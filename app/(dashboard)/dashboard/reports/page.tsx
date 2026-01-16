@@ -594,7 +594,7 @@ export default function ReportsPage() {
             addToast({
               type: 'warning',
               title: 'Aucune donnée',
-              message: 'Aucune session à exporter',
+              description: 'Aucune session à exporter',
             })
             setIsExporting(false)
             return
@@ -621,7 +621,7 @@ export default function ReportsPage() {
             addToast({
               type: 'warning',
               title: 'Aucune donnée',
-              message: 'Aucun apprenant à exporter',
+              description: 'Aucun apprenant à exporter',
             })
             setIsExporting(false)
             return
@@ -693,7 +693,7 @@ export default function ReportsPage() {
           addToast({
             type: 'error',
             title: 'Erreur',
-            message: 'Onglet non supporté pour l\'export',
+            description: 'Onglet non supporté pour l\'export',
           })
           setIsExporting(false)
           return
@@ -703,7 +703,7 @@ export default function ReportsPage() {
         addToast({
           type: 'warning',
           title: 'Aucune donnée',
-          message: 'Aucune donnée à exporter pour cet onglet',
+          description: 'Aucune donnée à exporter pour cet onglet',
         })
         setIsExporting(false)
         return
@@ -722,14 +722,14 @@ export default function ReportsPage() {
       addToast({
         type: 'success',
         title: 'Export réussi',
-        message: `Les données ont été exportées avec succès (${dataToExport.length} ligne(s))`,
+        description: `Les données ont été exportées avec succès (${dataToExport.length} ligne(s))`,
       })
     } catch (error) {
       console.error('Erreur lors de l\'export:', error)
       addToast({
         type: 'error',
         title: 'Erreur d\'export',
-        message: error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'export',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'export',
       })
     } finally {
       setIsExporting(false)
