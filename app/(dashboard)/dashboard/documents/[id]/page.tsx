@@ -20,7 +20,6 @@ export default function DocumentDetailPage() {
   const { user } = useAuth()
   const { addToast } = useToast()
   const documentId = params.id as string
-  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false)
 
   // Récupérer le document
   const { data: document, isLoading: documentLoading } = useQuery({
@@ -82,13 +81,23 @@ export default function DocumentDetailPage() {
           <div className="flex gap-2">
             {document.file_url && (
               <>
-                <Button
-                  variant="outline"
-                  onClick={() => setSignatureDialogOpen(true)}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Envoyer pour signature
-                </Button>
+                <SendSignatureRequestDialog
+                  documentId={documentId}
+                  documentTitle={document.title || 'Document'}
+                  onSuccess={() => {
+                    addToast({
+                      title: 'Demande de signature envoyée',
+                      description: 'Les destinataires ont reçu un email avec le lien de signature.',
+                      variant: 'success',
+                    })
+                  }}
+                  trigger={
+                    <Button variant="outline">
+                      <Send className="h-4 w-4 mr-2" />
+                      Envoyer pour signature
+                    </Button>
+                  }
+                />
                 <a
                   href={document.file_url}
                   target="_blank"
@@ -293,9 +302,7 @@ export default function DocumentDetailPage() {
       {user?.organization_id && (
         <SendSignatureRequestDialog
           documentId={documentId}
-          organizationId={user.organization_id}
-          open={signatureDialogOpen}
-          onOpenChange={setSignatureDialogOpen}
+          documentTitle={document?.title || 'Document'}
           onSuccess={() => {
             addToast({
               title: 'Demande de signature envoyée',
@@ -303,6 +310,12 @@ export default function DocumentDetailPage() {
               variant: 'success',
             })
           }}
+          trigger={
+            <Button variant="outline" size="sm">
+              <Send className="h-4 w-4 mr-2" />
+              Demander une signature
+            </Button>
+          }
         />
       )}
     </div>
