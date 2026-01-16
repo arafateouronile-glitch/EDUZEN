@@ -175,9 +175,11 @@ export default function SignDocumentPage() {
                       <p className="text-sm text-muted-foreground">
                         {signature.signer_role || signature.signer?.role || 'Rôle non spécifié'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(signature.signed_at)}
-                      </p>
+                      {signature.signed_at && (
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(signature.signed_at)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {signature.signer_id === user?.id && (
