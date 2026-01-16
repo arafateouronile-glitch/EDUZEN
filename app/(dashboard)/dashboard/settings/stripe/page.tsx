@@ -63,14 +63,14 @@ export default function StripeSettingsPage() {
       addToast({
         title: 'Configuration sauvegardée',
         description: 'Les paramètres Stripe ont été enregistrés avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la sauvegarde',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -98,14 +98,14 @@ export default function StripeSettingsPage() {
       addToast({
         title: 'Connexion réussie',
         description: 'La connexion à Stripe fonctionne correctement.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur de connexion',
         description: error.message || 'Impossible de se connecter à Stripe',
-        variant: 'error',
+        type: 'error',
       })
     },
   })

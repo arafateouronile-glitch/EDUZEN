@@ -88,14 +88,14 @@ export default function EmailSchedulesPage() {
       addToast({
         title: 'Règle créée',
         description: 'La règle de planification a été créée avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: Error) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la création de la règle.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -111,14 +111,14 @@ export default function EmailSchedulesPage() {
       addToast({
         title: 'Règle mise à jour',
         description: 'La règle de planification a été mise à jour avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: Error) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la mise à jour de la règle.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -133,14 +133,14 @@ export default function EmailSchedulesPage() {
       addToast({
         title: 'Règle supprimée',
         description: 'La règle de planification a été supprimée avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: Error) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la suppression de la règle.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -155,14 +155,14 @@ export default function EmailSchedulesPage() {
       addToast({
         title: 'Règle mise à jour',
         description: `La règle a été ${editingSchedule ? 'activée' : 'désactivée'}.`,
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: Error) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la mise à jour de la règle.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })

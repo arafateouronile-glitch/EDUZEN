@@ -448,7 +448,7 @@ function StudentsPageContent() {
                                   addToast({
                                     title: 'Lien copié',
                                     description: `Lien d'accès pour ${s.first_name} ${s.last_name} copié`,
-                                    variant: 'success',
+                                    type: 'success',
                                   })
                                   setTimeout(() => {
                                     setCopiedLinks(prev => {
@@ -461,7 +461,7 @@ function StudentsPageContent() {
                                   addToast({
                                     title: 'Erreur',
                                     description: 'Impossible de copier le lien',
-                                    variant: 'error',
+                                    type: 'error',
                                   })
                                 })
                               }}

@@ -63,14 +63,14 @@ function SitesPageContent() {
       addToast({
         title: 'Succès',
         description: 'Site créé avec succès',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la création du site',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -86,14 +86,14 @@ function SitesPageContent() {
       addToast({
         title: 'Succès',
         description: 'Site mis à jour avec succès',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la mise à jour',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -107,14 +107,14 @@ function SitesPageContent() {
       addToast({
         title: 'Succès',
         description: 'Site supprimé avec succès',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la suppression',
-        variant: 'error',
+        type: 'error',
       })
     },
   })

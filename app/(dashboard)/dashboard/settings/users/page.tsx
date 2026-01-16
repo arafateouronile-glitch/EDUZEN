@@ -162,14 +162,14 @@ function UsersSettingsPageContent() {
       addToast({
         title: 'Succès',
         description: 'Le statut de l\'utilisateur a été mis à jour',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la mise à jour',
-        variant: 'error',
+        type: 'error',
       })
     },
   })

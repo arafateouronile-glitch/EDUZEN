@@ -81,14 +81,14 @@ export function GestionAutomatisation({
       addToast({
         title: 'Règle mise à jour',
         description: 'Le statut de la règle a été mis à jour.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: Error) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la mise à jour de la règle.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })

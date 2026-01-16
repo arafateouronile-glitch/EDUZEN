@@ -134,14 +134,14 @@ export default function StudentDetailPage() {
                 addToast({
                   title: 'Lien copié',
                   description: 'Le lien d\'accès a été copié dans le presse-papiers',
-                  variant: 'success',
+                  type: 'success',
                 })
                 setTimeout(() => setCopiedLink(false), 2000)
               }).catch(() => {
                 addToast({
                   title: 'Erreur',
                   description: 'Impossible de copier le lien',
-                  variant: 'error',
+                  type: 'error',
                 })
               })
             }}

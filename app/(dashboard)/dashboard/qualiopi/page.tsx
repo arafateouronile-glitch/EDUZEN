@@ -115,7 +115,7 @@ export default function QualiopiPage() {
       addToast({
         title: 'Indicateurs initialisés',
         description: 'Les indicateurs Qualiopi ont été initialisés avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {

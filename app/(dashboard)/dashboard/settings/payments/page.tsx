@@ -62,7 +62,7 @@ export default function PaymentSettingsPage() {
       addToast({
         title: 'Configuration sauvegardée',
         description: 'La configuration Stripe a été enregistrée avec succès.',
-        variant: 'success',
+        type: 'success',
       })
       queryClient.invalidateQueries({ queryKey: ['payment-configs'] })
     },
@@ -79,7 +79,7 @@ export default function PaymentSettingsPage() {
       addToast({
         title: 'Configuration sauvegardée',
         description: 'La configuration SEPA a été enregistrée avec succès.',
-        variant: 'success',
+        type: 'success',
       })
       queryClient.invalidateQueries({ queryKey: ['payment-configs'] })
     },

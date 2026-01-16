@@ -93,7 +93,7 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
       addToast({
         title: 'Workflow créé',
         description: 'Le workflow de validation a été créé avec succès.',
-        variant: 'success',
+        type: 'success',
       })
       queryClient.invalidateQueries({ queryKey: ['workflows'] })
       setShowCreateWorkflow(false)
@@ -105,7 +105,7 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
       addToast({
         title: 'Erreur',
         description: error.message || 'Impossible de créer le workflow.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -120,7 +120,7 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
       addToast({
         title: 'Workflow démarré',
         description: 'Le processus de validation a été démarré.',
-        variant: 'success',
+        type: 'success',
       })
       queryClient.invalidateQueries({ queryKey: ['workflow-instances'] })
     },
@@ -128,7 +128,7 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
       addToast({
         title: 'Erreur',
         description: error.message || 'Impossible de démarrer le workflow.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -142,7 +142,7 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
       addToast({
         title: 'Décision enregistrée',
         description: 'Votre décision a été enregistrée.',
-        variant: 'success',
+        type: 'success',
       })
       queryClient.invalidateQueries({ queryKey: ['workflow-instances'] })
       queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
@@ -151,7 +151,7 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
       addToast({
         title: 'Erreur',
         description: error.message || 'Impossible d\'enregistrer la décision.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })

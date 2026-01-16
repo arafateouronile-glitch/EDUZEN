@@ -66,7 +66,7 @@ export default function SignDocumentPage() {
       addToast({
         title: 'Signature enregistrée',
         description: 'Votre signature a été enregistrée avec succès.',
-        variant: 'success',
+        type: 'success',
       })
       router.push(`/dashboard/documents/${documentId}`)
     },

@@ -102,14 +102,14 @@ export default function SEPASettingsPage() {
       addToast({
         title: 'Configuration sauvegardée',
         description: 'Les paramètres SEPA ont été enregistrés avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors de la sauvegarde',
-        variant: 'error',
+        type: 'error',
       })
     },
   })

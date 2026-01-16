@@ -83,14 +83,14 @@ export default function EmailTemplatesPage() {
       addToast({
         title: 'Modèle créé',
         description: 'Le modèle d\'email a été créé avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Une erreur est survenue lors de la création du modèle.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -107,14 +107,14 @@ export default function EmailTemplatesPage() {
       addToast({
         title: 'Modèle mis à jour',
         description: 'Le modèle d\'email a été mis à jour avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Une erreur est survenue lors de la mise à jour du modèle.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
@@ -129,14 +129,14 @@ export default function EmailTemplatesPage() {
       addToast({
         title: 'Modèle supprimé',
         description: 'Le modèle d\'email a été supprimé avec succès.',
-        variant: 'success',
+        type: 'success',
       })
     },
     onError: (error: any) => {
       addToast({
         title: 'Erreur',
         description: error.message || 'Une erreur est survenue lors de la suppression du modèle.',
-        variant: 'error',
+        type: 'error',
       })
     },
   })
