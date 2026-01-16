@@ -289,16 +289,15 @@ export default function QualiopiPage() {
       </Card>
 
       {/* Navigation par catégories */}
-      <Tabs defaultValue="all" className="mb-6">
+      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
         <TabsList>
-          <TabsTrigger value="all" onClick={() => setSelectedCategory('all')}>
+          <TabsTrigger value="all">
             Tous ({indicators.length})
           </TabsTrigger>
           {categories.map((category) => (
             <TabsTrigger
               key={category}
               value={category}
-              onClick={() => setSelectedCategory(category)}
             >
               {category.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
             </TabsTrigger>
