@@ -59,7 +59,7 @@ export default function DocumentDetailPage() {
     )
   }
 
-  const hasUserSigned = signatures?.some((sig) => sig.signer_id === user?.id && sig.status === 'signed')
+  const hasUserSigned = signatures?.some((sig) => sig.signer?.id === user?.id && sig.status === 'signed')
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
