@@ -29,7 +29,7 @@ export default function ProgramFormationsPage() {
     queryKey: ['program-formations', programId, search, showActiveOnly],
     queryFn: async () => {
       const allFormations = await programService.getFormationsByProgram(programId)
-      let filtered = (allFormations as Formation[]) || []
+      let filtered = allFormations || []
 
       // Filtrer par statut
       if (showActiveOnly) {
@@ -74,7 +74,7 @@ export default function ProgramFormationsPage() {
     )
   }
 
-  const formationsList = (formations as FormationWithRelations[]) || []
+  const formationsList = formations || []
 
   return (
     <div className="space-y-6">
