@@ -1,6 +1,6 @@
 {
   "name": "eduzen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Solution SaaS de Gestion Scolaire pour l'Afrique",
   "private": true,
   "scripts": {
