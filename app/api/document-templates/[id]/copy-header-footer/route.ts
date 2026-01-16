@@ -6,9 +6,10 @@ import type { CopyHeaderFooterInput } from '@/lib/types/document-templates'
 // POST /api/document-templates/[id]/copy-header-footer - Copie header/footer d'un template vers un autre
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const {
       data: { user },
@@ -20,7 +21,7 @@ export async function POST(
     }
 
     // Vérifier que l'utilisateur a accès au template cible
-    const targetTemplate = await documentTemplateService.getTemplateById(params.id)
+    const targetTemplate = await documentTemplateService.getTemplateById(id)
     const { data: userData } = await supabase
       .from('users')
       .select('organization_id')
@@ -39,7 +40,7 @@ export async function POST(
       return NextResponse.json({ error: 'Accès non autorisé au template source' }, { status: 403 })
     }
 
-    const updatedTemplate = await documentTemplateService.copyHeaderFooter(params.id, body)
+    const updatedTemplate = await documentTemplateService.copyHeaderFooter(id, body)
 
     return NextResponse.json(updatedTemplate)
   } catch (error) {

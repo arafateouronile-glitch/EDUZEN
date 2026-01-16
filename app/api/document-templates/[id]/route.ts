@@ -5,9 +5,10 @@ import { documentTemplateService } from '@/lib/services/document-template.servic
 // GET /api/document-templates/[id] - Récupère un template par son ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const {
       data: { user },
@@ -18,7 +19,7 @@ export async function GET(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const template = await documentTemplateService.getTemplateById(params.id)
+    const template = await documentTemplateService.getTemplateById(id)
 
     // Vérifier que l'utilisateur a accès à ce template
     const { data: userData } = await supabase
@@ -44,9 +45,10 @@ export async function GET(
 // PUT /api/document-templates/[id] - Met à jour un template
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const {
       data: { user },
@@ -58,7 +60,7 @@ export async function PUT(
     }
 
     // Vérifier que l'utilisateur a accès à ce template
-    const template = await documentTemplateService.getTemplateById(params.id)
+    const template = await documentTemplateService.getTemplateById(id)
     const { data: userData } = await supabase
       .from('users')
       .select('organization_id')
@@ -71,7 +73,7 @@ export async function PUT(
 
     const body = await request.json()
     const updatedTemplate = await documentTemplateService.updateTemplate({
-      id: params.id,
+      id,
       ...body,
     })
 
@@ -88,9 +90,10 @@ export async function PUT(
 // DELETE /api/document-templates/[id] - Supprime un template
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const {
       data: { user },
@@ -102,7 +105,7 @@ export async function DELETE(
     }
 
     // Vérifier que l'utilisateur a accès à ce template
-    const template = await documentTemplateService.getTemplateById(params.id)
+    const template = await documentTemplateService.getTemplateById(id)
     const { data: userData } = await supabase
       .from('users')
       .select('organization_id')
@@ -113,7 +116,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
-    await documentTemplateService.deleteTemplate(params.id)
+    await documentTemplateService.deleteTemplate(id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
