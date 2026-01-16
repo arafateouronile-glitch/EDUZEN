@@ -74,7 +74,7 @@ export default function EditProgramPage() {
         duration_hours: formData.duration_hours ? parseInt(formData.duration_hours) : null,
         price: parseFloat(formData.price) || 0,
         currency: formData.currency,
-        payment_plan: formData.payment_plan as Program['payment_plan'],
+        payment_plan: formData.payment_plan as 'full' | 'installment' | 'custom',
         prerequisites: formData.prerequisites || null,
         capacity_max: formData.capacity_max ? parseInt(formData.capacity_max) : null,
         age_min: formData.age_min ? parseInt(formData.age_min) : null,
