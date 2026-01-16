@@ -1,0 +1,596 @@
+{
+  "info": {
+    "name": "EDUZEN API",
+    "description": "Collection Postman pour l'API EDUZEN",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://app.eduzen.com",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "organization_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "2FA",
+      "item": [
+        {
+          "name": "Generate Secret",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2fa/generate-secret",
+              "host": ["{{base_url}}"],
+              "path": ["api", "2fa", "generate-secret"]
+            }
+          }
+        },
+        {
+          "name": "Verify Activation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/2fa/verify-activation",
+              "host": ["{{base_url}}"],
+              "path": ["api", "2fa", "verify-activation"]
+            }
+          }
+        },
+        {
+          "name": "Verify Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/2fa/verify",
+              "host": ["{{base_url}}"],
+              "path": ["api", "2fa", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Disable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"user_password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/2fa/disable",
+              "host": ["{{base_url}}"],
+              "path": ["api", "2fa", "disable"]
+            }
+          }
+        },
+        {
+          "name": "Regenerate Backup Codes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/2fa/regenerate-backup-codes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "2fa", "regenerate-backup-codes"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"teacher@example.com\",\n  \"full_name\": \"Jane Smith\",\n  \"phone\": \"+221771234567\",\n  \"organization_id\": \"{{organization_id}}\",\n  \"password\": \"SecurePassword123!\",\n  \"role\": \"teacher\",\n  \"is_active\": true,\n  \"send_invitation\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/create",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "create"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "your-api-key",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/students?organization_id={{organization_id}}&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "students"],
+              "query": [
+                {
+                  "key": "organization_id",
+                  "value": "{{organization_id}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Stripe - Create Intent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 10000,\n  \"currency\": \"EUR\",\n  \"description\": \"Paiement frais de scolarité\",\n  \"customer_email\": \"parent@example.com\",\n  \"customer_name\": \"John Doe\",\n  \"metadata\": {\n    \"invoice_id\": \"inv-123\"\n  },\n  \"return_url\": \"https://app.eduzen.com/payments/success\",\n  \"cancel_url\": \"https://app.eduzen.com/payments/cancel\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/payments/stripe/create-intent",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payments", "stripe", "create-intent"]
+            }
+          }
+        },
+        {
+          "name": "Stripe - Get Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/payments/stripe/status/:paymentIntentId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payments", "stripe", "status", ":paymentIntentId"],
+              "variable": [
+                {
+                  "key": "paymentIntentId",
+                  "value": "pi_1234567890"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "SEPA - Create Direct Debit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 10000,\n  \"currency\": \"EUR\",\n  \"description\": \"Paiement frais de scolarité\",\n  \"debtor_name\": \"John Doe\",\n  \"debtor_iban\": \"FR1420041010050500013M02606\",\n  \"debtor_bic\": \"AABAFR22\",\n  \"reference\": \"REF-123456\",\n  \"due_date\": \"2024-12-15\",\n  \"mandate_id\": \"MANDATE-123\",\n  \"creditor_name\": \"EDUZEN\",\n  \"creditor_iban\": \"FR1420041010050500013M02607\",\n  \"creditor_id\": \"CRED-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/payments/sepa/create-direct-debit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payments", "sepa", "create-direct-debit"]
+            }
+          }
+        },
+        {
+          "name": "SEPA - Get Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/payments/sepa/status/:paymentId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payments", "sepa", "status", ":paymentId"],
+              "variable": [
+                {
+                  "key": "paymentId",
+                  "value": "payment-123"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "SEPA - Create Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 10000,\n  \"currency\": \"EUR\",\n  \"description\": \"Virement frais de scolarité\",\n  \"debtor_name\": \"EDUZEN\",\n  \"debtor_iban\": \"FR1420041010050500013M02607\",\n  \"debtor_bic\": \"AABAFR22\",\n  \"creditor_name\": \"John Doe\",\n  \"creditor_iban\": \"FR1420041010050500013M02606\",\n  \"creditor_bic\": \"AABAFR22\",\n  \"reference\": \"REF-123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/payments/sepa/create-transfer",
+              "host": ["{{base_url}}"],
+              "path": ["api", "payments", "sepa", "create-transfer"]
+            }
+          }
+        },
+        {
+          "name": "Mobile Money - Initiate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"mtn\",\n  \"amount\": 10000,\n  \"currency\": \"XOF\",\n  \"phone_number\": \"+221771234567\",\n  \"description\": \"Paiement frais de scolarité\",\n  \"invoice_id\": \"inv-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile-money/initiate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile-money", "initiate"]
+            }
+          }
+        },
+        {
+          "name": "Mobile Money - Get Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile-money/status/:transactionId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile-money", "status", ":transactionId"],
+              "variable": [
+                {
+                  "key": "transactionId",
+                  "value": "txn-123"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Generate Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template_id\": \"template-123\",\n  \"format\": \"pdf\",\n  \"variables\": {\n    \"student_name\": \"Jane Doe\",\n    \"amount\": \"10000 XOF\",\n    \"date\": \"2024-12-03\"\n  },\n  \"send_email\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/documents/generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Upload Resource",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "organization_id",
+                  "value": "{{organization_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "Cours de Mathématiques",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Cours complet de mathématiques niveau 6ème",
+                  "type": "text"
+                },
+                {
+                  "key": "resource_type",
+                  "value": "document",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/resources/upload",
+              "host": ["{{base_url}}"],
+              "path": ["api", "resources", "upload"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Compliance",
+      "item": [
+        {
+          "name": "Check Alerts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/compliance/alerts/check",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "alerts", "check"]
+            }
+          }
+        },
+        {
+          "name": "Get Critical Risks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/compliance/alerts/critical-risks",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "alerts", "critical-risks"]
+            }
+          }
+        },
+        {
+          "name": "Sync Controls",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_id\": \"{{organization_id}}\",\n  \"sync_type\": \"qualiopi\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/compliance/sync-controls",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "sync-controls"]
+            }
+          }
+        },
+        {
+          "name": "Generate Report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "sb-access-token={{access_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_id\": \"{{organization_id}}\",\n  \"report_type\": \"annual\",\n  \"format\": \"pdf\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/compliance/reports/generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "compliance", "reports", "generate"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+
+
+

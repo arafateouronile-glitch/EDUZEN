@@ -1,0 +1,36 @@
+{
+  "name": "@eduzen/sdk",
+  "version": "1.0.0",
+  "description": "Official EDUZEN API SDK for JavaScript and TypeScript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "eduzen",
+    "api",
+    "sdk",
+    "education",
+    "school-management"
+  ],
+  "author": "EDUZEN",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eduzen/sdk-javascript.git"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^4.0.0 || ^5.0.0"
+  }
+}

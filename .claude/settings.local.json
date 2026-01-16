@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(psql:*)",
+      "Bash(sort:*)",
+      "Bash(python3:*)",
+      "Bash(npm install:*)",
+      "Bash(xargs:*)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(pkill:*)",
+      "Bash(/compact)",
+      "Bash(lsof:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm test:*)",
+      "Bash(npm audit:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm outdated:*)",
+      "Bash(while true)",
+      "Bash(do sleep 30)",
+      "Bash(break)",
+      "Bash(done)",
+      "Bash(timeout 60 npm run dev:*)",
+      "Bash(tee:*)",
+      "Bash(npm run test:security:*)",
+      "Bash(npx tsx:*)",
+      "Bash(for file in /Users/arafatetoure/Documents/EDUZEN/supabase/migrations/*.sql)",
+      "Bash(do if grep -q \"students\" \"$file\")",
+      "Bash(fi)",
+      "Bash(curl:*)"
+    ]
+  }
+}

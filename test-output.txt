@@ -1,0 +1,863 @@
+
+> eduzen@1.0.0 test
+> vitest --reporter=verbose
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90m/Users/arafatetoure/Documents/EDUZEN[39m
+
+[2m12:18:21 AM[22m [33m[1m[vite][22m[39m (client) warning: This assignment will throw because "mockSupabase" is a constant
+29 |  
+30 |    beforeEach(() => {
+31 |      mockSupabase = createMockSupabase()
+   |      ^
+32 |      service = new StudentService()
+33 |      vi.clearAllMocks()
+
+  Plugin: vite:esbuild
+  File: /Users/arafatetoure/Documents/EDUZEN/tests/services/student.service.test.ts
+[2m12:18:22 AM[22m [33m[1m[vite][22m[39m (client) warning: Duplicate key "hover:-translate-y-0.5" in object literal
+46 |          // Ghost variant
+47 |          'hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
+48 |          'hover:-translate-y-0.5': variant === 'ghost' && !disabled,
+   |          ^
+49 |          
+50 |          // Link variant - Bleu pour liens
+
+  Plugin: vite:esbuild
+  File: /Users/arafatetoure/Documents/EDUZEN/components/ui/button.tsx
+ [32m✓[39m tests/services/payment.service.test.ts[2m > [22mPaymentService[2m > [22mgetAll[2m > [22mdevrait récupérer tous les paiements d'une organisation[32m 4[2mms[22m[39m
+ [32m✓[39m tests/services/payment.service.test.ts[2m > [22mPaymentService[2m > [22mgetAll[2m > [22mdevrait filtrer par statut[32m 4[2mms[22m[39m
+ [31m×[39m tests/services/payment.service.test.ts[2m > [22mPaymentService[2m > [22mgetAll[2m > [22mdevrait retourner un tableau vide si la table n'existe pas[32m 6[2mms[22m[39m
+[31m   → Table not found[39m
+ [32m✓[39m tests/services/payment.service.test.ts[2m > [22mPaymentService[2m > [22mgetById[2m > [22mdevrait récupérer un paiement par son ID[32m 1[2mms[22m[39m
+ [32m✓[39m tests/services/payment.service.test.ts[2m > [22mPaymentService[2m > [22mgetById[2m > [22mdevrait gérer les erreurs si le paiement n'existe pas[32m 3[2mms[22m[39m
+ [32m✓[39m tests/services/payment.service.test.ts[2m > [22mPaymentService[2m > [22mcreate[2m > [22mdevrait créer un nouveau paiement[32m 2[2mms[22m[39m
+ [31m×[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mgetAll[2m > [22mdevrait récupérer tous les documents avec pagination[32m 11[2mms[22m[39m
+[31m   → expected { data: [ …(2) ], total: +0, …(3) } to deeply equal [ { id: 'doc-1', …(5) }, …(1) ][39m
+ [32m✓[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mgetAll[2m > [22mdevrait gérer les erreurs de base de données avec errorHandler[32m 3[2mms[22m[39m
+ [32m✓[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mgetById[2m > [22mdevrait récupérer un document par ID[32m 1[2mms[22m[39m
+ [31m×[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mgetById[2m > [22mdevrait lever une erreur NOT_FOUND si le document n'existe pas[32m 6[2mms[22m[39m
+[31m   → expected AppError: Document avec l'ID non-existent… { …(6) } to match object { code: undefined }
+(10 matching properties omitted from actual)[39m
+ [31m×[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mcreate[2m > [22mdevrait créer un document avec succès[32m 3[2mms[22m[39m
+[31m   → Le titre est obligatoire[39m
+ [32m✓[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mcreate[2m > [22mdevrait valider les champs requis[32m 1[2mms[22m[39m
+ [31m×[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mcreate[2m > [22mdevrait gérer les contraintes uniques[32m 2[2mms[22m[39m
+[31m   → expected AppError: Le titre est obligatoire { …(6) } to match object { code: 'VALID_2004' }
+(11 matching properties omitted from actual)[39m
+ [31m×[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22muploadFile[2m > [22mdevrait uploader un fichier vers Supabase Storage[32m 3[2mms[22m[39m
+[31m   → Cannot destructure property 'data' of '(intermediate value)' as it is undefined.[39m
+ [32m✓[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22muploadFile[2m > [22mdevrait gérer les erreurs de storage[32m 1[2mms[22m[39m
+ [31m×[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mdelete[2m > [22mdevrait supprimer un document et son fichier[32m 2[2mms[22m[39m
+[31m   → expected undefined to be true // Object.is equality[39m
+ [32m✓[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mdelete[2m > [22mdevrait gérer les contraintes de clé étrangère[32m 1[2mms[22m[39m
+ [31m×[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mError handling patterns[2m > [22mdevrait propager les AppError sans les wrapper[32m 2[2mms[22m[39m
+[31m   → expected AssertionError: Should have thrown { …(3) } to be AppError: Custom error { …(6) } // Object.is equality[39m
+ [31m×[39m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mError handling patterns[2m > [22mdevrait logger les opérations avec succès[32m 1[2mms[22m[39m
+[31m   → duplicate key value violates unique constraint[39m
+ [31m×[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendCampaign - Pattern #5 Parallel Optimization[2m > [22mdevrait envoyer une campagne à tous les utilisateurs en parallèle[32m 8[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).single is not a function[39m
+ [31m×[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendCampaign - Pattern #5 Parallel Optimization[2m > [22mdevrait gérer les échecs individuels sans bloquer toute la campagne[32m 1[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).single is not a function[39m
+ [31m×[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendCampaign - Pattern #5 Parallel Optimization[2m > [22mdevrait envoyer une campagne ciblée à des utilisateurs spécifiques[32m 1[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).single is not a function[39m
+ [31m×[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendCampaign - Pattern #5 Parallel Optimization[2m > [22mdevrait être rapide grâce à l'envoi parallèle (vs séquentiel)[32m 1[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).single is not a function[39m
+ [31m×[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendNotification - Individual notification[2m > [22mdevrait envoyer une notification à un utilisateur avec devices actifs[32m 1[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).maybeSingle is not a function[39m
+ [31m×[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendNotification - Individual notification[2m > [22mdevrait rejeter si les notifications sont désactivées pour ce type[32m 10[2mms[22m[39m
+[31m   → expected [Function] to throw error including 'Notifications of type message are dis…' but got 'this.supabase.from(...).select(...).e…'[39m
+ [31m×[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendNotification - Individual notification[2m > [22mdevrait rejeter si heures silencieuses actives[32m 2[2mms[22m[39m
+[31m   → expected [Function] to throw error including 'Quiet hours are active' but got 'this.supabase.from(...).select(...).e…'[39m
+ [32m✓[39m tests/components/ui/button.test.tsx[2m > [22mButton Component[2m > [22mdevrait rendre le bouton sans erreur[32m 52[2mms[22m[39m
+ [32m✓[39m tests/components/ui/button.test.tsx[2m > [22mButton Component[2m > [22mdevrait accepter les variants[32m 29[2mms[22m[39m
+ [32m✓[39m tests/components/ui/button.test.tsx[2m > [22mButton Component[2m > [22mdevrait gérer les props DOM correctement[32m 1[2mms[22m[39m
+ [32m✓[39m tests/components/ui/button.test.tsx[2m > [22mButton Component[2m > [22mType Safety[2m > [22mdevrait utiliser Record<string, unknown> pour domProps[32m 1[2mms[22m[39m
+ [32m✓[39m tests/components/ui/button.test.tsx[2m > [22mButton Component[2m > [22mType Safety[2m > [22mdevrait utiliser ReactElement<Record<string, unknown>> pour children[32m 1[2mms[22m[39m
+[90mstderr[2m | tests/components/charts/premium-charts.test.tsx[2m > [22m[2mPremium Charts Components[2m > [22m[2mPremiumPieChart[2m > [22m[2mdevrait rendre le composant sans erreur
+[22m[39mThe width(0) and height(0) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(300) or use aspect(undefined) to control the
+       height and width.
+
+[90mstderr[2m | tests/components/charts/premium-charts.test.tsx[2m > [22m[2mPremium Charts Components[2m > [22m[2mPremiumBarChart[2m > [22m[2mdevrait rendre le composant sans erreur
+[22m[39mThe width(0) and height(0) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(300) or use aspect(undefined) to control the
+       height and width.
+
+ReferenceError: GradientDef is not defined
+    at ChartContent (/Users/arafatetoure/Documents/EDUZEN/components/charts/premium-line-chart.tsx:168:12)
+    at renderWithHooks (/Users/arafatetoure/Documents/EDUZEN/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (/Users/arafatetoure/Documents/EDUZEN/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (/Users/arafatetoure/Documents/EDUZEN/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (/Users/arafatetoure/Documents/EDUZEN/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:360:16)
+    at invokeEventListeners (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:114:17)
+ReferenceError: GradientDef is not defined
+    at ChartContent (/Users/arafatetoure/Documents/EDUZEN/components/charts/premium-line-chart.tsx:168:12)
+    at renderWithHooks (/Users/arafatetoure/Documents/EDUZEN/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (/Users/arafatetoure/Documents/EDUZEN/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (/Users/arafatetoure/Documents/EDUZEN/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (/Users/arafatetoure/Documents/EDUZEN/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:360:16)
+    at invokeEventListeners (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:243:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/arafatetoure/Documents/EDUZEN/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:114:17)
+[90mstderr[2m | tests/components/charts/premium-charts.test.tsx[2m > [22m[2mPremium Charts Components[2m > [22m[2mPremiumLineChart[2m > [22m[2mdevrait rendre le composant sans erreur
+[22m[39mThe above error occurred in the <ChartContent> component:
+
+    at ChartContent (/Users/arafatetoure/Documents/EDUZEN/components/charts/premium-line-chart.tsx:241:56)
+    at div
+    at div
+    at div
+    at div
+    at MotionDOMComponent (file:///Users/arafatetoure/Documents/EDUZEN/node_modules/framer-motion/dist/es/motion/index.mjs:42:16)
+    at PremiumLineChart (/Users/arafatetoure/Documents/EDUZEN/components/charts/premium-line-chart.tsx:14:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ [32m✓[39m tests/components/charts/premium-charts.test.tsx[2m > [22mPremium Charts Components[2m > [22mPremiumPieChart[2m > [22mdevrait rendre le composant sans erreur[32m 76[2mms[22m[39m
+ [32m✓[39m tests/components/charts/premium-charts.test.tsx[2m > [22mPremium Charts Components[2m > [22mPremiumPieChart[2m > [22mdevrait accepter les props avec les types corrects[32m 1[2mms[22m[39m
+ [32m✓[39m tests/components/charts/premium-charts.test.tsx[2m > [22mPremium Charts Components[2m > [22mPremiumBarChart[2m > [22mdevrait rendre le composant sans erreur[32m 11[2mms[22m[39m
+ [32m✓[39m tests/components/charts/premium-charts.test.tsx[2m > [22mPremium Charts Components[2m > [22mPremiumBarChart[2m > [22mdevrait accepter CustomTooltip avec les types corrects[32m 0[2mms[22m[39m
+ [31m×[39m tests/components/charts/premium-charts.test.tsx[2m > [22mPremium Charts Components[2m > [22mPremiumLineChart[2m > [22mdevrait rendre le composant sans erreur[32m 30[2mms[22m[39m
+[31m   → GradientDef is not defined[39m
+ [32m✓[39m tests/components/charts/premium-charts.test.tsx[2m > [22mPremium Charts Components[2m > [22mPremiumLineChart[2m > [22mdevrait accepter CustomTooltip avec les types corrects[32m 0[2mms[22m[39m
+ [32m✓[39m tests/components/charts/premium-charts.test.tsx[2m > [22mPremium Charts Components[2m > [22mType Safety[2m > [22mdevrait utiliser des types stricts pour les props[32m 0[2mms[22m[39m
+ [32m✓[39m tests/services/invoice.service.test.ts[2m > [22mInvoiceService[2m > [22mgetAll[2m > [22mdevrait récupérer toutes les factures d'une organisation[32m 5[2mms[22m[39m
+ [32m✓[39m tests/services/invoice.service.test.ts[2m > [22mInvoiceService[2m > [22mgetAll[2m > [22mdevrait filtrer par statut[32m 1[2mms[22m[39m
+ [32m✓[39m tests/services/invoice.service.test.ts[2m > [22mInvoiceService[2m > [22mgetAll[2m > [22mdevrait gérer les erreurs[32m 4[2mms[22m[39m
+ [32m✓[39m tests/services/invoice.service.test.ts[2m > [22mInvoiceService[2m > [22mgetById[2m > [22mdevrait récupérer une facture par son ID[32m 1[2mms[22m[39m
+ [32m✓[39m tests/services/invoice.service.test.ts[2m > [22mInvoiceService[2m > [22mgetById[2m > [22mdevrait gérer les erreurs si la facture n'existe pas[32m 1[2mms[22m[39m
+ [32m✓[39m tests/services/invoice.service.test.ts[2m > [22mInvoiceService[2m > [22mcreate[2m > [22mdevrait créer une nouvelle facture[32m 2[2mms[22m[39m
+ [32m✓[39m tests/services/invoice.service.test.ts[2m > [22mInvoiceService[2m > [22mcreate[2m > [22mdevrait valider les champs requis[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/auth.test.ts[2m > [22mAuthentication - Inscription[2m > [22mdevrait créer un compte utilisateur avec succès[32m 6[2mms[22m[39m
+ [32m✓[39m tests/critical/auth.test.ts[2m > [22mAuthentication - Inscription[2m > [22mdevrait rejeter un email invalide[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/auth.test.ts[2m > [22mAuthentication - Inscription[2m > [22mdevrait rejeter un mot de passe trop court[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/auth.test.ts[2m > [22mAuthentication - Connexion[2m > [22mdevrait connecter un utilisateur avec des identifiants valides[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/auth.test.ts[2m > [22mAuthentication - Connexion[2m > [22mdevrait rejeter des identifiants invalides[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/auth.test.ts[2m > [22mAuthentication - Session[2m > [22mdevrait récupérer la session actuelle[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/auth.test.ts[2m > [22mAuthentication - Session[2m > [22mdevrait retourner null si aucune session[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable users[2m > [22mdevrait empêcher un utilisateur de voir les utilisateurs d'autres organisations[32m 2[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable users[2m > [22mdevrait permettre à un utilisateur de voir son propre profil[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable users[2m > [22mdevrait permettre à un admin de voir les utilisateurs de son organisation[32m 2[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable organizations[2m > [22mdevrait empêcher un utilisateur de voir les organisations d'autres utilisateurs[32m 1[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable organizations[2m > [22mdevrait permettre à un utilisateur de voir sa propre organisation[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable students[2m > [22mdevrait empêcher un utilisateur de voir les élèves d'autres organisations[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable students[2m > [22mdevrait permettre à un utilisateur de voir les élèves de son organisation[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable courses[2m > [22mdevrait empêcher un utilisateur de voir les cours d'autres organisations[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable courses[2m > [22mdevrait permettre à un utilisateur de voir les cours publiés de son organisation[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable courses[2m > [22mdevrait permettre à un instructeur de voir ses propres cours non publiés[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable course_enrollments[2m > [22mdevrait empêcher un utilisateur de voir les inscriptions d'autres utilisateurs[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable course_enrollments[2m > [22mdevrait permettre à un utilisateur de voir ses propres inscriptions[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable payments[2m > [22mdevrait empêcher un utilisateur de voir les paiements d'autres organisations[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable payments[2m > [22mdevrait permettre à un utilisateur de voir les paiements de son organisation[32m 1[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable invoices[2m > [22mdevrait empêcher un utilisateur de voir les factures d'autres organisations[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Accès non autorisés[2m > [22mTable invoices[2m > [22mdevrait permettre à un utilisateur de voir les factures de son organisation[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Modifications non autorisées[2m > [22mdevrait empêcher un utilisateur de modifier les données d'autres organisations[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Modifications non autorisées[2m > [22mdevrait permettre à un admin de modifier les données de son organisation[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Modifications non autorisées[2m > [22mdevrait empêcher un utilisateur normal de modifier des données[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Suppressions non autorisées[2m > [22mdevrait empêcher un utilisateur de supprimer des données d'autres organisations[32m 0[2mms[22m[39m
+ [32m✓[39m tests/security/rls-access.test.ts[2m > [22mRLS - Suppressions non autorisées[2m > [22mdevrait permettre à un super_admin de supprimer des données de son organisation[32m 0[2mms[22m[39m
+ [32m✓[39m tests/integration/api/document-templates.test.ts[2m > [22mAPI Document Templates[2m > [22mGET /api/document-templates[2m > [22mdevrait retourner une liste de templates[32m 3[2mms[22m[39m
+ [32m✓[39m tests/integration/api/document-templates.test.ts[2m > [22mAPI Document Templates[2m > [22mGET /api/document-templates[2m > [22mdevrait filtrer par type de document[32m 1[2mms[22m[39m
+ [32m✓[39m tests/integration/api/document-templates.test.ts[2m > [22mAPI Document Templates[2m > [22mGET /api/document-templates[2m > [22mdevrait gérer les erreurs correctement[32m 2[2mms[22m[39m
+ [32m✓[39m tests/integration/api/document-templates.test.ts[2m > [22mAPI Document Templates[2m > [22mType Safety[2m > [22mdevrait utiliser le type DocumentType correctement[32m 1[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mcalculateRemainingAmount[2m > [22mdevrait calculer correctement le reste à payer[32m 2[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mcalculateRemainingAmount[2m > [22mne devrait pas retourner un montant négatif[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidPaymentAmount[2m > [22mdevrait accepter un montant valide[32m 1[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidPaymentAmount[2m > [22mdevrait rejeter un montant négatif ou zéro[32m 1[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidPaymentAmount[2m > [22mdevrait rejeter un montant qui dépasse le reste à payer[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidPaymentAmount[2m > [22mdevrait accepter un paiement égal au reste à payer[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mcalculateInvoiceStatus[2m > [22mdevrait retourner "sent" si aucun paiement[32m 1[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mcalculateInvoiceStatus[2m > [22mdevrait retourner "paid" si le montant payé est égal au total[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mcalculateInvoiceStatus[2m > [22mdevrait retourner "paid" si le montant payé dépasse le total[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mcalculateInvoiceStatus[2m > [22mdevrait retourner "partial" si le montant payé est partiel[32m 1[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidDateRange[2m > [22mdevrait accepter une plage de dates valide[32m 1[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidDateRange[2m > [22mdevrait accepter des dates égales[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidDateRange[2m > [22mdevrait rejeter une date de fin antérieure à la date de début[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidDateRange[2m > [22mdevrait rejeter des dates invalides[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22misValidDateRange[2m > [22mdevrait fonctionner avec des objets Date[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mgenerateInvoiceNumber[2m > [22mdevrait générer un numéro de facture correct[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mgenerateInvoiceNumber[2m > [22mdevrait générer un numéro de devis correct[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mgenerateInvoiceNumber[2m > [22mdevrait formater correctement la séquence[32m 0[2mms[22m[39m
+ [32m✓[39m lib/utils/payment-calculations.test.ts[2m > [22mpayment-calculations[2m > [22mgenerateInvoiceNumber[2m > [22mdevrait gérer les grandes séquences[32m 0[2mms[22m[39m
+ [32m✓[39m tests/critical/integration.test.ts[2m > [22mFlux d'inscription complet[2m > [22mdevrait compléter le flux d'inscription end-to-end[32m 2[2mms[22m[39m
+ [32m✓[39m tests/critical/integration.test.ts[2m > [22mFlux de connexion complet[2m > [22mdevrait compléter le flux de connexion end-to-end[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/integration.test.ts[2m > [22mFlux de paiement complet[2m > [22mdevrait compléter le flux de création de paiement[32m 1[2mms[22m[39m
+ [32m✓[39m tests/integration/api/documents-scheduled.test.ts[2m > [22mAPI Documents Scheduled Execute[2m > [22mType Safety - filter_config[2m > [22mdevrait accepter filter_config avec studentIds[32m 2[2mms[22m[39m
+ [32m✓[39m tests/integration/api/documents-scheduled.test.ts[2m > [22mAPI Documents Scheduled Execute[2m > [22mType Safety - filter_config[2m > [22mdevrait accepter filter_config null[32m 0[2mms[22m[39m
+ [32m✓[39m tests/integration/api/documents-scheduled.test.ts[2m > [22mAPI Documents Scheduled Execute[2m > [22mType Safety - filter_config[2m > [22mdevrait accepter filter_config vide[32m 1[2mms[22m[39m
+ [32m✓[39m tests/integration/api/documents-scheduled.test.ts[2m > [22mAPI Documents Scheduled Execute[2m > [22mType Safety - template.type[2m > [22mdevrait utiliser le type DocumentType correctement[32m 2[2mms[22m[39m
+ [32m✓[39m tests/integration/api/documents-scheduled.test.ts[2m > [22mAPI Documents Scheduled Execute[2m > [22mType Safety - student et sessions[2m > [22mdevrait accepter student comme Record<string, unknown>[32m 0[2mms[22m[39m
+ [32m✓[39m tests/integration/api/documents-scheduled.test.ts[2m > [22mAPI Documents Scheduled Execute[2m > [22mType Safety - student et sessions[2m > [22mdevrait accepter sessions comme Record ou Array[32m 0[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Création de paiement[2m > [22mdevrait créer un paiement avec succès[32m 2[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Création de paiement[2m > [22mdevrait valider que le montant est positif[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Création de paiement[2m > [22mdevrait accepter les devises valides[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Création de paiement[2m > [22mdevrait accepter les méthodes de paiement valides[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Statuts de paiement[2m > [22mdevrait avoir des statuts valides[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Statuts de paiement[2m > [22mdevrait permettre la transition de statuts valides[32m 0[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Calculs financiers[2m > [22mdevrait calculer correctement le total[32m 0[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Calculs financiers[2m > [22mdevrait gérer les montants décimaux[32m 0[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Tests d'intégration[2m > [22mdevrait valider la structure complète d'un paiement[32m 1[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Tests d'intégration[2m > [22mdevrait calculer le reste à payer correctement[32m 0[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Tests d'intégration[2m > [22mdevrait gérer les paiements partiels[32m 0[2mms[22m[39m
+ [32m✓[39m tests/critical/payments.test.ts[2m > [22mPaymentService - Tests d'intégration[2m > [22mdevrait valider les limites de montant[32m 1[2mms[22m[39m
+ [32m✓[39m tests/integration/api/payments-stripe.test.ts[2m > [22mAPI Stripe Payments[2m > [22mGET /api/payments/stripe/status/[paymentIntentId][2m > [22mdevrait gérer les erreurs avec le type unknown[32m 1[2mms[22m[39m
+ [32m✓[39m tests/integration/api/payments-stripe.test.ts[2m > [22mAPI Stripe Payments[2m > [22mGET /api/payments/stripe/status/[paymentIntentId][2m > [22mdevrait retourner un message d'erreur approprié pour les erreurs non-Error[32m 0[2mms[22m[39m
+ [32m✓[39m tests/integration/api/payments-stripe.test.ts[2m > [22mAPI Stripe Payments[2m > [22mPOST /api/payments/stripe/test-connection[2m > [22mdevrait gérer les erreurs correctement[32m 1[2mms[22m[39m
+ [32m✓[39m tests/integration/api/payments-stripe.test.ts[2m > [22mAPI Stripe Payments[2m > [22mType Safety[2m > [22mdevrait utiliser unknown pour les erreurs[32m 0[2mms[22m[39m
+ [32m✓[39m tests/integration/api/compliance-alerts.test.ts[2m > [22mAPI Compliance Alerts Cron[2m > [22mGestion d'erreurs[2m > [22mdevrait gérer les erreurs Error correctement[32m 1[2mms[22m[39m
+ [32m✓[39m tests/integration/api/compliance-alerts.test.ts[2m > [22mAPI Compliance Alerts Cron[2m > [22mGestion d'erreurs[2m > [22mdevrait gérer les erreurs non-Error correctement[32m 0[2mms[22m[39m
+ [32m✓[39m tests/integration/api/compliance-alerts.test.ts[2m > [22mAPI Compliance Alerts Cron[2m > [22mGestion d'erreurs[2m > [22mdevrait gérer les erreurs null/undefined correctement[32m 1[2mms[22m[39m
+ [32m✓[39m tests/integration/api/compliance-alerts.test.ts[2m > [22mAPI Compliance Alerts Cron[2m > [22mType Safety[2m > [22mdevrait utiliser unknown pour toutes les erreurs[32m 1[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatDate[2m > [22mdevrait formater une date correctement[32m 2[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatDate[2m > [22mdevrait retourner une chaîne vide pour une date invalide[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatDate[2m > [22mdevrait gérer les dates en chaîne de caractères[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatCurrency[2m > [22mdevrait formater une devise en EUR par défaut[32m 20[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatCurrency[2m > [22mdevrait formater une devise XOF[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatCurrency[2m > [22mdevrait gérer les nombres décimaux[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatNumber[2m > [22mdevrait formater un nombre avec 2 décimales par défaut[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatNumber[2m > [22mdevrait formater un nombre avec un nombre spécifique de décimales[32m 1[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatNumber[2m > [22mdevrait gérer les nombres entiers[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatRelativeTime[2m > [22mdevrait formater "À l'instant" pour les dates récentes[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatRelativeTime[2m > [22mdevrait formater "Il y a X minutes"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatRelativeTime[2m > [22mdevrait formater "Il y a X heures"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatRelativeTime[2m > [22mdevrait formater "Il y a X jours"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatRelativeTime[2m > [22mdevrait formater "Il y a X semaines"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatRelativeTime[2m > [22mdevrait formater "Il y a X mois"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/utils/format.test.ts[2m > [22mformatRelativeTime[2m > [22mdevrait retourner une chaîne vide pour une date invalide[32m 0[2mms[22m[39m
+ [31m×[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalRisks - Pattern #5 Parallel Optimization[2m > [22mdevrait envoyer des alertes en parallèle pour plusieurs risques et admins[32m 15[2mms[22m[39m
+[31m   → expected 55 to be 50 // Object.is equality[39m
+ [31m×[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalRisks - Pattern #5 Parallel Optimization[2m > [22mdevrait gérer les échecs individuels sans bloquer les autres alertes[32m 2[2mms[22m[39m
+[31m   → expected 8 to be 3 // Object.is equality[39m
+ [32m✓[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalRisks - Pattern #5 Parallel Optimization[2m > [22mdevrait envoyer aussi au propriétaire du risque s'il est différent des admins[32m 1[2mms[22m[39m
+ [31m×[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalRisks - Pattern #5 Parallel Optimization[2m > [22mdevrait retourner 0 si aucun risque critique[32m 1[2mms[22m[39m
+[31m   → expected undefined to be +0 // Object.is equality[39m
+ [32m✓[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalIncidents - Parallel Notifications[2m > [22mdevrait envoyer des alertes en parallèle pour les incidents critiques[32m 1[2mms[22m[39m
+ [32m✓[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalIncidents - Parallel Notifications[2m > [22mdevrait retourner 0 si aucun incident critique[32m 0[2mms[22m[39m
+ [31m×[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckNonCompliantControls - Parallel Notifications[2m > [22mdevrait envoyer une seule notification par admin avec le décompte[32m 2[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).eq is not a function[39m
+ [31m×[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mrunAllChecks - Execute all checks[2m > [22mdevrait exécuter toutes les vérifications[32m 1[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).eq is not a function[39m
+ [32m✓[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mPerformance comparison - Sequential vs Parallel[2m > [22mAVANT (séquentiel): 5 risks × 10 admins = ~4.5 secondes[33m 4539[2mms[22m[39m
+ [32m✓[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mPerformance comparison - Sequential vs Parallel[2m > [22mAPRÈS (parallèle): 5 risks × 10 admins = ~100ms[32m 93[2mms[22m[39m
+ [31m×[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mError resilience with Promise.allSettled[2m > [22mdevrait compter correctement les succès et échecs[32m 1[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).in is not a function[39m
+ [31m×[39m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mError logging[2m > [22mdevrait logger les erreurs sans interrompre le processus[32m 1[2mms[22m[39m
+[31m   → this.supabase.from(...).select(...).eq(...).in is not a function[39m
+ [31m×[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22mPerformance comparison - Sequential vs Parallel[2m > [22mAVANT (séquentiel): envoi séquentiel à 100 users = ~9 secondes[33m 5003[2mms[22m[39m
+[31m   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".[39m
+ [32m✓[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22mPerformance comparison - Sequential vs Parallel[2m > [22mAPRÈS (parallèle): envoi parallèle à 100 users = ~100ms[32m 93[2mms[22m[39m
+ [32m✓[39m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22mError resilience with Promise.allSettled[2m > [22mdevrait continuer même si certaines notifications échouent[32m 2[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 9 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/services/accounting.service.test.ts[2m [ tests/services/accounting.service.test.ts ][22m
+[31m[1mTypeError[22m: __vite_ssr_import_1__.XeroAdapter is not a constructor[39m
+[36m [2m❯[22m new AccountingService lib/services/accounting.service.ts:[2m28:11[22m[39m
+    [90m 26| [39m  [35mprivate[39m supabase [33m=[39m [34mcreateClient[39m()
+    [90m 27| [39m  [35mprivate[39m adapters[33m:[39m [33mRecord[39m[33m<[39m[33mAccountingProvider[39m[33m,[39m [33mAccountingAdapter[39m[33m>[39m [33m=[39m {
+    [90m 28| [39m    xero[33m:[39m [35mnew[39m [33mXeroAdapter[39m()[33m,[39m
+    [90m   | [39m          [31m^[39m
+    [90m 29| [39m    quickbooks[33m:[39m [35mnew[39m [33mQuickBooksAdapter[39m()[33m,[39m
+    [90m 30| [39m    sage[33m:[39m [35mnew[39m [33mSageAdapter[39m()[33m,[39m
+[90m [2m❯[22m lib/services/accounting.service.ts:[2m645:34[22m[39m
+[90m [2m❯[22m tests/services/accounting.service.test.ts:[2m7:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/messaging.service.test.ts[2m [ tests/services/messaging.service.test.ts ][22m
+[31m[1mReferenceError[22m: Cannot access 'mockSupabaseClient' before initialization[39m
+[36m [2m❯[22m createClient tests/services/messaging.service.test.ts:[2m28:23[22m[39m
+    [90m 26| [39m
+    [90m 27| [39mvi[33m.[39m[34mmock[39m([32m'@/lib/supabase/client'[39m[33m,[39m () [33m=>[39m ({
+    [90m 28| [39m  createClient[33m:[39m () [33m=>[39m mockSupabaseClient[33m,[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 29| [39m}))
+    [90m 30| [39m
+[90m [2m❯[22m new MessagingService lib/services/messaging.service.ts:[2m19:22[22m[39m
+[90m [2m❯[22m lib/services/messaging.service.ts:[2m1005:33[22m[39m
+[90m [2m❯[22m tests/services/messaging.service.test.ts:[2m2:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/notification.service.test.ts[2m [ tests/services/notification.service.test.ts ][22m
+[31m[1mReferenceError[22m: Cannot access 'mockSupabase' before initialization[39m
+[36m [2m❯[22m createClient tests/services/notification.service.test.ts:[2m33:23[22m[39m
+    [90m 31| [39m
+    [90m 32| [39mvi[33m.[39m[34mmock[39m([32m'@/lib/supabase/client'[39m[33m,[39m () [33m=>[39m ({
+    [90m 33| [39m  createClient[33m:[39m () [33m=>[39m mockSupabase[33m,[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 34| [39m}))
+    [90m 35| [39m
+[90m [2m❯[22m new NotificationService lib/services/notification.service.ts:[2m48:22[22m[39m
+[90m [2m❯[22m lib/services/notification.service.ts:[2m375:36[22m[39m
+[90m [2m❯[22m tests/services/notification.service.test.ts:[2m6:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/student.service.test.ts[2m [ tests/services/student.service.test.ts ][22m
+[31m[1mReferenceError[22m: Cannot access 'mockSupabase' before initialization[39m
+[36m [2m❯[22m createClient tests/services/student.service.test.ts:[2m24:23[22m[39m
+    [90m 22| [39m
+    [90m 23| [39mvi[33m.[39m[34mmock[39m([32m'@/lib/supabase/client'[39m[33m,[39m () [33m=>[39m ({
+    [90m 24| [39m  createClient[33m:[39m () [33m=>[39m mockSupabase[33m,[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 25| [39m}))
+    [90m 26| [39m
+[90m [2m❯[22m new StudentService lib/services/student.service.ts:[2m24:22[22m[39m
+[90m [2m❯[22m lib/services/student.service.ts:[2m403:31[22m[39m
+[90m [2m❯[22m tests/services/student.service.test.ts:[2m6:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/integration/workflows/attendance-workflow.test.ts[2m [ tests/integration/workflows/attendance-workflow.test.ts ][22m
+[31m[1mReferenceError[22m: Cannot access 'mockSupabase' before initialization[39m
+[36m [2m❯[22m createClient tests/integration/workflows/attendance-workflow.test.ts:[2m32:23[22m[39m
+    [90m 30| [39m
+    [90m 31| [39mvi[33m.[39m[34mmock[39m([32m'@/lib/supabase/client'[39m[33m,[39m () [33m=>[39m ({
+    [90m 32| [39m  createClient[33m:[39m () [33m=>[39m mockSupabase[33m,[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 33| [39m}))
+    [90m 34| [39m
+[90m [2m❯[22m new AttendanceService lib/services/attendance.service.ts:[2m12:22[22m[39m
+[90m [2m❯[22m lib/services/attendance.service.ts:[2m486:34[22m[39m
+[90m [2m❯[22m tests/integration/workflows/attendance-workflow.test.ts:[2m7:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/integration/workflows/messaging-workflow.test.ts[2m [ tests/integration/workflows/messaging-workflow.test.ts ][22m
+[31m[1mReferenceError[22m: Cannot access 'mockSupabase' before initialization[39m
+[36m [2m❯[22m createClient tests/integration/workflows/messaging-workflow.test.ts:[2m40:23[22m[39m
+    [90m 38| [39m
+    [90m 39| [39mvi[33m.[39m[34mmock[39m([32m'@/lib/supabase/client'[39m[33m,[39m () [33m=>[39m ({
+    [90m 40| [39m  createClient[33m:[39m () [33m=>[39m mockSupabase[33m,[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 41| [39m}))
+    [90m 42| [39m
+[90m [2m❯[22m new MessagingService lib/services/messaging.service.ts:[2m19:22[22m[39m
+[90m [2m❯[22m lib/services/messaging.service.ts:[2m1005:33[22m[39m
+[90m [2m❯[22m tests/integration/workflows/messaging-workflow.test.ts:[2m7:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/integration/workflows/notification-workflow.test.ts[2m [ tests/integration/workflows/notification-workflow.test.ts ][22m
+[31m[1mReferenceError[22m: Cannot access 'mockSupabase' before initialization[39m
+[36m [2m❯[22m createClient tests/integration/workflows/notification-workflow.test.ts:[2m37:23[22m[39m
+    [90m 35| [39m
+    [90m 36| [39mvi[33m.[39m[34mmock[39m([32m'@/lib/supabase/client'[39m[33m,[39m () [33m=>[39m ({
+    [90m 37| [39m  createClient[33m:[39m () [33m=>[39m mockSupabase[33m,[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 38| [39m}))
+    [90m 39| [39m
+[90m [2m❯[22m new NotificationService lib/services/notification.service.ts:[2m48:22[22m[39m
+[90m [2m❯[22m lib/services/notification.service.ts:[2m375:36[22m[39m
+[90m [2m❯[22m tests/integration/workflows/notification-workflow.test.ts:[2m7:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/integration/workflows/payment-workflow.test.ts[2m [ tests/integration/workflows/payment-workflow.test.ts ][22m
+[31m[1mReferenceError[22m: Cannot access 'mockSupabase' before initialization[39m
+[36m [2m❯[22m createClient tests/integration/workflows/payment-workflow.test.ts:[2m33:23[22m[39m
+    [90m 31| [39m
+    [90m 32| [39mvi[33m.[39m[34mmock[39m([32m'@/lib/supabase/client'[39m[33m,[39m () [33m=>[39m ({
+    [90m 33| [39m  createClient[33m:[39m () [33m=>[39m mockSupabase[33m,[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 34| [39m}))
+    [90m 35| [39m
+[90m [2m❯[22m new PaymentService lib/services/payment.service.ts:[2m24:22[22m[39m
+[90m [2m❯[22m lib/services/payment.service.ts:[2m459:31[22m[39m
+[90m [2m❯[22m tests/integration/workflows/payment-workflow.test.ts:[2m7:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/integration/workflows/student-creation.test.ts[2m [ tests/integration/workflows/student-creation.test.ts ][22m
+[31m[1mReferenceError[22m: Cannot access 'mockSupabase' before initialization[39m
+[36m [2m❯[22m createClient tests/integration/workflows/student-creation.test.ts:[2m32:23[22m[39m
+    [90m 30| [39m
+    [90m 31| [39mvi[33m.[39m[34mmock[39m([32m'@/lib/supabase/client'[39m[33m,[39m () [33m=>[39m ({
+    [90m 32| [39m  createClient[33m:[39m () [33m=>[39m mockSupabase[33m,[39m
+    [90m   | [39m                      [31m^[39m
+    [90m 33| [39m}))
+    [90m 34| [39m
+[90m [2m❯[22m new StudentService lib/services/student.service.ts:[2m24:22[22m[39m
+[90m [2m❯[22m lib/services/student.service.ts:[2m403:31[22m[39m
+[90m [2m❯[22m tests/integration/workflows/student-creation.test.ts:[2m7:1[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/34]⎯[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 25 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalRisks - Pattern #5 Parallel Optimization[2m > [22mdevrait envoyer des alertes en parallèle pour plusieurs risques et admins
+[31m[1mAssertionError[22m: expected 55 to be 50 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 50[39m
+[31m+ 55[39m
+
+[36m [2m❯[22m tests/services/compliance-alerts.service.test.ts:[2m112:33[22m[39m
+    [90m110| [39m
+    [90m111| [39m      [90m// 5 risks × 10 admins = 50 notifications[39m
+    [90m112| [39m      [34mexpect[39m(result[33m.[39malertsSent)[33m.[39m[34mtoBe[39m([34m50[39m)
+    [90m   | [39m                                [31m^[39m
+    [90m113| [39m      [34mexpect[39m(result[33m.[39mcriticalRisks)[33m.[39m[34mtoBe[39m([34m5[39m)
+    [90m114| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalRisks - Pattern #5 Parallel Optimization[2m > [22mdevrait gérer les échecs individuels sans bloquer les autres alertes
+[31m[1mAssertionError[22m: expected 8 to be 3 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 3[39m
+[31m+ 8[39m
+
+[36m [2m❯[22m tests/services/compliance-alerts.service.test.ts:[2m151:33[22m[39m
+    [90m149| [39m      [90m// 2 risks × 3 admins = 6 notifications total[39m
+    [90m150| [39m      [90m// La moitié échoue, donc 3 succès[39m
+    [90m151| [39m      [34mexpect[39m(result[33m.[39malertsSent)[33m.[39m[34mtoBe[39m([34m3[39m)
+    [90m   | [39m                                [31m^[39m
+    [90m152| [39m    })
+    [90m153| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckCriticalRisks - Pattern #5 Parallel Optimization[2m > [22mdevrait retourner 0 si aucun risque critique
+[31m[1mAssertionError[22m: expected undefined to be +0 // Object.is equality[39m
+
+[32m- Expected:[39m 
+0
+
+[31m+ Received:[39m 
+undefined
+
+[36m [2m❯[22m tests/services/compliance-alerts.service.test.ts:[2m192:36[22m[39m
+    [90m190| [39m
+    [90m191| [39m      [34mexpect[39m(result[33m.[39malertsSent)[33m.[39m[34mtoBe[39m([34m0[39m)
+    [90m192| [39m      [34mexpect[39m(result[33m.[39mcriticalRisks)[33m.[39m[34mtoBe[39m([34m0[39m)
+    [90m   | [39m                                   [31m^[39m
+    [90m193| [39m      expect(pushNotificationsService.sendNotification).not.toHaveBeen…
+    [90m194| [39m    })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mcheckNonCompliantControls - Parallel Notifications[2m > [22mdevrait envoyer une seule notification par admin avec le décompte
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).eq is not a function[39m
+[36m [2m❯[22m ComplianceAlertsService.checkNonCompliantControls lib/services/compliance-alerts.service.ts:[2m210:8[22m[39m
+    [90m208| [39m      [33m.[39m[34mselect[39m([32m'*'[39m)
+    [90m209| [39m      [33m.[39m[34meq[39m([32m'organization_id'[39m[33m,[39m organizationId)
+    [90m210| [39m      [33m.[39m[34meq[39m([32m'compliance_status'[39m[33m,[39m [32m'non_compliant'[39m)
+    [90m   | [39m       [31m^[39m
+    [90m211| [39m      [33m.[39m[34meq[39m([32m'risk_level'[39m[33m,[39m [32m'high'[39m)
+    [90m212| [39m
+[90m [2m❯[22m tests/services/compliance-alerts.service.test.ts:[2m278:36[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mrunAllChecks - Execute all checks[2m > [22mdevrait exécuter toutes les vérifications
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).eq is not a function[39m
+[36m [2m❯[22m ComplianceAlertsService.checkCriticalIncidents lib/services/compliance-alerts.service.ts:[2m127:8[22m[39m
+    [90m125| [39m      [33m.[39m[34mselect[39m([32m'*'[39m)
+    [90m126| [39m      [33m.[39m[34meq[39m([32m'organization_id'[39m[33m,[39m organizationId)
+    [90m127| [39m      [33m.[39m[34meq[39m([32m'severity'[39m[33m,[39m [32m'critical'[39m)
+    [90m   | [39m       [31m^[39m
+    [90m128| [39m      [33m.[39m[35min[39m([32m'status'[39m[33m,[39m [[32m'open'[39m[33m,[39m [32m'investigating'[39m])
+    [90m129| [39m
+[90m [2m❯[22m ComplianceAlertsService.runAllChecks lib/services/compliance-alerts.service.ts:[2m284:37[22m[39m
+[90m [2m❯[22m tests/services/compliance-alerts.service.test.ts:[2m303:22[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mError resilience with Promise.allSettled[2m > [22mdevrait compter correctement les succès et échecs
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).in is not a function[39m
+[36m [2m❯[22m ComplianceAlertsService.checkCriticalRisks lib/services/compliance-alerts.service.ts:[2m30:8[22m[39m
+    [90m 28| [39m      [33m.[39m[34mselect[39m([32m'id, full_name, email'[39m)
+    [90m 29| [39m      [33m.[39m[34meq[39m([32m'organization_id'[39m[33m,[39m organizationId)
+    [90m 30| [39m      [33m.[39m[35min[39m([32m'role'[39m[33m,[39m [[32m'super_admin'[39m[33m,[39m [32m'admin'[39m])
+    [90m   | [39m       [31m^[39m
+    [90m 31| [39m
+    [90m 32| [39m    logger[33m.[39m[34minfo[39m([32m'Critical risks analysis'[39m[33m,[39m {
+[90m [2m❯[22m tests/services/compliance-alerts.service.test.ts:[2m382:22[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/compliance-alerts.service.test.ts[2m > [22mComplianceAlertsService - Parallel Notifications Optimization[2m > [22mError logging[2m > [22mdevrait logger les erreurs sans interrompre le processus
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).in is not a function[39m
+[36m [2m❯[22m ComplianceAlertsService.checkCriticalRisks lib/services/compliance-alerts.service.ts:[2m30:8[22m[39m
+    [90m 28| [39m      [33m.[39m[34mselect[39m([32m'id, full_name, email'[39m)
+    [90m 29| [39m      [33m.[39m[34meq[39m([32m'organization_id'[39m[33m,[39m organizationId)
+    [90m 30| [39m      [33m.[39m[35min[39m([32m'role'[39m[33m,[39m [[32m'super_admin'[39m[33m,[39m [32m'admin'[39m])
+    [90m   | [39m       [31m^[39m
+    [90m 31| [39m
+    [90m 32| [39m    logger[33m.[39m[34minfo[39m([32m'Critical risks analysis'[39m[33m,[39m {
+[90m [2m❯[22m tests/services/compliance-alerts.service.test.ts:[2m402:22[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mgetAll[2m > [22mdevrait récupérer tous les documents avec pagination
+[31m[1mAssertionError[22m: expected { data: [ …(2) ], total: +0, …(3) } to deeply equal [ { id: 'doc-1', …(5) }, …(1) ][39m
+
+[32m- Expected:[39m 
+[
+  {
+    "created_at": "2026-01-10T23:18:22.266Z",
+    "file_name": "contract.pdf",
+    "file_url": "http://example.com/contract.pdf",
+    "id": "doc-1",
+    "organization_id": "org-1",
+    "type": "contract",
+  },
+  {
+    "created_at": "2026-01-10T23:18:22.266Z",
+    "file_name": "invoice.pdf",
+    "file_url": "http://example.com/invoice.pdf",
+    "id": "doc-2",
+    "organization_id": "org-1",
+    "type": "invoice",
+  },
+]
+
+[31m+ Received:[39m 
+{
+  "data": [
+    {
+      "created_at": "2026-01-10T23:18:22.266Z",
+      "file_name": "contract.pdf",
+      "file_url": "http://example.com/contract.pdf",
+      "id": "doc-1",
+      "organization_id": "org-1",
+      "type": "contract",
+    },
+    {
+      "created_at": "2026-01-10T23:18:22.266Z",
+      "file_name": "invoice.pdf",
+      "file_url": "http://example.com/invoice.pdf",
+      "id": "doc-2",
+      "organization_id": "org-1",
+      "type": "invoice",
+    },
+  ],
+  "limit": 10,
+  "page": 1,
+  "total": 0,
+  "totalPages": 0,
+}
+
+[36m [2m❯[22m tests/services/document.service.test.ts:[2m88:22[22m[39m
+    [90m 86| [39m      const result = await service.getAll('org-1', { page: 1, limit: 1…
+    [90m 87| [39m
+    [90m 88| [39m      [34mexpect[39m(result)[33m.[39m[34mtoEqual[39m(mockDocuments)
+    [90m   | [39m                     [31m^[39m
+    [90m 89| [39m      expect(mockSupabase.from).toHaveBeenCalledWith('generated_docume…
+    [90m 90| [39m      expect(mockSupabase.eq).toHaveBeenCalledWith('organization_id', …
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mgetById[2m > [22mdevrait lever une erreur NOT_FOUND si le document n'existe pas
+[31m[1mAssertionError[22m: expected AppError: Document avec l'ID non-existent… { …(6) } to match object { code: undefined }
+(10 matching properties omitted from actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- {[39m
+[32m-   "code": undefined,[39m
+[31m+ AppError {[39m
+[31m+   "code": "DB_3002",[39m
+[2m  }[22m
+
+[36m [2m❯[22m tests/services/document.service.test.ts:[2m133:7[22m[39m
+    [90m131| [39m
+    [90m132| [39m      await expect(service.getById('non-existent')).rejects.toThrow(Ap…
+    [90m133| [39m      await expect(service.getById('non-existent')).rejects.toMatchObj…
+    [90m   | [39m      [31m^[39m
+    [90m134| [39m        code[33m:[39m [33mErrorCode[39m[33m.[39m[33mNOT_FOUND[39m[33m,[39m
+    [90m135| [39m      })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mcreate[2m > [22mdevrait créer un document avec succès
+[31m[1mAppError[22m: Le titre est obligatoire[39m
+[36m [2m❯[22m ErrorHandler.createValidationError lib/errors/error-handler.ts:[2m370:12[22m[39m
+    [90m368| [39m   */[39m
+    [90m369| [39m  [34mcreateValidationError[39m(message[33m:[39m string[33m,[39m field[33m?[39m[33m:[39m string)[33m:[39m [33mAppError[39m {
+    [90m370| [39m    [35mreturn[39m [35mnew[39m [33mAppError[39m(
+    [90m   | [39m           [31m^[39m
+    [90m371| [39m      message[33m,[39m
+    [90m372| [39m      [33mErrorCode[39m[33m.[39m[33mVALIDATION_ERROR[39m[33m,[39m
+[90m [2m❯[22m DocumentService.create lib/services/document.service.ts:[2m120:28[22m[39m
+[90m [2m❯[22m tests/services/document.service.test.ts:[2m164:36[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22m[39m
+[31m[1mSerialized Error:[22m[39m [90m{ code: 'VALID_2001', severity: 'low', userMessage: 'Le titre est obligatoire', retryable: false, context: { field: 'title', userMessage: 'Le titre est obligatoire', code: 'VALID_2001', severity: 'low', timestamp: '2026-01-10T23:18:22.288Z' }, originalError: undefined }[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mcreate[2m > [22mdevrait gérer les contraintes uniques
+[31m[1mAssertionError[22m: expected AppError: Le titre est obligatoire { …(6) } to match object { code: 'VALID_2004' }
+(11 matching properties omitted from actual)[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- {[39m
+[32m-   "code": "VALID_2004",[39m
+[31m+ AppError {[39m
+[31m+   "code": "VALID_2001",[39m
+[2m  }[22m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22muploadFile[2m > [22mdevrait uploader un fichier vers Supabase Storage
+[31m[1mAppError[22m: Cannot destructure property 'data' of '(intermediate value)' as it is undefined.[39m
+[36m [2m❯[22m ErrorHandler.handleStandardError lib/errors/error-handler.ts:[2m268:22[22m[39m
+    [90m266| [39m    }
+    [90m267| [39m
+    [90m268| [39m    const appError = new AppError(error.message, code, severity, conte…
+    [90m   | [39m                     [31m^[39m
+    [90m269| [39m    [35mthis[39m[33m.[39m[34mlogError[39m(appError)
+    [90m270| [39m    [35mreturn[39m appError
+[90m [2m❯[22m ErrorHandler.handleError lib/errors/error-handler.ts:[2m218:19[22m[39m
+[90m [2m❯[22m DocumentService.uploadFile lib/services/document.service.ts:[2m218:26[22m[39m
+[90m [2m❯[22m tests/services/document.service.test.ts:[2m222:22[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22m[39m
+[31m[1mSerialized Error:[22m[39m [90m{ code: 'SYS_6001', severity: 'medium', userMessage: 'Une erreur interne est survenue. Veuillez réessayer.', retryable: false, context: { operation: 'uploadFile', path: 'org-1', fileName: 'test.pdf', code: 'SYS_6001', severity: 'medium', timestamp: '2026-01-10T23:18:22.296Z' }, originalError: { name: 'TypeError', message: 'Cannot destructure property \'data\' of \'(intermediate value)\' as it is undefined.', stack: 'TypeError: Cannot destructure property \'data\' of \'(intermediate value)\' as it is undefined.\n    at DocumentService.uploadFile (/Users/arafatetoure/Documents/EDUZEN/lib/services/document.service.ts:187:15)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at /Users/arafatetoure/Documents/EDUZEN/tests/services/document.service.test.ts:222:22\n    at file:///Users/arafatetoure/Documents/EDUZEN/node_modules/@vitest/runner/dist/index.js:915:20' } }[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mdelete[2m > [22mdevrait supprimer un document et son fichier
+[31m[1mAssertionError[22m: expected undefined to be true // Object.is equality[39m
+
+[32m- Expected:[39m 
+true
+
+[31m+ Received:[39m 
+undefined
+
+[36m [2m❯[22m tests/services/document.service.test.ts:[2m266:22[22m[39m
+    [90m264| [39m      [35mconst[39m result [33m=[39m [35mawait[39m service[33m.[39m[35mdelete[39m([32m'doc-1'[39m)
+    [90m265| [39m
+    [90m266| [39m      [34mexpect[39m(result)[33m.[39m[34mtoBe[39m([35mtrue[39m)
+    [90m   | [39m                     [31m^[39m
+    [90m267| [39m      [34mexpect[39m(mockSupabase[33m.[39m[35mdelete[39m)[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m268| [39m    })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mError handling patterns[2m > [22mdevrait propager les AppError sans les wrapper
+[31m[1mAssertionError[22m: expected AssertionError: Should have thrown { …(3) } to be AppError: Custom error { …(6) } // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- AppError {[39m
+[32m-   "message": "Custom error",[39m
+[32m-   "name": "AppError",[39m
+[32m-   "code": "VALID_2001",[39m
+[32m-   "severity": "medium",[39m
+[32m-   "userMessage": "Les données fournies ne sont pas valides.",[39m
+[32m-   "retryable": false,[39m
+[32m-   "context": {[39m
+[32m-     "code": "VALID_2001",[39m
+[32m-     "severity": "medium",[39m
+[32m-     "timestamp": "2026-01-10T23:18:22.301Z",[39m
+[32m-   },[39m
+[32m-   "originalError": undefined,[39m
+[31m+ AssertionError {[39m
+[31m+   "message": "Should have thrown",[39m
+[31m+   "actual": undefined,[39m
+[31m+   "expected": undefined,[39m
+[31m+   "operator": undefined,[39m
+[2m  }[22m
+
+[36m [2m❯[22m tests/services/document.service.test.ts:[2m303:23[22m[39m
+    [90m301| [39m        expect[33m.[39m[34mfail[39m([32m'Should have thrown'[39m)
+    [90m302| [39m      } [35mcatch[39m (error) {
+    [90m303| [39m        [34mexpect[39m(error)[33m.[39m[34mtoBe[39m(appError)
+    [90m   | [39m                      [31m^[39m
+    [90m304| [39m        [34mexpect[39m(error)[33m.[39m[34mtoBeInstanceOf[39m([33mAppError[39m)
+    [90m305| [39m      }
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/document.service.test.ts[2m > [22mDocumentService - ErrorHandler Standardization[2m > [22mError handling patterns[2m > [22mdevrait logger les opérations avec succès
+[31m[1mAppError[22m: duplicate key value violates unique constraint[39m
+[36m [2m❯[22m ErrorHandler.handleSupabaseError lib/errors/error-handler.ts:[2m325:22[22m[39m
+    [90m323| [39m    }
+    [90m324| [39m
+    [90m325| [39m    const appError = new AppError(message, errorCode, severity, contex…
+    [90m   | [39m                     [31m^[39m
+    [90m326| [39m    [35mthis[39m[33m.[39m[34mlogError[39m(appError)
+    [90m327| [39m    [35mreturn[39m appError
+[90m [2m❯[22m ErrorHandler.handleError lib/errors/error-handler.ts:[2m223:19[22m[39m
+[90m [2m❯[22m DocumentService.getById lib/services/document.service.ts:[2m90:28[22m[39m
+[90m [2m❯[22m tests/services/document.service.test.ts:[2m321:22[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22m[39m
+[31m[1mSerialized Error:[22m[39m [90m{ code: 'VALID_2004', severity: 'low', userMessage: 'Cette valeur existe déjà.', retryable: false, context: { operation: 'getById', id: 'doc-1', code: 'VALID_2004', severity: 'low', timestamp: '2026-01-10T23:18:22.304Z' }, originalError: { code: '23505', message: 'duplicate key value violates unique constraint' } }[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/payment.service.test.ts[2m > [22mPaymentService[2m > [22mgetAll[2m > [22mdevrait retourner un tableau vide si la table n'existe pas
+[31m[1mAppError[22m: Table not found[39m
+[36m [2m❯[22m tests/services/payment.service.test.ts:[2m96:21[22m[39m
+    [90m 94| [39m      [90m// Créer une erreur avec le code Supabase dans originalError[39m
+    [90m 95| [39m      const supabaseError = { code: 'PGRST116', message: 'Table not fo…
+    [90m 96| [39m      const error = new AppError('Table not found', ErrorCode.DB_NOT_F…
+    [90m   | [39m                    [31m^[39m
+    [90m 97| [39m      vi[33m.[39m[34mmocked[39m(getAllByOrganization)[33m.[39m[34mmockRejectedValue[39m(error)
+    [90m 98| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22m[39m
+[31m[1mSerialized Error:[22m[39m [90m{ code: 'DB_3003', severity: 'low', userMessage: 'Ressource introuvable.', retryable: false, context: { code: 'DB_3003', severity: 'low', timestamp: '2026-01-10T23:18:22.286Z' }, originalError: { code: 'PGRST116', message: 'Table not found' } }[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendCampaign - Pattern #5 Parallel Optimization[2m > [22mdevrait envoyer une campagne à tous les utilisateurs en parallèle
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).single is not a function[39m
+[36m [2m❯[22m PushNotificationsService.sendCampaign lib/services/push-notifications.service.ts:[2m384:8[22m[39m
+    [90m382| [39m      [33m.[39m[34mselect[39m([32m'*'[39m)
+    [90m383| [39m      [33m.[39m[34meq[39m([32m'id'[39m[33m,[39m campaignId)
+    [90m384| [39m      [33m.[39m[34msingle[39m()
+    [90m   | [39m       [31m^[39m
+    [90m385| [39m
+    [90m386| [39m    [35mif[39m ([33m![39mcampaign) {
+[90m [2m❯[22m tests/services/push-notifications.service.test.ts:[2m119:36[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendCampaign - Pattern #5 Parallel Optimization[2m > [22mdevrait gérer les échecs individuels sans bloquer toute la campagne
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).single is not a function[39m
+[36m [2m❯[22m PushNotificationsService.sendCampaign lib/services/push-notifications.service.ts:[2m384:8[22m[39m
+    [90m382| [39m      [33m.[39m[34mselect[39m([32m'*'[39m)
+    [90m383| [39m      [33m.[39m[34meq[39m([32m'id'[39m[33m,[39m campaignId)
+    [90m384| [39m      [33m.[39m[34msingle[39m()
+    [90m   | [39m       [31m^[39m
+    [90m385| [39m
+    [90m386| [39m    [35mif[39m ([33m![39mcampaign) {
+[90m [2m❯[22m tests/services/push-notifications.service.test.ts:[2m171:36[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendCampaign - Pattern #5 Parallel Optimization[2m > [22mdevrait envoyer une campagne ciblée à des utilisateurs spécifiques
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).single is not a function[39m
+[36m [2m❯[22m PushNotificationsService.sendCampaign lib/services/push-notifications.service.ts:[2m384:8[22m[39m
+    [90m382| [39m      [33m.[39m[34mselect[39m([32m'*'[39m)
+    [90m383| [39m      [33m.[39m[34meq[39m([32m'id'[39m[33m,[39m campaignId)
+    [90m384| [39m      [33m.[39m[34msingle[39m()
+    [90m   | [39m       [31m^[39m
+    [90m385| [39m
+    [90m386| [39m    [35mif[39m ([33m![39mcampaign) {
+[90m [2m❯[22m tests/services/push-notifications.service.test.ts:[2m200:36[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendCampaign - Pattern #5 Parallel Optimization[2m > [22mdevrait être rapide grâce à l'envoi parallèle (vs séquentiel)
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).single is not a function[39m
+[36m [2m❯[22m PushNotificationsService.sendCampaign lib/services/push-notifications.service.ts:[2m384:8[22m[39m
+    [90m382| [39m      [33m.[39m[34mselect[39m([32m'*'[39m)
+    [90m383| [39m      [33m.[39m[34meq[39m([32m'id'[39m[33m,[39m campaignId)
+    [90m384| [39m      [33m.[39m[34msingle[39m()
+    [90m   | [39m       [31m^[39m
+    [90m385| [39m
+    [90m386| [39m    [35mif[39m ([33m![39mcampaign) {
+[90m [2m❯[22m tests/services/push-notifications.service.test.ts:[2m237:21[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendNotification - Individual notification[2m > [22mdevrait envoyer une notification à un utilisateur avec devices actifs
+[31m[1mTypeError[22m: this.supabase.from(...).select(...).eq(...).maybeSingle is not a function[39m
+[36m [2m❯[22m PushNotificationsService.getPreferences lib/services/push-notifications.service.ts:[2m81:8[22m[39m
+    [90m 79| [39m      [33m.[39m[34mselect[39m([32m'*'[39m)
+    [90m 80| [39m      [33m.[39m[34meq[39m([32m'user_id'[39m[33m,[39m userId)
+    [90m 81| [39m      [33m.[39m[34mmaybeSingle[39m()
+    [90m   | [39m       [31m^[39m
+    [90m 82| [39m
+    [90m 83| [39m    [35mif[39m (error) [35mthrow[39m error
+[90m [2m❯[22m PushNotificationsService.sendNotification lib/services/push-notifications.service.ts:[2m133:36[22m[39m
+[90m [2m❯[22m tests/services/push-notifications.service.test.ts:[2m301:36[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendNotification - Individual notification[2m > [22mdevrait rejeter si les notifications sont désactivées pour ce type
+[31m[1mAssertionError[22m: expected [Function] to throw error including 'Notifications of type message are dis…' but got 'this.supabase.from(...).select(...).e…'[39m
+
+Expected: [32m"[7mNotifications of type message ar[27me [7md[27mis[7mabled for this user[27m"[39m
+Received: [31m"[7mthis.supabase.from(...).select(...).eq(...).maybeSingl[27me is[7m not a function[27m"[39m
+
+[36m [2m❯[22m tests/services/push-notifications.service.test.ts:[2m324:7[22m[39m
+    [90m322| [39m      })
+    [90m323| [39m
+    [90m324| [39m      await expect(service.sendNotification(userId, payload)).rejects.…
+    [90m   | [39m      [31m^[39m
+    [90m325| [39m        [32m'Notifications of type message are disabled for this user'[39m
+    [90m326| [39m      )
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22msendNotification - Individual notification[2m > [22mdevrait rejeter si heures silencieuses actives
+[31m[1mAssertionError[22m: expected [Function] to throw error including 'Quiet hours are active' but got 'this.supabase.from(...).select(...).e…'[39m
+
+Expected: [32m"[7mQuiet hours are a[27mcti[7mve[27m"[39m
+Received: [31m"[7mthis.supabase.from(...).select(...).eq(...).maybeSingle is not a fun[27mcti[7mon[27m"[39m
+
+[36m [2m❯[22m tests/services/push-notifications.service.test.ts:[2m353:7[22m[39m
+    [90m351| [39m      isQuietHoursSpy[33m.[39m[34mmockReturnValue[39m([35mtrue[39m)
+    [90m352| [39m
+    [90m353| [39m      await expect(service.sendNotification(userId, payload)).rejects.…
+    [90m   | [39m      [31m^[39m
+    [90m354| [39m        [32m'Quiet hours are active'[39m
+    [90m355| [39m      )
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/services/push-notifications.service.test.ts[2m > [22mPushNotificationsService - Campaign Optimization[2m > [22mPerformance comparison - Sequential vs Parallel[2m > [22mAVANT (séquentiel): envoi séquentiel à 100 users = ~9 secondes
+[31m[1mError[22m: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".[39m
+[36m [2m❯[22m tests/services/push-notifications.service.test.ts:[2m360:5[22m[39m
+    [90m358| [39m
+    [90m359| [39m  [34mdescribe[39m([32m'Performance comparison - Sequential vs Parallel'[39m[33m,[39m () [33m=>[39m {
+    [90m360| [39m    it('AVANT (séquentiel): envoi séquentiel à 100 users = ~9 secondes…
+    [90m   | [39m    [31m^[39m
+    [90m361| [39m      const userIds = Array.from({ length: 100 }, (_, i) => `user-${i}…
+    [90m362| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/34]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m tests/components/charts/premium-charts.test.tsx[2m > [22mPremium Charts Components[2m > [22mPremiumLineChart[2m > [22mdevrait rendre le composant sans erreur
+[31m[1mReferenceError[22m: GradientDef is not defined[39m
+[36m [2m❯[22m ChartContent components/charts/premium-line-chart.tsx:[2m168:12[22m[39m
+    [90m166| [39m      [33m<[39m[33mResponsiveContainer[39m [33mwidth[39m[33m=[39m[32m"100%"[39m [33mheight[39m[33m=[39m[32m"100%"[39m [33mminHeight[39m[33m=[39m[33m{[39m[34m300[39m[33m}[39m[33m>[39m
+    [90m167| [39m        [33m<[39m[33mLineChart[39m [33m{[39m[33m...[39mcommonProps[33m}[39m[33m>[39m
+    [90m168| [39m          [33m<[39m[33mGradientDef[39m [33m/[39m[33m>[39m
+    [90m   | [39m           [31m^[39m
+    [90m169| [39m          [33m<[39m[33mCartesianGrid[39m [33m{[39m[33m...[39mgridProps[33m}[39m [33m/[39m[33m>[39m
+    [90m170| [39m          [33m<[39m[33mXAxis[39m [33mdataKey[39m[33m=[39m[33m{[39mxAxisKey[33m}[39m [33m{[39m[33m...[39maxisProps[33m}[39m [33m/[39m[33m>[39m
+[90m [2m❯[22m renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:[2m15486:18[22m[39m
+[90m [2m❯[22m mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:[2m20103:13[22m[39m
+[90m [2m❯[22m beginWork node_modules/react-dom/cjs/react-dom.development.js:[2m21626:16[22m[39m
+[90m [2m❯[22m beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:[2m27465:14[22m[39m
+[90m [2m❯[22m performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:[2m26599:12[22m[39m
+[90m [2m❯[22m workLoopSync node_modules/react-dom/cjs/react-dom.development.js:[2m26505:5[22m[39m
+[90m [2m❯[22m renderRootSync node_modules/react-dom/cjs/react-dom.development.js:[2m26473:7[22m[39m
+[90m [2m❯[22m recoverFromConcurrentError node_modules/react-dom/cjs/react-dom.development.js:[2m25889:20[22m[39m
+[90m [2m❯[22m performConcurrentWorkOnRoot node_modules/react-dom/cjs/react-dom.development.js:[2m25789:22[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/34]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m14 failed[39m[22m[2m | [22m[1m[32m12 passed[39m[22m[90m (26)[39m
+[2m      Tests [22m [1m[31m25 failed[39m[22m[2m | [22m[1m[32m131 passed[39m[22m[90m (156)[39m
+[2m   Start at [22m 00:18:19
+[2m   Duration [22m 7.64s[2m (transform 5.02s, setup 10.19s, import 3.87s, tests 10.21s, environment 31.58s)[22m
+

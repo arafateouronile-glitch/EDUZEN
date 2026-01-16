@@ -1,0 +1,1058 @@
+openapi: 3.0.3
+info:
+  title: EDUZEN API
+  description: API REST pour la plateforme de gestion scolaire EDUZEN
+  version: 1.0.0
+  contact:
+    name: Support EDUZEN
+    email: support@eduzen.com
+
+servers:
+  - url: https://app.eduzen.com/api
+    description: Production
+  - url: http://localhost:3001/api
+    description: Development
+
+tags:
+  - name: 2FA
+    description: Authentification à deux facteurs
+  - name: Users
+    description: Gestion des utilisateurs
+  - name: Students
+    description: Gestion des étudiants
+  - name: Payments
+    description: Gestion des paiements
+  - name: Documents
+    description: Génération de documents
+  - name: Mobile Money
+    description: Paiements Mobile Money
+  - name: SEPA
+    description: Paiements SEPA
+  - name: Compliance
+    description: Conformité et audits
+  - name: QR Attendance
+    description: Présence par QR code
+  - name: Sessions
+    description: Gestion des sessions
+  - name: Programs
+    description: Gestion des programmes (futur)
+  - name: Formations
+    description: Gestion des formations (futur)
+  - name: Evaluations
+    description: Gestion des évaluations (futur)
+
+paths:
+  /2fa/generate-secret:
+    post:
+      tags: [2FA]
+      summary: Génère un secret TOTP et un QR code
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Secret généré avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secret:
+                    type: string
+                    example: "JBSWY3DPEHPK3PXP"
+                  qrCodeUrl:
+                    type: string
+                    format: uri
+                    example: "data:image/png;base64,..."
+                  backupCodes:
+                    type: array
+                    items:
+                      type: string
+                    example: ["A1B2C3D4", "E5F6G7H8"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /2fa/verify-activation:
+    post:
+      tags: [2FA]
+      summary: Vérifie un code TOTP lors de l'activation
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: "123456"
+      responses:
+        '200':
+          description: 2FA activée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /users/create:
+    post:
+      tags: [Users]
+      summary: Crée un nouvel utilisateur
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Utilisateur créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /v1/students:
+    get:
+      tags: [Students]
+      summary: Récupère la liste des étudiants
+      security:
+        - cookieAuth: []
+        - apiKey: []
+      parameters:
+        - name: organization_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Liste des étudiants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentsListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /payments/stripe/create-intent:
+    post:
+      tags: [Payments]
+      summary: Crée une intention de paiement Stripe
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStripeIntentRequest'
+      responses:
+        '200':
+          description: Intention de paiement créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StripeIntentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /payments/sepa/create-direct-debit:
+    post:
+      tags: [SEPA]
+      summary: Crée un prélèvement SEPA
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSEPADirectDebitRequest'
+      responses:
+        '200':
+          description: Prélèvement SEPA créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SEPAPaymentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /mobile-money/initiate:
+    post:
+      tags: [Mobile Money]
+      summary: Initie un paiement Mobile Money
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMobileMoneyRequest'
+      responses:
+        '200':
+          description: Paiement Mobile Money initié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileMoneyResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /documents/generate:
+    post:
+      tags: [Documents]
+      summary: Génère un document à partir d'un template
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateDocumentRequest'
+      responses:
+        '200':
+          description: Document généré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /sessions/active:
+    get:
+      tags: [Sessions]
+      summary: Récupère les sessions actives de l'utilisateur
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Liste des sessions actives
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+              examples:
+                success:
+                  summary: Sessions actives
+                  value:
+                    sessions:
+                      - id: "session-123"
+                        title: "Cours de Mathématiques"
+                        start_time: "2024-12-03T10:00:00Z"
+                        end_time: "2024-12-03T11:30:00Z"
+                        status: "active"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/timeout-rules:
+    post:
+      tags: [Sessions]
+      summary: Configure les règles de timeout pour les sessions
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organization_id]
+              properties:
+                organization_id:
+                  type: string
+                idle_timeout_minutes:
+                  type: integer
+                  default: 30
+                  description: Timeout après inactivité (minutes)
+                absolute_timeout_minutes:
+                  type: integer
+                  default: 480
+                  description: Timeout absolu (minutes)
+                warning_before_timeout_minutes:
+                  type: integer
+                  default: 5
+                  description: Avertissement avant timeout (minutes)
+            examples:
+              default:
+                summary: Configuration par défaut
+                value:
+                  organization_id: "org-123"
+                  idle_timeout_minutes: 30
+                  absolute_timeout_minutes: 480
+                  warning_before_timeout_minutes: 5
+      responses:
+        '200':
+          description: Règles de timeout configurées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  timeout_rules:
+                    $ref: '#/components/schemas/TimeoutRules'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /sessions/revoke:
+    post:
+      tags: [Sessions]
+      summary: Révoque une session active
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id]
+              properties:
+                session_id:
+                  type: string
+            examples:
+              revoke:
+                summary: Révoquer une session
+                value:
+                  session_id: "session-123"
+      responses:
+        '200':
+          description: Session révoquée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /compliance/alerts/check:
+    post:
+      tags: [Compliance]
+      summary: Vérifie les alertes de conformité
+      description: |
+        Exécute toutes les vérifications d'alertes de conformité pour l'organisation de l'utilisateur.
+        Les vérifications incluent GDPR, Qualiopi, et autres frameworks de conformité.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Résultats des vérifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComplianceCheckResponse'
+              examples:
+                success:
+                  summary: Vérifications réussies
+                  value:
+                    success: true
+                    timestamp: "2024-12-03T10:00:00Z"
+                    results:
+                      gdpr:
+                        passed: true
+                        alerts: []
+                      qualiopi:
+                        passed: true
+                        alerts: []
+                withAlerts:
+                  summary: Vérifications avec alertes
+                  value:
+                    success: true
+                    timestamp: "2024-12-03T10:00:00Z"
+                    results:
+                      gdpr:
+                        passed: false
+                        alerts:
+                          - id: "alert-123"
+                            type: "gdpr"
+                            severity: "high"
+                            message: "Données personnelles non chiffrées"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /qr-attendance/generate:
+    post:
+      tags: [QR Attendance]
+      summary: Génère un QR code pour une session
+      description: |
+        Génère un QR code unique pour une session de cours. Le QR code peut être configuré avec :
+        - Durée de validité
+        - Nombre maximum de scans
+        - Exigence de localisation
+        - Rayon autorisé
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateQRCodeRequest'
+            examples:
+              basic:
+                summary: QR code basique
+                value:
+                  session_id: "session-123"
+                  duration_minutes: 15
+              withLocation:
+                summary: QR code avec localisation
+                value:
+                  session_id: "session-123"
+                  duration_minutes: 30
+                  require_location: true
+                  allowed_radius_meters: 50
+      responses:
+        '200':
+          description: QR code généré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QRCodeResponse'
+              examples:
+                success:
+                  summary: QR code généré
+                  value:
+                    success: true
+                    qr_code:
+                      id: "qr-123"
+                      qr_code_data: "EDUZEN:session-123:abc123"
+                      expires_at: "2024-12-03T10:15:00Z"
+                    qr_code_image: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /qr-attendance/active/{sessionId}:
+    get:
+      tags: [QR Attendance]
+      summary: Récupère le QR code actif d'une session
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de la session
+      responses:
+        '200':
+          description: QR code actif trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QRCodeResponse'
+        '404':
+          description: Aucun QR code actif
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  qr_code:
+                    type: "null"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /qr-attendance/scan:
+    post:
+      tags: [QR Attendance]
+      summary: Scanne un QR code pour marquer la présence
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [qr_code, student_id]
+              properties:
+                qr_code:
+                  type: string
+                  description: Données du QR code scanné
+                student_id:
+                  type: string
+                  description: ID de l'étudiant
+                latitude:
+                  type: number
+                  format: float
+                  description: Latitude (si require_location est true)
+                longitude:
+                  type: number
+                  format: float
+                  description: Longitude (si require_location est true)
+            examples:
+              basic:
+                summary: Scan basique
+                value:
+                  qr_code: "EDUZEN:session-123:abc123"
+                  student_id: "student-123"
+              withLocation:
+                summary: Scan avec localisation
+                value:
+                  qr_code: "EDUZEN:session-123:abc123"
+                  student_id: "student-123"
+                  latitude: 14.7167
+                  longitude: -17.4677
+      responses:
+        '200':
+          description: Présence enregistrée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  attendance_id:
+                    type: string
+                    example: "attendance-123"
+                  message:
+                    type: string
+                    example: "Présence enregistrée avec succès"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /qr-attendance/deactivate/{qrCodeId}:
+    post:
+      tags: [QR Attendance]
+      summary: Désactive un QR code
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: qrCodeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID du QR code à désactiver
+      responses:
+        '200':
+          description: QR code désactivé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sb-access-token
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    CreateUserRequest:
+      type: object
+      required: [email, full_name, organization_id]
+      properties:
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        phone:
+          type: string
+        organization_id:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [super_admin, admin, teacher, accountant, parent, student]
+        is_active:
+          type: boolean
+        send_invitation:
+          type: boolean
+
+    UserResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            full_name:
+              type: string
+            role:
+              type: string
+            is_active:
+              type: boolean
+        message:
+          type: string
+
+    StudentsListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Student'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Student:
+      type: object
+      properties:
+        id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        student_number:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, graduated]
+        classes:
+          type: object
+          properties:
+            name:
+              type: string
+            level:
+              type: string
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        pageSize:
+          type: integer
+        totalItems:
+          type: integer
+        totalPages:
+          type: integer
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+
+    CreateStripeIntentRequest:
+      type: object
+      required: [amount, customer_email]
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+        currency:
+          type: string
+          default: EUR
+        description:
+          type: string
+        customer_email:
+          type: string
+          format: email
+        customer_name:
+          type: string
+        metadata:
+          type: object
+        return_url:
+          type: string
+          format: uri
+        cancel_url:
+          type: string
+          format: uri
+
+    StripeIntentResponse:
+      type: object
+      properties:
+        paymentIntentId:
+          type: string
+        clientSecret:
+          type: string
+        status:
+          type: string
+        paymentId:
+          type: string
+
+    CreateSEPADirectDebitRequest:
+      type: object
+      required: [amount, debtor_iban, mandate_id, creditor_id]
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+        currency:
+          type: string
+          default: EUR
+        description:
+          type: string
+        debtor_name:
+          type: string
+        debtor_iban:
+          type: string
+          pattern: '^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$'
+        debtor_bic:
+          type: string
+        reference:
+          type: string
+        due_date:
+          type: string
+          format: date
+        mandate_id:
+          type: string
+        creditor_name:
+          type: string
+        creditor_iban:
+          type: string
+        creditor_id:
+          type: string
+
+    SEPAPaymentResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        iban:
+          type: string
+        reference:
+          type: string
+        dueDate:
+          type: string
+          format: date
+
+    CreateMobileMoneyRequest:
+      type: object
+      required: [provider, amount, phone_number]
+      properties:
+        provider:
+          type: string
+          enum: [mtn, orange, airtel]
+        amount:
+          type: number
+          minimum: 1
+        currency:
+          type: string
+          default: XOF
+        phone_number:
+          type: string
+          pattern: '^\+[1-9]\d{1,14}$'
+        description:
+          type: string
+        invoice_id:
+          type: string
+
+    MobileMoneyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        transaction_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        message:
+          type: string
+
+    GenerateDocumentRequest:
+      type: object
+      required: [template_id, format]
+      properties:
+        template_id:
+          type: string
+        format:
+          type: string
+          enum: [pdf, docx, html]
+        variables:
+          type: object
+        send_email:
+          type: boolean
+        email_to:
+          type: string
+          format: email
+
+    DocumentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        document_id:
+          type: string
+        file_url:
+          type: string
+          format: uri
+        format:
+          type: string
+
+    ComplianceCheckResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        results:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              passed:
+                type: boolean
+              alerts:
+                type: array
+                items:
+                  type: object
+
+    GenerateQRCodeRequest:
+      type: object
+      required: [session_id]
+      properties:
+        session_id:
+          type: string
+        duration_minutes:
+          type: integer
+          default: 15
+        max_scans:
+          type: integer
+        require_location:
+          type: boolean
+          default: false
+        allowed_radius_meters:
+          type: integer
+
+    QRCodeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        qr_code:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "qr-123"
+            qr_code_data:
+              type: string
+              example: "EDUZEN:session-123:abc123"
+            expires_at:
+              type: string
+              format: date-time
+              example: "2024-12-03T10:15:00Z"
+        qr_code_image:
+          type: string
+          format: uri
+          example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "session-123"
+        title:
+          type: string
+          example: "Cours de Mathématiques"
+        start_time:
+          type: string
+          format: date-time
+          example: "2024-12-03T10:00:00Z"
+        end_time:
+          type: string
+          format: date-time
+          example: "2024-12-03T11:30:00Z"
+        status:
+          type: string
+          enum: [active, inactive, expired]
+          example: "active"
+
+    TimeoutRules:
+      type: object
+      properties:
+        idle_timeout_minutes:
+          type: integer
+          example: 30
+        absolute_timeout_minutes:
+          type: integer
+          example: 480
+        warning_before_timeout_minutes:
+          type: integer
+          example: 5
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Non authentifié
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Permission refusée
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    TooManyRequests:
+      description: Trop de requêtes
+      headers:
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: string
+            format: date-time
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation error"
+        message:
+          type: string
+          example: "Les champs suivants sont requis : email, full_name"
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        details:
+          type: object
+          additionalProperties: true
+          example:
+            field: "email"
+            message: "Email invalide"
+
+  responses:
+    NotFound:
+      description: Ressource non trouvée
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+

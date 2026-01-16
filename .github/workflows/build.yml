@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    name: Build Next.js
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run type-check
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Check bundle size
+        run: |
+          echo "Checking bundle size..."
+          # Vérifier que le bundle principal ne dépasse pas 500KB
+          # (à adapter selon vos besoins)
+          if [ -f ".next/static/chunks/main.js" ]; then
+            SIZE=$(stat -f%z .next/static/chunks/main.js 2>/dev/null || stat -c%s .next/static/chunks/main.js)
+            echo "Main bundle size: $SIZE bytes"
+            if [ $SIZE -gt 512000 ]; then
+              echo "⚠️ Warning: Main bundle exceeds 500KB"
+            fi
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: build
+          path: .next
+          retention-days: 7
