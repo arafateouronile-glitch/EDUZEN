@@ -1088,7 +1088,7 @@ export default function DashboardPage() {
           repeat: Infinity,
           ease: "easeInOut" as const
         }
-      } as const
+      }
 
   return (
     <ErrorBoundary>
