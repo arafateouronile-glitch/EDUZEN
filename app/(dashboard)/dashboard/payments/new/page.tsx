@@ -99,7 +99,7 @@ export default function NewInvoicePage() {
       } else {
         // Facture individuelle
         const amount = parseFloat(data.amount) || 0
-        const taxAmount = parseFloat(data.tax_amount) || 0
+        const taxAmount = parseFloat(data.tax_amount || '0') || 0
         const totalAmount = amount + taxAmount
 
         return invoiceService.create({
