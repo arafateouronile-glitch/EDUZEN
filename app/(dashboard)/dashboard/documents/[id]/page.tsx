@@ -86,6 +86,7 @@ export default function DocumentDetailPage() {
                   documentTitle={document.title || 'Document'}
                   onSuccess={() => {
                     addToast({
+                      type: 'success',
                       title: 'Demande de signature envoyée',
                       description: 'Les destinataires ont reçu un email avec le lien de signature.',
                     })
@@ -304,6 +305,7 @@ export default function DocumentDetailPage() {
           documentTitle={document?.title || 'Document'}
           onSuccess={() => {
             addToast({
+              type: 'success',
               title: 'Demande de signature envoyée',
               description: 'Les destinataires ont reçu un email avec le lien de signature.',
             })
