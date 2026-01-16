@@ -43,7 +43,27 @@ export default function ProgramSessionsPage() {
   // Récupérer les sessions
   const { data: sessions, isLoading, refetch } = useQuery({
     queryKey: ['program-sessions', programId],
-    queryFn: () => programService.getSessionsByProgram(programId),
+    queryFn: async () => {
+      // Récupérer les formations du programme d'abord
+      const { data: formations } = await supabase
+        .from('formations')
+        .select('id')
+        .eq('program_id', programId)
+
+      if (!formations || formations.length === 0) return []
+
+      const formationIds = formations.map(f => f.id)
+
+      // Récupérer les sessions des formations
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*, formations(*, programs(*))')
+        .in('formation_id', formationIds)
+        .order('start_date', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    },
   })
 
   // Récupérer les enseignants
