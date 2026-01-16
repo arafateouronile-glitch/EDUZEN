@@ -540,7 +540,7 @@ export default function ReportsPage() {
       addToast({
         type: 'error',
         title: 'Erreur',
-        message: 'Vous devez être connecté pour exporter les données',
+        description: 'Vous devez être connecté pour exporter les données',
       })
       return
     }
