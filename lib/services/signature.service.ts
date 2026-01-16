@@ -31,6 +31,9 @@ export interface SignatureWithUser {
   signer_id: string
   signature_data: string
   signature_type: 'handwritten' | 'typed' | 'image' | null
+  signer_name: string | null
+  signer_email: string | null
+  signer_role: string | null
   position_x: number | null
   position_y: number | null
   width: number | null
