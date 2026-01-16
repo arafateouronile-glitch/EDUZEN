@@ -51,7 +51,8 @@ export default function StudentsPage() {
     queryKey: ['students', user?.organization_id, search, statusFilter, sessionFilter],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      let studentsData = await studentService.getAll(user.organization_id, { search })
+      const result = await studentService.getAll(user.organization_id, { search })
+      let studentsData = result.data || []
       
       // Filtrer par statut
       if (statusFilter !== 'all') {
