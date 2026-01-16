@@ -88,7 +88,6 @@ export default function DocumentDetailPage() {
                     addToast({
                       title: 'Demande de signature envoyée',
                       description: 'Les destinataires ont reçu un email avec le lien de signature.',
-                      variant: 'success',
                     })
                   }}
                   trigger={
@@ -307,7 +306,6 @@ export default function DocumentDetailPage() {
             addToast({
               title: 'Demande de signature envoyée',
               description: 'Les destinataires ont reçu un email avec le lien de signature.',
-              variant: 'success',
             })
           }}
           trigger={
