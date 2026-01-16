@@ -59,7 +59,8 @@ export default function DocumentDetailPage() {
     )
   }
 
-  const hasUserSigned = signatures?.some((sig) => sig.signer?.id === user?.id && sig.status === 'signed')
+  // Note: getSignaturesByDocument retourne déjà uniquement les signatures avec status === 'signed'
+  const hasUserSigned = signatures?.some((sig) => sig.signer?.id === user?.id)
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
