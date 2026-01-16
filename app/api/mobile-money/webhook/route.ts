@@ -42,13 +42,14 @@ function mapWebhookStatus(provider: string, status: string): 'success' | 'failed
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { provider?: string } }
+  { params }: { params: Promise<{ provider?: string }> }
 ) {
   return withRateLimit(request, generalRateLimiter, async (req) => {
   try {
+    const resolvedParams = await params
     // Extraire le provider de l'URL
     const url = new URL(req.url)
-    const provider = params?.provider || url.pathname.split('/').pop()
+    const provider = resolvedParams?.provider || url.pathname.split('/').pop()
 
     if (!provider || !['mtn', 'orange', 'airtel'].includes(provider)) {
       return NextResponse.json(
