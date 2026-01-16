@@ -30,7 +30,17 @@ const PremiumPieChart = dynamic(() => import('@/components/charts/premium-pie-ch
   loading: () => <div className="h-64 bg-gray-100 rounded-lg animate-pulse" />
 })
 
-// Note: recharts est déjà lazy loaded via les composants Premium*Chart
+// Import des composants recharts pour les graphiques personnalisés
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts'
+
 import { performanceMonitor } from '@/lib/utils/performance-monitor'
 
 type Payment = TableRow<'payments'>
