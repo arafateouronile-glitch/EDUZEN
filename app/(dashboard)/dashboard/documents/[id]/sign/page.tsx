@@ -72,9 +72,9 @@ export default function SignDocumentPage() {
     },
     onError: (error: Error) => {
       addToast({
+        type: 'error',
         title: 'Erreur',
         description: error.message || 'Une erreur est survenue lors de l\'enregistrement de la signature.',
-        variant: 'destructive',
       })
     },
   })

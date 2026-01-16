@@ -121,9 +121,9 @@ export default function QualiopiPage() {
     onError: (error: any) => {
       console.error('Error initializing indicators:', error)
       addToast({
+        type: 'error',
         title: 'Erreur',
         description: error?.message || 'Une erreur est survenue lors de l\'initialisation des indicateurs.',
-        variant: 'destructive',
       })
     },
   })
