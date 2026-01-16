@@ -941,7 +941,6 @@ export default function DashboardPage() {
       if (error) return []
       return data || []
     },
-    enabled: !!user?.organization_id,
   })
 
   // Récupérer les top programmes
