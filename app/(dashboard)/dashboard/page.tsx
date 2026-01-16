@@ -833,7 +833,6 @@ export default function DashboardPage() {
 
       return classData.filter((c) => c.students > 0).slice(0, 10) // Limiter à 10 pour la lisibilité
     },
-    enabled: !!user?.organization_id && user?.role !== 'teacher',
   })
 
   // Récupérer les statuts de factures
