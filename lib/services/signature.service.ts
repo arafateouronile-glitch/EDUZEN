@@ -25,7 +25,21 @@ export interface CreateSignatureParams {
   comment?: string
 }
 
-export interface SignatureWithUser extends DocumentSignature {
+export interface SignatureWithUser {
+  id: string
+  document_id: string
+  signer_id: string
+  signature_data: string
+  signature_type: 'handwritten' | 'typed' | 'image' | null
+  position_x: number | null
+  position_y: number | null
+  width: number | null
+  height: number | null
+  page_number: number | null
+  status: 'pending' | 'signed' | 'declined' | null
+  signed_at: string | null
+  comment: string | null
+  created_at: string
   signer: {
     id: string
     full_name: string | null
