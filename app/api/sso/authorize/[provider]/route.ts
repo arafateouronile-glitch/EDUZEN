@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server'
 
 export async function GET(
   request: Request,
-  { params }: { params: { provider: string } }
+  { params }: { params: Promise<{ provider: string }> }
 ) {
-  const { provider } = params
+  const { provider } = await params
   
   // TODO: Implémenter l'autorisation SSO pour différents providers
   // (Google, Microsoft, Okta, etc.)
