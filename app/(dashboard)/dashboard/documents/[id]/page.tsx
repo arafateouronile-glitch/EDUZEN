@@ -188,9 +188,11 @@ export default function DocumentDetailPage() {
                                 {signature.signer_email}
                               </p>
                             )}
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Signé le {formatDate(signature.signed_at)}
-                            </p>
+                            {signature.signed_at && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Signé le {formatDate(signature.signed_at)}
+                              </p>
+                            )}
                             {signature.comment && (
                               <p className="text-sm text-muted-foreground mt-2 italic">
                                 "{signature.comment}"
