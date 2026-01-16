@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Edit, Calendar, Clock, MapPin, Users, BookOpen, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
+import type { SessionWithRelations } from '@/lib/types/query-types'
 
 export default function SessionDetailPage() {
   const params = useParams()
