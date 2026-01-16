@@ -39,7 +39,7 @@ export interface SignatureWithUser {
   width: number | null
   height: number | null
   page_number: number | null
-  status: 'pending' | 'signed' | 'declined' | null
+  status: 'pending' | 'signed' | 'declined' | 'revoked' | 'expired' | null
   signed_at: string | null
   comment: string | null
   created_at: string
