@@ -7,10 +7,11 @@ import { signatureRequestService } from '@/lib/services/signature-request.servic
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const signatureRequest = await signatureRequestService.getSignatureRequestByToken(params.token)
+    const { token } = await params
+    const signatureRequest = await signatureRequestService.getSignatureRequestByToken(token)
 
     return NextResponse.json(signatureRequest)
   } catch (error) {

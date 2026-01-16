@@ -8,9 +8,10 @@ import { electronicAttendanceService } from '@/lib/services/electronic-attendanc
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -25,7 +26,7 @@ export async function PATCH(
     const { action } = body
 
     if (action === 'remind') {
-      const result = await electronicAttendanceService.sendAttendanceReminder(params.id)
+      const result = await electronicAttendanceService.sendAttendanceReminder(id)
       return NextResponse.json({ success: result })
     }
 

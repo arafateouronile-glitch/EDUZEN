@@ -7,10 +7,11 @@ import { electronicAttendanceService } from '@/lib/services/electronic-attendanc
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const attendanceRequest = await electronicAttendanceService.getAttendanceRequestByToken(params.token)
+    const { token } = await params
+    const attendanceRequest = await electronicAttendanceService.getAttendanceRequestByToken(token)
 
     return NextResponse.json(attendanceRequest)
   } catch (error) {

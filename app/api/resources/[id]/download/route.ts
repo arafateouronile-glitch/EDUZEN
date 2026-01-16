@@ -7,9 +7,10 @@ import { resourceLibraryService } from '@/lib/services/resource-library.service'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: resourceId } = await params
     const supabase = await createClient()
     const {
       data: { user },
@@ -18,8 +19,6 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
-
-    const resourceId = params.id
 
     // Récupérer la ressource
     const { data: resource, error } = await supabase

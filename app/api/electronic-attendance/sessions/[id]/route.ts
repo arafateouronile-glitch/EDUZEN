@@ -8,9 +8,10 @@ import { electronicAttendanceService } from '@/lib/services/electronic-attendanc
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -21,7 +22,7 @@ export async function GET(
       )
     }
 
-    const session = await electronicAttendanceService.getAttendanceSessionById(params.id)
+    const session = await electronicAttendanceService.getAttendanceSessionById(id)
 
     return NextResponse.json(session)
   } catch (error) {
@@ -39,9 +40,10 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -57,14 +59,14 @@ export async function PATCH(
 
     if (action === 'launch') {
       const result = await electronicAttendanceService.launchAttendanceSession(
-        params.id,
+        id,
         sendEmails !== false
       )
       return NextResponse.json(result)
     }
 
     if (action === 'close') {
-      const result = await electronicAttendanceService.closeAttendanceSession(params.id)
+      const result = await electronicAttendanceService.closeAttendanceSession(id)
       return NextResponse.json(result)
     }
 

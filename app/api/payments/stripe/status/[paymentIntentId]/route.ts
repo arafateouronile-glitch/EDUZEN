@@ -8,10 +8,11 @@ import { withRateLimit, generalRateLimiter } from '@/lib/utils/rate-limiter'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { paymentIntentId: string } }
+  { params }: { params: Promise<{ paymentIntentId: string }> }
 ) {
   return withRateLimit(request, generalRateLimiter, async (req) => {
     try {
+      const { paymentIntentId } = await params
       const supabase = await createClient()
       const {
         data: { user },
@@ -20,8 +21,6 @@ export async function GET(
       if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-
-      const { paymentIntentId } = await params
 
       // TODO: Vérifier avec l'API Stripe réelle
       // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)

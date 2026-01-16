@@ -8,9 +8,10 @@ import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { paymentId: string } }
+  { params }: { params: Promise<{ paymentId: string }> }
 ) {
   try {
+    const { paymentId } = await params
     const supabase = await createClient()
     const {
       data: { user },
@@ -19,8 +20,6 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const { paymentId } = params
 
     // Récupérer depuis la base de données
     const { data: payment, error } = await supabase
