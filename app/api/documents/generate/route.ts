@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
-import { generateODT } from '@/lib/utils/document-generation/odt-generator'
+// import { generateODT } from '@/lib/utils/document-generation/odt-generator' // TODO: Implémenter generateODT
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { emailService } from '@/lib/services/email.service'
 import { templateAnalyticsService } from '@/lib/services/template-analytics.service'
@@ -166,12 +166,11 @@ export async function POST(request: NextRequest) {
         fileName = `${template.type}_${Date.now()}.docx`
         console.log('DOCX généré avec succès')
       } else if (body.format === 'ODT') {
-        console.log('Début de la génération ODT...')
-        const result = await generateODT(template as DocumentTemplate, body.variables, documentId, userData.organization_id)
-        fileBlob = result.blob
-        pageCount = result.pageCount
-        fileName = `${template.type}_${Date.now()}.odt`
-        console.log('ODT généré avec succès')
+        // TODO: Implémenter generateODT dans lib/utils/document-generation/odt-generator.ts
+        return NextResponse.json(
+          { error: 'Le format ODT n\'est pas encore implémenté. Utilisez PDF, DOCX ou HTML.' },
+          { status: 501 }
+        )
       } else if (body.format === 'HTML') {
         console.log('Début de la génération HTML...')
         // Pour HTML, on génère d'abord sans documentId (les signatures seront des placeholders)

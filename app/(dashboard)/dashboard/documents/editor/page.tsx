@@ -1,3 +1,5 @@
+'use client'
+
 import dynamic from 'next/dynamic'
 
 // Import dynamique pour éviter les erreurs SSR avec TipTap

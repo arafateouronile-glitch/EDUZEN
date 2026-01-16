@@ -1,9 +1,12 @@
 'use server'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { wordGeneratorService, ConventionData } from '@/lib/services/word-generator.service'
+// import { wordGeneratorService, ConventionData } from '@/lib/services/word-generator.service' // TODO: Implémenter wordGeneratorService
 import * as path from 'path'
 import * as fs from 'fs/promises'
+
+// Type temporaire en attendant l'implémentation
+type ConventionData = any
 
 /**
  * Route API pour générer un document Word à partir d'un template docxtemplater
@@ -30,12 +33,18 @@ export async function POST(request: NextRequest) {
       `convention-${Date.now()}.docx`
     )
 
-    // Générer le document
-    await wordGeneratorService.generateDoc(
-      templatePath,
-      data as ConventionData,
-      finalOutputPath
+    // TODO: Implémenter wordGeneratorService.generateDoc dans lib/services/word-generator.service.ts
+    return NextResponse.json(
+      { error: 'La génération de documents Word via template n\'est pas encore implémentée.' },
+      { status: 501 }
     )
+
+    // Générer le document (code commenté en attendant l'implémentation)
+    // await wordGeneratorService.generateDoc(
+    //   templatePath,
+    //   data as ConventionData,
+    //   finalOutputPath
+    // )
 
     // Lire le fichier généré
     const buffer = await fs.readFile(finalOutputPath)

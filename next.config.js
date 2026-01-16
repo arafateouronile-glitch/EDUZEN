@@ -4,15 +4,26 @@ const withNextIntl = require('next-intl/plugin')(
 )
 
 /** @type {import('next').NextConfig} */
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-})
+// Bundle analyzer uniquement si disponible (devDependencies) ou si ANALYZE=true
+// En production sur Vercel, @next/bundle-analyzer n'est pas installé (devDependencies)
+// Donc on le rend vraiment optionnel
+let withBundleAnalyzer = (config) => config
+
+// Vérifier si le module est disponible AVANT de l'utiliser
+if (process.env.ANALYZE === 'true' || process.env.NODE_ENV === 'development') {
+  try {
+    const bundleAnalyzer = require('@next/bundle-analyzer')
+    withBundleAnalyzer = bundleAnalyzer({
+      enabled: process.env.ANALYZE === 'true',
+    })
+  } catch (e) {
+    // Module non disponible, on continue sans (cas production Vercel)
+  }
+}
 
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true, // Activé pour la production (optimisation de la taille du bundle)
   images: {
-    domains: ['localhost'],
     remotePatterns: [
       {
         protocol: 'https',
