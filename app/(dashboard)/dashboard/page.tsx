@@ -1086,9 +1086,9 @@ export default function DashboardPage() {
         transition: {
           duration: 6,
           repeat: Infinity,
-          ease: "easeInOut"
+          ease: "easeInOut" as const
         }
-      }
+      } as const
 
   return (
     <ErrorBoundary>
