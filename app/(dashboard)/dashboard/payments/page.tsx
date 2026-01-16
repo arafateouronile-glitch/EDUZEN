@@ -253,7 +253,6 @@ function PaymentsPageContent() {
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          error.status === 400 ||
           error.code === '400' ||
           error.message?.includes('relation') ||
           error.message?.includes('relationship') ||
