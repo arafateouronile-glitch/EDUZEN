@@ -1162,7 +1162,7 @@ export default function GenerateDocumentPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Format d'export</label>
-                    <Select value={exportFormat} onValueChange={(value: 'pdf' | 'word') => setExportFormat(value)}>
+                    <Select value={exportFormat} onValueChange={(value) => setExportFormat(value as 'pdf' | 'word')}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Sélectionner un format" />
                       </SelectTrigger>
