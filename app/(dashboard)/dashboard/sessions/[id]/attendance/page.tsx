@@ -54,7 +54,7 @@ export default function SessionAttendancePage() {
   })
 
   // Récupérer l'émargement existant
-  const { data: existingAttendance, refetch: refetchAttendance } = useQuery({
+  const { data: existingAttendance, refetch: refetchAttendance } = useQuery<AttendanceWithRelations[]>({
     queryKey: ['attendance-session', sessionId, date],
     queryFn: () => attendanceService.getBySessionAndDate(sessionId, date),
     enabled: !!sessionId,
@@ -75,8 +75,7 @@ export default function SessionAttendancePage() {
         lateMinutes?: number | null
         notes?: string | null
       }> = {}
-      const attendanceArray = existingAttendance as AttendanceWithRelations[]
-      attendanceArray.forEach((att) => {
+      existingAttendance.forEach((att) => {
         initial[att.student_id] = {
           status: att.status,
           lateMinutes: att.late_minutes,
