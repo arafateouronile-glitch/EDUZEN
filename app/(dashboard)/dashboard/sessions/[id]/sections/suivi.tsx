@@ -243,7 +243,7 @@ export function Suivi({
                 hasConvocations: false, // TODO: Vérifier si les convocations ont été envoyées
                 attendanceRate,
                 invoicesGenerated: enrollments.some(e => e.payment_status !== 'pending'),
-                evaluationsCompleted: gradesStats && gradesStats.total > 0,
+                evaluationsCompleted: !!(gradesStats && gradesStats.total > 0),
               }}
             />
           </GlassCard>
