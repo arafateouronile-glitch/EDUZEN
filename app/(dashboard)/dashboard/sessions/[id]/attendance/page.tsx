@@ -75,14 +75,13 @@ export default function SessionAttendancePage() {
         lateMinutes?: number | null
         notes?: string | null
       }> = {}
-      const attendanceList: AttendanceWithRelations[] = existingAttendance
-      attendanceList.forEach((att) => {
+      for (const att of existingAttendance) {
         initial[att.student_id] = {
           status: att.status,
           lateMinutes: att.late_minutes,
           notes: att.notes || '',
         }
-      })
+      }
       // Ajouter les étudiants non encore émarginés
       (enrollments as EnrollmentWithRelations[]).forEach((enrollment) => {
         const studentId = enrollment.student_id
