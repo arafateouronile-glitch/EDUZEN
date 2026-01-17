@@ -10,6 +10,18 @@ type ChargeCategoryInsert = TableInsert<'charge_categories'>
 
 export interface SessionChargeWithCategory extends SessionCharge {
   id: string // Explicitement inclure id pour éviter les erreurs TypeScript
+  description: string
+  amount: number
+  currency: string
+  charge_date: string
+  category_id: string | null
+  payment_method: string | null
+  payment_status: 'pending' | 'paid' | 'cancelled'
+  paid_at: string | null
+  vendor: string | null
+  vendor_invoice_number: string | null
+  vendor_invoice_date: string | null
+  notes: string | null
   charge_categories?: ChargeCategory | null
 }
 
