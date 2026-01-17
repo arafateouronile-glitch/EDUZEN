@@ -94,20 +94,20 @@ export default function SessionAttendancePage() {
         }
       })
       setAttendance(initial)
-    } else if (enrollments) {
+    } else if (enrollments && Array.isArray(enrollments)) {
       // Initialiser tous les étudiants comme présents par défaut
       const initial: Record<string, {
         status: AttendanceStatus
         lateMinutes?: number
         notes?: string
       }> = {}
-      (enrollments as EnrollmentWithRelations[]).forEach((enrollment) => {
+      for (const enrollment of enrollments) {
         initial[enrollment.student_id] = {
           status: 'present' as AttendanceStatus,
           lateMinutes: 0,
           notes: '',
         }
-      })
+      }
       setAttendance(initial)
     }
   }, [existingAttendance, enrollments])
