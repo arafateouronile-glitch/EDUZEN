@@ -36,13 +36,7 @@ function ExportsHistoryPageContent() {
   const pageSize = 20
 
   // Récupérer l'historique des exports
-  const { data: exportsData, isLoading } = useQuery<{
-    data: Array<{ id: string; [key: string]: any }>;
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }>({
+  const { data: exportsData, isLoading } = useQuery({
     queryKey: ['export-history', user?.organization_id, page, exportTypeFilter, entityTypeFilter],
     queryFn: async () => {
       if (!user?.organization_id) return { data: [], total: 0, page: 1, limit: pageSize, totalPages: 0 }
