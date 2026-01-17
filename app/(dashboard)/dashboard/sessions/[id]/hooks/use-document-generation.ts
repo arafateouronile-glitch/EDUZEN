@@ -53,7 +53,7 @@ export function useDocumentGeneration({
     }
 
     try {
-      const html = generateConventionHTML({
+      const html = await generateConventionHTML({
         session: {
           name: sessionData.name,
           start_date: sessionData.start_date,
