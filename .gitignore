@@ -76,6 +76,8 @@ dist/
 # Backup files
 *.backup.*
 *.backup
+*.bak
+*.bak.*
 
 # Logs
 logs/
