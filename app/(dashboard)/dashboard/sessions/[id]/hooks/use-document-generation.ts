@@ -548,7 +548,7 @@ export function useDocumentGeneration({
         const student = enrollment.students
         if (!student) continue
 
-        const convocationHTML = generateConvocationHTML({
+        const convocationHTML = await generateConvocationHTML({
           student: {
             first_name: student.first_name,
             last_name: student.last_name,
