@@ -102,7 +102,6 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
           onTemplateChange({
             content: {
               ...template.content,
-              html: newBodyContent, // Sauvegarder en format {variable}
               elements: [
                 {
                   id: 'main-content',
