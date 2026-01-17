@@ -66,7 +66,7 @@ export function GestionAutomatisation({
     queryKey: ['email-templates', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
-      return emailTemplateService.getAllTemplates(user.organization_id)
+      return emailTemplateService.getAll(user.organization_id)
     },
     enabled: !!user?.organization_id,
   })
