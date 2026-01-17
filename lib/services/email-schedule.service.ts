@@ -61,7 +61,7 @@ export interface CreateEmailScheduleInput {
 }
 
 export interface UpdateEmailScheduleInput extends Partial<CreateEmailScheduleInput> {
-  id: string
+  id?: string // Optionnel car passé comme paramètre séparé dans updateSchedule
 }
 
 export interface EmailScheduleExecutionResult {
