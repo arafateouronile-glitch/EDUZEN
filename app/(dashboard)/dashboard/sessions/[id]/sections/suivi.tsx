@@ -19,7 +19,11 @@ import dynamic from 'next/dynamic'
 
 // Lazy load SessionTimeline avec gestion d'erreur
 const SessionTimeline = dynamic(
-  () => import('../components/session-timeline').then(mod => ({ default: mod.SessionTimeline })),
+  () => import('../components/session-timeline').then(mod => ({ default: mod.SessionTimeline })).catch((error) => {
+    console.error('Erreur lors du chargement de SessionTimeline:', error)
+    // Retourner un composant de fallback en cas d'erreur
+    return { default: () => <div className="p-8 text-center text-red-500">Erreur lors du chargement de la timeline</div> }
+  }),
   { 
     ssr: false,
     loading: () => (
@@ -27,9 +31,6 @@ const SessionTimeline = dynamic(
         <p>Chargement de la timeline...</p>
       </div>
     ),
-    onError: (error) => {
-      console.error('Erreur lors du chargement de SessionTimeline:', error)
-    }
   }
 )
 import type {
