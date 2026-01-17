@@ -98,8 +98,8 @@ export default function SessionAttendancePage() {
       // Initialiser tous les étudiants comme présents par défaut
       const initial: Record<string, {
         status: AttendanceStatus
-        lateMinutes?: number | null
-        notes?: string | null
+        lateMinutes?: number
+        notes?: string
       }> = {}
       (enrollments as EnrollmentWithRelations[]).forEach((enrollment) => {
         initial[enrollment.student_id] = {
