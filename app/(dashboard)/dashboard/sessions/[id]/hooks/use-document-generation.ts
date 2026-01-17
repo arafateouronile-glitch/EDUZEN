@@ -99,8 +99,8 @@ export function useDocumentGeneration({
       })
     } catch (error) {
       logger.error('Erreur lors de la génération de la convention', error as Error, {
-        enrollmentId: enrollment.id,
-        studentId: enrollment.student_id,
+        sessionId: sessionData?.id,
+        formationId: formation?.id,
       })
       addToast({
         type: 'error',
