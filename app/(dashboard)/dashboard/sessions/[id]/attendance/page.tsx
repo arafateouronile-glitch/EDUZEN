@@ -75,7 +75,8 @@ export default function SessionAttendancePage() {
         lateMinutes?: number | null
         notes?: string | null
       }> = {}
-      existingAttendance.forEach((att) => {
+      const attendanceArray = existingAttendance as AttendanceWithRelations[]
+      attendanceArray.forEach((att) => {
         initial[att.student_id] = {
           status: att.status,
           lateMinutes: att.late_minutes,
