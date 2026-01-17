@@ -72,13 +72,13 @@ export default function SessionAttendancePage() {
     if (existingAttendance && Array.isArray(existingAttendance) && enrollments) {
       const initial: Record<string, {
         status: AttendanceStatus
-        lateMinutes?: number | null
-        notes?: string | null
+        lateMinutes?: number
+        notes?: string
       }> = {}
       for (const att of existingAttendance) {
         initial[att.student_id] = {
           status: att.status,
-          lateMinutes: att.late_minutes,
+          lateMinutes: att.late_minutes ?? undefined,
           notes: att.notes || '',
         }
       }
