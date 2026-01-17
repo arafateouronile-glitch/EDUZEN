@@ -42,7 +42,7 @@ export default function APISettingsPage() {
     addToast({
       title: options.title,
       description: options.description,
-      variant: options.variant || 'success',
+      type: options.type || options.variant || 'success',
     })
   }
   const [newKeyName, setNewKeyName] = useState('')
