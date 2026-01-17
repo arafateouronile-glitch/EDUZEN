@@ -19,10 +19,10 @@ export function StudentDocumentsSection({
   organizationId,
 }: StudentDocumentsSectionProps) {
   const { addToast } = useToast()
-  const { data: documents, isLoading } = useQuery({
+  const { data: documents, isLoading } = useQuery<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>({
     queryKey: ['student-documents', studentId, organizationId],
     queryFn: async () => {
-      if (!organizationId) return []
+      if (!organizationId) return { data: [], total: 0, page: 1, limit: 50, totalPages: 0 }
       return documentService.getAll(organizationId, {
         studentId: studentId,
       })
