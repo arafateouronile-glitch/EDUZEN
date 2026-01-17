@@ -302,7 +302,7 @@ export function VariablesSidebar({ onVariableSelect, className }: VariablesSideb
                           onClick={() => handleVariableClick(variable.key)}
                           className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-brand-blue-ghost hover:text-brand-blue rounded-lg transition-all duration-200 cursor-move group hover:shadow-sm hover:scale-[1.02]"
                           draggable
-                          onDragStart={(e) => {
+                          onDragStart={(e: React.DragEvent<HTMLButtonElement>) => {
                             // Format pour le nouveau système de drag & drop avec TipTap VariableExtension
                             e.dataTransfer.setData('application/x-variable-id', variable.key)
                             e.dataTransfer.setData('application/x-variable-label', variable.label)
