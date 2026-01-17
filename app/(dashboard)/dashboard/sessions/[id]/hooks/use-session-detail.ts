@@ -470,7 +470,7 @@ export function useSessionDetail(sessionId: string) {
         sessionId,
         startDate: formData.start_date,
         endDate: formData.end_date,
-        timeSlotType: slotConfig.timeSlotType === 'full_day' ? 'full_day' : slotConfig.timeSlotType,
+        timeSlotType: slotConfig.timeSlotType === 'full_day' ? 'both' : slotConfig.timeSlotType,
         morningStart: slotConfig.morningStart,
         morningEnd: slotConfig.morningEnd,
         afternoonStart: slotConfig.afternoonStart,
