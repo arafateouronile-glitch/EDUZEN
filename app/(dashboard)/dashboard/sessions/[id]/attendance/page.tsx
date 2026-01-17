@@ -69,7 +69,7 @@ export default function SessionAttendancePage() {
 
   // Initialiser avec les données existantes
   useEffect(() => {
-    if (existingAttendance && enrollments) {
+    if (existingAttendance && Array.isArray(existingAttendance) && enrollments) {
       const initial: Record<string, {
         status: AttendanceStatus
         lateMinutes?: number | null
