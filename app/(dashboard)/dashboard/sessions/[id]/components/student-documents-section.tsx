@@ -96,9 +96,9 @@ export function StudentDocumentsSection({
       <CardContent>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Chargement des documents...</p>
-        ) : documents && documents.length > 0 ? (
+        ) : documents && documents.data && documents.data.length > 0 ? (
           <div className="space-y-3">
-            {(documents as DocumentWithRelations[]).map((doc) => (
+            {documents.data.map((doc) => (
               <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex items-center space-x-3 flex-1">
                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
