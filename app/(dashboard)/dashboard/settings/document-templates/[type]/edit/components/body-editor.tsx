@@ -435,11 +435,10 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
                 onChange={handleContentChange}
                 placeholder="Saisissez le contenu du document..."
                 className="flex-1"
-                toolbar="full"
                 onTableEditorOpen={() => setShowTableEditor(true)}
                 onShapeEditorOpen={() => setShowShapeEditor(true)}
                 onElementPaletteOpen={() => setShowElementPalette(true)}
-            onSignatureFieldOpen={() => setShowSignatureField(true)}
+                onSignatureFieldOpen={() => setShowSignatureField(true)}
                 onQuickTemplatesOpen={() => setShowQuickTemplates(true)}
                 onStylePaletteOpen={() => setShowStylePalette(true)}
                 onWatermarkEditorOpen={() => setShowWatermarkEditor(true)}
