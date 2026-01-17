@@ -130,11 +130,11 @@ const nextConfig = {
       // Ne pas externaliser framer-motion car il est utilisé dans les composants
       config.externals = [...(config.externals || []), 'canvas', 'jsdom']
     }
-    // Exclure les fichiers .backup.* du build en utilisant IgnorePlugin
+    // Exclure les fichiers .backup.* et .refactored.* du build en utilisant IgnorePlugin
     const webpack = require('webpack')
     config.plugins.push(
       new webpack.IgnorePlugin({
-        resourceRegExp: /\.backup\.(ts|tsx|js|jsx)$/,
+        resourceRegExp: /\.(backup|refactored)\.(ts|tsx|js|jsx)$/,
       })
     )
     // S'assurer que framer-motion est correctement résolu
