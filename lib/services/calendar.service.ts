@@ -878,6 +878,36 @@ class CalendarService {
       upcomingTodos,
     }
   }
+
+  // ==========================================
+  // INTÉGRATIONS CALENDRIER EXTERNE
+  // ==========================================
+
+  /**
+   * Récupère la configuration d'intégration calendrier (Google, Outlook)
+   * TODO: Implémenter la récupération depuis la table calendar_integrations
+   */
+  async getConfig(
+    organizationId: string,
+    provider: 'google' | 'outlook'
+  ): Promise<any | null> {
+    // TODO: Implémenter la récupération depuis Supabase
+    // const { data, error } = await this.supabase
+    //   .from('calendar_integrations')
+    //   .select('*')
+    //   .eq('organization_id', organizationId)
+    //   .eq('provider', provider)
+    //   .single()
+    // 
+    // if (error) {
+    //   if (error.code === 'PGRST116') return null
+    //   throw error
+    // }
+    // return data
+    
+    // Pour l'instant, retourner null
+    return null
+  }
 }
 
 export const calendarService = new CalendarService()
