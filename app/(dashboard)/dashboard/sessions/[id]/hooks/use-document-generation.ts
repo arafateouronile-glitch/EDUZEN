@@ -117,7 +117,7 @@ export function useDocumentGeneration({
     if (!student) return
 
     try {
-      const html = generateContractHTML({
+      const html = await generateContractHTML({
         student: {
           first_name: student.first_name,
           last_name: student.last_name,
@@ -194,7 +194,7 @@ export function useDocumentGeneration({
     if (!student) return
 
     try {
-      const html = generateConvocationHTML({
+      const html = await generateConvocationHTML({
         student: {
           first_name: student.first_name,
           last_name: student.last_name,
@@ -261,7 +261,7 @@ export function useDocumentGeneration({
     if (!sessionData || !formation || !program || !organization) return
 
     try {
-      const html = generateProgramHTML({
+      const html = await generateProgramHTML({
         program: { name: program.name },
         formation: {
           name: formation.name,
@@ -311,7 +311,7 @@ export function useDocumentGeneration({
     if (!organization) return
 
     try {
-      const html = generateTermsHTML({
+      const html = await generateTermsHTML({
         organization: {
           name: organization.name,
           address: organization.address || undefined,
@@ -356,7 +356,7 @@ export function useDocumentGeneration({
     if (!organization) return
 
     try {
-      const html = generatePrivacyPolicyHTML({
+      const html = await generatePrivacyPolicyHTML({
         organization: {
           name: organization.name,
           address: organization.address || undefined,
@@ -697,7 +697,7 @@ export function useDocumentGeneration({
 
     try {
       // Générer le HTML de la convocation
-      const html = generateConvocationHTML({
+      const html = await generateConvocationHTML({
         student: {
           first_name: student.first_name,
           last_name: student.last_name,
@@ -795,7 +795,7 @@ export function useDocumentGeneration({
 
     try {
       // Générer le HTML de la convocation
-      const html = generateConvocationHTML({
+      const html = await generateConvocationHTML({
         student: {
           first_name: student.first_name,
           last_name: student.last_name,
@@ -992,7 +992,7 @@ export function useDocumentGeneration({
     }
 
     try {
-      const html = generateContractHTML({
+      const html = await generateContractHTML({
         student: {
           first_name: student.first_name,
           last_name: student.last_name,
@@ -1093,7 +1093,7 @@ export function useDocumentGeneration({
     }
 
     try {
-      const html = generateContractHTML({
+      const html = await generateContractHTML({
         student: {
           first_name: student.first_name,
           last_name: student.last_name,
