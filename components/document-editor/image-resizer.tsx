@@ -13,7 +13,9 @@ export interface ImageConfig {
 }
 
 interface ImageResizerProps {
+  imageUrl?: string
   config?: ImageConfig
+  onUpdate?: (config: ImageConfig & { align?: string; width?: number; height?: number }) => void
   onInsert?: (html: string) => void
   onClose?: () => void
 }
