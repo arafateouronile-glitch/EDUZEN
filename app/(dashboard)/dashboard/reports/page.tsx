@@ -874,7 +874,6 @@ export default function ReportsPage() {
                 <CardContent>
                   <PremiumPieChart
                     data={chartData.attendanceDistribution}
-                    height={250}
                   />
                 </CardContent>
               </Card>
