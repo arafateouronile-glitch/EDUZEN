@@ -138,14 +138,24 @@ export function ConfigApprenants({
   })
 
   // Récupérer tous les étudiants actifs (pour recherche et création)
-  const { data: allStudents } = useQuery({
+  const { data: allStudentsResult } = useQuery<{
+    data: StudentWithRelations[]
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }>({
     queryKey: ['all-students', user?.organization_id],
     queryFn: async () => {
-      if (!user?.organization_id) return []
+      if (!user?.organization_id) {
+        return { data: [], total: 0, page: 1, limit: 50, totalPages: 0 }
+      }
       return studentService.getAll(user.organization_id, { status: 'active' })
     },
     enabled: !!user?.organization_id,
   })
+
+  const allStudents = allStudentsResult?.data || []
 
   // Filtrer les candidats et étudiants
   const filteredCandidates = useMemo(() => {
