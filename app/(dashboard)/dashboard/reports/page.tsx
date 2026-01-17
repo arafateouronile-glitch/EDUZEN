@@ -854,7 +854,6 @@ export default function ReportsPage() {
                     data={chartData.enrollmentsTrend}
                     dataKey="value"
                     xAxisKey="name"
-                    height={250}
                     color="#3B82F6"
                     showArea={true}
                     gradientColors={{
