@@ -454,7 +454,7 @@ export function useDocumentGeneration({
         const student = enrollment.students
         if (!student) continue
 
-        const contractHTML = generateContractHTML({
+        const contractHTML = await generateContractHTML({
           student: {
             first_name: student.first_name,
             last_name: student.last_name,
