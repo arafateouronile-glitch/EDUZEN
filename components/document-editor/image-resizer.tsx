@@ -12,6 +12,12 @@ export interface ImageConfig {
   position?: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 }
 
-export function ImageResizer() {
+interface ImageResizerProps {
+  config?: ImageConfig
+  onInsert?: (html: string) => void
+  onClose?: () => void
+}
+
+export function ImageResizer(props?: ImageResizerProps) {
   return null
 }

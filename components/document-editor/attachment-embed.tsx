@@ -1,6 +1,12 @@
 'use client'
 
 // TODO: Implémenter AttachmentEmbed
-export function AttachmentEmbed() {
+
+interface AttachmentEmbedProps {
+  onInsert?: (html: string) => void
+  onClose?: () => void
+}
+
+export function AttachmentEmbed(props?: AttachmentEmbedProps) {
   return null
 }

@@ -1,6 +1,12 @@
 'use client'
 
 // TODO: Implémenter ColumnLayout
-export function ColumnLayout() {
+
+interface ColumnLayoutProps {
+  onInsert?: (html: string) => void
+  onClose?: () => void
+}
+
+export function ColumnLayout(props?: ColumnLayoutProps) {
   return null
 }

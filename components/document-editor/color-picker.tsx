@@ -1,6 +1,12 @@
 'use client'
 
 // TODO: Implémenter ColorPicker
-export function ColorPicker() {
+
+interface ColorPickerProps {
+  onSelect?: (color: string) => void
+  onClose?: () => void
+}
+
+export function ColorPicker(props?: ColorPickerProps) {
   return null
 }

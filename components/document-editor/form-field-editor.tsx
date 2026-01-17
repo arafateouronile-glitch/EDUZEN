@@ -1,6 +1,12 @@
 'use client'
 
 // TODO: Implémenter FormFieldEditor
-export function FormFieldEditor() {
+
+interface FormFieldEditorProps {
+  onInsert?: (html: string) => void
+  onClose?: () => void
+}
+
+export function FormFieldEditor(props?: FormFieldEditorProps) {
   return null
 }
