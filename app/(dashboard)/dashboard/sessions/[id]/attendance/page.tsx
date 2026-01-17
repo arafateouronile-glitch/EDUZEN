@@ -38,7 +38,7 @@ export default function SessionAttendancePage() {
   })
 
   // Récupérer les inscriptions à cette session
-  const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
+  const { data: enrollments, isLoading: enrollmentsLoading } = useQuery<EnrollmentWithRelations[]>({
     queryKey: ['session-enrollments', sessionId],
     queryFn: async () => {
       const { data, error } = await supabase
