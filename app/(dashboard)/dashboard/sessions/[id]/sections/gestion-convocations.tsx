@@ -287,7 +287,7 @@ export function GestionConvocations({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleSendAllConvocationsByEmail}
+                  onClick={() => handleSendAllConvocationsByEmail(enrollments)}
                   disabled={enrollments.length === 0}
                 >
                   <Mail className="mr-2 h-4 w-4" />
