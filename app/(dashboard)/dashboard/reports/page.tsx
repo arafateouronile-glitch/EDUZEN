@@ -1063,7 +1063,6 @@ export default function ReportsPage() {
                   ]}
                   dataKey="value"
                   xAxisKey="name"
-                  height={250}
                   color="#10B981"
                   showArea={true}
                   gradientColors={{
@@ -1124,7 +1123,6 @@ export default function ReportsPage() {
                   data={chartData.paymentsTrend}
                   dataKey="value"
                   xAxisKey="name"
-                  height={250}
                   color="#8B5CF6"
                   showArea={true}
                   gradientColors={{
