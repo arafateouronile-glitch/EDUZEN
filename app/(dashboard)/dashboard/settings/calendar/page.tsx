@@ -313,7 +313,6 @@ export default function CalendarSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  id={`sync-sessions-${selectedProvider}`}
                   checked={configs[selectedProvider].sync_sessions}
                   onCheckedChange={(checked) => updateConfig(selectedProvider, 'sync_sessions', checked)}
                 />
@@ -327,7 +326,6 @@ export default function CalendarSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  id={`create-events-${selectedProvider}`}
                   checked={configs[selectedProvider].create_events_for_sessions}
                   onCheckedChange={(checked) => updateConfig(selectedProvider, 'create_events_for_sessions', checked)}
                 />
@@ -341,7 +339,6 @@ export default function CalendarSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  id={`include-students-${selectedProvider}`}
                   checked={configs[selectedProvider].include_students_in_events}
                   onCheckedChange={(checked) => updateConfig(selectedProvider, 'include_students_in_events', checked)}
                 />
@@ -355,7 +352,6 @@ export default function CalendarSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  id={`include-location-${selectedProvider}`}
                   checked={configs[selectedProvider].include_location}
                   onCheckedChange={(checked) => updateConfig(selectedProvider, 'include_location', checked)}
                 />
@@ -369,7 +365,6 @@ export default function CalendarSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  id={`send-reminders-${selectedProvider}`}
                   checked={configs[selectedProvider].send_reminders}
                   onCheckedChange={(checked) => updateConfig(selectedProvider, 'send_reminders', checked)}
                 />
