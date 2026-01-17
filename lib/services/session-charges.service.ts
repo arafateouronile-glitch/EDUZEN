@@ -9,6 +9,7 @@ type SessionChargeInsert = TableInsert<'session_charges'>
 type ChargeCategoryInsert = TableInsert<'charge_categories'>
 
 export interface SessionChargeWithCategory extends SessionCharge {
+  id: string // Explicitement inclure id pour éviter les erreurs TypeScript
   charge_categories?: ChargeCategory | null
 }
 
