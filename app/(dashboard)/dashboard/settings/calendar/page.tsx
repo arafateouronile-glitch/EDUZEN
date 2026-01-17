@@ -245,7 +245,6 @@ export default function CalendarSettingsPage() {
                 </p>
               </div>
               <Switch
-                id={`test-mode-${selectedProvider}`}
                 checked={configs[selectedProvider].is_test_mode}
                 onCheckedChange={(checked) => updateConfig(selectedProvider, 'is_test_mode', checked)}
               />
