@@ -407,7 +407,7 @@ export function useDocumentGeneration({
       const pdfBlobs: Array<{ name: string; blob: Blob }> = []
 
       // Générer la convention générale
-      const conventionHTML = generateConventionHTML({
+      const conventionHTML = await generateConventionHTML({
         session: {
           name: sessionData.name,
           start_date: sessionData.start_date,
