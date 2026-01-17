@@ -130,6 +130,11 @@ const nextConfig = {
       // Ne pas externaliser framer-motion car il est utilisé dans les composants
       config.externals = [...(config.externals || []), 'canvas', 'jsdom']
     }
+    // Exclure les fichiers .backup.* du build
+    config.module.rules.push({
+      test: /\.backup\.(ts|tsx|js|jsx)$/,
+      use: 'ignore-loader',
+    })
     // S'assurer que framer-motion est correctement résolu
     config.resolve.alias = {
       ...config.resolve.alias,

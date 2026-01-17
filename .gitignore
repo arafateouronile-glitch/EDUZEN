@@ -73,6 +73,10 @@ dist/
 *.temp
 .temp/
 
+# Backup files
+*.backup.*
+*.backup
+
 # Logs
 logs/
 *.log
