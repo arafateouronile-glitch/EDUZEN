@@ -908,6 +908,36 @@ class CalendarService {
     // Pour l'instant, retourner null
     return null
   }
+
+  /**
+   * Crée ou met à jour la configuration d'intégration calendrier
+   * TODO: Implémenter la création/mise à jour dans la table calendar_integrations
+   */
+  async upsertConfig(
+    organizationId: string,
+    provider: 'google' | 'outlook',
+    config: any
+  ): Promise<any> {
+    // TODO: Implémenter la création/mise à jour dans Supabase
+    // const { data, error } = await this.supabase
+    //   .from('calendar_integrations')
+    //   .upsert(
+    //     {
+    //       organization_id: organizationId,
+    //       provider,
+    //       ...config,
+    //     },
+    //     { onConflict: 'organization_id,provider' }
+    //   )
+    //   .select()
+    //   .single()
+    // 
+    // if (error) throw error
+    // return data
+    
+    // Pour l'instant, retourner la config telle quelle
+    return { organization_id: organizationId, provider, ...config }
+  }
 }
 
 export const calendarService = new CalendarService()
