@@ -730,7 +730,7 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
                   const imgHTML = `
                     <p style="text-align: ${config.align || 'center'}; margin: 16px 0;">
                       <img 
-                        src="${config.url}" 
+                        src="${imageResizerConfig.url}" 
                         alt="Image" 
                         style="
                           width: ${config.widthUnit === '%' ? `${config.width}%` : config.widthUnit === 'auto' ? 'auto' : `${config.width}px`};
