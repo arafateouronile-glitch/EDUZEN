@@ -242,7 +242,6 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
     onTemplateChange({
       content: {
         ...template.content,
-        html: convertedContent,
         elements: [
           {
             id: 'main-content',
