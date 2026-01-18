@@ -34,10 +34,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { report_type = 'annual', format = 'pdf' } = body
 
+    // Note: generateComplianceReport accepte seulement organizationId et framework (optionnel)
     const report = await complianceService.generateComplianceReport(
       userData.organization_id,
-      report_type,
-      format
+      report_type
     )
 
     return NextResponse.json(report)

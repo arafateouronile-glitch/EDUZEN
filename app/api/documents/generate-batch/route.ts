@@ -39,7 +39,9 @@ const batchGenerateSchema: ValidationSchema = {
  */
 export async function POST(request: NextRequest) {
   return withRateLimit(request, mutationRateLimiter, async (req) => {
-    return withBodyValidation(req, batchGenerateSchema, async (req, validatedData) => {
+    // Convertir Request en NextRequest pour withBodyValidation
+    const nextReq = req as unknown as NextRequest
+    return withBodyValidation(nextReq, batchGenerateSchema, async (req, validatedData) => {
   try {
     const supabase = createSupabaseServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -107,10 +109,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer le template
+    const templateId = validatedData.template_id as string
     const { data: template, error: templateError } = await supabase
       .from('document_templates')
       .select('*')
-      .eq('id', validatedData.template_id)
+      .eq('id', templateId)
       .single()
 
     if (templateError || !template) {
@@ -163,11 +166,11 @@ export async function POST(request: NextRequest) {
         let fileName: string
 
         if (validatedData.format === 'PDF') {
-          const result = await generatePDF(template as DocumentTemplate, item.variables, undefined, userData.organization_id)
+          const result = await generatePDF(template as unknown as DocumentTemplate, item.variables, undefined, userData.organization_id)
           fileBlob = result.blob
           fileName = `${template.type}_${item.related_entity_id || i + 1}_${Date.now()}.pdf`
         } else {
-          const result = await generateDOCX(template as DocumentTemplate, item.variables, undefined, userData.organization_id)
+          const result = await generateDOCX(template as unknown as DocumentTemplate, item.variables, undefined, userData.organization_id)
           fileBlob = result.blob
           fileName = `${template.type}_${item.related_entity_id || i + 1}_${Date.now()}.docx`
         }
