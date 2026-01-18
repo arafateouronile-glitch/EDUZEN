@@ -155,10 +155,6 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
                     layout: layout as any,
                     ...layoutConfig,
                   })
-                  // Update content if layout has default content
-                  if (layoutConfig.content) {
-                    handleContentChange(layoutConfig.content)
-                  }
                 }}
               />
             </div>
