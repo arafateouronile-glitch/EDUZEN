@@ -196,7 +196,7 @@ export default function ProgramSessionsPage() {
       enrollment_date: new Date().toISOString().split('T')[0],
       status: 'confirmed',
       payment_status: 'pending',
-      total_amount: program?.price?.toString() || '0',
+      total_amount: (program?.formations?.[0] as any)?.price?.toString() || '0',
       paid_amount: '0',
     })
     setShowEnrollmentForm(true)

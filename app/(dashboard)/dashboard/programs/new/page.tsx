@@ -67,9 +67,8 @@ export default function NewProgramPage() {
         category: data.category,
         program_version: data.program_version,
         version_date: data.version_date,
-        // Note: duration_hours n'existe pas dans la table programs, c'est dans formations
+        // Note: duration_hours, price n'existent pas dans la table programs, c'est dans formations
         duration_days: duration_days,
-        price: price,
         currency: data.currency,
         published_online: data.published_online,
         eligible_cpf: data.eligible_cpf,
