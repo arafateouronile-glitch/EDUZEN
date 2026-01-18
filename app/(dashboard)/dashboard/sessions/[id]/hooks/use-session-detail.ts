@@ -204,7 +204,12 @@ export function useSessionDetail(sessionId: string) {
         return formationService.getAllFormations(user.organization_id, { isActive: true })
       }
       const allFormations = await formationService.getAllFormations(user.organization_id, { isActive: true })
-      return allFormations.filter((f: FormationWithRelations) => 
+      // Mapper programs: null en programs: undefined pour correspondre à FormationWithRelations
+      const mappedFormations = allFormations.map((f: any) => ({
+        ...f,
+        programs: f.programs || undefined,
+      }))
+      return mappedFormations.filter((f: any) => 
         f.program_id && formData.program_ids.includes(f.program_id)
       )
     },
@@ -287,7 +292,7 @@ export function useSessionDetail(sessionId: string) {
         .from('payments')
         .select('*, students(*), invoices(*)')
         .eq('organization_id', user?.organization_id)
-        .in('student_id', (enrollments as EnrollmentWithRelations[])?.map((e) => e.student_id) || [])
+        .in('student_id', (enrollments as EnrollmentWithRelations[])?.map((e) => e.student_id).filter((id): id is string => id !== null) || [])
         .order('paid_at', { ascending: false })
       if (error) throw error
       return data || []
@@ -407,12 +412,12 @@ export function useSessionDetail(sessionId: string) {
       setFormData({
         name: sessionData.name || '',
         type: 'formation_professionnelle',
-        code: sessionData.code || '',
-        manager1_id: sessionData.manager1_id || user?.id || '',
-        manager2_id: sessionData.manager2_id || '',
-        inter_entreprise: sessionData.inter_entreprise ?? true,
-        sous_traitance: sessionData.sous_traitance ?? false,
-        timezone: sessionData.timezone || 'Europe/Paris',
+        code: (sessionData as any).code || '',
+        manager1_id: (sessionData as any).manager1_id || user?.id || '',
+        manager2_id: (sessionData as any).manager2_id || '',
+        inter_entreprise: (sessionData as any).inter_entreprise ?? true,
+        sous_traitance: (sessionData as any).sous_traitance ?? false,
+        timezone: (sessionData as any).timezone || 'Europe/Paris',
         formation_id: formation?.id || '',
         program_ids: programIds,
         start_date: sessionData.start_date?.split('T')[0] || '',
@@ -422,7 +427,7 @@ export function useSessionDetail(sessionId: string) {
         location: sessionData.location || '',
         capacity_max: sessionData.capacity_max?.toString() || '',
         teacher_id: sessionData.teacher_id || '',
-        status: sessionData.status || 'planned',
+        status: (sessionData.status || 'planned') as 'completed' | 'planned' | 'ongoing' | 'cancelled',
       })
 
       if (formation) {
