@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "NODE_OPTIONS='--max-old-space-size=8192' next build",
+    "build:clean": "npm run clean && npm run build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit",
+    "clean": "bash scripts/clean-build.sh",
+    "clean:full": "bash scripts/clean-build.sh --full",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
