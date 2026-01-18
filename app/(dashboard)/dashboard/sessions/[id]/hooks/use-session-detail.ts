@@ -658,7 +658,7 @@ export function useSessionDetail(sessionId: string) {
       const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
         .select('id, start_date, end_date, status')
-        .eq('id', enrollment.session_id)
+        .eq('id', enrollment.session_id || '')
         .single()
 
       if (sessionError || !sessionData) {
