@@ -718,11 +718,11 @@ export default function InvoiceDetailPage() {
                     <label className="block text-sm font-medium mb-2">Méthode de paiement *</label>
                     <select
                       required
-                      value={paymentForm.payment_method}
+                      value={paymentForm.payment_method || ''}
                       onChange={(e) =>
                         setPaymentForm({
                           ...paymentForm,
-                          payment_method: e.target.value as Payment['payment_method'],
+                          payment_method: e.target.value as 'cash' | 'card' | 'bank_transfer' | 'sepa',
                         })
                       }
                       className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
@@ -739,11 +739,11 @@ export default function InvoiceDetailPage() {
                       <label className="block text-sm font-medium mb-2">Fournisseur *</label>
                       <select
                         required
-                        value={paymentForm.payment_provider}
+                        value={paymentForm.payment_provider || ''}
                         onChange={(e) =>
                           setPaymentForm({
                             ...paymentForm,
-                            payment_provider: e.target.value as Payment['payment_provider'],
+                            payment_provider: e.target.value as 'sepa' | 'stripe' | null,
                           })
                         }
                         className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
@@ -758,11 +758,11 @@ export default function InvoiceDetailPage() {
                       <label className="block text-sm font-medium mb-2">Fournisseur *</label>
                       <select
                         required
-                        value={paymentForm.payment_provider}
+                        value={paymentForm.payment_provider || ''}
                         onChange={(e) =>
                           setPaymentForm({
                             ...paymentForm,
-                            payment_provider: e.target.value as Payment['payment_provider'],
+                            payment_provider: e.target.value as 'sepa' | 'stripe' | null,
                           })
                         }
                         className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
