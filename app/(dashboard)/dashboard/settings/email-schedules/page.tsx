@@ -61,7 +61,7 @@ export default function EmailSchedulesPage() {
     queryKey: ['email-templates', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
-      return emailTemplateService.getAllTemplates(user.organization_id)
+      return emailTemplateService.getAll(user.organization_id)
     },
     enabled: !!user?.organization_id,
   })
@@ -1069,7 +1069,7 @@ function EditScheduleForm({
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          document_type: e.target.value || undefined,
+                          document_type: (e.target.value || undefined) as DocumentType | undefined,
                         })
                       }
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"

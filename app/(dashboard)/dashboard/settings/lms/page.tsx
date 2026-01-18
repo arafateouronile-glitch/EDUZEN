@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/toast'
 import { ArrowLeft, Save, GraduationCap, Settings, Info } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -37,7 +37,7 @@ export default function LMSSettingsPage() {
       try {
         // Note: Cette table n'existe peut-être pas encore
         // Vous devrez créer la table lms_configurations si nécessaire
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('lms_configurations')
           .select('*')
           .eq('organization_id', user.organization_id)
@@ -46,7 +46,7 @@ export default function LMSSettingsPage() {
         // Gérer les cas où la table n'existe pas ou aucune configuration trouvée
         if (error) {
           // PGRST116 = no rows found, 406 = no rows returned, PGRST200 = table does not exist, 404 = not found
-          if (error.code === 'PGRST116' || error.code === '406' || error.code === 'PGRST200' || error.status === 404 || error.message?.includes('does not exist')) {
+          if (error.code === 'PGRST116' || error.code === '406' || error.code === 'PGRST200' || error.message?.includes('does not exist')) {
             return null
           }
           throw error
@@ -54,7 +54,7 @@ export default function LMSSettingsPage() {
         return data
       } catch (error: any) {
         // Si la table n'existe pas, retourner null silencieusement
-        if (error?.code === 'PGRST200' || error?.status === 404 || error?.message?.includes('does not exist') || error?.message?.includes('schema cache')) {
+        if (error?.code === 'PGRST200' || error?.message?.includes('does not exist') || error?.message?.includes('schema cache')) {
           return null
         }
         console.error('Error fetching LMS configuration:', error.message)
@@ -62,38 +62,40 @@ export default function LMSSettingsPage() {
       }
     },
     enabled: !!user?.organization_id,
-    onSuccess: (data) => {
-      if (data) {
-        setLmsForm({
-          provider: data.provider || 'moodle',
-          api_url: data.api_url || '',
-          api_key: data.api_key || '',
-          is_active: data.is_active || false,
-          auto_sync: data.auto_sync || false,
-          sync_frequency: data.sync_frequency || 'daily',
-        })
-      }
-    },
   })
+
+  // Mettre à jour le formulaire quand existingConfig change
+  useEffect(() => {
+    if (existingConfig) {
+      setLmsForm({
+        provider: (existingConfig as any).provider || 'moodle',
+        api_url: (existingConfig as any).api_url || '',
+        api_key: (existingConfig as any).api_key || '',
+        is_active: (existingConfig as any).is_active || false,
+        auto_sync: (existingConfig as any).auto_sync || false,
+        sync_frequency: (existingConfig as any).sync_frequency || 'daily',
+      })
+    }
+  }, [existingConfig])
 
   // Mutation to save/update configuration
   const saveConfigMutation = useMutation({
     mutationFn: async (data: typeof lmsForm) => {
       if (!user?.organization_id) throw new Error('Organization ID is missing.')
 
-      if (existingConfig?.id) {
+      if ((existingConfig as any)?.id) {
         // Update existing
-        const { data: updatedData, error } = await supabase
+        const { data: updatedData, error } = await (supabase as any)
           .from('lms_configurations')
           .update(data)
-          .eq('id', existingConfig.id)
+          .eq('id', (existingConfig as any).id)
           .select()
           .single()
         if (error) throw error
         return updatedData
       } else {
         // Insert new
-        const { data: newData, error } = await supabase
+        const { data: newData, error } = await (supabase as any)
           .from('lms_configurations')
           .insert({ ...data, organization_id: user.organization_id })
           .select()

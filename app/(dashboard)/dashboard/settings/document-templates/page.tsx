@@ -218,7 +218,7 @@ export default function DocumentTemplatesPage() {
     const sorted: Record<DocumentType, DocumentTemplate[]> = {} as Record<DocumentType, DocumentTemplate[]>
     
     Object.entries(templatesByType).forEach(([type, templatesList]) => {
-      sorted[type as DocumentType] = [...templatesList].sort((a, b) => {
+      sorted[type as DocumentType] = [...(templatesList as DocumentTemplate[])].sort((a, b) => {
         // Modèle par défaut en premier
         if (a.is_default && !b.is_default) return -1
         if (!a.is_default && b.is_default) return 1

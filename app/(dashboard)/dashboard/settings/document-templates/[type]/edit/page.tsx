@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { documentTemplateService } from '@/lib/services/document-template.service'
-import type { DocumentType, DocumentTemplate } from '@/lib/types/document-templates'
+import type { DocumentType, DocumentTemplate, DocumentContent } from '@/lib/types/document-templates'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -435,10 +435,8 @@ export default function DocumentTemplateEditPage() {
         // Capturer l'état actuel du template avant la sauvegarde
         const templateToSave = template
         
-        await documentTemplateService.updateTemplate({
-          id: template.id,
-          ...template,
-        })
+        const { id, ...templateData } = template
+        await documentTemplateService.updateTemplate(id, templateData)
         
         // Mettre à jour la référence du template sauvegardé
         savedTemplateRef.current = { ...template }
@@ -678,9 +676,8 @@ export default function DocumentTemplateEditPage() {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <Accordion 
             type="single" 
-            collapsible 
             value={accordionValue} 
-            onValueChange={(value) => value && setAccordionValue(value)}
+            onValueChange={(value: string | undefined) => value && setAccordionValue(value)}
             className="w-full space-y-4"
           >
             <AccordionItem value="header" className="border rounded-lg">

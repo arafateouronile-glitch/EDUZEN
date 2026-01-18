@@ -92,10 +92,10 @@ export default function DocumentTemplatePreviewPage() {
   })
 
   // Récupérer les étudiants
-  const { data: students } = useQuery({
+  const { data: students } = useQuery<{ data: StudentWithRelations[]; total: number; page: number; limit: number; totalPages: number }>({
     queryKey: ['students', user?.organization_id],
     queryFn: async () => {
-      if (!user?.organization_id) return []
+      if (!user?.organization_id) return { data: [], total: 0, page: 1, limit: 50, totalPages: 0 }
       return studentService.getAll(user.organization_id)
     },
     enabled: !!user?.organization_id && dataSource === 'real',
@@ -311,8 +311,8 @@ export default function DocumentTemplatePreviewPage() {
     }
 
     // Par défaut, utiliser le premier étudiant disponible
-    if (students && students.length > 0) {
-      return mapStudentToVariables(students[0] as StudentWithRelations, organization)
+    if (students && students.data && students.data.length > 0) {
+      return mapStudentToVariables(students.data[0] as StudentWithRelations, organization)
     }
 
     // Fallback: données minimales
@@ -463,7 +463,7 @@ export default function DocumentTemplatePreviewPage() {
                         className="w-full mt-1 px-3 py-2 border rounded-lg"
                       >
                         <option value="">Sélectionner un étudiant</option>
-                        {students?.map((student: any) => (
+                        {students?.data?.map((student: any) => (
                           <option key={student.id} value={student.id}>
                             {student.last_name} {student.first_name} ({student.student_number})
                           </option>

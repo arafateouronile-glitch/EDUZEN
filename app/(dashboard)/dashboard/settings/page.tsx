@@ -156,29 +156,31 @@ export default function SettingsPage() {
     enabled: !!user?.organization_id,
     retry: 2,
     refetchOnWindowFocus: true,
-    onSuccess: (data) => {
-      if (data) {
-        // Récupérer postal_code depuis settings si présent
-        const settings = (data.settings as any) || {}
-        setOrgFormData({
-          name: data.name ?? '',
-          code: data.code ?? '',
-          type: data.type ?? '',
-          country: data.country ?? '',
-          currency: data.currency ?? 'EUR',
-          language: data.language ?? 'fr',
-          address: data.address ?? '',
-          city: data.city ?? '',
-          postal_code: settings.postal_code ?? '',
-          phone: data.phone ?? '',
-          email: data.email ?? '',
-          logo_url: data.logo_url ?? '',
-          qualiopi_certificate_url: data.qualiopi_certificate_url ?? '',
-          brand_color: data.brand_color ?? '#335ACF',
-        })
-      }
-    },
   })
+
+  // Mettre à jour le formulaire quand organization change
+  useEffect(() => {
+    if (organization) {
+      // Récupérer postal_code depuis settings si présent
+      const settings = ((organization as any).settings as any) || {}
+      setOrgFormData({
+        name: (organization as any).name ?? '',
+        code: (organization as any).code ?? '',
+        type: (organization as any).type ?? '',
+        country: (organization as any).country ?? '',
+        currency: (organization as any).currency ?? 'EUR',
+        language: (organization as any).language ?? 'fr',
+        address: (organization as any).address ?? '',
+        city: (organization as any).city ?? '',
+        postal_code: settings.postal_code ?? '',
+        phone: (organization as any).phone ?? '',
+        email: (organization as any).email ?? '',
+        logo_url: (organization as any).logo_url ?? '',
+        qualiopi_certificate_url: (organization as any).qualiopi_certificate_url ?? '',
+        brand_color: (organization as any).brand_color ?? '#335ACF',
+      })
+    }
+  }, [organization])
 
   // Charger les paramètres utilisateur depuis localStorage
   useEffect(() => {
@@ -558,7 +560,7 @@ export default function SettingsPage() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } }
   }
 
   const getRoleLabel = (role: string) => {
@@ -649,7 +651,7 @@ export default function SettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
             className="flex items-center gap-4"
           >
             <motion.div
@@ -861,22 +863,22 @@ export default function SettingsPage() {
                         <Button
                           onClick={() => {
                             if (organization) {
-                              const settings = (organization.settings as any) || {}
+                              const settings = ((organization as any).settings as any) || {}
                               setOrgFormData({
-                                name: organization.name ?? '',
-                                code: organization.code ?? '',
-                                type: organization.type ?? '',
-                                country: organization.country ?? '',
-                                currency: organization.currency ?? 'EUR',
-                                language: organization.language ?? 'fr',
-                                address: organization.address ?? '',
-                                city: organization.city ?? '',
+                                name: (organization as any).name ?? '',
+                                code: (organization as any).code ?? '',
+                                type: (organization as any).type ?? '',
+                                country: (organization as any).country ?? '',
+                                currency: (organization as any).currency ?? 'EUR',
+                                language: (organization as any).language ?? 'fr',
+                                address: (organization as any).address ?? '',
+                                city: (organization as any).city ?? '',
                                 postal_code: settings.postal_code ?? '',
-                                phone: organization.phone ?? '',
-                                email: organization.email ?? '',
-                                logo_url: organization.logo_url ?? '',
-                                qualiopi_certificate_url: organization.qualiopi_certificate_url ?? '',
-                                brand_color: organization.brand_color ?? '#335ACF',
+                                phone: (organization as any).phone ?? '',
+                                email: (organization as any).email ?? '',
+                                logo_url: (organization as any).logo_url ?? '',
+                                qualiopi_certificate_url: (organization as any).qualiopi_certificate_url ?? '',
+                                brand_color: (organization as any).brand_color ?? '#335ACF',
                               })
                             }
                             setIsEditing(true)
@@ -903,22 +905,22 @@ export default function SettingsPage() {
                             onClick={() => {
                               setIsEditing(false)
                               if (organization) {
-                                const settings = (organization.settings as any) || {}
+                                const settings = ((organization as any).settings as any) || {}
                                 setOrgFormData({
-                                  name: organization.name ?? '',
-                                  code: organization.code ?? '',
-                                  type: organization.type ?? '',
-                                  country: organization.country ?? '',
-                                  currency: organization.currency ?? 'EUR',
-                                  language: organization.language ?? 'fr',
-                                  address: organization.address ?? '',
-                                  city: organization.city ?? '',
+                                  name: (organization as any).name ?? '',
+                                  code: (organization as any).code ?? '',
+                                  type: (organization as any).type ?? '',
+                                  country: (organization as any).country ?? '',
+                                  currency: (organization as any).currency ?? 'EUR',
+                                  language: (organization as any).language ?? 'fr',
+                                  address: (organization as any).address ?? '',
+                                  city: (organization as any).city ?? '',
                                   postal_code: settings.postal_code ?? '',
-                                  phone: organization.phone ?? '',
-                                  email: organization.email ?? '',
-                                  logo_url: organization.logo_url ?? '',
-                                  qualiopi_certificate_url: organization.qualiopi_certificate_url ?? '',
-                                  brand_color: organization.brand_color ?? '#335ACF',
+                                  phone: (organization as any).phone ?? '',
+                                  email: (organization as any).email ?? '',
+                                  logo_url: (organization as any).logo_url ?? '',
+                                  qualiopi_certificate_url: (organization as any).qualiopi_certificate_url ?? '',
+                                  brand_color: (organization as any).brand_color ?? '#335ACF',
                                 })
                               }
                             }}

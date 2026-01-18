@@ -10,6 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "NODE_OPTIONS='--max-old-space-size=8192' tsc --noEmit",
+    "ts:check": "bash scripts/check-typescript.sh",
+    "ts:errors": "NODE_OPTIONS='--max-old-space-size=8192' npx tsc --noEmit --pretty false 2>&1 | tee typescript-errors.txt",
     "clean": "bash scripts/clean-build.sh",
     "clean:full": "bash scripts/clean-build.sh --full",
     "test": "vitest",

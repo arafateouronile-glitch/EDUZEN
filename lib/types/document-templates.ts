@@ -123,6 +123,7 @@ export interface DocumentContent {
     left: number
   }
   elements: TemplateElement[]
+  html?: string // Contenu HTML du document (utilisé pour la génération)
 }
 
 export type ElementType =

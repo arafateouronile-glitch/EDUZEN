@@ -600,7 +600,7 @@ export function ConfigApprenants({
                         {studentNumber && (
                           <span className="font-mono">#{studentNumber}</span>
                         )}
-                        <span>Inscrit le {formatDate(enrollment.enrollment_date)}</span>
+                        <span>Inscrit le {formatDate(enrollment.enrollment_date || '')}</span>
                         <Badge
                           variant={
                             enrollment.status === 'confirmed'

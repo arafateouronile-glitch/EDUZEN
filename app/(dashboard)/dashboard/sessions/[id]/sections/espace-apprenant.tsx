@@ -1025,7 +1025,7 @@ export function EspaceApprenant({
                               variant="default"
                               size="sm"
                               onClick={() => generateTokenMutation.mutate({
-                                studentId: enrollment.student_id,
+                                studentId: enrollment.student_id || '',
                                 studentName,
                                 studentEmail: student.email || ''
                               })}

@@ -351,7 +351,6 @@ export default function EmailTemplatesPage() {
                 onValueChange={(value) => {
                   setFormData({ ...formData, email_type: value as EmailType })
                 }}
-                disabled={!!editingTemplate}
               >
                 <SelectTrigger id="email_type">
                   <SelectValue />

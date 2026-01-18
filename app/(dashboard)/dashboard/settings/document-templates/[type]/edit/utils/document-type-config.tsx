@@ -100,6 +100,24 @@ export function getDocumentTypeConfig(type: DocumentType) {
       icon: CheckCircle,
       color: '#335ACF',
     },
+    certificat_realisation: {
+      name: 'Certificat de réalisation',
+      description: 'Certificat OF de réalisation de formation',
+      icon: Award,
+      color: '#335ACF',
+    },
+    livret_accueil: {
+      name: 'Livret d\'accueil',
+      description: 'Livret d\'accueil OF pour les apprenants',
+      icon: BookOpen,
+      color: '#34B9EE',
+    },
+    emargement: {
+      name: 'Feuille d\'émargement',
+      description: 'Feuille d\'émargement OF pour les sessions',
+      icon: ClipboardList,
+      color: '#335ACF',
+    },
   }
 
   return configs[type]
