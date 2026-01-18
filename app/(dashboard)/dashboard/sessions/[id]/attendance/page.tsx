@@ -48,7 +48,11 @@ export default function SessionAttendancePage() {
         .in('status', ['confirmed', 'completed'])
         .order('students(last_name)', { ascending: true })
       if (error) throw error
-      return data || []
+      // Mapper les résultats pour convertir null en undefined
+      return (data || []).map(enrollment => ({
+        ...enrollment,
+        students: enrollment.students || undefined,
+      })) as EnrollmentWithRelations[]
     },
     enabled: !!sessionId,
   })
