@@ -294,39 +294,42 @@ export function VariablesSidebar({ onVariableSelect, className }: VariablesSideb
                       className="space-y-1 pl-2 overflow-hidden"
                     >
                       {category.variables.map((variable, varIndex) => (
-                        <motion.button
+                        <motion.div
                           key={variable.key}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: varIndex * 0.03 }}
-                          onClick={() => handleVariableClick(variable.key)}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-brand-blue-ghost hover:text-brand-blue rounded-lg transition-all duration-200 cursor-move group hover:shadow-sm hover:scale-[1.02]"
-                          draggable
-                          onDragStart={(e: React.DragEvent<HTMLButtonElement>) => {
-                            // Format pour le nouveau système de drag & drop avec TipTap VariableExtension
-                            e.dataTransfer.setData('application/x-variable-id', variable.key)
-                            e.dataTransfer.setData('application/x-variable-label', variable.label)
-                            e.dataTransfer.setData('application/x-variable-value', `{${variable.key}}`)
-                            // Formats de fallback
-                            e.dataTransfer.setData('text/html', `{${variable.key}}`)
-                            e.dataTransfer.setData('text/plain', variable.key)
-                            e.dataTransfer.effectAllowed = 'copy'
-                            e.dataTransfer.dropEffect = 'copy'
-                            // Ajouter une classe pour le feedback visuel
-                            const target = e.currentTarget
-                            target.style.opacity = '0.5'
-                          }}
-                          onDragEnd={(e) => {
-                            const target = e.currentTarget
-                            target.style.opacity = '1'
-                          }}
                         >
-                          <GripVertical className="h-4 w-4 text-text-tertiary group-hover:text-brand-blue transition-all duration-200 group-hover:scale-110" />
-                          <span className="flex-1 text-left">{variable.label}</span>
-                          <code className="text-xs text-brand-blue bg-brand-blue-ghost px-1.5 py-0.5 rounded transition-all duration-200 group-hover:bg-brand-blue group-hover:text-white">
-                            {`{${variable.key}}`}
-                          </code>
-                        </motion.button>
+                          <button
+                            onClick={() => handleVariableClick(variable.key)}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-brand-blue-ghost hover:text-brand-blue rounded-lg transition-all duration-200 cursor-move group hover:shadow-sm hover:scale-[1.02]"
+                            draggable
+                            onDragStart={(e) => {
+                              // Format pour le nouveau système de drag & drop avec TipTap VariableExtension
+                              e.dataTransfer.setData('application/x-variable-id', variable.key)
+                              e.dataTransfer.setData('application/x-variable-label', variable.label)
+                              e.dataTransfer.setData('application/x-variable-value', `{${variable.key}}`)
+                              // Formats de fallback
+                              e.dataTransfer.setData('text/html', `{${variable.key}}`)
+                              e.dataTransfer.setData('text/plain', variable.key)
+                              e.dataTransfer.effectAllowed = 'copy'
+                              e.dataTransfer.dropEffect = 'copy'
+                              // Ajouter une classe pour le feedback visuel
+                              const target = e.currentTarget
+                              target.style.opacity = '0.5'
+                            }}
+                            onDragEnd={(e) => {
+                              const target = e.currentTarget
+                              target.style.opacity = '1'
+                            }}
+                          >
+                            <GripVertical className="h-4 w-4 text-text-tertiary group-hover:text-brand-blue transition-all duration-200 group-hover:scale-110" />
+                            <span className="flex-1 text-left">{variable.label}</span>
+                            <code className="text-xs text-brand-blue bg-brand-blue-ghost px-1.5 py-0.5 rounded transition-all duration-200 group-hover:bg-brand-blue group-hover:text-white">
+                              {`{${variable.key}}`}
+                            </code>
+                          </button>
+                        </motion.div>
                       ))}
                     </motion.div>
                   )}
