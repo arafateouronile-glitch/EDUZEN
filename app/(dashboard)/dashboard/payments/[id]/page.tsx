@@ -743,7 +743,7 @@ export default function InvoiceDetailPage() {
                         onChange={(e) =>
                           setPaymentForm({
                             ...paymentForm,
-                            payment_provider: e.target.value as 'sepa' | 'stripe' | null,
+                            payment_provider: (e.target.value || 'stripe') as 'sepa' | 'stripe',
                           })
                         }
                         className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
@@ -762,7 +762,7 @@ export default function InvoiceDetailPage() {
                         onChange={(e) =>
                           setPaymentForm({
                             ...paymentForm,
-                            payment_provider: e.target.value as 'sepa' | 'stripe' | null,
+                            payment_provider: (e.target.value || 'stripe') as 'sepa' | 'stripe',
                           })
                         }
                         className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
