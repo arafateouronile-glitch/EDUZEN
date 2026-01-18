@@ -171,7 +171,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
                     checked={footer.pagination.enabled}
                     onCheckedChange={(checked) => {
                       handleUpdateFooter({
-                        pagination: { ...footer.pagination, enabled: checked },
+                        pagination: { ...footer.pagination, enabled: checked as boolean },
                       })
                     }}
                   />
