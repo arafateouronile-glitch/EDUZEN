@@ -61,8 +61,26 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
   }
 
   const handleUpdateFooter = (updates: Omit<Partial<FooterConfig>, 'pagination'> & { content?: string; pagination?: Partial<FooterConfig['pagination']> }) => {
+    const { pagination: paginationUpdate, ...restUpdates } = updates
+    const mergedFooter = {
+      ...footer,
+      ...restUpdates,
+      ...(paginationUpdate && footer.pagination ? {
+        pagination: {
+          ...footer.pagination,
+          ...paginationUpdate,
+        } as FooterConfig['pagination']
+      } : paginationUpdate ? {
+        pagination: {
+          enabled: false,
+          format: 'Page {numero_page} / {total_pages}',
+          position: 'center',
+          ...paginationUpdate,
+        } as FooterConfig['pagination']
+      } : {}),
+    }
     onTemplateChange({
-      footer: { ...footer, ...updates },
+      footer: mergedFooter as FooterConfig,
       footer_enabled: updates.enabled !== undefined ? updates.enabled : template.footer_enabled,
       footer_height: updates.height !== undefined ? updates.height : template.footer_height,
     })
