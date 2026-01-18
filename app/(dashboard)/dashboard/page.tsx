@@ -171,7 +171,7 @@ function TeacherDashboard() {
       
       // Émargements pour aujourd'hui
       const { data, error } = await supabase
-        .from('attendances')
+        .from('attendance')
         .select('id, status')
         .in('session_id', sessionIds)
         .eq('date', today)
@@ -814,6 +814,7 @@ export default function DashboardPage() {
 
       const classData = await Promise.all(
         classes.map(async (classItem: any) => {
+          if (!user.organization_id) return null
           const { count } = await supabase
             .from('students')
             .select('*', { count: 'exact', head: true })

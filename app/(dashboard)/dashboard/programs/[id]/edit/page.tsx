@@ -44,19 +44,22 @@ export default function EditProgramPage() {
   // Pré-remplir le formulaire avec les données existantes
   useEffect(() => {
     if (program) {
+      // Note: Les propriétés price, currency, duration_hours, etc. sont dans formations, pas dans programs
+      // Pour l'instant, on utilise des valeurs par défaut
+      const firstFormation = program.formations?.[0]
       setFormData({
         code: program.code || '',
         name: program.name || '',
         description: program.description || '',
-        duration_hours: program.duration_hours?.toString() || '',
-        price: program.price?.toString() || '',
-        currency: program.currency || 'XOF',
-        payment_plan: program.payment_plan || 'full',
-        prerequisites: program.prerequisites || '',
-        capacity_max: program.capacity_max?.toString() || '',
-        age_min: program.age_min?.toString() || '',
-        age_max: program.age_max?.toString() || '',
-        certification_issued: program.certification_issued || false,
+        duration_hours: (firstFormation as any)?.duration_hours?.toString() || '',
+        price: (firstFormation as any)?.price?.toString() || '',
+        currency: (firstFormation as any)?.currency || 'XOF',
+        payment_plan: (firstFormation as any)?.payment_plan || 'full',
+        prerequisites: (firstFormation as any)?.prerequisites || '',
+        capacity_max: (firstFormation as any)?.capacity_max?.toString() || '',
+        age_min: (firstFormation as any)?.age_min?.toString() || '',
+        age_max: (firstFormation as any)?.age_max?.toString() || '',
+        certification_issued: (firstFormation as any)?.certification_issued || false,
         is_active: program.is_active ?? true,
       })
     }
@@ -67,21 +70,15 @@ export default function EditProgramPage() {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
       console.log('Mise à jour du programme:', programId, formData)
+      // Note: Les propriétés price, currency, duration_hours, etc. sont dans formations, pas dans programs
+      // On met à jour uniquement les propriétés qui existent dans la table programs
       const result = await programService.updateProgram(programId, {
         code: formData.code,
         name: formData.name,
         description: formData.description || null,
-        duration_hours: formData.duration_hours ? parseInt(formData.duration_hours) : null,
-        price: parseFloat(formData.price) || 0,
-        currency: formData.currency,
-        payment_plan: formData.payment_plan as 'full' | 'installment' | 'free',
-        prerequisites: formData.prerequisites || null,
-        capacity_max: formData.capacity_max ? parseInt(formData.capacity_max) : null,
-        age_min: formData.age_min ? parseInt(formData.age_min) : null,
-        age_max: formData.age_max ? parseInt(formData.age_max) : null,
-        certification_issued: formData.certification_issued,
         is_active: formData.is_active,
-      })
+        // Les autres propriétés (price, currency, etc.) doivent être mises à jour dans formations
+      } as any)
       console.log('Programme mis à jour avec succès:', result)
       return result
     },

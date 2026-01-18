@@ -117,7 +117,7 @@ export default function MyStudentsPage() {
       const studentIds = myStudents.map((e: any) => e.students?.id).filter(Boolean)
       
       const { data, error } = await supabase
-        .from('attendances')
+        .from('attendance')
         .select('student_id, status')
         .in('student_id', studentIds)
       
