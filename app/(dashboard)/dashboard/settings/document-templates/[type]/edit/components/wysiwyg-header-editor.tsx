@@ -105,11 +105,10 @@ export function WysiwygHeaderEditor({ template, onTemplateChange, onEditorRefRea
             {/* Activer/Désactiver */}
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="header-enabled">Afficher l'en-tête</Label>
+                <Label>Afficher l'en-tête</Label>
                 <p className="text-sm text-text-tertiary">Afficher l'en-tête sur toutes les pages</p>
               </div>
               <Switch
-                id="header-enabled"
                 checked={template.header_enabled}
                 onCheckedChange={(checked) => {
                   onTemplateChange({ header_enabled: checked })
