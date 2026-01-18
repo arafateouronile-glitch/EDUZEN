@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
             start_time,
             end_time,
             location,
-            room,
             organization_id,
             formations(id, name),
             session_teachers(
@@ -106,7 +105,7 @@ export async function GET(request: NextRequest) {
             month: 'long',
           })
 
-          const locationInfo = [session.location, session.room].filter(Boolean).join(' - ')
+          const locationInfo = session.location || ''
           const timeInfo = session.start_time 
             ? `${session.start_time}${session.end_time ? ` - ${session.end_time}` : ''}`
             : ''
@@ -190,7 +189,7 @@ export async function GET(request: NextRequest) {
             // Récupérer les infos de l'apprenant
             const { data: student } = await supabaseAdmin
               .from('students')
-              .select('id, first_name, last_name, email, phone, parent_phone')
+              .select('id, first_name, last_name, email, phone')
               .eq('id', studentId)
               .single()
 
@@ -203,7 +202,7 @@ export async function GET(request: NextRequest) {
               `${timeInfo ? `⏰ Horaire : ${timeInfo}\n` : ''}` +
               `${locationInfo ? `📍 Lieu : ${locationInfo}\n` : ''}`
 
-            const studentPhone = student.phone || student.parent_phone
+            const studentPhone = student.phone
 
             // WhatsApp pour apprenants (premium)
             if (whatsappEnabled && studentPhone) {
