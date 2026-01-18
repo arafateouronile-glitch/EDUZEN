@@ -435,8 +435,7 @@ export default function DocumentTemplateEditPage() {
         // Capturer l'état actuel du template avant la sauvegarde
         const templateToSave = template
         
-        const { id, ...templateData } = template
-        await documentTemplateService.updateTemplate(id, templateData)
+        await documentTemplateService.updateTemplate(template)
         
         // Mettre à jour la référence du template sauvegardé
         savedTemplateRef.current = { ...template }
