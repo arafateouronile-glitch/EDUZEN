@@ -247,7 +247,7 @@ export default function ProgramEnrollmentsPage() {
         enrollment_date: new Date().toISOString().split('T')[0],
         status: 'confirmed',
         payment_status: 'pending',
-        total_amount: program?.price?.toString() || '0',
+        total_amount: (program as any)?.price?.toString() || '0',
         paid_amount: '0',
       })
     },
@@ -255,13 +255,13 @@ export default function ProgramEnrollmentsPage() {
 
   // Mettre à jour le montant total quand le programme change
   useEffect(() => {
-    if (program?.price && !newEnrollmentForm.total_amount) {
+    if ((program as any)?.price && !newEnrollmentForm.total_amount) {
       setNewEnrollmentForm((prev) => ({
         ...prev,
-        total_amount: program.price.toString(),
+        total_amount: (program as any).price.toString(),
       }))
     }
-  }, [program?.price])
+  }, [(program as any)?.price])
 
   // Statistiques
   const stats = enrollments
@@ -368,7 +368,7 @@ export default function ProgramEnrollmentsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="text-lg font-bold">{formatCurrency(stats.totalAmount, program.currency)}</div>
+                <div className="text-lg font-bold">{formatCurrency(stats.totalAmount, (program as any).currency || 'XOF')}</div>
                 <div className="text-sm text-muted-foreground">Total</div>
               </div>
             </CardContent>
@@ -376,7 +376,7 @@ export default function ProgramEnrollmentsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="text-lg font-bold">{formatCurrency(stats.paidAmount, program.currency)}</div>
+                <div className="text-lg font-bold">{formatCurrency(stats.paidAmount, (program as any).currency || 'XOF')}</div>
                 <div className="text-sm text-muted-foreground">Payé</div>
               </div>
             </CardContent>
@@ -578,7 +578,7 @@ export default function ProgramEnrollmentsPage() {
                 {/* Montant total */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Montant total ({program.currency}) *
+                    Montant total ({(program as any).currency || 'XOF'}) *
                   </label>
                   <input
                     type="number"
@@ -599,7 +599,7 @@ export default function ProgramEnrollmentsPage() {
                 {/* Montant payé */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Montant payé ({program.currency})
+                    Montant payé ({(program as any).currency || 'XOF'})
                   </label>
                   <input
                     type="number"
@@ -719,14 +719,14 @@ export default function ProgramEnrollmentsPage() {
                           <div>
                             <span className="text-muted-foreground">Montant:</span>{' '}
                             <span className="font-medium">
-                              {formatCurrency(enrollment.total_amount || 0, program.currency)}
+                              {formatCurrency(enrollment.total_amount || 0, (program as any).currency || 'XOF')}
                             </span>
                           </div>
                           {enrollment.paid_amount > 0 && (
                             <div>
                               <span className="text-muted-foreground">Payé:</span>{' '}
                               <span className="font-medium">
-                                {formatCurrency(enrollment.paid_amount, program.currency)}
+                                {formatCurrency(enrollment.paid_amount, (program as any).currency || 'XOF')}
                               </span>
                             </div>
                           )}
