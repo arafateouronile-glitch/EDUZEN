@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     const { data: templateData, error: templateError } = await supabase
       .from('document_templates')
       .update({ docx_template_url: docxTemplateUrl })
-      .eq('type', type)
+      .eq('type', type as any)
       .eq('organization_id', organizationId)
       .select()
       .single()

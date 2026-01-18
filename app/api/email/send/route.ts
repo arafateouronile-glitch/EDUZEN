@@ -51,8 +51,9 @@ export async function POST(request: NextRequest) {
 
         const errors: string[] = [];
         for (const email of emails) {
-          const result = validateEmail(String(email));
-          if (!result.isValid) {
+          try {
+            validateEmail(String(email));
+          } catch {
             errors.push(`Email invalide: ${email}`);
           }
         }
@@ -226,7 +227,7 @@ export async function POST(request: NextRequest) {
           })),
           cc: emailData.cc,
           bcc: emailData.bcc,
-          replyTo: emailData.replyTo,
+          replyTo: emailData.replyTo as string | undefined,
         });
 
         if (error) {

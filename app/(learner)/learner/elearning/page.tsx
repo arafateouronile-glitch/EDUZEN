@@ -59,7 +59,7 @@ export default function LearnerElearningPage() {
         }
         return data || []
       } catch (error: any) {
-        logger.warn('Error fetching session courses', error, {
+        logger.warn('Error fetching session courses', {
           studentId: maskId(studentId),
           error: sanitizeError(error),
         })
@@ -86,7 +86,7 @@ export default function LearnerElearningPage() {
           .eq('student_id', studentId)
 
         if (error) {
-          logger.warn('Error fetching lesson progress', error, {
+          logger.warn('Error fetching lesson progress', {
             studentId: maskId(studentId),
             error: sanitizeError(error),
           })
@@ -120,7 +120,7 @@ export default function LearnerElearningPage() {
 
         return progressByCourse
       } catch (error: any) {
-        logger.warn('Error calculating progress', error, {
+        logger.warn('Error calculating progress', {
           studentId: maskId(studentId),
           error: sanitizeError(error),
         })
@@ -140,8 +140,8 @@ export default function LearnerElearningPage() {
     progress_percentage: lessonProgressData?.[sc.course_id]?.percentage || 0,
     completed_lessons: lessonProgressData?.[sc.course_id]?.completed || 0,
     total_lessons: lessonProgressData?.[sc.course_id]?.total || 0,
-    status: lessonProgressData?.[sc.course_id]?.percentage === 100 ? 'completed' : 
-            lessonProgressData?.[sc.course_id]?.percentage > 0 ? 'in_progress' : 'not_started',
+    status: (lessonProgressData?.[sc.course_id]?.percentage ?? 0) === 100 ? 'completed' : 
+            (lessonProgressData?.[sc.course_id]?.percentage ?? 0) > 0 ? 'in_progress' : 'not_started',
     is_required: sc.is_required,
     due_date: sc.due_date,
   }))
@@ -157,6 +157,7 @@ export default function LearnerElearningPage() {
       const enrolledCourseIds = enrollments?.map((e: any) => e.course_id) || []
       
       try {
+        if (!supabase || !studentData.organization_id) return []
         let query = supabase
           .from('courses')
           .select('*')
@@ -175,14 +176,14 @@ export default function LearnerElearningPage() {
             error.code === 'PGRST116' ||
             error.code === '42P01' ||
             error.code === 'PGRST301' ||
-            error.status === 400 ||
+            (error as any).status === 400 ||
             error.code === '400' ||
             error.message?.includes('relation') ||
             error.message?.includes('relationship') ||
             error.message?.includes('does not exist') ||
             error.message?.includes('schema cache')
           ) {
-            logger.warn('Courses table does not exist yet or invalid query', error, {
+            logger.warn('Courses table does not exist yet or invalid query', {
               studentId: maskId(studentData.id),
               error: sanitizeError(error),
             })
@@ -205,7 +206,7 @@ export default function LearnerElearningPage() {
           error?.message?.includes('does not exist') ||
           error?.message?.includes('schema cache')
         ) {
-          logger.warn('Courses table does not exist yet or invalid query', error, {
+          logger.warn('Courses table does not exist yet or invalid query', {
             studentId: maskId(studentData.id),
             error: sanitizeError(error),
           })

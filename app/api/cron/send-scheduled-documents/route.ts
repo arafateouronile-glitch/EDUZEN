@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
           supabaseAdmin,
           scheduledSend.organization_id,
           scheduledSend.recipient_type,
-          scheduledSend.recipient_ids || [],
-          scheduledSend.session_id
+          (scheduledSend.recipient_ids || []) as string[],
+          scheduledSend.session_id || undefined
         )
 
         if (!recipients.length) {
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         for (const recipient of recipients) {
           if (scheduledSend.send_via && scheduledSend.send_via.includes('email') && recipient.email) {
             const result = await sendDocumentByEmail(
-              recipient.email,
+              recipient.email || undefined,
               recipient.name,
               scheduledSend.subject,
               scheduledSend.message,

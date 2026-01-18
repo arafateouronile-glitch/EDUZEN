@@ -4,108 +4,109 @@
 
 🔍 Vérification TypeScript en cours...
 
-app/(dashboard)/dashboard/settings/document-templates/[type]/edit/page.tsx(678,13): error TS2322: Type '{ children: Element[]; type: "single"; value: string; onValueChange: (value: string | undefined) => void | "" | undefined; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionProps'.
-  Property 'value' does not exist on type 'IntrinsicAttributes & AccordionProps'.
-app/(dashboard)/dashboard/settings/email-schedules/page.tsx(589,29): error TS2322: Type 'string | undefined' is not assignable to type 'DocumentType | undefined'.
-  Type 'string' is not assignable to type 'DocumentType | undefined'.
-app/(dashboard)/dashboard/settings/users/[id]/page.tsx(66,5): error TS2769: No overload matches this call.
-  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, string[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<unknown, Error>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, string[]>'.
-  Overload 2 of 3, '(options: UndefinedInitialDataOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UndefinedInitialDataOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>'.
-  Overload 3 of 3, '(options: UseQueryOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UseQueryOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>'.
-app/(dashboard)/dashboard/settings/users/[id]/page.tsx(66,17): error TS7006: Parameter 'data' implicitly has an 'any' type.
-app/(dashboard)/dashboard/settings/users/page.tsx(431,50): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | Date'.
-  Type 'null' is not assignable to type 'string | Date'.
-app/(dashboard)/dashboard/settings/users/page.tsx(442,31): error TS2322: Type 'boolean | null' is not assignable to type 'boolean'.
-  Type 'null' is not assignable to type 'boolean'.
-app/(dashboard)/dashboard/sites/page.tsx(406,19): error TS2322: Type '{ id: string; checked: boolean; onCheckedChange: (checked: boolean) => void; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
-  Property 'id' does not exist on type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
-app/(dashboard)/dashboard/sites/page.tsx(418,19): error TS2322: Type '{ id: string; checked: boolean; onCheckedChange: (checked: boolean) => void; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
-  Property 'id' does not exist on type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
-app/(dashboard)/dashboard/students/[id]/edit/page.tsx(81,9): error TS2322: Type 'string' is not assignable to type '"active" | "inactive" | "graduated"'.
-app/(dashboard)/dashboard/students/[id]/edit/page.tsx(332,74): error TS2304: Cannot find name 'Student'.
-app/(dashboard)/dashboard/students/[id]/page.tsx(282,56): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | Date'.
-  Type 'null' is not assignable to type 'string | Date'.
-app/(dashboard)/dashboard/students/new/page.tsx(234,12): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(values: { created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
-    Argument of type '{ student_id: string; session_id: string; enrollment_date: string; status: string; payment_status: string; }' is not assignable to parameter of type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }'.
-      Property 'total_amount' is missing in type '{ student_id: string; session_id: string; enrollment_date: string; status: string; payment_status: string; }' but required in type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }'.
-  Overload 2 of 2, '(values: { created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
-    Object literal may only specify known properties, and 'student_id' does not exist in type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }[]'.
-app/(dashboard)/dashboard/students/page.tsx(136,9): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+app/(learner)/learner/elearning/page.tsx(123,58): error TS2554: Expected 1-2 arguments, but got 3.
+app/(learner)/learner/evaluations/[quizId]/page.tsx(84,65): error TS2554: Expected 1-2 arguments, but got 3.
+app/(learner)/learner/formations/[sessionId]/page.tsx(289,83): error TS2554: Expected 1-2 arguments, but got 3.
+app/(learner)/learner/formations/[sessionId]/page.tsx(360,55): error TS2554: Expected 1-2 arguments, but got 3.
+app/(learner)/learner/messages/[id]/page.tsx(393,70): error TS2367: This comparison appears to be unintentional because the types '"student" | "group"' and '"user"' have no overlap.
+app/(learner)/learner/page.tsx(550,11): error TS2322: Type '{ y: number[]; transition: { duration: number; repeat: number; ease: string; }; }' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls | undefined'.
+  Type '{ y: number[]; transition: { duration: number; repeat: number; ease: string; }; }' is not assignable to type 'TargetAndTransition'.
+    Type '{ y: number[]; transition: { duration: number; repeat: number; ease: string; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
+      Types of property 'transition' are incompatible.
+        Type '{ duration: number; repeat: number; ease: string; }' is not assignable to type 'Transition<any> | undefined'.
+          Type '{ duration: number; repeat: number; ease: string; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+            Type '{ duration: number; repeat: number; ease: string; }' is not assignable to type 'ValueAnimationTransition<any>'.
+              Types of property 'ease' are incompatible.
+                Type 'string' is not assignable to type 'Easing | Easing[] | undefined'.
+app/(learner)/learner/page.tsx(554,11): error TS2322: Type '{ transition: { delay: number; duration: number; repeat: number; ease: string; }; y: number[]; }' is not assignable to type 'boolean | TargetAndTransition | VariantLabels | LegacyAnimationControls | undefined'.
+  Types of property 'transition' are incompatible.
+    Type '{ delay: number; duration: number; repeat: number; ease: string; }' is not assignable to type 'Transition<any> | undefined'.
+      Type '{ delay: number; duration: number; repeat: number; ease: string; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+        Type '{ delay: number; duration: number; repeat: number; ease: string; }' is not assignable to type 'ValueAnimationTransition<any>'.
+          Types of property 'ease' are incompatible.
+            Type 'string' is not assignable to type 'Easing | Easing[] | undefined'.
+app/(learner)/learner/payments/page.tsx(35,57): error TS2554: Expected 1-2 arguments, but got 3.
+app/(learner)/learner/payments/page.tsx(71,78): error TS2554: Expected 1-2 arguments, but got 3.
+app/(learner)/learner/payments/page.tsx(89,57): error TS2554: Expected 1-2 arguments, but got 3.
+app/(learner)/learner/planning/page.tsx(69,19): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
+app/(learner)/learner/planning/page.tsx(77,92): error TS2554: Expected 1-2 arguments, but got 3.
+app/(learner)/learner/profile/page.tsx(69,26): error TS2339: Property 'bio' does not exist on type '{ address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; enrollment_date: string | null; ... 10 more ...; updated_at: string | null; }'.
+app/(learner)/learner/profile/page.tsx(81,9): error TS18047: 'supabase' is possibly 'null'.
+app/(learner)/learner/profile/page.tsx(87,9): error TS18047: 'supabase' is possibly 'null'.
+app/(learner)/learner/profile/page.tsx(109,31): error TS18047: 'supabase' is possibly 'null'.
+app/(learner)/learner/profile/page.tsx(229,39): error TS2339: Property 'bio' does not exist on type '{ address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; enrollment_date: string | null; ... 10 more ...; updated_at: string | null; }'.
+app/(learner)/learner/profile/page.tsx(391,66): error TS2339: Property 'bio' does not exist on type '{ address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; enrollment_date: string | null; ... 10 more ...; updated_at: string | null; }'.
+app/(portal)/portal/attendance/page.tsx(40,9): error TS2322: Type '(string | null)[]' is not assignable to type 'string[]'.
+  Type 'string | null' is not assignable to type 'string'.
+    Type 'null' is not assignable to type 'string'.
+app/(portal)/portal/children/page.tsx(37,19): error TS2345: Argument of type '(string | null)[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'string | null' is not assignable to type 'string'.
+    Type 'null' is not assignable to type 'string'.
+app/(portal)/portal/children/page.tsx(84,31): error TS2339: Property 'classes' does not exist on type 'StudentWithRelations'.
+app/(portal)/portal/documents/page.tsx(55,9): error TS2322: Type '(string | null)[]' is not assignable to type 'string[]'.
+  Type 'string | null' is not assignable to type 'string'.
+    Type 'null' is not assignable to type 'string'.
+app/(portal)/portal/page.tsx(41,19): error TS2345: Argument of type '(string | null)[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'string | null' is not assignable to type 'string'.
+    Type 'null' is not assignable to type 'string'.
+app/(portal)/portal/page.tsx(208,99): error TS2339: Property 'paid_amount' does not exist on type '{ amount: number; created_at: string | null; currency: string; document_type: string | null; due_date: string; enrollment_id: string | null; id: string; invoice_number: string; issue_date: string | null; ... 9 more ...; updated_at: string | null; }'.
+app/(portal)/portal/payments/page.tsx(40,9): error TS2322: Type '(string | null)[]' is not assignable to type 'string[]'.
+  Type 'string | null' is not assignable to type 'string'.
+    Type 'null' is not assignable to type 'string'.
+app/(portal)/portal/payments/page.tsx(86,9): error TS2322: Type '(string | null)[]' is not assignable to type 'string[]'.
+  Type 'string | null' is not assignable to type 'string'.
+    Type 'null' is not assignable to type 'string'.
+app/(portal)/portal/payments/page.tsx(171,99): error TS2339: Property 'paid_amount' does not exist on type '{ amount: number; created_at: string | null; currency: string; document_type: string | null; due_date: string; enrollment_id: string | null; id: string; invoice_number: string; issue_date: string | null; ... 10 more ...; students: { ...; } | null; }'.
+app/(portal)/portal/portfolios/[id]/page.tsx(70,38): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'string | number | boolean | { [key: string]: Json | undefined; } | Json[]'.
+  No index signature with a parameter of type 'string' was found on type 'string | number | boolean | { [key: string]: Json | undefined; } | Json[]'.
+app/(portal)/portal/portfolios/[id]/page.tsx(257,60): error TS2322: Type 'string | null' is not assignable to type 'Color | undefined'.
+  Type 'null' is not assignable to type 'Color | undefined'.
+app/(portal)/portal/portfolios/[id]/page.tsx(268,40): error TS2339: Property 'map' does not exist on type 'string | number | boolean | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'map' does not exist on type 'string'.
+app/(portal)/portal/portfolios/[id]/page.tsx(279,48): error TS2322: Type 'string | null' is not assignable to type 'BorderBottomColor | undefined'.
+  Type 'null' is not assignable to type 'BorderBottomColor | undefined'.
+app/(portal)/portal/portfolios/[id]/page.tsx(284,30): error TS2322: Type 'string | null' is not assignable to type 'BackgroundColor | undefined'.
+  Type 'null' is not assignable to type 'BackgroundColor | undefined'.
+app/api/cron/send-scheduled-documents/route.ts(57,11): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
   Type 'null' is not assignable to type 'string | undefined'.
-app/(dashboard)/dashboard/students/page.tsx(179,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
-  Property 'visible' is incompatible with index signature.
-    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
-      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
-        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
-          Types of property 'transition' are incompatible.
-            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
-              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
-                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
-                  Types of property 'ease' are incompatible.
-                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
-                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
-                        Type 'number[]' is not assignable to type 'Easing[]'.
-                          Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/students/page.tsx(298,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
-  Property 'visible' is incompatible with index signature.
-    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
-      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
-        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
-          Types of property 'transition' are incompatible.
-            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
-              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
-                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
-                  Types of property 'ease' are incompatible.
-                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
-                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
-                        Type 'number[]' is not assignable to type 'Easing[]'.
-                          Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/students/page.tsx(374,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
-  Property 'visible' is incompatible with index signature.
-    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
-      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
-        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
-          Types of property 'transition' are incompatible.
-            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
-              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
-                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
-                  Types of property 'ease' are incompatible.
-                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
-                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
-                        Type 'number[]' is not assignable to type 'Easing[]'.
-                          Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/students/page.tsx(536,11): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
-  Property 'visible' is incompatible with index signature.
-    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
-      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
-        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
-          Types of property 'transition' are incompatible.
-            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
-              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
-                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
-                  Types of property 'ease' are incompatible.
-                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
-                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
-                        Type 'number[]' is not assignable to type 'Easing[]'.
-                          Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/students/page.tsx(540,14): error TS2739: Type '{ currentPage: number; totalPages: number; onPageChange: Dispatch<SetStateAction<number>>; }' is missing the following properties from type 'PaginationProps': itemsPerPage, totalItems
-app/(dashboard)/dashboard/support/[id]/page.tsx(223,32): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+app/api/cron/send-scheduled-documents/route.ts(81,15): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
   Type 'null' is not assignable to type 'string'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(224,39): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
-  Type 'null' is not assignable to type 'string'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(233,17): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
-  Type 'null' is not assignable to type 'string | undefined'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(339,33): error TS2339: Property 'full_name' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(339,59): error TS2339: Property 'email' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(346,43): error TS2339: Property 'full_name' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(346,77): error TS2339: Property 'email' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(439,29): error TS2322: Type '{ children: Element[]; name: string; required: true; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
-  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.
-app/(dashboard)/dashboard/support/page.tsx(242,29): error TS2322: Type '{ children: Element[]; name: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
-  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.
-app/(dashboard)/dashboard/support/page.tsx(276,29): error TS2322: Type '{ children: Element[]; name: string; defaultValue: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
-  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.
+app/api/documents/generate-docx/route.ts(85,29): error TS2345: Argument of type 'Buffer<ArrayBufferLike>' is not assignable to parameter of type 'BodyInit | null | undefined'.
+  Type 'Buffer<ArrayBufferLike>' is missing the following properties from type 'URLSearchParams': size, append, delete, get, and 2 more.
+app/api/documents/generate/route.ts(228,8): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { created_at?: string | null | undefined; file_name: string; file_url: string; format: string; generated_by?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; ... 5 more ...; type: "convention" | ... 11 more ... | "attestation_assiduite"; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type 'DocumentVariables' is not assignable to type 'Json | undefined'.
+      Type 'DocumentVariables' is not assignable to type '{ [key: string]: Json | undefined; }'.
+        Index signature for type 'string' is missing in type 'DocumentVariables'.
+  Overload 2 of 2, '(values: { created_at?: string | null | undefined; file_name: string; file_url: string; format: string; generated_by?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; ... 5 more ...; type: "convention" | ... 11 more ... | "attestation_assiduite"; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'organization_id' does not exist in type '{ created_at?: string | null | undefined; file_name: string; file_url: string; format: string; generated_by?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; ... 5 more ...; type: "convention" | ... 11 more ... | "attestation_assiduite"; }[]'.
+app/api/documents/generate/route.ts(263,9): error TS2554: Expected 2-3 arguments, but got 5.
+app/api/documents/generate/route.ts(313,15): error TS2367: This comparison appears to be unintentional because the types '"HTML"' and '"ODT"' have no overlap.
+app/api/documents/generate/route.ts(319,42): error TS2339: Property 'send' does not exist on type 'EmailService'.
+app/api/documents/schedule-send/route.ts(86,52): error TS2339: Property 'name' does not exist on type 'SelectQueryError<"column 'name' does not exist on 'documents'.">'.
+app/api/documents/schedule-send/route.ts(92,35): error TS2339: Property 'name' does not exist on type 'SelectQueryError<"column 'name' does not exist on 'documents'.">'.
+app/api/documents/scheduled/execute/route.ts(102,48): error TS2352: Conversion of type '{ content: Json; created_at: string | null; docx_template_url: string | null; footer: Json; footer_enabled: boolean | null; footer_height: number | null; header: Json; ... 10 more ...; updated_at: string | null; }' to type 'DocumentTemplate' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'content' are incompatible.
+    Type 'Json' is not comparable to type 'DocumentContent'.
+      Type 'Json[]' is missing the following properties from type 'DocumentContent': pageSize, margins, elements
+app/api/documents/scheduled/execute/route.ts(106,49): error TS2352: Conversion of type '{ content: Json; created_at: string | null; docx_template_url: string | null; footer: Json; footer_enabled: boolean | null; footer_height: number | null; header: Json; ... 10 more ...; updated_at: string | null; }' to type 'DocumentTemplate' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'content' are incompatible.
+    Type 'Json' is not comparable to type 'DocumentContent'.
+      Type 'Json[]' is missing the following properties from type 'DocumentContent': pageSize, margins, elements
+app/api/documents/scheduled/execute/route.ts(110,49): error TS2352: Conversion of type '{ content: Json; created_at: string | null; docx_template_url: string | null; footer: Json; footer_enabled: boolean | null; footer_height: number | null; header: Json; ... 10 more ...; updated_at: string | null; }' to type 'DocumentTemplate' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'content' are incompatible.
+    Type 'Json' is not comparable to type 'DocumentContent'.
+      Type 'Json[]' is missing the following properties from type 'DocumentContent': pageSize, margins, elements
+app/api/documents/scheduled/execute/route.ts(122,16): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { created_at?: string | null | undefined; file_name: string; file_url: string; format: string; generated_by?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; ... 5 more ...; type: "convention" | ... 11 more ... | "attestation_assiduite"; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type 'DocumentVariables' is not assignable to type 'Json | undefined'.
+      Type 'DocumentVariables' is not assignable to type '{ [key: string]: Json | undefined; }'.
+        Index signature for type 'string' is missing in type 'DocumentVariables'.
+  Overload 2 of 2, '(values: { created_at?: string | null | undefined; file_name: string; file_url: string; format: string; generated_by?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; ... 5 more ...; type: "convention" | ... 11 more ... | "attestation_assiduite"; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'organization_id' does not exist in type '{ created_at?: string | null | undefined; file_name: string; file_url: string; format: string; generated_by?: string | null | undefined; id?: string | undefined; metadata?: Json | undefined; ... 5 more ...; type: "convention" | ... 11 more ... | "attestation_assiduite"; }[]'.
+app/api/documents/scheduled/execute/route.ts(145,36): error TS2339: Property 'send' does not exist on type 'EmailService'.
+app/api/documents/scheduled/execute/route.ts(194,42): error TS2339: Property 'recordExecution' does not exist on type 'ScheduledGenerationService'.
+app/api/documents/scheduled/execute/route.ts(199,42): error TS2339: Property 'recordExecution' does not exist on type 'ScheduledGenerationService'.
+app/api/documents/scheduled/route.ts(91,7): error TS2353: Object literal may only specify known properties, and 'name' does not exist in type 'ScheduledGenerationConfig'.
+app/api/documents/upload-docx-template/route.ts(96,19): error TS2345: Argument of type 'string' is not assignable to parameter of type 'NonNullable<"convention" | "facture" | "devis" | "convocation" | "contrat" | "attestation_reussite" | "certificat_scolarite" | "releve_notes" | "attestation_entree" | "reglement_interieur" | "cgv" | "programme" | "attestation_assiduite">'.
+app/api/documents/upload-signed/route.ts(15,65): error TS2339: Property 'auth' does not exist on type 'Promise<SupabaseClient<Database, "public", "public", { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationsh...'.

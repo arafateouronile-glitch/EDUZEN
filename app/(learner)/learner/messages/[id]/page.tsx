@@ -396,11 +396,12 @@ export default function LearnerConversationPage() {
       if (otherParticipant.name && !otherParticipant.name.startsWith('Administrateur ') && !otherParticipant.name.startsWith('Utilisateur ')) return
       
       try {
+        if (!supabase) return
         const { data: userData, error } = await supabase
           .rpc('get_user_name', { p_user_id: otherParticipant.data.id })
         
         if (!error && userData) {
-          const userName = userData.full_name || userData.email
+          const userName = (userData as any).full_name || (userData as any).email
           if (userName) {
             setEnrichedOtherParticipant({
               ...otherParticipant,

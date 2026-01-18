@@ -80,7 +80,7 @@ export default function LearnerDashboardPage() {
             error.message?.includes('does not exist') ||
             error.message?.includes('schema cache')
           ) {
-            logger.warn('Enrollments table may not be accessible (RLS or missing)', error, {
+            logger.warn('Enrollments table may not be accessible (RLS or missing)', {
               studentId: maskId(studentId),
               error: sanitizeError(error),
             })
@@ -135,7 +135,7 @@ export default function LearnerDashboardPage() {
 
         return data || []
       } catch (error: any) {
-        logger.warn('Error fetching session courses (dashboard)', error, {
+        logger.warn('Error fetching session courses (dashboard)', {
           studentId: maskId(studentId),
           error: sanitizeError(error),
         })
@@ -163,7 +163,7 @@ export default function LearnerDashboardPage() {
           .eq('student_id', studentId)
 
         if (error) {
-          logger.warn('Error fetching lesson progress (dashboard)', error, {
+          logger.warn('Error fetching lesson progress (dashboard)', {
             studentId: maskId(studentId),
             error: sanitizeError(error),
           })
@@ -176,7 +176,7 @@ export default function LearnerDashboardPage() {
           .in('course_id', courseIds)
 
         if (lessonsError) {
-          logger.warn('Error fetching lessons (dashboard)', lessonsError, {
+          logger.warn('Error fetching lessons (dashboard)', {
             studentId: maskId(studentId),
             error: sanitizeError(lessonsError),
           })
@@ -199,7 +199,7 @@ export default function LearnerDashboardPage() {
 
         return progressByCourse
       } catch (error: any) {
-        logger.warn('Error calculating progress (dashboard)', error, {
+        logger.warn('Error calculating progress (dashboard)', {
           studentId: maskId(studentId),
           error: sanitizeError(error),
         })
@@ -295,7 +295,7 @@ export default function LearnerDashboardPage() {
           .order('date', { ascending: false })
 
         if (attendanceError) {
-          logger.warn('Error fetching attendance', attendanceError, {
+          logger.warn('Error fetching attendance', {
             studentId: maskId(studentId),
             error: sanitizeError(attendanceError),
           })
@@ -318,7 +318,7 @@ export default function LearnerDashboardPage() {
           .order('start_time', { ascending: true })
 
         if (slotsError) {
-          logger.warn('Error fetching session_slots', slotsError, {
+          logger.warn('Error fetching session_slots', {
             studentId: maskId(studentId),
             error: sanitizeError(slotsError),
           })
@@ -347,7 +347,7 @@ export default function LearnerDashboardPage() {
 
         return enrichedData
       } catch (error: any) {
-        logger.warn('Unexpected error fetching attendance', error, {
+        logger.warn('Unexpected error fetching attendance', {
           studentId: maskId(studentId),
           error: sanitizeError(error),
         })
@@ -417,7 +417,7 @@ export default function LearnerDashboardPage() {
                   }
                 }
               } catch (e) {
-                logger.warn('Error calculating hours from slot', e, {
+                logger.warn('Error calculating hours from slot', {
                   studentId: studentId ? maskId(studentId) : undefined,
                   slotId: slot?.id ? maskId(slot.id) : undefined,
                   error: sanitizeError(e),
@@ -442,7 +442,7 @@ export default function LearnerDashboardPage() {
               }
             }
           } catch (e) {
-            logger.warn('Error calculating hours from session times', e, {
+            logger.warn('Error calculating hours from session times', {
               studentId: studentId ? maskId(studentId) : undefined,
               sessionId: session?.id ? maskId(session.id) : undefined,
               error: sanitizeError(e),
@@ -519,7 +519,7 @@ export default function LearnerDashboardPage() {
       scale: 1,
       transition: {
         duration: 0.6,
-        ease: [0.16, 1, 0.3, 1],
+        ease: [0.16, 1, 0.3, 1] as const,
       }
     }
   }
@@ -529,7 +529,7 @@ export default function LearnerDashboardPage() {
     transition: {
       duration: 6,
       repeat: Infinity,
-      ease: "easeInOut"
+      ease: "easeInOut" as const
     }
   }
 

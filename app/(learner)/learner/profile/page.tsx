@@ -66,7 +66,7 @@ export default function LearnerProfilePage() {
         postal_code: studentData.postal_code || '',
         country: studentData.country || '',
         date_of_birth: studentData.date_of_birth || '',
-        bio: studentData.bio || '',
+        bio: (studentData as any).bio || '',
       })
     }
   })
@@ -77,6 +77,7 @@ export default function LearnerProfilePage() {
     queryFn: async () => {
       if (!studentData?.id) return null
       
+      if (!supabase) return { enrollments: 0, courses: 0, certificates: 0 }
       const [enrollments, courses, certificates] = await Promise.all([
         supabase
           .from('enrollments')
@@ -105,6 +106,7 @@ export default function LearnerProfilePage() {
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!studentData?.id) throw new Error('Student not found')
+      if (!supabase) throw new Error('Supabase client not available')
       
       const { error } = await supabase
         .from('students')
@@ -226,7 +228,7 @@ export default function LearnerProfilePage() {
                     postal_code: studentData?.postal_code || '',
                     country: studentData?.country || '',
                     date_of_birth: studentData?.date_of_birth || '',
-                    bio: studentData?.bio || '',
+                    bio: (studentData as any).bio || '',
                   })
                   setIsEditing(true)
                 }}>
@@ -388,7 +390,7 @@ export default function LearnerProfilePage() {
               <div>
                 <Label>Bio / À propos</Label>
                 <Textarea
-                  value={isEditing ? formData.bio : studentData?.bio || ''}
+                  value={isEditing ? formData.bio : (studentData as any)?.bio || ''}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                   disabled={!isEditing}
                   className="mt-1"

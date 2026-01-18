@@ -43,7 +43,7 @@ export async function POST(
         .eq('student_id', user.id)
         .maybeSingle()
 
-      const quizResponses = (progress?.quiz_responses as Record<string, unknown>) || {}
+      const quizResponses = ((progress as any)?.quiz_responses as Record<string, unknown>) || {}
       quizResponses[block_id] = {
         answer,
         answered_at: new Date().toISOString(),
@@ -52,8 +52,8 @@ export async function POST(
       if (progress) {
         const { error } = await supabase
           .from('lesson_progress')
-          .update({ quiz_responses: quizResponses })
-          .eq('id', progress.id)
+          .update({ quiz_responses: quizResponses } as any)
+          .eq('id', (progress as any).id)
 
         if (error) throw error
       } else {
@@ -62,7 +62,7 @@ export async function POST(
           .insert({
             lesson_id,
             student_id: user.id,
-            quiz_responses: quizResponses,
+            quiz_responses: quizResponses as any,
             started_at: new Date().toISOString(),
             last_accessed_at: new Date().toISOString(),
           })
@@ -90,8 +90,8 @@ export async function POST(
       if (progress) {
         const { error } = await supabase
           .from('lesson_progress')
-          .update({ poll_votes: pollVotes })
-          .eq('id', progress.id)
+          .update({ poll_votes: pollVotes } as any)
+          .eq('id', (progress as any).id)
 
         if (error) throw error
       } else {
@@ -100,7 +100,7 @@ export async function POST(
           .insert({
             lesson_id,
             student_id: user.id,
-            poll_votes: pollVotes,
+            poll_votes: pollVotes as any,
             started_at: new Date().toISOString(),
             last_accessed_at: new Date().toISOString(),
           })

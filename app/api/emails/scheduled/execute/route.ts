@@ -464,7 +464,7 @@ export async function POST(request: NextRequest) {
           if (schedule.template_id) {
             template = await emailTemplateService.getTemplateById(schedule.template_id)
           } else {
-            template = await emailTemplateService.getDefaultTemplate(
+            template = await emailTemplateService.getDefault(
               schedule.organization_id,
               schedule.email_type
             )

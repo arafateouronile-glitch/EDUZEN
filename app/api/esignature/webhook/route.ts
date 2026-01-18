@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       })
     } catch (error: unknown) {
       logger.error('Error processing e-signature webhook', error instanceof Error ? error : new Error(String(error)), {
-        path: req.nextUrl.pathname,
+        path: (req as NextRequest).nextUrl.pathname,
       })
 
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors du traitement du webhook'

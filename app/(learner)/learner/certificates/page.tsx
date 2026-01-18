@@ -29,6 +29,7 @@ export default function LearnerCertificatesPage() {
     queryFn: async () => {
       if (!studentId) return []
       
+      if (!supabase) return []
       const { data } = await supabase
         .from('course_certificates')
         .select(`
@@ -49,6 +50,7 @@ export default function LearnerCertificatesPage() {
     queryFn: async () => {
       if (!studentData?.id) return []
       
+      if (!supabase) return []
       const { data } = await supabase
         .from('enrollments')
         .select(`

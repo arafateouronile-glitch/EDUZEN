@@ -38,7 +38,7 @@ export default function PortalDashboardPage() {
       const { data: students } = await supabase
         .from('students')
         .select('*, classes(name)')
-        .in('id', studentGuardians.map((sg) => sg.student_id))
+        .in('id', studentGuardians.map((sg) => sg.student_id).filter((id): id is string => id !== null))
         .eq('status', 'active')
 
       return students || []
@@ -205,7 +205,7 @@ export default function PortalDashboardPage() {
             {unpaidInvoices && unpaidInvoices.length > 0 && (
               <p className="text-sm text-muted-foreground mt-1">
                 Total: {formatCurrency(
-                  unpaidInvoices.reduce((sum, inv) => sum + Number(inv.total_amount) - Number(inv.paid_amount || 0), 0),
+                  unpaidInvoices.reduce((sum, inv) => sum + Number(inv.total_amount) - Number((inv as any).paid_amount || 0), 0),
                   unpaidInvoices[0]?.currency || 'XOF'
                 )}
               </p>

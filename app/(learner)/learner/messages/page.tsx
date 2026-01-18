@@ -45,7 +45,7 @@ export default function LearnerMessagesPage() {
         .eq('student_id', studentId)
 
       if (participantError) {
-        logger.warn('Error fetching conversation participants', participantError, {
+        logger.warn('Error fetching conversation participants', {
           studentId: maskId(studentId),
           error: sanitizeError(participantError),
         })
@@ -104,8 +104,8 @@ export default function LearnerMessagesPage() {
                     // La fonction RPC retourne un jsonb avec full_name et email
                     user = {
                       id: participant.user_id,
-                      full_name: userData.full_name,
-                      email: userData.email,
+                      full_name: (userData as any).full_name,
+                      email: (userData as any).email,
                       avatar_url: null // L'avatar n'est pas retourné par la fonction RPC
                     }
                   } else {

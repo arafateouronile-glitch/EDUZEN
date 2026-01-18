@@ -220,8 +220,8 @@ export default function SupportTicketPage() {
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
-                {getStatusIcon(ticket.status)}
-                <span>{getStatusLabel(ticket.status)}</span>
+                {getStatusIcon(ticket.status || '')}
+                <span>{getStatusLabel(ticket.status || '')}</span>
               </div>
               <span>Créé le {formatDate(ticket.created_at || '')}</span>
               {ticket.category && <span>{ticket.category.name}</span>}

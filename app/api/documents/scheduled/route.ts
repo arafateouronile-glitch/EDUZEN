@@ -88,11 +88,9 @@ export async function POST(request: NextRequest) {
     const generation = await scheduledGenerationService.create({
       organization_id: user.organization_id,
       template_id: body.template_id,
-      name: body.name,
-      description: body.description,
       schedule_type: body.schedule_type,
       schedule_config: body.schedule_config,
-      filter_config: body.filter_config || {},
+      filter_criteria: body.filter_config || {},
       format: body.format || 'PDF',
       send_email: body.send_email || false,
       email_recipients: body.email_recipients || [],

@@ -52,7 +52,7 @@ export default function PortalDocumentsPage() {
           logger.info('Portal Documents - No student guardians found')
           return []
         }
-        studentIds = studentGuardians.map((sg) => sg.student_id)
+        studentIds = studentGuardians.map((sg) => sg.student_id).filter((id): id is string => id !== null)
         logger.info('Portal Documents - Parent student IDs count', {
           count: studentIds.length,
         })

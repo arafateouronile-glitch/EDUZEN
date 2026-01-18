@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     
     logger.debug('Generating access token', {
       studentId: maskId(studentId),
-      sessionId: sessionId ? maskId(sessionId) : null,
+      sessionId: sessionId ? maskId(sessionId) : undefined,
       expiresInDays,
     })
 

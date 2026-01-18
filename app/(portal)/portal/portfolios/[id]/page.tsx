@@ -67,7 +67,8 @@ export default function ViewPortfolioPage() {
 
   const getFieldValue = (sectionId: string, fieldId: string) => {
     const key = `${sectionId}.${fieldId}`
-    return entriesMap[key]?.value || portfolio?.content?.[key]
+    const content = portfolio?.content as Record<string, any> | undefined
+    return entriesMap[key]?.value || content?.[key]
   }
 
   const getFieldComment = (sectionId: string, fieldId: string) => {
@@ -254,7 +255,7 @@ export default function ViewPortfolioPage() {
                   <><Clock className="h-3 w-3 mr-1" /> En cours</>
                 )}
               </Badge>
-              <div className="text-3xl font-bold" style={{ color: template?.primary_color }}>
+              <div className="text-3xl font-bold" style={{ color: template?.primary_color || undefined }}>
                 {Math.round(portfolio.progress_percentage || 0)}%
               </div>
               <p className="text-xs text-gray-500">Progression</p>
@@ -265,7 +266,7 @@ export default function ViewPortfolioPage() {
 
       {/* Sections du livret */}
       <div className="space-y-6">
-        {template?.template_structure?.map((section: any, sectionIndex: number) => (
+        {(template?.template_structure as any[])?.map((section: any, sectionIndex: number) => (
           <motion.div
             key={section.id}
             initial={{ opacity: 0, y: 20 }}
@@ -276,12 +277,12 @@ export default function ViewPortfolioPage() {
             <Card className="print:border print:shadow-none">
               <CardHeader 
                 className="print:py-3"
-                style={{ borderBottomWidth: 2, borderBottomColor: template?.primary_color }}
+                style={{ borderBottomWidth: 2, borderBottomColor: template?.primary_color || undefined }}
               >
                 <CardTitle className="flex items-center gap-3">
                   <span 
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium print:border print:border-gray-300 print:bg-white print:text-gray-700"
-                    style={{ backgroundColor: template?.primary_color }}
+                    style={{ backgroundColor: template?.primary_color || undefined }}
                   >
                     {sectionIndex + 1}
                   </span>

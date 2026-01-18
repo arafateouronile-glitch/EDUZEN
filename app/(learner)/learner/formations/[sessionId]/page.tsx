@@ -60,7 +60,7 @@ export default function LearnerSessionDetailPage() {
           .maybeSingle()
         return data
       } catch (err) {
-        logger.warn('Exception fetching student data', err, {
+        logger.warn('Exception fetching student data', {
           userId: user?.id ? maskId(user.id) : undefined,
           error: sanitizeError(err),
         })
@@ -103,13 +103,13 @@ export default function LearnerSessionDetailPage() {
             
             if (simpleError) {
               if (simpleError.code === 'PGRST116' || simpleError.code === 'PGRST301' || simpleError.code === '42P01') {
-                logger.warn('Session not found or access denied', simpleError, {
+                logger.warn('Session not found or access denied', {
                   sessionId: maskId(sessionId),
                   error: sanitizeError(simpleError),
                 })
                 return null
               }
-              logger.warn('Error fetching session (simple)', simpleError, {
+              logger.warn('Error fetching session (simple)', {
                 sessionId: maskId(sessionId),
                 error: sanitizeError(simpleError),
               })
@@ -119,13 +119,13 @@ export default function LearnerSessionDetailPage() {
           }
           
           if (error.code === 'PGRST116' || error.code === 'PGRST301' || error.code === '42P01') {
-            logger.warn('Session not found or access denied', error, {
+            logger.warn('Session not found or access denied', {
               sessionId: maskId(sessionId),
               error: sanitizeError(error),
             })
             return null
           }
-          logger.warn('Error fetching session', error, {
+          logger.warn('Error fetching session', {
             sessionId: maskId(sessionId),
             error: sanitizeError(error),
           })
@@ -162,7 +162,7 @@ export default function LearnerSessionDetailPage() {
           if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST301') {
             return null
           }
-          logger.warn('Error fetching enrollment', error, {
+          logger.warn('Error fetching enrollment', {
             sessionId: maskId(sessionId),
             studentId: studentData?.id ? maskId(studentData.id) : undefined,
             error: sanitizeError(error),
@@ -214,7 +214,7 @@ export default function LearnerSessionDetailPage() {
           }
           
           // Si les deux échouent, retourner vide
-          logger.warn('Documents/generated_documents tables may not be accessible', errorGenerated, {
+          logger.warn('Documents/generated_documents tables may not be accessible', {
             sessionId: maskId(sessionId),
             studentId: studentData?.id ? maskId(studentData.id) : undefined,
             error: sanitizeError(errorGenerated),
@@ -286,7 +286,7 @@ export default function LearnerSessionDetailPage() {
             }
           } catch (enrichError) {
             // Ignorer l'erreur d'enrichissement, on garde les données de base
-            logger.warn('Could not enrich teachers with users data', enrichError, {
+            logger.warn('Could not enrich teachers with users data', {
               sessionId: maskId(sessionId),
               error: sanitizeError(enrichError),
             })
@@ -306,13 +306,13 @@ export default function LearnerSessionDetailPage() {
             error.message?.includes('does not exist') ||
             error.message?.includes('Could not find the table')
           ) {
-            logger.warn('Session teachers table may not exist or be accessible', error, {
+            logger.warn('Session teachers table may not exist or be accessible', {
               sessionId: maskId(sessionId),
               error: sanitizeError(error),
             })
             return []
           }
-          logger.warn('Error fetching trainers', error, {
+          logger.warn('Error fetching trainers', {
             sessionId: maskId(sessionId),
             error: sanitizeError(error),
           })
@@ -357,7 +357,7 @@ export default function LearnerSessionDetailPage() {
           ) {
             return []
           }
-          logger.warn('Error fetching grades', error, {
+          logger.warn('Error fetching grades', {
             sessionId: maskId(sessionId),
             studentId: studentData?.id ? maskId(studentData.id) : undefined,
             error: sanitizeError(error),
@@ -404,7 +404,7 @@ export default function LearnerSessionDetailPage() {
           ) {
             return []
           }
-          logger.warn('Error fetching attendance', error, {
+          logger.warn('Error fetching attendance', {
             sessionId: maskId(sessionId),
             studentId: studentData?.id ? maskId(studentData.id) : undefined,
             error: sanitizeError(error),

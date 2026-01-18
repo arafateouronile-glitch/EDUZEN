@@ -273,7 +273,7 @@ export default function SupportPage() {
                   </div>
                   <div>
                     <Label htmlFor="priority">Priorité</Label>
-                    <Select defaultValue="medium">
+                    <Select>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

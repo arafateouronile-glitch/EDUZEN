@@ -1,109 +1,29 @@
-app/(dashboard)/dashboard/settings/document-templates/[type]/edit/page.tsx(678,13): error TS2322: Type '{ children: Element[]; type: "single"; value: string; onValueChange: (value: string | undefined) => void | "" | undefined; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionProps'.
-  Property 'value' does not exist on type 'IntrinsicAttributes & AccordionProps'.
-app/(dashboard)/dashboard/settings/email-schedules/page.tsx(589,29): error TS2322: Type 'string | undefined' is not assignable to type 'DocumentType | undefined'.
-  Type 'string' is not assignable to type 'DocumentType | undefined'.
-app/(dashboard)/dashboard/settings/users/[id]/page.tsx(66,5): error TS2769: No overload matches this call.
-  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, string[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<unknown, Error>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, string[]>'.
-  Overload 2 of 3, '(options: UndefinedInitialDataOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UndefinedInitialDataOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>'.
-  Overload 3 of 3, '(options: UseQueryOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UseQueryOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>'.
-app/(dashboard)/dashboard/settings/users/[id]/page.tsx(66,17): error TS7006: Parameter 'data' implicitly has an 'any' type.
-app/(dashboard)/dashboard/settings/users/page.tsx(431,50): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | Date'.
-  Type 'null' is not assignable to type 'string | Date'.
-app/(dashboard)/dashboard/settings/users/page.tsx(442,31): error TS2322: Type 'boolean | null' is not assignable to type 'boolean'.
-  Type 'null' is not assignable to type 'boolean'.
-app/(dashboard)/dashboard/sites/page.tsx(406,19): error TS2322: Type '{ id: string; checked: boolean; onCheckedChange: (checked: boolean) => void; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
-  Property 'id' does not exist on type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
-app/(dashboard)/dashboard/sites/page.tsx(418,19): error TS2322: Type '{ id: string; checked: boolean; onCheckedChange: (checked: boolean) => void; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
-  Property 'id' does not exist on type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
-app/(dashboard)/dashboard/students/[id]/edit/page.tsx(81,9): error TS2322: Type 'string' is not assignable to type '"active" | "inactive" | "graduated"'.
-app/(dashboard)/dashboard/students/[id]/edit/page.tsx(332,74): error TS2304: Cannot find name 'Student'.
-app/(dashboard)/dashboard/students/[id]/page.tsx(282,56): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | Date'.
-  Type 'null' is not assignable to type 'string | Date'.
-app/(dashboard)/dashboard/students/new/page.tsx(234,12): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(values: { created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
-    Argument of type '{ student_id: string; session_id: string; enrollment_date: string; status: string; payment_status: string; }' is not assignable to parameter of type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }'.
-      Property 'total_amount' is missing in type '{ student_id: string; session_id: string; enrollment_date: string; status: string; payment_status: string; }' but required in type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }'.
-  Overload 2 of 2, '(values: { created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
-    Object literal may only specify known properties, and 'student_id' does not exist in type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }[]'.
-app/(dashboard)/dashboard/students/page.tsx(136,9): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
-  Type 'null' is not assignable to type 'string | undefined'.
-app/(dashboard)/dashboard/students/page.tsx(179,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
-  Property 'visible' is incompatible with index signature.
-    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
-      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
-        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
-          Types of property 'transition' are incompatible.
-            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
-              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
-                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
-                  Types of property 'ease' are incompatible.
-                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
-                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
-                        Type 'number[]' is not assignable to type 'Easing[]'.
-                          Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/students/page.tsx(298,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
-  Property 'visible' is incompatible with index signature.
-    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
-      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
-        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
-          Types of property 'transition' are incompatible.
-            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
-              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
-                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
-                  Types of property 'ease' are incompatible.
-                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
-                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
-                        Type 'number[]' is not assignable to type 'Easing[]'.
-                          Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/students/page.tsx(374,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
-  Property 'visible' is incompatible with index signature.
-    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
-      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
-        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
-          Types of property 'transition' are incompatible.
-            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
-              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
-                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
-                  Types of property 'ease' are incompatible.
-                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
-                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
-                        Type 'number[]' is not assignable to type 'Easing[]'.
-                          Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/students/page.tsx(536,11): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
-  Property 'visible' is incompatible with index signature.
-    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
-      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
-        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
-          Types of property 'transition' are incompatible.
-            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
-              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
-                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
-                  Types of property 'ease' are incompatible.
-                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
-                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
-                        Type 'number[]' is not assignable to type 'Easing[]'.
-                          Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/students/page.tsx(540,14): error TS2739: Type '{ currentPage: number; totalPages: number; onPageChange: Dispatch<SetStateAction<number>>; }' is missing the following properties from type 'PaginationProps': itemsPerPage, totalItems
-app/(dashboard)/dashboard/support/[id]/page.tsx(223,32): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
-  Type 'null' is not assignable to type 'string'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(224,39): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
-  Type 'null' is not assignable to type 'string'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(233,17): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
-  Type 'null' is not assignable to type 'string | undefined'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(339,33): error TS2339: Property 'full_name' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(339,59): error TS2339: Property 'email' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(346,43): error TS2339: Property 'full_name' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(346,77): error TS2339: Property 'email' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
-app/(dashboard)/dashboard/support/[id]/page.tsx(439,29): error TS2322: Type '{ children: Element[]; name: string; required: true; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
-  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.
-app/(dashboard)/dashboard/support/page.tsx(242,29): error TS2322: Type '{ children: Element[]; name: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
-  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.
-app/(dashboard)/dashboard/support/page.tsx(276,29): error TS2322: Type '{ children: Element[]; name: string; defaultValue: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
-  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.
-app/(learner)/learner/certificates/page.tsx(32,30): error TS18047: 'supabase' is possibly 'null'.
-app/(learner)/learner/certificates/page.tsx(52,30): error TS18047: 'supabase' is possibly 'null'.
-app/(learner)/learner/elearning/[slug]/page.tsx(123,19): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
-app/(learner)/learner/elearning/[slug]/page.tsx(130,95): error TS2554: Expected 1-2 arguments, but got 3.
+npm error code EPERM
+npm error syscall open
+npm error path /usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js
+npm error errno -1
+npm error Error: EPERM: operation not permitted, open '/usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js'
+npm error     at Object.readFileSync (node:fs:449:20)
+npm error     at loadSource (node:internal/modules/cjs/loader:1548:17)
+npm error     at Module._extensions..js (node:internal/modules/cjs/loader:1617:44)
+npm error     at Module.load (node:internal/modules/cjs/loader:1266:32)
+npm error     at Module._load (node:internal/modules/cjs/loader:1091:12)
+npm error     at Module.require (node:internal/modules/cjs/loader:1289:19)
+npm error     at require (node:internal/modules/helpers:182:18)
+npm error     at Object.<anonymous> (/usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/node_modules/@sigstore/verify/dist/verifier.js:21:15)
+npm error     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+npm error     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10) {
+npm error   errno: -1,
+npm error   code: 'EPERM',
+npm error   syscall: 'open',
+npm error   path: '/usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js'
+npm error }
+npm error
+npm error The operation was rejected by your operating system.
+npm error It is likely you do not have the permissions to access this file as the current user
+npm error
+npm error If you believe this might be a permissions issue, please double-check the
+npm error permissions of the file and its containing directories, or try running
+npm error the command again as root/Administrator.
+npm error Log files were not written due to an error writing to the directory: /Users/arafatetoure/.npm/_logs
+npm error You can rerun the command with `--loglevel=verbose` to see the logs in your terminal

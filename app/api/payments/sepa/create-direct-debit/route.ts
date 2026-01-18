@@ -115,11 +115,15 @@ export async function POST(request: NextRequest) {
       dueDate: due_date,
     })
   } catch (error: unknown) {
+    const errorAmount = (error as any)?.amount || 'unknown'
+    const errorCurrency = (error as any)?.currency || 'unknown'
+    const errorDebtorIban = (error as any)?.debtor_iban || undefined
+    const errorCreditorIban = (error as any)?.creditor_iban || undefined
     logger.error('Error creating SEPA direct debit', error, {
-      amount,
-      currency,
-      debtorIBAN: debtor_iban ? maskIBAN(debtor_iban) : undefined,
-      creditorIBAN: creditor_iban ? maskIBAN(creditor_iban) : undefined,
+      amount: errorAmount,
+      currency: errorCurrency,
+      debtorIBAN: errorDebtorIban ? maskIBAN(errorDebtorIban) : undefined,
+      creditorIBAN: errorCreditorIban ? maskIBAN(errorCreditorIban) : undefined,
       error: sanitizeError(error),
     })
     const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'

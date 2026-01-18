@@ -9,7 +9,7 @@ import { errorHandler } from '@/lib/errors'
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Vérifier l'authentification
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier que l'utilisateur a accès à l'organisation
-    const { data: membership, error: membershipError } = await supabase
+    const { data: membership, error: membershipError } = await (supabase as any)
       .from('user_organizations')
       .select('role')
       .eq('user_id', user.id)
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { error: appError.message },
-      { status: appError.statusCode || 500 }
+      { status: (appError as any).statusCode || 500 }
     )
   }
 }

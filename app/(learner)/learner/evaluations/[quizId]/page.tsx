@@ -81,7 +81,7 @@ export default function LearnerQuizPage() {
       
       if (error) {
         if (error.code === 'PGRST116' || error.code === 'PGRST301') {
-          logger.warn('Quiz not found or access denied', error, {
+          logger.warn('Quiz not found or access denied', {
             quizId: maskId(quizId),
             error: sanitizeError(error),
           })
@@ -313,7 +313,7 @@ export default function LearnerQuizPage() {
       // Sauvegarder le résultat
       if (studentId && supabase) {
         try {
-          await supabase
+          await (supabase as any)
             .from('lesson_quiz_responses')
             .insert({
               student_id: studentId,
@@ -422,7 +422,7 @@ export default function LearnerQuizPage() {
             {results.passed ? 'Félicitations !' : 'Quiz terminé'}
           </h1>
           <p className="text-gray-500 mb-6">
-            {quiz.title}
+            {quiz?.title || ''}
           </p>
 
           <div className="flex justify-center gap-8 mb-8">
@@ -435,7 +435,7 @@ export default function LearnerQuizPage() {
             <div className="w-px bg-gray-200" />
             <div className="text-center">
               <div className="text-4xl font-bold text-gray-400">
-                {quiz.passing_score || 70}%
+                {quiz?.passing_score || 70}%
               </div>
               <p className="text-sm text-gray-500">Score requis</p>
             </div>

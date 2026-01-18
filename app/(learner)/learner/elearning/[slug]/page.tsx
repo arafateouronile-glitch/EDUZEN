@@ -120,14 +120,14 @@ export default function LearnerCourseDetailPage() {
             error.code === 'PGRST116' ||
             error.code === '42P01' ||
             error.code === 'PGRST301' ||
-            error.status === 400 ||
+            (error as any).status === 400 ||
             error.code === '400' ||
             error.message?.includes('relation') ||
             error.message?.includes('relationship') ||
             error.message?.includes('does not exist') ||
             error.message?.includes('schema cache')
           ) {
-            logger.warn('Course table or relations do not exist yet or invalid query', error, {
+            logger.warn('Course table or relations do not exist yet or invalid query', {
               slug: slug,
               error: sanitizeError(error),
             })
@@ -149,7 +149,7 @@ export default function LearnerCourseDetailPage() {
           error?.message?.includes('does not exist') ||
           error?.message?.includes('schema cache')
         ) {
-          logger.warn('Course table or relations do not exist yet or invalid query', error, {
+          logger.warn('Course table or relations do not exist yet or invalid query', {
             slug: slug,
             error: sanitizeError(error),
           })
@@ -219,7 +219,7 @@ export default function LearnerCourseDetailPage() {
         .order('order_index', { ascending: true })
 
       if (error) {
-        logger.warn('Error fetching lessons fallback', error, {
+        logger.warn('Error fetching lessons fallback', {
           courseId: maskId(course.id),
           error: sanitizeError(error),
         })

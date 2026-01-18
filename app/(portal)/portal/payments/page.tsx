@@ -37,7 +37,7 @@ export default function PaymentsPage() {
           .in('guardian_id', guardians.map((g) => g.id))
 
         if (!studentGuardians || studentGuardians.length === 0) return []
-        studentIds = studentGuardians.map((sg) => sg.student_id)
+        studentIds = studentGuardians.map((sg) => sg.student_id).filter((id): id is string => id !== null)
       } else if (user?.role === 'student') {
         const { data: student } = await supabase
           .from('students')
@@ -83,7 +83,7 @@ export default function PaymentsPage() {
           .in('guardian_id', guardians.map((g) => g.id))
 
         if (!studentGuardians || studentGuardians.length === 0) return []
-        studentIds = studentGuardians.map((sg) => sg.student_id)
+        studentIds = studentGuardians.map((sg) => sg.student_id).filter((id): id is string => id !== null)
       } else if (user?.role === 'student') {
         studentIds = [user.id]
       }
@@ -168,7 +168,7 @@ export default function PaymentsPage() {
             {unpaidInvoices.length > 0 && (
               <p className="text-sm text-muted-foreground mt-1">
                 Total: {formatCurrency(
-                  unpaidInvoices.reduce((sum, inv) => sum + Number(inv.total_amount) - Number(inv.paid_amount || 0), 0),
+                  unpaidInvoices.reduce((sum, inv) => sum + Number(inv.total_amount) - Number((inv as any).paid_amount || 0), 0),
                   unpaidInvoices[0]?.currency || 'XOF'
                 )}
               </p>

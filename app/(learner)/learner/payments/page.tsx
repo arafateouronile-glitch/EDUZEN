@@ -32,7 +32,7 @@ export default function LearnerPaymentsPage() {
           .order('issue_date', { ascending: false })
         
         if (error) {
-          logger.warn('Error fetching invoices', error, {
+          logger.warn('Error fetching invoices', {
             studentId: maskId(studentId),
             error: sanitizeError(error),
           })
@@ -68,7 +68,7 @@ export default function LearnerPaymentsPage() {
           .eq('student_id', studentId)
         
         if (invoicesError) {
-          logger.warn('Error fetching invoices for payments', invoicesError, {
+          logger.warn('Error fetching invoices for payments', {
             studentId: maskId(studentId),
             error: sanitizeError(invoicesError),
           })
@@ -86,7 +86,7 @@ export default function LearnerPaymentsPage() {
           .order('paid_at', { ascending: false })
         
         if (error) {
-          logger.warn('Error fetching payments', error, {
+          logger.warn('Error fetching payments', {
             studentId: maskId(studentId),
             error: sanitizeError(error),
           })

@@ -65,14 +65,14 @@ export default function LearnerFormationsPage() {
             error.code === 'PGRST116' ||
             error.code === '42P01' ||
             error.code === 'PGRST301' ||
-            error.status === 400 ||
+            (error as any).status === 400 ||
             error.code === '400' ||
             error.message?.includes('relation') ||
             error.message?.includes('relationship') ||
             error.message?.includes('does not exist') ||
             error.message?.includes('schema cache')
           ) {
-            logger.warn('Enrollments table may not be accessible (RLS or missing)', error, {
+            logger.warn('Enrollments table may not be accessible (RLS or missing)', {
               studentId: maskId(studentId),
               error: sanitizeError(error),
             })

@@ -428,7 +428,7 @@ function UsersSettingsPageContent() {
                             </div>
                           )}
                           <div className="text-muted-foreground">
-                            Créé le: {formatDate(userItem.created_at)}
+                            Créé le: {formatDate(userItem.created_at || '')}
                           </div>
                         </div>
                       </div>

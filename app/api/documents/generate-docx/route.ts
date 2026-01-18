@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     console.log('[Generate DOCX] ✅ Document généré avec succès, taille:', outputBuffer.length, 'bytes')
 
     // Retourner le document
-    return new NextResponse(outputBuffer, {
+    return new NextResponse(outputBuffer as any, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${filename}"`,

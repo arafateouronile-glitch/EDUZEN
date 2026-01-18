@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
         page_count: pageCount,
         related_entity_type: body.related_entity_type,
         related_entity_id: body.related_entity_id,
-        metadata: body.variables,
+        metadata: body.variables as any,
         generated_by: user.id,
       })
       .select()
@@ -258,19 +258,17 @@ export async function POST(request: NextRequest) {
       
       await templateAnalyticsService.logEvent(
         template.id,
-        userData.organization_id,
-        user.id,
         'generate',
         {
+          organization_id: userData.organization_id,
+          user_id: user.id,
           format: body.format,
           variablesCount,
           generationTimeMs: generationTime,
           fileSizeBytes: fileBlob.size,
-          metadata: {
-            pageCount,
-            related_entity_type: body.related_entity_type,
-            related_entity_id: body.related_entity_id,
-          },
+          pageCount,
+          related_entity_type: body.related_entity_type,
+          related_entity_id: body.related_entity_id,
         }
       )
     } catch (analyticsError) {
@@ -303,20 +301,19 @@ export async function POST(request: NextRequest) {
         }
 
         // Préparer la pièce jointe
+        const arrayBuffer = await fileBlob.arrayBuffer()
         const attachment = {
           filename: fileName,
-          content: Buffer.from(await fileBlob.arrayBuffer()),
+          content: arrayBuffer,
           contentType: body.format === 'PDF' 
             ? 'application/pdf' 
             : body.format === 'DOCX'
             ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            : body.format === 'ODT'
-            ? 'application/vnd.oasis.opendocument.text'
             : 'text/html',
         }
 
         // Envoyer l'email
-        emailResult = await emailService.send({
+        emailResult = await emailService.sendEmail({
           to: body.options.emailTo,
           subject: `${documentTitle} - ${organization?.name || 'Eduzen'}`,
           html: `
@@ -386,7 +383,7 @@ ${organization?.name ? `Cordialement,\n${organization.name}` : 'Cordialement,\nL
       downloadUrl: fileUrl,
       fileName,
       emailSent: emailResult?.success || false,
-      emailError: emailResult?.error,
+      emailError: (emailResult as any)?.error || (!emailResult?.success ? 'Erreur lors de l\'envoi de l\'email' : undefined),
     })
   } catch (error) {
     console.error('Erreur lors de la génération du document:', error)

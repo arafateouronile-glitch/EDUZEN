@@ -37,7 +37,7 @@ export default function AttendancePage() {
           .in('guardian_id', guardians.map((g) => g.id))
 
         if (!studentGuardians || studentGuardians.length === 0) return []
-        studentIds = studentGuardians.map((sg) => sg.student_id)
+        studentIds = studentGuardians.map((sg) => sg.student_id).filter((id): id is string => id !== null)
       } else if (user?.role === 'student') {
         studentIds = [user.id]
       }

@@ -34,7 +34,7 @@ export default function ChildrenPage() {
       const { data: students } = await supabase
         .from('students')
         .select('*, classes(name)')
-        .in('id', studentGuardians.map((sg) => sg.student_id))
+        .in('id', studentGuardians.map((sg) => sg.student_id).filter((id): id is string => id !== null))
         .eq('status', 'active')
 
       return students || []
@@ -81,7 +81,7 @@ export default function ChildrenPage() {
                       {child.first_name} {child.last_name}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      {(child.classes as { name: string } | undefined)?.name || 'Non assigné'}
+                      {((child as any).classes as { name: string } | undefined)?.name || 'Non assigné'}
                     </p>
                   </div>
                 </div>

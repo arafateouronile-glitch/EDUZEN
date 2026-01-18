@@ -66,7 +66,7 @@ export default function LearnerPlanningPage() {
             error.code === '42P01' ||
             error.code === 'PGRST301' ||
             error.code === '42P17' ||
-            error.status === 400 ||
+            (error as any).status === 400 ||
             error.code === '400' ||
             error.message?.includes('relation') ||
             error.message?.includes('relationship') ||
@@ -74,7 +74,7 @@ export default function LearnerPlanningPage() {
             error.message?.includes('schema cache') ||
             error.message?.includes('infinite recursion')
           ) {
-            logger.warn('Enrollments table may not be accessible (RLS or missing)', error, {
+            logger.warn('Enrollments table may not be accessible (RLS or missing)', {
               studentId: maskId(studentId),
               error: sanitizeError(error),
             })

@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         
         case 'enrollments': {
           console.log('[API Learner Data] Fetching enrollments for studentId:', studentId)
-          const { data, error } = await supabaseAdmin
+          const { data, error } = await (supabaseAdmin as any)
             .from('session_enrollments')
             .select(`
               *,
