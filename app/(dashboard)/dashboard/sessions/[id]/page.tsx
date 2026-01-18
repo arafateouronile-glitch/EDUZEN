@@ -384,7 +384,14 @@ export default function SessionDetailPage() {
                   enrollments={enrollments}
                   students={students}
                   enrollmentForm={enrollmentForm}
-                  onEnrollmentFormChange={setEnrollmentForm}
+                  onEnrollmentFormChange={(form) => {
+                    // Convertir status et payment_status null en valeurs par défaut pour correspondre à EnrollmentFormData
+                    setEnrollmentForm({
+                      ...form,
+                      status: (form.status || 'pending') as EnrollmentFormData['status'],
+                      payment_status: (form.payment_status || 'pending') as EnrollmentFormData['payment_status'],
+                    })
+                  }}
                   onCreateEnrollment={() => createEnrollmentMutation.mutate()}
                   createEnrollmentMutation={createEnrollmentMutation}
                   formationPrice={
