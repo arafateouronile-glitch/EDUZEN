@@ -176,7 +176,7 @@ function SessionsPageContent() {
 
       if (error) throw error
 
-      const sessionsArray = (allSessions as Session[]) || []
+      const sessionsArray = (allSessions as unknown as Session[]) || []
       const total = sessionsArray.length
       const planned = sessionsArray.filter((s) => s.status === 'planned').length
       const ongoing = sessionsArray.filter((s) => s.status === 'ongoing').length

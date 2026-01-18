@@ -186,7 +186,7 @@ export function Suivi({
           }, 0) / studentGrades.length
         : null
 
-      const studentAttendance = attendanceStats?.byStudent?.[enrollment.student_id] || {
+      const studentAttendance = enrollment.student_id ? (attendanceStats?.byStudent?.[enrollment.student_id]) : undefined || {
         present: 0,
         total: 0,
       }
