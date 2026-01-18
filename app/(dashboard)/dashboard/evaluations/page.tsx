@@ -244,7 +244,7 @@ export default function EvaluationsPage() {
     setValue('session_id', evaluation.session_id || '')
     setValue('subject', evaluation.subject)
     setValue('assessment_type', (evaluation.assessment_type as AssessmentType) || 'quiz')
-    setValue('score', evaluation.score.toString())
+    setValue('score', evaluation.score?.toString() || '')
     setValue('max_score', evaluation.max_score?.toString() || '')
     setValue('notes', evaluation.notes || '')
     setValue('graded_at', evaluation.graded_at ? evaluation.graded_at.split('T')[0] : new Date().toISOString().split('T')[0])

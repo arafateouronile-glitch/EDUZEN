@@ -89,7 +89,7 @@ export default function SessionAttendancePage() {
       for (const att of existingAttendance) {
         if (att.student_id) {
           initial[att.student_id] = {
-            status: att.status,
+            status: att.status as AttendanceStatus,
             lateMinutes: att.late_minutes ?? undefined,
             notes: att.notes || '',
           }

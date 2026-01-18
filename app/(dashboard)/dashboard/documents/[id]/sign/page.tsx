@@ -55,8 +55,8 @@ export default function SignDocumentPage() {
         signerId: user.id,
         signatureData,
         signerName: user.full_name || user.email || 'Utilisateur',
-        signerEmail: user.email || null,
-        signerRole: user.role || null,
+        signerEmail: user.email || undefined,
+        signerRole: user.role || undefined,
         comment: comment || undefined,
       })
     },

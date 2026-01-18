@@ -385,11 +385,11 @@ export default function SessionDetailPage() {
                   students={students}
                   enrollmentForm={enrollmentForm}
                   onEnrollmentFormChange={(form) => {
-                    // Convertir status et payment_status null en valeurs par défaut pour correspondre à EnrollmentFormData
+                    // Convertir status et payment_status null en valeurs par défaut
                     setEnrollmentForm({
                       ...form,
-                      status: (form.status || 'pending') as EnrollmentFormData['status'],
-                      payment_status: (form.payment_status || 'pending') as EnrollmentFormData['payment_status'],
+                      status: (form.status || 'pending') as 'pending' | 'completed' | 'cancelled' | 'confirmed' | 'failed',
+                      payment_status: (form.payment_status || 'pending') as 'pending' | 'partial' | 'paid' | 'overdue',
                     })
                   }}
                   onCreateEnrollment={() => createEnrollmentMutation.mutate()}
@@ -438,7 +438,13 @@ export default function SessionDetailPage() {
               students={students}
               showEnrollmentForm={showEnrollmentForm}
               enrollmentForm={enrollmentForm}
-              onEnrollmentFormChange={setEnrollmentForm}
+              onEnrollmentFormChange={(form) => {
+                setEnrollmentForm({
+                  ...form,
+                  status: (form.status || 'pending') as 'pending' | 'completed' | 'cancelled' | 'confirmed' | 'failed',
+                  payment_status: (form.payment_status || 'pending') as 'pending' | 'partial' | 'paid' | 'overdue',
+                })
+              }}
               onCreateEnrollment={() => createEnrollmentMutation.mutate()}
               createEnrollmentMutation={createEnrollmentMutation}
               cancelEnrollmentMutation={cancelEnrollmentMutation}
@@ -520,7 +526,7 @@ export default function SessionDetailPage() {
               enrollments={enrollments}
               grades={grades}
               attendanceStats={attendanceStats}
-              organizationId={user?.organization_id}
+              organizationId={user?.organization_id || undefined}
               onShowEnrollmentForm={() => {
                 setActiveStep('gestion')
                 setActiveGestionTab('convocations')

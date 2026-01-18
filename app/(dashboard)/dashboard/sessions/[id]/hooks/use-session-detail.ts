@@ -291,7 +291,7 @@ export function useSessionDetail(sessionId: string) {
       const { data, error } = await supabase
         .from('payments')
         .select('*, students(*), invoices(*)')
-        .eq('organization_id', user?.organization_id)
+        .eq('organization_id', user?.organization_id || '')
         .in('student_id', (enrollments as EnrollmentWithRelations[])?.map((e) => e.student_id).filter((id): id is string => id !== null) || [])
         .order('paid_at', { ascending: false })
       if (error) throw error
