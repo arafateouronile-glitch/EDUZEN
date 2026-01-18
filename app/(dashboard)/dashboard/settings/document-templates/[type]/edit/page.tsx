@@ -329,9 +329,10 @@ export default function DocumentTemplateEditPage() {
   // Mutation pour sauvegarder
   const saveMutation = useMutation({
     mutationFn: async (updatedTemplate: DocumentTemplate) => {
+      const { id, ...templateData } = updatedTemplate
       return documentTemplateService.updateTemplate({
-        id: updatedTemplate.id,
-        ...updatedTemplate,
+        id,
+        ...templateData,
       })
     },
     onSuccess: (savedTemplate) => {
