@@ -113,11 +113,10 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
             {/* Activer/Désactiver */}
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="footer-enabled">Afficher le pied de page</Label>
+                <Label>Afficher le pied de page</Label>
                 <p className="text-sm text-text-tertiary">Afficher le pied de page sur toutes les pages</p>
               </div>
               <Switch
-                id="footer-enabled"
                 checked={template.footer_enabled}
                 onCheckedChange={(checked) => {
                   onTemplateChange({ footer_enabled: checked })
