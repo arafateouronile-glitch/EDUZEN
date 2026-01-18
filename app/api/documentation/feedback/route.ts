@@ -36,7 +36,9 @@ const feedbackSchema: ValidationSchema = {
  */
 export async function POST(request: NextRequest) {
   return withRateLimit(request, mutationRateLimiter, async (req) => {
-    return withBodyValidation(req, feedbackSchema, async (req, validatedData) => {
+    // Convertir Request en NextRequest pour withBodyValidation
+    const nextReq = req as unknown as NextRequest
+    return withBodyValidation(nextReq, feedbackSchema, async (req, validatedData) => {
       try {
         const supabase = await createClient()
         const {

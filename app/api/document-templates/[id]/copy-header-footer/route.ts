@@ -35,6 +35,9 @@ export async function POST(
     const body: CopyHeaderFooterInput = await request.json()
 
     // Vérifier que l'utilisateur a accès au template source
+    if (!userData) {
+      return NextResponse.json({ error: 'Données utilisateur non trouvées' }, { status: 404 })
+    }
     const sourceTemplate = await documentTemplateService.getTemplateById(body.sourceTemplateId)
     if (userData.organization_id !== sourceTemplate.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé au template source' }, { status: 403 })
