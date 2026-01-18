@@ -56,15 +56,15 @@ export default function StudentsPage() {
       
       // Filtrer par statut
       if (statusFilter !== 'all') {
-        studentsData = (studentsData as StudentWithRelations[]).filter((s) => s.status === statusFilter)
+        studentsData = (studentsData as any[]).filter((s) => s.status === statusFilter)
       }
 
       // Filtrer par session
       if (sessionFilter !== 'all') {
-        studentsData = (studentsData as StudentWithRelations[]).filter((s) => s.class_id === sessionFilter)
+        studentsData = (studentsData as any[]).filter((s) => s.class_id === sessionFilter)
       }
 
-      return studentsData
+      return studentsData as any[]
     },
     enabled: !!user?.organization_id,
   })

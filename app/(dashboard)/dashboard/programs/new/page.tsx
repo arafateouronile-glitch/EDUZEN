@@ -67,7 +67,7 @@ export default function NewProgramPage() {
         category: data.category,
         program_version: data.program_version,
         version_date: data.version_date,
-        duration_hours: data.duration_hours, // Note: check if this should be string or number in DB
+        // Note: duration_hours n'existe pas dans la table programs, c'est dans formations
         duration_days: duration_days,
         price: price,
         currency: data.currency,
