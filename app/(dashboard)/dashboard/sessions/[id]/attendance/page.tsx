@@ -60,7 +60,14 @@ export default function SessionAttendancePage() {
   // Récupérer l'émargement existant
   const { data: existingAttendance, refetch: refetchAttendance } = useQuery<AttendanceWithRelations[]>({
     queryKey: ['attendance-session', sessionId, date],
-    queryFn: () => attendanceService.getBySessionAndDate(sessionId, date),
+    queryFn: async () => {
+      const data = await attendanceService.getBySessionAndDate(sessionId, date)
+      // Convertir students: null en students: undefined pour correspondre à AttendanceWithRelations
+      return data.map((att: any) => ({
+        ...att,
+        students: att.students || undefined,
+      }))
+    },
     enabled: !!sessionId,
   })
 
@@ -80,16 +87,18 @@ export default function SessionAttendancePage() {
         notes?: string
       }> = {}
       for (const att of existingAttendance) {
-        initial[att.student_id] = {
-          status: att.status,
-          lateMinutes: att.late_minutes ?? undefined,
-          notes: att.notes || '',
+        if (att.student_id) {
+          initial[att.student_id] = {
+            status: att.status,
+            lateMinutes: att.late_minutes ?? undefined,
+            notes: att.notes || '',
+          }
         }
       }
       // Ajouter les étudiants non encore émarginés
       (enrollments as EnrollmentWithRelations[]).forEach((enrollment) => {
         const studentId = enrollment.student_id
-        if (!initial[studentId]) {
+        if (studentId && !initial[studentId]) {
           initial[studentId] = {
             status: 'present' as AttendanceStatus,
             lateMinutes: 0,
@@ -106,10 +115,12 @@ export default function SessionAttendancePage() {
         notes?: string
       }> = {}
       for (const enrollment of enrollments) {
-        initial[enrollment.student_id] = {
-          status: 'present' as AttendanceStatus,
-          lateMinutes: 0,
-          notes: '',
+        if (enrollment.student_id) {
+          initial[enrollment.student_id] = {
+            status: 'present' as AttendanceStatus,
+            lateMinutes: 0,
+            notes: '',
+          }
         }
       }
       setAttendance(initial)
@@ -135,15 +146,17 @@ export default function SessionAttendancePage() {
       if (!user?.organization_id || !enrollments) throw new Error('Données manquantes')
 
       // Préparer les enregistrements
-      const records = (enrollments as EnrollmentWithRelations[]).map((enrollment) => ({
-        student_id: enrollment.student_id,
-        session_id: sessionId,
-        date: date,
-        status: attendance[enrollment.student_id]?.status || 'present',
-        late_minutes: attendance[enrollment.student_id]?.lateMinutes || 0,
-        teacher_id: user.id,
-        notes: attendance[enrollment.student_id]?.notes || undefined,
-      }))
+      const records = (enrollments as EnrollmentWithRelations[])
+        .filter((enrollment) => enrollment.student_id) // Filtrer les student_id null
+        .map((enrollment) => ({
+          student_id: enrollment.student_id!,
+          session_id: sessionId,
+          date: date,
+          status: attendance[enrollment.student_id!]?.status || 'present',
+          late_minutes: attendance[enrollment.student_id!]?.lateMinutes || 0,
+          teacher_id: user.id,
+          notes: attendance[enrollment.student_id!]?.notes || undefined,
+        }))
 
       return attendanceService.markMultiple(user.organization_id, records)
     },
