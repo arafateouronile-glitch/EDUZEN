@@ -473,7 +473,7 @@ export default function APISettingsPage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Par minute</span>
                         <span className="text-sm text-muted-foreground">
-                          {quota.requests_used_minute || 0} / {quota.requests_per_minute || 60}
+                          {(quota as any).requests_used_minute || 0} / {(quota as any).requests_per_minute || 60}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -481,7 +481,7 @@ export default function APISettingsPage() {
                           className="bg-primary h-2 rounded-full transition-all"
                           style={{
                             width: `${
-                              ((quota.requests_used_minute || 0) / (quota.requests_per_minute || 60)) *
+                              (((quota as any).requests_used_minute || 0) / ((quota as any).requests_per_minute || 60)) *
                               100
                             }%`,
                           }}
@@ -492,7 +492,7 @@ export default function APISettingsPage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Par heure</span>
                         <span className="text-sm text-muted-foreground">
-                          {quota.requests_used_hour || 0} / {quota.requests_per_hour || 1000}
+                          {(quota as any).requests_used_hour || 0} / {(quota as any).requests_per_hour || 1000}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -500,7 +500,7 @@ export default function APISettingsPage() {
                           className="bg-primary h-2 rounded-full transition-all"
                           style={{
                             width: `${
-                              ((quota.requests_used_hour || 0) / (quota.requests_per_hour || 1000)) *
+                              (((quota as any).requests_used_hour || 0) / ((quota as any).requests_per_hour || 1000)) *
                               100
                             }%`,
                           }}
@@ -511,7 +511,7 @@ export default function APISettingsPage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Par jour</span>
                         <span className="text-sm text-muted-foreground">
-                          {quota.requests_used_day || 0} / {quota.requests_per_day || 10000}
+                          {(quota as any).requests_used_day || 0} / {(quota as any).requests_per_day || 10000}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -519,7 +519,7 @@ export default function APISettingsPage() {
                           className="bg-primary h-2 rounded-full transition-all"
                           style={{
                             width: `${
-                              ((quota.requests_used_day || 0) / (quota.requests_per_day || 10000)) *
+                              (((quota as any).requests_used_day || 0) / ((quota as any).requests_per_day || 10000)) *
                               100
                             }%`,
                           }}
@@ -530,7 +530,7 @@ export default function APISettingsPage() {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium">Par mois</span>
                         <span className="text-sm text-muted-foreground">
-                          {quota.requests_used_month || 0} / {quota.requests_per_month || 100000}
+                          {(quota as any).requests_used_month || 0} / {(quota as any).requests_per_month || 100000}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -538,8 +538,8 @@ export default function APISettingsPage() {
                           className="bg-primary h-2 rounded-full transition-all"
                           style={{
                             width: `${
-                              ((quota.requests_used_month || 0) /
-                                (quota.requests_per_month || 100000)) *
+                              (((quota as any).requests_used_month || 0) /
+                                ((quota as any).requests_per_month || 100000)) *
                               100
                             }%`,
                           }}
