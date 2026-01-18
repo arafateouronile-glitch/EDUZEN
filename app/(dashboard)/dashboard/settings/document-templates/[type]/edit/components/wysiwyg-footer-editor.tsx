@@ -275,7 +275,6 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
                 onChange={handleContentChange}
                 placeholder="Saisissez le contenu du pied de page..."
                 className="flex-1"
-                toolbar="minimal"
               />
             </div>
           </CardContent>
