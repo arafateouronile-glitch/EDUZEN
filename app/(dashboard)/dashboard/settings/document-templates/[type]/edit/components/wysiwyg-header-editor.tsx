@@ -174,7 +174,6 @@ export function WysiwygHeaderEditor({ template, onTemplateChange, onEditorRefRea
                 onChange={handleContentChange}
                 placeholder="Saisissez le contenu de l'en-tête..."
                 className="flex-1"
-                toolbar="full"
               />
             </div>
           </CardContent>
