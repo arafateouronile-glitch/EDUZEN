@@ -147,7 +147,7 @@ export function useDocumentGeneration({
           logo_url: organization.logo_url || undefined,
         },
         enrollment: {
-          enrollment_date: enrollment.enrollment_date,
+          enrollment_date: enrollment.enrollment_date || '',
           total_amount: enrollment.total_amount || 0,
           paid_amount: enrollment.paid_amount || 0,
         },
@@ -1022,7 +1022,7 @@ export function useDocumentGeneration({
           logo_url: organization.logo_url || undefined,
         },
         enrollment: {
-          enrollment_date: enrollment.enrollment_date,
+          enrollment_date: enrollment.enrollment_date || '',
           total_amount: enrollment.total_amount || 0,
           paid_amount: enrollment.paid_amount || 0,
         },
@@ -1123,7 +1123,7 @@ export function useDocumentGeneration({
           logo_url: organization.logo_url || undefined,
         },
         enrollment: {
-          enrollment_date: enrollment.enrollment_date,
+          enrollment_date: enrollment.enrollment_date || '',
           total_amount: enrollment.total_amount || 0,
           paid_amount: enrollment.paid_amount || 0,
         },

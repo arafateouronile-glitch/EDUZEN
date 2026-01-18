@@ -565,9 +565,10 @@ export function SessionElearningSection({
               {enrollments.map((enrollment) => {
                 const student = enrollment.students as StudentWithRelations
                 if (!student || !enrollment.student_id) return null
-                const stats = getStudentStats(enrollment.student_id)
-                const isExpanded = expandedStudent === enrollment.student_id
-                const entries: StudentProgress[] = progressByStudent?.[enrollment.student_id]?.courses || []
+                const studentId = enrollment.student_id // TypeScript sait que c'est non-null maintenant
+                const stats = getStudentStats(studentId)
+                const isExpanded = expandedStudent === studentId
+                const entries: StudentProgress[] = progressByStudent?.[studentId]?.courses || []
 
                 return (
                   <Card key={enrollment.student_id} className="overflow-hidden">
