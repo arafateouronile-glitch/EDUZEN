@@ -1122,10 +1122,10 @@ export function EspaceApprenant({
             const attendanceRate = studentAttendance.total > 0
               ? Math.round((studentAttendance.present / studentAttendance.total) * 100)
               : 0
-            const studentGrades = grades.filter((g) => g.student_id === enrollment.student_id)
+            const studentGrades = enrollment.student_id ? grades.filter((g) => g.student_id === enrollment.student_id) : []
             const averageGrade = studentGrades.length > 0
               ? Math.round(studentGrades.reduce((sum, g) => {
-                  const percentage = g.percentage !== null ? g.percentage : (g.score / (g.max_score || 20)) * 100
+                  const percentage = g.percentage !== null ? g.percentage : ((g.score ?? 0) / (g.max_score || 20)) * 100
                   return sum + percentage
                 }, 0) / studentGrades.length)
               : null

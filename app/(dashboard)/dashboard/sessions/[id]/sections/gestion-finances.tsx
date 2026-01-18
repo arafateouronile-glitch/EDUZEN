@@ -66,6 +66,7 @@ export function GestionFinances({
       if (!user?.organization_id || studentIds.length === 0) return []
       const allInvoices: any[] = []
       for (const studentId of studentIds) {
+        if (!studentId) continue
         const studentInvoices = await invoiceService.getAll(user.organization_id, {
           studentId,
         })
@@ -241,7 +242,7 @@ export function GestionFinances({
         issueDate: invoice.issue_date,
       })
 
-      const result = await generateHTML(template, variables, undefined, user?.organization_id)
+      const result = await generateHTML(template, variables, undefined, user?.organization_id || undefined)
       const filename = `${type === 'invoice' ? 'facture' : 'devis'}_${invoice.invoice_number}.pdf`
 
       const tempDiv = document.createElement('div')

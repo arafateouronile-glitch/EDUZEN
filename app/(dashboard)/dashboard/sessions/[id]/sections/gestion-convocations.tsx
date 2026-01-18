@@ -169,7 +169,7 @@ export function GestionConvocations({
                 <div>
                   <label className="block text-sm font-medium mb-2">Statut *</label>
                   <select
-                    value={enrollmentForm.status}
+                    value={enrollmentForm.status || 'pending'}
                     onChange={(e) => onEnrollmentFormChange({ ...enrollmentForm, status: e.target.value as Enrollment['status'] })}
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
@@ -210,7 +210,7 @@ export function GestionConvocations({
               <div>
                 <label className="block text-sm font-medium mb-2">Statut de paiement *</label>
                 <select
-                  value={enrollmentForm.payment_status}
+                  value={enrollmentForm.payment_status || 'pending'}
                   onChange={(e) => onEnrollmentFormChange({ ...enrollmentForm, payment_status: e.target.value as Enrollment['payment_status'] })}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
