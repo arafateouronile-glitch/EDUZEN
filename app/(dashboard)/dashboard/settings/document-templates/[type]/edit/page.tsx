@@ -372,7 +372,6 @@ export default function DocumentTemplateEditPage() {
         name: defaultContent.name,
         content: {
           ...template.content,
-          html: defaultContent.bodyContent,
           elements: [
             {
               id: 'main-content',
@@ -381,7 +380,7 @@ export default function DocumentTemplateEditPage() {
               content: defaultContent.bodyContent,
             },
           ],
-        },
+        } as DocumentContent,
         header: {
           ...(template.header as any),
           content: defaultContent.headerContent,
