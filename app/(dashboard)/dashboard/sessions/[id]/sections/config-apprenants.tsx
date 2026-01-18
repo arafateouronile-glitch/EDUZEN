@@ -127,7 +127,7 @@ export function ConfigApprenants({
           status,
           organization_id
         `)
-        .in('id', candidateStudentIds)
+        .in('id', candidateStudentIds.filter((id): id is string => id !== null))
         .eq('organization_id', user.organization_id)
         .eq('status', 'active')
         .order('last_name', { ascending: true })
@@ -519,7 +519,6 @@ export function ConfigApprenants({
             {enrollments.map((enrollment) => {
               // Gérer différents formats de données
               const student = 
-                (enrollment.student as StudentWithRelations | undefined) ||
                 (enrollment as any).students ||
                 null
               
@@ -541,7 +540,7 @@ export function ConfigApprenants({
                           Étudiant ID: {enrollment.student_id}
                         </p>
                         <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                          <span>Inscrit le {formatDate(enrollment.enrollment_date)}</span>
+                          <span>Inscrit le {formatDate(enrollment.enrollment_date || '')}</span>
                           <Badge
                             variant={
                               enrollment.status === 'confirmed'
@@ -717,7 +716,7 @@ export function ConfigApprenants({
                     <Label htmlFor="status">Statut *</Label>
                     <select
                       id="status"
-                      value={enrollmentForm.status}
+                      value={enrollmentForm.status || 'pending'}
                       onChange={(e) =>
                         onEnrollmentFormChange({
                           ...enrollmentForm,
@@ -779,7 +778,7 @@ export function ConfigApprenants({
                   <Label htmlFor="payment_status">Statut de paiement</Label>
                   <select
                     id="payment_status"
-                    value={enrollmentForm.payment_status}
+                    value={enrollmentForm.payment_status || 'pending'}
                     onChange={(e) =>
                       onEnrollmentFormChange({
                         ...enrollmentForm,
