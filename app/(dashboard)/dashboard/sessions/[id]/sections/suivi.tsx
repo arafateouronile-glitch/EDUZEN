@@ -186,10 +186,15 @@ export function Suivi({
           }, 0) / studentGrades.length
         : null
 
-      const studentAttendance = enrollment.student_id ? (attendanceStats?.byStudent?.[enrollment.student_id]) : undefined || {
-        present: 0,
-        total: 0,
-      }
+      const studentAttendance = enrollment.student_id 
+        ? (attendanceStats?.byStudent?.[enrollment.student_id] || {
+            present: 0,
+            total: 0,
+          })
+        : {
+            present: 0,
+            total: 0,
+          }
       const studentAttendanceRate = studentAttendance.total > 0
         ? Math.round((studentAttendance.present / studentAttendance.total) * 100)
         : 0
