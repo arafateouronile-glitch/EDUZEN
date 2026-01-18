@@ -180,7 +180,9 @@ export default function MessagesPage() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
       setShowNewConversationDialog(false)
       resetDialogState()
-      router.push(`/dashboard/messages/${conversation.id}`)
+      if (conversation?.id) {
+        router.push(`/dashboard/messages/${conversation.id}`)
+      }
       addToast({
         type: 'success',
         title: 'Conversation créée',
@@ -271,7 +273,9 @@ export default function MessagesPage() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
       setShowNewConversationDialog(false)
       resetDialogState()
-      router.push(`/dashboard/messages/${conversation.id}`)
+      if (conversation?.id) {
+        router.push(`/dashboard/messages/${conversation.id}`)
+      }
       addToast({
         type: 'success',
         title: 'Conversation de groupe créée',
