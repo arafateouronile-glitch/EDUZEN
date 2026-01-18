@@ -570,7 +570,6 @@ function CreateScheduleForm({
                     Joindre un document à l'email
                   </Label>
                   <Switch
-                    id="send_document"
                     checked={formData.send_document ?? false}
                     onCheckedChange={(checked) =>
                       setFormData({ ...formData, send_document: checked })
@@ -649,7 +648,6 @@ function CreateScheduleForm({
                     Envoyer aux étudiants
                   </Label>
                   <Switch
-                    id="send_to_students"
                     checked={formData.send_to_students ?? true}
                     onCheckedChange={(checked) =>
                       setFormData({ ...formData, send_to_students: checked })
@@ -661,7 +659,6 @@ function CreateScheduleForm({
                     Envoyer aux enseignants
                   </Label>
                   <Switch
-                    id="send_to_teachers"
                     checked={formData.send_to_teachers ?? false}
                     onCheckedChange={(checked) =>
                       setFormData({ ...formData, send_to_teachers: checked })
@@ -673,7 +670,6 @@ function CreateScheduleForm({
                     Envoyer aux coordinateurs
                   </Label>
                   <Switch
-                    id="send_to_coordinators"
                     checked={formData.send_to_coordinators ?? false}
                     onCheckedChange={(checked) =>
                       setFormData({ ...formData, send_to_coordinators: checked })
@@ -686,7 +682,6 @@ function CreateScheduleForm({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Switch
-                  id="is_active"
                   checked={formData.is_active ?? true}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                 />
@@ -1058,7 +1053,6 @@ function EditScheduleForm({
                   Joindre un document à l'email
                 </Label>
                 <Switch
-                  id="edit-send_document"
                   checked={formData.send_document ?? false}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, send_document: checked })
@@ -1137,7 +1131,6 @@ function EditScheduleForm({
                   Envoyer aux étudiants
                 </Label>
                 <Switch
-                  id="edit-send_to_students"
                   checked={formData.send_to_students ?? false}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, send_to_students: checked })
@@ -1149,7 +1142,6 @@ function EditScheduleForm({
                   Envoyer aux enseignants
                 </Label>
                 <Switch
-                  id="edit-send_to_teachers"
                   checked={formData.send_to_teachers ?? false}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, send_to_teachers: checked })
@@ -1161,7 +1153,6 @@ function EditScheduleForm({
                   Envoyer aux coordinateurs
                 </Label>
                 <Switch
-                  id="edit-send_to_coordinators"
                   checked={formData.send_to_coordinators ?? false}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, send_to_coordinators: checked })
@@ -1174,7 +1165,6 @@ function EditScheduleForm({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Switch
-                id="edit-is_active"
                 checked={formData.is_active ?? false}
                 onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
               />

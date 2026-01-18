@@ -439,7 +439,6 @@ export default function EmailTemplatesPage() {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Switch
-                  id="is_default"
                   checked={formData.is_default}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_default: checked })}
                 />
@@ -447,7 +446,6 @@ export default function EmailTemplatesPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Switch
-                  id="is_active"
                   checked={formData.is_active}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                 />

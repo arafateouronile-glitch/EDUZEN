@@ -224,7 +224,6 @@ export default function StripeSettingsPage() {
               </p>
             </div>
             <Switch
-              id="is_test_mode"
               checked={config.is_test_mode}
               onCheckedChange={(checked) => setConfig({ ...config, is_test_mode: checked })}
             />
@@ -232,13 +231,12 @@ export default function StripeSettingsPage() {
 
           <div className="flex items-center justify-between pt-2">
             <div className="space-y-1">
-              <Label htmlFor="is_active">Activer Stripe</Label>
+              <Label>Activer Stripe</Label>
               <p className="text-xs text-muted-foreground">
                 Activez les paiements Stripe pour votre organisation
               </p>
             </div>
             <Switch
-              id="is_active"
               checked={config.is_active}
               onCheckedChange={(checked) => setConfig({ ...config, is_active: checked })}
             />

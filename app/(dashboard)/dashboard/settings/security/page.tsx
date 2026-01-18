@@ -775,13 +775,12 @@ function TimeoutRulesSettings() {
       <div className="space-y-4">
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div>
-            <Label htmlFor="allow-multiple-devices">Autoriser plusieurs appareils</Label>
+            <Label>Autoriser plusieurs appareils</Label>
             <p className="text-sm text-muted-foreground">
               Permettre aux utilisateurs d'être connectés sur plusieurs appareils simultanément
             </p>
           </div>
           <Switch
-            id="allow-multiple-devices"
             checked={formData.allow_multiple_devices}
             onCheckedChange={(checked) => setFormData({ ...formData, allow_multiple_devices: checked })}
           />
@@ -789,13 +788,12 @@ function TimeoutRulesSettings() {
 
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div>
-            <Label htmlFor="require-device-verification">Vérification des appareils</Label>
+            <Label>Vérification des appareils</Label>
             <p className="text-sm text-muted-foreground">
               Exiger une vérification pour les nouveaux appareils
             </p>
           </div>
           <Switch
-            id="require-device-verification"
             checked={formData.require_device_verification}
             onCheckedChange={(checked) => setFormData({ ...formData, require_device_verification: checked })}
           />
@@ -803,13 +801,12 @@ function TimeoutRulesSettings() {
 
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div>
-            <Label htmlFor="notify-new-device">Notifier nouveaux appareils</Label>
+            <Label>Notifier nouveaux appareils</Label>
             <p className="text-sm text-muted-foreground">
               Envoyer une notification lors d'une connexion depuis un nouvel appareil
             </p>
           </div>
           <Switch
-            id="notify-new-device"
             checked={formData.notify_on_new_device}
             onCheckedChange={(checked) => setFormData({ ...formData, notify_on_new_device: checked })}
           />
@@ -817,13 +814,12 @@ function TimeoutRulesSettings() {
 
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
           <div>
-            <Label htmlFor="notify-suspicious">Notifier activité suspecte</Label>
+            <Label>Notifier activité suspecte</Label>
             <p className="text-sm text-muted-foreground">
               Envoyer une notification en cas d'activité suspecte détectée
             </p>
           </div>
           <Switch
-            id="notify-suspicious"
             checked={formData.notify_on_suspicious_activity}
             onCheckedChange={(checked) => setFormData({ ...formData, notify_on_suspicious_activity: checked })}
           />

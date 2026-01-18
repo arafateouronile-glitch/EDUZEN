@@ -215,7 +215,6 @@ export default function LMSSettingsPage() {
         <CardContent className="space-y-6">
           <div className="flex items-center space-x-2">
             <Switch
-              id="is_active"
               checked={lmsForm.is_active}
               onCheckedChange={(checked) => setLmsForm({ ...lmsForm, is_active: checked })}
             />
@@ -223,7 +222,6 @@ export default function LMSSettingsPage() {
           </div>
           <div className="flex items-center space-x-2">
             <Switch
-              id="auto_sync"
               checked={lmsForm.auto_sync}
               onCheckedChange={(checked) => setLmsForm({ ...lmsForm, auto_sync: checked })}
               disabled={!lmsForm.is_active}

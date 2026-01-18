@@ -124,7 +124,6 @@ export default function PaymentSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  id="stripe-enabled"
                   checked={stripeConfig.enabled}
                   onCheckedChange={(checked) =>
                     setStripeConfig({ ...stripeConfig, enabled: checked })
@@ -221,13 +220,12 @@ export default function PaymentSettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="sepa-enabled">Activer SEPA</Label>
+                  <Label>Activer SEPA</Label>
                   <p className="text-sm text-muted-foreground">
                     Permettre les virements et prélèvements SEPA
                   </p>
                 </div>
                 <Switch
-                  id="sepa-enabled"
                   checked={sepaConfig.enabled}
                   onCheckedChange={(checked) =>
                     setSepaConfig({ ...sepaConfig, enabled: checked })

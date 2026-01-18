@@ -260,7 +260,6 @@ export default function SEPASettingsPage() {
               </p>
             </div>
             <Switch
-              id="is_active"
               checked={config.is_active}
               onCheckedChange={(checked) => setConfig({ ...config, is_active: checked })}
             />
