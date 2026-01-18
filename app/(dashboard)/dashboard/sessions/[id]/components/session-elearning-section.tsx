@@ -564,7 +564,7 @@ export function SessionElearningSection({
             <div className="space-y-4">
               {enrollments.map((enrollment) => {
                 const student = enrollment.students as StudentWithRelations
-                if (!student) return null
+                if (!student || !enrollment.student_id) return null
                 const stats = getStudentStats(enrollment.student_id)
                 const isExpanded = expandedStudent === enrollment.student_id
                 const entries: StudentProgress[] = progressByStudent?.[enrollment.student_id]?.courses || []
