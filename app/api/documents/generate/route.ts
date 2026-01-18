@@ -15,6 +15,8 @@ import type { CookieOptions } from '@supabase/ssr'
 export async function POST(request: NextRequest) {
   return withRateLimit(request, mutationRateLimiter, async (req) => {
   try {
+    // Convertir Request en NextRequest pour accéder aux cookies
+    const nextReq = req as unknown as NextRequest
     // Créer un client Supabase pour les API routes en utilisant les cookies de la requête
     // Utiliser la même approche que le middleware pour la compatibilité
     const supabase = createSupabaseServerClient<Database>(
@@ -23,7 +25,7 @@ export async function POST(request: NextRequest) {
       {
         cookies: {
           get(name: string) {
-            return req.cookies.get(name)?.value
+            return nextReq.cookies.get(name)?.value
           },
           set(_name: string, _value: string, _options?: CookieOptions) {
             // Dans les API routes, on ne peut pas modifier les cookies de la réponse
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Debug: vérifier les cookies reçus
-    const cookies = req.cookies.getAll()
+    const cookies = nextReq.cookies.getAll()
     console.log('Cookies reçus dans l\'API:', cookies.map(c => c.name))
     console.log('Cookies Supabase présents:', cookies.some(c => c.name.includes('supabase') || c.name.includes('sb-')))
 
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
       if (authError || !userFromGetUser) {
         console.error('Erreur d\'authentification:', authError)
         console.error('Utilisateur:', userFromGetUser)
-        console.error('Cookies disponibles:', req.cookies.getAll().map(c => `${c.name}=${c.value.substring(0, 20)}...`))
+        console.error('Cookies disponibles:', nextReq.cookies.getAll().map(c => `${c.name}=${c.value.substring(0, 20)}...`))
         return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
       }
 
@@ -135,7 +137,7 @@ export async function POST(request: NextRequest) {
         console.log('Variables reçues:', Object.keys(body.variables || {}).length, 'variables')
         
         try {
-          const result = await generatePDF(template as DocumentTemplate, body.variables, documentId, userData.organization_id)
+          const result = await generatePDF(template as unknown as DocumentTemplate, body.variables, documentId, userData.organization_id)
           fileBlob = result.blob
           pageCount = result.pageCount
           fileName = `${template.type}_${Date.now()}.pdf`
@@ -160,7 +162,7 @@ export async function POST(request: NextRequest) {
         }
       } else if (body.format === 'DOCX') {
         console.log('Début de la génération DOCX...')
-        const result = await generateDOCX(template as DocumentTemplate, body.variables, documentId, userData.organization_id)
+        const result = await generateDOCX(template as unknown as DocumentTemplate, body.variables, documentId, userData.organization_id)
         fileBlob = result.blob
         pageCount = result.pageCount
         fileName = `${template.type}_${Date.now()}.docx`
@@ -176,7 +178,7 @@ export async function POST(request: NextRequest) {
         // Pour HTML, on génère d'abord sans documentId (les signatures seront des placeholders)
         // Si un documentId est fourni, on peut l'utiliser pour récupérer les signatures réelles
         const result = await generateHTML(
-          template as DocumentTemplate,
+          template as unknown as DocumentTemplate,
           body.variables,
           undefined, // documentId sera disponible après la création du document
           userData.organization_id
