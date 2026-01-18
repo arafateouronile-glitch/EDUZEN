@@ -53,13 +53,14 @@ export async function POST(request: NextRequest) {
     const organizationId = userData.organization_id
 
     // Vérifier la configuration CPF
-    const { data: config, error: configError } = await supabase
+    // Note: cpf_configurations n'existe pas dans les types Supabase générés
+    const { data: config, error: configError } = await (supabase as any)
       .from('cpf_configurations')
       .select('*')
       .eq('organization_id', organizationId)
       .single()
 
-    if (configError || !config || !config.is_active) {
+    if (configError || !config || !(config as any).is_active) {
       return NextResponse.json(
         { error: 'Configuration CPF non active ou introuvable' },
         { status: 400 }
