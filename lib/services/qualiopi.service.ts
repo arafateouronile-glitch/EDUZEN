@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface QualiopiIndicator {
   id: string
@@ -80,7 +81,14 @@ export interface QualiopiAudit {
 }
 
 export class QualiopiService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupérer tous les indicateurs Qualiopi d'une organisation

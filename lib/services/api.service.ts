@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
@@ -8,7 +9,14 @@ type Webhook = TableRow<'webhooks'>
 type WebhookDelivery = TableRow<'webhook_deliveries'>
 
 export class APIService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   // ========== API KEYS ==========
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { authenticator } from 'otplib'
 import QRCode from 'qrcode'
 import crypto from 'crypto'
@@ -9,7 +10,14 @@ type User2FAInsert = TableInsert<'user_2fa'>
 type User2FAUpdate = TableUpdate<'user_2fa'>
 
 class TwoFactorAuthService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Génère un secret TOTP pour un utilisateur

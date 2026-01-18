@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { XeroAdapter } from './accounting/xero.adapter'
 import { QuickBooksAdapter } from './accounting/quickbooks.adapter'
 import { SageAdapter } from './accounting/sage.adapter'
@@ -23,7 +24,14 @@ type AccountingIntegrationInsert = TableInsert<'accounting_integrations'>
 type AccountingIntegrationUpdate = TableUpdate<'accounting_integrations'>
 
 export class AccountingService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
   private adapters: Record<AccountingProvider, AccountingAdapter> = {
     xero: new XeroAdapter(),
     quickbooks: new QuickBooksAdapter(),

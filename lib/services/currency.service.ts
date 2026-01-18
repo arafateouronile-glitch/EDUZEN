@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 
 // Taux de change par défaut (à remplacer par une API réelle)
@@ -30,7 +31,14 @@ const DEFAULT_EXCHANGE_RATES: Record<string, Record<string, number>> = {
 }
 
 export class CurrencyService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Convertit un montant d'une devise à une autre

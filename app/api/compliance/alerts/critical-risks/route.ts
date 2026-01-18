@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { complianceService } from '@/lib/services/compliance.service'
-import { pushNotificationsService } from '@/lib/services/push-notifications.service'
+import { ComplianceService } from '@/lib/services/compliance.service'
+import { PushNotificationsService } from '@/lib/services/push-notifications.service'
 
 /**
  * GET /api/compliance/alerts/critical-risks
@@ -10,6 +10,11 @@ import { pushNotificationsService } from '@/lib/services/push-notifications.serv
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
+
+    // Créer des instances de services avec le client serveur
+    const complianceService = new ComplianceService(supabase)
+    const pushNotificationsService = new PushNotificationsService(supabase)
+
     const {
       data: { user },
     } = await supabase.auth.getUser()

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
@@ -44,7 +45,14 @@ export interface ReportCardFilters {
 }
 
 class ReportCardService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère tous les bulletins pour une organisation

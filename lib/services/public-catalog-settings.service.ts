@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 
@@ -54,7 +55,14 @@ export interface PublicCatalogSettingsFormData {
 }
 
 export class PublicCatalogSettingsService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère les paramètres du catalogue pour une organisation

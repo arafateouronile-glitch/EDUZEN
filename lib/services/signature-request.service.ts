@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, AppError } from '@/lib/errors'
@@ -40,7 +41,14 @@ export interface SignatureRequestWithDetails extends SignatureRequest {
  * Service pour gérer les demandes de signature électronique par email
  */
 export class SignatureRequestService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Crée une demande de signature et envoie l'email

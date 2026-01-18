@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
@@ -7,7 +8,14 @@ type RecommendationType = TableRow<'recommendation_types'>
 type AIPrediction = TableRow<'ai_predictions'>
 
 export class AIRecommendationsService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   // ========== RECOMMENDATION TYPES ==========
 

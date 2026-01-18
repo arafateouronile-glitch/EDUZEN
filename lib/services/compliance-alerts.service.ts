@@ -1,10 +1,18 @@
 import { complianceService } from './compliance.service'
 import { pushNotificationsService } from './push-notifications.service'
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
 export class ComplianceAlertsService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Vérifie les risques critiques et envoie des alertes

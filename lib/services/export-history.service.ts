@@ -1,15 +1,40 @@
 /**
  * Service pour gérer l'historique des exports
+ *
+ * NOTE: La table 'export_history' n'existe pas encore dans Supabase.
+ * Les types sont définis manuellement ici jusqu'à ce que la table soit créée
+ * et les types régénérés avec: supabase gen types typescript
  */
 
 import { createClient } from '@/lib/supabase/client'
-import type { TableRow, TableInsert } from '@/lib/types/supabase-helpers'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-type ExportHistory = TableRow<'export_history'>
-type ExportHistoryInsert = TableInsert<'export_history'>
-
+// Types définis manuellement car la table n'existe pas encore dans database.types.ts
+// TODO: Supprimer ces définitions après avoir créé la table et régénéré les types
 export type ExportType = 'excel' | 'csv' | 'pdf'
 export type EntityType = 'students' | 'documents' | 'payments' | 'dashboard_report' | 'attendance_report' | 'other'
+
+export interface ExportHistory {
+  id: string
+  organization_id: string
+  user_id: string
+  export_type: ExportType
+  entity_type: EntityType
+  filename: string
+  record_count: number
+  file_size_bytes: number | null
+  filters: string | null
+  created_at: string
+}
+
+type ExportHistoryInsert = Omit<ExportHistory, 'id' | 'created_at'>
+
+export interface ExportHistoryWithUser extends ExportHistory {
+  users?: {
+    full_name: string | null
+    email: string
+  } | null
+}
 
 export interface CreateExportHistoryParams {
   organizationId: string
@@ -23,7 +48,14 @@ export interface CreateExportHistoryParams {
 }
 
 export class ExportHistoryService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Enregistre un export dans l'historique
@@ -83,7 +115,7 @@ export class ExportHistoryService {
 
       let query = this.supabase
         .from('export_history')
-        .select('*', { count: 'exact' })
+        .select('*, users(full_name, email)', { count: 'exact' })
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false })
 
@@ -127,7 +159,7 @@ export class ExportHistoryService {
       }
 
       return {
-        data: data || [],
+        data: (data || []) as ExportHistoryWithUser[],
         total: count || 0,
         page,
         limit,

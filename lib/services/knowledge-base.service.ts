@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
 type FAQCategory = TableRow<'faq_categories'>
@@ -7,7 +8,14 @@ type Guide = TableRow<'guides'>
 type GuideStep = TableRow<'guide_steps'>
 
 export class KnowledgeBaseService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   // ========== FAQ CATEGORIES ==========
 

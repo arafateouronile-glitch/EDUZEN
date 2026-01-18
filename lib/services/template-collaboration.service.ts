@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
 type TemplateShare = Database['public']['Tables']['template_shares']['Row']
@@ -40,7 +41,14 @@ export type NotificationType =
   | 'approval_status_changed'
 
 export class TemplateCollaborationService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   // ========== PARTAGE ==========
 

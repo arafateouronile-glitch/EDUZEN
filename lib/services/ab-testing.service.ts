@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import { analytics } from '@/lib/utils/analytics'
 
@@ -29,7 +30,14 @@ export interface ABTestResult {
 }
 
 export class ABTestingService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère ou assigne une variante pour un utilisateur

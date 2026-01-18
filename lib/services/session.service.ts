@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { calendarService } from './calendar.service'
 import { videoconferenceService } from './videoconference.service'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
@@ -14,7 +15,14 @@ type SessionUpdate = TableUpdate<'sessions'>
  * Exemple : "Session Hiver 2024" (de la formation "Excel avancé")
  */
 export class SessionService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère toutes les sessions d'une organisation

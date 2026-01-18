@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Types pour les livrets d'apprentissage
 export interface TemplateField {
@@ -85,7 +86,14 @@ export interface PortfolioEntry {
 }
 
 class LearningPortfolioService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   // =====================================================
   // Templates

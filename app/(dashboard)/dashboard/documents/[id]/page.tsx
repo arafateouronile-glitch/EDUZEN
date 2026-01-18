@@ -75,7 +75,7 @@ export default function DocumentDetailPage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">{document.title || 'Document sans titre'}</h1>
             <p className="text-muted-foreground">
-              Type : {document.type || 'Non spécifié'} • Créé le {formatDate(document.created_at)}
+              Type : {document.type || 'Non spécifié'} • Créé le {document.created_at ? formatDate(document.created_at) : 'Date inconnue'}
             </p>
           </div>
           <div className="flex gap-2">

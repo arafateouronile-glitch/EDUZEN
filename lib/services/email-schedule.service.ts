@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { EmailTemplate } from './email-template.service'
 
@@ -75,7 +76,14 @@ export interface EmailScheduleExecutionResult {
 }
 
 class EmailScheduleService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère toutes les règles de planification d'une organisation

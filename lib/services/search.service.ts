@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 
 type Student = TableRow<'students'>
@@ -21,7 +22,14 @@ export interface SearchResult {
 }
 
 export class SearchService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Recherche globale dans tous les types de contenu

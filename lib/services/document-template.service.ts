@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { templateCollaborationService } from './template-collaboration.service'
 import { templateSecurityService } from './template-security.service'
 import { convertTemplateContent } from '@/lib/utils/document-generation/template-converter'
@@ -13,7 +14,14 @@ import type {
 } from '@/lib/types/document-templates'
 
 export class DocumentTemplateService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère tous les templates d'une organisation

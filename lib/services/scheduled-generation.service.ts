@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { DocumentType, DocumentVariables } from '@/lib/types/document-templates'
 
@@ -34,7 +35,14 @@ export interface ScheduledGenerationConfig {
 }
 
 export class ScheduledGenerationService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Crée une nouvelle génération programmée

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 
 export type EmailTemplate = TableRow<'email_templates'>
@@ -40,7 +41,14 @@ export interface UpdateEmailTemplateInput {
 }
 
 class EmailTemplateService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupérer tous les modèles d'une organisation

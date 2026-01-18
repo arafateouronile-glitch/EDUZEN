@@ -23,6 +23,12 @@ if (process.env.ANALYZE === 'true' || process.env.NODE_ENV === 'development') {
 
 const nextConfig = {
   reactStrictMode: true,
+  // Désactiver la vérification TypeScript pendant le build (optionnel pour accélérer)
+  // TypeScript est quand même vérifié par votre IDE et CI/CD
+  typescript: {
+    // Vérification TypeScript stricte activée
+    ignoreBuildErrors: false,
+  },
   images: {
     remotePatterns: [
       {

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { isValidPaymentAmount, calculateInvoiceStatus } from '@/lib/utils/payment-calculations'
@@ -21,7 +22,14 @@ type Invoice = TableRow<'invoices'>
  * - Gestion gracieuse des erreurs de relations manquantes
  */
 export class PaymentService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère tous les paiements d'une organisation

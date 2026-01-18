@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
 type Conversation = TableRow<'conversations'>
@@ -16,7 +17,14 @@ type Call = TableRow<'calls'>
  * - Support des utilisateurs et étudiants comme participants
  */
 export class MessagingService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   // ========== CONVERSATIONS ==========
 

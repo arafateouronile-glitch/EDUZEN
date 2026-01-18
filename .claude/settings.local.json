@@ -37,7 +37,26 @@
       "Bash(for file in /Users/arafatetoure/Documents/EDUZEN/supabase/migrations/*.sql)",
       "Bash(do if grep -q \"students\" \"$file\")",
       "Bash(fi)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Read(//private/tmp/claude/-Users-arafatetoure-Documents-EDUZEN/tasks/**)",
+      "Bash(timeout 180 tail:*)",
+      "Bash(for i in {1..40})",
+      "Bash(do sleep 15)",
+      "Bash(if grep -q \"✓ TypeScript\\\\|Failed to compile\\\\|Linting and checking validity\" /tmp/claude/-Users-arafatetoure-Documents-EDUZEN/tasks/b8baabf.output)",
+      "Bash(then break)",
+      "Bash(NEXT_DISABLE_TYPESCRIPT_ERRORS=true npm run build:*)",
+      "Bash(if [ -f \".next/build-manifest.json\" ])",
+      "Bash(then)",
+      "Read(//Users/arafatetoure/Documents/EDUZEN/**)",
+      "Bash([ -f \".next/package.json\" ])",
+      "Bash(then echo \"✅ Build completed successfully!\")",
+      "Bash(else echo \"⚠️ Build may not have completed\")",
+      "Bash(kill:*)",
+      "Bash(ps:*)",
+      "Bash(sysctl:*)",
+      "Bash(perl:*)",
+      "Bash(supabase --version:*)",
+      "Bash(vm_stat:*)"
     ]
   }
 }

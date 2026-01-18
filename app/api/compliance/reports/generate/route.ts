@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { complianceService } from '@/lib/services/compliance.service'
+import { ComplianceService } from '@/lib/services/compliance.service'
 
 /**
  * GET /api/compliance/reports/generate
@@ -9,6 +9,10 @@ import { complianceService } from '@/lib/services/compliance.service'
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
+
+    // Créer une instance de ComplianceService avec le client serveur
+    const complianceService = new ComplianceService(supabase)
+
     const {
       data: { user },
     } = await supabase.auth.getUser()

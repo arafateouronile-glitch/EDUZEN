@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, ErrorCode, AppError } from '@/lib/errors'
@@ -21,7 +22,14 @@ type StudentUpdate = TableUpdate<'students'>
  * - Génération automatique de numéros d'étudiant uniques
  */
 export class StudentService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère tous les étudiants d'une organisation avec pagination

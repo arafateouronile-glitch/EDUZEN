@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // =====================================================
 // TYPES & INTERFACES
@@ -85,7 +86,14 @@ export interface BPFTrainingDomain {
 // =====================================================
 
 export class BPFService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupérer les rapports BPF d'une organisation

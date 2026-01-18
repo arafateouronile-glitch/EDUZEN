@@ -5,6 +5,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import * as CryptoJS from 'crypto-js'
 
 type TemplatePermission = Database['public']['Tables']['template_permissions']['Row']
@@ -38,10 +39,11 @@ export type AuditAction =
   | 'permission_revoked'
 
 export class TemplateSecurityService {
-  private supabase = createClient()
-  private encryptionKey: string // En production, utiliser une clé sécurisée depuis les variables d'environnement
+  private supabase: SupabaseClient<Database>
+  private encryptionKey: string
 
-  constructor() {
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+    this.supabase = supabaseClient || createClient()
     // En production, récupérer depuis process.env.TEMPLATE_ENCRYPTION_KEY
     this.encryptionKey = process.env.TEMPLATE_ENCRYPTION_KEY || 'default-key-change-in-production'
   }

@@ -61,53 +61,10 @@ export default function SessionAttendancePage() {
     queryKey: ['session', sessionId],
     queryFn: async () => {
       const sessionData = await sessionService.getSessionById(sessionId)
-      // Récupérer les informations de géolocalisation (si les colonnes existent)
-      try {
-        const { data: sessionWithLocation, error } = await supabase
-          .from('sessions')
-          .select('latitude, longitude, require_location_for_attendance, allowed_attendance_radius_meters')
-          .eq('id', sessionId)
-          .single()
-        
-        // Si les colonnes n'existent pas ou erreur 400, ignorer l'erreur et retourner seulement sessionData
-        if (error) {
-          // Codes d'erreur pour colonnes inexistantes ou erreurs de requête
-          const isColumnError = 
-            error.code === '42703' || 
-            error.code === 'PGRST116' || 
-            error.code === 'PGRST200' ||
-            (error as any).status === 400 ||
-            error.message?.includes('does not exist') ||
-            error.message?.includes('column') ||
-            error.message?.includes('Could not find')
-          
-          if (isColumnError) {
-            console.warn('Colonnes de géolocalisation non disponibles, utilisation des données de session de base')
-            return sessionData
-          }
-          throw error
-        }
-        if (sessionWithLocation) {
-          return Object.assign({}, sessionData as Record<string, unknown>, sessionWithLocation as Record<string, unknown>)
-        }
-        return sessionData
-      } catch (error: any) {
-        // Si erreur, retourner seulement sessionData sans les infos de géolocalisation
-        const isColumnError = 
-          error?.code === '42703' || 
-          error?.code === 'PGRST116' || 
-          error?.code === 'PGRST200' ||
-          error?.status === 400 ||
-          error?.message?.includes('does not exist') ||
-          error?.message?.includes('column') ||
-          error?.message?.includes('Could not find')
-        
-        if (isColumnError) {
-          console.warn('Colonnes de géolocalisation non disponibles, utilisation des données de session de base')
-          return sessionData
-        }
-        throw error
-      }
+      // NOTE: Les colonnes de géolocalisation (latitude, longitude, etc.) ne sont pas encore
+      // ajoutées à la table sessions. Retourner directement sessionData pour l'instant.
+      // TODO: Activer la requête ci-dessous après avoir ajouté les colonnes à la table sessions
+      return sessionData
     },
   })
 

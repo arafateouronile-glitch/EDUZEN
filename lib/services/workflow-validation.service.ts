@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
 type Workflow = Database['public']['Tables']['template_workflows']['Row']
@@ -36,7 +37,14 @@ export interface CreateWorkflowInput {
 }
 
 export class WorkflowValidationService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   // ========== WORKFLOWS ==========
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { MTNAdapter } from './mobile-money/mtn.adapter'
 import { OrangeAdapter } from './mobile-money/orange.adapter'
 import { AirtelAdapter } from './mobile-money/airtel.adapter'
@@ -20,7 +21,14 @@ type MobileMoneyTransactionInsert = TableInsert<'mobile_money_transactions'>
 type MobileMoneyTransactionUpdate = TableUpdate<'mobile_money_transactions'>
 
 class MobileMoneyService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
   private adapters: Record<MobileMoneyProvider, MobileMoneyAdapter> = {
     mtn: new MTNAdapter(),
     orange: new OrangeAdapter(),

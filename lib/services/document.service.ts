@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import { errorHandler, ErrorCode, AppError } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
@@ -7,7 +8,14 @@ type Document = Database['public']['Tables']['documents']['Row']
 type DocumentInsert = Database['public']['Tables']['documents']['Insert']
 
 export class DocumentService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
 
   /**
    * Récupère tous les documents d'une organisation avec pagination

@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -45,7 +46,14 @@ export interface CreateNotificationParams {
 }
 
 export class NotificationService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
   private channels: Map<string, RealtimeChannel> = new Map()
 
   /**

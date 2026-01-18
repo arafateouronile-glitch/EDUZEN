@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 
@@ -21,7 +22,14 @@ export interface ActiveUser {
 }
 
 export class RealtimeCollaborationService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<any>
+
+
+  constructor(supabaseClient?: SupabaseClient<any>) {
+
+    this.supabase = supabaseClient || createClient()
+
+  }
   private providers: Map<string, WebsocketProvider> = new Map()
   private ydocs: Map<string, Y.Doc> = new Map()
   private activeUsers: Map<string, Map<string, ActiveUser>> = new Map() // templateId -> userId -> user

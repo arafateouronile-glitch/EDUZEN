@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { exportHistoryService, type ExportType, type EntityType } from '@/lib/services/export-history.service'
+import { exportHistoryService, type ExportType, type EntityType, type ExportHistoryWithUser } from '@/lib/services/export-history.service'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -85,7 +85,7 @@ function ExportsHistoryPageContent() {
     },
   })
 
-  const exports = exportsData?.data || []
+  const exports: ExportHistoryWithUser[] = exportsData?.data || []
   const totalPages = exportsData?.totalPages || 0
 
   const getExportTypeIcon = (type: ExportType) => {
