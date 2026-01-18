@@ -395,7 +395,7 @@ export default function InvoiceDetailPage() {
         invoiceTemplate,
         variables,
         undefined,
-        user?.organization_id
+        user?.organization_id || undefined
       )
 
       // Générer le nom de fichier
@@ -535,8 +535,8 @@ export default function InvoiceDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Détails de la facture</CardTitle>
-                <span className={`px-3 py-1 rounded text-sm font-medium ${getStatusColor(invoice.status)}`}>
-                  {getStatusLabel(invoice.status)}
+                <span className={`px-3 py-1 rounded text-sm font-medium ${getStatusColor(invoice.status || 'pending')}`}>
+                  {getStatusLabel(invoice.status || 'pending')}
                 </span>
               </div>
             </CardHeader>
@@ -561,12 +561,12 @@ export default function InvoiceDetailPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Date d'émission</p>
-                  <p className="font-medium">{formatDate(invoice.issue_date)}</p>
+                  <p className="font-medium">{formatDate(invoice.issue_date || '')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Date d'échéance</p>
-                  <p className={`font-medium ${invoice.due_date < new Date().toISOString().split('T')[0] && invoice.status !== 'paid' ? 'text-red-600' : ''}`}>
-                    {formatDate(invoice.due_date)}
+                  <p className={`font-medium ${invoice.due_date && invoice.due_date < new Date().toISOString().split('T')[0] && invoice.status !== 'paid' ? 'text-red-600' : ''}`}>
+                    {formatDate(invoice.due_date || '')}
                   </p>
                 </div>
               </div>
