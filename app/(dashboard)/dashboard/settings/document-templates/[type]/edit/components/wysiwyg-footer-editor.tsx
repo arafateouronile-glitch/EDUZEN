@@ -60,7 +60,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
     content: '',
   }
 
-  const handleUpdateFooter = (updates: Partial<FooterConfig> & { content?: string; pagination?: Partial<FooterConfig['pagination']> }) => {
+  const handleUpdateFooter = (updates: Omit<Partial<FooterConfig>, 'pagination'> & { content?: string; pagination?: Partial<FooterConfig['pagination']> }) => {
     onTemplateChange({
       footer: { ...footer, ...updates },
       footer_enabled: updates.enabled !== undefined ? updates.enabled : template.footer_enabled,
@@ -171,7 +171,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
                     checked={footer.pagination.enabled}
                     onCheckedChange={(checked) => {
                       handleUpdateFooter({
-                        pagination: { ...footer.pagination, enabled: checked },
+                        pagination: footer.pagination ? { ...footer.pagination, enabled: checked } : { enabled: checked, format: 'Page {numero_page} / {total_pages}', position: 'center' },
                       })
                     }}
                   />
