@@ -60,7 +60,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
     content: '',
   }
 
-  const handleUpdateFooter = (updates: Partial<FooterConfig>) => {
+  const handleUpdateFooter = (updates: Partial<FooterConfig> & { content?: string }) => {
     onTemplateChange({
       footer: { ...footer, ...updates },
       footer_enabled: updates.enabled !== undefined ? updates.enabled : template.footer_enabled,
