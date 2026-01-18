@@ -424,6 +424,7 @@ export interface CreateTemplateInput {
     bottom: number
     left: number
   }
+  font_size?: number
   is_default?: boolean
 }
 
