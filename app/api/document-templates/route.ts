@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { documentTemplateService } from '@/lib/services/document-template.service'
-import type { CreateTemplateInput, UpdateTemplateInput } from '@/lib/types/document-templates'
+import type { CreateTemplateInput, UpdateTemplateInput, DocumentType } from '@/lib/types/document-templates'
 
 // GET /api/document-templates - Récupère tous les templates d'une organisation
 export async function GET(request: NextRequest) {
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive')
 
     const templates = await documentTemplateService.getAllTemplates(userData.organization_id, {
-      type: type as 'invoice' | 'quote' | 'certificate' | 'contract' | 'report' | 'other' | undefined,
+      type: type as DocumentType | undefined,
       isActive: isActive ? isActive === 'true' : undefined,
     })
 
