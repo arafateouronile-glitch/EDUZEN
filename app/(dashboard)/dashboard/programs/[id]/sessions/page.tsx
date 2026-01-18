@@ -565,7 +565,7 @@ export default function ProgramSessionsPage() {
                     onChange={(e) =>
                       setEnrollmentForm({
                         ...enrollmentForm,
-                        status: e.target.value as Enrollment['status'],
+                        status: e.target.value as 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'failed',
                       })
                     }
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
@@ -645,7 +645,7 @@ export default function ProgramSessionsPage() {
                     onChange={(e) =>
                       setEnrollmentForm({
                         ...enrollmentForm,
-                        payment_status: e.target.value as Enrollment['payment_status'],
+                        payment_status: e.target.value as 'pending' | 'partial' | 'paid' | 'overdue',
                       })
                     }
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
