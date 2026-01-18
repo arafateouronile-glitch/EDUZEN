@@ -107,7 +107,7 @@ export function ConfigApprenants({
 
       if (!otherEnrollments || otherEnrollments.length === 0) return []
 
-      const candidateStudentIds = [...new Set(otherEnrollments.map((e) => e.student_id))]
+      const candidateStudentIds = [...new Set(otherEnrollments.map((e) => e.student_id).filter((id): id is string => id !== null))]
 
       // Récupérer les étudiants candidats avec toutes les informations
       const { data: candidates } = await supabase

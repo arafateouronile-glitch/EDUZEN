@@ -355,7 +355,7 @@ export function EspaceApprenant({
     const totalCount = studentAttendanceDetailsData.length
     const studentAttendance = totalCount > 0 
       ? { present: presentCount, total: totalCount }
-      : (attendanceStats?.byStudent?.[enrollment.student_id] || { present: 0, total: 0 })
+      : (enrollment.student_id ? (attendanceStats?.byStudent?.[enrollment.student_id] || { present: 0, total: 0 }) : { present: 0, total: 0 })
     
     const attendanceRate = studentAttendance.total > 0
       ? Math.round((studentAttendance.present / studentAttendance.total) * 100)
@@ -718,7 +718,7 @@ export function EspaceApprenant({
         </Card>
 
         {/* Documents partagés */}
-        {organizationId && (
+        {organizationId && enrollment.student_id && (
           <StudentDocumentsSection
             studentId={enrollment.student_id}
             organizationId={organizationId}
@@ -1006,7 +1006,7 @@ export function EspaceApprenant({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generateTokenMutation.mutate({
-                                  studentId: enrollment.student_id,
+                                  studentId: enrollment.student_id || '',
                                   studentName,
                                   studentEmail: student.email || ''
                                 })}
@@ -1115,10 +1115,10 @@ export function EspaceApprenant({
             const student = enrollment.students as StudentWithRelations | null
             if (!student) return null
 
-            const studentAttendance = attendanceStats?.byStudent?.[enrollment.student_id] || {
+            const studentAttendance = enrollment.student_id ? (attendanceStats?.byStudent?.[enrollment.student_id] || {
               present: 0,
               total: 0,
-            }
+            }) : { present: 0, total: 0 }
             const attendanceRate = studentAttendance.total > 0
               ? Math.round((studentAttendance.present / studentAttendance.total) * 100)
               : 0
