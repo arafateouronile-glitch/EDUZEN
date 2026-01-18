@@ -49,6 +49,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
   const footer = template.footer || {
     enabled: true,
     height: 60,
+    layout: 'complete' as const,
     elements: [],
     repeatOnAllPages: true,
     pagination: {
