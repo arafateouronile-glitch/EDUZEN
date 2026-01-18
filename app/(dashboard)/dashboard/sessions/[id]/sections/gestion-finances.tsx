@@ -960,7 +960,7 @@ export function GestionFinances({
                 const total = Number(enrollment.total_amount || 0)
                 const paid = Number(enrollment.paid_amount || 0)
                 const remaining = total - paid
-                const studentInvoices = getInvoicesForStudent(enrollment.student_id)
+                const studentInvoices = enrollment.student_id ? getInvoicesForStudent(enrollment.student_id) : []
                 const studentInvoicesList = studentInvoices.filter((inv: any) => inv.document_type === 'invoice')
                 const studentQuotesList = studentInvoices.filter((inv: any) => inv.document_type === 'quote')
 
@@ -1129,7 +1129,7 @@ export function GestionFinances({
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {payment.paid_at && new Date(payment.paid_at).toLocaleDateString('fr-FR')}
-                        {payment.method && ` • ${payment.method}`}
+                        {payment.payment_method && ` • ${payment.payment_method}`}
                       </p>
                     </div>
                     <div className="text-right">
