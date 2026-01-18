@@ -37,9 +37,9 @@ export default function InvoiceDetailPage() {
   const [isDownloadingInvoice, setIsDownloadingInvoice] = useState(false)
 
   // Récupérer la facture
-  const { data: invoice, isLoading, refetch } = useQuery({
+  const { data: invoice, isLoading, refetch } = useQuery<InvoiceWithRelations>({
     queryKey: ['invoice', invoiceId],
-    queryFn: () => invoiceService.getById(invoiceId),
+    queryFn: () => invoiceService.getById(invoiceId) as Promise<InvoiceWithRelations>,
   })
 
   // Récupérer les paiements
@@ -387,7 +387,7 @@ export default function InvoiceDetailPage() {
         invoice: invoiceData,
         academicYear,
         language: 'fr',
-        issueDate: invoice.issue_date,
+        issueDate: invoice.issue_date ?? undefined,
       })
 
       // Générer le HTML avec le template
