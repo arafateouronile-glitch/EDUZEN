@@ -164,11 +164,10 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
               <div className="space-y-4 border-t border-bg-gray-200 pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="pagination-enabled">Afficher la numérotation</Label>
+                    <Label>Afficher la numérotation</Label>
                     <p className="text-sm text-text-tertiary">Numérotation automatique des pages</p>
                   </div>
                   <Switch
-                    id="pagination-enabled"
                     checked={footer.pagination.enabled}
                     onCheckedChange={(checked) => {
                       handleUpdateFooter({
