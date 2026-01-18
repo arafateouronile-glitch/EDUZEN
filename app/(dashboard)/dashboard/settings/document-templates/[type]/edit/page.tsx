@@ -675,8 +675,7 @@ export default function DocumentTemplateEditPage() {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <Accordion 
             type="single" 
-            value={accordionValue} 
-            onValueChange={(value: string | undefined) => value && setAccordionValue(value)}
+            defaultValue={accordionValue || undefined}
             className="w-full space-y-4"
           >
             <AccordionItem value="header" className="border rounded-lg">

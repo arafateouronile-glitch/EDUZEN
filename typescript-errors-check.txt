@@ -4,65 +4,39 @@
 
 🔍 Vérification TypeScript en cours...
 
-app/(dashboard)/dashboard/sessions/[id]/sections/config-apprenants.tsx(603,54): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | Date'.
-  Type 'null' is not assignable to type 'string | Date'.
-app/(dashboard)/dashboard/sessions/[id]/sections/espace-apprenant.tsx(1028,33): error TS2322: Type 'string | null' is not assignable to type 'string'.
-  Type 'null' is not assignable to type 'string'.
-app/(dashboard)/dashboard/settings/document-templates/[type]/edit/page.tsx(383,14): error TS2304: Cannot find name 'DocumentContent'.
-app/(dashboard)/dashboard/settings/document-templates/[type]/edit/page.tsx(439,11): error TS2783: 'id' is specified more than once, so this usage will be overwritten.
-app/(dashboard)/dashboard/settings/document-templates/[type]/edit/page.tsx(681,13): error TS2322: Type '{ children: Element[]; type: "single"; collapsible: true; value: string; onValueChange: (value: any) => any; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionProps'.
-  Property 'collapsible' does not exist on type 'IntrinsicAttributes & AccordionProps'.
-app/(dashboard)/dashboard/settings/document-templates/[type]/edit/page.tsx(683,29): error TS7006: Parameter 'value' implicitly has an 'any' type.
-app/(dashboard)/dashboard/settings/document-templates/[type]/edit/utils/document-type-config.tsx(19,9): error TS2739: Type '{ convention: { name: string; description: string; icon: LucideIcon; color: string; }; facture: { name: string; description: string; icon: LucideIcon; color: string; }; devis: { ...; }; ... 9 more ...; attestation_assiduite: { ...; }; }' is missing the following properties from type 'Record<DocumentType, { name: string; description: string; icon: ElementType<any, keyof IntrinsicElements>; color: string; }>': certificat_realisation, livret_accueil, emargement
-app/(dashboard)/dashboard/settings/document-templates/[type]/preview/page.tsx(314,30): error TS2339: Property 'length' does not exist on type 'never[] | { data: { address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; ... 12 more ...; classes: { ...; } | null; }[]; total: number; page: number; limit: number; totalPages: number; }'.
-  Property 'length' does not exist on type '{ data: { address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; ... 12 more ...; classes: { ...; } | null; }[]; total: number; page: number; limit: number; totalPages: number; }'.
-app/(dashboard)/dashboard/settings/document-templates/[type]/preview/page.tsx(315,36): error TS7053: Element implicitly has an 'any' type because expression of type '0' can't be used to index type 'never[] | { data: { address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; ... 12 more ...; classes: { ...; } | null; }[]; total: number; page: number; limit: number; totalPages: number; }'.
-  Property '0' does not exist on type 'never[] | { data: { address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; ... 12 more ...; classes: { ...; } | null; }[]; total: number; page: number; limit: number; totalPages: number; }'.
-app/(dashboard)/dashboard/settings/document-templates/[type]/preview/page.tsx(466,36): error TS2339: Property 'map' does not exist on type 'never[] | { data: { address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; ... 12 more ...; classes: { ...; } | null; }[]; total: number; page: number; limit: number; totalPages: number; }'.
-  Property 'map' does not exist on type '{ data: { address: string | null; city: string | null; class_id: string | null; country: string | null; created_at: string | null; date_of_birth: string | null; email: string | null; ... 12 more ...; classes: { ...; } | null; }[]; total: number; page: number; limit: number; totalPages: number; }'.
-app/(dashboard)/dashboard/settings/document-templates/page.tsx(221,42): error TS2488: Type 'unknown' must have a '[Symbol.iterator]()' method that returns an iterator.
-app/(dashboard)/dashboard/settings/email-schedules/page.tsx(64,35): error TS2339: Property 'getAllTemplates' does not exist on type 'EmailTemplateService'.
+app/(dashboard)/dashboard/settings/document-templates/[type]/edit/page.tsx(678,13): error TS2322: Type '{ children: Element[]; type: "single"; value: string; onValueChange: (value: string | undefined) => void | "" | undefined; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionProps'.
+  Property 'value' does not exist on type 'IntrinsicAttributes & AccordionProps'.
 app/(dashboard)/dashboard/settings/email-schedules/page.tsx(589,29): error TS2322: Type 'string | undefined' is not assignable to type 'DocumentType | undefined'.
   Type 'string' is not assignable to type 'DocumentType | undefined'.
-app/(dashboard)/dashboard/settings/email-schedules/page.tsx(1072,27): error TS2322: Type 'string | undefined' is not assignable to type 'DocumentType | undefined'.
-  Type 'string' is not assignable to type 'DocumentType | undefined'.
-app/(dashboard)/dashboard/settings/email-templates/page.tsx(354,17): error TS2322: Type '{ children: Element[]; value: EmailType; onValueChange: (value: string) => void; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & SelectRootProps & RefAttributes<HTMLDivElement>'.
-  Property 'disabled' does not exist on type 'IntrinsicAttributes & SelectRootProps & RefAttributes<HTMLDivElement>'.
-app/(dashboard)/dashboard/settings/lms/page.tsx(41,17): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
-    Argument of type '"lms_configurations"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
-  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 239 more ...; videoconference_meeting_mappings: { ...; }; }; Views: {}; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, never, never, never>', gave the following error.
-    Argument of type '"lms_configurations"' is not assignable to parameter of type 'never'.
-app/(dashboard)/dashboard/settings/lms/page.tsx(49,103): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
-app/(dashboard)/dashboard/settings/lms/page.tsx(65,5): error TS2769: No overload matches this call.
-  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, (string | null | undefined)[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, (string | null | undefined)[]>'.
-  Overload 2 of 3, '(options: UndefinedInitialDataOptions<ResultOne | null, Error, ResultOne | null, (string | null | undefined)[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UndefinedInitialDataOptions<ResultOne | null, Error, ResultOne | null, (string | null | undefined)[]>'.
-  Overload 3 of 3, '(options: UseQueryOptions<ResultOne | null, Error, ResultOne | null, (string | null | undefined)[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UseQueryOptions<ResultOne | null, Error, ResultOne | null, (string | null | undefined)[]>'.
-app/(dashboard)/dashboard/settings/lms/page.tsx(65,17): error TS7006: Parameter 'data' implicitly has an 'any' type.
-app/(dashboard)/dashboard/settings/lms/page.tsx(84,27): error TS2339: Property 'id' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/lms/page.tsx(87,17): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
-    Argument of type '"lms_configurations"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
-  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 239 more ...; videoconference_meeting_mappings: { ...; }; }; Views: {}; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, never, never, never>', gave the following error.
-    Argument of type '"lms_configurations"' is not assignable to parameter of type 'never'.
-app/(dashboard)/dashboard/settings/lms/page.tsx(89,36): error TS2339: Property 'id' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/lms/page.tsx(97,17): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
-    Argument of type '"lms_configurations"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
-  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 239 more ...; videoconference_meeting_mappings: { ...; }; }; Views: {}; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, never, never, never>', gave the following error.
-    Argument of type '"lms_configurations"' is not assignable to parameter of type 'never'.
-app/(dashboard)/dashboard/settings/page.tsx(159,5): error TS2769: No overload matches this call.
-  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, (string | null | undefined)[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, (string | null | undefined)[]>'.
-  Overload 2 of 3, '(options: UndefinedInitialDataOptions<{ address: string | null; brand_color: string | null; city: string | null; code: string; country: string; created_at: string | null; currency: string; email: string | null; id: string; ... 11 more ...; updated_at: string | null; } | null, Error, { ...; } | null, (string | ... 1 more ... | undefined)[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UndefinedInitialDataOptions<{ address: string | null; brand_color: string | null; city: string | null; code: string; country: string; created_at: string | null; currency: string; email: string | null; id: string; ... 11 more ...; updated_at: string | null; } | null, Error, { ...; } | null, (string | ... 1 more ... |...'.
-  Overload 3 of 3, '(options: UseQueryOptions<{ address: string | null; brand_color: string | null; city: string | null; code: string; country: string; created_at: string | null; currency: string; email: string | null; id: string; ... 11 more ...; updated_at: string | null; } | null, Error, { ...; } | null, (string | ... 1 more ... | undefined)[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
-    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UseQueryOptions<{ address: string | null; brand_color: string | null; city: string | null; code: string; country: string; created_at: string | null; currency: string; email: string | null; id: string; ... 11 more ...; updated_at: string | null; } | null, Error, { ...; } | null, (string | ... 1 more ... | undefined)[]>'.
-app/(dashboard)/dashboard/settings/page.tsx(159,17): error TS7006: Parameter 'data' implicitly has an 'any' type.
-app/(dashboard)/dashboard/settings/page.tsx(611,9): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
+app/(dashboard)/dashboard/settings/users/[id]/page.tsx(66,5): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, string[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<unknown, Error>', gave the following error.
+    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, string[]>'.
+  Overload 2 of 3, '(options: UndefinedInitialDataOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UndefinedInitialDataOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>'.
+  Overload 3 of 3, '(options: UseQueryOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'onSuccess' does not exist in type 'UseQueryOptions<{ id: string; email: string; full_name: string; phone: string | null; role: string; is_active: boolean | null; organization_id: string | null; }, Error, { id: string; email: string; ... 4 more ...; organization_id: string | null; }, string[]>'.
+app/(dashboard)/dashboard/settings/users/[id]/page.tsx(66,17): error TS7006: Parameter 'data' implicitly has an 'any' type.
+app/(dashboard)/dashboard/settings/users/page.tsx(431,50): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | Date'.
+  Type 'null' is not assignable to type 'string | Date'.
+app/(dashboard)/dashboard/settings/users/page.tsx(442,31): error TS2322: Type 'boolean | null' is not assignable to type 'boolean'.
+  Type 'null' is not assignable to type 'boolean'.
+app/(dashboard)/dashboard/sites/page.tsx(406,19): error TS2322: Type '{ id: string; checked: boolean; onCheckedChange: (checked: boolean) => void; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
+  Property 'id' does not exist on type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
+app/(dashboard)/dashboard/sites/page.tsx(418,19): error TS2322: Type '{ id: string; checked: boolean; onCheckedChange: (checked: boolean) => void; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
+  Property 'id' does not exist on type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
+app/(dashboard)/dashboard/students/[id]/edit/page.tsx(81,9): error TS2322: Type 'string' is not assignable to type '"active" | "inactive" | "graduated"'.
+app/(dashboard)/dashboard/students/[id]/edit/page.tsx(332,74): error TS2304: Cannot find name 'Student'.
+app/(dashboard)/dashboard/students/[id]/page.tsx(282,56): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | Date'.
+  Type 'null' is not assignable to type 'string | Date'.
+app/(dashboard)/dashboard/students/new/page.tsx(234,12): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type '{ student_id: string; session_id: string; enrollment_date: string; status: string; payment_status: string; }' is not assignable to parameter of type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }'.
+      Property 'total_amount' is missing in type '{ student_id: string; session_id: string; enrollment_date: string; status: string; payment_status: string; }' but required in type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }'.
+  Overload 2 of 2, '(values: { created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'student_id' does not exist in type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }[]'.
+app/(dashboard)/dashboard/students/page.tsx(136,9): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+app/(dashboard)/dashboard/students/page.tsx(179,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
   Property 'visible' is incompatible with index signature.
     Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
       Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
@@ -76,7 +50,7 @@ app/(dashboard)/dashboard/settings/page.tsx(611,9): error TS2322: Type '{ hidden
                       Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
                         Type 'number[]' is not assignable to type 'Easing[]'.
                           Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/settings/page.tsx(676,21): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
+app/(dashboard)/dashboard/students/page.tsx(298,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
   Property 'visible' is incompatible with index signature.
     Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
       Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
@@ -90,23 +64,48 @@ app/(dashboard)/dashboard/settings/page.tsx(676,21): error TS2322: Type '{ hidde
                       Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
                         Type 'number[]' is not assignable to type 'Easing[]'.
                           Type 'number' is not assignable to type 'Easing'.
-app/(dashboard)/dashboard/settings/page.tsx(864,62): error TS2339: Property 'settings' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(866,52): error TS2339: Property 'name' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(867,52): error TS2339: Property 'code' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(868,52): error TS2339: Property 'type' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(869,55): error TS2339: Property 'country' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(870,56): error TS2339: Property 'currency' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(871,56): error TS2339: Property 'language' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(872,55): error TS2339: Property 'address' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(873,52): error TS2339: Property 'city' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(875,53): error TS2339: Property 'phone' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(876,53): error TS2339: Property 'email' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(877,56): error TS2339: Property 'logo_url' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(878,72): error TS2339: Property 'qualiopi_certificate_url' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(879,59): error TS2339: Property 'brand_color' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(906,64): error TS2339: Property 'settings' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(908,54): error TS2339: Property 'name' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(909,54): error TS2339: Property 'code' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(910,54): error TS2339: Property 'type' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(911,57): error TS2339: Property 'country' does not exist on type '{}'.
-app/(dashboard)/dashboard/settings/page.tsx(912,58): error TS2339: Property 'currency' does not exist on type '{}'.
+app/(dashboard)/dashboard/students/page.tsx(374,19): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
+  Property 'visible' is incompatible with index signature.
+    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
+      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
+        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
+          Types of property 'transition' are incompatible.
+            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+                  Types of property 'ease' are incompatible.
+                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+                        Type 'number[]' is not assignable to type 'Easing[]'.
+                          Type 'number' is not assignable to type 'Easing'.
+app/(dashboard)/dashboard/students/page.tsx(536,11): error TS2322: Type '{ hidden: { opacity: number; y: number; }; visible: { opacity: number; y: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
+  Property 'visible' is incompatible with index signature.
+    Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
+      Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
+        Type '{ opacity: number; y: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
+          Types of property 'transition' are incompatible.
+            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+                  Types of property 'ease' are incompatible.
+                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+                        Type 'number[]' is not assignable to type 'Easing[]'.
+                          Type 'number' is not assignable to type 'Easing'.
+app/(dashboard)/dashboard/students/page.tsx(540,14): error TS2739: Type '{ currentPage: number; totalPages: number; onPageChange: Dispatch<SetStateAction<number>>; }' is missing the following properties from type 'PaginationProps': itemsPerPage, totalItems
+app/(dashboard)/dashboard/support/[id]/page.tsx(223,32): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+app/(dashboard)/dashboard/support/[id]/page.tsx(224,39): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+app/(dashboard)/dashboard/support/[id]/page.tsx(233,17): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+app/(dashboard)/dashboard/support/[id]/page.tsx(339,33): error TS2339: Property 'full_name' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
+app/(dashboard)/dashboard/support/[id]/page.tsx(339,59): error TS2339: Property 'email' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
+app/(dashboard)/dashboard/support/[id]/page.tsx(346,43): error TS2339: Property 'full_name' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
+app/(dashboard)/dashboard/support/[id]/page.tsx(346,77): error TS2339: Property 'email' does not exist on type 'SelectQueryError<"could not find the relation between support_tickets and users">'.
+app/(dashboard)/dashboard/support/[id]/page.tsx(439,29): error TS2322: Type '{ children: Element[]; name: string; required: true; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.
+app/(dashboard)/dashboard/support/page.tsx(242,29): error TS2322: Type '{ children: Element[]; name: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.
+app/(dashboard)/dashboard/support/page.tsx(276,29): error TS2322: Type '{ children: Element[]; name: string; defaultValue: string; }' is not assignable to type 'IntrinsicAttributes & SelectProps'.
+  Property 'name' does not exist on type 'IntrinsicAttributes & SelectProps'.

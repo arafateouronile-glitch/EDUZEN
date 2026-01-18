@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { studentService } from '@/lib/services/student.service'
+import type { TableRow } from '@/lib/types/supabase-helpers'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
@@ -78,7 +79,7 @@ export default function EditStudentPage() {
         city: student.city || '',
         class_id: student.class_id || '',
         enrollment_date: student.enrollment_date ? student.enrollment_date.split('T')[0] : '',
-        status: student.status || 'active',
+        status: (student.status || 'active') as 'active' | 'inactive' | 'graduated',
       })
     }
   }, [student])
@@ -329,7 +330,7 @@ export default function EditStudentPage() {
                 <select
                   value={formData.status}
                   onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value as Student['status'] })
+                    setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'graduated' })
                   }
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
                 >

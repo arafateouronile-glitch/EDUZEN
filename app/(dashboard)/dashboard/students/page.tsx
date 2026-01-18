@@ -133,7 +133,7 @@ function StudentsPageContent() {
         sheetName: vocab.students,
         format,
         entityType: 'students',
-        organizationId: user?.organization_id,
+        organizationId: user?.organization_id || undefined,
         userId: user?.id,
       })
 
@@ -164,7 +164,7 @@ function StudentsPageContent() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
     }
   }
 
@@ -541,6 +541,8 @@ function StudentsPageContent() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
             />
           </GlassCard>
         </motion.div>

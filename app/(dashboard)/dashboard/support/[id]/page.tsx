@@ -223,14 +223,14 @@ export default function SupportTicketPage() {
                 {getStatusIcon(ticket.status)}
                 <span>{getStatusLabel(ticket.status)}</span>
               </div>
-              <span>Créé le {formatDate(ticket.created_at)}</span>
+              <span>Créé le {formatDate(ticket.created_at || '')}</span>
               {ticket.category && <span>{ticket.category.name}</span>}
             </div>
           </div>
           {isSupportStaff && (
             <div className="flex items-center gap-2">
               <Select
-                value={ticket.status}
+                value={ticket.status || ''}
                 onValueChange={(value) => updateStatusMutation.mutate(value)}
               >
                 <SelectTrigger className="w-40">
@@ -336,14 +336,14 @@ export default function SupportTicketPage() {
               <div>
                 <Label className="text-xs text-muted-foreground">Créé par</Label>
                 <p className="font-medium">
-                  {ticket.user?.full_name || ticket.user?.email || 'Utilisateur'}
+                  {(ticket as any).user?.full_name || (ticket as any).user?.email || 'Utilisateur'}
                 </p>
               </div>
               {ticket.assigned_user && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Assigné à</Label>
                   <p className="font-medium">
-                    {ticket.assigned_user.full_name || ticket.assigned_user.email}
+                    {(ticket as any).assigned_user?.full_name || (ticket as any).assigned_user?.email}
                   </p>
                 </div>
               )}
@@ -436,7 +436,7 @@ export default function SupportTicketPage() {
                 >
                   <div>
                     <Label>Note</Label>
-                    <Select name="rating" required>
+                    <Select>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner une note" />
                       </SelectTrigger>

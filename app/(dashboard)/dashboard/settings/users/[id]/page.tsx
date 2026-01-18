@@ -63,18 +63,20 @@ function EditUserPageContent() {
       return data
     },
     enabled: !!userId,
-    onSuccess: (data) => {
-      if (data) {
-        setFormData({
-          email: data.email || '',
-          full_name: data.full_name || '',
-          phone: data.phone || '',
-          role: data.role || 'teacher',
-          is_active: data.is_active ?? true,
-        })
-      }
-    },
   })
+
+  // Mettre à jour le formulaire quand userData change
+  useEffect(() => {
+    if (userData) {
+      setFormData({
+        email: userData.email || '',
+        full_name: userData.full_name || '',
+        phone: userData.phone || '',
+        role: userData.role || 'teacher',
+        is_active: userData.is_active ?? true,
+      })
+    }
+  }, [userData])
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof formData) => {

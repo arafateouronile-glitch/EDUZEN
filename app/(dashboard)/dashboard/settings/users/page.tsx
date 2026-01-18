@@ -439,7 +439,7 @@ function UsersSettingsPageContent() {
                           onClick={() =>
                             toggleUserStatusMutation.mutate({
                               userId: userItem.id,
-                              isActive: userItem.is_active,
+                              isActive: userItem.is_active ?? false,
                             })
                           }
                           disabled={toggleUserStatusMutation.isPending}

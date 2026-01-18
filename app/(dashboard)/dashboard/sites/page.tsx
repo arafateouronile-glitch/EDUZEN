@@ -403,19 +403,17 @@ function SiteFormDialog({ open, onClose, site, onSubmit, isSubmitting }: SiteFor
             <div className="flex items-center gap-4 pt-6">
               <div className="flex items-center gap-2">
                 <Switch
-                  id="is_headquarters"
                   checked={formData.is_headquarters}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, is_headquarters: checked })
                   }
                   disabled={isSubmitting}
                 />
-                <Label htmlFor="is_headquarters">Siège principal</Label>
+                <Label>Siège principal</Label>
               </div>
 
               <div className="flex items-center gap-2">
                 <Switch
-                  id="is_active"
                   checked={formData.is_active}
                   onCheckedChange={(checked) =>
                     setFormData({ ...formData, is_active: checked })

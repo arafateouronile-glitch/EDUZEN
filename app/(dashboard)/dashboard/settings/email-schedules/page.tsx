@@ -586,7 +586,7 @@ function CreateScheduleForm({
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            document_type: e.target.value || undefined,
+                            document_type: (e.target.value || undefined) as DocumentType | undefined,
                           })
                         }
                         className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"

@@ -279,7 +279,7 @@ export default function StudentDetailPage() {
                   <Calendar className="mr-2 h-4 w-4" />
                   Date d'inscription
                 </p>
-                <p className="font-medium">{formatDate(student.enrollment_date)}</p>
+                <p className="font-medium">{formatDate(student.enrollment_date || '')}</p>
               </div>
             </CardContent>
           </Card>

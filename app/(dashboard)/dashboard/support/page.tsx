@@ -239,7 +239,7 @@ export default function SupportPage() {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="category_id">Catégorie</Label>
-                    <Select name="category_id">
+                    <Select>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner une catégorie" />
                       </SelectTrigger>
@@ -273,7 +273,7 @@ export default function SupportPage() {
                   </div>
                   <div>
                     <Label htmlFor="priority">Priorité</Label>
-                    <Select name="priority" defaultValue="medium">
+                    <Select defaultValue="medium">
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>

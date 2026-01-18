@@ -237,6 +237,8 @@ export default function NewStudentPage() {
             enrollment_date: data.enrollment_date,
             status: 'confirmed',
             payment_status: 'pending',
+            total_amount: 0,
+            paid_amount: 0,
           })
 
         if (enrollmentError) {
