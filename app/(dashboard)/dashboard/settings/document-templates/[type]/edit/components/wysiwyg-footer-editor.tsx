@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { RichTextEditor, type RichTextEditorRef } from '@/components/ui/rich-text-editor'
 import { TableFrameToolbar } from '@/components/ui/table-frame-toolbar'
-import type { DocumentTemplate } from '@/lib/types/document-templates'
+import type { DocumentTemplate, FooterConfig } from '@/lib/types/document-templates'
 import { LayoutSelector } from './layout-selector'
 import { generateFooterLayout } from '../utils/layout-generator'
 import { useEffect } from 'react'
@@ -60,7 +60,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
     content: '',
   }
 
-  const handleUpdateFooter = (updates: Partial<typeof footer>) => {
+  const handleUpdateFooter = (updates: Partial<FooterConfig>) => {
     onTemplateChange({
       footer: { ...footer, ...updates },
       footer_enabled: updates.enabled !== undefined ? updates.enabled : template.footer_enabled,
@@ -171,7 +171,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
                     checked={footer.pagination.enabled}
                     onCheckedChange={(checked) => {
                       handleUpdateFooter({
-                        pagination: { ...footer.pagination, enabled: checked as boolean },
+                        pagination: { ...footer.pagination, enabled: checked },
                       })
                     }}
                   />
