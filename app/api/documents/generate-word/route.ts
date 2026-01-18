@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Retourner le document Word
-    return new NextResponse(wordBuffer, {
+    return new NextResponse(wordBuffer as any, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${template.name || 'document'}.docx"`,

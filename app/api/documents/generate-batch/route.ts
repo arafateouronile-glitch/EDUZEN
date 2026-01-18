@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
       try {
         const { error: insertError } = await supabase
           .from('generated_documents')
-          .insert(documentsToInsert)
+          .insert(documentsToInsert as any)
 
         if (insertError) {
           logger.error('Batch document insert failed', insertError, {

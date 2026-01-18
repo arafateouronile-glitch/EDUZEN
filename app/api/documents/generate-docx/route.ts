@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     // - Si docx_template_url existe : utilise docxtemplater
     // - Sinon : génère automatiquement depuis le HTML
     const outputBuffer = await generateWordDocument(
-      template as DocumentTemplate,
+      template as unknown as DocumentTemplate,
       variables
     )
 

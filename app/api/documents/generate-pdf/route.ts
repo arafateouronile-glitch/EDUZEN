@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
     console.log('[PDF API] Template header content (premiers 200 chars):', 
       template.header 
         ? (typeof template.header === 'string' 
-          ? template.header.substring(0, 200) 
-          : JSON.stringify(template.header).substring(0, 200))
+          ? (template.header as string).substring(0, 200) 
+          : JSON.stringify(template.header as any).substring(0, 200))
         : 'null/undefined'
     )
     let htmlResult
@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
         headerType: typeof template?.header,
         headerPreview: template?.header 
           ? (typeof template.header === 'string' 
-            ? template.header.substring(0, 200) 
-            : JSON.stringify(template.header).substring(0, 200))
+            ? (template.header as string).substring(0, 200) 
+            : JSON.stringify(template.header as any).substring(0, 200))
           : null,
       }
       
@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Retourner le PDF
-    return new NextResponse(pdf, {
+    return new NextResponse(pdf as any, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${template.name || 'document'}.pdf"`,
