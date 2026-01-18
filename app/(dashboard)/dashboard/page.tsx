@@ -832,7 +832,7 @@ export default function DashboardPage() {
         })
       )
 
-      return classData.filter((c) => c.students > 0).slice(0, 10) // Limiter à 10 pour la lisibilité
+      return classData.filter((c): c is NonNullable<typeof c> => c !== null && c.students > 0).slice(0, 10) // Limiter à 10 pour la lisibilité
     },
   })
 
