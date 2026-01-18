@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, AppError } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
 import { emailService } from './email.service'
-import { attendanceService } from './attendance.service'
+import { AttendanceService } from './attendance.service'
 
 type ElectronicAttendanceSession = TableRow<'electronic_attendance_sessions'>
 type ElectronicAttendanceRequest = TableRow<'electronic_attendance_requests'>
@@ -44,7 +45,14 @@ export interface AttendanceSessionWithRequests extends ElectronicAttendanceSessi
  * Service pour gérer les émargements électroniques
  */
 export class ElectronicAttendanceService {
-  private supabase = createClient()
+  private supabase: SupabaseClient<Database>
+  private attendanceService: AttendanceService
+
+  constructor(supabaseClient?: SupabaseClient<Database>) {
+    this.supabase = supabaseClient || createClient()
+    // Créer une instance d'AttendanceService avec le même client Supabase
+    this.attendanceService = new AttendanceService(this.supabase)
+  }
 
   /**
    * Crée une session d'émargement électronique
@@ -446,7 +454,7 @@ export class ElectronicAttendanceService {
         location_verified: locationVerified,
       }
 
-      const attendance = await attendanceService.upsert(attendanceData as any)
+      const attendance = await this.attendanceService.upsert(attendanceData as any)
 
       // Mettre à jour la demande d'émargement
       const { data: updatedRequest, error: updateError } = await this.supabase

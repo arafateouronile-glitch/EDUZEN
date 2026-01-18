@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { electronicAttendanceService } from '@/lib/services/electronic-attendance.service'
 
 /**
  * GET /api/electronic-attendance/sessions
@@ -161,6 +160,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+
+    // Créer une instance du service avec le client serveur
+    const { ElectronicAttendanceService } = await import('@/lib/services/electronic-attendance.service')
+    const electronicAttendanceService = new ElectronicAttendanceService(supabase)
 
     const attendanceSession = await electronicAttendanceService.createAttendanceSession({
       sessionId: body.sessionId,
