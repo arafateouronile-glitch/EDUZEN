@@ -54,10 +54,28 @@ export function VersionDiff({ templateId, version1Id, version2Id, onClose }: Ver
 
   const getContentText = (template: DocumentTemplate | null): string => {
     if (!template) return ''
-    const header = template.header?.content?.html || ''
-    const body = template.content?.html || ''
-    const footer = template.footer?.content?.html || ''
-    return `${header} ${body} ${footer}`.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    
+    // Extraire le texte des éléments du header
+    const headerText = template.header?.elements
+      ?.map((el) => el.content || '')
+      .filter(Boolean)
+      .join(' ') || ''
+    
+    // Extraire le texte des éléments du body
+    const bodyText = template.content?.elements
+      ?.map((el) => el.content || '')
+      .filter(Boolean)
+      .join(' ') || ''
+    
+    // Extraire le texte des éléments du footer
+    const footerText = template.footer?.elements
+      ?.map((el) => el.content || '')
+      .filter(Boolean)
+      .join(' ') || ''
+    
+    return `${template.name} ${headerText} ${bodyText} ${footerText}`
+      .replace(/\s+/g, ' ')
+      .trim()
   }
 
   const content1 = getContentText(version1)
