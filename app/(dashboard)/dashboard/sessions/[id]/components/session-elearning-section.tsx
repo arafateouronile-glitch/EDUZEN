@@ -182,7 +182,7 @@ export function SessionElearningSection({
       if (!sessionCourses?.length || !enrollments.length) return []
 
       const courseIds = sessionCourses.map(sc => sc.course_id)
-      const studentIds = enrollments.map(e => e.student_id)
+      const studentIds = enrollments.map(e => e.student_id).filter((id): id is string => id !== null)
 
       try {
         // Récupérer les inscriptions aux cours
@@ -258,7 +258,7 @@ export function SessionElearningSection({
               : null
 
             const lastProgress = studentLessonProgress.sort((a: any, b: any) => 
-              new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
+              new Date(b.last_accessed_at || b.started_at || b.completed_at || 0).getTime() - new Date(a.last_accessed_at || a.started_at || a.completed_at || 0).getTime()
             )[0]
 
             let status: 'not_started' | 'in_progress' | 'completed' = 'not_started'
@@ -268,17 +268,19 @@ export function SessionElearningSection({
               status = 'in_progress'
             }
 
-            progressMap.push({
-              student_id: enrollment.student_id,
-              student_name: `${student.first_name} ${student.last_name}`,
-              course_id: courseId,
-              progress,
-              completed_lessons: completedLessons,
-              total_lessons: totalLessons,
-              quiz_score: quizScore,
-              last_activity: lastProgress?.updated_at || lastProgress?.created_at || null,
-              status,
-            })
+            if (enrollment.student_id) {
+              progressMap.push({
+                student_id: enrollment.student_id,
+                student_name: `${student.first_name} ${student.last_name}`,
+                course_id: courseId,
+                progress,
+                completed_lessons: completedLessons,
+                total_lessons: totalLessons,
+                quiz_score: quizScore,
+                last_activity: lastProgress?.last_accessed_at || lastProgress?.started_at || lastProgress?.completed_at || null,
+                status,
+              })
+            }
           }
         }
 
