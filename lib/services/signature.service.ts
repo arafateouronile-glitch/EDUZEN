@@ -226,7 +226,7 @@ export class SignatureService {
       // Récupérer les informations de l'utilisateur
       const { data: userData } = await this.supabase.auth.getUser()
       if (!userData.user) {
-        throw errorHandler.createAuthenticationError('Utilisateur non authentifié')
+        throw errorHandler.createAuthError(ErrorCode.AUTH_REQUIRED, 'Utilisateur non authentifié')
       }
 
       // Générer un code de validation
@@ -401,7 +401,8 @@ export class SignatureService {
   async validateSignature(signatureId: string, validationCode: string): Promise<boolean> {
     try {
       const signature = await this.getSignatureById(signatureId)
-      return signature.validation_code === validationCode && signature.is_valid
+      const sig = signature as any
+      return (sig.validation_code === validationCode) && (sig.is_valid === true)
     } catch (error) {
       return false
     }

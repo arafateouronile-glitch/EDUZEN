@@ -39,7 +39,7 @@ export function useABTest(options: UseABTestOptions): Variant {
     const assignedVariant = abTestingService.getVariant(
       testId,
       user?.id,
-      user?.organization_id
+      user?.organization_id || undefined
     )
 
     // Track l'impression

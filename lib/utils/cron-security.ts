@@ -101,7 +101,7 @@ export function validateCronRequest(
 /**
  * Middleware pour sécuriser les endpoints CRON
  */
-export function withCronSecurity(
+export async function withCronSecurity(
   request: NextRequest,
   handler: (req: NextRequest) => Promise<NextResponse>,
   config: CronSecurityConfig = {}

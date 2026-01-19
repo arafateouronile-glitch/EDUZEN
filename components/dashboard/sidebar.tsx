@@ -154,7 +154,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
               { name: t('navigation.systemHealth'), href: '/dashboard/admin/health', icon: Activity },
               { name: t('navigation.exportHistory'), href: '/dashboard/admin/exports', icon: FileDown },
             ],
-          },
+          } as NavigationItem,
         ],
       },
     ],

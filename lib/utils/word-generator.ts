@@ -8,14 +8,15 @@
 'use server'
 
 import { Document, Packer, Paragraph, HeadingLevel, Header, Footer, TextRun, AlignmentType, PageBreak, ImageRun, WidthType, Table, TableRow, TableCell, VerticalAlign, BorderStyle, ShadingType, convertMillimetersToTwip } from 'docx'
+// @ts-ignore - html-to-text n'a pas de types TypeScript
 import { convert } from 'html-to-text'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 
 /**
  * Parse les styles CSS depuis un élément HTML et retourne les propriétés pour TextRun
  */
-function parseStyles(element: Element, context?: 'header' | 'content' | 'footer', defaultFontSize?: number): Partial<TextRun['options']> {
-  const style: Partial<TextRun['options']> = {}
+function parseStyles(element: Element, context?: 'header' | 'content' | 'footer', defaultFontSize?: number): Partial<any> {
+  const style: Partial<any> = {}
   const computedStyle = element.getAttribute('style') || ''
   const tagName = element.tagName.toLowerCase()
   
@@ -79,7 +80,7 @@ function parseStyles(element: Element, context?: 'header' | 'content' | 'footer'
 /**
  * Parse l'alignement depuis les styles CSS
  */
-function parseAlignment(element: Element): AlignmentType | undefined {
+function parseAlignment(element: Element): any {
   const style = element.getAttribute('style') || ''
   if (style.includes('text-align: center')) return AlignmentType.CENTER
   if (style.includes('text-align: right')) return AlignmentType.RIGHT
@@ -303,7 +304,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
   const paragraphs: Paragraph[] = []
   
   // Fonction wrapper pour parseStyles avec le contexte
-  const parseStylesWithContext = (element: Element): Partial<TextRun['options']> => {
+  const parseStylesWithContext = (element: Element): Partial<any> => {
     return parseStyles(element, context, defaultFontSize)
   }
   
@@ -375,12 +376,12 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 
                 // Utiliser ImageRun directement (Media.addImage n'existe pas dans docx)
                 const imageRun = new ImageRun({
-                  data: imageBuffer,
+                  data: imageBuffer as any,
                   transformation: {
                     width: imageWidth,
                     height: imageHeight,
                   },
-                })
+                } as any)
                 
                 // Déterminer l'alignement depuis le parent ou les styles
                 let alignment = AlignmentType.CENTER
@@ -388,10 +389,10 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 while (parent) {
                   const parentStyle = parent.getAttribute('style') || ''
                   if (parentStyle.includes('text-align: left')) {
-                    alignment = AlignmentType.LEFT
+                    alignment = AlignmentType.LEFT as any
                     break
                   } else if (parentStyle.includes('text-align: right')) {
-                    alignment = AlignmentType.RIGHT
+                    alignment = AlignmentType.RIGHT as any
                     break
                   } else if (parentStyle.includes('text-align: center')) {
                     alignment = AlignmentType.CENTER
@@ -446,7 +447,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               if (text) {
                 // Chercher le parent pour les styles
                 let parent = node.parentElement
-                const styles: Partial<TextRun['options']> = {}
+                const styles: Partial<any> = {}
                 while (parent && parent !== element) {
                   const parentStyles = parseStylesWithContext(parent)
                   Object.assign(styles, parentStyles)
@@ -583,7 +584,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               
               // Ajouter les bordures si présentes
               if (borderConfig) {
-                cellConfig.borders = {
+                (cellConfig as any).borders = {
                   top: borderConfig,
                   bottom: borderConfig,
                   left: borderConfig,
@@ -614,7 +615,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               
               // Ajouter les bordures au tableau si présentes
               if (borderConfig) {
-                encadrementTable.borders = {
+                (encadrementTable as any).borders = {
                   top: borderConfig,
                   bottom: borderConfig,
                   left: borderConfig,
@@ -696,7 +697,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                     const text = node.textContent?.trim() || ''
                     if (text) {
                       let parent = node.parentElement
-                      const nodeStyles: Partial<TextRun['options']> = {}
+                      const nodeStyles: Partial<any> = {}
                       while (parent && parent !== cell) {
                         const parentStyles = parseStylesWithContext(parent)
                         Object.assign(nodeStyles, parentStyles)
@@ -745,12 +746,12 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                             }
                             
                             const imageRun = new ImageRun({
-                              data: imageBuffer,
+                              data: imageBuffer as any,
                               transformation: {
                                 width: imageWidth,
                                 height: imageHeight,
                               },
-                            })
+                            } as any)
                             
                             // Alignement de l'image selon la cellule
                             let imageAlignment = cellAlignment || AlignmentType.LEFT
@@ -883,7 +884,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                   }
                   
                   const finalBorder = cellBorder || defaultBorder
-                  cellConfig.borders = {
+                  ;(cellConfig as any).borders = {
                     top: finalBorder,
                     bottom: finalBorder,
                     left: finalBorder,
@@ -928,7 +929,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               
               // Ajouter les bordures seulement si elles sont définies
               if (borderConfig) {
-                tableConfig.borders = {
+                (tableConfig as any).borders = {
                   top: borderConfig,
                   bottom: borderConfig,
                   left: borderConfig,
@@ -955,7 +956,8 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 })
               )
               
-              console.log(`[Word Generator] ✅ Tableau créé avec ${tableRows.length} lignes et ${tableRows[0]?.children?.length || 0} colonnes`)
+              const firstRowChildren = ((tableRows[0] as any)?.children as any)?.length || 0
+              console.log(`[Word Generator] ✅ Tableau créé avec ${tableRows.length} lignes et ${firstRowChildren} colonnes`)
             } else {
               console.warn('[Word Generator] ⚠️ Aucune ligne trouvée dans le tableau HTML')
             }
@@ -987,7 +989,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
         if (text && text.length > 0) {
           // Chercher le parent pour les styles
           let parent = node.parentElement
-          const styles: Partial<TextRun['options']> = {}
+          const styles: Partial<any> = {}
           while (parent) {
             const parentStyles = parseStylesWithContext(parent)
             Object.assign(styles, parentStyles)
@@ -1147,12 +1149,12 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                   }
                   
                   const imageRun = new ImageRun({
-                    data: imageBuffer,
+                    data: imageBuffer as any,
                     transformation: {
                       width: imageWidth,
                       height: imageHeight,
                     },
-                  })
+                  } as any)
                   
                   // Déterminer l'alignement de l'image selon le style de la cellule
                   // Pour l'en-tête, si text-align: right, l'image doit être à droite
@@ -1198,7 +1200,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                   .trim()
                 
                 if (pText) {
-                  const defaultStyles: Partial<TextRun['options']> = {}
+                  const defaultStyles: Partial<any> = {}
                   if (defaultFontSize) {
                     defaultStyles.size = Math.round(defaultFontSize * 2)
                   }
@@ -1241,7 +1243,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 // Diviser en paragraphes selon les sauts de ligne
                 const lines = processedCellText.split('\n').filter(line => line.trim())
                 lines.forEach((line, index) => {
-                  const defaultStyles: Partial<TextRun['options']> = {}
+                  const defaultStyles: Partial<any> = {}
                   if (defaultFontSize) {
                     defaultStyles.size = Math.round(defaultFontSize * 2)
                   }
@@ -1298,7 +1300,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             // Ajouter les bordures seulement si elles sont définies (pas pour border: 0)
             const cellHasBorder = cellStyle.match(/border[:\s]/i) && !cellStyle.match(/border:\s*0|border:\s*none/i)
             if (cellHasBorder && finalBorder) {
-              cellConfig.borders = {
+              (cellConfig as any).borders = {
                 top: finalBorder,
                 bottom: finalBorder,
                 left: finalBorder,
@@ -1316,7 +1318,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             
             // Vérifier que la cellule a bien des paragraphes avec contenu
             const hasContent = cellParagraphs.some(p => {
-              const children = (p as any).children || []
+              const children = (p as any).children as any || []
               return children.length > 0 && children.some((c: any) => {
                 return c.text || c.type === 'imageRun' || c.constructor?.name === 'ImageRun'
               })
@@ -1332,7 +1334,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             // Log pour déboguer les images dans les cellules
             try {
               const imageCount = cellParagraphs.filter(p => {
-                const children = (p as any).children || []
+                const children = (p as any).children as any || []
                 return children.some((c: any) => c.type === 'imageRun' || c.constructor?.name === 'ImageRun')
               }).length
               if (imageCount > 0) {
@@ -1343,9 +1345,9 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             }
             try {
               console.log('[Word Generator] Cellule ' + tableCells.length + ' ajoutée:', {
-                cellChildrenCount: cellConfig.children?.length || 0,
-                cellHasImage: cellConfig.children?.some((p: any) => 
-                  p.children?.some((c: any) => c.type === 'imageRun' || c.constructor?.name === 'ImageRun')
+                cellChildrenCount: (cellConfig as any).children?.length || 0,
+                cellHasImage: (cellConfig as any).children?.some((p: any) => 
+                  (p as any).children?.some((c: any) => c.type === 'imageRun' || c.constructor?.name === 'ImageRun')
                 ) || false,
               })
             } catch (e) {
@@ -1354,7 +1356,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           }
           
           if (tableCells.length > 0) {
-            // CRITIQUE : Dans docx v9.5.1, TableRow et TableCell ne stockent pas les enfants dans .children après création
+            // CRITIQUE : Dans docx v9.5.1, TableRow et TableCell ne stockent pas les enfants dans .children as any après création
             // Les enfants sont passés au constructeur et seront rendus correctement même si on ne peut pas les lire après
             // On fait confiance que si tableCells.length > 0, les cellules ont été créées avec du contenu valide
             const row = new TableRow({ children: tableCells })
@@ -1402,7 +1404,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Ajouter les bordures seulement si elles sont définies
           if (borderConfig) {
-            tableConfig.borders = {
+            (tableConfig as any).borders = {
               top: borderConfig,
               bottom: borderConfig,
               left: borderConfig,
@@ -1412,7 +1414,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             }
           }
           
-          // CRITIQUE : Dans docx v9.5.1, TableRow ne stocke pas les cellules dans row.children après création
+          // CRITIQUE : Dans docx v9.5.1, TableRow ne stocke pas les cellules dans row.children as any après création
           // Les cellules sont passées au constructeur et seront rendues correctement même si on ne peut pas les lire après
           // On fait confiance que si tableRows.length > 0, les lignes ont été créées avec des cellules valides
           if (tableRows.length === 0) {
@@ -1431,7 +1433,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Ajouter les bordures seulement si elles sont définies
           if (borderConfig) {
-            finalTableConfig.borders = {
+            (finalTableConfig as any).borders = {
               top: borderConfig,
               bottom: borderConfig,
               left: borderConfig,
@@ -1512,7 +1514,8 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           const virtualDiv = { 
             getAttribute: (name: string) => {
               if (name === 'style') return styleValue
-              const attrMatch = divAttributes.match(new RegExp(`${name}\\s*=\\s*["']([^"']+)["']`, 'i'))
+              const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+              const attrMatch = divAttributes.match(new RegExp(escapedName + '\\s*=\\s*["\']([^"\']+)["\']', 'i'))
               return attrMatch ? attrMatch[1] : null
             } 
           } as any
@@ -1552,7 +1555,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           if (divText) {
             const lines = divText.split('\n').filter(line => line.trim())
             lines.forEach((line, index) => {
-              const defaultStyles: Partial<TextRun['options']> = {}
+              const defaultStyles: Partial<any> = {}
               if (defaultFontSize) {
                 defaultStyles.size = Math.round(defaultFontSize * 2)
               }
@@ -1587,7 +1590,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Ajouter les bordures si présentes
           if (borderConfig) {
-            cellConfig.borders = {
+            (cellConfig as any).borders = {
               top: borderConfig,
               bottom: borderConfig,
               left: borderConfig,
@@ -1618,7 +1621,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Ajouter les bordures au tableau si présentes
           if (borderConfig) {
-            encadrementTable.borders = {
+            (encadrementTable as any).borders = {
               top: borderConfig,
               bottom: borderConfig,
               left: borderConfig,
@@ -1719,12 +1722,12 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               console.log(`[Word Generator] Image téléchargée, taille: ${imageBuffer.length} bytes`)
               // Utiliser ImageRun directement (Media.addImage n'existe pas dans docx)
               const imageRun = new ImageRun({
-                data: imageBuffer,
+                data: imageBuffer as any,
                 transformation: {
                   width: 200,
                   height: 200,
                 },
-              })
+              } as any)
               paragraphs.push(
                 new Paragraph({
                   children: [imageRun],
@@ -1768,7 +1771,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
       textPreview: text.substring(0, 300),
     })
 
-    const lines = text.split('\n').filter(line => line.trim())
+    const lines = text.split('\n').filter((line: string) => line.trim())
     
     console.log('[Word Generator] Lignes extraites:', lines.length)
     
@@ -1776,7 +1779,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
       // Si pas de lignes mais du texte, créer un paragraphe avec tout le texte
       console.log('[Word Generator] Pas de lignes, création d\'un paragraphe avec tout le texte')
       // Appliquer les styles par défaut selon le contexte
-      const defaultStyles: Partial<TextRun['options']> = {}
+      const defaultStyles: Partial<any> = {}
       if (defaultFontSize) {
         defaultStyles.size = Math.round(defaultFontSize * 2) // Convertir en half-points
       }
@@ -1793,7 +1796,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
         })
       )
     } else {
-      lines.forEach((line) => {
+      lines.forEach((line: any) => {
         const trimmed = line.trim()
         if (!trimmed) return
 
@@ -1805,7 +1808,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
         )
 
         // Appliquer les styles par défaut selon le contexte
-        const defaultStyles: Partial<TextRun['options']> = {}
+        const defaultStyles: Partial<any> = {}
         if (defaultFontSize) {
           defaultStyles.size = Math.round(defaultFontSize * 2) // Convertir en half-points
         }
@@ -1834,7 +1837,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
       })
     }
     
-    console.log('[Word Generator] Paragraphes créés côté serveur:', paragraphs.length, '(images:', (paragraphs.filter(p => p.children?.some((c: any) => c.type === 'imageRun')).length), ')')
+    console.log('[Word Generator] Paragraphes créés côté serveur:', paragraphs.length, '(images:', (paragraphs.filter(p => ((p as any).children as any)?.some((c: any) => c.type === 'imageRun')).length), ')')
   }
 
   if (paragraphs.length === 0) {
@@ -1874,7 +1877,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
       tableType: t.constructor?.name,
       rowsCount: (t as any).rows?.length || (t as any)._rows?.length || 0,
       hasRows: !!(t as any).rows || !!(t as any)._rows,
-      firstRowCells: (t as any).rows?.[0]?.children?.length || (t as any)._rows?.[0]?.children?.length || 0,
+      firstRowCells: ((t as any).rows?.[0]?.children as any)?.length || ((t as any)._rows?.[0]?.children as any)?.length || 0,
     })))
     
     // Vérifier que les tableaux ont bien des lignes
@@ -1884,7 +1887,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
         console.log('[Word Generator] Tableau ' + index + ':', {
           rowsCount: rows.length,
           firstRowExists: !!rows[0],
-          firstRowChildren: rows[0]?.children?.length || 0,
+          firstRowChildren: ((rows[0] as any)?.children as any)?.length || 0,
         })
       })
     } catch (e) {
@@ -1933,7 +1936,7 @@ export async function generateWordFromHTML(
     // Pour l'instant, on traite tout le HTML comme contenu principal
     // et on va créer des headers/footers basés sur le template si disponible
     
-    const bodyParagraphs = htmlToParagraphs(html)
+    const bodyParagraphs = await htmlToParagraphs(html)
 
     // Créer le document Word avec sections
     const doc = new Document({
@@ -2241,17 +2244,17 @@ export async function generateWordFromTemplate(
     
     // Vérifier si des images sont dans les paragraphes ou les tableaux
     const headerHasImages = cleanHeaderParagraphs.some(p => {
-      const children = (p as any).children || []
+      const children = (p as any).children as any || []
       return children.some((c: any) => c.type === 'imageRun' || c.type === 'drawing')
     }) || headerTables.some(t => {
       // Vérifier les images dans les tableaux
       const rows = (t as any).rows || []
       return rows.some((r: any) => {
-        const cells = (r as any).children || []
+        const cells = ((r as any).children as any) || []
         return cells.some((c: any) => {
-          const cellChildren = (c as any).children || []
+          const cellChildren = ((c as any).children as any) || []
           return cellChildren.some((p: any) => {
-            const pChildren = (p as any).children || []
+            const pChildren = (p as any).children as any || []
             return pChildren.some((child: any) => child.type === 'imageRun' || child.type === 'drawing')
           })
         })
@@ -2344,7 +2347,7 @@ export async function generateWordFromTemplate(
     if (cleanHeaderParagraphs.length > 0 || headerTables.length > 0) {
       // Vérifier le contenu des paragraphes du header
       cleanHeaderParagraphs.forEach((p, i) => {
-        const children = (p as any).children || []
+        const children = (p as any).children as any || []
         const hasImage = children.some((c: any) => c.type === 'imageRun' || c.type === 'drawing')
         console.log(`[Word Generator] Header paragraphe ${i}:`, {
           hasImage,

@@ -90,7 +90,7 @@ export function useAuth() {
                 if (syncError) {
                   logger.error('Error syncing user:', syncError)
                   // Ne pas throw, on continue avec null pour éviter de bloquer l'app
-                } else if (syncResult?.success) {
+                } else if ((syncResult as any)?.success) {
                   logger.info('User synced successfully, refetching...', { syncResult })
                   
                   // Attendre un peu pour s'assurer que l'utilisateur est disponible
@@ -139,7 +139,7 @@ export function useAuth() {
             return data
           })
 
-        return await Promise.race([userPromise, timeoutPromise])
+        return (await Promise.race([userPromise, timeoutPromise])) as UserRow
       } catch (err) {
         // En cas d'erreur ou de timeout, retourner null pour ne pas bloquer
         return null
@@ -378,7 +378,7 @@ export function useAuth() {
       
       try {
         // Essayer d'abord avec la fonction SQL
-        const { data: createdUserId, error: rpcUserError } = await supabase.rpc(
+        const { data: createdUserId, error: rpcUserError } = await (supabase.rpc as any)(
           'create_user_for_organization',
           {
             user_id: userId,
@@ -472,7 +472,9 @@ export function useAuth() {
       const { data: { session } } = await supabase.auth.getSession()
       
       queryClient.invalidateQueries({ queryKey: ['session'] })
-      queryClient.invalidateQueries({ queryKey: ['user', authData.user.id] })
+      if (authData.user) {
+        queryClient.invalidateQueries({ queryKey: ['user', authData.user.id] })
+      }
       
       if (session) {
         router.push('/dashboard')

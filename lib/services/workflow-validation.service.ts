@@ -7,14 +7,15 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
-type Workflow = Database['public']['Tables']['template_workflows']['Row']
-type WorkflowInsert = Database['public']['Tables']['template_workflows']['Insert']
-type WorkflowStep = Database['public']['Tables']['template_workflow_steps']['Row']
-type WorkflowStepInsert = Database['public']['Tables']['template_workflow_steps']['Insert']
-type WorkflowInstance = Database['public']['Tables']['template_workflow_instances']['Row']
-type WorkflowInstanceInsert = Database['public']['Tables']['template_workflow_instances']['Insert']
-type WorkflowApproval = Database['public']['Tables']['template_workflow_approvals']['Row']
-type WorkflowApprovalInsert = Database['public']['Tables']['template_workflow_approvals']['Insert']
+// Types locaux pour les tables workflow qui ne sont pas encore dans le schéma Supabase
+type Workflow = any
+type WorkflowInsert = any
+type WorkflowStep = any
+type WorkflowStepInsert = any
+type WorkflowInstance = any
+type WorkflowInstanceInsert = any
+type WorkflowApproval = any
+type WorkflowApprovalInsert = any
 
 export interface WorkflowStepConfig {
   step_order: number
@@ -53,7 +54,7 @@ export class WorkflowValidationService {
    */
   async createWorkflow(input: CreateWorkflowInput, createdBy: string): Promise<Workflow> {
     // Créer le workflow
-    const { data: workflow, error: workflowError } = await this.supabase
+    const { data: workflow, error: workflowError } = await (this.supabase as any)
       .from('template_workflows')
       .insert({
         organization_id: input.organization_id,
@@ -82,7 +83,7 @@ export class WorkflowValidationService {
         timeout_days: step.timeout_days || null,
       }))
 
-      const { error: stepsError } = await this.supabase
+      const { error: stepsError } = await (this.supabase as any)
         .from('template_workflow_steps')
         .insert(steps)
 
@@ -96,7 +97,7 @@ export class WorkflowValidationService {
    * Récupère tous les workflows d'une organisation
    */
   async getWorkflows(organizationId: string): Promise<Workflow[]> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('template_workflows')
       .select('*')
       .eq('organization_id', organizationId)
@@ -110,7 +111,7 @@ export class WorkflowValidationService {
    * Récupère un workflow avec ses étapes
    */
   async getWorkflowWithSteps(workflowId: string): Promise<Workflow & { steps: WorkflowStep[] }> {
-    const { data: workflow, error: workflowError } = await this.supabase
+    const { data: workflow, error: workflowError } = await (this.supabase as any)
       .from('template_workflows')
       .select('*')
       .eq('id', workflowId)
@@ -118,7 +119,7 @@ export class WorkflowValidationService {
 
     if (workflowError) throw workflowError
 
-    const { data: steps, error: stepsError } = await this.supabase
+    const { data: steps, error: stepsError } = await (this.supabase as any)
       .from('template_workflow_steps')
       .select('*')
       .eq('workflow_id', workflowId)
@@ -136,7 +137,7 @@ export class WorkflowValidationService {
    * Met à jour un workflow
    */
   async updateWorkflow(workflowId: string, updates: Partial<Workflow>): Promise<Workflow> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('template_workflows')
       .update(updates)
       .eq('id', workflowId)
@@ -151,7 +152,7 @@ export class WorkflowValidationService {
    * Supprime un workflow
    */
   async deleteWorkflow(workflowId: string): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('template_workflows')
       .delete()
       .eq('id', workflowId)
@@ -165,7 +166,7 @@ export class WorkflowValidationService {
    * Ajoute une étape à un workflow
    */
   async addWorkflowStep(workflowId: string, step: WorkflowStepConfig): Promise<WorkflowStep> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('template_workflow_steps')
       .insert({
         workflow_id: workflowId,
@@ -182,7 +183,7 @@ export class WorkflowValidationService {
    * Met à jour une étape
    */
   async updateWorkflowStep(stepId: string, updates: Partial<WorkflowStep>): Promise<WorkflowStep> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('template_workflow_steps')
       .update(updates)
       .eq('id', stepId)
@@ -197,7 +198,7 @@ export class WorkflowValidationService {
    * Supprime une étape
    */
   async deleteWorkflowStep(stepId: string): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('template_workflow_steps')
       .delete()
       .eq('id', stepId)
@@ -216,7 +217,7 @@ export class WorkflowValidationService {
     startedBy: string
   ): Promise<WorkflowInstance> {
     // Récupérer la première étape
-    const { data: firstStep } = await this.supabase
+    const { data: firstStep } = await (this.supabase as any)
       .from('template_workflow_steps')
       .select('id')
       .eq('workflow_id', workflowId)
@@ -225,7 +226,7 @@ export class WorkflowValidationService {
       .single()
 
     // Créer l'instance
-    const { data: instance, error: instanceError } = await this.supabase
+    const { data: instance, error: instanceError } = await (this.supabase as any)
       .from('template_workflow_instances')
       .insert({
         template_id: templateId,
@@ -251,7 +252,7 @@ export class WorkflowValidationService {
    * Crée les approbations pour une étape
    */
   private async createApprovalsForStep(instanceId: string, stepId: string): Promise<void> {
-    const { data: step } = await this.supabase
+    const { data: step } = await (this.supabase as any)
       .from('template_workflow_steps')
       .select('*')
       .eq('id', stepId)
@@ -265,7 +266,7 @@ export class WorkflowValidationService {
         ? new Date(Date.now() + step.timeout_days * 24 * 60 * 60 * 1000).toISOString()
         : null
 
-      await this.supabase.from('template_workflow_approvals').insert({
+      await (this.supabase as any).from('template_workflow_approvals').insert({
         instance_id: instanceId,
         step_id: stepId,
         approver_id: step.approver_user_id,
@@ -274,7 +275,7 @@ export class WorkflowValidationService {
       } as WorkflowApprovalInsert)
     } else if (step.approver_role) {
       // Si un rôle est défini, récupérer les utilisateurs avec ce rôle
-      const { data: users } = await this.supabase
+      const { data: users } = await (this.supabase as any)
         .from('users')
         .select('id')
         .eq('role', step.approver_role)
@@ -284,7 +285,7 @@ export class WorkflowValidationService {
           ? new Date(Date.now() + step.timeout_days * 24 * 60 * 60 * 1000).toISOString()
           : null
 
-        const approvals: WorkflowApprovalInsert[] = users.map((user) => ({
+        const approvals: WorkflowApprovalInsert[] = users.map((user: any) => ({
           instance_id: instanceId,
           step_id: stepId,
           approver_id: user.id,
@@ -292,7 +293,7 @@ export class WorkflowValidationService {
           deadline,
         }))
 
-        await this.supabase.from('template_workflow_approvals').insert(approvals)
+        await (this.supabase as any).from('template_workflow_approvals').insert(approvals)
       }
     }
   }
@@ -301,7 +302,7 @@ export class WorkflowValidationService {
    * Récupère les instances de workflow pour un template
    */
   async getTemplateInstances(templateId: string): Promise<WorkflowInstance[]> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('template_workflow_instances')
       .select('*, workflow:template_workflows(*)')
       .eq('template_id', templateId)
@@ -321,7 +322,7 @@ export class WorkflowValidationService {
       approvals: (WorkflowApproval & { step: WorkflowStep; approver: { id: string; full_name: string; email: string } | null })[]
     }
   > {
-    const { data: instance, error: instanceError } = await this.supabase
+    const { data: instance, error: instanceError } = await (this.supabase as any)
       .from('template_workflow_instances')
       .select('*, workflow:template_workflows(*)')
       .eq('id', instanceId)
@@ -332,7 +333,7 @@ export class WorkflowValidationService {
     // Récupérer l'étape actuelle
     let current_step: WorkflowStep | null = null
     if (instance.current_step_id) {
-      const { data: step } = await this.supabase
+      const { data: step } = await (this.supabase as any)
         .from('template_workflow_steps')
         .select('*')
         .eq('id', instance.current_step_id)
@@ -341,7 +342,7 @@ export class WorkflowValidationService {
     }
 
     // Récupérer les approbations
-    const { data: approvals } = await this.supabase
+    const { data: approvals } = await (this.supabase as any)
       .from('template_workflow_approvals')
       .select('*, step:template_workflow_steps(*), approver:users!template_workflow_approvals_approver_id_fkey(id, email, full_name)')
       .eq('instance_id', instanceId)
@@ -367,7 +368,7 @@ export class WorkflowValidationService {
     approverId?: string
   ): Promise<WorkflowApproval> {
     // Mettre à jour l'approbation
-    const { data: approval, error: approvalError } = await this.supabase
+    const { data: approval, error: approvalError } = await (this.supabase as any)
       .from('template_workflow_approvals')
       .update({
         status,
@@ -382,7 +383,7 @@ export class WorkflowValidationService {
 
     // Si rejeté, mettre à jour l'instance
     if (status === 'rejected') {
-      await this.supabase
+      await (this.supabase as any)
         .from('template_workflow_instances')
         .update({
           status: 'rejected',
@@ -391,14 +392,14 @@ export class WorkflowValidationService {
         .eq('id', approval.instance_id)
     } else {
       // Vérifier si toutes les approbations requises de l'étape sont approuvées
-      const { data: stepApprovals } = await this.supabase
+      const { data: stepApprovals } = await (this.supabase as any)
         .from('template_workflow_approvals')
         .select('*, step:template_workflow_steps(*)')
         .eq('instance_id', approval.instance_id)
         .eq('step_id', approval.step_id)
 
       // Récupérer l'étape pour vérifier is_required
-      const { data: currentStep } = await this.supabase
+      const { data: currentStep } = await (this.supabase as any)
         .from('template_workflow_steps')
         .select('*')
         .eq('id', approval.step_id)
@@ -409,16 +410,16 @@ export class WorkflowValidationService {
       }
 
       // Filtrer les approbations requises
-      const requiredApprovals = stepApprovals?.filter((a) => {
+      const requiredApprovals = stepApprovals?.filter((a: any) => {
         const step = (a as any).step
         return step?.is_required !== false
       }) || []
 
-      const allRequiredApproved = requiredApprovals.length > 0 && requiredApprovals.every((a) => a.status === 'approved')
+      const allRequiredApproved = requiredApprovals.length > 0 && requiredApprovals.every((a: any) => a.status === 'approved')
 
       if (allRequiredApproved) {
         // Récupérer l'instance pour obtenir le workflow_id
-        const { data: instance } = await this.supabase
+        const { data: instance } = await (this.supabase as any)
           .from('template_workflow_instances')
           .select('workflow_id, current_step_id')
           .eq('id', approval.instance_id)
@@ -429,7 +430,7 @@ export class WorkflowValidationService {
         }
 
         // Trouver l'étape suivante
-        const { data: nextStep } = await this.supabase
+        const { data: nextStep } = await (this.supabase as any)
           .from('template_workflow_steps')
           .select('*')
           .eq('workflow_id', instance.workflow_id)
@@ -440,7 +441,7 @@ export class WorkflowValidationService {
 
         if (nextStep) {
           // Mettre à jour l'instance avec la nouvelle étape
-          await this.supabase
+          await (this.supabase as any)
             .from('template_workflow_instances')
             .update({
               current_step_id: nextStep.id,
@@ -452,7 +453,7 @@ export class WorkflowValidationService {
           await this.createApprovalsForStep(approval.instance_id, nextStep.id)
         } else {
           // Dernière étape terminée, approuver le workflow
-          await this.supabase
+          await (this.supabase as any)
             .from('template_workflow_instances')
             .update({
               status: 'approved',
@@ -471,7 +472,7 @@ export class WorkflowValidationService {
    * Récupère les approbations en attente d'un utilisateur
    */
   async getPendingApprovals(userId: string): Promise<WorkflowApproval[]> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('template_workflow_approvals')
       .select('*, instance:template_workflow_instances(*, template:document_templates(*)), step:template_workflow_steps(*)')
       .eq('approver_id', userId)

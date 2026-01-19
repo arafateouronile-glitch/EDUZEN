@@ -67,7 +67,7 @@ export function PremiumLineChart({
           />
           
           <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider text-center">
-            {payload[0].payload[xAxisKey]}
+            {((payload[0] as any).payload as any)?.[xAxisKey]}
           </p>
           
           <div className="flex items-center justify-center gap-2">

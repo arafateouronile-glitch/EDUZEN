@@ -197,10 +197,13 @@ export class StudentService {
       let studentNumber = student.student_number
       if (!studentNumber || studentNumber.trim() === '') {
         // Récupérer le code de l'organisation
+        const orgId = student.organization_id
+        if (!orgId) throw new Error('organization_id is required')
+        
         const { data: org } = await this.supabase
           .from('organizations')
           .select('code')
-          .eq('id', student.organization_id)
+          .eq('id', orgId)
           .single()
 
         const orgCode = org?.code || 'ORG'
@@ -210,7 +213,7 @@ export class StudentService {
         studentNumber = await generateUniqueNumber(
           this.supabase,
           'students',
-          student.organization_id,
+          orgId,
           {
             prefix: 'EDU',
             orgCode,
@@ -254,7 +257,7 @@ export class StudentService {
 
       logger.info('Étudiant créé avec succès', {
         id: data?.id,
-        organizationId: student.organization_id,
+        organizationId: student.organization_id || undefined,
         studentNumber: data?.student_number,
       })
 

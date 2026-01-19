@@ -84,16 +84,16 @@ export class ELearningService {
       const errorObj = error as { code?: string; status?: number; message?: string }
       if (
         errorObj?.code === 'PGRST116' ||
-        error?.code === '42P01' ||
-        error?.code === 'PGRST301' ||
-        error?.status === 400 ||
-        error?.code === '400' ||
-        error?.message?.includes('relation') ||
-        error?.message?.includes('relationship') ||
-        error?.message?.includes('does not exist') ||
-        error?.message?.includes('schema cache')
+        errorObj?.code === '42P01' ||
+        errorObj?.code === 'PGRST301' ||
+        errorObj?.status === 400 ||
+        errorObj?.code === '400' ||
+        errorObj?.message?.includes('relation') ||
+        errorObj?.message?.includes('relationship') ||
+        errorObj?.message?.includes('does not exist') ||
+        errorObj?.message?.includes('schema cache')
       ) {
-        console.warn('Table courses does not exist yet or invalid query:', error.message)
+        console.warn('Table courses does not exist yet or invalid query:', errorObj?.message || String(error))
         return []
       }
       throw error
@@ -394,16 +394,16 @@ export class ELearningService {
       const errorObj = error as { code?: string; status?: number; message?: string }
       if (
         errorObj?.code === 'PGRST116' ||
-        error?.code === '42P01' ||
-        error?.code === 'PGRST301' ||
-        error?.status === 400 ||
-        error?.code === '400' ||
-        error?.message?.includes('relation') ||
-        error?.message?.includes('relationship') ||
-        error?.message?.includes('does not exist') ||
-        error?.message?.includes('schema cache')
+        errorObj?.code === '42P01' ||
+        errorObj?.code === 'PGRST301' ||
+        errorObj?.status === 400 ||
+        errorObj?.code === '400' ||
+        errorObj?.message?.includes('relation') ||
+        errorObj?.message?.includes('relationship') ||
+        errorObj?.message?.includes('does not exist') ||
+        errorObj?.message?.includes('schema cache')
       ) {
-        console.warn('Table course_enrollments does not exist yet or invalid query:', error.message)
+        console.warn('Table course_enrollments does not exist yet or invalid query:', errorObj?.message || String(error))
         return []
       }
       throw error
@@ -561,7 +561,12 @@ export class ELearningService {
 
     questions.forEach((question: { id: string; question_type: string; options?: unknown[]; correct_answer?: unknown }) => {
       const studentAnswer = answers[question.id]
-      if (this.isAnswerCorrect(question, studentAnswer)) {
+      const typedQuestion = {
+        question_type: question.question_type,
+        options: question.options as Array<{ is_correct?: boolean; text?: string }> | undefined,
+        correct_answer: question.correct_answer,
+      }
+      if (this.isAnswerCorrect(typedQuestion, studentAnswer)) {
         correctCount++
       }
     })
@@ -595,10 +600,9 @@ export class ELearningService {
       case 'true_false':
         return studentAnswer === question.correct_answer
       case 'short_answer':
-        return (
-          studentAnswer?.toLowerCase().trim() ===
-          question.correct_answer?.toLowerCase().trim()
-        )
+        const studentStr = String(studentAnswer || '').toLowerCase().trim()
+        const correctStr = String(question.correct_answer || '').toLowerCase().trim()
+        return studentStr === correctStr
       default:
         return false
     }
@@ -709,7 +713,8 @@ export class ELearningService {
         course_id: courseId,
         student_id: studentId,
         enrollment_id: enrollment.id,
-      })
+        certificate_number: '', // Sera remplacé par le trigger
+      } as any)
       .select()
       .single()
 

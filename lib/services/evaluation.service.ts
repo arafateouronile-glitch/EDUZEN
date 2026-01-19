@@ -314,7 +314,7 @@ class EvaluationService {
       const maxScore = evaluation.max_score || 1
       const score = evaluation.score
 
-      if (maxScore > 0) {
+      if (maxScore > 0 && score !== null && score !== undefined) {
         weightedSum += (score / maxScore) * 20 * coefficient // Convertir sur 20
         totalCoefficient += coefficient
       }
@@ -405,7 +405,9 @@ class EvaluationService {
       stats.bySubject[subject].count++
 
       // Scores
-      totalScore += evaluation.score
+      if (evaluation.score !== null && evaluation.score !== undefined) {
+        totalScore += evaluation.score
+      }
       if (evaluation.max_score) {
         totalMaxScore += evaluation.max_score
       }
@@ -422,7 +424,7 @@ class EvaluationService {
     // Moyennes par sujet
     Object.keys(stats.bySubject).forEach((subject) => {
       const subjectEvals = evaluations.filter((e) => e.subject === subject)
-      const subjectTotal = subjectEvals.reduce((sum, e) => sum + e.score, 0)
+      const subjectTotal = subjectEvals.reduce((sum, e) => sum + (e.score || 0), 0)
       stats.bySubject[subject].average = subjectTotal / subjectEvals.length
     })
 

@@ -1,19 +1,23 @@
-import type { MobileMoneyAdapter, InitiatePaymentRequest, InitiatePaymentResponse, PaymentStatusResponse } from './mobile-money.types'
+import type { MobileMoneyAdapter, MobileMoneyConfig, InitiatePaymentRequest, InitiatePaymentResponse, PaymentStatusResponse, WebhookPayload } from './mobile-money.types'
 
 /**
  * TODO: Implémenter Orange Money adapter
  * Adapter stub pour permettre le build
  */
 export class OrangeAdapter implements MobileMoneyAdapter {
-  async initiatePayment(request: InitiatePaymentRequest): Promise<InitiatePaymentResponse> {
+  async initiatePayment(config: MobileMoneyConfig, request: InitiatePaymentRequest): Promise<InitiatePaymentResponse> {
     throw new Error('Orange Money adapter n\'est pas encore implémenté')
   }
 
-  async checkPaymentStatus(transactionId: string): Promise<PaymentStatusResponse> {
+  async checkPaymentStatus(config: MobileMoneyConfig, transactionId: string): Promise<PaymentStatusResponse> {
     throw new Error('Orange Money adapter n\'est pas encore implémenté')
   }
 
-  async handleWebhook(payload: any): Promise<{ transactionId: string; status: string }> {
+  async validateWebhook(config: MobileMoneyConfig, payload: WebhookPayload): Promise<boolean> {
+    throw new Error('Orange Money adapter n\'est pas encore implémenté')
+  }
+
+  async processWebhook(config: MobileMoneyConfig, payload: WebhookPayload): Promise<PaymentStatusResponse> {
     throw new Error('Orange Money adapter n\'est pas encore implémenté')
   }
 }

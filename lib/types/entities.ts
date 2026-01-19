@@ -9,7 +9,7 @@ import type { TableRow } from './supabase-helpers'
 
 export type UserRole = 'admin' | 'teacher' | 'secretary' | 'staff'
 
-export interface User extends TableRow<'users'> {
+export interface User extends Omit<TableRow<'users'>, 'id' | 'organization_id' | 'email' | 'full_name' | 'role' | 'is_active' | 'avatar_url' | 'created_at' | 'updated_at'> {
   id: string
   organization_id: string
   email: string
@@ -41,7 +41,7 @@ export interface UpdateUserInput {
 
 export type StudentStatus = 'active' | 'inactive' | 'graduated' | 'dropped'
 
-export interface Student extends TableRow<'students'> {
+export interface Student extends Omit<TableRow<'students'>, 'id' | 'organization_id' | 'first_name' | 'last_name' | 'email' | 'phone' | 'student_number' | 'status' | 'date_of_birth' | 'address' | 'created_at' | 'updated_at'> {
   id: string
   organization_id: string
   first_name: string
@@ -84,7 +84,7 @@ export type PaymentMethod = 'card' | 'cash' | 'bank_transfer' | 'sepa' | 'mobile
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled'
 export type PaymentProvider = 'stripe' | 'paypal' | 'mobile_money_provider'
 
-export interface Payment extends TableRow<'payments'> {
+export interface Payment extends Omit<TableRow<'payments'>, 'id' | 'organization_id' | 'invoice_id' | 'student_id' | 'amount' | 'currency' | 'payment_method' | 'payment_provider' | 'transaction_id' | 'status' | 'paid_at' | 'metadata' | 'created_at' | 'updated_at'> {
   id: string
   organization_id: string
   invoice_id: string
@@ -127,7 +127,7 @@ export interface UpdatePaymentInput {
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
 export type InvoiceType = 'invoice' | 'quote' | 'receipt'
 
-export interface Invoice extends TableRow<'invoices'> {
+export interface Invoice extends Omit<TableRow<'invoices'>, 'id' | 'organization_id' | 'student_id' | 'invoice_number' | 'type' | 'status' | 'total_amount' | 'paid_amount' | 'remaining_amount' | 'currency' | 'due_date' | 'issued_at' | 'paid_at' | 'metadata' | 'created_at' | 'updated_at'> {
   id: string
   organization_id: string
   student_id: string
@@ -162,7 +162,7 @@ export interface CreateInvoiceInput {
 
 export type ConversationType = 'direct' | 'group'
 
-export interface Conversation extends TableRow<'conversations'> {
+export interface Conversation extends Omit<TableRow<'conversations'>, 'id' | 'organization_id' | 'conversation_type' | 'name' | 'created_by' | 'is_archived' | 'last_message_at' | 'created_at' | 'updated_at'> {
   id: string
   organization_id: string
   conversation_type: ConversationType
@@ -174,7 +174,7 @@ export interface Conversation extends TableRow<'conversations'> {
   updated_at?: string | null
 }
 
-export interface Message extends TableRow<'messages'> {
+export interface Message extends Omit<TableRow<'messages'>, 'id' | 'conversation_id' | 'sender_id' | 'student_sender_id' | 'content' | 'attachments' | 'reply_to_id' | 'is_deleted' | 'deleted_at' | 'created_at' | 'updated_at'> {
   id: string
   conversation_id: string
   sender_id?: string | null
@@ -209,7 +209,7 @@ export interface CreateMessageInput {
 
 export type SessionStatus = 'planned' | 'ongoing' | 'completed' | 'cancelled'
 
-export interface Session extends TableRow<'sessions'> {
+export interface Session extends Omit<TableRow<'sessions'>, 'id' | 'organization_id' | 'formation_id' | 'name' | 'description' | 'start_date' | 'end_date' | 'status' | 'max_students' | 'created_at' | 'updated_at'> {
   id: string
   organization_id: string
   formation_id: string
@@ -238,7 +238,7 @@ export interface CreateSessionInput {
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused'
 
-export interface Attendance extends TableRow<'attendance'> {
+export interface Attendance extends Omit<TableRow<'attendance'>, 'id' | 'organization_id' | 'session_id' | 'student_id' | 'date' | 'status' | 'slot_id' | 'notes' | 'created_at' | 'updated_at'> {
   id: string
   organization_id: string
   session_id: string
@@ -263,7 +263,7 @@ export interface CreateAttendanceInput {
 
 // ========== ÉVALUATIONS ==========
 
-export interface EvaluationTemplate extends TableRow<'evaluation_templates'> {
+export interface EvaluationTemplate extends Omit<TableRow<'evaluation_templates'>, 'id' | 'organization_id' | 'name' | 'description' | 'is_system' | 'created_at' | 'updated_at'> {
   id: string
   organization_id?: string | null
   name: string
@@ -273,7 +273,7 @@ export interface EvaluationTemplate extends TableRow<'evaluation_templates'> {
   updated_at?: string | null
 }
 
-export interface EvaluationTemplateQuestion extends TableRow<'evaluation_template_questions'> {
+export interface EvaluationTemplateQuestion extends Omit<TableRow<'evaluation_template_questions'>, 'id' | 'template_id' | 'question_text' | 'question_type' | 'order' | 'required' | 'options' | 'created_at'> {
   id: string
   template_id: string
   question_text: string
@@ -295,7 +295,7 @@ export type DocumentType =
   | 'receipt'
   | 'learning_portfolio'
 
-export interface Document extends TableRow<'documents'> {
+export interface Document extends Omit<TableRow<'documents'>, 'id' | 'organization_id' | 'student_id' | 'session_id' | 'type' | 'title' | 'content' | 'file_url' | 'metadata' | 'created_at' | 'updated_at'> {
   id: string
   organization_id: string
   student_id?: string | null
@@ -311,7 +311,7 @@ export interface Document extends TableRow<'documents'> {
 
 // ========== ORGANISATIONS ==========
 
-export interface Organization extends TableRow<'organizations'> {
+export interface Organization extends Omit<TableRow<'organizations'>, 'id' | 'name' | 'code' | 'type' | 'country' | 'currency' | 'language' | 'timezone' | 'subscription_tier' | 'created_at' | 'updated_at'> {
   id: string
   name: string
   code: string

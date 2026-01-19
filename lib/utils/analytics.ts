@@ -79,13 +79,14 @@ export const analytics = {
       organizationId?: string
       [key: string]: any
     }) => {
+      const { path, title, category, userId, organizationId, ...rest } = data
       trackAnalyticsEvent('page_view' as AnalyticsEvent, {
-        path: data.path,
-        title: data.title,
-        category: data.category || 'Page',
-        user_id: data.userId,
-        organization_id: data.organizationId,
-        ...data,
+        path,
+        title,
+        category: category || 'Page',
+        user_id: userId,
+        organization_id: organizationId,
+        ...rest,
       })
     },
   },

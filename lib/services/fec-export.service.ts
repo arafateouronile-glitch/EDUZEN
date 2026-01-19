@@ -140,7 +140,7 @@ export class FECExportService {
 
     // Convertir les factures en écritures comptables
     for (const invoice of invoices || []) {
-      const invoiceDate = invoice.issue_date ? new Date(invoice.issue_date) : new Date(invoice.created_at)
+      const invoiceDate = invoice.issue_date ? new Date(invoice.issue_date) : new Date(invoice.created_at || new Date().toISOString())
       const formattedDate = this.formatDateFEC(invoiceDate)
       const ecritureNum = invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase()
 
@@ -233,7 +233,7 @@ export class FECExportService {
 
       // Convertir les paiements en écritures comptables
       for (const payment of payments || []) {
-        const paymentDate = payment.paid_at ? new Date(payment.paid_at) : new Date(payment.created_at)
+        const paymentDate = payment.paid_at ? new Date(payment.paid_at) : new Date(payment.created_at || new Date().toISOString())
         const formattedDate = this.formatDateFEC(paymentDate)
         const ecritureNum = `PAY-${payment.id.slice(0, 8).toUpperCase()}`
         const invoice = payment.invoices as any

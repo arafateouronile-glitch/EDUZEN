@@ -508,7 +508,9 @@ export function ElectronicAttendanceManager({
                               <div className="flex items-center gap-2">
                                 {getStatusBadge(request.status)}
                                 {request.location_verified && (
-                                  <MapPin className="h-3 w-3 text-green-500" title="Position vérifiée" />
+                                  <span title="Position vérifiée">
+                                    <MapPin className="h-3 w-3 text-green-500" />
+                                  </span>
                                 )}
                               </div>
                             </TableCell>

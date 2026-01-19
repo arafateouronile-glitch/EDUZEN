@@ -781,6 +781,73 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
       </div>
     `,
 
+    certificat_realisation: `
+      <div style="text-align: center; margin-bottom: 40px;">
+        <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 10px;">
+          CERTIFICAT DE RÉALISATION
+        </h1>
+      </div>
+      
+      <div style="margin-bottom: 40px;">
+        <p style="text-align: justify; font-size: 16px; line-height: 1.8;">
+          L'établissement <strong>{ecole_nom}</strong> certifie que 
+          <strong>{eleve_prenom} {eleve_nom}</strong> a réalisé avec succès la formation 
+          <strong>"{formation_nom}"</strong>.
+        </p>
+      </div>
+      
+      <div style="margin-top: 60px; text-align: center;">
+        <p style="margin-bottom: 50px;">{ecole_ville}, le {date_jour}</p>
+        <p><strong>Le Directeur</strong></p>
+        <p style="margin-top: 60px;">________________________</p>
+        <p>{ecole_directeur}</p>
+      </div>
+    `,
+    livret_accueil: `
+      <h1 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px;">
+        LIVRET D'ACCUEIL
+      </h1>
+      
+      <div style="margin-bottom: 30px;">
+        <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">BIENVENUE</h2>
+        <p>Bienvenue à <strong>{ecole_nom}</strong>.</p>
+        <p>Ce livret vous présente les informations essentielles de notre établissement.</p>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">PRÉSENTATION</h2>
+        <p><strong>Établissement :</strong> {ecole_nom}</p>
+        <p><strong>Adresse :</strong> {ecole_adresse}, {ecole_ville}</p>
+        <p><strong>Contact :</strong> {ecole_telephone} | {ecole_email}</p>
+      </div>
+    `,
+    emargement: `
+      <h1 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px;">
+        FEUILLE D'ÉMARGEMENT
+      </h1>
+      
+      <div style="margin-bottom: 30px;">
+        <p><strong>Formation :</strong> {formation_nom}</p>
+        <p><strong>Session :</strong> {session_nom}</p>
+        <p><strong>Date :</strong> {session_debut}</p>
+        <p><strong>Lieu :</strong> {session_lieu}</p>
+      </div>
+      
+      <table style="width: 100%; border-collapse: collapse; margin-top: 30px;">
+        <thead>
+          <tr style="background-color: #f3f4f6;">
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Nom et Prénom</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Signature</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">{eleve_prenom} {eleve_nom}</td>
+            <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">________________</td>
+          </tr>
+        </tbody>
+      </table>
+    `,
     attestation_assiduite: `
       <div style="text-align: center; margin-bottom: 40px;">
         <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 10px;">

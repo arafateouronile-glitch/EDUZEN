@@ -73,13 +73,6 @@ export function parseCellRange(range: string): CellReference[] | null {
 }
 
 /**
- * Vérifie si une chaîne est une formule (commence par "=")
- */
-export function isFormula(value: string): boolean {
-  return typeof value === 'string' && value.trim().startsWith('=')
-}
-
-/**
  * Extrait les références de cellules d'une formule
  */
 function extractCellReferences(formula: string): string[] {

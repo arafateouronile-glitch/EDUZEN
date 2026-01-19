@@ -43,7 +43,7 @@ export class ComplianceAlertsService {
     })
 
     // Collect all notifications to send in parallel
-    const notificationPromises: Promise<void>[] = []
+    const notificationPromises: Promise<any>[] = []
 
     for (const risk of criticalRisks) {
       // Send to admins
@@ -153,7 +153,7 @@ export class ComplianceAlertsService {
     })
 
     // Collect all notifications to send in parallel
-    const notificationPromises: Promise<void>[] = []
+    const notificationPromises: Promise<any>[] = []
 
     for (const incident of incidents) {
       if (admins) {

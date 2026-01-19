@@ -264,7 +264,7 @@ export class SessionService {
     if (error) throw error
 
     // Synchroniser avec les calendriers si activé
-    const formation = existingSession.formations as { organization_id?: string } | null
+    const formation = existingSession?.formations as { organization_id?: string } | null
     if (existingSession && formation?.organization_id) {
       await this.syncWithCalendars(id, formation.organization_id, 'update').catch((error) => {
         console.error('Erreur lors de la synchronisation calendrier:', error)
@@ -286,7 +286,7 @@ export class SessionService {
       .single()
 
     // Supprimer les événements calendrier si activé
-    const formation = existingSession.formations as { organization_id?: string } | null
+    const formation = existingSession?.formations as { organization_id?: string } | null
     if (existingSession && formation?.organization_id) {
       await this.syncWithCalendars(id, formation.organization_id, 'delete').catch((error) => {
         console.error('Erreur lors de la suppression de l\'événement calendrier:', error)
@@ -324,9 +324,8 @@ export class SessionService {
     for (const integration of integrations) {
       try {
         await videoconferenceService.createMeetingForSession(
-          organizationId,
-          integration.provider as string,
-          sessionId
+          sessionId,
+          { organizationId, provider: integration.provider as string }
         )
       } catch (error) {
         console.error(`Erreur lors de la création de réunion avec ${integration.provider}:`, error)
@@ -359,19 +358,21 @@ export class SessionService {
     // Synchroniser avec chaque calendrier
     for (const integration of integrations) {
       try {
-        if (action === 'delete') {
-          await calendarService.deleteSessionEvent(
-            organizationId,
-            integration.provider as string,
-            sessionId
-          )
-        } else {
-          await calendarService.syncSession(
-            organizationId,
-            integration.provider as string,
-            sessionId
-          )
-        }
+        // TODO: Implémenter deleteSessionEvent et syncSession dans CalendarService
+        // if (action === 'delete') {
+        //   await calendarService.deleteSessionEvent(
+        //     organizationId,
+        //     integration.provider as string,
+        //     sessionId
+        //   )
+        // } else {
+        //   await calendarService.syncSession(
+        //     organizationId,
+        //     integration.provider as string,
+        //     sessionId
+        //   )
+        // }
+        console.warn(`Calendar sync for ${action} not implemented yet for provider ${integration.provider}`)
       } catch (error) {
         console.error(`Erreur lors de la synchronisation avec ${integration.provider}:`, error)
         // Continuer avec les autres intégrations même si une échoue

@@ -166,10 +166,10 @@ class LearnerNotificationsService {
         badge: payload.badge || '/icons/badge-72x72.png',
         tag: payload.tag,
         data: payload.data,
-        actions: payload.actions,
+        ...(payload.actions ? { actions: payload.actions } : {}),
         vibrate: [200, 100, 200],
         requireInteraction: true,
-      })
+      } as NotificationOptions)
     } else {
       // Fallback avec l'API Notification standard
       new Notification(payload.title, {

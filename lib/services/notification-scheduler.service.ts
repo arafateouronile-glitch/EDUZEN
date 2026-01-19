@@ -79,7 +79,7 @@ export class NotificationSchedulerService {
     const dayAfter = new Date(tomorrow)
     dayAfter.setDate(dayAfter.getDate() + 1)
 
-    const { data: upcomingSessions } = await supabaseAdmin
+    const { data: upcomingSessionsData } = await supabaseAdmin
       .from('sessions')
       .select(`
         id,
@@ -104,6 +104,8 @@ export class NotificationSchedulerService {
       .gte('start_date', tomorrow.toISOString().split('T')[0])
       .lt('start_date', dayAfter.toISOString().split('T')[0])
       .eq('status', 'active')
+    
+    const upcomingSessions = (upcomingSessionsData || []) as any[]
 
     if (!upcomingSessions?.length) return
 

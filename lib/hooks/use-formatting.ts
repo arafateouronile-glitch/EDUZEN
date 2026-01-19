@@ -6,10 +6,10 @@
 
 import { useLocale } from 'next-intl'
 import { format as dateFnsFormat, formatRelative } from 'date-fns'
-import { fr, enUS, type Locale } from 'date-fns/locale'
+import { fr, enUS } from 'date-fns/locale'
 
 // Mapping des locales next-intl vers date-fns
-const dateFnsLocales: Record<string, Locale> = {
+const dateFnsLocales: Record<string, typeof fr> = {
   fr,
   en: enUS,
 }

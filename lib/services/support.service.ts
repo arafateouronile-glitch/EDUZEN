@@ -32,18 +32,19 @@ export class SupportService {
 
     if (error) {
       // Si la table n'existe pas encore ou erreur 404, retourner un tableau vide
+      const errorObj = error as { code?: string; status?: number; message?: string }
       if (
-        error.code === 'PGRST116' ||
-        error.code === '42P01' ||
-        error.code === 'PGRST301' ||
-        error.status === 404 ||
-        error.code === '404' ||
-        error.message?.includes('relation') ||
-        error.message?.includes('relationship') ||
-        error.message?.includes('does not exist') ||
-        error.message?.includes('schema cache')
+        errorObj.code === 'PGRST116' ||
+        errorObj.code === '42P01' ||
+        errorObj.code === 'PGRST301' ||
+        errorObj.status === 404 ||
+        errorObj.code === '404' ||
+        errorObj.message?.includes('relation') ||
+        errorObj.message?.includes('relationship') ||
+        errorObj.message?.includes('does not exist') ||
+        errorObj.message?.includes('schema cache')
       ) {
-        console.warn('Table support_categories does not exist yet or invalid query:', error?.message)
+        console.warn('Table support_categories does not exist yet or invalid query:', errorObj?.message)
         return []
       }
       throw error
@@ -127,19 +128,20 @@ export class SupportService {
 
     if (error) {
       // Si la table n'existe pas encore ou erreur 404/400, retourner un tableau vide
+      const errorObj = error as { code?: string; status?: number; message?: string }
       if (
-        error.code === 'PGRST116' ||
-        error.code === '42P01' ||
-        error.code === 'PGRST301' ||
-        error.status === 404 ||
-        (error as any).status === 400 ||
-        error.code === '404' ||
-        error.code === '400' ||
-        error.message?.includes('relation') ||
-        error.message?.includes('relationship') ||
-        error.message?.includes('does not exist') ||
-        error.message?.includes('schema cache') ||
-        error.message?.includes('Could not find a relationship')
+        errorObj.code === 'PGRST116' ||
+        errorObj.code === '42P01' ||
+        errorObj.code === 'PGRST301' ||
+        errorObj.status === 404 ||
+        errorObj.status === 400 ||
+        errorObj.code === '404' ||
+        errorObj.code === '400' ||
+        errorObj.message?.includes('relation') ||
+        errorObj.message?.includes('relationship') ||
+        errorObj.message?.includes('does not exist') ||
+        errorObj.message?.includes('schema cache') ||
+        errorObj.message?.includes('Could not find a relationship')
       ) {
         // Ne pas logger en mode production pour éviter le bruit dans la console
         if (process.env.NODE_ENV === 'development') {
@@ -402,8 +404,10 @@ export class SupportService {
 
     if (error) throw error
 
+    const ticketsData = (data || []) as any[]
+
     const stats = {
-      total: data.length,
+      total: ticketsData.length,
       byStatus: {
         open: 0,
         in_progress: 0,
@@ -428,14 +432,14 @@ export class SupportService {
     let resolutionCount = 0
     let resolvedCount = 0
 
-    data.forEach((ticket: SupportTicket) => {
+    ticketsData.forEach((ticket: any) => {
       // Par statut
-      if (ticket.status in stats.byStatus) {
+      if (ticket.status && ticket.status in stats.byStatus) {
         stats.byStatus[ticket.status as keyof typeof stats.byStatus]++
       }
 
       // Par priorité
-      if (ticket.priority in stats.byPriority) {
+      if (ticket.priority && ticket.priority in stats.byPriority) {
         stats.byPriority[ticket.priority as keyof typeof stats.byPriority]++
       }
 

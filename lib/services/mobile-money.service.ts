@@ -29,11 +29,11 @@ class MobileMoneyService {
     this.supabase = supabaseClient || createClient()
 
   }
-  private adapters: Record<MobileMoneyProvider, MobileMoneyAdapter> = {
-    mtn: new MTNAdapter(),
-    orange: new OrangeAdapter(),
-    airtel: new AirtelAdapter(),
-  }
+  private adapters: Partial<Record<MobileMoneyProvider, MobileMoneyAdapter>> & Record<string, MobileMoneyAdapter> = {
+    mtn_mobile_money: new MTNAdapter(),
+    orange_money: new OrangeAdapter(),
+    moov_money: new AirtelAdapter(),
+  } as any
 
   /**
    * Récupère la configuration pour un opérateur
@@ -129,8 +129,8 @@ class MobileMoneyService {
       merchant_code: configRow.merchant_code || undefined,
       api_url: configRow.api_url || undefined,
       callback_url: configRow.callback_url || `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/mobile-money/webhook/${provider}`,
-      is_active: configRow.is_active,
-      is_test_mode: configRow.is_test_mode,
+      is_active: configRow.is_active ?? false,
+      is_test_mode: configRow.is_test_mode ?? false,
       metadata: (configRow.metadata as Record<string, unknown>) || undefined,
     }
 
@@ -147,6 +147,9 @@ class MobileMoneyService {
 
     // Obtenir l'adapter approprié
     const adapter = this.adapters[provider]
+    if (!adapter) {
+      throw new Error(`Adapter pour ${provider} non disponible`)
+    }
 
     // Initialiser le paiement
     const response = await adapter.initiatePayment(config, request)
@@ -166,8 +169,8 @@ class MobileMoneyService {
       currency: currency || invoice.currency,
       phone_number: phoneNumber,
       status: 'initiated',
-      request_data: request as Record<string, unknown>,
-      response_data: response.data as Record<string, unknown>,
+      request_data: request as any,
+      response_data: response.data as any,
       initiated_at: new Date().toISOString(),
     })
 
@@ -198,18 +201,21 @@ class MobileMoneyService {
       merchant_code: configRow.merchant_code || undefined,
       api_url: configRow.api_url || undefined,
       callback_url: configRow.callback_url || undefined,
-      is_active: configRow.is_active,
-      is_test_mode: configRow.is_test_mode,
+      is_active: configRow.is_active ?? false,
+      is_test_mode: configRow.is_test_mode ?? false,
       metadata: configRow.metadata as Record<string, unknown> | undefined,
     }
 
     const adapter = this.adapters[transaction.provider as MobileMoneyProvider]
+    if (!adapter) {
+      throw new Error(`Adapter pour ${transaction.provider} non disponible`)
+    }
     const statusResponse = await adapter.checkPaymentStatus(config, transaction.transaction_id || '')
 
     // Mettre à jour la transaction
     await this.updateTransaction(transaction.id, {
       status: statusResponse.status,
-      response_data: statusResponse.data as unknown,
+      response_data: statusResponse.data as any,
       ...(statusResponse.status === 'completed' && { completed_at: new Date().toISOString() }),
       ...(statusResponse.status === 'failed' && {
         failed_at: new Date().toISOString(),
@@ -255,12 +261,15 @@ class MobileMoneyService {
       merchant_code: configRow.merchant_code || undefined,
       api_url: configRow.api_url || undefined,
       callback_url: configRow.callback_url || undefined,
-      is_active: configRow.is_active,
-      is_test_mode: configRow.is_test_mode,
+      is_active: configRow.is_active ?? false,
+      is_test_mode: configRow.is_test_mode ?? false,
       metadata: configRow.metadata as Record<string, unknown> | undefined,
     }
 
     const adapter = this.adapters[provider]
+    if (!adapter) {
+      throw new Error(`Adapter pour ${provider} non disponible`)
+    }
 
     // Valider le webhook
     const isValid = await adapter.validateWebhook(config, payload)
@@ -275,8 +284,8 @@ class MobileMoneyService {
     await this.updateTransaction(transaction.id, {
       status: statusResponse.status,
       webhook_received: true,
-      webhook_data: payload as Record<string, unknown>,
-      response_data: statusResponse.data as unknown,
+      webhook_data: payload as any,
+      response_data: statusResponse.data as any,
       ...(statusResponse.status === 'completed' && { completed_at: new Date().toISOString() }),
       ...(statusResponse.status === 'failed' && {
         failed_at: new Date().toISOString(),

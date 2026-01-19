@@ -132,7 +132,7 @@ export class AccountingService {
       metadata: {
         ...(config.metadata as Record<string, unknown> || {}),
         company_info: companyInfo.data,
-      },
+      } as any,
     }
 
     return this.upsertConfig(organizationId, provider, updates)
@@ -211,10 +211,10 @@ export class AccountingService {
       tax_amount: Number(invoice.tax_amount || 0),
       total_amount: Number(invoice.total_amount),
       currency: invoice.currency,
-      status: invoice.status,
+      status: invoice.status || '',
       student_id: invoice.student_id,
-      student_name: invoice.students
-        ? `${invoice.students.first_name} ${invoice.students.last_name}`
+      student_name: (invoice as any).students
+        ? `${(invoice as any).students.first_name} ${(invoice as any).students.last_name}`
         : undefined,
       items: invoice.items as Array<{ description: string; quantity: number; unit_price: number; total: number }>,
     }
@@ -430,10 +430,10 @@ export class AccountingService {
           tax_amount: Number(invoice.tax_amount || 0),
           total_amount: Number(invoice.total_amount),
           currency: invoice.currency,
-          status: invoice.status,
+          status: invoice.status || '',
           student_id: invoice.student_id,
-          student_name: invoice.students
-            ? `${invoice.students.first_name} ${invoice.students.last_name}`
+          student_name: (invoice as any).students
+            ? `${(invoice as any).students.first_name} ${(invoice as any).students.last_name}`
             : undefined,
           items: invoice.items as Array<{
             description: string
@@ -487,7 +487,7 @@ export class AccountingService {
             integration_id: config.id,
             entity_type: 'invoice',
             local_entity_id: syncResult.invoiceId,
-            external_entity_id: syncResult.externalId,
+            external_entity_id: syncResult.externalId || '',
             external_entity_data: syncResult.data,
             sync_status: 'synced',
           })
@@ -569,13 +569,12 @@ export class AccountingService {
       provider: config.provider as AccountingProvider,
       access_token: config.access_token || undefined,
       refresh_token: config.refresh_token || undefined,
-      token_expires_at: config.token_expires_at || undefined,
       api_key: config.api_key || undefined,
       api_secret: config.api_secret || undefined,
       company_id: config.company_id || undefined,
       company_name: config.company_name || undefined,
       api_url: config.api_url || undefined,
-      is_active: config.is_active,
+      is_active: config.is_active ?? false,
       is_test_mode: config.is_test_mode,
       sync_invoices: config.sync_invoices,
       sync_payments: config.sync_payments,
@@ -583,7 +582,7 @@ export class AccountingService {
       auto_sync: config.auto_sync,
       sync_frequency: config.sync_frequency as 'hourly' | 'daily' | 'weekly' | 'manual',
       metadata: config.metadata as Record<string, unknown> | undefined,
-    }
+    } as AccountingConfig
   }
 
   /**
@@ -608,7 +607,7 @@ export class AccountingService {
       records_created: result.records_created,
       records_updated: result.records_updated,
       records_skipped: result.records_skipped,
-      error_message: result.errors?.map((e) => e.error).join('; ') || undefined,
+      error_message: result.errors?.map((e: any) => e.error).join('; ') || undefined,
       sync_data: result as SyncResult,
       completed_at: new Date().toISOString(),
       duration_ms: duration,
@@ -620,7 +619,7 @@ export class AccountingService {
       .update({
         last_sync_at: new Date().toISOString(),
         last_sync_status: result.success && result.records_failed === 0 ? 'success' : result.records_failed > 0 ? 'partial' : 'failed',
-        last_sync_error: result.errors?.map((e) => e.error).join('; ') || undefined,
+        last_sync_error: result.errors?.map((e: any) => e.error).join('; ') || undefined,
       })
       .eq('id', integrationId)
   }

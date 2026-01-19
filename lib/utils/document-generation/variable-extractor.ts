@@ -39,7 +39,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     issueDate = new Date().toISOString(),
   } = options
 
-  const variables: DocumentVariables = {
+  const variables: any = {
     // Date actuelle
     date_emission: new Date().toLocaleDateString('fr-FR'),
     date_aujourd_hui: new Date().toLocaleDateString('fr-FR'),
@@ -57,7 +57,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     ecole_ville: (organization?.address || '').split(',').pop()?.trim() || '',
     ecole_telephone: organization?.phone || '',
     ecole_email: organization?.email || '',
-    ecole_site_web: organization?.website || '',
+    ecole_site_web: (organization as any)?.website || '',
     ecole_code_postal: (organization?.address || '').match(/\d{5}/)?.[0] || '',
     
     // Format alternatif (organisation_*) pour compatibilité avec anciens templates
@@ -66,7 +66,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     organisation_telephone: organization?.phone || '',
     organisation_email: organization?.email || '',
     organisation_logo: organization?.logo_url || '',
-    organisation_site_web: organization?.website || '',
+    organisation_site_web: (organization as any)?.website || '',
 
     // Étudiant/Élève (utiliser les deux formats pour compatibilité)
     // Format standard (eleve_*)
@@ -76,8 +76,8 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     eleve_date_naissance: student?.date_of_birth
       ? new Date(student.date_of_birth).toLocaleDateString('fr-FR')
       : '',
-    eleve_classe: (student as StudentWithRelations)?.classes
-      ? ((student as StudentWithRelations).classes as { name: string }).name
+    eleve_classe: ((student as StudentWithRelations) as any)?.classes
+      ? (((student as StudentWithRelations) as any).classes as { name: string }).name
       : '',
     eleve_photo: (student as any)?.photo_url || '',
     eleve_adresse: (student as any)?.address || '',
@@ -100,8 +100,8 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     etudiant_photo: (student as any)?.photo_url || '',
 
     // Classe
-    classe_nom: (student as StudentWithRelations)?.classes
-      ? ((student as StudentWithRelations).classes as { name: string }).name
+    classe_nom: ((student as StudentWithRelations) as any)?.classes
+      ? (((student as StudentWithRelations) as any).classes as { name: string }).name
       : '',
 
     // Année académique
@@ -126,17 +126,17 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     formation_duree: (session as SessionWithRelations)?.formations?.duration_hours
       ? `${(session as SessionWithRelations).formations?.duration_hours} heures`
       : '',
-    formation_objectifs: (session as SessionWithRelations)?.formations?.objectives || (program as any)?.objectives || '',
-    formation_public_concerne: (session as SessionWithRelations)?.formations?.target_audience || (program as any)?.target_audience || '',
-    formation_prerequis: (session as SessionWithRelations)?.formations?.prerequisites || (program as any)?.prerequisites || '',
-    formation_qualite_et_resultats: (session as SessionWithRelations)?.formations?.quality_indicators || (program as any)?.quality_indicators || '',
-    formation_contenu: (session as SessionWithRelations)?.formations?.content || (program as any)?.content || '',
-    formation_equipe_pedagogique: (session as SessionWithRelations)?.formations?.pedagogical_team || (program as any)?.pedagogical_team || '',
-    formation_ressources: (session as SessionWithRelations)?.formations?.resources || (program as any)?.resources || '',
-    formation_supports: (session as SessionWithRelations)?.formations?.materials || (program as any)?.materials || '',
+    formation_objectifs: ((session as SessionWithRelations)?.formations as any)?.objectives || (program as any)?.objectives || '',
+    formation_public_concerne: ((session as SessionWithRelations)?.formations as any)?.target_audience || (program as any)?.target_audience || '',
+    formation_prerequis: ((session as SessionWithRelations)?.formations as any)?.prerequisites || (program as any)?.prerequisites || '',
+    formation_qualite_et_resultats: ((session as SessionWithRelations)?.formations as any)?.quality_indicators || (program as any)?.quality_indicators || '',
+    formation_contenu: ((session as SessionWithRelations)?.formations as any)?.content || (program as any)?.content || '',
+    formation_equipe_pedagogique: ((session as SessionWithRelations)?.formations as any)?.pedagogical_team || (program as any)?.pedagogical_team || '',
+    formation_ressources: ((session as SessionWithRelations)?.formations as any)?.resources || (program as any)?.resources || '',
+    formation_supports: ((session as SessionWithRelations)?.formations as any)?.materials || (program as any)?.materials || '',
     session_lieu: (session as any)?.location || (session as any)?.venue || '',
     session_effectif: (session as any)?.enrollment_count?.toString() || (session as any)?.student_count?.toString() || '',
-    diplome_ou_certification: (session as SessionWithRelations)?.formations?.certification || (program as any)?.certification || '',
+    diplome_ou_certification: ((session as SessionWithRelations)?.formations as any)?.certification || (program as any)?.certification || '',
     ecole_region: (organization as any)?.region || (organization as any)?.administrative_region || '',
     // Programme
     programme_nom: program?.name || (session as SessionWithRelations)?.formations?.programs?.name || '',

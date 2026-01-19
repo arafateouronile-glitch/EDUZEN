@@ -78,7 +78,7 @@ export function DocumentUpload({
       }
 
       // 2. Créer l'entrée dans la base de données
-      return await accessibilityService.uploadDocument(file, {
+      return await accessibilityService.uploadDocument({
         organization_id: organizationId,
         student_id: studentId,
         student_need_id: studentNeedId || null,
@@ -362,7 +362,7 @@ export function DocumentUpload({
                       </div>
                       <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                         <span>{doc.file_name}</span>
-                        <span>{formatFileSize(doc.file_size)}</span>
+                        <span>{formatFileSize(doc.file_size || 0)}</span>
                         {doc.issue_date && <span>Émis le {formatDate(doc.issue_date)}</span>}
                         {doc.expiry_date && <span>Expire le {formatDate(doc.expiry_date)}</span>}
                       </div>

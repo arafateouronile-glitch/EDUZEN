@@ -111,7 +111,7 @@ export async function generateDOCX(
                             alignment: getAlignmentType(template.footer.pagination.position),
                             children: [
                               new TextRun({
-                                children: replacePaginationFormat(
+                                text: replacePaginationFormat(
                                   template.footer.pagination.format || 'Page {numero_page} / {total_pages}',
                                   variables,
                                   pages.length
@@ -267,7 +267,7 @@ function convertPxToDXA(px: number): number {
  */
 function getAlignmentType(
   align?: 'left' | 'center' | 'right' | 'justify'
-): AlignmentType {
+): typeof AlignmentType[keyof typeof AlignmentType] {
   switch (align) {
     case 'center':
       return AlignmentType.CENTER

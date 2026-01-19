@@ -4,8 +4,8 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { complianceService } from '@/lib/services/compliance.service'
-import { twoFactorService } from '@/lib/services/2fa.service'
-import { ssoService } from '@/lib/services/sso.service'
+import { twoFactorAuthService } from '@/lib/services/2fa.service'
+// import { ssoService } from '@/lib/services/sso.service' // Service SSO non disponible
 
 /**
  * Vérifie la conformité 2FA et crée/met à jour les contrôles correspondants
@@ -33,7 +33,8 @@ export async function sync2FACompliance(organizationId: string) {
 
       // Ignorer les erreurs 406 (table n'existe pas), PGRST116 (pas de lignes), PGRST301 (RLS)
       if (twoFAError) {
-        if (twoFAError.code === 'PGRST116' || twoFAError.code === 'PGRST301' || twoFAError.status === 406) {
+        const errorObj = twoFAError as { code?: string; status?: number }
+      if (errorObj.code === 'PGRST116' || errorObj.code === 'PGRST301' || errorObj.status === 406) {
           // Table n'existe pas ou pas de données, continuer
           continue
         }

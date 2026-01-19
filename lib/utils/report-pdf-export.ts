@@ -50,9 +50,9 @@ export async function generateReportPDF(data: ReportData): Promise<Blob> {
   let yPosition = margin
 
   // Couleurs
-  const primaryColor = [37, 99, 235] // brand-blue
-  const textColor = [31, 41, 55] // gray-800
-  const lightGray = [243, 244, 246] // gray-100
+  const primaryColor: [number, number, number] = [37, 99, 235] // brand-blue
+  const textColor: [number, number, number] = [31, 41, 55] // gray-800
+  const lightGray: [number, number, number] = [243, 244, 246] // gray-100
 
   // En-tête avec logo
   if (data.organization.logo) {

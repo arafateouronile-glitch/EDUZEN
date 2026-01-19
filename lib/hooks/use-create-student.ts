@@ -151,10 +151,10 @@ export function useCreateStudent() {
           .insert({
             student_id: student.id,
             session_id: data.class_id,
-            enrollment_date: data.enrollment_date,
+            enrollment_date: data.enrollment_date || new Date().toISOString(),
             status: 'confirmed',
             payment_status: 'pending',
-          })
+          } as any)
 
         if (enrollmentError) {
           // Ne pas faire échouer la création de l'élève si l'inscription échoue

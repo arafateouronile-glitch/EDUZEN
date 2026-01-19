@@ -44,20 +44,22 @@ class TwoFactorAuthService {
       .maybeSingle()
     
     // Si la table n'existe pas ou erreur 406, ignorer
-    if (existingError && (existingError.code === 'PGRST116' || existingError.code === 'PGRST301' || existingError.status === 406)) {
+    const errorObj = existingError as { code?: string; status?: number }
+    if (existingError && (errorObj.code === 'PGRST116' || errorObj.code === 'PGRST301' || errorObj.status === 406)) {
       // Table n'existe pas, créer un nouvel enregistrement
-      await this.supabase
-        .from('user_2fa')
-        .insert({
-          user_id: userId,
-          secret,
-          backup_codes: backupCodes.map(code => this.hashCode(code)),
-          is_enabled: false,
-          is_verified: false,
-        })
-        .catch(() => {
-          // Ignorer les erreurs d'insertion si la table n'existe pas
-        })
+      try {
+        await this.supabase
+          .from('user_2fa')
+          .insert({
+            user_id: userId,
+            secret,
+            backup_codes: backupCodes.map(code => this.hashCode(code)),
+            is_enabled: false,
+            is_verified: false,
+          })
+      } catch {
+        // Ignorer les erreurs d'insertion si la table n'existe pas
+      }
       return {
         secret,
         qrCodeUrl,
@@ -105,7 +107,8 @@ class TwoFactorAuthService {
       .maybeSingle()
 
     // Ignorer les erreurs 406, PGRST116, PGRST301
-    if (error && (error.code === 'PGRST116' || error.code === 'PGRST301' || error.status === 406)) {
+    const errorObj = error as { code?: string; status?: number }
+    if (error && (errorObj.code === 'PGRST116' || errorObj.code === 'PGRST301' || errorObj.status === 406)) {
       return { valid: false }
     }
 
@@ -153,7 +156,8 @@ class TwoFactorAuthService {
       .maybeSingle()
 
     // Ignorer les erreurs 406, PGRST116, PGRST301
-    if (error && (error.code === 'PGRST116' || error.code === 'PGRST301' || error.status === 406)) {
+    const errorObj = error as { code?: string; status?: number }
+    if (error && (errorObj.code === 'PGRST116' || errorObj.code === 'PGRST301' || errorObj.status === 406)) {
       return false
     }
 
@@ -217,7 +221,8 @@ class TwoFactorAuthService {
 
     // Ignorer les erreurs 406, PGRST116, PGRST301
     if (error) {
-      if (error.code === 'PGRST116' || error.code === 'PGRST301' || error.status === 406) {
+      const errorObj = error as { code?: string; status?: number }
+      if (errorObj.code === 'PGRST116' || errorObj.code === 'PGRST301' || errorObj.status === 406) {
         return null
       }
       throw error
@@ -274,7 +279,8 @@ class TwoFactorAuthService {
       .maybeSingle()
 
     // Ignorer les erreurs 406, PGRST116, PGRST301
-    if (error && (error.code === 'PGRST116' || error.code === 'PGRST301' || error.status === 406)) {
+    const errorObj = error as { code?: string; status?: number }
+    if (error && (errorObj.code === 'PGRST116' || errorObj.code === 'PGRST301' || errorObj.status === 406)) {
       return { valid: false }
     }
 

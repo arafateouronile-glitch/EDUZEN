@@ -102,7 +102,7 @@ export class YousignAdapter {
             email: signer.info.email,
             phone: signer.info.phone_number,
           } : {
-            email: signer.info?.email || '',
+            email: '',
           },
           position: index + 1,
           fileObjects: signer.fields?.map((field, fieldIndex) => ({

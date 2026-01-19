@@ -106,7 +106,7 @@ export class QualiopiService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        error.status === 404 ||
+        (error as any).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||
@@ -291,9 +291,9 @@ export class QualiopiService {
           error.code === 'PGRST116' ||
           error.code === '42883' ||
           error.code === 'PGRST301' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.code === '404' ||
-          String(error.status) === '404' ||
+          String((error as any).status) === '404' ||
           String(error.code) === '404' ||
           error.message?.toLowerCase().includes('function') ||
           error.message?.toLowerCase().includes('does not exist') ||
@@ -313,14 +313,15 @@ export class QualiopiService {
       return data || 0
     } catch (err: unknown) {
       // Capturer les erreurs réseau ou autres erreurs inattendues
+      const errorObj = err as { status?: number; code?: string; message?: string }
       if (
-        err?.status === 404 ||
-        err?.code === '404' ||
-        String(err?.status) === '404' ||
-        err?.message?.toLowerCase().includes('not found') ||
-        err?.message?.toLowerCase().includes('404') ||
-        err?.message?.toLowerCase().includes('function') ||
-        err?.message?.toLowerCase().includes('does not exist')
+        errorObj?.status === 404 ||
+        errorObj?.code === '404' ||
+        String(errorObj?.status) === '404' ||
+        errorObj?.message?.toLowerCase().includes('not found') ||
+        errorObj?.message?.toLowerCase().includes('404') ||
+        errorObj?.message?.toLowerCase().includes('function') ||
+        errorObj?.message?.toLowerCase().includes('does not exist')
       ) {
         if (process.env.NODE_ENV === 'development') {
           console.warn('Function calculate_qualiopi_compliance_rate does not exist yet. This is normal if the function has not been created in Supabase yet.')
@@ -403,7 +404,7 @@ export class QualiopiService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        error.status === 404 ||
+        (error as any).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||

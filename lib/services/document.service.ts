@@ -160,7 +160,7 @@ export class DocumentService {
 
       logger.info('Document created successfully', {
         id: data?.id,
-        organizationId: document.organization_id,
+        organizationId: document.organization_id || undefined,
       })
 
       return data

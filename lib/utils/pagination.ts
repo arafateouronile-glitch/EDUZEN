@@ -106,14 +106,10 @@ export function createPaginatedResponse<T>(
  */
 export async function paginateQuery<T>(
   queryBuilder: {
-    select: (columns: string) => {
-      eq: (column: string, value: unknown) => any
-      order: (column: string, options?: { ascending: boolean }) => {
-        range: (from: number, to: number) => Promise<{ data: T[] | null; error: any }>
-        count: (type?: 'exact') => Promise<{ count: number | null; error: any }>
-      }
-      [key: string]: any
+    order: (column: string, options?: { ascending: boolean }) => {
+      range: (from: number, to: number) => Promise<{ data: T[] | null; error: any }>
     }
+    [key: string]: any
   },
   pagination: PaginationParams,
   countQuery?: () => Promise<{ count: number | null; error: any }>

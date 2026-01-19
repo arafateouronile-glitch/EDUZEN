@@ -315,22 +315,26 @@ export class TemplateSecurityService {
     }
 
     // Déchiffrer le contenu
+    const encryptedContent = encryption.encrypted_content as any
+    if (!encryptedContent || !encryptedContent.header || !encryptedContent.content || !encryptedContent.footer) {
+      throw new Error('Invalid encrypted content structure')
+    }
     const decryptedContent = {
       header: JSON.parse(
         CryptoJS.AES.decrypt(
-          encryption.encrypted_content.header,
+          encryptedContent.header,
           this.encryptionKey
         ).toString(CryptoJS.enc.Utf8)
       ),
       content: JSON.parse(
         CryptoJS.AES.decrypt(
-          encryption.encrypted_content.content,
+          encryptedContent.content,
           this.encryptionKey
         ).toString(CryptoJS.enc.Utf8)
       ),
       footer: JSON.parse(
         CryptoJS.AES.decrypt(
-          encryption.encrypted_content.footer,
+          encryptedContent.footer,
           this.encryptionKey
         ).toString(CryptoJS.enc.Utf8)
       ),
@@ -365,7 +369,7 @@ export class TemplateSecurityService {
         throw error
       }
       if (!data) return false
-      return data.is_encrypted
+      return data.is_encrypted ?? false
     } catch (error: unknown) {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
@@ -543,7 +547,7 @@ export class TemplateSecurityService {
     // Mettre à jour le template
     await this.supabase
       .from('document_templates')
-      .update({ content: anonymizedContent })
+      .update({ content: anonymizedContent as any })
       .eq('id', templateId)
 
     // Logger l'audit

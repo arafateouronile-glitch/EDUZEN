@@ -28,9 +28,9 @@ export function mapStudentToVariables(
     ecole_ville: organization?.city || '',
     ecole_telephone: organization?.phone || '',
     ecole_email: organization?.email || '',
-    ecole_site_web: organization?.website || '',
-    ecole_siret: organization?.siret || '',
-    ecole_code_postal: organization?.postal_code || '',
+    ecole_site_web: (organization as any)?.website || '',
+    ecole_siret: (organization as any)?.siret || '',
+    ecole_code_postal: (organization as any)?.postal_code || '',
     
     // Élève
     eleve_nom: student?.last_name || '',
@@ -50,7 +50,7 @@ export function mapStudentToVariables(
     formation_prix: formation?.price ? `${formation.price} ${formation.currency || 'EUR'}` : '',
     formation_dates: session ? `${formatDate(session.start_date)} - ${formatDate(session.end_date)}` : '',
     formation_description: formation?.description || '',
-    formation_objectifs: formation?.objectives || '',
+    formation_objectifs: (formation as any)?.objectives || '',
     
     // Session
     session_nom: session?.name || '',
@@ -93,7 +93,7 @@ export function mapInvoiceToVariables(
     ecole_ville: organization?.city || '',
     ecole_telephone: organization?.phone || '',
     ecole_email: organization?.email || '',
-    ecole_siret: organization?.siret || '',
+    ecole_siret: (organization as any)?.siret || '',
     
     // Élève
     eleve_nom: student?.last_name || '',
@@ -176,7 +176,7 @@ export function mapSessionToVariables(
 ): DocumentVariables {
   const now = new Date()
   
-  return {
+  const variables: any = {
     // Établissement
     ecole_nom: organization?.name || '',
     ecole_logo: organization?.logo_url || '',
@@ -184,9 +184,9 @@ export function mapSessionToVariables(
     ecole_ville: organization?.city || '',
     ecole_telephone: organization?.phone || '',
     ecole_email: organization?.email || '',
-    ecole_siret: organization?.siret || '',
-    ecole_rcs: organization?.rcs || '',
-    ecole_representant: organization?.representative_name || '',
+    ecole_siret: (organization as any)?.siret || '',
+    ecole_rcs: (organization as any)?.rcs || '',
+    ecole_representant: (organization as any)?.representative_name || '',
     
     // Formation
     formation_nom: formation?.name || '',
@@ -194,7 +194,7 @@ export function mapSessionToVariables(
     formation_duree: formation?.duration_hours ? `${formation.duration_hours} heures` : '',
     formation_prix: formation?.price ? `${formation.price} ${formation.currency || 'EUR'}` : '',
     formation_description: formation?.description || '',
-    formation_objectifs: formation?.objectives || '',
+    formation_objectifs: (formation as any)?.objectives || '',
     
     // Session
     session_nom: session?.name || '',
@@ -216,6 +216,7 @@ export function mapSessionToVariables(
     numero_page: 1,
     total_pages: 1,
   }
+  return variables as DocumentVariables
 }
 
 /**

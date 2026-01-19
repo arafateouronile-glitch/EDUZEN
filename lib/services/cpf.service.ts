@@ -218,7 +218,7 @@ export class CPFService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        error.status === 404 ||
+        (error as any).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||
@@ -278,7 +278,7 @@ export class CPFService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        error.status === 404 ||
+        (error as any).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||

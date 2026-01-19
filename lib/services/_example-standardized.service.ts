@@ -12,10 +12,10 @@ import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate
 import { errorHandler, ErrorCode, AppError } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
 
-// Types
-type ExampleEntity = TableRow<'example_table'>
-type ExampleInsert = TableInsert<'example_table'>
-type ExampleUpdate = TableUpdate<'example_table'>
+// Types (example_table n'existe pas dans le schéma, donc on utilise any)
+type ExampleEntity = any
+type ExampleInsert = any
+type ExampleUpdate = any
 
 export class ExampleStandardizedService {
   private supabase: SupabaseClient<Database>
@@ -41,7 +41,7 @@ export class ExampleStandardizedService {
     search?: string
   }) {
     try {
-      let query = this.supabase
+      let query = (this.supabase as any)
         .from('example_table')
         .select('*')
         .eq('organization_id', organizationId)
@@ -83,7 +83,7 @@ export class ExampleStandardizedService {
    */
   async getById(id: string) {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await (this.supabase as any)
         .from('example_table')
         .select('*')
         .eq('id', id)
@@ -126,17 +126,17 @@ export class ExampleStandardizedService {
   /**
    * Crée un nouvel enregistrement
    */
-  async create(entity: FlexibleInsert<'example_table'>) {
+  async create(entity: any) {
     try {
       // Validation avant insertion
-      if (!entity.name) {
+      if (!(entity as any).name) {
         throw errorHandler.createValidationError(
           'Le nom est obligatoire',
           'name'
         )
       }
 
-      const { data, error } = await this.supabase
+      const { data, error } = await (this.supabase as any)
         .from('example_table')
         .insert(entity as ExampleInsert)
         .select()
@@ -159,7 +159,7 @@ export class ExampleStandardizedService {
 
       logger.info('Enregistrement créé avec succès', {
         id: data?.id,
-        organizationId: entity.organization_id,
+        organizationId: (entity as any).organization_id,
       })
 
       return data
@@ -177,9 +177,9 @@ export class ExampleStandardizedService {
   /**
    * Met à jour un enregistrement
    */
-  async update(id: string, updates: FlexibleUpdate<'example_table'>) {
+  async update(id: string, updates: any) {
     try {
-      const { data, error } = await this.supabase
+      const { data, error } = await (this.supabase as any)
         .from('example_table')
         .update(updates as ExampleUpdate)
         .eq('id', id)
@@ -231,7 +231,7 @@ export class ExampleStandardizedService {
    */
   async delete(id: string) {
     try {
-      const { error } = await this.supabase
+      const { error } = await (this.supabase as any)
         .from('example_table')
         .delete()
         .eq('id', id)

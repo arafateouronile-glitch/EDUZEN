@@ -10,12 +10,12 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/components/ui/toast'
 import { errorHandler, AppError, ErrorSeverity } from '@/lib/errors'
 import type { AppErrorContext } from '@/lib/errors'
 
 export function useErrorHandler() {
-  const { toast } = useToast()
+  const { addToast } = useToast()
 
   /**
    * Gère une erreur et affiche une notification
@@ -25,22 +25,22 @@ export function useErrorHandler() {
       const appError = errorHandler.handleError(error, context)
 
       // Afficher une notification selon la sévérité
-      const variant =
+      const type =
         appError.severity === ErrorSeverity.CRITICAL ||
         appError.severity === ErrorSeverity.HIGH
-          ? 'destructive'
-          : 'default'
+          ? 'error'
+          : 'warning'
 
-      toast({
+      addToast({
+        type,
         title: 'Erreur',
         description: appError.userMessage,
-        variant,
         duration: appError.severity === ErrorSeverity.CRITICAL ? 10000 : 5000,
       })
 
       return appError
     },
-    [toast]
+    [addToast]
   )
 
   /**
@@ -76,10 +76,10 @@ export function useErrorHandler() {
         attempts++
         try {
           await retryFn()
-          toast({
+          addToast({
+            type: 'success',
             title: 'Succès',
             description: 'L\'opération a réussi après plusieurs tentatives.',
-            variant: 'default',
           })
           return null // Succès
         } catch (retryError) {
@@ -96,7 +96,7 @@ export function useErrorHandler() {
 
       return appError
     },
-    [handleError, toast]
+    [handleError, addToast]
   )
 
   return {

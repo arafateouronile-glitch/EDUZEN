@@ -203,7 +203,8 @@ export class ComplianceService {
 
     // Si la table n'existe pas ou erreur de syntaxe, retourner un tableau vide
     if (error) {
-      if (error.code === 'PGRST200' || error.status === 404 || error.status === 400 || error.message?.includes('does not exist')) {
+      const errorObj = error as { code?: string; status?: number; message?: string }
+      if (errorObj.code === 'PGRST200' || errorObj.status === 404 || errorObj.status === 400 || errorObj.message?.includes('does not exist')) {
         return []
       }
       throw error
@@ -258,7 +259,8 @@ export class ComplianceService {
 
     // Si la table n'existe pas ou erreur de syntaxe, retourner un tableau vide
     if (error) {
-      if (error.code === 'PGRST200' || error.status === 404 || error.status === 400 || error.message?.includes('does not exist')) {
+      const errorObj = error as { code?: string; status?: number; message?: string }
+      if (errorObj.code === 'PGRST200' || errorObj.status === 404 || errorObj.status === 400 || errorObj.message?.includes('does not exist')) {
         return []
       }
       throw error
@@ -514,12 +516,12 @@ export class ComplianceService {
           ? audits.reduce((sum, a) => sum + (a.compliance_percentage || 0), 0) / audits.length
           : 0,
       },
-      recommendations: this.generateRecommendations(stats, criticalRisks, openIncidents),
+      recommendations: this.generateRecommendations(stats as any, criticalRisks, openIncidents),
     }
   }
 
   private generateRecommendations(
-    stats: { compliance_percentage: number; total_controls: number; compliant_controls: number; non_compliant_controls: number; pending_controls: number },
+    stats: any,
     criticalRisks: RiskAssessment[],
     openIncidents: SecurityIncident[]
   ): string[] {

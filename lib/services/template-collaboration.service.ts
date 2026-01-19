@@ -155,7 +155,18 @@ export class TemplateCollaborationService {
       .eq('shared_with_user_id', userId)
 
     if (error) throw error
-    return data || []
+    
+    // Mapper les données pour correspondre au type de retour attendu
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      template_id: item.template_id,
+      shared_with_user_id: item.shared_with_user_id,
+      shared_by_user_id: item.shared_by_user_id,
+      permission_type: item.permission || item.permission_type || '',
+      created_at: item.created_at || new Date().toISOString(),
+      template: item.template,
+      shared_by: item.shared_by,
+    }))
   }
 
   // ========== COMMENTAIRES ==========

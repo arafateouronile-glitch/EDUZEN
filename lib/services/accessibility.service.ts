@@ -249,7 +249,7 @@ export class AccessibilityService {
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -294,11 +294,9 @@ export class AccessibilityService {
 
     // Convertir les UUID invalides en null pour referent_user_id
     if (cleanData.referent_user_id !== null && cleanData.referent_user_id !== undefined) {
-      if (!isValidUUID(cleanData.referent_user_id)) {
+      if (cleanData.referent_user_id === '' || !isValidUUID(cleanData.referent_user_id)) {
         cleanData.referent_user_id = null
       }
-    } else if (cleanData.referent_user_id === '') {
-      cleanData.referent_user_id = null
     }
 
     // Convertir les chaînes vides en null pour les champs de type DATE
@@ -407,7 +405,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -454,7 +452,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -488,7 +486,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -578,7 +576,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -668,7 +666,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -809,7 +807,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -852,7 +850,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -971,7 +969,7 @@ export class AccessibilityService {
         const is404Error =
           error.code === 'PGRST116' ||
           error.code === '42883' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.toLowerCase().includes('function') ||
           error.message?.toLowerCase().includes('does not exist')
 

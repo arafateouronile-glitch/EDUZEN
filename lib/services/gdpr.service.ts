@@ -163,7 +163,8 @@ export class GDPRService {
 
     // Si la table n'existe pas, retourner un tableau vide
     if (error) {
-      if (error.code === 'PGRST200' || error.status === 404 || error.message?.includes('does not exist')) {
+      const errorObj = error as { code?: string; status?: number; message?: string }
+      if (errorObj.code === 'PGRST200' || errorObj.status === 404 || errorObj.message?.includes('does not exist')) {
         return []
       }
       throw error
@@ -228,7 +229,8 @@ export class GDPRService {
 
     // Si la table n'existe pas, retourner un tableau vide
     if (error) {
-      if (error.code === 'PGRST200' || error.status === 404 || error.message?.includes('does not exist')) {
+      const errorObj = error as { code?: string; status?: number; message?: string }
+      if (errorObj.code === 'PGRST200' || errorObj.status === 404 || errorObj.message?.includes('does not exist')) {
         return []
       }
       throw error
@@ -325,7 +327,8 @@ export class GDPRService {
 
     // Si la table n'existe pas, retourner un tableau vide
     if (error) {
-      if (error.code === 'PGRST200' || error.status === 404 || error.message?.includes('does not exist')) {
+      const errorObj = error as { code?: string; status?: number; message?: string }
+      if (errorObj.code === 'PGRST200' || errorObj.status === 404 || errorObj.message?.includes('does not exist')) {
         return []
       }
       throw error

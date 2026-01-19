@@ -7,9 +7,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { DocumentType, DocumentVariables } from '@/lib/types/document-templates'
 
-type ScheduledGeneration = Database['public']['Tables']['scheduled_generations']['Row']
-type ScheduledGenerationInsert = Database['public']['Tables']['scheduled_generations']['Insert']
-type ScheduledGenerationUpdate = Database['public']['Tables']['scheduled_generations']['Update']
+type ScheduledGeneration = any
+type ScheduledGenerationInsert = any
+type ScheduledGenerationUpdate = any
 
 export interface ScheduledGenerationConfig {
   template_id: string
@@ -48,7 +48,7 @@ export class ScheduledGenerationService {
    * Crée une nouvelle génération programmée
    */
   async create(config: ScheduledGenerationConfig): Promise<ScheduledGeneration> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('scheduled_generations')
       .insert({
         template_id: config.template_id,
@@ -73,7 +73,7 @@ export class ScheduledGenerationService {
    * Récupère toutes les générations programmées d'une organisation
    */
   async getAll(organizationId: string): Promise<ScheduledGeneration[]> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('scheduled_generations')
       .select('*')
       .eq('organization_id', organizationId)
@@ -87,7 +87,7 @@ export class ScheduledGenerationService {
    * Récupère une génération programmée par ID
    */
   async getById(id: string): Promise<ScheduledGeneration | null> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('scheduled_generations')
       .select('*')
       .eq('id', id)
@@ -107,7 +107,7 @@ export class ScheduledGenerationService {
     id: string,
     updates: Partial<ScheduledGenerationConfig>
   ): Promise<ScheduledGeneration> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('scheduled_generations')
       .update({
         ...updates,
@@ -132,7 +132,7 @@ export class ScheduledGenerationService {
    * Supprime une génération programmée
    */
   async delete(id: string): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('scheduled_generations')
       .delete()
       .eq('id', id)
@@ -150,7 +150,7 @@ export class ScheduledGenerationService {
     const currentDayOfWeek = now.getDay()
     const currentDayOfMonth = now.getDate()
 
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('scheduled_generations')
       .select('*')
       .eq('enabled', true)
@@ -158,15 +158,15 @@ export class ScheduledGenerationService {
     if (error) throw error
 
     // Filtrer les générations qui doivent être exécutées maintenant
-    return (data || []).filter((gen) => {
-      const config = gen.schedule_config as { time?: string; day_of_week?: number; day_of_month?: number; cron_expression?: string }
+    return (data || []).filter((gen: any) => {
+      const config = (gen as any).schedule_config as { time?: string; day_of_week?: number; day_of_month?: number; cron_expression?: string }
 
-      if (gen.schedule_type === 'daily') {
+      if ((gen as any).schedule_type === 'daily') {
         const [hour, minute] = (config.time || '00:00').split(':').map(Number)
         return currentHour === hour && currentMinute === minute
       }
 
-      if (gen.schedule_type === 'weekly') {
+      if ((gen as any).schedule_type === 'weekly') {
         const [hour, minute] = (config.time || '00:00').split(':').map(Number)
         const dayOfWeek = config.day_of_week ?? 0
         return (
@@ -176,7 +176,7 @@ export class ScheduledGenerationService {
         )
       }
 
-      if (gen.schedule_type === 'monthly') {
+      if ((gen as any).schedule_type === 'monthly') {
         const [hour, minute] = (config.time || '00:00').split(':').map(Number)
         const dayOfMonth = config.day_of_month ?? 1
         return (
@@ -196,7 +196,7 @@ export class ScheduledGenerationService {
    * Marque une génération comme exécutée
    */
   async markAsExecuted(id: string, result: { success: boolean; error?: string }): Promise<void> {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('scheduled_generations')
       .update({
         last_executed_at: new Date().toISOString(),

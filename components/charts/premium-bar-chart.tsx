@@ -48,9 +48,9 @@ export function PremiumBarChart({
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number; payload: { name: string; value: number; fill?: string } }> }) => {
     if (active && payload && payload.length) {
-      const data = payload[0]
+      const data = payload[0] as any
       // Si la couleur n'est pas passée dans payload (cas simple), utiliser la première couleur
-      const itemColor = data.color || (data.payload.fill) || chartColors[0];
+      const itemColor = data.color || (data.payload?.fill) || chartColors[0];
       
       return (
         <motion.div
@@ -66,7 +66,7 @@ export function PremiumBarChart({
           />
           
           <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">
-            {data.payload[xAxisKey]}
+            {(data.payload as any)[xAxisKey]}
           </p>
           
           <div className="flex items-center gap-3">

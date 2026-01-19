@@ -50,7 +50,7 @@ export function usePageAnalytics(options?: PageViewOptions) {
         title: pageName,
         category: options?.category || 'Page',
         userId: user?.id,
-        organizationId: user?.organization_id,
+        organizationId: user?.organization_id || undefined,
         ...options?.additionalData,
       })
     }, 100)
@@ -82,7 +82,7 @@ export function useUserEventTracking() {
   return (eventName: string, properties?: Record<string, any>) => {
     analytics.event.track(eventName, {
       userId: user?.id,
-      organizationId: user?.organization_id,
+      organizationId: user?.organization_id || undefined,
       ...properties,
     })
   }
@@ -111,7 +111,7 @@ export function useConversionTracking() {
   return (conversionName: string, properties?: Record<string, any>) => {
     analytics.conversion.track(conversionName, {
       userId: user?.id,
-      organizationId: user?.organization_id,
+      organizationId: user?.organization_id || undefined,
       ...properties,
     })
   }
@@ -147,7 +147,7 @@ export function useTimeOnPage(options?: { pageName?: string; minTime?: number })
           pageName: options?.pageName || pathname,
           timeSpent,
           userId: user?.id,
-          organizationId: user?.organization_id,
+          organizationId: user?.organization_id || undefined,
         })
       }
     }

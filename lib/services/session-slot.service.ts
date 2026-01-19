@@ -10,7 +10,7 @@ export interface GenerateSlotsParams {
   sessionId: string
   startDate: string
   endDate: string
-  timeSlotType: 'morning' | 'afternoon' | 'both'
+  timeSlotType: 'morning' | 'afternoon' | 'both' | 'full_day'
   morningStart?: string // Format HH:mm
   morningEnd?: string
   afternoonStart?: string

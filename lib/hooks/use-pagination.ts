@@ -6,7 +6,8 @@
 
 'use client'
 
-import { useQuery, UseQueryOptions } from '@tanstack/react-query'
+import React from 'react'
+import { useQuery, UseQueryOptions, keepPreviousData } from '@tanstack/react-query'
 import { parsePaginationParams, type PaginationParams, type PaginatedResponse } from '@/lib/utils/pagination'
 
 export interface UsePaginationOptions<T> {
@@ -24,43 +25,44 @@ export function usePagination<T>({
   initialPage = 1,
   initialPageSize = 20,
   enabled = true,
-  keepPreviousData = true,
+  keepPreviousData: useKeepPreviousData = true,
 }: UsePaginationOptions<T>) {
   const [page, setPage] = React.useState(initialPage)
   const [pageSize, setPageSize] = React.useState(initialPageSize)
 
-  const { data, isLoading, error, refetch, isFetching } = useQuery({
+  const { data, isLoading, error, refetch, isFetching } = useQuery<PaginatedResponse<T>>({
     queryKey: [...queryKey, page, pageSize],
     queryFn: () => queryFn({ page, pageSize }),
     enabled,
-    keepPreviousData,
+    placeholderData: useKeepPreviousData ? keepPreviousData : undefined,
     staleTime: 30 * 1000, // 30 secondes
   })
+
+  const response = data as PaginatedResponse<T> | undefined
 
   const goToPage = React.useCallback((newPage: number) => {
     setPage(newPage)
   }, [])
 
   const nextPage = React.useCallback(() => {
-    if (data?.pagination.hasNextPage) {
+    if (response?.pagination?.hasNextPage) {
       setPage((p) => p + 1)
     }
-  }, [data?.pagination.hasNextPage])
+  }, [response])
 
   const previousPage = React.useCallback(() => {
-    if (data?.pagination.hasPreviousPage) {
+    if (response?.pagination?.hasPreviousPage) {
       setPage((p) => p - 1)
     }
-  }, [data?.pagination.hasPreviousPage])
+  }, [response])
 
   const changePageSize = React.useCallback((newPageSize: number) => {
     setPageSize(newPageSize)
     setPage(1) // Reset à la première page
   }, [])
-
   return {
-    data: data?.data || [],
-    pagination: data?.pagination || {
+    data: response?.data || [],
+    pagination: response?.pagination || {
       page,
       pageSize,
       total: 0,
@@ -82,8 +84,6 @@ export function usePagination<T>({
   }
 }
 
-// Import React pour useCallback et useState
-import React from 'react'
 
 
 

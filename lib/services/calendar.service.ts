@@ -229,7 +229,7 @@ class CalendarService {
   async createTodo(input: CreateTodoInput): Promise<CalendarTodo> {
     const { data, error } = await this.supabase
       .from('calendar_todos')
-      .insert(input)
+      .insert(input as any)
       .select()
       .single()
 
@@ -249,7 +249,7 @@ class CalendarService {
   async updateTodo(id: string, updates: UpdateTodoInput): Promise<CalendarTodo> {
     const { data, error } = await this.supabase
       .from('calendar_todos')
-      .update(updates)
+      .update(updates as any)
       .eq('id', id)
       .select()
       .single()
@@ -308,7 +308,7 @@ class CalendarService {
         p_organization_id: string
         p_start_date: string
         p_end_date: string
-        p_user_id?: string | null
+        p_user_id?: string
       } = {
         p_organization_id: organizationId,
         p_start_date: startDate,
@@ -318,8 +318,6 @@ class CalendarService {
       // Ajouter p_user_id seulement s'il est défini
       if (userId) {
         rpcParams.p_user_id = userId
-      } else {
-        rpcParams.p_user_id = null
       }
 
       const { data, error } = await this.supabase.rpc('get_calendar_events', rpcParams)
@@ -388,6 +386,7 @@ class CalendarService {
     // Inclure les sessions qui chevauchent la période demandée
     // Si userId est fourni et que l'utilisateur est un enseignant, filtrer par session_teachers
     try {
+      let sessions: any[] | null | undefined = undefined
       let sessionsQuery = this.supabase
         .from('sessions')
         .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, organization_id, formations(id, name)')
@@ -444,7 +443,7 @@ class CalendarService {
         const rangeStart = new Date(startDate)
         const rangeEnd = new Date(endDate)
 
-        const overlappingSessions = sessions.filter((session) => {
+        const overlappingSessions = sessions.filter((session: any) => {
           // Ignorer les sessions sans date de début
           if (!session.start_date) return false
 

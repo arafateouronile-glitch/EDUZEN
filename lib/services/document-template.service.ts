@@ -92,14 +92,14 @@ export class DocumentTemplateService {
     if (isEncrypted && userId) {
       try {
         const decrypted = await templateSecurityService.decryptTemplate(id)
-        template.header = decrypted.header
-        template.content = decrypted.content
-        template.footer = decrypted.footer
+        template.header = decrypted.header as any
+        template.content = decrypted.content as any
+        template.footer = decrypted.footer as any
       } catch (decryptError) {
         console.error('Erreur lors du déchiffrement:', decryptError)
         // Ne pas exposer le contenu chiffré
         template.header = null
-        template.content = { html: '', elements: [] }
+        template.content = { html: '', elements: [], pageSize: 'A4', margins: { top: 20, right: 20, bottom: 20, left: 20 } } as any
         template.footer = null
       }
     }
@@ -243,7 +243,7 @@ export class DocumentTemplateService {
       changes.name = { from: existingTemplate.name, to: updates.name }
     }
     if (updates.content !== undefined && JSON.stringify(updates.content) !== JSON.stringify(existingTemplate.content)) {
-      changes.content = { changed: true }
+      changes.content = { from: existingTemplate.content, to: updates.content }
     }
 
     const updateData: Record<string, unknown> = {}
@@ -259,7 +259,7 @@ export class DocumentTemplateService {
     if (updates.page_size !== undefined) updateData.page_size = updates.page_size
     if (updates.margins !== undefined) updateData.margins = updates.margins
     if (updates.is_default !== undefined) updateData.is_default = updates.is_default
-    if (updates.is_active !== undefined) updateData.is_active = updates.is_active
+    if ((updates as any).is_active !== undefined) updateData.is_active = (updates as any).is_active
 
     const { data, error } = await this.supabase
       .from('document_templates')
@@ -559,7 +559,7 @@ export class DocumentTemplateService {
       updates.footer_height = sourceTemplate.footer_height
     }
 
-    return this.updateTemplate(updates)
+    return this.updateTemplate(updates as UpdateTemplateInput)
   }
 
   /**

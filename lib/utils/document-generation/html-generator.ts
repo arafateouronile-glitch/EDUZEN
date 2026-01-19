@@ -1146,7 +1146,7 @@ export async function generateHTML(
       id: template?.id,
       type: template?.type,
       name: template?.name,
-      headerLength: template?.header ? (typeof template.header === 'string' ? template.header.length : JSON.stringify(template.header).length) : 0,
+      headerLength: template?.header ? (typeof (template.header as any) === 'string' ? (template.header as any).length : JSON.stringify(template.header as any).length) : 0,
     })
     console.error('[HTML Generator] Variables keys:', Object.keys(variables || {}).slice(0, 20))
     throw error

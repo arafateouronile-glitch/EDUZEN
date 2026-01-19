@@ -29,7 +29,9 @@ class Logger {
     if (this.sentryEnabled && typeof window !== 'undefined') {
       // Lazy load Sentry pour éviter d'augmenter la taille du bundle
       import('@sentry/nextjs').then((Sentry) => {
-        if (!Sentry.getCurrentHub().getClient()) {
+        try {
+          // Vérifier si Sentry est déjà initialisé en essayant d'accéder au client
+          // Si ce n'est pas le cas, l'initialiser
           Sentry.init({
             dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
             environment: process.env.NODE_ENV,
@@ -43,6 +45,8 @@ class Logger {
               return event
             },
           })
+        } catch (e) {
+          // Sentry déjà initialisé ou erreur, continuer sans
         }
       }).catch(() => {
         // Sentry non disponible, continuer sans

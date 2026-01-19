@@ -336,7 +336,7 @@ export function TodoModal({
                           )}
                           style={
                             watchedCategory === cat.value
-                              ? { backgroundColor: cat.color + '20', color: cat.color, ringColor: cat.color }
+                              ? { backgroundColor: cat.color + '20', color: cat.color }
                               : {}
                           }
                         >
@@ -402,7 +402,7 @@ export function TodoModal({
                           )}
                           style={
                             watch('priority') === priority.value
-                              ? { backgroundColor: priority.color + '20', color: priority.color, ringColor: priority.color }
+                              ? { backgroundColor: priority.color + '20', color: priority.color }
                               : {}
                           }
                         >
@@ -428,7 +428,7 @@ export function TodoModal({
                             'w-8 h-8 rounded-full transition-transform hover:scale-110',
                             selectedColor === color && 'ring-2 ring-offset-2'
                           )}
-                          style={{ backgroundColor: color, ringColor: color }}
+                          style={{ backgroundColor: color }}
                         />
                       ))}
                     </div>

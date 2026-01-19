@@ -1,29 +1,520 @@
-npm error code EPERM
-npm error syscall open
-npm error path /usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js
-npm error errno -1
-npm error Error: EPERM: operation not permitted, open '/usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js'
-npm error     at Object.readFileSync (node:fs:449:20)
-npm error     at loadSource (node:internal/modules/cjs/loader:1548:17)
-npm error     at Module._extensions..js (node:internal/modules/cjs/loader:1617:44)
-npm error     at Module.load (node:internal/modules/cjs/loader:1266:32)
-npm error     at Module._load (node:internal/modules/cjs/loader:1091:12)
-npm error     at Module.require (node:internal/modules/cjs/loader:1289:19)
-npm error     at require (node:internal/modules/helpers:182:18)
-npm error     at Object.<anonymous> (/usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/node_modules/@sigstore/verify/dist/verifier.js:21:15)
-npm error     at Module._compile (node:internal/modules/cjs/loader:1521:14)
-npm error     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10) {
-npm error   errno: -1,
-npm error   code: 'EPERM',
-npm error   syscall: 'open',
-npm error   path: '/usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js'
-npm error }
-npm error
-npm error The operation was rejected by your operating system.
-npm error It is likely you do not have the permissions to access this file as the current user
-npm error
-npm error If you believe this might be a permissions issue, please double-check the
-npm error permissions of the file and its containing directories, or try running
-npm error the command again as root/Administrator.
-npm error Log files were not written due to an error writing to the directory: /Users/arafatetoure/.npm/_logs
-npm error You can rerun the command with `--loglevel=verbose` to see the logs in your terminal
+app/(learner)/learner/messages/[id]/page.tsx(393,70): error TS2367: This comparison appears to be unintentional because the types '"student" | "group"' and '"user"' have no overlap.
+app/api/cron/send-scheduled-documents/route.ts(79,15): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+app/api/documents/scheduled/route.ts(97,7): error TS2353: Object literal may only specify known properties, and 'is_active' does not exist in type 'ScheduledGenerationConfig'.
+app/api/elearning/lessons/[lessonId]/responses/route.ts(84,36): error TS2339: Property 'poll_votes' does not exist on type 'SelectQueryError<"column 'poll_votes' does not exist on 'lesson_progress'.">'.
+app/api/email/send/route.ts(45,7): error TS2322: Type '(value: unknown) => { isValid: false; errors: string[]; sanitized?: undefined; } | { isValid: true; sanitized: any[]; errors?: undefined; }' is not assignable to type '(value: unknown) => ValidationResult'.
+  Type '{ isValid: false; errors: string[]; sanitized?: undefined; } | { isValid: true; sanitized: any[]; errors?: undefined; }' is not assignable to type 'ValidationResult'.
+    Type '{ isValid: true; sanitized: any[]; errors?: undefined; }' is not assignable to type 'ValidationResult'.
+      Types of property 'sanitized' are incompatible.
+        Type 'any[]' is not assignable to type 'string'.
+app/api/email/send/route.ts(218,58): error TS2345: Argument of type '{ from: string; to: any[]; subject: string; html: string | undefined; text: string | undefined; attachments: { filename: string; content: Buffer<ArrayBuffer>; }[] | undefined; cc: any[] | undefined; bcc: any[] | undefined; replyTo: string | undefined; }' is not assignable to parameter of type 'CreateEmailOptions'.
+  Type '{ from: string; to: any[]; subject: string; html: string | undefined; text: string | undefined; attachments: { filename: string; content: Buffer<ArrayBuffer>; }[] | undefined; cc: any[] | undefined; bcc: any[] | undefined; replyTo: string | undefined; }' is not assignable to type 'EmailTemplateOptions & CreateEmailBaseOptionsWithTemplate & { react?: undefined; html?: undefined; text?: undefined; }'.
+    Property 'template' is missing in type '{ from: string; to: any[]; subject: string; html: string | undefined; text: string | undefined; attachments: { filename: string; content: Buffer<ArrayBuffer>; }[] | undefined; cc: any[] | undefined; bcc: any[] | undefined; replyTo: string | undefined; }' but required in type 'EmailTemplateOptions'.
+app/api/emails/scheduled/execute/route.ts(465,51): error TS2339: Property 'getTemplateById' does not exist on type 'EmailTemplateService'.
+app/api/emails/scheduled/execute/route.ts(469,15): error TS2345: Argument of type 'string' is not assignable to parameter of type 'EmailType'.
+app/api/mobile-money/webhook/route.ts(113,7): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+app/api/payments/sepa/create-transfer/route.ts(56,5): error TS2322: Type '(iban: string) => { isValid: boolean; errors?: string[]; sanitized?: string; }' is not assignable to type '(value: unknown) => ValidationResult'.
+  Types of parameters 'iban' and 'value' are incompatible.
+    Type 'unknown' is not assignable to type 'string'.
+app/api/payments/sepa/create-transfer/route.ts(76,5): error TS2322: Type '(iban: string) => { isValid: boolean; errors?: string[]; sanitized?: string; }' is not assignable to type '(value: unknown) => ValidationResult'.
+  Types of parameters 'iban' and 'value' are incompatible.
+    Type 'unknown' is not assignable to type 'string'.
+app/api/payments/sepa/create-transfer/route.ts(97,31): error TS2345: Argument of type 'Request' is not assignable to parameter of type 'NextRequest'.
+  Type 'Request' is missing the following properties from type 'NextRequest': cookies, nextUrl, page, ua
+app/api/payments/sepa/create-transfer/route.ts(117,12): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { amount: number; created_at?: string | null | undefined; currency?: string | undefined; id?: string | undefined; invoice_id?: string | null | undefined; metadata?: Json | undefined; ... 8 more ...; updated_at?: string | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type '{ debtor_name: unknown; debtor_iban: unknown; debtor_bic: unknown; debtor_email: unknown; creditor_name: unknown; creditor_iban: unknown; creditor_bic: unknown; reference: unknown; type: string; }' is not assignable to type 'Json | undefined'.
+      Types of property 'debtor_name' are incompatible.
+        Type 'unknown' is not assignable to type 'Json | undefined'.
+  Overload 2 of 2, '(values: { amount: number; created_at?: string | null | undefined; currency?: string | undefined; id?: string | undefined; invoice_id?: string | null | undefined; metadata?: Json | undefined; ... 8 more ...; updated_at?: string | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'organization_id' does not exist in type '{ amount: number; created_at?: string | null | undefined; currency?: string | undefined; id?: string | undefined; invoice_id?: string | null | undefined; metadata?: Json | undefined; ... 8 more ...; updated_at?: string | ... 1 more ... | undefined; }[]'.
+app/api/payments/sepa/create-transfer/route.ts(119,21): error TS18046: 'validatedData.amount' is of type 'unknown'.
+app/api/payments/sepa/create-transfer/route.ts(120,57): error TS2339: Property 'toUpperCase' does not exist on type '{}'.
+app/api/payments/sepa/create-transfer/route.ts(145,34): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+app/api/payments/sepa/create-transfer/route.ts(146,65): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+app/api/payments/sepa/create-transfer/route.ts(147,36): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+app/api/payments/sepa/status/[paymentId]/route.ts(37,26): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+app/api/payments/sepa/status/[paymentId]/route.ts(43,25): error TS2304: Cannot find name 'paymentId'.
+app/api/payments/sepa/status/[paymentId]/route.ts(44,15): error TS2304: Cannot find name 'user'.
+app/api/payments/sepa/status/[paymentId]/route.ts(44,29): error TS2304: Cannot find name 'user'.
+app/api/payments/stripe/create-intent/route.ts(55,31): error TS2345: Argument of type 'Request' is not assignable to parameter of type 'NextRequest'.
+  Type 'Request' is missing the following properties from type 'NextRequest': cookies, nextUrl, page, ua
+app/api/payments/stripe/create-intent/route.ts(100,17): error TS18046: 'amount' is of type 'unknown'.
+app/api/payments/stripe/create-intent/route.ts(101,19): error TS18046: 'currency' is of type 'unknown'.
+app/api/payments/stripe/create-intent/route.ts(110,11): error TS2698: Spread types may only be created from object types.
+app/api/payments/stripe/status/[paymentIntentId]/route.ts(50,27): error TS2538: Type 'null' cannot be used as an index type.
+app/api/payments/stripe/status/[paymentIntentId]/route.ts(51,28): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+app/api/payments/stripe/test-connection/route.ts(48,23): error TS2304: Cannot find name 'publishable_key'.
+app/api/payments/stripe/test-connection/route.ts(48,52): error TS2304: Cannot find name 'publishable_key'.
+app/api/payments/stripe/test-connection/route.ts(49,18): error TS2304: Cannot find name 'secret_key'.
+app/api/payments/stripe/test-connection/route.ts(49,42): error TS2304: Cannot find name 'secret_key'.
+app/api/resources/[id]/download/route.ts(24,45): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/resources/[id]/download/route.ts(25,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"resources"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 239 more ...; videoconference_meeting_mappings: { ...; }; }; Views: {}; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, never, never, never>', gave the following error.
+    Argument of type '"resources"' is not assignable to parameter of type 'never'.
+app/api/resources/[id]/download/route.ts(41,18): error TS2339: Property 'external_url' does not exist on type 'NonNullable<ResultOne>'.
+app/api/resources/[id]/download/route.ts(42,45): error TS2339: Property 'external_url' does not exist on type 'NonNullable<ResultOne>'.
+app/api/resources/[id]/download/route.ts(46,18): error TS2339: Property 'file_url' does not exist on type 'NonNullable<ResultOne>'.
+app/api/resources/[id]/download/route.ts(47,45): error TS2339: Property 'file_url' does not exist on type 'NonNullable<ResultOne>'.
+app/api/resources/upload/route.ts(78,60): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/resources/upload/route.ts(79,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"resources"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 239 more ...; videoconference_meeting_mappings: { ...; }; }; Views: {}; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, never, never, never>', gave the following error.
+    Argument of type '"resources"' is not assignable to parameter of type 'never'.
+app/api/templates/create-sample/route.ts(26,29): error TS2345: Argument of type 'Buffer<ArrayBufferLike>' is not assignable to parameter of type 'BodyInit | null | undefined'.
+  Type 'Buffer<ArrayBufferLike>' is missing the following properties from type 'URLSearchParams': size, append, delete, get, and 2 more.
+app/api/users/by-email/route.ts(19,46): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/users/by-email/route.ts(20,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"profiles"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 239 more ...; videoconference_meeting_mappings: { ...; }; }; Views: {}; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, never, never, never>', gave the following error.
+    Argument of type '"profiles"' is not assignable to parameter of type 'never'.
+app/api/users/by-email/route.ts(22,22): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '{}'.
+app/api/users/create/route.ts(38,7): error TS2322: Type '(value: unknown) => { isValid: true; sanitized: unknown; errors?: undefined; } | { isValid: false; errors: string[]; sanitized?: undefined; }' is not assignable to type '(value: unknown) => ValidationResult'.
+  Type '{ isValid: true; sanitized: unknown; errors?: undefined; } | { isValid: false; errors: string[]; sanitized?: undefined; }' is not assignable to type 'ValidationResult'.
+    Type '{ isValid: true; sanitized: unknown; errors?: undefined; }' is not assignable to type 'ValidationResult'.
+      Types of property 'sanitized' are incompatible.
+        Type 'unknown' is not assignable to type 'string | undefined'.
+app/api/users/create/route.ts(193,60): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+app/api/v1/middleware.ts(28,11): error TS2339: Property 'expires_at' does not exist on type '{}'.
+app/api/v1/middleware.ts(28,38): error TS2339: Property 'expires_at' does not exist on type '{}'.
+app/api/v1/middleware.ts(36,11): error TS2339: Property 'allowed_ips' does not exist on type '{}'.
+app/api/v1/middleware.ts(36,30): error TS2339: Property 'allowed_ips' does not exist on type '{}'.
+app/api/v1/middleware.ts(38,14): error TS2339: Property 'allowed_ips' does not exist on type '{}'.
+app/api/v1/middleware.ts(47,62): error TS2339: Property 'organization_id' does not exist on type '{}'.
+app/api/v1/middleware.ts(69,42): error TS2339: Property 'id' does not exist on type '{}'.
+app/api/v1/middleware.ts(70,47): error TS2339: Property 'organization_id' does not exist on type '{}'.
+app/api/v1/middleware.ts(71,57): error TS2339: Property 'scopes' does not exist on type '{}'.
+app/api/v1/middleware.ts(75,25): error TS2339: Property 'organization_id' does not exist on type '{}'.
+app/api/v1/middleware.ts(76,17): error TS2339: Property 'scopes' does not exist on type '{}'.
+app/api/v1/students/route.ts(32,43): error TS2339: Property 'getStudents' does not exist on type 'StudentService'.
+app/api/v1/students/route.ts(42,22): error TS2339: Property 'id' does not exist on type '{}'.
+app/cataloguepublic/[slug]/page.tsx(65,41): error TS2339: Property 'id' does not exist on type '{ name: string; code: string; logo_url: string | null; }'.
+app/cataloguepublic/[slug]/page.tsx(150,37): error TS18047: 'programs' is possibly 'null'.
+app/programmes/page.tsx(59,37): error TS18047: 'programs' is possibly 'null'.
+app/programmes/page.tsx(69,26): error TS18047: 'programs' is possibly 'null'.
+app/programmes/page.tsx(69,49): error TS18047: 'programs' is possibly 'null'.
+app/programmes/page.tsx(70,37): error TS18047: 'programs' is possibly 'null'.
+app/programmes/page.tsx(87,30): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+app/providers.tsx(37,13): error TS2353: Object literal may only specify known properties, and 'onError' does not exist in type 'OmitKeyof<QueryObserverOptions<unknown, Error, unknown, unknown, readonly unknown[], never>, "queryKey" | "suspense", "strictly">'.
+app/providers.tsx(37,23): error TS7006: Parameter 'error' implicitly has an 'any' type.
+components/accessibility/document-upload.tsx(81,62): error TS2554: Expected 1 arguments, but got 2.
+components/accessibility/document-upload.tsx(365,47): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+components/accessibility/student-need-form.tsx(24,11): error TS2339: Property 'toast' does not exist on type 'ToastContextType'.
+components/attendance/electronic-attendance-manager.tsx(511,78): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & LucideProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & LucideProps'.
+components/calendar/todo-modal.tsx(339,88): error TS2322: Type '{ backgroundColor: string; color: string; ringColor: string; } | {}' is not assignable to type 'CSSProperties | undefined'.
+  Object literal may only specify known properties, and 'ringColor' does not exist in type 'Properties<string | number, string & {}>'.
+components/calendar/todo-modal.tsx(405,98): error TS2322: Type '{ backgroundColor: string; color: string; ringColor: string; } | {}' is not assignable to type 'CSSProperties | undefined'.
+  Object literal may only specify known properties, and 'ringColor' does not exist in type 'Properties<string | number, string & {}>'.
+components/calendar/todo-modal.tsx(431,60): error TS2353: Object literal may only specify known properties, and 'ringColor' does not exist in type 'Properties<string | number, string & {}>'.
+components/charts/premium-bar-chart.tsx(53,30): error TS2339: Property 'color' does not exist on type '{ name: string; value: number; payload: { name: string; value: number; fill?: string | undefined; }; }'.
+components/charts/premium-bar-chart.tsx(69,14): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ name: string; value: number; fill?: string | undefined; }'.
+  No index signature with a parameter of type 'string' was found on type '{ name: string; value: number; fill?: string | undefined; }'.
+components/charts/premium-line-chart.tsx(70,25): error TS2339: Property 'payload' does not exist on type '{ value: string | number; name?: string | undefined; }'.
+components/charts/premium-pie-chart.tsx(80,54): error TS2339: Property 'total' does not exist on type '{ name: string; value: number; }'.
+components/charts/premium-pie-chart.tsx(90,54): error TS2339: Property 'fill' does not exist on type '{ name: string; value: number; }'.
+components/charts/premium-pie-chart.tsx(136,25): error TS2322: Type '(props: { cx: number; cy: number; innerRadius: number; outerRadius: number; startAngle: number; endAngle: number; fill: string; payload: { name: string; }; percent: number; value: number; }) => JSX.Element' is not assignable to type 'ActiveShape<PieSectorDataItem> | undefined'.
+  Type '(props: { cx: number; cy: number; innerRadius: number; outerRadius: number; startAngle: number; endAngle: number; fill: string; payload: { name: string; }; percent: number; value: number; }) => JSX.Element' is not assignable to type '(props: unknown) => Element'.
+    Types of parameters 'props' and 'props' are incompatible.
+      Type 'unknown' is not assignable to type '{ cx: number; cy: number; innerRadius: number; outerRadius: number; startAngle: number; endAngle: number; fill: string; payload: { name: string; }; percent: number; value: number; }'.
+components/charts/premium-pie-chart.tsx(156,17): error TS2322: Type '{ key: string; fill: string; stroke: string; cornerRadius: number; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'cornerRadius' does not exist on type 'IntrinsicAttributes & Props'.
+components/dashboard/admin-quick-actions.tsx(79,39): error TS2322: Type '{ hidden: { opacity: number; y: number; scale: number; }; visible: { opacity: number; y: number; scale: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
+  Property 'visible' is incompatible with index signature.
+    Type '{ opacity: number; y: number; scale: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
+      Type '{ opacity: number; y: number; scale: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
+        Type '{ opacity: number; y: number; scale: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
+          Types of property 'transition' are incompatible.
+            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+                  Types of property 'ease' are incompatible.
+                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+                        Type 'number[]' is not assignable to type 'Easing[]'.
+                          Type 'number' is not assignable to type 'Easing'.
+components/dashboard/mobile-sidebar.tsx(117,52): error TS2537: Type 'NavigationItem' has no matching index signature for type 'number'.
+components/dashboard/mobile-sidebar.tsx(119,27): error TS7006: Parameter 'child' implicitly has an 'any' type.
+components/dashboard/mobile-sidebar.tsx(232,31): error TS2339: Property 'href' does not exist on type 'NavigationItem'.
+  Property 'href' does not exist on type '{ name: string; icon: ComponentType<{ className?: string | undefined; }>; children: { name: string; href: string; icon: ComponentType<{ className?: string | undefined; }>; }[]; }'.
+components/dashboard/mobile-sidebar.tsx(233,32): error TS2339: Property 'href' does not exist on type 'NavigationItem'.
+  Property 'href' does not exist on type '{ name: string; icon: ComponentType<{ className?: string | undefined; }>; children: { name: string; href: string; icon: ComponentType<{ className?: string | undefined; }>; }[]; }'.
+components/dashboard/mobile-sidebar.tsx(236,37): error TS2339: Property 'href' does not exist on type 'NavigationItem'.
+  Property 'href' does not exist on type '{ name: string; icon: ComponentType<{ className?: string | undefined; }>; children: { name: string; href: string; icon: ComponentType<{ className?: string | undefined; }>; }[]; }'.
+components/dashboard/quick-actions.tsx(80,39): error TS2322: Type '{ hidden: { opacity: number; y: number; scale: number; }; visible: { opacity: number; y: number; scale: number; transition: { duration: number; ease: number[]; }; }; }' is not assignable to type 'Variants'.
+  Property 'visible' is incompatible with index signature.
+    Type '{ opacity: number; y: number; scale: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Variant'.
+      Type '{ opacity: number; y: number; scale: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'TargetAndTransition'.
+        Type '{ opacity: number; y: number; scale: number; transition: { duration: number; ease: number[]; }; }' is not assignable to type '{ transition?: Transition<any> | undefined; transitionEnd?: ResolvedValues | undefined; }'.
+          Types of property 'transition' are incompatible.
+            Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+              Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+                Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+                  Types of property 'ease' are incompatible.
+                    Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+                      Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+                        Type 'number[]' is not assignable to type 'Easing[]'.
+                          Type 'number' is not assignable to type 'Easing'.
+components/dashboard/sidebar.tsx(153,13): error TS2353: Object literal may only specify known properties, and 'children' does not exist in type '{ name: string; href: string; icon: ComponentType<{ className?: string | undefined; }>; allowedRoles?: string[] | undefined; }'.
+components/document-editor/block-editor/block-editor.tsx(3,10): error TS2300: Duplicate identifier 'useEditor'.
+components/document-editor/block-editor/block-editor.tsx(3,21): error TS2300: Duplicate identifier 'EditorContent'.
+components/document-editor/block-editor/block-editor.tsx(4,8): error TS2300: Duplicate identifier 'StarterKit'.
+components/document-editor/block-editor/block-editor.tsx(5,10): error TS2300: Duplicate identifier 'Table'.
+components/document-editor/block-editor/block-editor.tsx(6,10): error TS2300: Duplicate identifier 'TableRow'.
+components/document-editor/block-editor/block-editor.tsx(7,10): error TS2300: Duplicate identifier 'TableCell'.
+components/document-editor/block-editor/block-editor.tsx(8,10): error TS2300: Duplicate identifier 'TableHeader'.
+components/document-editor/block-editor/block-editor.tsx(9,8): error TS2300: Duplicate identifier 'TextAlign'.
+components/document-editor/block-editor/block-editor.tsx(10,10): error TS2300: Duplicate identifier 'TextStyle'.
+components/document-editor/block-editor/block-editor.tsx(11,10): error TS2300: Duplicate identifier 'Color'.
+components/document-editor/block-editor/block-editor.tsx(12,8): error TS2300: Duplicate identifier 'Underline'.
+components/document-editor/block-editor/block-editor.tsx(13,8): error TS2300: Duplicate identifier 'TiptapImage'.
+components/document-editor/block-editor/block-editor.tsx(15,10): error TS2300: Duplicate identifier 'Link'.
+components/document-editor/block-editor/block-editor.tsx(16,10): error TS2300: Duplicate identifier 'CodeBlock'.
+components/document-editor/block-editor/block-editor.tsx(17,10): error TS2300: Duplicate identifier 'useCallback'.
+components/document-editor/block-editor/block-editor.tsx(17,23): error TS2300: Duplicate identifier 'useEffect'.
+components/document-editor/block-editor/block-editor.tsx(17,34): error TS2300: Duplicate identifier 'useRef'.
+components/document-editor/block-editor/block-editor.tsx(17,42): error TS2300: Duplicate identifier 'useState'.
+components/document-editor/block-editor/block-editor.tsx(18,10): error TS2300: Duplicate identifier 'cn'.
+components/document-editor/block-editor/block-editor.tsx(19,10): error TS2300: Duplicate identifier 'SlashMenu'.
+components/document-editor/block-editor/block-editor.tsx(19,26): error TS2300: Duplicate identifier 'SlashCommand'.
+components/document-editor/block-editor/block-editor.tsx(19,46): error TS2306: File '/Users/arafatetoure/Documents/EDUZEN/components/document-editor/block-editor/slash-menu.tsx' is not a module.
+components/document-editor/block-editor/block-editor.tsx(20,10): error TS2300: Duplicate identifier 'DndContext'.
+components/document-editor/block-editor/block-editor.tsx(20,22): error TS2300: Duplicate identifier 'closestCenter'.
+components/document-editor/block-editor/block-editor.tsx(20,37): error TS2300: Duplicate identifier 'KeyboardSensor'.
+components/document-editor/block-editor/block-editor.tsx(20,53): error TS2300: Duplicate identifier 'PointerSensor'.
+components/document-editor/block-editor/block-editor.tsx(20,68): error TS2300: Duplicate identifier 'useSensor'.
+components/document-editor/block-editor/block-editor.tsx(20,79): error TS2300: Duplicate identifier 'useSensors'.
+components/document-editor/block-editor/block-editor.tsx(21,10): error TS2300: Duplicate identifier 'SortableContext'.
+components/document-editor/block-editor/block-editor.tsx(21,27): error TS2300: Duplicate identifier 'sortableKeyboardCoordinates'.
+components/document-editor/block-editor/block-editor.tsx(21,56): error TS2300: Duplicate identifier 'verticalListSortingStrategy'.
+components/document-editor/block-editor/block-editor.tsx(22,10): error TS2300: Duplicate identifier 'useSortable'.
+components/document-editor/block-editor/block-editor.tsx(23,10): error TS2300: Duplicate identifier 'CSS'.
+components/document-editor/block-editor/block-editor.tsx(24,10): error TS2300: Duplicate identifier 'GripVertical'.
+components/document-editor/block-editor/block-editor.tsx(37,10): error TS2393: Duplicate function implementation.
+components/document-editor/block-editor/block-editor.tsx(65,17): error TS2323: Cannot redeclare exported variable 'BlockEditor'.
+components/document-editor/block-editor/block-editor.tsx(65,17): error TS2393: Duplicate function implementation.
+components/document-editor/block-editor/block-editor.tsx(263,10): error TS2300: Duplicate identifier 'useEditor'.
+components/document-editor/block-editor/block-editor.tsx(263,21): error TS2300: Duplicate identifier 'EditorContent'.
+components/document-editor/block-editor/block-editor.tsx(264,8): error TS2300: Duplicate identifier 'StarterKit'.
+components/document-editor/block-editor/block-editor.tsx(265,10): error TS2300: Duplicate identifier 'Table'.
+components/document-editor/block-editor/block-editor.tsx(266,10): error TS2300: Duplicate identifier 'TableRow'.
+components/document-editor/block-editor/block-editor.tsx(267,10): error TS2300: Duplicate identifier 'TableCell'.
+components/document-editor/block-editor/block-editor.tsx(268,10): error TS2300: Duplicate identifier 'TableHeader'.
+components/document-editor/block-editor/block-editor.tsx(269,8): error TS2300: Duplicate identifier 'TextAlign'.
+components/document-editor/block-editor/block-editor.tsx(270,10): error TS2300: Duplicate identifier 'TextStyle'.
+components/document-editor/block-editor/block-editor.tsx(271,10): error TS2300: Duplicate identifier 'Color'.
+components/document-editor/block-editor/block-editor.tsx(272,8): error TS2300: Duplicate identifier 'Underline'.
+components/document-editor/block-editor/block-editor.tsx(273,8): error TS2300: Duplicate identifier 'TiptapImage'.
+components/document-editor/block-editor/block-editor.tsx(275,10): error TS2300: Duplicate identifier 'Link'.
+components/document-editor/block-editor/block-editor.tsx(276,10): error TS2300: Duplicate identifier 'CodeBlock'.
+components/document-editor/block-editor/block-editor.tsx(277,10): error TS2300: Duplicate identifier 'useCallback'.
+components/document-editor/block-editor/block-editor.tsx(277,23): error TS2300: Duplicate identifier 'useEffect'.
+components/document-editor/block-editor/block-editor.tsx(277,34): error TS2300: Duplicate identifier 'useRef'.
+components/document-editor/block-editor/block-editor.tsx(277,42): error TS2300: Duplicate identifier 'useState'.
+components/document-editor/block-editor/block-editor.tsx(278,10): error TS2300: Duplicate identifier 'cn'.
+components/document-editor/block-editor/block-editor.tsx(279,10): error TS2300: Duplicate identifier 'SlashMenu'.
+components/document-editor/block-editor/block-editor.tsx(279,26): error TS2300: Duplicate identifier 'SlashCommand'.
+components/document-editor/block-editor/block-editor.tsx(279,46): error TS2306: File '/Users/arafatetoure/Documents/EDUZEN/components/document-editor/block-editor/slash-menu.tsx' is not a module.
+components/document-editor/block-editor/block-editor.tsx(280,10): error TS2300: Duplicate identifier 'DndContext'.
+components/document-editor/block-editor/block-editor.tsx(280,22): error TS2300: Duplicate identifier 'closestCenter'.
+components/document-editor/block-editor/block-editor.tsx(280,37): error TS2300: Duplicate identifier 'KeyboardSensor'.
+components/document-editor/block-editor/block-editor.tsx(280,53): error TS2300: Duplicate identifier 'PointerSensor'.
+components/document-editor/block-editor/block-editor.tsx(280,68): error TS2300: Duplicate identifier 'useSensor'.
+components/document-editor/block-editor/block-editor.tsx(280,79): error TS2300: Duplicate identifier 'useSensors'.
+components/document-editor/block-editor/block-editor.tsx(281,10): error TS2300: Duplicate identifier 'SortableContext'.
+components/document-editor/block-editor/block-editor.tsx(281,27): error TS2300: Duplicate identifier 'sortableKeyboardCoordinates'.
+components/document-editor/block-editor/block-editor.tsx(281,56): error TS2300: Duplicate identifier 'verticalListSortingStrategy'.
+components/document-editor/block-editor/block-editor.tsx(282,10): error TS2300: Duplicate identifier 'useSortable'.
+components/document-editor/block-editor/block-editor.tsx(283,10): error TS2300: Duplicate identifier 'CSS'.
+components/document-editor/block-editor/block-editor.tsx(284,10): error TS2300: Duplicate identifier 'GripVertical'.
+components/document-editor/block-editor/block-editor.tsx(297,10): error TS2393: Duplicate function implementation.
+components/document-editor/block-editor/block-editor.tsx(325,17): error TS2323: Cannot redeclare exported variable 'BlockEditor'.
+components/document-editor/block-editor/block-editor.tsx(325,17): error TS2393: Duplicate function implementation.
+components/document-editor/block-editor/block-editor.tsx(523,10): error TS2300: Duplicate identifier 'useEditor'.
+components/document-editor/block-editor/block-editor.tsx(523,21): error TS2300: Duplicate identifier 'EditorContent'.
+components/document-editor/block-editor/block-editor.tsx(524,8): error TS2300: Duplicate identifier 'StarterKit'.
+components/document-editor/block-editor/block-editor.tsx(525,10): error TS2300: Duplicate identifier 'Table'.
+components/document-editor/block-editor/block-editor.tsx(526,10): error TS2300: Duplicate identifier 'TableRow'.
+components/document-editor/block-editor/block-editor.tsx(527,10): error TS2300: Duplicate identifier 'TableCell'.
+components/document-editor/block-editor/block-editor.tsx(528,10): error TS2300: Duplicate identifier 'TableHeader'.
+components/document-editor/block-editor/block-editor.tsx(529,8): error TS2300: Duplicate identifier 'TextAlign'.
+components/document-editor/block-editor/block-editor.tsx(530,10): error TS2300: Duplicate identifier 'TextStyle'.
+components/document-editor/block-editor/block-editor.tsx(531,10): error TS2300: Duplicate identifier 'Color'.
+components/document-editor/block-editor/block-editor.tsx(532,8): error TS2300: Duplicate identifier 'Underline'.
+components/document-editor/block-editor/block-editor.tsx(533,8): error TS2300: Duplicate identifier 'TiptapImage'.
+components/document-editor/block-editor/block-editor.tsx(535,10): error TS2300: Duplicate identifier 'Link'.
+components/document-editor/block-editor/block-editor.tsx(536,10): error TS2300: Duplicate identifier 'CodeBlock'.
+components/document-editor/block-editor/block-editor.tsx(537,10): error TS2300: Duplicate identifier 'useCallback'.
+components/document-editor/block-editor/block-editor.tsx(537,23): error TS2300: Duplicate identifier 'useEffect'.
+components/document-editor/block-editor/block-editor.tsx(537,34): error TS2300: Duplicate identifier 'useRef'.
+components/document-editor/block-editor/block-editor.tsx(537,42): error TS2300: Duplicate identifier 'useState'.
+components/document-editor/block-editor/block-editor.tsx(538,10): error TS2300: Duplicate identifier 'cn'.
+components/document-editor/block-editor/block-editor.tsx(539,10): error TS2300: Duplicate identifier 'SlashMenu'.
+components/document-editor/block-editor/block-editor.tsx(539,26): error TS2300: Duplicate identifier 'SlashCommand'.
+components/document-editor/block-editor/block-editor.tsx(539,46): error TS2306: File '/Users/arafatetoure/Documents/EDUZEN/components/document-editor/block-editor/slash-menu.tsx' is not a module.
+components/document-editor/block-editor/block-editor.tsx(540,10): error TS2300: Duplicate identifier 'DndContext'.
+components/document-editor/block-editor/block-editor.tsx(540,22): error TS2300: Duplicate identifier 'closestCenter'.
+components/document-editor/block-editor/block-editor.tsx(540,37): error TS2300: Duplicate identifier 'KeyboardSensor'.
+components/document-editor/block-editor/block-editor.tsx(540,53): error TS2300: Duplicate identifier 'PointerSensor'.
+components/document-editor/block-editor/block-editor.tsx(540,68): error TS2300: Duplicate identifier 'useSensor'.
+components/document-editor/block-editor/block-editor.tsx(540,79): error TS2300: Duplicate identifier 'useSensors'.
+components/document-editor/block-editor/block-editor.tsx(541,10): error TS2300: Duplicate identifier 'SortableContext'.
+components/document-editor/block-editor/block-editor.tsx(541,27): error TS2300: Duplicate identifier 'sortableKeyboardCoordinates'.
+components/document-editor/block-editor/block-editor.tsx(541,56): error TS2300: Duplicate identifier 'verticalListSortingStrategy'.
+components/document-editor/block-editor/block-editor.tsx(542,10): error TS2300: Duplicate identifier 'useSortable'.
+components/document-editor/block-editor/block-editor.tsx(543,10): error TS2300: Duplicate identifier 'CSS'.
+components/document-editor/block-editor/block-editor.tsx(544,10): error TS2300: Duplicate identifier 'GripVertical'.
+components/document-editor/block-editor/block-editor.tsx(557,10): error TS2393: Duplicate function implementation.
+components/document-editor/block-editor/block-editor.tsx(585,17): error TS2323: Cannot redeclare exported variable 'BlockEditor'.
+components/document-editor/block-editor/block-editor.tsx(585,17): error TS2393: Duplicate function implementation.
+components/document-editor/element-palette.tsx(205,28): error TS7053: Element implicitly has an 'any' type because expression of type 'ElementType' can't be used to index type '{ image: LucideIcon; signature: LucideIcon; qrcode: LucideIcon; barcode: LucideIcon; link: LucideIcon; divider: LucideIcon; chart: LucideIcon; form: LucideIcon; }'.
+  Property 'map' does not exist on type '{ image: LucideIcon; signature: LucideIcon; qrcode: LucideIcon; barcode: LucideIcon; link: LucideIcon; divider: LucideIcon; chart: LucideIcon; form: LucideIcon; }'.
+components/document-editor/media-library.tsx(109,95): error TS2304: Cannot find name 'toast'.
+components/document-editor/style-presets.tsx(107,7): error TS2353: Object literal may only specify known properties, and 'borderLeft' does not exist in type '{ fontSize?: string | undefined; fontWeight?: string | undefined; fontStyle?: string | undefined; color?: string | undefined; backgroundColor?: string | undefined; textAlign?: "left" | "center" | "right" | "justify" | undefined; ... 6 more ...; borderRadius?: string | undefined; }'.
+components/document-editor/style-presets.tsx(125,7): error TS2353: Object literal may only specify known properties, and 'borderLeft' does not exist in type '{ fontSize?: string | undefined; fontWeight?: string | undefined; fontStyle?: string | undefined; color?: string | undefined; backgroundColor?: string | undefined; textAlign?: "left" | "center" | "right" | "justify" | undefined; ... 6 more ...; borderRadius?: string | undefined; }'.
+components/hoc/with-ripple.tsx(25,13): error TS2322: Type '{ key: number; className: string; style: { left: number; top: number; transform: string; }; }' is not assignable to type 'IntrinsicAttributes & RippleProps'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & RippleProps'.
+components/learner/chat-interface.tsx(75,14): error TS2352: Conversion of type '{ attachments: Json; content: string; conversation_id: string; created_at: string; deleted_at: string | null; id: string; is_deleted: boolean | null; is_edited: boolean | null; message_type: string | null; ... 4 more ...; updated_at: string; }[]' to type 'Message[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'read_at' is missing in type '{ attachments: Json; content: string; conversation_id: string; created_at: string; deleted_at: string | null; id: string; is_deleted: boolean | null; is_edited: boolean | null; message_type: string | null; ... 4 more ...; updated_at: string; }' but required in type 'Message'.
+components/learner/chat-interface.tsx(149,17): error TS2353: Object literal may only specify known properties, and 'read_at' does not exist in type '{ attachments?: Json | undefined; content?: string | undefined; conversation_id?: string | undefined; created_at?: string | undefined; deleted_at?: string | null | undefined; ... 8 more ...; updated_at?: string | undefined; }'.
+components/learner/header.tsx(84,24): error TS2339: Property 'first_name' does not exist on type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+components/learner/header.tsx(84,43): error TS2339: Property 'last_name' does not exist on type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+components/learner/header.tsx(89,22): error TS2339: Property 'first_name' does not exist on type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+components/learner/header.tsx(89,45): error TS2339: Property 'last_name' does not exist on type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+components/learner/sidebar.tsx(122,22): error TS2339: Property 'first_name' does not exist on type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+components/learner/sidebar.tsx(122,45): error TS2339: Property 'last_name' does not exist on type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+components/learner/sidebar.tsx(127,22): error TS2339: Property 'first_name' does not exist on type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+components/learner/sidebar.tsx(127,41): error TS2339: Property 'last_name' does not exist on type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+components/public/catalog-hero.tsx(68,14): error TS2322: Type '{ children: string; className: string; style: { textShadow: "0 4px 20px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.2)"; }; initial: { opacity: number; y: number; }; animate: { opacity: number; y: number; }; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"h1">, "ref">'.
+  Types of property 'transition' are incompatible.
+    Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+      Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+        Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+          Types of property 'ease' are incompatible.
+            Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+              Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+                Type 'number[]' is not assignable to type 'Easing[]'.
+                  Type 'number' is not assignable to type 'Easing'.
+components/public/catalog-hero.tsx(80,17): error TS2322: Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+  Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+    Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+      Types of property 'ease' are incompatible.
+        Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+          Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+            Type 'number[]' is not assignable to type 'Easing[]'.
+              Type 'number' is not assignable to type 'Easing'.
+components/public/catalog-hero.tsx(92,17): error TS2322: Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+  Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+    Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+      Types of property 'ease' are incompatible.
+        Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+          Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+            Type 'number[]' is not assignable to type 'Easing[]'.
+              Type 'number' is not assignable to type 'Easing'.
+components/public/catalog-hero.tsx(103,15): error TS2322: Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+  Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+    Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+      Types of property 'ease' are incompatible.
+        Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+          Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+            Type 'number[]' is not assignable to type 'Easing[]'.
+              Type 'number' is not assignable to type 'Easing'.
+components/public/catalog-hero.tsx(176,12): error TS2322: Type '{ children: string; className: string; style: { textShadow: "0 4px 20px rgba(0,0,0,0.2)"; }; initial: { opacity: number; y: number; }; animate: { opacity: number; y: number; }; transition: { duration: number; ease: number[]; }; }' is not assignable to type 'Omit<HTMLMotionProps<"h1">, "ref">'.
+  Types of property 'transition' are incompatible.
+    Type '{ duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+      Type '{ duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+        Type '{ duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+          Types of property 'ease' are incompatible.
+            Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+              Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+                Type 'number[]' is not assignable to type 'Easing[]'.
+                  Type 'number' is not assignable to type 'Easing'.
+components/public/catalog-hero.tsx(188,15): error TS2322: Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+  Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+    Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+      Types of property 'ease' are incompatible.
+        Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+          Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+            Type 'number[]' is not assignable to type 'Easing[]'.
+              Type 'number' is not assignable to type 'Easing'.
+components/public/catalog-hero.tsx(200,15): error TS2322: Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+  Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+    Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+      Types of property 'ease' are incompatible.
+        Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+          Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+            Type 'number[]' is not assignable to type 'Easing[]'.
+              Type 'number' is not assignable to type 'Easing'.
+components/public/catalog-hero.tsx(211,13): error TS2322: Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'Transition<any> | undefined'.
+  Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'TransitionWithValueOverrides<any>'.
+    Type '{ delay: number; duration: number; ease: number[]; }' is not assignable to type 'ValueAnimationTransition<any>'.
+      Types of property 'ease' are incompatible.
+        Type 'number[]' is not assignable to type 'Easing | Easing[] | undefined'.
+          Type 'number[]' is not assignable to type 'EasingFunction | Easing[]'.
+            Type 'number[]' is not assignable to type 'Easing[]'.
+              Type 'number' is not assignable to type 'Easing'.
+components/public/enrollment-form.tsx(78,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/public/enrollment-form.tsx(88,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/search/global-search.tsx(43,19): error TS2345: Argument of type 'RefObject<HTMLDivElement>' is not assignable to parameter of type '() => void'.
+  Type 'RefObject<HTMLDivElement>' provides no match for the signature '(): void'.
+components/signatures/signature-canvas.tsx(4,29): error TS7016: Could not find a declaration file for module 'react-signature-canvas'. '/Users/arafatetoure/Documents/EDUZEN/node_modules/react-signature-canvas/build/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/react-signature-canvas` if it exists or add a new declaration (.d.ts) file containing `declare module 'react-signature-canvas';`
+components/signatures/signatures-history.tsx(30,43): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, (string | undefined)[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<unknown, Error>', gave the following error.
+    Argument of type '{ queryKey: (string | undefined)[]; queryFn: () => Promise<SignatureWithUser[]> | Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; ... 19 more ...; document: { ...; }; }[]>; enabled: boolean; }' is not assignable to parameter of type 'DefinedInitialDataOptions<unknown, Error, unknown, (string | undefined)[]>'.
+      Property 'initialData' is missing in type '{ queryKey: (string | undefined)[]; queryFn: () => Promise<SignatureWithUser[]> | Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; ... 19 more ...; document: { ...; }; }[]>; enabled: boolean; }' but required in type '{ initialData: unknown; queryFn?: QueryFunction<unknown, (string | undefined)[]> | undefined; }'.
+  Overload 2 of 3, '(options: UndefinedInitialDataOptions<SignatureWithUser[], Error, SignatureWithUser[], (string | undefined)[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Type '() => Promise<SignatureWithUser[]> | Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; ... 17 more ...; document: { ...; }; }[]>' is not assignable to type 'unique symbol | QueryFunction<SignatureWithUser[], (string | undefined)[], never> | undefined'.
+      Type '() => Promise<SignatureWithUser[]> | Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; ... 17 more ...; document: { ...; }; }[]>' is not assignable to type 'QueryFunction<SignatureWithUser[], (string | undefined)[], never>'.
+        Type 'Promise<SignatureWithUser[]> | Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; ... 17 more ...; document: { ...; }; }[]>' is not assignable to type 'SignatureWithUser[] | Promise<SignatureWithUser[]>'.
+          Type 'Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; is_valid: boolean | null; organization_id: string; page_number: number | null; ... 14 more ...; document: { ...; }; }[]>' is not assignable to type 'SignatureWithUser[] | Promise<SignatureWithUser[]>'.
+            Type 'Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; is_valid: boolean | null; organization_id: string; page_number: number | null; ... 14 more ...; document: { ...; }; }[]>' is not assignable to type 'Promise<SignatureWithUser[]>'.
+              Type '{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; is_valid: boolean | null; organization_id: string; page_number: number | null; ... 14 more ...; document: { ...; }; }[]' is not assignable to type 'SignatureWithUser[]'.
+                Property 'signer' is missing in type '{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; is_valid: boolean | null; organization_id: string; page_number: number | null; ... 14 more ...; document: { ...; }; }' but required in type 'SignatureWithUser'.
+  Overload 3 of 3, '(options: UseQueryOptions<SignatureWithUser[], Error, SignatureWithUser[], (string | undefined)[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Type '() => Promise<SignatureWithUser[]> | Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; ... 17 more ...; document: { ...; }; }[]>' is not assignable to type 'unique symbol | QueryFunction<SignatureWithUser[], (string | undefined)[], never> | undefined'.
+      Type '() => Promise<SignatureWithUser[]> | Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; ... 17 more ...; document: { ...; }; }[]>' is not assignable to type 'QueryFunction<SignatureWithUser[], (string | undefined)[], never>'.
+        Type 'Promise<SignatureWithUser[]> | Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; ... 17 more ...; document: { ...; }; }[]>' is not assignable to type 'SignatureWithUser[] | Promise<SignatureWithUser[]>'.
+          Type 'Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; is_valid: boolean | null; organization_id: string; page_number: number | null; ... 14 more ...; document: { ...; }; }[]>' is not assignable to type 'SignatureWithUser[] | Promise<SignatureWithUser[]>'.
+            Type 'Promise<{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; is_valid: boolean | null; organization_id: string; page_number: number | null; ... 14 more ...; document: { ...; }; }[]>' is not assignable to type 'Promise<SignatureWithUser[]>'.
+              Type '{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; is_valid: boolean | null; organization_id: string; page_number: number | null; ... 14 more ...; document: { ...; }; }[]' is not assignable to type 'SignatureWithUser[]'.
+                Property 'signer' is missing in type '{ comment: string | null; created_at: string; document_id: string; height: number | null; id: string; ip_address: string | null; is_valid: boolean | null; organization_id: string; page_number: number | null; ... 14 more ...; document: { ...; }; }' but required in type 'SignatureWithUser'.
+components/signatures/signatures-history.tsx(57,33): error TS2339: Property 'length' does not exist on type '{}'.
+components/signatures/signatures-history.tsx(80,23): error TS2339: Property 'length' does not exist on type '{}'.
+components/signatures/signatures-history.tsx(85,23): error TS2339: Property 'map' does not exist on type '{}'.
+components/signatures/signatures-history.tsx(85,28): error TS7006: Parameter 'signature' implicitly has an 'any' type.
+components/ui/avatar.tsx(57,8): error TS2322: Type '{ children: (false | Element)[]; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; suppressContentEditableWarning?: boolean | undefined; ... 276 more ...; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">'.
+  Types of property 'onDrag' are incompatible.
+    Type 'DragEventHandler<HTMLDivElement> | undefined' is not assignable to type '((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void) | undefined'.
+      Type 'DragEventHandler<HTMLDivElement>' is not assignable to type '(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void'.
+        Types of parameters 'event' and 'event' are incompatible.
+          Type 'MouseEvent | TouchEvent | PointerEvent' is not assignable to type 'DragEvent<HTMLDivElement>'.
+            Type 'MouseEvent' is missing the following properties from type 'DragEvent<HTMLDivElement>': dataTransfer, nativeEvent, isDefaultPrevented, isPropagationStopped, persist
+components/ui/bento-grid.tsx(67,8): error TS2322: Type '{ children: ReactNode; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; suppressContentEditableWarning?: boolean | undefined; ... 276 more ...; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">'.
+  Types of property 'onDrag' are incompatible.
+    Type 'DragEventHandler<HTMLDivElement> | undefined' is not assignable to type '((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void) | undefined'.
+      Type 'DragEventHandler<HTMLDivElement>' is not assignable to type '(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void'.
+        Types of parameters 'event' and 'event' are incompatible.
+          Type 'MouseEvent | TouchEvent | PointerEvent' is not assignable to type 'DragEvent<HTMLDivElement>'.
+            Type 'MouseEvent' is missing the following properties from type 'DragEvent<HTMLDivElement>': dataTransfer, nativeEvent, isDefaultPrevented, isPropagationStopped, persist
+components/ui/button.tsx(48,9): error TS1117: An object literal cannot have multiple properties with the same name.
+components/ui/button.tsx(73,40): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'ClassValue'.
+components/ui/form-enhanced.tsx(50,12): error TS2322: Type '{ accept?: string | undefined; alt?: string | undefined; autoComplete?: HTMLInputAutoCompleteAttribute | undefined; capture?: boolean | "environment" | "user" | undefined; ... 305 more ...; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"input">, "ref">'.
+  Types of property 'onDrag' are incompatible.
+    Type 'DragEventHandler<HTMLInputElement> | undefined' is not assignable to type '((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void) | undefined'.
+      Type 'DragEventHandler<HTMLInputElement>' is not assignable to type '(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void'.
+        Types of parameters 'event' and 'event' are incompatible.
+          Type 'MouseEvent | TouchEvent | PointerEvent' is not assignable to type 'DragEvent<HTMLInputElement>'.
+            Type 'MouseEvent' is missing the following properties from type 'DragEvent<HTMLInputElement>': dataTransfer, nativeEvent, isDefaultPrevented, isPropagationStopped, persist
+components/ui/glass-card.tsx(17,8): error TS2322: Type '{ children: (false | Element)[]; defaultChecked?: boolean | undefined; defaultValue?: string | number | readonly string[] | undefined; suppressContentEditableWarning?: boolean | undefined; ... 275 more ...; transition: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">'.
+  Types of property 'onDrag' are incompatible.
+    Type 'DragEventHandler<HTMLDivElement> | undefined' is not assignable to type '((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void) | undefined'.
+      Type 'DragEventHandler<HTMLDivElement>' is not assignable to type '(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void'.
+        Types of parameters 'event' and 'event' are incompatible.
+          Type 'MouseEvent | TouchEvent | PointerEvent' is not assignable to type 'DragEvent<HTMLDivElement>'.
+            Type 'MouseEvent' is missing the following properties from type 'DragEvent<HTMLDivElement>': dataTransfer, nativeEvent, isDefaultPrevented, isPropagationStopped, persist
+components/ui/input.tsx(105,12): error TS2322: Type '{ onChange: (e: ChangeEvent<HTMLInputElement>) => void; onFocus: (e: FocusEvent<HTMLInputElement, Element>) => void; ... 307 more ...; id: string; }' is not assignable to type 'Omit<HTMLMotionProps<"input">, "ref">'.
+  Types of property 'onDrag' are incompatible.
+    Type 'DragEventHandler<HTMLInputElement> | undefined' is not assignable to type '((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void) | undefined'.
+      Type 'DragEventHandler<HTMLInputElement>' is not assignable to type '(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void'.
+        Types of parameters 'event' and 'event' are incompatible.
+          Type 'MouseEvent | TouchEvent | PointerEvent' is not assignable to type 'DragEvent<HTMLInputElement>'.
+            Type 'MouseEvent' is missing the following properties from type 'DragEvent<HTMLInputElement>': dataTransfer, nativeEvent, isDefaultPrevented, isPropagationStopped, persist
+components/ui/select.tsx(90,12): error TS2322: Type '{ children: ("" | Element | Element[] | undefined)[]; onFocus: (e: FocusEvent<HTMLSelectElement, Element>) => void; onBlur: (e: FocusEvent<...>) => void; ... 284 more ...; value: string | ... 2 more ... | undefined; }' is not assignable to type 'Omit<HTMLMotionProps<"select">, "ref">'.
+  Types of property 'onDrag' are incompatible.
+    Type 'DragEventHandler<HTMLSelectElement> | undefined' is not assignable to type '((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void) | undefined'.
+      Type 'DragEventHandler<HTMLSelectElement>' is not assignable to type '(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => void'.
+        Types of parameters 'event' and 'event' are incompatible.
+          Type 'MouseEvent | TouchEvent | PointerEvent' is not assignable to type 'DragEvent<HTMLSelectElement>'.
+            Type 'MouseEvent' is missing the following properties from type 'DragEvent<HTMLSelectElement>': dataTransfer, nativeEvent, isDefaultPrevented, isPropagationStopped, persist
+components/ui/table-properties-modal.tsx(131,15): error TS2322: Type '(value: TableProperties["headers"]) => void' is not assignable to type '(value: string) => void'.
+  Types of parameters 'value' and 'value' are incompatible.
+    Type 'string' is not assignable to type '"none" | "both" | "first-row" | "first-col"'.
+components/ui/table-properties-modal.tsx(199,17): error TS2322: Type '(value: TableProperties["alignment"]) => void' is not assignable to type '(value: string) => void'.
+  Types of parameters 'value' and 'value' are incompatible.
+    Type 'string' is not assignable to type '"undefined" | "left" | "center" | "right"'.
+components/ui/tinymce-editor.tsx(4,24): error TS2307: Cannot find module '@tinymce/tinymce-react' or its corresponding type declarations.
+components/ui/tinymce-editor.tsx(124,20): error TS7006: Parameter 'evt' implicitly has an 'any' type.
+components/ui/tinymce-editor.tsx(124,25): error TS7006: Parameter 'editor' implicitly has an 'any' type.
+components/ui/tinymce-editor.tsx(128,28): error TS7006: Parameter 'content' implicitly has an 'any' type.
+components/ui/tinymce-editor.tsx(223,21): error TS7006: Parameter 'editor' implicitly has an 'any' type.
+components/ui/tinymce-editor.tsx(227,25): error TS7006: Parameter 'callback' implicitly has an 'any' type.
+components/ui/tinymce-editor.tsx(265,25): error TS7006: Parameter 'callback' implicitly has an 'any' type.
+components/ui/tinymce-editor.tsx(296,25): error TS7006: Parameter 'callback' implicitly has an 'any' type.
+components/ui/tiptap-editor.tsx(320,9): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(options: Partial<EditorOptions> & { immediatelyRender?: boolean | undefined; shouldRerenderOnTransaction?: boolean | undefined; } & { immediatelyRender: false; }, deps?: DependencyList | undefined): Editor | null', gave the following error.
+    Object literal may only specify known properties, and 'parseOptions' does not exist in type 'EditorProps<any>'.
+  Overload 2 of 2, '(options: UseEditorOptions, deps?: DependencyList | undefined): Editor', gave the following error.
+    Object literal may only specify known properties, and 'parseOptions' does not exist in type 'EditorProps<any>'.
+components/ui/tiptap-editor.tsx(390,45): error TS2559: Type 'false' has no properties in common with type 'SetContentOptions'.
+components/ui/tiptap-editor.tsx(558,7): error TS1117: An object literal cannot have multiple properties with the same name.
+lib/hooks/use-ab-test.ts(42,7): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+lib/hooks/use-auth.ts(93,40): error TS2339: Property 'success' does not exist on type 'string | number | boolean | { [key: string]: Json | undefined; } | Json[]'.
+  Property 'success' does not exist on type 'string'.
+lib/hooks/use-auth.ts(142,9): error TS2322: Type 'UserRow | { id: string; organization_id: string | null; email: string; full_name: string; phone: string | null; avatar_url: string | null; role: string; permissions: Json; is_active: boolean | null; last_login_at: string | null; created_at: string | null; updated_at: string | null; }' is not assignable to type 'UserRow'.
+  Property 'theme_preference' is missing in type '{ id: string; organization_id: string | null; email: string; full_name: string; phone: string | null; avatar_url: string | null; role: string; permissions: Json; is_active: boolean | null; last_login_at: string | null; created_at: string | null; updated_at: string | null; }' but required in type '{ avatar_url: string | null; created_at: string | null; email: string; full_name: string; id: string; is_active: boolean | null; last_login_at: string | null; organization_id: string | null; ... 4 more ...; updated_at: string | null; }'.
+lib/hooks/use-auth.ts(382,11): error TS2345: Argument of type '"create_user_for_organization"' is not assignable to parameter of type '"archive_old_template_versions" | "auto_correct_evaluation_responses" | "calculate_accessibility_compliance_rate" | "calculate_bpf_metrics" | "calculate_cashflow" | "calculate_evaluation_score" | ... 63 more ... | "validate_learner_access_token"'.
+lib/hooks/use-auth.ts(475,58): error TS18047: 'authData.user' is possibly 'null'.
+lib/hooks/use-create-student.ts(151,12): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Argument of type '{ student_id: string; session_id: string; enrollment_date: string; status: string; payment_status: string; }' is not assignable to parameter of type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }'.
+      Property 'total_amount' is missing in type '{ student_id: string; session_id: string; enrollment_date: string; status: string; payment_status: string; }' but required in type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }'.
+  Overload 2 of 2, '(values: { created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'student_id' does not exist in type '{ created_at?: string | null | undefined; enrollment_date?: string | null | undefined; id?: string | undefined; paid_amount?: number | null | undefined; payment_status?: string | null | undefined; ... 4 more ...; updated_at?: string | ... 1 more ... | undefined; }[]'.
+lib/hooks/use-error-handler.ts(13,26): error TS2307: Cannot find module '@/hooks/use-toast' or its corresponding type declarations.
+lib/hooks/use-formatting.ts(9,25): error TS2305: Module '"date-fns/locale"' has no exported member 'Locale'.
+lib/hooks/use-page-analytics.ts(53,9): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+lib/hooks/use-page-analytics.ts(85,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | boolean | undefined'.
+  Type 'null' is not assignable to type 'string | number | boolean | undefined'.
+lib/hooks/use-page-analytics.ts(114,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | boolean | undefined'.
+  Type 'null' is not assignable to type 'string | number | boolean | undefined'.
+lib/hooks/use-page-analytics.ts(150,11): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | number | boolean | undefined'.
+  Type 'null' is not assignable to type 'string | number | boolean | undefined'.
+lib/hooks/use-pagination.ts(36,5): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, (string | number | undefined)[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, (string | number | undefined)[]>'.
+  Overload 2 of 3, '(options: UndefinedInitialDataOptions<PaginatedResponse<T>, Error, PaginatedResponse<T>, (string | number | undefined)[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UndefinedInitialDataOptions<PaginatedResponse<T>, Error, PaginatedResponse<T>, (string | number | undefined)[]>'.
+  Overload 3 of 3, '(options: UseQueryOptions<PaginatedResponse<T>, Error, PaginatedResponse<T>, (string | number | undefined)[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UseQueryOptions<PaginatedResponse<T>, Error, PaginatedResponse<T>, (string | number | undefined)[]>'.
+lib/hooks/use-pagination.ts(45,15): error TS2339: Property 'pagination' does not exist on type '{}'.
+lib/hooks/use-pagination.ts(48,13): error TS2339: Property 'pagination' does not exist on type '{}'.
+lib/hooks/use-pagination.ts(51,15): error TS2339: Property 'pagination' does not exist on type '{}'.
+lib/hooks/use-pagination.ts(54,13): error TS2339: Property 'pagination' does not exist on type '{}'.
+lib/hooks/use-pagination.ts(62,17): error TS2339: Property 'data' does not exist on type '{}'.
+lib/hooks/use-pagination.ts(63,23): error TS2339: Property 'pagination' does not exist on type '{}'.
+lib/integrations/compliance-integrations.ts(7,10): error TS2724: '"@/lib/services/2fa.service"' has no exported member named 'twoFactorService'. Did you mean 'twoFactorAuthService'?
+lib/integrations/compliance-integrations.ts(8,28): error TS2306: File '/Users/arafatetoure/Documents/EDUZEN/lib/services/sso.service.ts' is not a module.
+lib/integrations/compliance-integrations.ts(36,92): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
+lib/services/2fa.service.ts(47,115): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
+lib/services/2fa.service.ts(58,10): error TS2551: Property 'catch' does not exist on type 'PostgrestFilterBuilder<any, any, any, null, "user_2fa", unknown, "POST">'. Did you mean 'match'?
+lib/services/2fa.service.ts(108,83): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
+lib/services/2fa.service.ts(156,83): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
+lib/services/2fa.service.ts(220,75): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
+lib/services/2fa.service.ts(277,83): error TS2339: Property 'status' does not exist on type 'PostgrestError'.
+lib/services/_example-standardized.service.ts(16,31): error TS2344: Type '"example_table"' does not satisfy the constraint '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
+lib/services/_example-standardized.service.ts(17,34): error TS2344: Type '"example_table"' does not satisfy the constraint '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
+lib/services/_example-standardized.service.ts(18,34): error TS2344: Type '"example_table"' does not satisfy the constraint '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
+lib/services/_example-standardized.service.ts(44,19): error TS2589: Type instantiation is excessively deep and possibly infinite.
+lib/services/_example-standardized.service.ts(45,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"example_table"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 239 more ...; videoconference_meeting_mappings: { ...; }; }; Views: {}; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, never, never, never>', gave the following error.
+    Argument of type '"example_table"' is not assignable to parameter of type 'never'.
+lib/services/_example-standardized.service.ts(86,37): error TS2589: Type instantiation is excessively deep and possibly infinite.
+lib/services/_example-standardized.service.ts(87,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"example_table"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 239 more ...; videoconference_meeting_mappings: { ...; }; }; Views: {}; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, never, never, never>', gave the following error.
+    Argument of type '"example_table"' is not assignable to parameter of type 'never'.
+lib/services/_example-standardized.service.ts(129,39): error TS2344: Type '"example_table"' does not satisfy the constraint '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 232 more ... | "videoconference_meeting_logs"'.

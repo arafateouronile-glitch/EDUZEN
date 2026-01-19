@@ -185,8 +185,8 @@ class EmailScheduleService {
     if (input.document_template_id !== undefined) {
       schedule.document_template_id = input.document_template_id || null
     }
-    if (user.data?.user?.id) {
-      schedule.created_by = user.data.user.id
+    if (user?.user?.id) {
+      schedule.created_by = user.user.id
     }
 
     const { data, error } = await this.supabase
@@ -302,18 +302,23 @@ class EmailScheduleService {
     if (error) throw error
 
     // Mettre à jour les statistiques de la règle
+    // Récupérer la valeur actuelle de total_sent
+    const { data: scheduleData } = await this.supabase
+      .from('email_schedules')
+      .select('total_sent')
+      .eq('id', scheduleId)
+      .single()
+    
+    const currentTotalSent = (scheduleData?.total_sent as number) || 0
+    const newTotalSent = currentTotalSent + result.successfulSends
+
     await this.supabase
       .from('email_schedules')
       .update({
         last_run_at: new Date().toISOString(),
         last_run_status: result.status,
         last_run_error: result.errorMessage || null,
-        total_sent: this.supabase.rpc('increment', {
-          table_name: 'email_schedules',
-          column_name: 'total_sent',
-          id: scheduleId,
-          amount: result.successfulSends,
-        }),
+        total_sent: newTotalSent,
       })
       .eq('id', scheduleId)
 

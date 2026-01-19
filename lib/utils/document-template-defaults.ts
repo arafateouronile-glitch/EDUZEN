@@ -1564,6 +1564,111 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     `,
     footerContent: premiumFooter,
   },
+
+  // ==========================================
+  // CERTIFICAT DE RÉALISATION
+  // ==========================================
+  certificat_realisation: {
+    type: 'certificat_realisation',
+    name: 'Certificat de réalisation',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
+          CERTIFICAT DE RÉALISATION
+        </h1>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <p style="text-align: justify; font-size: 11pt; line-height: 1.6;">
+          L'établissement <strong>{ecole_nom}</strong> certifie que 
+          <strong>{eleve_prenom} {eleve_nom}</strong> a réalisé avec succès la formation 
+          <strong>"{formation_nom}"</strong>.
+        </p>
+      </div>
+      
+      <div style="margin-top: 50px; text-align: center;">
+        <p style="margin-bottom: 30px;">{ecole_ville}, le {date_jour}</p>
+        <p><strong>Le Directeur</strong></p>
+        <p style="margin-top: 40px;">________________________</p>
+        <p>{ecole_directeur}</p>
+      </div>
+    `,
+    footerContent: premiumFooter,
+  },
+
+  // ==========================================
+  // LIVRET D'ACCUEIL
+  // ==========================================
+  livret_accueil: {
+    type: 'livret_accueil',
+    name: 'Livret d\'accueil',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
+          LIVRET D'ACCUEIL
+        </h1>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h2 style="font-size: 14pt; font-weight: bold; margin-bottom: 15px;">BIENVENUE</h2>
+        <p style="text-align: justify; font-size: 11pt; line-height: 1.6;">
+          Bienvenue à <strong>{ecole_nom}</strong>.
+        </p>
+        <p style="text-align: justify; font-size: 11pt; line-height: 1.6; margin-top: 10px;">
+          Ce livret vous présente les informations essentielles de notre établissement.
+        </p>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h2 style="font-size: 14pt; font-weight: bold; margin-bottom: 15px;">PRÉSENTATION</h2>
+        <p style="font-size: 11pt; line-height: 1.6;"><strong>Établissement :</strong> {ecole_nom}</p>
+        <p style="font-size: 11pt; line-height: 1.6;"><strong>Adresse :</strong> {ecole_adresse}, {ecole_ville}</p>
+        <p style="font-size: 11pt; line-height: 1.6;"><strong>Contact :</strong> {ecole_telephone} | {ecole_email}</p>
+      </div>
+    `,
+    footerContent: premiumFooter,
+  },
+
+  // ==========================================
+  // FEUILLE D'ÉMARGEMENT
+  // ==========================================
+  emargement: {
+    type: 'emargement',
+    name: 'Feuille d\'émargement',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
+          FEUILLE D'ÉMARGEMENT
+        </h1>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <p style="font-size: 11pt; line-height: 1.6;"><strong>Formation :</strong> {formation_nom}</p>
+        <p style="font-size: 11pt; line-height: 1.6;"><strong>Session :</strong> {session_nom}</p>
+        <p style="font-size: 11pt; line-height: 1.6;"><strong>Date :</strong> {session_debut}</p>
+        <p style="font-size: 11pt; line-height: 1.6;"><strong>Lieu :</strong> {session_lieu}</p>
+      </div>
+      
+      <table style="width: 100%; border-collapse: collapse; margin-top: 30px;">
+        <thead>
+          <tr style="background-color: #f3f4f6;">
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 11pt;">Nom et Prénom</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 11pt;">Signature</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd; font-size: 11pt;">{eleve_prenom} {eleve_nom}</td>
+            <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">________________</td>
+          </tr>
+        </tbody>
+      </table>
+    `,
+    footerContent: premiumFooter,
+  },
 }
 
 /**

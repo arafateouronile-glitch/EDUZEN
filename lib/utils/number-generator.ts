@@ -48,8 +48,8 @@ export async function generateUniqueNumber(
     }
 
     let sequence = 1
-    if (lastRecord?.[fieldName]) {
-      const parts = String(lastRecord[fieldName]).split('-')
+    if (lastRecord && (lastRecord as any)[fieldName]) {
+      const parts = String((lastRecord as any)[fieldName]).split('-')
       const lastSequence = parseInt(parts[parts.length - 1] || '0', 10)
       sequence = lastSequence + 1
     }

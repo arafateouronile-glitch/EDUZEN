@@ -87,16 +87,19 @@ export class RealtimeCollaborationService {
             } else {
               // Arrêter les tentatives après maxAttempts
               console.warn('WebSocket: trop de tentatives de connexion, collaboration désactivée')
-              provider.destroy()
-              this.providers.delete(templateId)
+              if (provider) {
+                provider.destroy()
+                this.providers.delete(templateId)
+              }
               throw new Error('Impossible de se connecter au serveur de collaboration après plusieurs tentatives')
             }
           }
         })
 
         // Gérer les erreurs de connexion
-        provider.on('connection-error', (error: Error) => {
-          console.warn('Erreur de connexion WebSocket:', error.message)
+        provider.on('connection-error', (event: any, provider: WebsocketProvider) => {
+          const errorMessage = event?.message || event?.error?.message || String(event)
+          console.warn('Erreur de connexion WebSocket:', errorMessage)
           // Ne pas lancer d'erreur, laisser le système gérer silencieusement
         })
 
@@ -298,7 +301,9 @@ export class RealtimeCollaborationService {
 
     // Convertir le HTML en XML pour Y.js
     const yXmlFragment = ydoc.getXmlFragment(section)
-    yXmlFragment.insert(0, content)
+    const yXmlText = new Y.XmlText()
+    yXmlText.insert(0, content)
+    yXmlFragment.insert(0, [yXmlText])
   }
 }
 

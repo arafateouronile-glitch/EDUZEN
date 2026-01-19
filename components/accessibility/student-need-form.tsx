@@ -21,7 +21,7 @@ interface StudentNeedFormProps {
 
 export function StudentNeedForm({ studentId, organizationId, onSuccess, onCancel }: StudentNeedFormProps) {
   const queryClient = useQueryClient()
-  const { toast } = useToast()
+  const { addToast } = useToast()
   const [step, setStep] = useState(1)
   const totalSteps = 5
 
@@ -78,17 +78,18 @@ export function StudentNeedForm({ studentId, organizationId, onSuccess, onCancel
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-need'] })
       queryClient.invalidateQueries({ queryKey: ['accessibility-needs'] })
-      toast({
+      addToast({
+        type: 'success',
         title: 'Déclaration enregistrée',
         description: 'Vos besoins spécifiques ont été enregistrés avec succès.',
       })
       onSuccess?.()
     },
     onError: (error: any) => {
-      toast({
+      addToast({
+        type: 'error',
         title: 'Erreur',
         description: error?.message || 'Impossible d\'enregistrer la déclaration.',
-        variant: 'destructive',
       })
     },
   })

@@ -108,7 +108,7 @@ export class ESignatureWebhookHandlerService {
   private async handleSignaturePending(event: SignatureWebhookEvent): Promise<WebhookProcessingResult> {
     // Créer ou mettre à jour la signature avec le statut pending
     if (event.documentId && event.signerEmail) {
-      const supabase = createClient()
+      const supabase = await createClient()
 
       // Vérifier si la signature existe déjà
       const { data: existingSignatures } = await supabase
@@ -150,7 +150,7 @@ export class ESignatureWebhookHandlerService {
       throw new Error('documentId manquant dans l\'événement signature.signed')
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Trouver la signature correspondante
     const { data: signatures } = await supabase
@@ -204,7 +204,7 @@ export class ESignatureWebhookHandlerService {
       throw new Error('documentId manquant dans l\'événement signature.completed')
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Mettre à jour le statut du document
     const { error: updateError } = await supabase
@@ -212,7 +212,7 @@ export class ESignatureWebhookHandlerService {
       .update({
         status: 'signed',
         signed_at: new Date().toISOString(),
-      })
+      } as any)
       .eq('id', event.documentId)
 
     if (updateError) {
@@ -257,7 +257,7 @@ export class ESignatureWebhookHandlerService {
       throw new Error('documentId manquant dans l\'événement signature.declined')
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Trouver et mettre à jour la signature
     const { data: signatures } = await supabase
@@ -302,7 +302,7 @@ export class ESignatureWebhookHandlerService {
       throw new Error('documentId manquant dans l\'événement signature.expired')
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Mettre à jour toutes les signatures pendantes comme expirées
     const { error } = await supabase
@@ -340,7 +340,7 @@ export class ESignatureWebhookHandlerService {
       throw new Error('documentId manquant dans l\'événement signature.canceled')
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Révoquer toutes les signatures du document
     const { data: signatures } = await supabase

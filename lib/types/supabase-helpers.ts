@@ -30,8 +30,11 @@ export type TableUpdate<T extends TableName> = Database['public']['Tables'][T]['
 export type FlexibleInsert<T extends TableName> = Omit<
   TableInsert<T>,
   'id' | 'created_at' | 'updated_at'
-> &
-  Partial<Pick<TableInsert<T>, 'id' | 'created_at' | 'updated_at'>>
+> & {
+  id?: TableInsert<T> extends { id?: infer U } ? U : never
+  created_at?: TableInsert<T> extends { created_at?: infer U } ? U : never
+  updated_at?: TableInsert<T> extends { updated_at?: infer U } ? U : never
+}
 
 /**
  * Type helper pour les mises à jour

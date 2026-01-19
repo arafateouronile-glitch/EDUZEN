@@ -3,6 +3,7 @@
  * Utilise la bibliothèque bwip-js
  */
 
+// @ts-expect-error - Module bwip-js peut ne pas avoir de types
 import bwipjs from 'bwip-js'
 
 export type BarcodeType = 'CODE128' | 'CODE39' | 'EAN13' | 'UPC' | 'EAN8' | 'ITF14' | 'MSI' | 'PHARMACODE'

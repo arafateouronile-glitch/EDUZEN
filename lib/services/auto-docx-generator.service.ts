@@ -95,9 +95,10 @@ export async function generateDocxFromHtmlTemplate(
   // Afficher les variables de logo disponibles
   const varKeys = Object.keys(variables)
   console.log('[AutoDocx] 📊 Variables reçues:', varKeys.length, 'variables')
+  const varsAsAny = variables as any
   console.log('[AutoDocx] 🖼️ Variables logo:', {
-    ecole_logo: variables.ecole_logo ? 'URL présente' : 'Non défini',
-    organization_logo: variables.organization_logo ? 'URL présente' : 'Non défini',
+    ecole_logo: varsAsAny.ecole_logo ? 'URL présente' : 'Non défini',
+    organization_logo: varsAsAny.organization_logo ? 'URL présente' : 'Non défini',
   })
   
   // Remplacer les variables dans le HTML AVANT la conversion
@@ -194,8 +195,9 @@ function replaceVariables(html: string, variables: DocumentVariables): string {
   let result = html
   
   // D'abord, convertir les variables de logo en balises <img>
+  const varsAsAny = variables as any
   for (const logoVar of LOGO_VARIABLES) {
-    const logoValue = variables[logoVar]
+    const logoValue = varsAsAny[logoVar]
     if (logoValue && typeof logoValue === 'string' && logoValue.startsWith('http')) {
       // Remplacer {logo_var} par une balise <img>
       const logoRegex = new RegExp(`\\{${logoVar}\\}`, 'g')
@@ -358,11 +360,11 @@ async function extractAndProcessStandaloneImages(
           const styles = parseInlineStyles(imgStyle)
           
           // Déterminer l'alignement
-          let alignment = AlignmentType.LEFT
+          let alignment: typeof AlignmentType.LEFT | typeof AlignmentType.CENTER | typeof AlignmentType.RIGHT = AlignmentType.LEFT
           if (styles.textAlign === 'center' || styles.margin === 'auto' || styles.marginLeft === 'auto') {
-            alignment = AlignmentType.CENTER
+            alignment = AlignmentType.CENTER as typeof AlignmentType.LEFT
           } else if (styles.textAlign === 'right') {
-            alignment = AlignmentType.RIGHT
+            alignment = AlignmentType.RIGHT as typeof AlignmentType.LEFT
           }
           
           // Dimensions
@@ -386,7 +388,7 @@ async function extractAndProcessStandaloneImages(
               new ImageRun({
                 data: logoBuffer,
                 transformation: { width: imgWidth, height: imgHeight },
-              }),
+              } as any),
             ],
             alignment,
           }))
@@ -509,10 +511,10 @@ function createParagraphFromBlock(
   }
   
   // Déterminer l'alignement
-  let alignment = AlignmentType.LEFT
-  if (styles.textAlign === 'center') alignment = AlignmentType.CENTER
-  else if (styles.textAlign === 'right') alignment = AlignmentType.RIGHT
-  else if (styles.textAlign === 'justify') alignment = AlignmentType.JUSTIFIED
+  let alignment: typeof AlignmentType.LEFT | typeof AlignmentType.CENTER | typeof AlignmentType.RIGHT | typeof AlignmentType.JUSTIFIED = AlignmentType.LEFT
+  if (styles.textAlign === 'center') alignment = AlignmentType.CENTER as typeof AlignmentType.LEFT
+  else if (styles.textAlign === 'right') alignment = AlignmentType.RIGHT as typeof AlignmentType.LEFT
+  else if (styles.textAlign === 'justify') alignment = AlignmentType.JUSTIFIED as typeof AlignmentType.LEFT
   
   // Créer le TextRun
   const textRunOptions: IRunOptions = {
@@ -535,15 +537,16 @@ function createParagraphFromBlock(
   }
   
   // Ajouter un style de titre si nécessaire
+  let finalParagraphOptions = paragraphOptions
   if (tag === 'h1') {
-    paragraphOptions.heading = HeadingLevel.HEADING_1
+    finalParagraphOptions = { ...paragraphOptions, heading: HeadingLevel.HEADING_1 }
   } else if (tag === 'h2') {
-    paragraphOptions.heading = HeadingLevel.HEADING_2
+    finalParagraphOptions = { ...paragraphOptions, heading: HeadingLevel.HEADING_2 }
   } else if (tag === 'h3') {
-    paragraphOptions.heading = HeadingLevel.HEADING_3
+    finalParagraphOptions = { ...paragraphOptions, heading: HeadingLevel.HEADING_3 }
   }
   
-  return new Paragraph(paragraphOptions)
+  return new Paragraph(finalParagraphOptions)
 }
 
 /**
@@ -649,9 +652,9 @@ async function parseHtmlTable(
               const logoBuffer = await downloadImage(imgSrc)
               if (logoBuffer) {
                 // Déterminer l'alignement de l'image
-                let imgAlignment = AlignmentType.LEFT
-                if (styles.textAlign === 'right') imgAlignment = AlignmentType.RIGHT
-                else if (styles.textAlign === 'center') imgAlignment = AlignmentType.CENTER
+                let imgAlignment: typeof AlignmentType.LEFT | typeof AlignmentType.CENTER | typeof AlignmentType.RIGHT = AlignmentType.LEFT
+                if (styles.textAlign === 'right') imgAlignment = AlignmentType.RIGHT as typeof AlignmentType.LEFT
+                else if (styles.textAlign === 'center') imgAlignment = AlignmentType.CENTER as typeof AlignmentType.LEFT
                 
                 // Extraire les dimensions de l'image depuis le HTML
                 const imgStyleMatch = processedCellContent.match(/<img[^>]*style="([^"]*)"[^>]*>/i)
@@ -682,7 +685,7 @@ async function parseHtmlTable(
                         width: imgWidth,
                         height: imgHeight,
                       },
-                    }),
+                    } as any),
                   ],
                   alignment: imgAlignment,
                 }))
@@ -736,9 +739,9 @@ async function parseHtmlTable(
           
           for (const line of lines) {
             // Déterminer l'alignement du texte
-            let textAlignment = AlignmentType.LEFT
-            if (styles.textAlign === 'right') textAlignment = AlignmentType.RIGHT
-            else if (styles.textAlign === 'center') textAlignment = AlignmentType.CENTER
+            let textAlignment: typeof AlignmentType.LEFT | typeof AlignmentType.CENTER | typeof AlignmentType.RIGHT = AlignmentType.LEFT
+            if (styles.textAlign === 'right') textAlignment = AlignmentType.RIGHT as typeof AlignmentType.LEFT
+            else if (styles.textAlign === 'center') textAlignment = AlignmentType.CENTER as typeof AlignmentType.LEFT
             
             cellChildren.push(new Paragraph({
               children: [
@@ -774,11 +777,11 @@ async function parseHtmlTable(
         }
         
         // Déterminer l'alignement vertical
-        let verticalAlignment = VerticalAlign.TOP
+        let verticalAlignment: typeof VerticalAlign.TOP | typeof VerticalAlign.CENTER | typeof VerticalAlign.BOTTOM = VerticalAlign.TOP
         if (styles.verticalAlign === 'middle' || styles.verticalAlign === 'center') {
-          verticalAlignment = VerticalAlign.CENTER
+          verticalAlignment = VerticalAlign.CENTER as typeof VerticalAlign.TOP
         } else if (styles.verticalAlign === 'bottom') {
-          verticalAlignment = VerticalAlign.BOTTOM
+          verticalAlignment = VerticalAlign.BOTTOM as typeof VerticalAlign.TOP
         }
         
         // Déterminer les bordures (vérifier border global, bordures individuelles, ou border-collapse de la table)
@@ -852,15 +855,16 @@ async function parseHtmlTable(
           },
         }
         
+        let finalCellOptions = cellOptions
         if (cellWidth) {
-          cellOptions.width = cellWidth
+          finalCellOptions = { ...cellOptions, width: cellWidth }
         }
         
         if (shading) {
-          cellOptions.shading = shading
+          finalCellOptions = { ...finalCellOptions, shading }
         }
         
-        tableCells.push(new TableCell(cellOptions))
+        tableCells.push(new TableCell(finalCellOptions))
       }
       
       if (tableCells.length > 0) {

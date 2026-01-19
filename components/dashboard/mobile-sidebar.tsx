@@ -114,9 +114,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     return pathname === href || pathname?.startsWith(href + '/')
   }
 
-  const hasActiveChild = (children: NavigationItem[number]['children']) => {
+  const hasActiveChild = (children: Array<{ name: string; href: string; icon: React.ComponentType<{ className?: string }> }> | undefined) => {
     if (!children) return false
-    return children.some((child) => {
+    return children.some((child: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }) => {
       return 'href' in child && isActive(child.href)
     })
   }
@@ -227,21 +227,24 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   )
                 }
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      'flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
-                      isActive(item.href)
-                        ? 'bg-gradient-to-r from-primary to-blue-600 text-white shadow-lg shadow-primary/25'
-                        : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-                    )}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                )
+                if ('href' in item) {
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        'flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
+                        isActive(item.href)
+                          ? 'bg-gradient-to-r from-primary to-blue-600 text-white shadow-lg shadow-primary/25'
+                          : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  )
+                }
+                return null
               })}
             </nav>
 

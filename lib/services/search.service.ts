@@ -82,7 +82,7 @@ export class SearchService {
 
     if (error || !data) return []
 
-    return data.map((student: Student) => ({
+    return (data as any[]).map((student: any) => ({
       type: 'student' as const,
       id: student.id,
       title: `${student.first_name || ''} ${student.last_name || ''}`.trim() || student.student_number || 'Étudiant',
@@ -111,7 +111,7 @@ export class SearchService {
 
     if (error || !data) return []
 
-    return data.map((session: Session) => ({
+    return (data as any[]).map((session: any) => ({
       type: 'session' as const,
       id: session.id,
       title: session.name || 'Session',
@@ -142,7 +142,7 @@ export class SearchService {
 
     if (error || !data) return []
 
-    return data.map((doc: Document) => ({
+    return (data as any[]).map((doc: any) => ({
       type: 'document' as const,
       id: doc.id,
       title: doc.title || 'Document',
@@ -185,7 +185,7 @@ export class SearchService {
 
     return conversations
       .filter((conv) => userConversationIds.has(conv.id))
-      .map((conv: Conversation) => ({
+      .map((conv: any) => ({
         type: 'message' as const,
         id: conv.id,
         title: conv.name || 'Conversation',

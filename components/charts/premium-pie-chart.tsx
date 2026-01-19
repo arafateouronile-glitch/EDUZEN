@@ -74,10 +74,11 @@ export function PremiumPieChart({
     setActiveIndex(index);
   };
 
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number; payload: { name: string; value: number } }> }) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number; payload: { name: string; value: number; total?: number; fill?: string } }> }) => {
     if (active && payload && payload.length) {
-      const data = payload[0]
-      const percentage = ((data.value / data.payload.total) * 100).toFixed(1)
+      const data = payload[0] as any
+      const total = (data.payload?.total as number) || data.value
+      const percentage = ((data.value / total) * 100).toFixed(1)
       return (
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -87,7 +88,7 @@ export function PremiumPieChart({
           <div className="flex items-center gap-2 mb-2">
             <div 
               className="w-3 h-3 rounded-full shadow-md" 
-              style={{ backgroundColor: data.payload.fill }} 
+              style={{ backgroundColor: data.payload?.fill || '#335ACF' }} 
             />
             <span className="text-sm font-medium text-gray-600 uppercase tracking-wider">
               {data.name}
@@ -133,7 +134,7 @@ export function PremiumPieChart({
           
           <Pie
             activeIndex={activeIndex}
-            activeShape={renderActiveShape}
+            activeShape={renderActiveShape as any}
             onMouseEnter={onPieEnter}
             data={dataWithTotal}
             cx="50%"
@@ -153,7 +154,6 @@ export function PremiumPieChart({
                 key={`cell-${index}`} 
                 fill={`url(#pieGradient-${index})`}
                 stroke="none"
-                cornerRadius={6} // Coins arrondis sur les segments
               />
             ))}
           </Pie>

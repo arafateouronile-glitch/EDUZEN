@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
-import { errorHandler, AppError } from '@/lib/errors'
+import { errorHandler, AppError, ErrorCode } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
 import { emailService } from './email.service'
 import { AttendanceService } from './attendance.service'
@@ -61,7 +61,7 @@ export class ElectronicAttendanceService {
     try {
       const { data: userData } = await this.supabase.auth.getUser()
       if (!userData.user) {
-        throw errorHandler.createAuthenticationError('Utilisateur non authentifié')
+        throw errorHandler.createAuthError(ErrorCode.AUTH_REQUIRED, 'Utilisateur non authentifié')
       }
 
       // Récupérer les étudiants inscrits à la session
@@ -124,7 +124,7 @@ export class ElectronicAttendanceService {
         expectedStudents: students?.length || 0,
       })
 
-      return data as AttendanceSessionWithRequests
+      return data as unknown as AttendanceSessionWithRequests
     } catch (error) {
       if (error instanceof AppError) throw error
       throw errorHandler.handleError(error, {
@@ -249,7 +249,7 @@ export class ElectronicAttendanceService {
         throw error
       }
 
-      return data as AttendanceSessionWithRequests
+      return data as unknown as AttendanceSessionWithRequests
     } catch (error) {
       if (error instanceof AppError) throw error
       throw errorHandler.handleError(error, {

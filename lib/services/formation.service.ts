@@ -155,7 +155,7 @@ export class FormationService {
     if (directError) throw directError
 
     // Combiner les deux en évitant les doublons
-    const linkedSessionsData = linkedSessions?.map((fs: { sessions: unknown }) => fs.sessions).filter(Boolean) || []
+    const linkedSessionsData = (linkedSessions?.map((fs: { sessions: unknown }) => fs.sessions).filter(Boolean) || []) as Array<{ id: string }>
     const directSessionsData = directSessions || []
     
     const allSessions = [...linkedSessionsData]

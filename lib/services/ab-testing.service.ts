@@ -15,7 +15,7 @@ export interface ABTestConfig {
   name: string
   description?: string
   variants: Variant[]
-  trafficSplit?: Record<Variant, number> // Pourcentage de trafic pour chaque variante
+  trafficSplit?: Partial<Record<Variant, number>> // Pourcentage de trafic pour chaque variante
   startDate?: string
   endDate?: string
   isActive: boolean
@@ -139,7 +139,7 @@ export class ABTestingService {
         name: 'Nouveau Layout Dashboard',
         description: 'Test du nouveau layout du dashboard',
         variants: ['control', 'treatment'],
-        trafficSplit: { control: 50, treatment: 50 },
+        trafficSplit: { control: 50, treatment: 50 } as Partial<Record<Variant, number>>,
         isActive: process.env.NEXT_PUBLIC_AB_TEST_DASHBOARD === 'true',
       },
       'new-student-form': {
@@ -147,7 +147,7 @@ export class ABTestingService {
         name: 'Nouveau Formulaire Étudiant',
         description: 'Test du nouveau formulaire de création d\'étudiant',
         variants: ['A', 'B'],
-        trafficSplit: { A: 50, B: 50 },
+        trafficSplit: { A: 50, B: 50 } as Partial<Record<Variant, number>>,
         isActive: process.env.NEXT_PUBLIC_AB_TEST_STUDENT_FORM === 'true',
       },
       'payment-flow': {
@@ -155,7 +155,7 @@ export class ABTestingService {
         name: 'Nouveau Flux de Paiement',
         description: 'Test du nouveau flux de paiement simplifié',
         variants: ['control', 'treatment'],
-        trafficSplit: { control: 70, treatment: 30 },
+        trafficSplit: { control: 70, treatment: 30 } as Partial<Record<Variant, number>>,
         isActive: process.env.NEXT_PUBLIC_AB_TEST_PAYMENT === 'true',
       },
     }
@@ -166,8 +166,8 @@ export class ABTestingService {
   /**
    * Génère un split de trafic par défaut (égal)
    */
-  private getDefaultTrafficSplit(variants: Variant[]): Record<Variant, number> {
-    const split: Record<Variant, number> = {} as Record<Variant, number>
+  private getDefaultTrafficSplit(variants: Variant[]): Partial<Record<Variant, number>> {
+    const split: Partial<Record<Variant, number>> = {}
     const percentage = 100 / variants.length
 
     variants.forEach((variant) => {

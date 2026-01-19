@@ -3,12 +3,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
-type DocumentationCategory = TableRow<'documentation_categories'>
-type DocumentationArticle = TableRow<'documentation_articles'>
-type DocumentationSection = TableRow<'documentation_sections'>
-type DocumentationFavorite = TableRow<'documentation_favorites'>
-type DocumentationNote = TableRow<'documentation_notes'>
-type DocumentationFeedback = TableRow<'documentation_feedback'>
+// Types locaux pour les tables documentation qui ne sont pas encore dans le schéma Supabase
+type DocumentationCategory = any
+type DocumentationArticle = any
+type DocumentationSection = any
+type DocumentationFavorite = any
+type DocumentationNote = any
+type DocumentationFeedback = any
 
 export class DocumentationService {
   private supabase: SupabaseClient<Database>
@@ -26,7 +27,7 @@ export class DocumentationService {
    * Récupère toutes les catégories de documentation
    */
   async getCategories(organizationId?: string, includePublic = true) {
-    let query = this.supabase
+    let query = (this.supabase as any)
       .from('documentation_categories')
       .select('*')
       .order('order_index', { ascending: true })
@@ -47,7 +48,7 @@ export class DocumentationService {
    * Récupère une catégorie par son slug
    */
   async getCategoryBySlug(slug: string, organizationId?: string) {
-    let query = this.supabase
+    let query = (this.supabase as any)
       .from('documentation_categories')
       .select('*')
       .eq('slug', slug)
@@ -68,8 +69,8 @@ export class DocumentationService {
   /**
    * Crée une catégorie
    */
-  async createCategory(category: TableInsert<'documentation_categories'>) {
-    const { data, error } = await this.supabase
+  async createCategory(category: any) {
+    const { data, error } = await (this.supabase as any)
       .from('documentation_categories')
       .insert(category)
       .select()
@@ -82,8 +83,8 @@ export class DocumentationService {
   /**
    * Met à jour une catégorie
    */
-  async updateCategory(id: string, updates: TableUpdate<'documentation_categories'>) {
-    const { data, error } = await this.supabase
+  async updateCategory(id: string, updates: any) {
+    const { data, error } = await (this.supabase as any)
       .from('documentation_categories')
       .update(updates)
       .eq('id', id)
@@ -98,7 +99,7 @@ export class DocumentationService {
    * Supprime une catégorie
    */
   async deleteCategory(id: string) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('documentation_categories')
       .delete()
       .eq('id', id)
@@ -112,7 +113,7 @@ export class DocumentationService {
    * Récupère tous les articles d'une catégorie
    */
   async getArticlesByCategory(categoryId: string, status: 'draft' | 'published' | 'archived' = 'published') {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_articles')
       .select('*, author:users(id, full_name, email)')
       .eq('category_id', categoryId)
@@ -128,7 +129,7 @@ export class DocumentationService {
    * Récupère un article par son slug
    */
   async getArticleBySlug(slug: string, categorySlug: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_articles')
       .select(`
         *,
@@ -145,7 +146,7 @@ export class DocumentationService {
 
     // Incrémenter le compteur de vues
     if (data) {
-      await this.supabase.rpc('increment_article_view_count', { article_uuid: data.id })
+      await (this.supabase as any).rpc('increment_article_view_count', { article_uuid: data.id })
     }
 
     return data
@@ -155,7 +156,7 @@ export class DocumentationService {
    * Recherche d'articles
    */
   async searchArticles(query: string, organizationId?: string) {
-    let searchQuery = this.supabase
+    let searchQuery = (this.supabase as any)
       .from('documentation_articles')
       .select('*, category:documentation_categories(*), author:users(id, full_name)')
       .eq('status', 'published')
@@ -179,7 +180,7 @@ export class DocumentationService {
    * Récupère les articles les plus populaires
    */
   async getPopularArticles(limit = 10, organizationId?: string) {
-    let query = this.supabase
+    let query = (this.supabase as any)
       .from('documentation_articles')
       .select('*, category:documentation_categories(*), author:users(id, full_name)')
       .eq('status', 'published')
@@ -202,7 +203,7 @@ export class DocumentationService {
    * Récupère les articles récents
    */
   async getRecentArticles(limit = 10, organizationId?: string) {
-    let query = this.supabase
+    let query = (this.supabase as any)
       .from('documentation_articles')
       .select('*, category:documentation_categories(*), author:users(id, full_name)')
       .eq('status', 'published')
@@ -225,7 +226,7 @@ export class DocumentationService {
    * Récupère les articles en vedette
    */
   async getFeaturedArticles(limit = 5, organizationId?: string) {
-    let query = this.supabase
+    let query = (this.supabase as any)
       .from('documentation_articles')
       .select('*, category:documentation_categories(*), author:users(id, full_name)')
       .eq('status', 'published')
@@ -248,8 +249,8 @@ export class DocumentationService {
   /**
    * Crée un article
    */
-  async createArticle(article: TableInsert<'documentation_articles'>) {
-    const { data, error } = await this.supabase
+  async createArticle(article: any) {
+    const { data, error } = await (this.supabase as any)
       .from('documentation_articles')
       .insert(article)
       .select()
@@ -262,8 +263,8 @@ export class DocumentationService {
   /**
    * Met à jour un article
    */
-  async updateArticle(id: string, updates: TableUpdate<'documentation_articles'>) {
-    const { data, error } = await this.supabase
+  async updateArticle(id: string, updates: any) {
+    const { data, error } = await (this.supabase as any)
       .from('documentation_articles')
       .update(updates)
       .eq('id', id)
@@ -278,7 +279,7 @@ export class DocumentationService {
    * Supprime un article
    */
   async deleteArticle(id: string) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('documentation_articles')
       .delete()
       .eq('id', id)
@@ -292,7 +293,7 @@ export class DocumentationService {
    * Récupère les sections d'un article
    */
   async getArticleSections(articleId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_sections')
       .select('*')
       .eq('article_id', articleId)
@@ -305,8 +306,8 @@ export class DocumentationService {
   /**
    * Crée une section
    */
-  async createSection(section: TableInsert<'documentation_sections'>) {
-    const { data, error } = await this.supabase
+  async createSection(section: any) {
+    const { data, error } = await (this.supabase as any)
       .from('documentation_sections')
       .insert(section)
       .select()
@@ -319,8 +320,8 @@ export class DocumentationService {
   /**
    * Met à jour une section
    */
-  async updateSection(id: string, updates: TableUpdate<'documentation_sections'>) {
-    const { data, error } = await this.supabase
+  async updateSection(id: string, updates: any) {
+    const { data, error } = await (this.supabase as any)
       .from('documentation_sections')
       .update(updates)
       .eq('id', id)
@@ -335,7 +336,7 @@ export class DocumentationService {
    * Supprime une section
    */
   async deleteSection(id: string) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('documentation_sections')
       .delete()
       .eq('id', id)
@@ -349,7 +350,7 @@ export class DocumentationService {
    * Récupère les favoris d'un utilisateur
    */
   async getUserFavorites(userId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_favorites')
       .select('*, article:documentation_articles(*, category:documentation_categories(*))')
       .eq('user_id', userId)
@@ -363,7 +364,7 @@ export class DocumentationService {
    * Ajoute un article aux favoris
    */
   async addFavorite(userId: string, articleId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_favorites')
       .insert({ user_id: userId, article_id: articleId })
       .select()
@@ -377,7 +378,7 @@ export class DocumentationService {
    * Retire un article des favoris
    */
   async removeFavorite(userId: string, articleId: string) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('documentation_favorites')
       .delete()
       .eq('user_id', userId)
@@ -390,7 +391,7 @@ export class DocumentationService {
    * Vérifie si un article est en favoris
    */
   async isFavorite(userId: string, articleId: string): Promise<boolean> {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_favorites')
       .select('id')
       .eq('user_id', userId)
@@ -407,7 +408,7 @@ export class DocumentationService {
    * Récupère les notes d'un utilisateur pour un article
    */
   async getUserNotes(userId: string, articleId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_notes')
       .select('*')
       .eq('user_id', userId)
@@ -428,7 +429,7 @@ export class DocumentationService {
 
     if (existing) {
       // Mettre à jour
-      const { data, error } = await this.supabase
+      const { data, error } = await (this.supabase as any)
         .from('documentation_notes')
         .update({ content })
         .eq('id', existing.id)
@@ -439,7 +440,7 @@ export class DocumentationService {
       return data
     } else {
       // Créer
-      const { data, error } = await this.supabase
+      const { data, error } = await (this.supabase as any)
         .from('documentation_notes')
         .insert({ user_id: userId, article_id: articleId, content })
         .select()
@@ -454,7 +455,7 @@ export class DocumentationService {
    * Supprime une note
    */
   async deleteNote(userId: string, articleId: string) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('documentation_notes')
       .delete()
       .eq('user_id', userId)
@@ -468,8 +469,8 @@ export class DocumentationService {
   /**
    * Crée un feedback
    */
-  async createFeedback(feedback: TableInsert<'documentation_feedback'>) {
-    const { data, error } = await this.supabase
+  async createFeedback(feedback: any) {
+    const { data, error } = await (this.supabase as any)
       .from('documentation_feedback')
       .insert(feedback)
       .select()
@@ -483,7 +484,7 @@ export class DocumentationService {
    * Récupère les feedbacks d'un article
    */
   async getArticleFeedback(articleId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_feedback')
       .select('*, user:users(id, full_name)')
       .eq('article_id', articleId)
@@ -497,7 +498,7 @@ export class DocumentationService {
    * Récupère les statistiques de feedback d'un article
    */
   async getArticleFeedbackStats(articleId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_feedback')
       .select('rating, is_helpful')
       .eq('article_id', articleId)
@@ -513,12 +514,12 @@ export class DocumentationService {
     }
 
     if (data.length > 0) {
-      const ratings = data.filter((f) => f.rating).map((f) => f.rating!)
+      const ratings = data.filter((f: any) => f.rating).map((f: any) => f.rating!)
       if (ratings.length > 0) {
-        stats.averageRating = ratings.reduce((a, b) => a + b, 0) / ratings.length
+        stats.averageRating = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length
       }
 
-      data.forEach((f) => {
+      data.forEach((f: any) => {
         if (f.rating) stats.ratings[f.rating as keyof typeof stats.ratings]++
         if (f.is_helpful === true) stats.helpfulCount++
         if (f.is_helpful === false) stats.notHelpfulCount++
@@ -534,7 +535,7 @@ export class DocumentationService {
    * Enregistre une recherche
    */
   async recordSearch(userId: string, query: string, resultsCount: number) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('documentation_search_history')
       .insert({ user_id: userId, query, results_count: resultsCount })
 
@@ -545,7 +546,7 @@ export class DocumentationService {
    * Récupère l'historique de recherche d'un utilisateur
    */
   async getSearchHistory(userId: string, limit = 10) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('documentation_search_history')
       .select('*')
       .eq('user_id', userId)
@@ -560,7 +561,7 @@ export class DocumentationService {
    * Supprime l'historique de recherche d'un utilisateur
    */
   async clearSearchHistory(userId: string) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('documentation_search_history')
       .delete()
       .eq('user_id', userId)

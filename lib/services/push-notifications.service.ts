@@ -200,7 +200,7 @@ export class PushNotificationsService {
         device_id: deviceId,
         title: payload.title,
         body: payload.body,
-        data: payload.data,
+        data: payload.data as any,
         notification_type: payload.notificationType,
         priority: payload.priority || 'normal',
         sound: payload.sound || 'default',
@@ -295,7 +295,7 @@ export class PushNotificationsService {
       case 'announcement':
         return preferences.enable_announcements ?? true
       case 'compliance':
-        return preferences.enable_compliance ?? true
+        return (preferences as any).enable_compliance ?? true
       default:
         return true
     }

@@ -6,9 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
-type UserFeedback = TableRow<'user_feedback'>
-type UserFeedbackInsert = TableInsert<'user_feedback'>
-type UserFeedbackUpdate = TableUpdate<'user_feedback'>
+type UserFeedback = any
+type UserFeedbackInsert = any
+type UserFeedbackUpdate = any
 
 export type FeedbackType = 'bug' | 'feature_request' | 'improvement' | 'question' | 'other'
 export type FeedbackStatus = 'pending' | 'reviewing' | 'in_progress' | 'resolved' | 'closed' | 'rejected'

@@ -35,7 +35,7 @@ class DocxGeneratorService {
       // 1. Convertir en Buffer si nécessaire
       const buffer = templateBuffer instanceof Buffer 
         ? templateBuffer 
-        : Buffer.from(templateBuffer)
+        : Buffer.from(templateBuffer as ArrayBufferLike)
       
       // 2. Décompresser le fichier .docx (qui est un ZIP)
       const zip = new PizZip(buffer)
@@ -211,7 +211,7 @@ export async function generateWordFromBuffer(
   variables: DocumentVariables
 ): Promise<Buffer> {
   return docxGeneratorService.generateFromTemplate(
-    templateBuffer instanceof Buffer ? templateBuffer : Buffer.from(templateBuffer),
+    templateBuffer instanceof Buffer ? templateBuffer : Buffer.from(templateBuffer as ArrayBufferLike),
     variables
   )
 }

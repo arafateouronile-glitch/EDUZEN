@@ -201,7 +201,7 @@ async function generatePDFFromHTML(
     })
     
     // Créer un Blob à partir du buffer
-    const pdfBlob = new Blob([pdfBuffer], { type: 'application/pdf' })
+    const pdfBlob = new Blob([pdfBuffer as BlobPart], { type: 'application/pdf' })
     
     // Estimer le nombre de pages (approximation basée sur la hauteur du contenu)
     // Note: Pour un calcul précis, il faudrait générer le PDF deux fois ou utiliser une méthode différente
@@ -230,7 +230,7 @@ async function generatePDFFromElements(
   const PDFDocument = () => (
     <Document>
       {pages.map((pageElements, pageIndex) => (
-        <Page key={pageIndex} size={template.page_size || 'A4'} style={styles.page}>
+        <Page key={pageIndex} size={(template.page_size || 'A4') as any} style={styles.page}>
           {/* Header répété sur chaque page si activé */}
           {template.header_enabled && template.header && (
             <View style={styles.header} fixed>
@@ -247,21 +247,21 @@ async function generatePDFFromElements(
           {template.footer_enabled && template.footer && (
             <View style={styles.footer} fixed>
               {/* Pagination automatique */}
-              {template.footer.pagination?.enabled && (
+              {(template.footer as any)?.pagination?.enabled && (
                 <Text
                   style={[
                     styles.pagination,
                     {
                       textAlign:
-                        template.footer.pagination.position === 'left'
+                        (template.footer as any).pagination.position === 'left'
                           ? 'left'
-                          : template.footer.pagination.position === 'right'
+                          : (template.footer as any).pagination.position === 'right'
                           ? 'right'
                           : 'center',
                     },
                   ]}
                   render={({ pageNumber, totalPages }) =>
-                    replaceVariables(template.footer.pagination?.format || 'Page {numero_page} / {total_pages}', {
+                    replaceVariables((template.footer as any).pagination?.format || 'Page {numero_page} / {total_pages}', {
                       ...variables,
                       numero_page: pageNumber,
                       total_pages: totalPages,
@@ -271,7 +271,7 @@ async function generatePDFFromElements(
                 />
               )}
               {/* Éléments du footer */}
-              {renderElements(template.footer.elements || [], {
+              {renderElements((template.footer as any).elements || [], {
                 ...variables,
                 numero_page: pageIndex + 1,
                 total_pages: pages.length,
@@ -422,7 +422,7 @@ function renderElements(
                 element.style?.fontStyle === 'italic' && styles.textItalic,
                 element.style?.textAlign === 'center' && styles.textCenter,
                 element.style?.textAlign === 'right' && styles.textRight,
-              ]}
+              ] as any}
             >
               {element.content ? replaceVariables(element.content, variables) : ''}
             </Text>
@@ -539,7 +539,8 @@ import { processDynamicTables } from './dynamic-table-processor'
 import { processElementVisibility } from './element-visibility-processor'
 import { processNestedVariables, flattenVariables } from './nested-variables-processor'
 import { processDynamicHyperlinks } from './dynamic-hyperlinks-processor'
-import { extractMetadataFromVariables, formatMetadataForPDF, type DocumentMetadata } from './metadata-processor'
+// import { extractMetadataFromVariables, formatMetadataForPDF, type DocumentMetadata } from './metadata-processor'
+type DocumentMetadata = Record<string, unknown>
 
 /**
  * Remplace les variables dans du HTML
@@ -634,7 +635,7 @@ function processFooterPagination(
   // Remplace {numero_page} et {total_pages} dans le footer
   // Note: Puppeteer ne gère pas automatiquement la pagination, on doit utiliser du CSS
   // Pour l'instant, on retourne le footer tel quel et on compte sur le CSS
-  const paginationFormat = template.footer.pagination.format || 'Page {numero_page} / {total_pages}'
+  const paginationFormat = (template.footer as any)?.pagination?.format || 'Page {numero_page} / {total_pages}'
   const paginationText = replaceVariables(paginationFormat, {
     ...variables,
     numero_page: 1, // Sera remplacé dynamiquement si nécessaire
@@ -643,7 +644,7 @@ function processFooterPagination(
   
   // Ajouter la pagination au footer si elle n'y est pas déjà
   if (!footerHTML.includes('{numero_page}') && !footerHTML.includes(paginationText)) {
-    const position = template.footer.pagination.position || 'center'
+    const position = (template.footer as any)?.pagination?.position || 'center'
     const textAlign = position === 'left' ? 'left' : position === 'right' ? 'right' : 'center'
     return `${footerHTML}<div style="text-align: ${textAlign}; font-size: 9pt; color: #4D4D4D; margin-top: 10px;">
       ${paginationText.replace(/\{numero_page\}/g, '<span class="page-number"></span>').replace(/\{total_pages\}/g, '<span class="total-pages"></span>')}

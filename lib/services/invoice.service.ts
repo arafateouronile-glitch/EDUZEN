@@ -126,8 +126,12 @@ export class InvoiceService {
       const invoiceData = invoice as InvoiceInsert & { invoice_number?: string; document_type?: 'quote' | 'invoice' }
       let invoiceNumber = invoiceData.invoice_number
       if (!invoiceNumber || invoiceNumber.trim() === '') {
+        const orgId = invoice.organization_id
+        if (!orgId) {
+          throw errorHandler.createValidationError('Organization ID is required to create an invoice.')
+        }
         invoiceNumber = await this.generateInvoiceNumber(
-          invoice.organization_id,
+          orgId,
           invoiceData.document_type || 'invoice'
         )
       }
@@ -163,7 +167,7 @@ export class InvoiceService {
 
       logger.info('Facture créée avec succès', {
         id: data?.id,
-        organizationId: invoice.organization_id,
+        organizationId: invoice.organization_id || undefined,
         invoiceNumber: data?.invoice_number,
       })
 

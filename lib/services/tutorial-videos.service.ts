@@ -139,16 +139,22 @@ export class TutorialVideosService {
   // ========== PROGRESS ==========
 
   async getProgress(userId: string, videoId?: string) {
-    let query = this.supabase
+    if (videoId) {
+      const { data, error } = await this.supabase
+        .from('tutorial_progress')
+        .select('*, video:tutorial_videos(*)')
+        .eq('user_id', userId)
+        .eq('video_id', videoId)
+        .maybeSingle()
+
+      if (error) throw error
+      return data
+    }
+
+    const { data, error } = await this.supabase
       .from('tutorial_progress')
       .select('*, video:tutorial_videos(*)')
       .eq('user_id', userId)
-
-    if (videoId) {
-      query = query.eq('video_id', videoId).maybeSingle()
-    }
-
-    const { data, error } = await query
 
     if (error) throw error
     return data
@@ -211,12 +217,14 @@ export class TutorialVideosService {
   }
 
   async getCompletionStats(userId: string) {
-    const { data: progress } = await this.getUserProgress(userId)
-    const { data: allVideos } = await this.getVideos({ isPublished: true })
+    const progress = await this.getUserProgress(userId)
+    const allVideos = await this.getVideos({ isPublished: true })
 
-    const completed = progress?.filter((p: { is_completed: boolean }) => p.is_completed).length || 0
-    const total = allVideos?.length || 0
-    const inProgress = progress?.filter((p: { is_completed: boolean; watched_seconds: number }) => !p.is_completed && p.watched_seconds > 0).length || 0
+    const progressArray = (progress || []) as any[]
+    const allVideosArray = (allVideos || []) as any[]
+    const completed = progressArray.filter((p: any) => p.is_completed).length || 0
+    const total = allVideosArray.length || 0
+    const inProgress = progressArray.filter((p: any) => !p.is_completed && p.watched_seconds > 0).length || 0
 
     return {
       completed,

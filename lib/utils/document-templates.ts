@@ -151,8 +151,8 @@ export async function generateAttestationHTML(data: {
   const template = generateAttestationTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     certifies: t.certifies,
     organization_name: data.organization.name,
@@ -307,8 +307,8 @@ export async function generateCertificateHTML(data: {
   const template = generateCertificateTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     certifies: t.certifies,
     student_first_name_upper: data.student.first_name.toUpperCase(),
@@ -515,8 +515,8 @@ export async function generateInvoiceHTML(data: {
   const template = generateInvoiceTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     organization_name: data.organization.name,
     organization_address: data.organization.address || '',
@@ -695,8 +695,8 @@ export async function generateReceiptHTML(data: {
   const template = generateReceiptTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     receipt_number_label: t.receiptNumber,
     receipt_number: `REC-${data.payment.paid_at.replace(/-/g, '').slice(0, 8)}`,
@@ -1087,8 +1087,8 @@ export async function generateConventionHTML(data: {
   const template = generateConventionTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     between: t.between,
     the_organization: t.theOrganization,
@@ -1644,8 +1644,8 @@ export async function generateSessionReportHTML(data: {
     ? t.averagePercentage 
     : t.averageGrade
   
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
     session_info: t.sessionInfo,
@@ -2148,8 +2148,8 @@ export async function generateContractHTML(data: {
   const template = generateContractTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     between: t.between,
     the_organization: t.theOrganization,
@@ -2454,8 +2454,8 @@ export async function generateConvocationHTML(data: {
   const template = generateConvocationTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     organization_name: data.organization.name,
     organization_address: data.organization.address || '',
@@ -2684,8 +2684,8 @@ export async function generateProgramHTML(data: {
   const template = generateProgramTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
     program: t.program,
@@ -2826,8 +2826,8 @@ export async function generateTermsHTML(data: {
   const template = generateTermsTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
     intro: t.intro,
@@ -2953,8 +2953,8 @@ export async function generatePrivacyPolicyHTML(data: {
   const template = generatePrivacyPolicyTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: DocumentVariables = {
-    organization_logo: data.organization.logo_url || '',
+  const variables: any = {
+    organisation_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
     intro: t.intro,
@@ -2986,13 +2986,25 @@ export async function processTemplateWithTags(
   organizationId?: string
 ): Promise<string> {
   // Créer un template minimal pour le système de génération HTML
-  const template: DocumentTemplate = {
+  const template: any = {
     id: documentId || 'temp',
     name: 'Template',
-    type: 'other',
+    type: 'convention', // Type par défaut
     content: {
-      html: templateContent,
-    },
+      pageSize: 'A4',
+      margins: {
+        top: 20,
+        right: 20,
+        bottom: 20,
+        left: 20,
+      },
+      elements: [
+        {
+          type: 'html',
+          html: templateContent,
+        },
+      ],
+    } as any,
     header: null,
     footer: null,
     header_enabled: false,

@@ -4,9 +4,10 @@ import crypto from 'crypto'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
-type APIKey = TableRow<'api_keys'>
-type Webhook = TableRow<'webhooks'>
-type WebhookDelivery = TableRow<'webhook_deliveries'>
+// Types locaux pour les tables API qui ne sont pas encore dans le schéma Supabase
+type APIKey = any
+type Webhook = any
+type WebhookDelivery = any
 
 export class APIService {
   private supabase: SupabaseClient<Database>
@@ -35,7 +36,7 @@ export class APIService {
    */
   async verifyAPIKey(apiKey: string): Promise<APIKey | null> {
     const hash = crypto.createHash('sha256').update(apiKey).digest('hex')
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('api_keys')
       .select('*')
       .eq('key_hash', hash)
@@ -69,7 +70,7 @@ export class APIService {
     // Créer le quota si nécessaire
     await this.ensureQuotaExists(organizationId)
 
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('api_keys')
       .insert({
         organization_id: organizationId,
@@ -99,7 +100,7 @@ export class APIService {
    * Récupère les clés API d'une organisation
    */
   async getAPIKeys(organizationId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('api_keys')
       .select('*')
       .eq('organization_id', organizationId)
@@ -112,8 +113,8 @@ export class APIService {
   /**
    * Met à jour une clé API
    */
-  async updateAPIKey(keyId: string, updates: TableUpdate<'api_keys'>) {
-    const { data, error } = await this.supabase
+  async updateAPIKey(keyId: string, updates: any) {
+    const { data, error } = await (this.supabase as any)
       .from('api_keys')
       .update(updates)
       .eq('id', keyId)
@@ -135,7 +136,7 @@ export class APIService {
    * Supprime une clé API
    */
   async deleteAPIKey(keyId: string) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('api_keys')
       .delete()
       .eq('id', keyId)
@@ -170,7 +171,7 @@ export class APIService {
   private async checkKeyRateLimit(
     keyId: string
   ): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
-    const { data: key } = await this.supabase
+    const { data: key } = await (this.supabase as any)
       .from('api_keys')
       .select('rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day')
       .eq('id', keyId)
@@ -186,19 +187,19 @@ export class APIService {
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
     // Compter les requêtes récentes
-    const { count: minuteCount } = await this.supabase
+    const { count: minuteCount } = await (this.supabase as any)
       .from('api_requests')
       .select('*', { count: 'exact', head: true })
       .eq('api_key_id', keyId)
       .gte('created_at', oneMinuteAgo.toISOString())
 
-    const { count: hourCount } = await this.supabase
+    const { count: hourCount } = await (this.supabase as any)
       .from('api_requests')
       .select('*', { count: 'exact', head: true })
       .eq('api_key_id', keyId)
       .gte('created_at', oneHourAgo.toISOString())
 
-    const { count: dayCount } = await this.supabase
+    const { count: dayCount } = await (this.supabase as any)
       .from('api_requests')
       .select('*', { count: 'exact', head: true })
       .eq('api_key_id', keyId)
@@ -229,7 +230,7 @@ export class APIService {
   private async checkQuotaRateLimit(
     organizationId: string
   ): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
-    const { data: quota } = await this.supabase
+    const { data: quota } = await (this.supabase as any)
       .from('api_quotas')
       .select('*')
       .eq('organization_id', organizationId)
@@ -278,7 +279,7 @@ export class APIService {
     userAgent?: string,
     queryParams?: Record<string, string | number | boolean>
   ) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('api_requests')
       .insert({
         api_key_id: apiKeyId,
@@ -303,7 +304,7 @@ export class APIService {
    * Récupère les statistiques d'utilisation API
    */
   async getAPIUsageStats(organizationId: string, startDate?: Date, endDate?: Date) {
-    let query = this.supabase
+    let query = (this.supabase as any)
       .from('api_requests')
       .select('method, endpoint, status_code, response_time_ms')
       .eq('organization_id', organizationId)
@@ -338,19 +339,22 @@ export class APIService {
         stats.by_method[req.method] = (stats.by_method[req.method] || 0) + 1
 
         // Par endpoint
-        stats.by_endpoint[req.endpoint] = (stats.by_endpoint[req.endpoint] || 0) + 1
+        const endpoint = req.endpoint as string
+        stats.by_endpoint[endpoint] = (stats.by_endpoint[endpoint] || 0) + 1
 
         // Par statut
-        const statusGroup = Math.floor(req.status_code / 100) * 100
+        const statusCode = (req.status_code as number) || 0
+        const statusGroup = Math.floor(statusCode / 100) * 100
         stats.by_status[statusGroup] = (stats.by_status[statusGroup] || 0) + 1
 
         // Temps de réponse
-        if (req.response_time_ms) {
-          totalResponseTime += req.response_time_ms
+        const responseTime = (req.response_time_ms as number) || 0
+        if (responseTime) {
+          totalResponseTime += responseTime
         }
 
         // Erreurs
-        if (req.status_code >= 400) {
+        if (statusCode >= 400) {
           errorCount++
         }
       })
@@ -365,14 +369,14 @@ export class APIService {
   // ========== QUOTAS ==========
 
   async ensureQuotaExists(organizationId: string) {
-    const { data: existing } = await this.supabase
+    const { data: existing } = await (this.supabase as any)
       .from('api_quotas')
       .select('id')
       .eq('organization_id', organizationId)
       .maybeSingle()
 
     if (!existing) {
-      const { error } = await this.supabase
+      const { error } = await (this.supabase as any)
         .from('api_quotas')
         .insert({
           organization_id: organizationId,
@@ -383,7 +387,7 @@ export class APIService {
   }
 
   async getQuota(organizationId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('api_quotas')
       .select('*')
       .eq('organization_id', organizationId)
@@ -393,8 +397,8 @@ export class APIService {
     return data
   }
 
-  async updateQuota(organizationId: string, updates: TableUpdate<'api_quotas'>) {
-    const { data, error } = await this.supabase
+  async updateQuota(organizationId: string, updates: any) {
+    const { data, error } = await (this.supabase as any)
       .from('api_quotas')
       .update(updates)
       .eq('organization_id', organizationId)
@@ -407,10 +411,10 @@ export class APIService {
 
   // ========== WEBHOOKS ==========
 
-  async createWebhook(webhook: TableInsert<'webhooks'>) {
+  async createWebhook(webhook: any) {
     // Générer un secret
     const secret = crypto.randomBytes(32).toString('hex')
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('webhooks')
       .insert({
         ...webhook,
@@ -424,7 +428,7 @@ export class APIService {
   }
 
   async getWebhooks(organizationId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('webhooks')
       .select('*')
       .eq('organization_id', organizationId)
@@ -434,8 +438,8 @@ export class APIService {
     return data
   }
 
-  async updateWebhook(webhookId: string, updates: TableUpdate<'webhooks'>) {
-    const { data, error } = await this.supabase
+  async updateWebhook(webhookId: string, updates: any) {
+    const { data, error } = await (this.supabase as any)
       .from('webhooks')
       .update(updates)
       .eq('id', webhookId)
@@ -447,7 +451,7 @@ export class APIService {
   }
 
   async deleteWebhook(webhookId: string) {
-    const { error } = await this.supabase
+    const { error } = await (this.supabase as any)
       .from('webhooks')
       .delete()
       .eq('id', webhookId)
@@ -459,7 +463,7 @@ export class APIService {
    * Déclenche un webhook
    */
   async triggerWebhook(webhookId: string, eventType: string, eventData: Record<string, unknown>) {
-    const { data: webhook } = await this.supabase
+    const { data: webhook } = await (this.supabase as any)
       .from('webhooks')
       .select('*')
       .eq('id', webhookId)
@@ -474,7 +478,7 @@ export class APIService {
     }
 
     // Créer une livraison
-    const { data: delivery, error: deliveryError } = await this.supabase
+    const { data: delivery, error: deliveryError } = await (this.supabase as any)
       .from('webhook_deliveries')
       .insert({
         webhook_id: webhookId,
@@ -497,7 +501,7 @@ export class APIService {
    * Envoie un webhook (appelé par un worker)
    */
   async sendWebhook(deliveryId: string) {
-    const { data: delivery } = await this.supabase
+    const { data: delivery } = await (this.supabase as any)
       .from('webhook_deliveries')
       .select('*, webhook:webhooks(*)')
       .eq('id', deliveryId)
@@ -514,8 +518,9 @@ export class APIService {
       timestamp: new Date().toISOString(),
     })
 
+    const secret = (webhook.secret as string) || ''
     const signature = crypto
-      .createHmac('sha256', webhook.secret)
+      .createHmac('sha256', secret)
       .update(payload)
       .digest('hex')
 
@@ -528,13 +533,13 @@ export class APIService {
           'X-Webhook-Event': delivery.event_type,
         },
         body: payload,
-        signal: AbortSignal.timeout((webhook.timeout_seconds || 30) * 1000),
+        signal: AbortSignal.timeout(((webhook.timeout_seconds as number) || 30) * 1000),
       })
 
       const responseBody = await response.text()
 
       // Mettre à jour la livraison
-      await this.supabase
+      await (this.supabase as any)
         .from('webhook_deliveries')
         .update({
           status: response.ok ? 'success' : 'failed',
@@ -545,11 +550,11 @@ export class APIService {
         .eq('id', deliveryId)
 
       // Mettre à jour les statistiques du webhook
-      await this.supabase
+      await (this.supabase as any)
         .from('webhooks')
         .update({
-          success_count: response.ok ? webhook.success_count + 1 : webhook.success_count,
-          failure_count: response.ok ? webhook.failure_count : webhook.failure_count + 1,
+          success_count: response.ok ? ((webhook.success_count as number) || 0) + 1 : (webhook.success_count as number) || 0,
+          failure_count: response.ok ? (webhook.failure_count as number) || 0 : ((webhook.failure_count as number) || 0) + 1,
           last_triggered_at: new Date().toISOString(),
         })
         .eq('id', webhook.id)
@@ -558,11 +563,11 @@ export class APIService {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
       // Mettre à jour la livraison avec l'erreur
-      await this.supabase
+      await (this.supabase as any)
         .from('webhook_deliveries')
         .update({
           status: 'failed',
-          error_message: error.message,
+          error_message: errorMessage,
           attempt_number: delivery.attempt_number + 1,
           next_retry_at:
             delivery.attempt_number < delivery.max_attempts
@@ -576,7 +581,7 @@ export class APIService {
   }
 
   async getWebhookDeliveries(webhookId: string) {
-    const { data, error } = await this.supabase
+    const { data, error } = await (this.supabase as any)
       .from('webhook_deliveries')
       .select('*')
       .eq('webhook_id', webhookId)

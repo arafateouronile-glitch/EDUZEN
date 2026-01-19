@@ -132,19 +132,20 @@ export class EducationalResourcesService {
       return data || []
     } catch (error: unknown) {
       // Gérer les erreurs de table inexistante ou erreur 400
+      const errorObj = error as { code?: string; status?: number; message?: string }
       if (
-        error?.code === 'PGRST116' ||
-        error?.code === 'PGRST200' ||
-        error?.code === '42P01' ||
-        error?.code === 'PGRST301' ||
-        error?.status === 400 ||
-        error?.code === '400' ||
-        error?.message?.includes('relation') ||
-        error?.message?.includes('relationship') ||
-        error?.message?.includes('does not exist') ||
-        error?.message?.includes('schema cache')
+        errorObj?.code === 'PGRST116' ||
+        errorObj?.code === 'PGRST200' ||
+        errorObj?.code === '42P01' ||
+        errorObj?.code === 'PGRST301' ||
+        errorObj?.status === 400 ||
+        errorObj?.code === '400' ||
+        errorObj?.message?.includes('relation') ||
+        errorObj?.message?.includes('relationship') ||
+        errorObj?.message?.includes('does not exist') ||
+        errorObj?.message?.includes('schema cache')
       ) {
-        console.warn('Table educational_resources does not exist yet or invalid query:', error.message)
+        console.warn('Table educational_resources does not exist yet or invalid query:', errorObj?.message || String(error))
         return []
       }
       throw error
@@ -174,8 +175,9 @@ export class EducationalResourcesService {
       return data
     } catch (error: unknown) {
       // Gérer les erreurs de table inexistante
-      if (error?.code === 'PGRST116' || error?.code === '42P01') {
-        console.warn('Table educational_resources does not exist yet:', error.message)
+      const errorObj = error as { code?: string; message?: string }
+      if (errorObj?.code === 'PGRST116' || errorObj?.code === '42P01') {
+        console.warn('Table educational_resources does not exist yet:', errorObj?.message || String(error))
         throw error
       }
       throw error
@@ -225,12 +227,17 @@ export class EducationalResourcesService {
 
     if (error) throw error
 
-    // Incrémenter le compteur
-    await this.supabase.rpc('increment', {
-      table_name: 'educational_resources',
-      column_name: 'favorite_count',
-      row_id: resourceId,
-    })
+    // Incrémenter le compteur (fonction RPC personnalisée - peut ne pas exister)
+    try {
+      await (this.supabase as any).rpc('increment', {
+        table_name: 'educational_resources',
+        column_name: 'favorite_count',
+        row_id: resourceId,
+      })
+    } catch (rpcError) {
+      // Si la fonction RPC n'existe pas, on ignore l'erreur
+      console.warn('RPC increment not available, skipping favorite_count increment')
+    }
 
     return data
   }
@@ -251,10 +258,10 @@ export class EducationalResourcesService {
       .eq('id', resourceId)
       .single()
 
-    if (resource && resource.favorite_count > 0) {
+    if (resource && (resource.favorite_count ?? 0) > 0) {
       await this.supabase
         .from('educational_resources')
-        .update({ favorite_count: resource.favorite_count - 1 })
+        .update({ favorite_count: (resource.favorite_count ?? 0) - 1 })
         .eq('id', resourceId)
     }
   }
