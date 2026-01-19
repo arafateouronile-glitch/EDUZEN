@@ -38,9 +38,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
   const debouncedQuery = useDebouncedValue(query, 300)
-  const searchRef = useRef<HTMLDivElement>(null)
-
-  useClickOutside(searchRef, () => setIsOpen(false))
+  const searchRef = useClickOutside<HTMLDivElement>(() => setIsOpen(false))
 
   const { data: results, isLoading } = useQuery({
     queryKey: ['global-search', debouncedQuery, user?.organization_id, user?.id],

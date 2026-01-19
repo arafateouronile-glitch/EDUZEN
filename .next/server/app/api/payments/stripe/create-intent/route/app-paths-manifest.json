@@ -1,0 +1,3 @@
+{
+  "/api/payments/stripe/create-intent/route": "app/api/payments/stripe/create-intent/route.js"
+}

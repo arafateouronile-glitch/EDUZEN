@@ -1,0 +1,3 @@
+{
+  "/api/sessions/timeout-rules/route": "app/api/sessions/timeout-rules/route.js"
+}

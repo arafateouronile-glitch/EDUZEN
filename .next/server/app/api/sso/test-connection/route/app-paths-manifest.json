@@ -1,0 +1,3 @@
+{
+  "/api/sso/test-connection/route": "app/api/sso/test-connection/route.js"
+}

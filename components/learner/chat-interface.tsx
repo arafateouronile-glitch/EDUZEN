@@ -72,7 +72,7 @@ export function ChatInterface({ conversationId, participant, onBack }: ChatInter
         .order('created_at', { ascending: true })
       
       if (error) throw error
-      return data as Message[]
+      return (data || []) as unknown as Message[]
     },
     enabled: !!conversationId,
     refetchInterval: 5000, // Polling toutes les 5 secondes
@@ -146,7 +146,7 @@ export function ChatInterface({ conversationId, participant, onBack }: ChatInter
 
     await supabase
       .from('messages')
-      .update({ read_at: new Date().toISOString() })
+      .update({ read_at: new Date().toISOString() } as any)
       .in('id', unreadMessages)
   }, [messages, user?.id, supabase])
 

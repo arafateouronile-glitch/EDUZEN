@@ -146,15 +146,8 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
           { name: t('navigation.opco'), href: '/dashboard/opco', icon: Building2 },
           { name: t('navigation.gdpr'), href: '/dashboard/gdpr', icon: Lock },
           { name: t('navigation.compliance'), href: '/dashboard/compliance', icon: Shield },
-          {
-            name: t('navigation.admin'),
-            icon: Shield,
-            allowedRoles: ADMIN_ROLES,
-            children: [
-              { name: t('navigation.systemHealth'), href: '/dashboard/admin/health', icon: Activity },
-              { name: t('navigation.exportHistory'), href: '/dashboard/admin/exports', icon: FileDown },
-            ],
-          } as NavigationItem,
+          { name: t('navigation.systemHealth'), href: '/dashboard/admin/health', icon: Activity, allowedRoles: ADMIN_ROLES },
+          { name: t('navigation.exportHistory'), href: '/dashboard/admin/exports', icon: FileDown, allowedRoles: ADMIN_ROLES },
         ],
       },
     ],

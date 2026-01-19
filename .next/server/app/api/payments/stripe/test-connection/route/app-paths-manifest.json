@@ -1,0 +1,3 @@
+{
+  "/api/payments/stripe/test-connection/route": "app/api/payments/stripe/test-connection/route.js"
+}

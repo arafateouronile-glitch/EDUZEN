@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
           return { isValid: false, errors };
         }
 
-        return { isValid: true, sanitized: emails };
+        return { isValid: true, sanitized: emails.join(',') };
       },
     },
     subject: {
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
           cc: emailData.cc,
           bcc: emailData.bcc,
           replyTo: emailData.replyTo as string | undefined,
-        });
+        } as any);
 
         if (error) {
           logger.error("Email Send - Resend error", error as Error, {

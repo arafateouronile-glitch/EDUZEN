@@ -75,7 +75,7 @@ export function EnrollmentForm({ formation, onSuccess, onCancel }: EnrollmentFor
       addToast({
         title: 'Inscription réussie',
         description: 'Votre demande d\'inscription a été envoyée. Un responsable vous contactera prochainement.',
-        variant: 'success',
+        type: 'success',
       })
 
       reset()
@@ -85,7 +85,7 @@ export function EnrollmentForm({ formation, onSuccess, onCancel }: EnrollmentFor
       addToast({
         title: 'Erreur',
         description: error.message || 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.',
-        variant: 'error',
+        type: 'error',
       })
     } finally {
       setIsSubmitting(false)

@@ -1,0 +1,3 @@
+{
+  "/api/compliance/reports/generate/route": "app/api/compliance/reports/generate/route.js"
+}

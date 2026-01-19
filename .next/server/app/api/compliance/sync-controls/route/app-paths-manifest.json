@@ -1,0 +1,3 @@
+{
+  "/api/compliance/sync-controls/route": "app/api/compliance/sync-controls/route.js"
+}

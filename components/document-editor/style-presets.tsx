@@ -32,7 +32,9 @@ export interface StylePreset {
     marginTop?: string
     marginBottom?: string
     padding?: string
+    paddingLeft?: string
     border?: string
+    borderLeft?: string
     borderRadius?: string
   }
 }

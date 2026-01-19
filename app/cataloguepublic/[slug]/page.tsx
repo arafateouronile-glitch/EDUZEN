@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { data: settings } = await supabase
     .from('public_catalog_settings')
     .select('meta_title, meta_description, meta_image_url, site_title')
-    .eq('organization_id', organization.id)
+    .eq('organization_id', (organization as any).id)
     .eq('is_enabled', true)
     .maybeSingle()
 
@@ -144,7 +144,8 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
     programsQuery = programsQuery.or(`name.ilike.%${search}%,description.ilike.%${search}%,public_description.ilike.%${search}%`)
   }
 
-  const { data: programs = [] } = await programsQuery.order('created_at', { ascending: false })
+  const { data: programsData } = await programsQuery.order('created_at', { ascending: false })
+  const programs = programsData || []
 
   // Filtrer les formations et sessions inactives
   const programsWithActiveContent = programs.map((program: any) => ({

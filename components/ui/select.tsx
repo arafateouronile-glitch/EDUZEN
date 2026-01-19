@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from '@/components/ui/motion'
 import { ChevronDown, Check, AlertCircle } from 'lucide-react'
 
 export interface SelectProps
-  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'children' | 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   label?: string
   error?: string
   helperText?: string
@@ -91,7 +91,7 @@ const SelectNative = React.forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             value={value}
-            {...props}
+            {...(props as any)}
             onFocus={(e) => {
               setIsFocused(true)
               props.onFocus?.(e)

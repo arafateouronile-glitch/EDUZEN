@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { User } from 'lucide-react'
 import { getAvatarColor, getInitials, getPremiumGradient } from '@/lib/utils/avatar-colors'
 
-interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
+interface AvatarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   src?: string
   alt?: string
   fallback?: string
@@ -72,7 +72,7 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
         whileHover={{ scale: 1.05, boxShadow: variant === 'auto' ? `0 8px 20px ${premiumGradient.shadowColor}` : undefined }}
         whileTap={{ scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        {...props}
+        {...(props as any)}
       >
         {src ? (
           <motion.img

@@ -5,7 +5,7 @@ import { motion } from '@/components/ui/motion'
 import { CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface FormFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface FormFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   label: string
   error?: string
   success?: string
@@ -50,6 +50,7 @@ export const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
           <motion.input
             ref={ref}
             type={type}
+            {...(props as any)}
             className={cn(
               'flex h-11 w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300',
               'file:border-0 file:bg-transparent file:text-sm file:font-medium',
@@ -70,7 +71,6 @@ export const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
             onBlur={() => setIsFocused(false)}
             whileFocus={{ scale: 1.01 }}
             transition={{ duration: 0.2 }}
-            {...props}
           />
 
           {statusIcon && (

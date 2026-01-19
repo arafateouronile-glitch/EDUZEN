@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,983321,t=>{"use strict";function e(t){return null}t.s(["AttachmentEmbed",()=>e])},897169,t=>{t.n(t.i(983321))}]);

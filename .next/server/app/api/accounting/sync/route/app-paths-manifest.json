@@ -1,0 +1,3 @@
+{
+  "/api/accounting/sync/route": "app/api/accounting/sync/route.js"
+}

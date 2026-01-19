@@ -1,0 +1,3 @@
+{
+  "/api/document-templates/[id]/copy-header-footer/route": "app/api/document-templates/[id]/copy-header-footer/route.js"
+}

@@ -390,7 +390,7 @@ export default function LearnerConversationPage() {
   useEffect(() => {
     const fetchAdminName = async () => {
       // Récupérer le nom de l'admin si c'est un utilisateur/admin
-      if (!otherParticipant || (otherParticipant.type !== 'admin' && otherParticipant.type !== 'user') || !otherParticipant.data?.id) return
+      if (!otherParticipant || otherParticipant.type !== 'admin' || !otherParticipant.data?.id) return
       
       // Si on a déjà un nom complet, ne rien faire
       if (otherParticipant.name && !otherParticipant.name.startsWith('Administrateur ') && !otherParticipant.name.startsWith('Utilisateur ')) return

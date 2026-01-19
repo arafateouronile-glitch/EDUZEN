@@ -260,7 +260,7 @@ export default function EmailTemplatesPage() {
         </Card>
       ) : (
         <div className="space-y-6">
-          {Object.entries(templatesByType).map(([type, typeTemplates]) => {
+          {(Object.entries(templatesByType) as [string, any[]][]).map(([type, typeTemplates]) => {
             const typeInfo = emailTypes.find(t => t.value === type)
             return (
               <Card key={type}>

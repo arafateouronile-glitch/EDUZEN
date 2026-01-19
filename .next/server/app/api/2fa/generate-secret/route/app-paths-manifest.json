@@ -1,0 +1,3 @@
+{
+  "/api/2fa/generate-secret/route": "app/api/2fa/generate-secret/route.js"
+}

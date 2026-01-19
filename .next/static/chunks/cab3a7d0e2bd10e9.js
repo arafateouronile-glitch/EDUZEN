@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,207803,e=>{"use strict";function t(e){return null}e.s(["ImageResizer",()=>t])},944369,e=>{e.n(e.i(207803))}]);

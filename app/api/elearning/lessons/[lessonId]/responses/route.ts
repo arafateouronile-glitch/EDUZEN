@@ -79,7 +79,7 @@ export async function POST(
         .select('id, poll_votes')
         .eq('lesson_id', lesson_id)
         .eq('student_id', user.id)
-        .maybeSingle()
+        .maybeSingle() as { data: { id: string; poll_votes: Record<string, unknown> } | null }
 
       const pollVotes = (progress?.poll_votes as Record<string, unknown>) || {}
       pollVotes[block_id] = {

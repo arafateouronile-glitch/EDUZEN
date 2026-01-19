@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || undefined
 
     // Récupérer les étudiants
-    const students = await studentService.getStudents(middleware.organizationId, {
+    const students = await studentService.getAll(middleware.organizationId, {
       page,
       limit,
       search,
@@ -53,11 +53,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        data: students,
+        data: students.data,
         meta: {
           page,
           limit,
-          total: students.length,
+          total: students.total,
         },
       },
       {

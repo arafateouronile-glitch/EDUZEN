@@ -1,0 +1,3 @@
+{
+  "/api/videoconference/callback/[provider]/route": "app/api/videoconference/callback/[provider]/route.js"
+}

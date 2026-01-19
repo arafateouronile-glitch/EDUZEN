@@ -1,0 +1,3 @@
+{
+  "/api/payments/sepa/create-transfer/route": "app/api/payments/sepa/create-transfer/route.js"
+}

@@ -119,12 +119,12 @@ export function LearnerSidebar({ isOpen, onClose }: LearnerSidebarProps) {
         <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-brand-blue/5 to-indigo-50 border border-brand-blue/10">
           <div className="w-10 h-10 rounded-full bg-brand-blue/10 flex items-center justify-center">
             <span className="text-brand-blue font-semibold">
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
+              {(user?.full_name || user?.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate">
-              {user?.first_name} {user?.last_name}
+              {user?.full_name || user?.email || 'Utilisateur'}
             </p>
             <p className="text-xs text-gray-500 truncate">{user?.email}</p>
           </div>

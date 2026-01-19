@@ -1,0 +1,3 @@
+{
+  "/api/payments/sepa/status/[paymentId]/route": "app/api/payments/sepa/status/[paymentId]/route.js"
+}

@@ -9,7 +9,7 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react'
 let inputIdCounter = 0
 
 export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   label?: string
   error?: string
   helperText?: string
@@ -105,7 +105,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <motion.input
             ref={ref}
             id={inputId}
-            {...props}
+            {...(props as any)}
             onChange={handleChange}
             onFocus={(e) => {
               setIsFocused(true)

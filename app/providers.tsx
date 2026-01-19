@@ -33,19 +33,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
               return failureCount < 2
             },
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-            // Gestion d'erreur
-            onError: (error) => {
-              logger.queryError('React Query Error', error as Error)
-            },
           },
           mutations: {
             // Retry pour les mutations
             retry: 1,
             retryDelay: 1000,
-            // Gestion d'erreur
-            onError: (error) => {
-              logger.mutationError('React Query Mutation Error', error as Error)
-            },
           },
         },
       })

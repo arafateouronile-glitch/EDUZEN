@@ -53,7 +53,12 @@ const sepaTransferSchema: ValidationSchema = {
   debtor_iban: {
     type: 'string',
     required: true,
-    customValidator: validateIBAN,
+    customValidator: (value: unknown) => {
+      if (typeof value !== 'string') {
+        return { isValid: false, errors: ['IBAN doit être une chaîne de caractères'] };
+      }
+      return validateIBAN(value);
+    },
   },
   debtor_bic: {
     type: 'string',
@@ -73,7 +78,12 @@ const sepaTransferSchema: ValidationSchema = {
   creditor_iban: {
     type: 'string',
     required: true,
-    customValidator: validateIBAN,
+    customValidator: (value: unknown) => {
+      if (typeof value !== 'string') {
+        return { isValid: false, errors: ['IBAN doit être une chaîne de caractères'] };
+      }
+      return validateIBAN(value);
+    },
   },
   creditor_bic: {
     type: 'string',
@@ -94,7 +104,7 @@ const sepaTransferSchema: ValidationSchema = {
  */
 export async function POST(request: NextRequest) {
   return withRateLimit(request, mutationRateLimiter, async (req) => {
-    return withBodyValidation(req, sepaTransferSchema, async (req, validatedData) => {
+    return withBodyValidation(req as NextRequest, sepaTransferSchema, async (req, validatedData) => {
       try {
         const supabase = await createClient()
         const {
@@ -112,16 +122,19 @@ export async function POST(request: NextRequest) {
           .eq('id', user.id)
           .single()
 
+        const amount = typeof validatedData.amount === 'number' ? validatedData.amount : parseFloat(String(validatedData.amount));
+        const currency = typeof validatedData.currency === 'string' ? validatedData.currency : 'EUR';
+        
         const { data: paymentRecord, error: dbError } = await supabase
           .from('payments')
           .insert({
-            organization_id: userData?.organization_id,
-            amount: validatedData.amount.toString(),
-            currency: (validatedData.currency || 'EUR').toUpperCase(),
+            organization_id: userData?.organization_id || null,
+            amount: amount.toString(),
+            currency: currency.toUpperCase(),
             status: 'pending',
             payment_method: 'sepa_transfer',
             payment_provider: 'sepa',
-            description: validatedData.description,
+            description: validatedData.description as string | undefined,
             metadata: {
               debtor_name: validatedData.debtor_name,
               debtor_iban: validatedData.debtor_iban,
@@ -132,19 +145,19 @@ export async function POST(request: NextRequest) {
               creditor_bic: validatedData.creditor_bic,
               reference: validatedData.reference,
               type: 'transfer',
-            },
-          })
+            } as Record<string, unknown>,
+          } as any)
           .select()
           .single()
 
         if (dbError) {
           logger.error('Error saving SEPA payment', dbError, {
-            amount: validatedData.amount,
-            currency: validatedData.currency,
+            amount,
+            currency,
             userId: maskId(user.id),
-            debtorIBAN: maskIBAN(validatedData.debtor_iban),
-            debtorEmail: validatedData.debtor_email ? maskEmail(validatedData.debtor_email) : undefined,
-            creditorIBAN: maskIBAN(validatedData.creditor_iban),
+            debtorIBAN: maskIBAN(String(validatedData.debtor_iban)),
+            debtorEmail: validatedData.debtor_email ? maskEmail(String(validatedData.debtor_email)) : undefined,
+            creditorIBAN: maskIBAN(String(validatedData.creditor_iban)),
             error: sanitizeError(dbError),
           })
           return NextResponse.json({ error: 'Erreur lors de l\'enregistrement' }, { status: 500 })
@@ -156,8 +169,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           paymentId: paymentRecord.id,
           status: 'pending',
-          iban: validatedData.creditor_iban,
-          reference: validatedData.reference,
+          iban: String(validatedData.creditor_iban),
+          reference: validatedData.reference as string | undefined,
         })
       } catch (error: unknown) {
         logger.error('Error creating SEPA transfer', error, {

@@ -143,7 +143,6 @@ export function SignaturePad({
             backgroundColor={backgroundColor}
             penColor={penColor}
             onEnd={handleEnd}
-            disabled={disabled}
           />
           {isEmpty && !signatureData && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

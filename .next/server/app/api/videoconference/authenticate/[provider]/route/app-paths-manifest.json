@@ -1,0 +1,3 @@
+{
+  "/api/videoconference/authenticate/[provider]/route": "app/api/videoconference/authenticate/[provider]/route.js"
+}

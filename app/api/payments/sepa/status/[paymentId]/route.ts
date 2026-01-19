@@ -34,14 +34,21 @@ export async function GET(
 
     return NextResponse.json({
       status: payment.status,
-      amount: parseFloat(payment.amount),
+      amount: parseFloat(String(payment.amount)),
       currency: payment.currency,
       completed: payment.status === 'completed',
     })
   } catch (error: unknown) {
+    const resolvedParams = await params
+    const resolvedPaymentId = resolvedParams?.paymentId || ''
+    const supabase = await createClient()
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser()
+    
     logger.error('Error checking SEPA payment status', error, {
-      paymentId: maskId(paymentId),
-      userId: user ? maskId(user.id) : undefined,
+      paymentId: maskId(resolvedPaymentId),
+      userId: currentUser ? maskId(currentUser.id) : undefined,
       error: sanitizeError(error),
     })
     const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'

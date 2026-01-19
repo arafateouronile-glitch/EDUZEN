@@ -21,7 +21,7 @@ export async function GET(
     }
 
     // Récupérer la ressource
-    const { data: resource, error } = await supabase
+    const { data: resource, error } = await (supabase as any)
       .from('resources')
       .select('*')
       .eq('id', resourceId)

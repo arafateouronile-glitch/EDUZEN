@@ -94,8 +94,7 @@ export async function POST(request: NextRequest) {
       format: body.format || 'PDF',
       send_email: body.send_email || false,
       email_recipients: body.email_recipients || [],
-      is_active: body.is_active !== false,
-      created_by: session.user.id,
+      enabled: body.is_active !== false,
     })
 
     return NextResponse.json(generation)

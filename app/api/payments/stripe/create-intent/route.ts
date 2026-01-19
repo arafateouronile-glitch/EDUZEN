@@ -52,7 +52,7 @@ const createIntentSchema: ValidationSchema = {
  */
 export async function POST(request: NextRequest) {
   return withRateLimit(request, mutationRateLimiter, async (req) => {
-    return withBodyValidation(req, createIntentSchema, async (req, validatedData) => {
+    return withBodyValidation(req as NextRequest, createIntentSchema, async (req, validatedData) => {
   try {
     const supabase = await createClient()
     const {
@@ -63,16 +63,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const {
-      amount,
-      currency = 'EUR',
-      description,
-      customer_email,
-      customer_name,
-      metadata,
-      return_url,
-      cancel_url,
-    } = validatedData
+    const amount = typeof validatedData.amount === 'number' ? validatedData.amount : parseFloat(String(validatedData.amount));
+    const currency = typeof validatedData.currency === 'string' ? validatedData.currency : 'EUR';
+    const description = validatedData.description as string | undefined;
+    const customer_email = validatedData.customer_email as string;
+    const customer_name = validatedData.customer_name as string | undefined;
+    const metadata = validatedData.metadata as Record<string, unknown> | undefined;
+    const return_url = validatedData.return_url as string | undefined;
+    const cancel_url = validatedData.cancel_url as string | undefined;
 
     // TODO: Intégrer avec l'API Stripe réelle
     // Pour l'instant, on simule la création d'une intention de paiement
@@ -92,11 +90,18 @@ export async function POST(request: NextRequest) {
     const paymentIntentId = `pi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const clientSecret = `pi_${paymentIntentId}_secret_${Math.random().toString(36).substr(2, 9)}`
 
+    // Récupérer l'organization_id
+    const { data: userData } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single()
+
     // Enregistrer dans la base de données
     const { data: paymentRecord, error: dbError } = await supabase
       .from('payments')
       .insert({
-        organization_id: (await supabase.from('users').select('organization_id').eq('id', user.id).single()).data?.organization_id,
+        organization_id: userData?.organization_id || null,
         amount: amount.toString(),
         currency: currency.toUpperCase(),
         status: 'pending',
@@ -107,9 +112,9 @@ export async function POST(request: NextRequest) {
         metadata: {
           customer_email,
           customer_name,
-          ...metadata,
-        },
-      })
+          ...(metadata || {}),
+        } as Record<string, unknown>,
+      } as any)
       .select()
       .single()
 
@@ -130,10 +135,14 @@ export async function POST(request: NextRequest) {
       paymentId: paymentRecord.id,
     })
   } catch (error: unknown) {
+    const amount = typeof validatedData.amount === 'number' ? validatedData.amount : parseFloat(String(validatedData.amount));
+    const currency = typeof validatedData.currency === 'string' ? validatedData.currency : 'EUR';
+    const customer_email = validatedData.customer_email as string | undefined;
+    
     logger.error('Error creating Stripe payment intent', error, {
-      amount: validatedData.amount,
-      currency: validatedData.currency,
-      customerEmail: validatedData.customer_email ? maskEmail(String(validatedData.customer_email)) : undefined,
+      amount,
+      currency,
+      customerEmail: customer_email ? maskEmail(customer_email) : undefined,
       error: sanitizeError(error),
     })
     const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'

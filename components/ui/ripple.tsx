@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 export interface RippleProps {
   className?: string
   duration?: number
+  style?: React.CSSProperties
 }
 
 export function useRipple<T extends HTMLElement = HTMLButtonElement>() {

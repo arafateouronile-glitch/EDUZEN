@@ -56,7 +56,11 @@
       "Bash(sysctl:*)",
       "Bash(perl:*)",
       "Bash(supabase --version:*)",
-      "Bash(vm_stat:*)"
+      "Bash(vm_stat:*)",
+      "Bash(NODE_OPTIONS='--max-old-space-size=8192' npx tsc:*)",
+      "Bash(cut:*)",
+      "Bash(git checkout:*)",
+      "Bash(supabase gen types:*)"
     ]
   }
 }

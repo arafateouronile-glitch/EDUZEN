@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,173646,t=>{"use strict";function e(t){return null}t.s(["StylePalette",()=>e])},891564,t=>{t.n(t.i(173646))}]);

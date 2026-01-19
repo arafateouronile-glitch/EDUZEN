@@ -1,0 +1,3 @@
+{
+  "/api/payment-reminders/process/route": "app/api/payment-reminders/process/route.js"
+}

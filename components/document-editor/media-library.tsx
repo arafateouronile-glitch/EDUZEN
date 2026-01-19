@@ -106,7 +106,7 @@ export function MediaLibrary({
     } finally {
       setLoading(false)
     }
-  }, [user?.organization_id, selectedCategory, showFavoritesOnly, showLogosOnly, searchQuery, toast])
+  }, [user?.organization_id, selectedCategory, showFavoritesOnly, showLogosOnly, searchQuery, addToast])
 
   useEffect(() => {
     if (open && user?.organization_id) {

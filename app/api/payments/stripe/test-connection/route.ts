@@ -44,9 +44,20 @@ export async function POST(request: NextRequest) {
       test_mode: publishable_key.startsWith('pk_test_'),
     })
   } catch (error: unknown) {
+    let publishableKey: string | undefined;
+    let secretKey: string | undefined;
+    
+    try {
+      const body = await request.json()
+      publishableKey = body.publishable_key;
+      secretKey = body.secret_key;
+    } catch {
+      // Ignore si on ne peut pas parser le body
+    }
+    
     logger.error('Error testing Stripe connection', error, {
-      publishableKey: publishable_key ? maskApiKey(publishable_key) : undefined,
-      secretKey: secret_key ? maskApiKey(secret_key) : undefined,
+      publishableKey: publishableKey ? maskApiKey(publishableKey) : undefined,
+      secretKey: secretKey ? maskApiKey(secretKey) : undefined,
       error: sanitizeError(error),
     })
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Erreur serveur' }, { status: 500 })

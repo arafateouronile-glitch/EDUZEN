@@ -1,0 +1,3 @@
+{
+  "/(dashboard)/dashboard/settings/document-templates/[type]/analytics/page": "app/(dashboard)/dashboard/settings/document-templates/[type]/analytics/page.js"
+}

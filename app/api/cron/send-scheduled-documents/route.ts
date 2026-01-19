@@ -76,10 +76,10 @@ export async function GET(request: NextRequest) {
         for (const recipient of recipients) {
           if (scheduledSend.send_via && scheduledSend.send_via.includes('email') && recipient.email) {
             const result = await sendDocumentByEmail(
-              recipient.email || undefined,
+              recipient.email!,
               recipient.name,
-              scheduledSend.subject,
-              scheduledSend.message,
+              scheduledSend.subject || 'Document partagé',
+              scheduledSend.message || '',
               document
             )
             if (!result.success) {

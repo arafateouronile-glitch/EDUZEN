@@ -316,10 +316,6 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           style: `min-height: ${height}px;`,
           'data-placeholder': placeholder,
         },
-        // Permettre tous les attributs HTML
-        parseOptions: {
-          preserveWhitespace: 'full',
-        },
         // Gestionnaire de drag & drop pour les variables
         handleDrop: (view, event, _slice, moved) => {
           if (moved) return false
@@ -387,7 +383,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       if (editor && value !== editor.getHTML()) {
         // Utiliser une micro-tâche pour éviter flushSync pendant le rendu
         Promise.resolve().then(() => {
-          editor.commands.setContent(value, false)
+          editor.commands.setContent(value)
         })
       }
     }, [value, editor])
@@ -553,192 +549,6 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           }
           tableHTML += '</tbody></table>'
           editor.chain().focus().insertContent(tableHTML).run()
-        }
-      },
-      insertHTML: (html: string) => {
-        if (editor) {
-          try {
-            console.log('Tiptap insertHTML appelé avec:', html)
-            
-            // Nettoyer le HTML et s'assurer qu'il est valide
-            const cleanHTML = html.trim()
-            if (!cleanHTML) {
-              console.warn('HTML vide, insertion annulée')
-              return
-            }
-            
-            // Vérifier si c'est une image (pour utiliser la commande spécifique de Tiptap)
-            const imgMatch = cleanHTML.match(/<img[^>]+src="([^"]+)"[^>]*>/i)
-            if (imgMatch && imgMatch[1]) {
-              const imgSrc = imgMatch[1]
-              const imgAlt = cleanHTML.match(/alt="([^"]*)"/i)?.[1] || 'Image'
-              const widthMatch = cleanHTML.match(/width="(\d+)"/i)
-              const heightMatch = cleanHTML.match(/height="(\d+)"/i)
-              
-              console.log('Détection d\'une image, utilisation de la commande setImage:', { imgSrc, imgAlt, width: widthMatch?.[1], height: heightMatch?.[1] })
-              
-              // Utiliser la commande setImage de Tiptap pour une meilleure compatibilité
-              editor.chain().focus().setImage({
-                src: imgSrc,
-                alt: imgAlt,
-                width: widthMatch ? parseInt(widthMatch[1]) : undefined,
-                height: heightMatch ? parseInt(heightMatch[1]) : undefined,
-              }).run()
-              
-              console.log('✅ Image insérée via setImage')
-              return
-            }
-            
-            // Vérifier si c'est un horizontal rule (hr)
-            const hrMatch = cleanHTML.match(/<hr[^>]*>/i)
-            if (hrMatch) {
-              console.log('Détection d\'un horizontal rule')
-              
-              // Extraire les styles du hr
-              const styleMatch = cleanHTML.match(/style="([^"]*)"/i)
-              const hrStyles = styleMatch ? styleMatch[1] : ''
-              
-              // Pour les hr avec styles, utiliser directement insertContent pour préserver les styles
-              // StarterKit peut normaliser les hr et supprimer les styles
-              if (hrStyles) {
-                console.log('HR avec styles détecté, utilisation de insertContent pour préserver les styles')
-                // Insérer directement le HTML complet avec les styles
-                const result = editor.chain().focus().insertContent(cleanHTML).run()
-                console.log('Résultat insertContent pour HR:', result)
-                
-                // Vérifier que l'insertion a réussi
-                setTimeout(() => {
-                  const currentHTML = editor.getHTML()
-                  const hasHR = currentHTML.includes('<hr') || currentHTML.toLowerCase().includes('horizontalrule')
-                  if (hasHR) {
-                    console.log('✅ Horizontal rule stylisé confirmé dans l\'éditeur')
-                  } else {
-                    console.warn('⚠️ Horizontal rule non détecté après insertion, utilisation de la méthode alternative')
-                    // Fallback : utiliser la méthode alternative
-                    const currentContent = editor.getHTML()
-                    const parser = new DOMParser()
-                    const doc = parser.parseFromString(`<div>${currentContent}</div>`, 'text/html')
-                    const container = doc.querySelector('div')
-                    if (container) {
-                      container.insertAdjacentHTML('beforeend', cleanHTML)
-                      editor.commands.setContent(container.innerHTML)
-                      console.log('✅ Horizontal rule inséré via méthode alternative')
-                    }
-                  }
-                }, 100)
-                return
-              } else {
-                // Pour les hr sans styles, utiliser setHorizontalRule
-                try {
-                  if (editor.can().setHorizontalRule()) {
-                    editor.chain().focus().setHorizontalRule().run()
-                    console.log('✅ Horizontal rule inséré via setHorizontalRule')
-                    return
-                  }
-                } catch (hrError) {
-                  console.warn('setHorizontalRule non disponible, utilisation de insertContent:', hrError)
-                }
-              }
-            }
-            
-            // Tiptap peut avoir des problèmes avec certains HTML
-            // On utilise une approche plus robuste en créant un élément temporaire
-            const tempDiv = document.createElement('div')
-            tempDiv.innerHTML = cleanHTML
-            
-            // Tiptap peut avoir des problèmes avec les styles inline sur les paragraphes
-            // Utiliser une approche qui force l'insertion
-            try {
-              // Méthode 1 : Essayer insertContent directement
-              console.log('Tentative d\'insertion directe du HTML')
-              const result = editor.chain().focus().insertContent(cleanHTML).run()
-              console.log('Résultat insertContent:', result)
-              
-              // Vérifier après un court délai si l'insertion a réussi
-              setTimeout(() => {
-                const currentHTML = editor.getHTML()
-                console.log('HTML actuel après insertion (premiers 300 caractères):', currentHTML.substring(0, 300))
-                
-                // Vérifier si le contenu a été inséré (chercher des indices plus larges)
-                const htmlCheck = cleanHTML.toLowerCase().replace(/\s+/g, ' ')
-                const currentCheck = currentHTML.toLowerCase().replace(/\s+/g, ' ')
-                
-                // Vérifier plusieurs indices pour confirmer l'insertion
-                const hasDataImage = currentCheck.includes('data:image')
-                const hasImgTag = currentCheck.includes('<img') || currentCheck.includes('img src')
-                const hasSvg = currentCheck.includes('svg') || currentCheck.includes('base64')
-                const hasHR = currentCheck.includes('<hr') || currentCheck.includes('horizontalrule')
-                const hasInserted = hasDataImage || hasImgTag || hasSvg || hasHR || currentCheck.includes(htmlCheck.substring(0, 30))
-                
-                console.log('Vérification insertion - HTML cherché:', htmlCheck.substring(0, 50))
-                console.log('Vérification insertion - data:image:', hasDataImage, 'img tag:', hasImgTag, 'svg:', hasSvg, 'hr:', hasHR)
-                console.log('Vérification insertion - Trouvé:', hasInserted)
-                console.log('HTML complet actuel:', currentHTML)
-                
-                if (!hasInserted) {
-                  console.warn('Le HTML n\'a pas été inséré correctement, utilisation d\'une méthode alternative')
-                  
-                  // Méthode alternative : Insérer via manipulation directe du contenu
-                  try {
-                    const currentContent = editor.getHTML()
-                    const parser = new DOMParser()
-                    const doc = parser.parseFromString(`<div>${currentContent}</div>`, 'text/html')
-                    const container = doc.querySelector('div')
-                    
-                    if (container) {
-                      // Créer un élément avec le nouveau HTML
-                      const newElement = document.createElement('div')
-                      newElement.innerHTML = cleanHTML
-                      
-                      // Insérer à la fin
-                      if (newElement.firstElementChild) {
-                        container.appendChild(newElement.firstElementChild)
-                      } else {
-                        container.insertAdjacentHTML('beforeend', cleanHTML)
-                      }
-                      
-                      // Mettre à jour l'éditeur avec le nouveau contenu
-                      const newHTML = container.innerHTML
-                      editor.commands.setContent(newHTML)
-                      console.log('✅ HTML inséré via méthode alternative')
-                    }
-                  } catch (altError) {
-                    console.error('Erreur lors de la méthode alternative:', altError)
-                  }
-                } else {
-                  console.log('✅ HTML inséré avec succès via insertContent')
-                }
-              }, 150)
-            } catch (insertError) {
-              console.error('Erreur lors de l\'insertion:', insertError)
-              // Fallback final
-              try {
-                const currentHTML = editor.getHTML()
-                editor.commands.setContent(currentHTML + cleanHTML)
-              } catch (finalError) {
-                console.error('Erreur lors du fallback final:', finalError)
-              }
-            }
-          } catch (error) {
-            console.error('Erreur lors de l\'insertion HTML:', error, html)
-            // Fallback : utiliser une approche alternative
-            try {
-              // Essayer d'insérer directement le HTML
-              editor.chain().focus().insertContent(html).run()
-            } catch (directError) {
-              console.error('Erreur lors de l\'insertion directe:', directError)
-              // Dernier recours : ajouter à la fin du contenu
-              try {
-                const currentHTML = editor.getHTML()
-                const newHTML = currentHTML + html
-                editor.commands.setContent(newHTML)
-              } catch (finalError) {
-                console.error('Erreur lors du fallback final:', finalError)
-              }
-            }
-          }
-        } else {
-          console.error('Editor non disponible pour insertHTML')
         }
       },
     }), [editor])

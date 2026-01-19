@@ -1,0 +1,3 @@
+{
+  "/api/crm/authenticate/[provider]/route": "app/api/crm/authenticate/[provider]/route.js"
+}

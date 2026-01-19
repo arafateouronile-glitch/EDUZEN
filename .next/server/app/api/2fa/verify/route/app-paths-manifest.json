@@ -1,0 +1,3 @@
+{
+  "/api/2fa/verify/route": "app/api/2fa/verify/route.js"
+}

@@ -46,11 +46,12 @@ export async function GET(
         canceled: 'canceled',
       }
 
+      const paymentStatus = payment.status || 'pending';
       return NextResponse.json({
-        status: statusMap[payment.status] || payment.status,
-        amount: parseFloat(payment.amount),
+        status: statusMap[paymentStatus] || paymentStatus,
+        amount: parseFloat(String(payment.amount)),
         currency: payment.currency,
-        paid: payment.status === 'completed',
+        paid: paymentStatus === 'completed',
       })
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'

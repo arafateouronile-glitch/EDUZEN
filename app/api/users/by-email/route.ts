@@ -14,12 +14,13 @@ export async function GET(request: NextRequest) {
   return withQueryValidation(request, querySchema, async (req, data) => {
     try {
       const { email } = data
+      const emailStr = String(email)
       const supabase = createAdminClient()
 
       const { data: profile, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('id, email, full_name, role')
-        .eq('email', email)
+        .eq('email', emailStr)
         .single()
 
       if (error) {

@@ -53,7 +53,8 @@ export default async function ProgrammesPage({
     programsQuery = programsQuery.or(`name.ilike.%${search}%,description.ilike.%${search}%,public_description.ilike.%${search}%`)
   }
 
-  const { data: programs = [] } = await programsQuery.order('created_at', { ascending: false })
+  const { data: programsData } = await programsQuery.order('created_at', { ascending: false })
+  const programs = programsData || []
 
   // Filtrer les formations et sessions inactives
   const programsWithActiveContent = programs.map((program: any) => ({
@@ -81,14 +82,16 @@ export default async function ProgrammesPage({
   let catalogSettings = null
   if (organizationId || (organization && organization.id)) {
     const orgId = organizationId || organization?.id
-    const { data: settings } = await supabase
-      .from('public_catalog_settings')
-      .select('*')
-      .eq('organization_id', orgId)
-      .eq('is_enabled', true)
-      .maybeSingle()
+    if (orgId) {
+      const { data: settings } = await supabase
+        .from('public_catalog_settings')
+        .select('*')
+        .eq('organization_id', orgId)
+        .eq('is_enabled', true)
+        .maybeSingle()
     
-    catalogSettings = settings
+      catalogSettings = settings
+    }
   }
 
   // Utiliser les valeurs des settings ou celles par défaut

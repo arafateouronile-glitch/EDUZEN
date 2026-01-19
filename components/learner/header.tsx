@@ -81,12 +81,12 @@ export function LearnerHeader({ onMenuClick }: LearnerHeaderProps) {
           <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-gray-200">
             <div className="text-right">
               <p className="text-sm font-semibold text-gray-900">
-                {user?.first_name} {user?.last_name}
+                {user?.full_name || user?.email || 'Utilisateur'}
               </p>
               <p className="text-xs text-gray-500">Apprenant</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-blue to-indigo-600 flex items-center justify-center text-white font-semibold">
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
+              {(user?.full_name || user?.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
           </div>
         </div>

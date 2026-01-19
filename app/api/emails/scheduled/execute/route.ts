@@ -462,11 +462,11 @@ export async function POST(request: NextRequest) {
           // Récupérer le template d'email
           let template = null
           if (schedule.template_id) {
-            template = await emailTemplateService.getTemplateById(schedule.template_id)
+            template = await emailTemplateService.getById(schedule.template_id)
           } else {
             template = await emailTemplateService.getDefault(
               schedule.organization_id,
-              schedule.email_type
+              schedule.email_type as any
             )
           }
 

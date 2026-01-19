@@ -107,15 +107,18 @@ export async function POST(
 
     // Construire le payload du webhook
     const payload: WebhookPayload = {
+      provider: provider as MobileMoneyProvider,
       transaction_id: body.transaction_id || body.transactionId || body.id,
-      external_transaction_id: body.external_transaction_id || body.externalId || body.reference,
       status: mapWebhookStatus(provider, body.status || body.state),
-      amount: body.amount ? parseFloat(body.amount) : undefined,
-      currency: body.currency,
+      amount: body.amount ? parseFloat(body.amount) : 0,
+      currency: body.currency || 'XOF',
       phone_number: body.phone_number || body.phoneNumber || body.msisdn || body.subscriber?.msisdn,
       timestamp: body.timestamp || body.created_at || new Date().toISOString(),
-      signature,
-      data: body,
+      metadata: {
+        external_transaction_id: body.external_transaction_id || body.externalId || body.reference,
+        signature,
+        raw_data: body,
+      } as Record<string, unknown>,
     }
 
     // Traiter le webhook

@@ -1,0 +1,20 @@
+{
+  "node": {
+    "70bafc011444c60487d1ee4847afd169e191567030": {
+      "workers": {
+        "app/(dashboard)/dashboard/sessions/[id]/page": {
+          "moduleId": 767632,
+          "async": false,
+          "exportedName": "processSignatures",
+          "filename": "lib/utils/document-generation/signature-processor.ts"
+        }
+      },
+      "layer": {
+        "app/(dashboard)/dashboard/sessions/[id]/page": "action-browser"
+      },
+      "exportedName": "processSignatures",
+      "filename": "lib/utils/document-generation/signature-processor.ts"
+    }
+  },
+  "edge": {}
+}

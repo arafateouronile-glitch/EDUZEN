@@ -1,0 +1,3 @@
+{
+  "/api/crm/callback/[provider]/route": "app/api/crm/callback/[provider]/route.js"
+}

@@ -1,0 +1,35 @@
+{
+  "node": {
+    "70bafc011444c60487d1ee4847afd169e191567030": {
+      "workers": {
+        "app/(dashboard)/dashboard/documents/generate-batch/page": {
+          "moduleId": 73604,
+          "async": false,
+          "exportedName": "processSignatures",
+          "filename": "lib/utils/document-generation/signature-processor.ts"
+        },
+        "app/(dashboard)/dashboard/payments/[id]/page": {
+          "moduleId": 321308,
+          "async": false,
+          "exportedName": "processSignatures",
+          "filename": "lib/utils/document-generation/signature-processor.ts"
+        },
+        "app/(dashboard)/dashboard/sessions/[id]/page": {
+          "moduleId": 767632,
+          "async": false,
+          "exportedName": "processSignatures",
+          "filename": "lib/utils/document-generation/signature-processor.ts"
+        }
+      },
+      "layer": {
+        "app/(dashboard)/dashboard/documents/generate-batch/page": "action-browser",
+        "app/(dashboard)/dashboard/payments/[id]/page": "action-browser",
+        "app/(dashboard)/dashboard/sessions/[id]/page": "action-browser"
+      },
+      "filename": "lib/utils/document-generation/signature-processor.ts",
+      "exportedName": "processSignatures"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "pfds8rRi+AHrCr4hmAeHy/MpWw/fnPZcvhN9jtavIEs="
+}

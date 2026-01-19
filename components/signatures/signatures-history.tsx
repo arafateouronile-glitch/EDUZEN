@@ -27,18 +27,23 @@ export function SignaturesHistory({
   showDocumentLink = false,
 }: SignaturesHistoryProps) {
   // Récupérer les signatures par document ou par utilisateur
-  const { data: signatures, isLoading } = useQuery({
+  const { data: signaturesData, isLoading } = useQuery({
     queryKey: documentId
       ? ['document-signatures', documentId]
       : ['user-signatures', userId, organizationId],
-    queryFn: () =>
-      documentId
-        ? signatureService.getSignaturesByDocument(documentId)
-        : userId && organizationId
-        ? signatureService.getSignaturesByUser(userId, organizationId)
-        : Promise.resolve([]),
+    queryFn: async () => {
+      if (documentId) {
+        return await signatureService.getSignaturesByDocument(documentId)
+      }
+      if (userId && organizationId) {
+        return await signatureService.getSignaturesByUser(userId, organizationId)
+      }
+      return []
+    },
     enabled: !!(documentId || (userId && organizationId)),
   })
+  
+  const signatures = Array.isArray(signaturesData) ? signaturesData : []
 
   if (isLoading) {
     return (
@@ -106,7 +111,7 @@ export function SignaturesHistory({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-semibold">
-                        {signature.signer_name || signature.signer?.full_name || 'Signataire inconnu'}
+                        {signature.signer_name || ('signer' in signature ? signature.signer?.full_name : null) || 'Signataire inconnu'}
                       </p>
                       {signature.status === 'signed' && signature.is_valid && (
                         <CheckCircle className="h-4 w-4 text-green-600" />
@@ -119,7 +124,7 @@ export function SignaturesHistory({
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {signature.signer_role || signature.signer?.role || 'Rôle non spécifié'}
+                      {signature.signer_role || ('signer' in signature ? signature.signer?.role : null) || 'Rôle non spécifié'}
                     </p>
                     {signature.signer_email && (
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -127,7 +132,7 @@ export function SignaturesHistory({
                       </p>
                     )}
                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      <span>Signé le {formatDate(signature.signed_at)}</span>
+                      <span>Signé le {formatDate(signature.signed_at || signature.created_at)}</span>
                       {signature.signature_type && (
                         <span className="capitalize">
                           {signature.signature_type === 'handwritten'

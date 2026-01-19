@@ -1,0 +1,3 @@
+{
+  "/api/signature-requests/public/[token]/route": "app/api/signature-requests/public/[token]/route.js"
+}

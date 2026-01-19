@@ -201,8 +201,8 @@ export function ElementPalette({ onInsert, onClose, onChartEditorOpen, onSignatu
         <div>
           <Label className="mb-3 block">Type d'élément</Label>
           <div className="grid grid-cols-6 gap-2">
-            {(['image', 'signature', 'qrcode', 'barcode', 'link', 'divider', 'form'] as ElementType[]).map((type) => {
-              const Icon = elementIcons[type]
+            {(['image', 'signature', 'qrcode', 'barcode', 'link', 'divider', 'form'] as const).map((type) => {
+              const Icon = elementIcons[type as keyof typeof elementIcons]
               return (
                 <motion.button
                   key={type}

@@ -128,8 +128,8 @@ export function TablePropertiesModal({
             <Label htmlFor="headers">En-têtes</Label>
             <SelectRoot
               value={properties.headers}
-              onValueChange={(value: TableProperties['headers']) =>
-                setProperties({ ...properties, headers: value })
+              onValueChange={(value: string) =>
+                setProperties({ ...properties, headers: value as TableProperties['headers'] })
               }
             >
               <SelectTrigger id="headers">
@@ -196,8 +196,8 @@ export function TablePropertiesModal({
               <Label htmlFor="alignment">Alignement</Label>
               <SelectRoot
                 value={properties.alignment}
-                onValueChange={(value: TableProperties['alignment']) =>
-                  setProperties({ ...properties, alignment: value })
+                onValueChange={(value: string) =>
+                  setProperties({ ...properties, alignment: value as TableProperties['alignment'] })
                 }
               >
                 <SelectTrigger id="alignment">

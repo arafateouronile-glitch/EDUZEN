@@ -1,0 +1,3 @@
+module.exports=[879894,a=>{"use strict";var b=a.i(187924);function c(){return(0,b.jsxs)("div",{className:"container mx-auto py-8",children:[(0,b.jsx)("h1",{className:"text-3xl font-bold mb-4",children:"Mobile Money"}),(0,b.jsx)("p",{className:"text-gray-600",children:"Configuration Mobile Money en cours de développement."})]})}a.s(["default",()=>c])}];
+
+//# sourceMappingURL=app_%28dashboard%29_dashboard_settings_mobile-money_page_tsx_cca65c6a._.js.map

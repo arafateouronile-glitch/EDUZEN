@@ -58,6 +58,8 @@
     "e2e/**/*",
     "playwright-report/**/*",
     "test-results/**/*",
-    "test-output/**/*"
+    "test-output/**/*",
+    "scripts/**/*",
+    "supabase/functions/**/*"
   ]
 }

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       minLength: 8,
       maxLength: 72, // Bcrypt max length
       customValidator: (value: unknown) => {
-        if (!value) return { isValid: true, sanitized: value };
+        if (!value) return { isValid: true, sanitized: undefined };
 
         const password = String(value);
         const hasUpperCase = /[A-Z]/.test(password);
@@ -190,10 +190,10 @@ export async function POST(request: NextRequest) {
       } else if (send_invitation) {
         // Envoyer une invitation
         const { data: authData, error: authError } =
-          await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+          await supabaseAdmin.auth.admin.inviteUserByEmail(String(email), {
             data: {
-              full_name,
-              phone,
+              full_name: String(full_name),
+              phone: phone ? String(phone) : undefined,
             },
           });
 

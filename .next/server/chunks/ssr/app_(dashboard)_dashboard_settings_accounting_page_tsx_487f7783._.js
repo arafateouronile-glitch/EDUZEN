@@ -1,0 +1,3 @@
+module.exports=[626956,a=>{"use strict";var b=a.i(187924);function c(){return(0,b.jsxs)("div",{className:"space-y-6",children:[(0,b.jsxs)("div",{children:[(0,b.jsx)("h1",{className:"text-3xl font-bold text-gray-900",children:"Paramètres comptables"}),(0,b.jsx)("p",{className:"text-gray-500 mt-1",children:"Configuration des paramètres comptables et de facturation"})]}),(0,b.jsx)("div",{className:"bg-white rounded-lg shadow p-6",children:(0,b.jsx)("p",{className:"text-gray-500",children:"Cette page est en cours de développement."})})]})}a.s(["default",()=>c])}];
+
+//# sourceMappingURL=app_%28dashboard%29_dashboard_settings_accounting_page_tsx_487f7783._.js.map

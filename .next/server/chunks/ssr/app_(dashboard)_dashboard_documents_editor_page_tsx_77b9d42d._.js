@@ -1,0 +1,3 @@
+module.exports=[710859,a=>{"use strict";var b=a.i(187924);let c=(0,a.i(819721).default)(async()=>{},{loadableGenerated:{modules:[354039]},ssr:!1,loading:()=>(0,b.jsx)("div",{className:"flex items-center justify-center h-screen bg-gray-100",children:(0,b.jsx)("div",{className:"text-gray-500",children:"Chargement de l'éditeur..."})})});function d(){return(0,b.jsx)(c,{})}a.s(["default",()=>d])}];
+
+//# sourceMappingURL=app_%28dashboard%29_dashboard_documents_editor_page_tsx_77b9d42d._.js.map

@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       .replace(/(^-|-$)/g, '')
 
     // Créer l'enregistrement de la ressource
-    const { data: resource, error: resourceError } = await supabase
+    const { data: resource, error: resourceError } = await (supabase as any)
       .from('resources')
       .insert({
         organization_id: organizationId,

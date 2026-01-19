@@ -4,7 +4,7 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { motion } from '@/components/ui/motion'
 
-export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface GlassCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   variant?: 'default' | 'premium' | 'subtle'
   hoverable?: boolean
   glow?: boolean
@@ -37,7 +37,7 @@ const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
         )}
         whileHover={hoverable ? { scale: 1.02, y: -2 } : undefined}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        {...props}
+        {...(props as any)}
       >
         {/* Glow effect */}
         {glow && (

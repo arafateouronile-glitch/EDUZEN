@@ -1,0 +1,3 @@
+{
+  "/api/calendar/authenticate/[provider]/route": "app/api/calendar/authenticate/[provider]/route.js"
+}

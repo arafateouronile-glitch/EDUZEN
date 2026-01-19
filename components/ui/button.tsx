@@ -37,7 +37,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         
         // Outline variant - Bordure gris avec hover
         'border-2 border-bg-gray-200 bg-transparent text-text-secondary hover:bg-bg-gray-100 hover:border-brand-blue hover:text-text-primary': variant === 'outline',
-        'hover:-translate-y-0.5': variant === 'outline' && !disabled,
+        'hover:-translate-y-0.5': (variant === 'outline' || variant === 'ghost') && !disabled,
         
         // Secondary variant - Cyan #34B9EE
         'bg-brand-cyan text-white shadow-sm hover:shadow-md': variant === 'secondary',
@@ -45,7 +45,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         
         // Ghost variant
         'hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
-        'hover:-translate-y-0.5': variant === 'ghost' && !disabled,
         
         // Link variant - Bleu pour liens
         'underline-offset-4 hover:underline text-brand-blue p-0 h-auto': variant === 'link',
@@ -70,7 +69,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     if (asChild && React.isValidElement(children)) {
       // Mode composition : cloner l'enfant et lui passer les styles et props
       return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-        className: cn(buttonClassName, (children as React.ReactElement<Record<string, unknown>>).props?.className),
+        className: cn(buttonClassName, (children as React.ReactElement<Record<string, unknown>>).props?.className as string | undefined),
         disabled: disabled || isLoading,
         ...domProps,
       })

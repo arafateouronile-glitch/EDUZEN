@@ -1,0 +1,3 @@
+{
+  "/api/payments/sepa/create-direct-debit/route": "app/api/payments/sepa/create-direct-debit/route.js"
+}

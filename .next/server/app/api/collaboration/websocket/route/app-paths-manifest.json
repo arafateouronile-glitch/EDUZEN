@@ -1,0 +1,3 @@
+{
+  "/api/collaboration/websocket/route": "app/api/collaboration/websocket/route.js"
+}

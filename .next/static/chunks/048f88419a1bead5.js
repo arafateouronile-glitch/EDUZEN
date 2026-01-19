@@ -1,0 +1,1 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,561627,o=>{"use strict";function t(o){return null}o.s(["ColorPicker",()=>t])},109098,o=>{o.n(o.i(561627))}]);
