@@ -13,8 +13,6 @@ import { logger, maskEmail, sanitizeError } from '@/lib/utils/logger'
  * - RESEND_FROM_EMAIL=noreply@votredomaine.com
  */
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -65,6 +63,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Instancier Resend uniquement après avoir vérifié la clé API
+    const resend = new Resend(process.env.RESEND_API_KEY)
 
     logger.info('Sending email via Resend', {
       to: maskEmail(to),
