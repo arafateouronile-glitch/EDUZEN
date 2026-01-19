@@ -178,8 +178,11 @@ export class AppError extends Error {
 
   /**
    * Convertit l'erreur en objet JSON pour logging
+   * SÉCURITÉ: Les stack traces sont masquées en production
    */
   toJSON() {
+    const isProduction = process.env.NODE_ENV === 'production'
+
     return {
       name: this.name,
       message: this.message,
@@ -188,14 +191,16 @@ export class AppError extends Error {
       userMessage: this.userMessage,
       retryable: this.retryable,
       context: this.context,
-      stack: this.stack,
+      // Masquer les stack traces en production pour éviter la fuite d'informations
+      stack: isProduction ? undefined : this.stack,
       originalError: this.originalError instanceof Error
         ? {
             name: this.originalError.name,
             message: this.originalError.message,
-            stack: this.originalError.stack,
+            // Masquer la stack trace de l'erreur originale en production
+            stack: isProduction ? undefined : this.originalError.stack,
           }
-        : this.originalError,
+        : (isProduction ? undefined : this.originalError),
     }
   }
 }

@@ -60,7 +60,9 @@
       "Bash(NODE_OPTIONS='--max-old-space-size=8192' npx tsc:*)",
       "Bash(cut:*)",
       "Bash(git checkout:*)",
-      "Bash(supabase gen types:*)"
+      "Bash(supabase gen types:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm info:*)"
     ]
   }
 }

@@ -173,10 +173,12 @@ export default function LoginPage() {
         return
       }
 
-      // Vérifier le code 2FA
-      const response = await fetch('/api/2fa/verify', {
+      // Vérifier le code 2FA via la nouvelle API sécurisée
+      // Cette API définit le cookie 2fa_session de manière httpOnly côté serveur
+      const response = await fetch('/api/2fa/verify-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Important pour recevoir le cookie
         body: JSON.stringify({
           userId,
           code: twoFactorCode,
@@ -190,7 +192,8 @@ export default function LoginPage() {
         return
       }
 
-      // Reconnexion avec le sessionToken 2FA
+      // Reconnexion après vérification 2FA réussie
+      // Le cookie 2fa_session est déjà défini par l'API de manière sécurisée (httpOnly)
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -201,12 +204,9 @@ export default function LoginPage() {
         return
       }
 
-      // Stocker le sessionToken 2FA dans les cookies
-      document.cookie = `2fa_session=${data.sessionToken}; path=/; max-age=1800` // 30 minutes
-
       // Attendre un peu pour que la session soit mise à jour
       await new Promise(resolve => setTimeout(resolve, 300))
-      
+
       // Rediriger vers le dashboard (le dashboard détectera automatiquement le rôle)
       router.push('/dashboard')
     } catch (err) {

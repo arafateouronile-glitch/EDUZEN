@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { logger, sanitizeError } from './lib/utils/logger'
+import { getSecurityHeaders } from './lib/utils/csp'
 
 // Créer le middleware next-intl avec la configuration de routing
 const intlMiddleware = createMiddleware(routing)
@@ -185,64 +186,8 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Ajouter les headers de sécurité
-  const securityHeaders = {
-    // Content Security Policy - Version Elite Ultra Stricte
-    'Content-Security-Policy': [
-      "default-src 'self'",
-      // Scripts: autoriser self, Supabase, analytics (Plausible, Google)
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://plausible.io https://www.googletagmanager.com https://www.google-analytics.com",
-      // Styles: autoriser self, inline (requis pour Tailwind/styled-components), Google Fonts
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      // Images: autoriser self, data URIs, HTTPS, blob (pour preview), Supabase storage
-      "img-src 'self' data: https: blob: https://*.supabase.co",
-      // Fonts: autoriser self, data URIs, Google Fonts
-      "font-src 'self' data: https://fonts.gstatic.com",
-      // Connexions: autoriser self, Supabase, WebSocket, analytics
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co ws://localhost:* wss://localhost:* https://plausible.io https://www.google-analytics.com https://analytics.google.com data:",
-      // Frames: autoriser self, Supabase (auth popup)
-      "frame-src 'self' https://*.supabase.co",
-      // Media: autoriser self, Supabase storage
-      "media-src 'self' https://*.supabase.co blob:",
-      // Objets: interdire tous les plugins (Flash, Java, etc.)
-      "object-src 'none'",
-      // Base URI: limiter à self pour prévenir injection de base
-      "base-uri 'self'",
-      // Actions de formulaire: limiter à self
-      "form-action 'self'",
-      // Frame ancestors: interdire l'embedding (prévenir clickjacking)
-      "frame-ancestors 'none'",
-      // Upgrade insecure requests en production
-      process.env.NODE_ENV === 'production' ? "upgrade-insecure-requests" : "",
-      // Bloquer le mixed content en production
-      process.env.NODE_ENV === 'production' ? "block-all-mixed-content" : "",
-    ].filter(Boolean).join('; '),
-
-    // Strict Transport Security (HTTPS uniquement en production)
-    'Strict-Transport-Security': process.env.NODE_ENV === 'production'
-      ? 'max-age=31536000; includeSubDomains; preload'
-      : undefined,
-
-    // X-Frame-Options
-    'X-Frame-Options': 'DENY',
-
-    // X-Content-Type-Options
-    'X-Content-Type-Options': 'nosniff',
-
-    // X-XSS-Protection
-    'X-XSS-Protection': '1; mode=block',
-
-    // Referrer Policy
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-
-    // Permissions Policy
-    'Permissions-Policy': [
-      'camera=()',
-      'microphone=()',
-      'geolocation=()',
-      'interest-cohort=()',
-    ].join(', '),
-  }
+  // Ajouter les headers de sécurité via le module centralisé
+  const securityHeaders = getSecurityHeaders()
 
   // Appliquer les headers de sécurité
   Object.entries(securityHeaders).forEach(([key, value]) => {

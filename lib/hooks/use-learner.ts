@@ -6,6 +6,10 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { logger } from '@/lib/utils/logger'
+import { secureSessionStorage, TTL } from '@/lib/utils/secure-storage'
+
+// Clé pour le stockage sécurisé de l'ID étudiant
+const LEARNER_STORAGE_KEY = 'learner_student_id'
 
 type StudentRow = TableRow<'students'> | null
 
@@ -28,24 +32,25 @@ export function useLearner() {
     if (typeof window !== 'undefined') {
       // Essayer d'abord l'URL (pour /learner/access/[id] uniquement)
       if (studentIdFromUrl && isAccessRoute) {
-        logger.info('[useLearner] Student ID from URL (access route)', { 
+        logger.info('[useLearner] Student ID from URL (access route)', {
           studentId: studentIdFromUrl,
           path: currentPath
         })
-        localStorage.setItem('learner_student_id', studentIdFromUrl)
+        // Utiliser le stockage sécurisé avec expiration de 24h
+        secureSessionStorage.set(LEARNER_STORAGE_KEY, studentIdFromUrl, { ttl: TTL.DAY })
         return studentIdFromUrl
       }
-      // Sinon, vérifier localStorage (pour /learner après redirection ou autres routes)
-      const savedStudentId = localStorage.getItem('learner_student_id')
+      // Sinon, vérifier le stockage sécurisé (pour /learner après redirection ou autres routes)
+      const savedStudentId = secureSessionStorage.get<string>(LEARNER_STORAGE_KEY)
       if (savedStudentId) {
-        logger.info('[useLearner] Student ID from localStorage', { 
+        logger.info('[useLearner] Student ID from secure storage', {
           studentId: savedStudentId,
           path: currentPath,
           isAccessRoute
         })
         return savedStudentId
       }
-      logger.warn('[useLearner] No student ID found in URL or localStorage', { 
+      logger.warn('[useLearner] No student ID found in URL or secure storage', {
         path: currentPath,
         isAccessRoute,
         paramsId: params?.id
@@ -58,12 +63,13 @@ export function useLearner() {
   // Mettre à jour si l'URL change (uniquement sur la route /learner/access/[id])
   useEffect(() => {
     if (studentIdFromUrl && isAccessRoute && studentIdFromUrl !== studentId) {
-      logger.info('[useLearner] Updating student ID from URL', { 
-        oldId: studentId, 
+      logger.info('[useLearner] Updating student ID from URL', {
+        oldId: studentId,
         newId: studentIdFromUrl,
         path: currentPath
       })
-      localStorage.setItem('learner_student_id', studentIdFromUrl)
+      // Utiliser le stockage sécurisé avec expiration de 24h
+      secureSessionStorage.set(LEARNER_STORAGE_KEY, studentIdFromUrl, { ttl: TTL.DAY })
       setStudentId(studentIdFromUrl)
     }
   }, [studentIdFromUrl, studentId, isAccessRoute, currentPath])

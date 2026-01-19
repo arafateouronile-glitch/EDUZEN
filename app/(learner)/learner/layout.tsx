@@ -9,6 +9,9 @@ import { LearnerMobileNav } from '@/components/learner/mobile-nav'
 import { OfflineIndicator } from '@/components/learner/offline-indicator'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { secureSessionStorage } from '@/lib/utils/secure-storage'
+
+const LEARNER_STORAGE_KEY = 'learner_student_id'
 
 function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
   const { student, isLoading, hasStudent, studentId } = useLearnerContext()
@@ -54,7 +57,8 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
     
     // Si pas d'étudiant trouvé après chargement, rediriger vers la page d'accès
     if (!isLoading && !hasStudent && !studentId) {
-      const savedId = localStorage.getItem('learner_student_id')
+      // Utiliser le stockage sécurisé au lieu de localStorage
+      const savedId = secureSessionStorage.get<string>(LEARNER_STORAGE_KEY)
       if (savedId) {
         router.push(`/learner/access/${savedId}`)
       } else {
@@ -123,7 +127,8 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
               className="w-full"
               onClick={() => {
                 try {
-                  localStorage.removeItem('learner_student_id')
+                  // Utiliser le stockage sécurisé au lieu de localStorage
+                  secureSessionStorage.remove(LEARNER_STORAGE_KEY)
                 } catch (_e) {}
                 if (typeof window !== 'undefined') {
                   window.location.href = '/auth/login?redirect=/learner'
