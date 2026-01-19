@@ -1,3 +1,0 @@
-{
-  "/api/cron/send-scheduled-documents/route": "app/api/cron/send-scheduled-documents/route.js"
-}

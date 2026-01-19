@@ -1,3 +1,0 @@
-{
-  "/api/mobile-money/status/[transactionId]/route": "app/api/mobile-money/status/[transactionId]/route.js"
-}

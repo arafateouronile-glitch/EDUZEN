@@ -1,3 +1,0 @@
-{
-  "/(public)/signature/[token]/page": "app/(public)/signature/[token]/page.js"
-}

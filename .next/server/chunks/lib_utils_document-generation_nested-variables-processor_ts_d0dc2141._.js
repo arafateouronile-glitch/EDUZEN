@@ -1,3 +1,0 @@
-module.exports=[953530,e=>{"use strict";function t(e){let t={};return!function e(r,n=""){for(let l in r)if(r.hasOwnProperty(l)){let i=n?`${n}.${l}`:l,a=r[l];null===a||"object"!=typeof a||Array.isArray(a)||a instanceof Date?t[i]=a:e(a,i)}}(e),t}function r(e,t){let r=e;for(let e in t)if(t.hasOwnProperty(e)){let n=t[e];if(null!=n){let t=RegExp(`\\{${e.replace(/\./g,"\\.")}\\}`,"g");r=r.replace(t,String(n))}}return r}e.s(["flattenVariables",()=>t,"processNestedVariables",()=>r])}];
-
-//# sourceMappingURL=lib_utils_document-generation_nested-variables-processor_ts_d0dc2141._.js.map

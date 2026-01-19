@@ -1,3 +1,0 @@
-{
-  "/api/calendar/callback/[provider]/route": "app/api/calendar/callback/[provider]/route.js"
-}

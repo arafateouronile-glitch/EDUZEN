@@ -1,3 +1,0 @@
-{
-  "/api/payments/stripe/status/[paymentIntentId]/route": "app/api/payments/stripe/status/[paymentIntentId]/route.js"
-}

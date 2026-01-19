@@ -1,3 +1,0 @@
-module.exports=[876180,a=>{"use strict";var b=a.i(187924);function c(){return(0,b.jsxs)("div",{className:"container mx-auto py-8",children:[(0,b.jsx)("h1",{className:"text-3xl font-bold mb-4",children:"CRM"}),(0,b.jsx)("p",{className:"text-gray-600",children:"Page CRM en cours de développement."})]})}a.s(["default",()=>c])}];
-
-//# sourceMappingURL=app_%28dashboard%29_dashboard_settings_crm_page_tsx_6f9a01de._.js.map
