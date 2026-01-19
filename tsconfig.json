@@ -60,6 +60,7 @@
     "test-results/**/*",
     "test-output/**/*",
     "scripts/**/*",
-    "supabase/functions/**/*"
+    "supabase/functions/**/*",
+    "vitest.config.ts"
   ]
 }
