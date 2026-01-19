@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { resourceLibraryService } from '@/lib/services/resource-library.service'
+import { ResourceLibraryService } from '@/lib/services/resource-library.service'
 
 /**
  * API Route pour télécharger une ressource
@@ -35,6 +35,7 @@ export async function GET(
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
     const userAgent = request.headers.get('user-agent') || undefined
 
+    const resourceLibraryService = new ResourceLibraryService(supabase)
     await resourceLibraryService.recordDownload(resourceId, user.id, ipAddress, userAgent)
 
     // Si c'est une URL externe, rediriger

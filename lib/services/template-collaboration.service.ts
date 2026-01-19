@@ -44,10 +44,8 @@ export class TemplateCollaborationService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
   }
 
   // ========== PARTAGE ==========
@@ -608,6 +606,8 @@ export class TemplateCollaborationService {
   }
 }
 
-export const templateCollaborationService = new TemplateCollaborationService()
+// Note: templateCollaborationService doit être instancié avec un client Supabase
+// Pour les routes API: new TemplateCollaborationService(await createClient()) avec le client serveur
+// Pour les composants client: new TemplateCollaborationService(createClient()) avec le client client
 
 

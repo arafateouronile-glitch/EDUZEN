@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
@@ -60,10 +59,8 @@ export class SignatureService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
   }
 
   /**
@@ -409,5 +406,7 @@ export class SignatureService {
   }
 }
 
-export const signatureService = new SignatureService()
+// Note: signatureService doit être instancié avec un client Supabase
+// Pour les routes API: new SignatureService(await createClient()) avec le client serveur
+// Pour les composants client: new SignatureService(createClient()) avec le client client
 

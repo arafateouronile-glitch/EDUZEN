@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { MTNAdapter } from './mobile-money/mtn.adapter'
 import { OrangeAdapter } from './mobile-money/orange.adapter'
@@ -13,21 +12,20 @@ import type {
   WebhookPayload,
 } from './mobile-money/mobile-money.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
-import { paymentService } from './payment.service'
+import { PaymentService } from './payment.service'
 
 type MobileMoneyTransaction = TableRow<'mobile_money_transactions'>
 type MobileMoneyConfigRow = TableRow<'mobile_money_configs'>
 type MobileMoneyTransactionInsert = TableInsert<'mobile_money_transactions'>
 type MobileMoneyTransactionUpdate = TableUpdate<'mobile_money_transactions'>
 
-class MobileMoneyService {
+export class MobileMoneyService {
   private supabase: SupabaseClient<any>
+  private paymentService: PaymentService
 
-
-  constructor(supabaseClient?: SupabaseClient<any>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient
+    this.paymentService = new PaymentService(supabaseClient)
   }
   private adapters: Partial<Record<MobileMoneyProvider, MobileMoneyAdapter>> & Record<string, MobileMoneyAdapter> = {
     mtn_mobile_money: new MTNAdapter(),
@@ -396,4 +394,6 @@ class MobileMoneyService {
   }
 }
 
-export const mobileMoneyService = new MobileMoneyService()
+// Note: mobileMoneyService doit être instancié avec un client Supabase
+// Pour les routes API: new MobileMoneyService(await createClient()) avec le client serveur
+// Pour les composants client: new MobileMoneyService(createClient()) avec le client client

@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
@@ -15,9 +14,9 @@ export class DocumentationService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
+  constructor(supabaseClient: SupabaseClient<Database>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient
 
   }
 
@@ -570,5 +569,7 @@ export class DocumentationService {
   }
 }
 
-export const documentationService = new DocumentationService()
+// Note: documentationService doit être instancié avec un client Supabase
+// Pour les routes API: new DocumentationService(await createClient()) avec le client serveur
+// Pour les composants client: new DocumentationService(createClient()) avec le client client
 

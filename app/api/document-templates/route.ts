@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { documentTemplateService } from '@/lib/services/document-template.service'
+import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { CreateTemplateInput, UpdateTemplateInput, DocumentType } from '@/lib/types/document-templates'
 
 // GET /api/document-templates - Récupère tous les templates d'une organisation
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || undefined
     const isActive = searchParams.get('isActive')
 
+    const documentTemplateService = new DocumentTemplateService(supabase)
     const templates = await documentTemplateService.getAllTemplates(userData.organization_id, {
       type: type as DocumentType | undefined,
       isActive: isActive ? isActive === 'true' : undefined,
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organisation non autorisée' }, { status: 403 })
     }
 
+    const documentTemplateService = new DocumentTemplateService(supabase)
     const template = await documentTemplateService.createTemplate(body)
 
     return NextResponse.json(template, { status: 201 })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { signatureRequestService } from '@/lib/services/signature-request.service'
+import { SignatureRequestService } from '@/lib/services/signature-request.service'
 
 /**
  * GET /api/signature-requests
@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     if (status) filters.status = status
     if (recipientType) filters.recipientType = recipientType
 
+    const signatureRequestService = new SignatureRequestService(supabase)
     const requests = await signatureRequestService.getSignatureRequestsByOrganization(
       userData.organization_id,
       filters
@@ -103,6 +104,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
+    const signatureRequestService = new SignatureRequestService(supabase)
     // Demande unique
     if (body.recipientEmail && body.recipientName) {
       const signatureRequest = await signatureRequestService.createSignatureRequest({

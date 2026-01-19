@@ -5,10 +5,10 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
-import { documentTemplateService } from '@/lib/services/document-template.service'
+import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import { studentService } from '@/lib/services/student.service'
-import { invoiceService } from '@/lib/services/invoice.service'
-import { paymentService } from '@/lib/services/payment.service'
+import { invoiceService } from '@/lib/services/invoice.service.client'
+import { paymentService } from '@/lib/services/payment.service.client'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import {
   mapStudentToVariables,

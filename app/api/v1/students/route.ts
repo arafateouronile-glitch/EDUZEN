@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiMiddleware, hasScope } from '../middleware'
-import { apiService } from '@/lib/services/api.service'
-import { studentService } from '@/lib/services/student.service'
+import { createAPIService } from '@/lib/services/api.service'
+import { createStudentService } from '@/lib/services/student.service'
+import { createClient } from '@/lib/supabase/server'
 
 /**
  * GET /api/v1/students
@@ -27,6 +28,11 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
     const search = searchParams.get('search') || undefined
+
+    // Créer les services avec le client serveur
+    const supabase = await createClient()
+    const studentService = createStudentService(supabase)
+    const apiService = createAPIService(supabase)
 
     // Récupérer les étudiants
     const students = await studentService.getAll(middleware.organizationId, {

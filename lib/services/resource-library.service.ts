@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
@@ -12,10 +11,8 @@ export class ResourceLibraryService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
   }
 
   // ========== CATEGORIES ==========
@@ -489,5 +486,7 @@ export class ResourceLibraryService {
   }
 }
 
-export const resourceLibraryService = new ResourceLibraryService()
+// Note: resourceLibraryService doit être instancié avec un client Supabase
+// Pour les routes API: new ResourceLibraryService(await createClient()) avec le client serveur
+// Pour les composants client: new ResourceLibraryService(createClient()) avec le client client
 

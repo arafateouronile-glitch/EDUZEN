@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { apiService } from '@/lib/services/api.service'
+import { createAPIService } from '@/lib/services/api.service'
+import { createClient } from '@/lib/supabase/server'
 
 /**
  * Middleware pour l'authentification et le rate limiting de l'API
@@ -14,6 +15,10 @@ export async function apiMiddleware(request: NextRequest) {
       { status: 401 }
     )
   }
+
+  // Créer le service API avec le client serveur
+  const supabase = await createClient()
+  const apiService = createAPIService(supabase)
 
   // Vérifier la clé API
   const key = await apiService.verifyAPIKey(apiKey)

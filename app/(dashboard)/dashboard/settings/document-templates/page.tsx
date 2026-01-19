@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { documentTemplateService } from '@/lib/services/document-template.service'
+import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import type { DocumentType, DocumentTemplate } from '@/lib/types/document-templates'
 import { DuplicateDialog } from './components/duplicate-dialog'
 import { RenameDialog } from './components/rename-dialog'

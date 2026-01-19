@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { signatureService } from '@/lib/services/signature.service'
+import { signatureService } from '@/lib/services/signature.service.client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
 import { PenTool, CheckCircle, XCircle, Clock } from 'lucide-react'

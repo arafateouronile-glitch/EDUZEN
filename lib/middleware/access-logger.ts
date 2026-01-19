@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { complianceService } from '@/lib/services/compliance.service'
+import { ComplianceService } from '@/lib/services/compliance.service'
 
 /**
  * Middleware pour logger tous les accès utilisateur
@@ -31,6 +31,7 @@ export async function logAccess(request: NextRequest, action: string, resourceTy
     const userAgent = request.headers.get('user-agent') || undefined
 
     // Logger l'accès
+    const complianceService = new ComplianceService(supabase)
     await complianceService.logAccess({
       user_id: user.id,
       organization_id: userData.organization_id,

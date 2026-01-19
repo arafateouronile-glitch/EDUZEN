@@ -3,9 +3,13 @@
  * Ce fichier montre comment utiliser les différents services et composants
  */
 
-import { signatureService } from '@/lib/services/signature.service'
+import { SignatureService } from '@/lib/services/signature.service'
+import { createClient } from '@/lib/supabase/client'
 import { generatePDFWithSignatures, uploadSignedPDF } from '@/lib/utils/document-generation/pdf-with-signatures'
 import { YousignAdapter } from '@/lib/services/esignature-adapters/yousign.adapter'
+
+// Instancier le service pour les exemples
+const signatureService = new SignatureService(createClient())
 
 /**
  * EXEMPLE 1: Créer un template de document avec zones de signature

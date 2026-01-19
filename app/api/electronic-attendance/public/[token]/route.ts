@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { electronicAttendanceService } from '@/lib/services/electronic-attendance.service'
+import { createClient } from '@/lib/supabase/server'
+import { ElectronicAttendanceService } from '@/lib/services/electronic-attendance.service'
 
 /**
  * GET /api/electronic-attendance/public/[token]
@@ -11,6 +12,8 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    const supabase = await createClient()
+    const electronicAttendanceService = new ElectronicAttendanceService(supabase)
     const attendanceRequest = await electronicAttendanceService.getAttendanceRequestByToken(token)
 
     return NextResponse.json(attendanceRequest)

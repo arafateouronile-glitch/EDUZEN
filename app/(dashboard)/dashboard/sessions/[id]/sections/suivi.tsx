@@ -13,7 +13,7 @@ import { useDocumentGeneration } from '../hooks/use-document-generation'
 import { motion } from '@/components/ui/motion'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useQuery } from '@tanstack/react-query'
-import { signatureService } from '@/lib/services/signature.service'
+import { signatureService } from '@/lib/services/signature.service.client'
 import { ElectronicAttendanceManager } from '@/components/attendance'
 import dynamic from 'next/dynamic'
 

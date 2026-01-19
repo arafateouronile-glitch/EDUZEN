@@ -1,10 +1,9 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, AppError, ErrorCode } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
-import { emailService } from './email.service'
+import { EmailService } from './email.service'
 
 type SignatureRequest = TableRow<'signature_requests'>
 type SignatureRequestInsert = TableInsert<'signature_requests'>
@@ -42,12 +41,11 @@ export interface SignatureRequestWithDetails extends SignatureRequest {
  */
 export class SignatureRequestService {
   private supabase: SupabaseClient<Database>
+  private emailService: EmailService
 
-
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
+    this.emailService = new EmailService()
   }
 
   /**
@@ -562,7 +560,7 @@ EDUZEN - Plateforme de gestion de formation
 Si vous n'êtes pas le destinataire de ce message, veuillez l'ignorer.
     `
 
-    await emailService.sendEmail({
+    await this.emailService.sendEmail({
       to: params.to,
       subject: `Demande de signature : ${params.documentTitle}`,
       html: htmlBody,
@@ -679,7 +677,7 @@ ${params.signatureUrl}
 EDUZEN - Plateforme de gestion de formation
     `
 
-    await emailService.sendEmail({
+    await this.emailService.sendEmail({
       to: params.to,
       subject: `Rappel : Signature en attente - ${params.documentTitle}`,
       html: htmlBody,
@@ -688,4 +686,6 @@ EDUZEN - Plateforme de gestion de formation
   }
 }
 
-export const signatureRequestService = new SignatureRequestService()
+// Note: signatureRequestService doit être instancié avec un client Supabase
+// Pour les routes API: new SignatureRequestService(await createClient()) avec le client serveur
+// Pour les composants client: new SignatureRequestService(createClient()) avec le client client

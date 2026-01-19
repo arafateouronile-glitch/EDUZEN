@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { authenticator } from 'otplib'
 import QRCode from 'qrcode'
@@ -9,13 +8,13 @@ type User2FA = TableRow<'user_2fa'>
 type User2FAInsert = TableInsert<'user_2fa'>
 type User2FAUpdate = TableUpdate<'user_2fa'>
 
-class TwoFactorAuthService {
+export class TwoFactorAuthService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient
 
   }
 
@@ -365,4 +364,6 @@ class TwoFactorAuthService {
   }
 }
 
-export const twoFactorAuthService = new TwoFactorAuthService()
+// Note: twoFactorAuthService doit être instancié avec un client Supabase
+// Pour les routes API: new TwoFactorAuthService(await createClient()) avec le client serveur
+// Pour les composants client: new TwoFactorAuthService(createClient()) avec le client client

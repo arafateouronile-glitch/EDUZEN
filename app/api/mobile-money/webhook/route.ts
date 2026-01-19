@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { mobileMoneyService } from '@/lib/services/mobile-money.service'
+import { createClient } from '@/lib/supabase/server'
+import { MobileMoneyService } from '@/lib/services/mobile-money.service'
 import type { MobileMoneyProvider, WebhookPayload } from '@/lib/services/mobile-money/mobile-money.types'
 import { withRateLimit, generalRateLimiter } from '@/lib/utils/rate-limiter'
 import { validateWebhook } from '@/lib/utils/webhook-security'
@@ -122,6 +123,8 @@ export async function POST(
     }
 
     // Traiter le webhook
+    const supabase = await createClient()
+    const mobileMoneyService = new MobileMoneyService(supabase)
     await mobileMoneyService.processWebhook(provider as MobileMoneyProvider, payload)
 
     return NextResponse.json({ success: true, message: 'Webhook traité avec succès' })

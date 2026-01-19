@@ -16,7 +16,9 @@ async function getSignatureService() {
     // Côté client
     if (!signatureService) {
       const module = await import('@/lib/services/signature.service')
-      signatureService = module.signatureService
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      signatureService = new module.SignatureService(supabase)
     }
     return signatureService
   } else {

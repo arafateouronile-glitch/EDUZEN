@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { documentTemplateService } from '@/lib/services/document-template.service'
+import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
 import { 

@@ -3,7 +3,7 @@
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { attendanceService } from '@/lib/services/attendance.service'
+import { attendanceService } from '@/lib/services/attendance.service.client'
 import { sessionService } from '@/lib/services/session.service'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'

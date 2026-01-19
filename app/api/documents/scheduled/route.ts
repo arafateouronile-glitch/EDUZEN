@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { Database } from '@/types/database.types'
-import { scheduledGenerationService } from '@/lib/services/scheduled-generation.service'
+import { ScheduledGenerationService } from '@/lib/services/scheduled-generation.service'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
+    const scheduledGenerationService = new ScheduledGenerationService(supabase)
     const generations = await scheduledGenerationService.getAll(user.organization_id)
     return NextResponse.json(generations)
   } catch (error) {
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    const scheduledGenerationService = new ScheduledGenerationService(supabase)
     const generation = await scheduledGenerationService.create({
       organization_id: user.organization_id,
       template_id: body.template_id,
@@ -136,6 +138,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
+    const scheduledGenerationService = new ScheduledGenerationService(supabase)
     const generation = await scheduledGenerationService.update(id, body)
 
     return NextResponse.json(generation)
@@ -176,6 +179,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID manquant' }, { status: 400 })
     }
 
+    const scheduledGenerationService = new ScheduledGenerationService(supabase)
     await scheduledGenerationService.delete(id)
 
     return NextResponse.json({ success: true })

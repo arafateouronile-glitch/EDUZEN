@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { signatureRequestService } from '@/lib/services/signature-request.service'
-import { signatureService } from '@/lib/services/signature.service'
+import { createClient } from '@/lib/supabase/server'
+import { SignatureRequestService } from '@/lib/services/signature-request.service'
+import { SignatureService } from '@/lib/services/signature.service'
 
 /**
  * POST /api/signature-requests/sign
@@ -17,6 +18,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const supabase = await createClient()
+    const signatureRequestService = new SignatureRequestService(supabase)
+    const signatureService = new SignatureService(supabase)
 
     // Récupérer la demande de signature
     const signatureRequest = await signatureRequestService.getSignatureRequestByToken(token)

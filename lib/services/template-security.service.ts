@@ -3,7 +3,6 @@
  * Inclut : chiffrement, permissions granulaires, audit trail, RGPD, archivage
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import * as CryptoJS from 'crypto-js'
@@ -42,8 +41,8 @@ export class TemplateSecurityService {
   private supabase: SupabaseClient<Database>
   private encryptionKey: string
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
     // En production, récupérer depuis process.env.TEMPLATE_ENCRYPTION_KEY
     this.encryptionKey = process.env.TEMPLATE_ENCRYPTION_KEY || 'default-key-change-in-production'
   }
@@ -680,4 +679,6 @@ export class TemplateSecurityService {
   }
 }
 
-export const templateSecurityService = new TemplateSecurityService()
+// Note: templateSecurityService doit être instancié avec un client Supabase
+// Pour les routes API: new TemplateSecurityService(await createClient()) avec le client serveur
+// Pour les composants client: new TemplateSecurityService(createClient()) avec le client client

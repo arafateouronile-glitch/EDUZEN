@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { complianceAlertsService } from '@/lib/services/compliance-alerts.service'
+import { ComplianceAlertsService } from '@/lib/services/compliance-alerts.service'
 
 /**
  * POST /api/compliance/alerts/check
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
+    const complianceAlertsService = new ComplianceAlertsService(supabase)
     const results = await complianceAlertsService.runAllChecks(userData.organization_id)
 
     return NextResponse.json({

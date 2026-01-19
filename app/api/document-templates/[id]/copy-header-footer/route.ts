@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { documentTemplateService } from '@/lib/services/document-template.service'
+import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { CopyHeaderFooterInput } from '@/lib/types/document-templates'
 
 // POST /api/document-templates/[id]/copy-header-footer - Copie header/footer d'un template vers un autre
@@ -21,6 +21,7 @@ export async function POST(
     }
 
     // Vérifier que l'utilisateur a accès au template cible
+    const documentTemplateService = new DocumentTemplateService(supabase)
     const targetTemplate = await documentTemplateService.getTemplateById(id)
     const { data: userData } = await supabase
       .from('users')

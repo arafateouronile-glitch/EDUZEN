@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { XeroAdapter } from './accounting/xero.adapter'
 import { QuickBooksAdapter } from './accounting/quickbooks.adapter'
@@ -13,8 +12,8 @@ import type {
   SyncResult,
 } from './accounting/accounting.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
-import { invoiceService } from './invoice.service'
-import { paymentService } from './payment.service'
+import { InvoiceService } from './invoice.service'
+import { PaymentService } from './payment.service'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
 type AccountingIntegration = TableRow<'accounting_integrations'>
@@ -25,12 +24,13 @@ type AccountingIntegrationUpdate = TableUpdate<'accounting_integrations'>
 
 export class AccountingService {
   private supabase: SupabaseClient<any>
+  private invoiceService: InvoiceService
+  private paymentService: PaymentService
 
-
-  constructor(supabaseClient?: SupabaseClient<any>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient
+    this.invoiceService = new InvoiceService(supabaseClient)
+    this.paymentService = new PaymentService(supabaseClient)
   }
   private adapters: Record<AccountingProvider, AccountingAdapter> = {
     xero: new XeroAdapter(),
@@ -196,7 +196,7 @@ export class AccountingService {
       .single()
 
     // Récupérer la facture
-    const invoice = await invoiceService.getById(invoiceId)
+    const invoice = await this.invoiceService.getById(invoiceId)
     if (!invoice) {
       throw new Error('Facture non trouvée')
     }
@@ -376,7 +376,7 @@ export class AccountingService {
     await this.ensureValidToken(config)
 
     // Récupérer toutes les factures de l'organisation
-    const invoices = await invoiceService.getAll(organizationId, {
+    const invoices = await this.invoiceService.getAll(organizationId, {
       documentType: 'invoice', // Exclure les devis
     })
 
@@ -649,4 +649,6 @@ export class AccountingService {
   }
 }
 
-export const accountingService = new AccountingService()
+// Note: accountingService doit être instancié avec un client Supabase
+// Pour les routes API: new AccountingService(await createClient()) avec le client serveur
+// Pour les composants client: new AccountingService(createClient()) avec le client client

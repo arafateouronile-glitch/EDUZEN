@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { signatureRequestService } from '@/lib/services/signature-request.service'
+import { createClient } from '@/lib/supabase/server'
+import { SignatureRequestService } from '@/lib/services/signature-request.service'
 
 /**
  * GET /api/signature-requests/public/[token]
@@ -11,6 +12,8 @@ export async function GET(
 ) {
   try {
     const { token } = await params
+    const supabase = await createClient()
+    const signatureRequestService = new SignatureRequestService(supabase)
     const signatureRequest = await signatureRequestService.getSignatureRequestByToken(token)
 
     return NextResponse.json(signatureRequest)

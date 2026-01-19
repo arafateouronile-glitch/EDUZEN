@@ -1,7 +1,6 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { templateCollaborationService } from './template-collaboration.service'
-import { templateSecurityService } from './template-security.service'
+import { TemplateCollaborationService } from './template-collaboration.service'
+import { TemplateSecurityService } from './template-security.service'
 import { convertTemplateContent } from '@/lib/utils/document-generation/template-converter'
 import type {
   DocumentTemplate,
@@ -15,12 +14,13 @@ import type {
 
 export class DocumentTemplateService {
   private supabase: SupabaseClient<any>
+  private templateCollaborationService: TemplateCollaborationService
+  private templateSecurityService: TemplateSecurityService
 
-
-  constructor(supabaseClient?: SupabaseClient<any>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient
+    this.templateCollaborationService = new TemplateCollaborationService(supabaseClient)
+    this.templateSecurityService = new TemplateSecurityService(supabaseClient)
   }
 
   /**
@@ -59,7 +59,7 @@ export class DocumentTemplateService {
   async getTemplateById(id: string, userId?: string) {
     // Vérifier les permissions si userId est fourni
     if (userId) {
-      const hasViewPermission = await templateSecurityService.hasPermission(
+      const hasViewPermission = await this.templateSecurityService.hasPermission(
         id,
         userId,
         'view'
@@ -70,7 +70,7 @@ export class DocumentTemplateService {
 
       // Logger l'accès
       try {
-        await templateSecurityService.logAudit(id, userId, 'view', {})
+        await this.templateSecurityService.logAudit(id, userId, 'view', {})
       } catch (auditError) {
         // Ne pas faire échouer la récupération si l'audit échoue
         console.warn('Erreur lors du logging de l\'audit:', auditError)
@@ -88,10 +88,10 @@ export class DocumentTemplateService {
     const template = data as DocumentTemplate
 
     // Vérifier si le template est chiffré et le déchiffrer si nécessaire
-    const isEncrypted = await templateSecurityService.isTemplateEncrypted(id)
+    const isEncrypted = await this.templateSecurityService.isTemplateEncrypted(id)
     if (isEncrypted && userId) {
       try {
-        const decrypted = await templateSecurityService.decryptTemplate(id)
+        const decrypted = await this.templateSecurityService.decryptTemplate(id)
         template.header = decrypted.header as any
         template.content = decrypted.content as any
         template.footer = decrypted.footer as any
@@ -198,7 +198,7 @@ export class DocumentTemplateService {
     // Logger l'activité de création
     if (currentUser?.user?.id) {
       try {
-        await templateCollaborationService.logActivity(
+        await this.templateCollaborationService.logActivity(
           newTemplate.id,
           currentUser.user.id,
           'created',
@@ -273,7 +273,7 @@ export class DocumentTemplateService {
     // Logger l'activité de mise à jour
     if (currentUser?.user?.id) {
       try {
-        await templateCollaborationService.logActivity(
+        await this.templateCollaborationService.logActivity(
           id,
           currentUser.user.id,
           'updated',
@@ -287,10 +287,10 @@ export class DocumentTemplateService {
 
       // Notifier les utilisateurs avec accès
       try {
-        const shares = await templateCollaborationService.getTemplateShares(id)
+        const shares = await this.templateCollaborationService.getTemplateShares(id)
         for (const share of shares) {
           try {
-            await templateCollaborationService.createNotification(
+            await this.templateCollaborationService.createNotification(
               share.shared_with_user_id,
               id,
               'template_updated',
@@ -620,5 +620,7 @@ export class DocumentTemplateService {
   }
 }
 
-export const documentTemplateService = new DocumentTemplateService()
+// Note: documentTemplateService doit être instancié avec un client Supabase
+// Pour les routes API: new DocumentTemplateService(await createClient()) avec le client serveur
+// Pour les composants client: new DocumentTemplateService(createClient()) avec le client client
 

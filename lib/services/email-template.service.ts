@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 
@@ -40,14 +39,12 @@ export interface UpdateEmailTemplateInput {
   metadata?: Record<string, any>
 }
 
-class EmailTemplateService {
+export class EmailTemplateService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient
   }
 
   /**
@@ -278,4 +275,6 @@ class EmailTemplateService {
   }
 }
 
-export const emailTemplateService = new EmailTemplateService()
+// Note: emailTemplateService doit être instancié avec un client Supabase
+// Pour les routes API: new EmailTemplateService(await createClient()) avec le client serveur
+// Pour les composants client: new EmailTemplateService(createClient()) avec le client client

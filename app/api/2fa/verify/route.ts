@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { twoFactorAuthService } from '@/lib/services/2fa.service'
+import { TwoFactorAuthService } from '@/lib/services/2fa.service'
 import { withRateLimit, authRateLimiter } from '@/lib/utils/rate-limiter'
 
 /**
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       const userAgent = req.headers.get('user-agent') || 'unknown'
 
       // Vérifier le code
+      const twoFactorAuthService = new TwoFactorAuthService(supabase)
       const result = await twoFactorAuthService.verifyCode(user.id, code, ipAddress, userAgent)
 
       if (!result.valid) {

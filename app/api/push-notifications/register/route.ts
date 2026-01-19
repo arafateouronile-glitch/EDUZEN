@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { pushNotificationsService } from '@/lib/services/push-notifications.service'
+import { PushNotificationsService } from '@/lib/services/push-notifications.service'
 
 /**
  * POST /api/push-notifications/register
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    const pushNotificationsService = new PushNotificationsService(supabase)
     const device = await pushNotificationsService.registerDevice({
       user_id: user.id,
       organization_id: userData?.organization_id || null,

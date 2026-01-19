@@ -3,7 +3,7 @@
  * Gère les événements des différents providers (Yousign, DocuSign, HelloSign, etc.)
  */
 
-import { signatureService } from '@/lib/services/signature.service'
+import { SignatureService } from '@/lib/services/signature.service'
 import { logger, maskId } from '@/lib/utils/logger'
 import { createClient } from '@/lib/supabase/server'
 
@@ -164,6 +164,7 @@ export class ESignatureWebhookHandlerService {
       const signature = signatures[0]
 
       // Mettre à jour le statut de la signature
+      const signatureService = new SignatureService(supabase)
       await signatureService.updateSignature(signature.id, {
         status: 'signed',
         is_valid: true,
@@ -268,6 +269,7 @@ export class ESignatureWebhookHandlerService {
       .limit(1)
 
     if (signatures && signatures.length > 0) {
+      const signatureService = new SignatureService(supabase)
       await signatureService.revokeSignature(
         signatures[0].id,
         'Signature refusée par le signataire'
@@ -350,6 +352,7 @@ export class ESignatureWebhookHandlerService {
       .in('status', ['pending', 'processing'])
 
     if (signatures) {
+      const signatureService = new SignatureService(supabase)
       for (const sig of signatures) {
         await signatureService.revokeSignature(sig.id, 'Procédure de signature annulée')
       }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { twoFactorAuthService } from '@/lib/services/2fa.service'
+import { TwoFactorAuthService } from '@/lib/services/2fa.service'
 import { withRateLimit, authRateLimiter } from '@/lib/utils/rate-limiter'
 
 /**
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Désactiver la 2FA
+      const twoFactorAuthService = new TwoFactorAuthService(supabase)
       await twoFactorAuthService.disable2FA(user.id)
 
       return NextResponse.json({

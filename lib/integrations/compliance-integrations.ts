@@ -3,8 +3,8 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
-import { complianceService } from '@/lib/services/compliance.service'
-import { twoFactorAuthService } from '@/lib/services/2fa.service'
+import { ComplianceService } from '@/lib/services/compliance.service'
+// Note: twoFactorAuthService n'est plus utilisé dans ce fichier
 // import { ssoService } from '@/lib/services/sso.service' // Service SSO non disponible
 
 /**
@@ -12,6 +12,7 @@ import { twoFactorAuthService } from '@/lib/services/2fa.service'
  */
 export async function sync2FACompliance(organizationId: string) {
   const supabase = createClient()
+  const complianceService = new ComplianceService(supabase)
 
   // Récupérer les utilisateurs avec 2FA activé
   const { data: users } = await supabase
@@ -92,6 +93,7 @@ export async function sync2FACompliance(organizationId: string) {
  */
 export async function syncSSOCompliance(organizationId: string) {
   const supabase = createClient()
+  const complianceService = new ComplianceService(supabase)
 
   // Vérifier si SSO est configuré
   const { data: ssoConfigs } = await supabase

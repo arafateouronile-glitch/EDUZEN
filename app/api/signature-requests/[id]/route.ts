@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { signatureRequestService } from '@/lib/services/signature-request.service'
+import { SignatureRequestService } from '@/lib/services/signature-request.service'
 
 /**
  * PATCH /api/signature-requests/[id]
@@ -25,6 +25,7 @@ export async function PATCH(
     const body = await request.json()
     const { action } = body
 
+    const signatureRequestService = new SignatureRequestService(supabase)
     if (action === 'cancel') {
       const result = await signatureRequestService.cancelSignatureRequest(id)
       return NextResponse.json(result)

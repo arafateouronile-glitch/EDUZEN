@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { twoFactorAuthService } from '@/lib/services/2fa.service'
+import { TwoFactorAuthService } from '@/lib/services/2fa.service'
 import { withRateLimit, authRateLimiter } from '@/lib/utils/rate-limiter'
 
 /**
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Vérifier que la 2FA est activée
+      const twoFactorAuthService = new TwoFactorAuthService(supabase)
       const config = await twoFactorAuthService.getConfig(user.id)
       if (!config || !config.is_enabled) {
         return NextResponse.json({ error: '2FA non activée' }, { status: 400 })

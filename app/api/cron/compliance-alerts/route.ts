@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { complianceAlertsService } from '@/lib/services/compliance-alerts.service'
+import { ComplianceAlertsService } from '@/lib/services/compliance-alerts.service'
 import { withCronSecurity } from '@/lib/utils/cron-security'
 
 const CRON_SECRET = process.env.CRON_SECRET
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
         for (const org of organizations) {
           try {
+            const complianceAlertsService = new ComplianceAlertsService(supabase)
             const orgResults = await complianceAlertsService.runAllChecks(org.id)
             results.push({
               organizationId: org.id,

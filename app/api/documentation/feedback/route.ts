@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { documentationService } from '@/lib/services/documentation.service'
+import { DocumentationService } from '@/lib/services/documentation.service'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'
 import { withRateLimit, mutationRateLimiter } from '@/lib/utils/rate-limiter'
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         }
 
         // ✅ validatedData est typé et validé/sanitizé
+        const documentationService = new DocumentationService(supabase)
         const feedback = await documentationService.createFeedback({
           article_id: validatedData.article_id,
           user_id: user.id,
@@ -99,6 +100,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'article_id requis' }, { status: 400 })
     }
 
+    const documentationService = new DocumentationService(supabase)
     const feedbacks = await documentationService.getArticleFeedback(articleId)
     const stats = await documentationService.getArticleFeedbackStats(articleId)
 

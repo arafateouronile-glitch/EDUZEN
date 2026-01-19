@@ -1,10 +1,9 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, AppError, ErrorCode } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
-import { emailService } from './email.service'
+import { EmailService } from './email.service'
 import { AttendanceService } from './attendance.service'
 
 type ElectronicAttendanceSession = TableRow<'electronic_attendance_sessions'>
@@ -47,11 +46,13 @@ export interface AttendanceSessionWithRequests extends ElectronicAttendanceSessi
 export class ElectronicAttendanceService {
   private supabase: SupabaseClient<Database>
   private attendanceService: AttendanceService
+  private emailService: EmailService
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
     // Créer une instance d'AttendanceService avec le même client Supabase
     this.attendanceService = new AttendanceService(this.supabase)
+    this.emailService = new EmailService()
   }
 
   /**
@@ -817,7 +818,7 @@ Votre signature électronique sera enregistrée de manière sécurisée et confo
 EDUZEN - Plateforme de gestion de formation
     `
 
-    await emailService.sendEmail({
+    await this.emailService.sendEmail({
       to,
       subject: `Émargement électronique - ${sessionTitle}`,
       html: htmlBody,
@@ -931,7 +932,7 @@ ${attendanceUrl}
 EDUZEN - Plateforme de gestion de formation
     `
 
-    await emailService.sendEmail({
+    await this.emailService.sendEmail({
       to,
       subject: `Rappel : Émargement en attente - ${sessionTitle}`,
       html: htmlBody,
@@ -940,4 +941,6 @@ EDUZEN - Plateforme de gestion de formation
   }
 }
 
-export const electronicAttendanceService = new ElectronicAttendanceService()
+// Note: electronicAttendanceService doit être instancié avec un client Supabase
+// Pour les routes API: new ElectronicAttendanceService(await createClient()) avec le client serveur
+// Pour les composants client: new ElectronicAttendanceService(createClient()) avec le client client

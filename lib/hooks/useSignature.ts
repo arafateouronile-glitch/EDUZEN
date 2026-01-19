@@ -5,7 +5,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { signatureService } from '@/lib/services/signature.service'
+import { signatureService } from '@/lib/services/signature.service.client'
 import { generatePDFWithSignatures, uploadSignedPDF } from '@/lib/utils/document-generation/pdf-with-signatures'
 import { logger } from '@/lib/utils/logger'
 

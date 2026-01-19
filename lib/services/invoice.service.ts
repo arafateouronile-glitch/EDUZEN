@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import { errorHandler, ErrorCode, AppError } from '@/lib/errors'
@@ -14,11 +13,8 @@ type InvoiceUpdate = Database['public']['Tables']['invoices']['Update']
 export class InvoiceService {
   private supabase: SupabaseClient<Database>
 
-
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
   }
 
   /**
@@ -450,5 +446,7 @@ export class InvoiceService {
   }
 }
 
-export const invoiceService = new InvoiceService()
+// Note: invoiceService doit être instancié avec un client Supabase
+// Pour les routes API: new InvoiceService(await createClient()) avec le client serveur
+// Pour les composants client: new InvoiceService(createClient()) avec le client client
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { electronicAttendanceService } from '@/lib/services/electronic-attendance.service'
+import { ElectronicAttendanceService } from '@/lib/services/electronic-attendance.service'
 
 /**
  * PATCH /api/electronic-attendance/requests/[id]
@@ -25,6 +25,7 @@ export async function PATCH(
     const body = await request.json()
     const { action } = body
 
+    const electronicAttendanceService = new ElectronicAttendanceService(supabase)
     if (action === 'remind') {
       const result = await electronicAttendanceService.sendAttendanceReminder(id)
       return NextResponse.json({ success: result })

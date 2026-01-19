@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
@@ -24,10 +23,8 @@ type Invoice = TableRow<'invoices'>
 export class PaymentService {
   private supabase: SupabaseClient<Database>
 
-
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
 
   }
 
@@ -464,5 +461,7 @@ export class PaymentService {
   }
 }
 
-export const paymentService = new PaymentService()
+// Note: paymentService doit être instancié avec un client Supabase
+// Pour les routes API: new PaymentService(await createClient()) avec le client serveur
+// Pour les composants client: new PaymentService(createClient()) avec le client client
 

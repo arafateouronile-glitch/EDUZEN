@@ -2,7 +2,6 @@
  * Service pour la génération programmée de documents
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { DocumentType, DocumentVariables } from '@/lib/types/document-templates'
@@ -38,10 +37,8 @@ export class ScheduledGenerationService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
   }
 
   /**
@@ -209,4 +206,6 @@ export class ScheduledGenerationService {
   }
 }
 
-export const scheduledGenerationService = new ScheduledGenerationService()
+// Note: scheduledGenerationService doit être instancié avec un client Supabase
+// Pour les routes API: new ScheduledGenerationService(await createClient()) avec le client serveur
+// Pour les composants client: new ScheduledGenerationService(createClient()) avec le client client

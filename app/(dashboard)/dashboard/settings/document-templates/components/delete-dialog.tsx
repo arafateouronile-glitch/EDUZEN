@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { documentTemplateService } from '@/lib/services/document-template.service'
+import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
 import {

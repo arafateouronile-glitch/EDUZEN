@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { pushNotificationsService } from '@/lib/services/push-notifications.service'
+import { PushNotificationsService } from '@/lib/services/push-notifications.service'
 
 /**
  * POST /api/push-notifications/unregister
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing deviceId' }, { status: 400 })
     }
 
+    const pushNotificationsService = new PushNotificationsService(supabase)
     await pushNotificationsService.unregisterDevice(deviceId)
 
     return NextResponse.json({ success: true })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { electronicAttendanceService } from '@/lib/services/electronic-attendance.service'
+import { ElectronicAttendanceService } from '@/lib/services/electronic-attendance.service'
 
 /**
  * GET /api/electronic-attendance/sessions/[id]
@@ -22,6 +22,7 @@ export async function GET(
       )
     }
 
+    const electronicAttendanceService = new ElectronicAttendanceService(supabase)
     const session = await electronicAttendanceService.getAttendanceSessionById(id)
 
     return NextResponse.json(session)
@@ -57,6 +58,7 @@ export async function PATCH(
     const body = await request.json()
     const { action, sendEmails } = body
 
+    const electronicAttendanceService = new ElectronicAttendanceService(supabase)
     if (action === 'launch') {
       const result = await electronicAttendanceService.launchAttendanceSession(
         id,

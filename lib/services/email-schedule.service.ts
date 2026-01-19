@@ -2,7 +2,6 @@
  * Service pour gérer la planification et l'automatisation d'envoi d'emails
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { EmailTemplate } from './email-template.service'
@@ -75,14 +74,12 @@ export interface EmailScheduleExecutionResult {
   errorDetails?: Record<string, any>
 }
 
-class EmailScheduleService {
+export class EmailScheduleService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
   }
 
   /**
@@ -341,5 +338,7 @@ class EmailScheduleService {
   }
 }
 
-export const emailScheduleService = new EmailScheduleService()
+// Note: emailScheduleService doit être instancié avec un client Supabase
+// Pour les routes API: new EmailScheduleService(await createClient()) avec le client serveur
+// Pour les composants client: new EmailScheduleService(createClient()) avec le client client
 

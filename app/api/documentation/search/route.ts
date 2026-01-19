@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { documentationService } from '@/lib/services/documentation.service'
+import { DocumentationService } from '@/lib/services/documentation.service'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
 /**
@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Paramètre q requis' }, { status: 400 })
     }
 
+    const documentationService = new DocumentationService(supabase)
     const results = await documentationService.searchArticles(query, organizationId)
 
     // Enregistrer la recherche dans l'historique

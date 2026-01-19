@@ -6,13 +6,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { Database } from '@/types/database.types'
-import { scheduledGenerationService } from '@/lib/services/scheduled-generation.service'
+import { ScheduledGenerationService } from '@/lib/services/scheduled-generation.service'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { mapDataToVariables } from '@/lib/utils/document-generation/variable-mapper'
-import { emailService } from '@/lib/services/email.service'
-import { createClient } from '@/lib/supabase/client'
+import { EmailService } from '@/lib/services/email.service'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
 
 // POST /api/documents/scheduled/execute - Exécute les générations programmées
@@ -39,6 +38,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Récupérer les générations à exécuter
+    const scheduledGenerationService = new ScheduledGenerationService(supabase)
     const dueGenerations = await scheduledGenerationService.getDueGenerations()
     
     const results = []
@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
                 ? [studentEmail]
                 : recipientEmails
 
+              const emailService = new EmailService()
               for (const email of emailsToSend) {
                 await emailService.sendEmail({
                   to: email,

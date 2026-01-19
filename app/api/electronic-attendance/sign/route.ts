@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { electronicAttendanceService } from '@/lib/services/electronic-attendance.service'
+import { createClient } from '@/lib/supabase/server'
+import { ElectronicAttendanceService } from '@/lib/services/electronic-attendance.service'
 
 /**
  * POST /api/electronic-attendance/sign
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') || undefined,
     }
 
+    const supabase = await createClient()
+    const electronicAttendanceService = new ElectronicAttendanceService(supabase)
     const result = await electronicAttendanceService.signAttendanceRequest(
       token,
       signatureData,

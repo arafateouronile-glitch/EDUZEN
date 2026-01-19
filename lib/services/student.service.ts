@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/client'
+// Note: Ne pas importer createClient ici car ce service peut être utilisé côté serveur
+// Le client doit être passé en paramètre du constructeur
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
@@ -25,10 +26,11 @@ export class StudentService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    if (!supabaseClient) {
+      throw new Error('StudentService requires a Supabase client to be passed in constructor')
+    }
+    this.supabase = supabaseClient
   }
 
   /**
@@ -451,5 +453,12 @@ export class StudentService {
   }
 }
 
-export const studentService = new StudentService()
+// Factory function pour créer une instance du service
+export function createStudentService(supabaseClient: SupabaseClient<Database>) {
+  return new StudentService(supabaseClient)
+}
+
+// Pour la compatibilité avec le code existant qui utilise studentService
+// Cette variable sera undefined jusqu'à ce qu'elle soit initialisée
+export let studentService: StudentService
 

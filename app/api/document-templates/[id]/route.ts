@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { documentTemplateService } from '@/lib/services/document-template.service'
+import { DocumentTemplateService } from '@/lib/services/document-template.service'
 
 // GET /api/document-templates/[id] - Récupère un template par son ID
 export async function GET(
@@ -19,6 +19,7 @@ export async function GET(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
+    const documentTemplateService = new DocumentTemplateService(supabase)
     const template = await documentTemplateService.getTemplateById(id)
 
     // Vérifier que l'utilisateur a accès à ce template
@@ -60,6 +61,7 @@ export async function PUT(
     }
 
     // Vérifier que l'utilisateur a accès à ce template
+    const documentTemplateService = new DocumentTemplateService(supabase)
     const template = await documentTemplateService.getTemplateById(id)
     const { data: userData } = await supabase
       .from('users')
@@ -105,6 +107,7 @@ export async function DELETE(
     }
 
     // Vérifier que l'utilisateur a accès à ce template
+    const documentTemplateService = new DocumentTemplateService(supabase)
     const template = await documentTemplateService.getTemplateById(id)
     const { data: userData } = await supabase
       .from('users')

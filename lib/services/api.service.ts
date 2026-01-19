@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/client'
+// Note: Ne pas importer createClient ici car ce service peut être utilisé côté serveur
+// Le client doit être passé en paramètre du constructeur
 import type { SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import { Database } from '@/types/database.types'
@@ -13,10 +14,11 @@ export class APIService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    if (!supabaseClient) {
+      throw new Error('APIService requires a Supabase client to be passed in constructor')
+    }
+    this.supabase = supabaseClient
   }
 
   // ========== API KEYS ==========
@@ -593,4 +595,10 @@ export class APIService {
   }
 }
 
-export const apiService = new APIService()
+// Factory function pour créer une instance du service
+export function createAPIService(supabaseClient: SupabaseClient<Database>) {
+  return new APIService(supabaseClient)
+}
+
+// Pour la compatibilité avec le code existant
+export let apiService: APIService

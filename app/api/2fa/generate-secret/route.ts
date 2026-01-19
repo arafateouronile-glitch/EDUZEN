@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { twoFactorAuthService } from '@/lib/services/2fa.service'
+import { TwoFactorAuthService } from '@/lib/services/2fa.service'
 import { withRateLimit, authRateLimiter } from '@/lib/utils/rate-limiter'
 import { logger, maskId, maskEmail, sanitizeError } from '@/lib/utils/logger'
 
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Générer le secret et le QR code
+      const twoFactorAuthService = new TwoFactorAuthService(supabase)
       const result = await twoFactorAuthService.generateSecret(user.id, email)
 
       return NextResponse.json({

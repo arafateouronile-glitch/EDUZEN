@@ -1,17 +1,18 @@
-import { complianceService } from './compliance.service'
-import { pushNotificationsService } from './push-notifications.service'
-import { createClient } from '@/lib/supabase/client'
+import { ComplianceService } from './compliance.service'
+import { PushNotificationsService } from './push-notifications.service'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
 export class ComplianceAlertsService {
   private supabase: SupabaseClient<any>
+  private complianceService: ComplianceService
+  private pushNotificationsService: PushNotificationsService
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient
+    this.complianceService = new ComplianceService(supabaseClient)
+    this.pushNotificationsService = new PushNotificationsService(supabaseClient)
   }
 
   /**
@@ -23,7 +24,7 @@ export class ComplianceAlertsService {
       organizationId: maskId(organizationId),
     })
 
-    const criticalRisks = await complianceService.getCriticalRisks(organizationId)
+    const criticalRisks = await this.complianceService.getCriticalRisks(organizationId)
 
     if (criticalRisks.length === 0) {
       logger.info('No critical risks found')
@@ -49,7 +50,7 @@ export class ComplianceAlertsService {
       // Send to admins
       if (admins) {
         for (const admin of admins) {
-          const promise = pushNotificationsService
+          const promise = this.pushNotificationsService
             .sendNotification(admin.id, {
               title: '🚨 Risque critique détecté',
               body: `Le risque "${risk.title}" nécessite une attention immédiate.`,
@@ -76,7 +77,7 @@ export class ComplianceAlertsService {
 
       // Send to risk owner if different from admins
       if (risk.owner_id && !admins?.some((a) => a.id === risk.owner_id)) {
-        const promise = pushNotificationsService
+        const promise = this.pushNotificationsService
           .sendNotification(risk.owner_id, {
             title: '🚨 Risque critique - Action requise',
             body: `Le risque "${risk.title}" qui vous est assigné nécessite une attention immédiate.`,
@@ -158,7 +159,7 @@ export class ComplianceAlertsService {
     for (const incident of incidents) {
       if (admins) {
         for (const admin of admins) {
-          const promise = pushNotificationsService
+          const promise = this.pushNotificationsService
             .sendNotification(admin.id, {
               title: '🚨 Incident critique de sécurité',
               body: `L'incident "${incident.title}" nécessite une intervention immédiate.`,
@@ -242,7 +243,7 @@ export class ComplianceAlertsService {
 
     // ✅ OPTIMIZED: Send all notifications in parallel
     const notificationPromises = admins.map((admin) =>
-      pushNotificationsService
+      this.pushNotificationsService
         .sendNotification(admin.id, {
           title: '⚠️ Contrôles non conformes',
           body: `${controls.length} contrôle(s) à haut risque sont non conformes.`,
@@ -304,4 +305,5 @@ export class ComplianceAlertsService {
   }
 }
 
-export const complianceAlertsService = new ComplianceAlertsService()
+// Note: complianceAlertsService doit être instancié avec un client Supabase côté serveur
+// Utiliser: new ComplianceAlertsService(await createClient()) dans les routes API

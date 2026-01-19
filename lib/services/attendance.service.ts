@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import { errorHandler, ErrorCode, AppError } from '@/lib/errors'
@@ -12,11 +11,8 @@ type AttendanceUpdate = Database['public']['Tables']['attendance']['Update']
 export class AttendanceService {
   private supabase: SupabaseClient<Database>
 
-
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient
   }
 
   /**
@@ -493,4 +489,6 @@ export class AttendanceService {
   }
 }
 
-export const attendanceService = new AttendanceService()
+// Note: attendanceService doit être instancié avec un client Supabase
+// Pour les routes API: new AttendanceService(await createClient()) avec le client serveur
+// Pour les composants client: new AttendanceService(createClient()) avec le client client

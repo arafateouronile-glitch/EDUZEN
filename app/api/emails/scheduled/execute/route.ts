@@ -5,11 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { emailScheduleService } from '@/lib/services/email-schedule.service'
-import { emailTemplateService } from '@/lib/services/email-template.service'
-import { studentService } from '@/lib/services/student.service'
-import { sessionService } from '@/lib/services/session.service'
-import { evaluationService } from '@/lib/services/evaluation.service'
+import { EmailScheduleService } from '@/lib/services/email-schedule.service'
+import { EmailTemplateService } from '@/lib/services/email-template.service'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
 
@@ -432,6 +429,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
     const adminSupabase = createAdminClient()
+
+    // Instancier les services avec le client serveur
+    const emailScheduleService = new EmailScheduleService(supabase)
+    const emailTemplateService = new EmailTemplateService(supabase)
 
     // Récupérer toutes les règles actives
     const schedules = await emailScheduleService.getActiveSchedulesToExecute()
