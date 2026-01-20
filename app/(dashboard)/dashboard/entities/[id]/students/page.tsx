@@ -87,11 +87,12 @@ function EntityStudentsPageContent() {
     queryKey: ['external-entity', entityId],
     queryFn: async () => {
       // Utiliser as any pour éviter l'inférence récursive de TypeScript
-      const { data, error } = await ((supabase
-        .from('external_entities') as any)
+      // TypeScript a des problèmes avec l'inférence récursive sur external_entities
+      const queryBuilder = supabase.from('external_entities') as any
+      const { data, error } = await queryBuilder
         .select('*')
         .eq('id', entityId)
-        .single())
+        .single()
       if (error) throw error
       return data
     },
