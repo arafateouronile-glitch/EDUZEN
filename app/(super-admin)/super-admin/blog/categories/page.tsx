@@ -42,16 +42,16 @@ export default function BlogCategoriesPage() {
   }
 
   // Fetch categories
-  const { data: categories, isLoading, refetch } = useQuery<BlogCategory[]>({
+  const { data: categories, isLoading, refetch } = useQuery<BlogCategoryRow[]>({
     queryKey: ['blog-categories'],
-    queryFn: async (): Promise<BlogCategory[]> => {
+    queryFn: async (): Promise<BlogCategoryRow[]> => {
       const { data, error } = await supabase
         .from('blog_categories')
         .select('*')
         .order('display_order', { ascending: true })
 
       if (error) throw error
-      return (data || []) as BlogCategory[]
+      return (data || []) as BlogCategoryRow[]
     },
     staleTime: 1000 * 60 * 5,
   })
