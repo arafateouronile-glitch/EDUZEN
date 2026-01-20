@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -89,97 +90,6 @@ import type {
   AdminPermissions,
 } from '@/types/super-admin.types'
 
-// Sample data
-const sampleAdmins: PlatformAdmin[] = [
-  {
-    id: '1',
-    user_id: 'user-1',
-    role: 'super_admin',
-    permissions: {},
-    is_active: true,
-    last_active_at: '2024-01-20T10:30:00Z',
-    invited_by: null,
-    invited_at: '2023-01-01T00:00:00Z',
-    accepted_at: '2023-01-01T00:00:00Z',
-    revoked_at: null,
-    revoked_by: null,
-    revoke_reason: null,
-    created_at: '2023-01-01T00:00:00Z',
-    updated_at: '2024-01-20T10:30:00Z',
-    user: {
-      id: 'user-1',
-      email: 'admin@eduzen.io',
-      full_name: 'Admin Principal',
-      avatar_url: null,
-    },
-  },
-  {
-    id: '2',
-    user_id: 'user-2',
-    role: 'content_admin',
-    permissions: { manage_blog: true, publish_posts: true, moderate_comments: true },
-    is_active: true,
-    last_active_at: '2024-01-19T15:45:00Z',
-    invited_by: '1',
-    invited_at: '2023-06-15T10:00:00Z',
-    accepted_at: '2023-06-16T09:00:00Z',
-    revoked_at: null,
-    revoked_by: null,
-    revoke_reason: null,
-    created_at: '2023-06-15T10:00:00Z',
-    updated_at: '2024-01-19T15:45:00Z',
-    user: {
-      id: 'user-2',
-      email: 'sophie.martin@eduzen.io',
-      full_name: 'Sophie Martin',
-      avatar_url: null,
-    },
-  },
-  {
-    id: '3',
-    user_id: 'user-3',
-    role: 'finance_admin',
-    permissions: {},
-    is_active: true,
-    last_active_at: '2024-01-18T11:20:00Z',
-    invited_by: '1',
-    invited_at: '2023-09-01T08:00:00Z',
-    accepted_at: '2023-09-02T10:00:00Z',
-    revoked_at: null,
-    revoked_by: null,
-    revoke_reason: null,
-    created_at: '2023-09-01T08:00:00Z',
-    updated_at: '2024-01-18T11:20:00Z',
-    user: {
-      id: 'user-3',
-      email: 'thomas.durand@eduzen.io',
-      full_name: 'Thomas Durand',
-      avatar_url: null,
-    },
-  },
-  {
-    id: '4',
-    user_id: 'user-4',
-    role: 'content_admin',
-    permissions: { manage_blog: true, publish_posts: false },
-    is_active: false,
-    last_active_at: '2023-12-15T09:00:00Z',
-    invited_by: '1',
-    invited_at: '2023-10-10T14:00:00Z',
-    accepted_at: '2023-10-11T08:30:00Z',
-    revoked_at: '2024-01-05T16:00:00Z',
-    revoked_by: '1',
-    revoke_reason: 'Fin de mission',
-    created_at: '2023-10-10T14:00:00Z',
-    updated_at: '2024-01-05T16:00:00Z',
-    user: {
-      id: 'user-4',
-      email: 'marie.dupont@example.com',
-      full_name: 'Marie Dupont',
-      avatar_url: null,
-    },
-  },
-]
 
 const roleConfig: Record<PlatformAdminRole, { label: string; color: string; description: string }> = {
   super_admin: {
@@ -229,51 +139,97 @@ export default function TeamPage() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
   const [editingAdmin, setEditingAdmin] = useState<PlatformAdmin | null>(null)
   const [revokingAdmin, setRevokingAdmin] = useState<PlatformAdmin | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const queryClient = useQueryClient()
 
   const form = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
       email: '',
       role: 'content_admin',
-      permissions: {},
+      permissions: undefined,
     },
   })
 
   const watchedRole = form.watch('role')
 
+  // Fetch admins
+  const { data: adminsData, isLoading } = useQuery({
+    queryKey: ['platform-admins'],
+    queryFn: async () => {
+      const response = await fetch('/api/super-admin/admins')
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des administrateurs')
+      }
+      return response.json() as Promise<{ admins: PlatformAdmin[] }>
+    },
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const admins = adminsData?.admins || []
+
   // Stats
   const stats = {
-    totalAdmins: sampleAdmins.length,
-    activeAdmins: sampleAdmins.filter((a) => a.is_active).length,
-    pendingInvites: 0, // Would come from API
+    totalAdmins: admins.length,
+    activeAdmins: admins.filter((a) => a.is_active).length,
+    pendingInvites: admins.filter((a) => !a.accepted_at).length,
   }
 
-  const handleInvite = async (data: InviteFormData) => {
-    setIsSubmitting(true)
-    try {
-      // In production, this would call the API
-      console.log('Inviting admin:', data)
-      toast.success(`Invitation envoyée à ${data.email}`)
+  // Invite mutation
+  const inviteMutation = useMutation({
+    mutationFn: async (data: InviteFormData) => {
+      const response = await fetch('/api/super-admin/admins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de l\'invitation')
+      }
+      return response.json()
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || `Invitation envoyée à ${form.getValues('email')}`)
       setInviteDialogOpen(false)
       form.reset()
-    } catch (error) {
-      toast.error('Erreur lors de l\'envoi de l\'invitation')
-    } finally {
-      setIsSubmitting(false)
-    }
+      queryClient.invalidateQueries({ queryKey: ['platform-admins'] })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Erreur lors de l\'envoi de l\'invitation')
+    },
+  })
+
+  // Revoke mutation
+  const revokeMutation = useMutation({
+    mutationFn: async ({ adminId, reason }: { adminId: string; reason?: string }) => {
+      const response = await fetch(`/api/super-admin/admins/${adminId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la révocation')
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      toast.success('Accès révoqué')
+      setRevokingAdmin(null)
+      queryClient.invalidateQueries({ queryKey: ['platform-admins'] })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Erreur lors de la révocation')
+    },
+  })
+
+  const handleInvite = async (data: InviteFormData) => {
+    inviteMutation.mutate(data)
   }
 
   const handleRevoke = async () => {
     if (!revokingAdmin) return
-    try {
-      // In production, this would call the API
-      console.log('Revoking admin:', revokingAdmin.id)
-      toast.success('Accès révoqué')
-      setRevokingAdmin(null)
-    } catch (error) {
-      toast.error('Erreur lors de la révocation')
-    }
+    revokeMutation.mutate({ adminId: revokingAdmin.id })
   }
 
   const formatDate = (date: string | null) => {
@@ -360,7 +316,7 @@ export default function TeamPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {(Object.entries(roleConfig) as [PlatformAdminRole, typeof roleConfig[PlatformAdminRole]][]).map(
             ([role, config]) => {
-              const count = sampleAdmins.filter((a) => a.role === role && a.is_active).length
+              const count = admins.filter((a) => a.role === role && a.is_active).length
               return (
                 <Card key={role} className="relative overflow-hidden">
                   <CardContent className="pt-6">
@@ -385,116 +341,122 @@ export default function TeamPage() {
             <CardTitle>Membres de l'équipe</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Membre</TableHead>
-                  <TableHead>Rôle</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Dernière activité</TableHead>
-                  <TableHead>Invité le</TableHead>
-                  <TableHead className="w-[50px]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sampleAdmins.map((admin) => {
-                  const role = roleConfig[admin.role]
-                  return (
-                    <TableRow key={admin.id} className="group">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={admin.user?.avatar_url || undefined} />
-                            <AvatarFallback className="bg-muted text-xs font-medium">
-                              {admin.user?.full_name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')
-                                .toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{admin.user?.full_name}</p>
-                            <p className="text-sm text-muted-foreground">{admin.user?.email}</p>
+            {isLoading ? (
+              <div className="py-8 text-center text-muted-foreground">Chargement...</div>
+            ) : admins.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">Aucun administrateur</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Membre</TableHead>
+                    <TableHead>Rôle</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Dernière activité</TableHead>
+                    <TableHead>Invité le</TableHead>
+                    <TableHead className="w-[50px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {admins.map((admin) => {
+                    const role = roleConfig[admin.role]
+                    return (
+                      <TableRow key={admin.id} className="group">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={admin.user?.avatar_url || undefined} />
+                              <AvatarFallback className="bg-muted text-xs font-medium">
+                                {admin.user?.full_name
+                                  ?.split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .toUpperCase() || admin.user?.email?.[0].toUpperCase() || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{admin.user?.full_name || admin.user?.email || 'Invité'}</p>
+                              <p className="text-sm text-muted-foreground">{admin.user?.email || 'En attente d\'acceptation'}</p>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn(role.color)}>{role.label}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {admin.is_active ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1"
-                          >
-                            <CheckCircle2 className="h-3 w-3" />
-                            Actif
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="bg-gray-50 text-gray-500 border-gray-200 gap-1"
-                          >
-                            <XCircle className="h-3 w-3" />
-                            Révoqué
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{getRelativeTime(admin.last_active_at)}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {formatDate(admin.invited_at)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={cn(role.color)}>{role.label}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {admin.is_active ? (
+                            <Badge
+                              variant="outline"
+                              className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1"
                             >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setEditingAdmin(admin)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Modifier les permissions
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Key className="mr-2 h-4 w-4" />
-                              Réinitialiser le mot de passe
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Mail className="mr-2 h-4 w-4" />
-                              Envoyer un email
-                            </DropdownMenuItem>
-                            {admin.is_active && admin.role !== 'super_admin' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => setRevokingAdmin(admin)}
-                                  className="text-red-600"
-                                >
-                                  <UserX className="mr-2 h-4 w-4" />
-                                  Révoquer l'accès
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                              <CheckCircle2 className="h-3 w-3" />
+                              Actif
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="bg-gray-50 text-gray-500 border-gray-200 gap-1"
+                            >
+                              <XCircle className="h-3 w-3" />
+                              Révoqué
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm">{getRelativeTime(admin.last_active_at)}</span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">
+                            {formatDate(admin.invited_at)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setEditingAdmin(admin)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Modifier les permissions
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Key className="mr-2 h-4 w-4" />
+                                Réinitialiser le mot de passe
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Mail className="mr-2 h-4 w-4" />
+                                Envoyer un email
+                              </DropdownMenuItem>
+                              {admin.is_active && admin.role !== 'super_admin' && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => setRevokingAdmin(admin)}
+                                    className="text-red-600"
+                                  >
+                                    <UserX className="mr-2 h-4 w-4" />
+                                    Révoquer l'accès
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -595,9 +557,9 @@ export default function TeamPage() {
                   >
                     Annuler
                   </Button>
-                  <Button type="submit" disabled={isSubmitting} className="gap-2">
+                  <Button type="submit" disabled={inviteMutation.isPending} className="gap-2">
                     <Send className="h-4 w-4" />
-                    Envoyer l'invitation
+                    {inviteMutation.isPending ? 'Envoi...' : 'Envoyer l\'invitation'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -618,8 +580,12 @@ export default function TeamPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction onClick={handleRevoke} className="bg-red-600 hover:bg-red-700">
-                Révoquer
+              <AlertDialogAction
+                onClick={handleRevoke}
+                disabled={revokeMutation.isPending}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {revokeMutation.isPending ? 'Révocation...' : 'Révoquer'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
