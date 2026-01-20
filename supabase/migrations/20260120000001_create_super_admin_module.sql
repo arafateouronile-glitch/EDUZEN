@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
     name VARCHAR(50) NOT NULL UNIQUE,
     code VARCHAR(20) NOT NULL UNIQUE,
     description TEXT,
-    price_monthly DECIMAL(10, 2) NOT NULL DEFAULT 0,
-    price_yearly DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    price_monthly DECIMAL(10, 2) DEFAULT 0, -- NULL allowed for Enterprise (custom pricing)
+    price_yearly DECIMAL(10, 2) DEFAULT 0, -- NULL allowed for Enterprise (custom pricing)
     currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
     features JSONB NOT NULL DEFAULT '[]',
     max_users INTEGER,
@@ -303,6 +303,72 @@ CREATE TABLE IF NOT EXISTS platform_revenue_monthly (
 );
 
 -- =====================================================
+-- FIX COLUMN CONSTRAINTS (if table already exists)
+-- =====================================================
+
+-- Allow NULL for price_monthly and price_yearly (for Enterprise plan)
+DO $$
+BEGIN
+    -- Check if table exists and column has NOT NULL constraint
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'subscription_plans') THEN
+        -- Modify price_monthly to allow NULL
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'subscription_plans' 
+            AND column_name = 'price_monthly'
+            AND is_nullable = 'NO'
+        ) THEN
+            ALTER TABLE subscription_plans ALTER COLUMN price_monthly DROP NOT NULL;
+        END IF;
+        
+        -- Modify price_yearly to allow NULL
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'subscription_plans' 
+            AND column_name = 'price_yearly'
+            AND is_nullable = 'NO'
+        ) THEN
+            ALTER TABLE subscription_plans ALTER COLUMN price_yearly DROP NOT NULL;
+        END IF;
+    END IF;
+END $$;
+
+-- =====================================================
+-- FIX COLUMN CONSTRAINTS (if table already exists)
+-- =====================================================
+
+-- Allow NULL for price_monthly and price_yearly (for Enterprise plan)
+DO $$
+BEGIN
+    -- Check if table exists and column has NOT NULL constraint
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'subscription_plans') THEN
+        -- Modify price_monthly to allow NULL
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'subscription_plans' 
+            AND column_name = 'price_monthly'
+            AND is_nullable = 'NO'
+        ) THEN
+            ALTER TABLE subscription_plans ALTER COLUMN price_monthly DROP NOT NULL;
+        END IF;
+        
+        -- Modify price_yearly to allow NULL
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_schema = 'public' 
+            AND table_name = 'subscription_plans' 
+            AND column_name = 'price_yearly'
+            AND is_nullable = 'NO'
+        ) THEN
+            ALTER TABLE subscription_plans ALTER COLUMN price_yearly DROP NOT NULL;
+        END IF;
+    END IF;
+END $$;
+
+-- =====================================================
 -- ADD FOREIGN KEY CONSTRAINTS (conditional)
 -- =====================================================
 
@@ -534,8 +600,8 @@ INSERT INTO subscription_plans (name, code, description, price_monthly, price_ye
 ON CONFLICT (code) DO UPDATE SET
     name = EXCLUDED.name,
     description = EXCLUDED.description,
-    price_monthly = EXCLUDED.price_monthly,
-    price_yearly = EXCLUDED.price_yearly,
+    price_monthly = COALESCE(EXCLUDED.price_monthly, subscription_plans.price_monthly),
+    price_yearly = COALESCE(EXCLUDED.price_yearly, subscription_plans.price_yearly),
     features = EXCLUDED.features,
     max_users = EXCLUDED.max_users,
     max_students = EXCLUDED.max_students,
