@@ -445,10 +445,14 @@ export interface DashboardKPIs {
   churn_rate?: number // Alias pour compatibilité
   retentionRate: number
   retention_rate?: number // Alias pour compatibilité
+  conversionRate?: number
+  conversion_rate?: number // Alias pour compatibilité
   totalRevenue?: number
   total_revenue?: number // Alias pour compatibilité
   growthRate?: number
   growth_rate?: number // Alias pour compatibilité
+  averageRevenuePerUser?: number
+  average_revenue_per_user?: number // Alias pour compatibilité
 }
 
 export interface RevenueDataPoint {
