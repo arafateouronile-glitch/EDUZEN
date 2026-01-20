@@ -62,7 +62,10 @@
       "Bash(git checkout:*)",
       "Bash(supabase gen types:*)",
       "Bash(npm ls:*)",
-      "Bash(npm info:*)"
+      "Bash(npm info:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run test:components:*)",
+      "Bash(du -sh:*)"
     ]
   }
 }

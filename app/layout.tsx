@@ -6,6 +6,9 @@ import { cn } from '@/lib/utils'
 import { AnalyticsLoader } from '@/components/analytics/analytics-loader'
 // Réactiver next-intl pour que les composants puissent utiliser useTranslations
 import { NextIntlClientProvider } from 'next-intl'
+import { headers } from 'next/headers'
+import { CSP_NONCE_HEADER } from '@/lib/utils/csp'
+import { NonceProvider } from '@/lib/contexts/nonce-context'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -90,7 +93,7 @@ export default async function RootLayout({
   // Charger les messages pour next-intl
   const locale = 'fr'
   let messages = {}
-  
+
   try {
     // Charger les messages de la locale par défaut
     messages = (await import(`../messages/fr.json`)).default
@@ -98,6 +101,10 @@ export default async function RootLayout({
     // En cas d'erreur, utiliser des messages vides (pas de log pour éviter spam)
     messages = {}
   }
+
+  // Récupérer le nonce CSP depuis les headers (généré par le middleware)
+  const headersList = await headers()
+  const nonce = headersList.get(CSP_NONCE_HEADER) || undefined
 
   return (
     <html lang={locale} className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
@@ -118,12 +125,14 @@ export default async function RootLayout({
         {/* Pas besoin de preload/preconnect car next/font les gère automatiquement */}
       </head>
       <body className={cn(inter.variable, spaceGrotesk.variable, inter.className, 'smooth-scroll-premium')}>
-        <NextIntlClientProvider messages={messages}>
-          <Providers>
-            {children}
-            <AnalyticsLoader />
-          </Providers>
-        </NextIntlClientProvider>
+        <NonceProvider nonce={nonce}>
+          <NextIntlClientProvider messages={messages}>
+            <Providers>
+              {children}
+              <AnalyticsLoader />
+            </Providers>
+          </NextIntlClientProvider>
+        </NonceProvider>
       </body>
     </html>
   )

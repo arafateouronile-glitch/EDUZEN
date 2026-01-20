@@ -4,7 +4,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { logger, sanitizeError } from './lib/utils/logger'
-import { getSecurityHeaders } from './lib/utils/csp'
+import { generateNonce, getSecurityHeadersWithNonce, CSP_NONCE_HEADER } from './lib/utils/csp'
 
 // Créer le middleware next-intl avec la configuration de routing
 const intlMiddleware = createMiddleware(routing)
@@ -186,8 +186,11 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Ajouter les headers de sécurité via le module centralisé
-  const securityHeaders = getSecurityHeaders()
+  // Générer un nonce unique pour cette requête (protection CSP)
+  const nonce = generateNonce()
+
+  // Ajouter les headers de sécurité avec le nonce CSP
+  const securityHeaders = getSecurityHeadersWithNonce(nonce)
 
   // Appliquer les headers de sécurité
   Object.entries(securityHeaders).forEach(([key, value]) => {
@@ -195,6 +198,11 @@ export async function middleware(req: NextRequest) {
       intlResponse.headers.set(key, value)
     }
   })
+
+  // Passer le nonce aux Server Components via le header de requête
+  // Cela permet aux composants de récupérer le nonce pour les scripts inline
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set(CSP_NONCE_HEADER, nonce)
 
       return intlResponse
     } catch (error) {
