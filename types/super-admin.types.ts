@@ -132,6 +132,7 @@ export interface OrganizationSubscription {
   organization?: {
     id: string
     name: string
+    code?: string | null
     logo_url: string | null
     country?: string | null
   }
