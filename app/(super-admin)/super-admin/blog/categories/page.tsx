@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
-import type { BlogCategory } from '@/types/super-admin.types'
+import type { BlogCategory, BlogCategoryRow } from '@/types/super-admin.types'
 
 export default function BlogCategoriesPage() {
   const { canManageBlog, isSuperAdmin } = usePlatformAdmin()
@@ -101,8 +101,8 @@ export default function BlogCategoriesPage() {
           return acc
         },
         {
-          parents: [] as BlogCategory[],
-          children: {} as Record<string, BlogCategory[]>,
+          parents: [] as BlogCategoryRow[],
+          children: {} as Record<string, BlogCategoryRow[]>,
         }
       )
     : { parents: [], children: {} }

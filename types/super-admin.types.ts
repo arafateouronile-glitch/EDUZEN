@@ -251,7 +251,8 @@ export type BlogPostStatus =
   | 'published'
   | 'archived'
 
-export interface BlogCategory {
+// Type de base sans relations récursives pour les requêtes
+export interface BlogCategoryRow {
   id: string
   name: string
   slug: string
@@ -261,6 +262,10 @@ export interface BlogCategory {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+// Type complet avec relations (pour l'utilisation dans les composants)
+export interface BlogCategory extends BlogCategoryRow {
   // Relations
   parent?: BlogCategory
   children?: BlogCategory[]

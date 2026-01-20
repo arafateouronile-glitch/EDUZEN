@@ -88,6 +88,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
     items: [
       { name: vocab.students, href: '/dashboard/students', icon: Users, allowedRoles: ADMIN_ROLES },
       { name: t('navigation.myStudents'), href: '/dashboard/my-students', icon: Users, allowedRoles: ['teacher'] },
+      { name: 'Entreprises & Organismes', href: '/dashboard/entities', icon: Building2, allowedRoles: ADMIN_ROLES },
       {
         name: t('navigation.pedagogy'),
         icon: BookMarked,

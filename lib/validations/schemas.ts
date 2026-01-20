@@ -12,15 +12,36 @@ export const studentSchema = z.object({
   city: z.string().optional().or(z.literal('')),
   class_id: z.string().optional().or(z.literal('')),
   enrollment_date: z.string().min(1, 'La date d\'inscription est requise'),
-  // Tuteur
-  guardian_first_name: z.string().min(1, 'Le prénom du tuteur est requis'),
-  guardian_last_name: z.string().min(1, 'Le nom du tuteur est requis'),
-  guardian_relationship: z.enum(['parent', 'guardian', 'other']).default('parent'),
-  guardian_phone_primary: z.string().min(1, 'Le téléphone principal du tuteur est requis'),
+  // Tuteur - Option 1: Sélectionner un tuteur existant
+  guardian_id: z.string().optional().or(z.literal('')),
+  // Tuteur - Option 2: Créer un nouveau tuteur
+  guardian_first_name: z.string().optional().or(z.literal('')),
+  guardian_last_name: z.string().optional().or(z.literal('')),
+  guardian_relationship: z.enum(['parent', 'father', 'mother', 'guardian', 'other']).optional().or(z.literal('')),
+  guardian_phone_primary: z.string().optional().or(z.literal('')),
   guardian_phone_secondary: z.string().optional().or(z.literal('')),
   guardian_email: z.string().email('Email invalide').optional().or(z.literal('')),
   guardian_address: z.string().optional().or(z.literal('')),
-})
+  // Organisation (optionnel - par défaut celle de l'utilisateur)
+  organization_id: z.string().optional().or(z.literal('')),
+  // Entreprise - Option 1: Sélectionner une entité existante
+  entity_id: z.string().optional().or(z.literal('')),
+  // Entreprise - Option 2: Saisir manuellement
+  company_name: z.string().optional().or(z.literal('')),
+  company_address: z.string().optional().or(z.literal('')),
+  company_phone: z.string().optional().or(z.literal('')),
+  company_email: z.string().email('Email invalide').optional().or(z.literal('')),
+  company_siret: z.string().optional().or(z.literal('')),
+}).refine(
+  (data) => {
+    // Au moins un tuteur doit être fourni (existant ou nouveau)
+    return data.guardian_id || (data.guardian_first_name && data.guardian_last_name && data.guardian_phone_primary)
+  },
+  {
+    message: 'Vous devez sélectionner un tuteur existant ou créer un nouveau tuteur',
+    path: ['guardian_id'],
+  }
+)
 
 // Schéma pour la mise à jour d'un étudiant
 export const studentUpdateSchema = z.object({

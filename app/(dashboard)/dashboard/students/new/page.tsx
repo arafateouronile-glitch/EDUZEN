@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { studentService } from '@/lib/services/student.service'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Briefcase } from 'lucide-react'
 import Link from 'next/link'
 import { studentSchema, type StudentFormData } from '@/lib/validations/schemas'
 import { usePageAnalytics } from '@/lib/hooks/use-page-analytics'
@@ -45,6 +45,7 @@ export default function NewStudentPage() {
       phone: '',
       address: '',
       city: '',
+      guardian_id: '',
       guardian_first_name: '',
       guardian_last_name: '',
       guardian_relationship: 'parent',
@@ -52,11 +53,21 @@ export default function NewStudentPage() {
       guardian_phone_secondary: '',
       guardian_email: '',
       guardian_address: '',
+      organization_id: '',
+      entity_id: '',
+      company_name: '',
+      company_address: '',
+      company_phone: '',
+      company_email: '',
+      company_siret: '',
       class_id: '',
       enrollment_date: new Date().toISOString().split('T')[0],
     },
   })
 
+  // État pour le mode de sélection du tuteur
+  const [guardianMode, setGuardianMode] = useState<'existing' | 'new'>('new')
+  
   // Récupérer les sessions (remplace les classes)
   const { data: sessions } = useQuery({
     queryKey: ['program-sessions-all', user?.organization_id],
@@ -79,27 +90,105 @@ export default function NewStudentPage() {
     enabled: !!user?.organization_id && !userLoading,
   })
 
+  // Récupérer les tuteurs existants
+  const { data: existingGuardians } = useQuery({
+    queryKey: ['guardians', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('guardians')
+        .select('*')
+        .eq('organization_id', user.organization_id)
+        .order('last_name', { ascending: true })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user?.organization_id && !userLoading,
+  })
+
+  // Récupérer les organisations (pour sélection)
+  const { data: organizations } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: async () => {
+      // Si l'utilisateur est super admin, récupérer toutes les organisations
+      // Sinon, seulement la sienne
+      if (user?.role === 'super_admin') {
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('id, name, code')
+          .order('name', { ascending: true })
+        if (error) throw error
+        return data || []
+      } else {
+        // Pour les autres rôles, seulement leur organisation
+        if (!user?.organization_id) return []
+        const { data, error } = await supabase
+          .from('organizations')
+          .select('id, name, code')
+          .eq('id', user.organization_id)
+        if (error) throw error
+        return data || []
+      }
+    },
+    enabled: !userLoading,
+  })
+
+  // Récupérer les entités externes (entreprises/organismes)
+  const { data: externalEntities } = useQuery({
+    queryKey: ['external-entities', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('external_entities')
+        .select('id, name, type, siret')
+        .eq('organization_id', user.organization_id)
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user?.organization_id && !userLoading,
+  })
+
+  // État pour le mode de sélection de l'entreprise
+  const [companyMode, setCompanyMode] = useState<'existing' | 'new'>('new')
+
   const createMutation = useMutation({
     mutationFn: async (data: StudentFormData) => {
-      if (!user?.organization_id) throw new Error('Organization ID manquant')
+      // Déterminer l'organisation à utiliser
+      const targetOrganizationId = data.organization_id || user?.organization_id
+      if (!targetOrganizationId) throw new Error('Organization ID manquant')
 
-      // 1. Créer le tuteur
-      const { data: guardian, error: guardianError } = await supabase
-        .from('guardians')
-        .insert({
-          organization_id: user.organization_id,
-          first_name: data.guardian_first_name,
-          last_name: data.guardian_last_name,
-          relationship: data.guardian_relationship,
-          phone_primary: data.guardian_phone_primary,
-          phone_secondary: data.guardian_phone_secondary || null,
-          email: data.guardian_email || null,
-          address: data.guardian_address || null,
-        })
-        .select()
-        .single()
+      // 1. Gérer le tuteur (existant ou nouveau)
+      let guardianId: string
+      
+      if (data.guardian_id && guardianMode === 'existing') {
+        // Utiliser un tuteur existant
+        guardianId = data.guardian_id
+      } else {
+        // Créer un nouveau tuteur
+        if (!data.guardian_first_name || !data.guardian_last_name || !data.guardian_phone_primary) {
+          throw new Error('Les informations du tuteur sont requises')
+        }
+        
+        const { data: guardian, error: guardianError } = await supabase
+          .from('guardians')
+          .insert({
+            organization_id: targetOrganizationId,
+            first_name: data.guardian_first_name,
+            last_name: data.guardian_last_name,
+            relationship: data.guardian_relationship || 'parent',
+            phone_primary: data.guardian_phone_primary,
+            phone_secondary: data.guardian_phone_secondary || null,
+            email: data.guardian_email || null,
+            address: data.guardian_address || null,
+          })
+          .select()
+          .single()
 
-      if (guardianError) throw guardianError
+        if (guardianError) throw guardianError
+        guardianId = guardian.id
+      }
 
       // 2. Générer un numéro étudiant unique
       // Récupérer le code de l'organisation
@@ -137,7 +226,7 @@ export default function NewStudentPage() {
       const { data: existingCheck } = await supabase
         .from('students')
         .select('id')
-        .eq('organization_id', user.organization_id)
+        .eq('organization_id', targetOrganizationId)
         .eq('student_number', studentNumber)
         .maybeSingle()
       
@@ -151,7 +240,7 @@ export default function NewStudentPage() {
           const { data: check } = await supabase
             .from('students')
             .select('id')
-            .eq('organization_id', user.organization_id)
+            .eq('organization_id', targetOrganizationId)
             .eq('student_number', studentNumber)
             .maybeSingle()
           
@@ -170,24 +259,40 @@ export default function NewStudentPage() {
       // 3. Créer l'élève
       // Note: class_id n'est pas inséré car il fait référence à la table "classes", 
       // pas aux sessions. L'inscription à la session est gérée via la table "enrollments"
+      const studentData: any = {
+        organization_id: targetOrganizationId,
+        student_number: studentNumber,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        date_of_birth: data.date_of_birth || null,
+        gender: (data.gender as 'male' | 'female' | 'other') || null,
+        email: data.email || null,
+        phone: data.phone || null,
+        address: data.address || null,
+        city: data.city || null,
+        enrollment_date: data.enrollment_date,
+        status: 'active', // Statut par défaut pour un nouvel étudiant
+      }
+
+      // Si une entité existante est sélectionnée, créer le rattachement après la création de l'étudiant
+      // Sinon, ajouter les informations d'entreprise dans metadata si fournies
+      if (data.entity_id && companyMode === 'existing') {
+        // Le rattachement sera créé après la création de l'étudiant
+      } else if (data.company_name || data.company_address || data.company_phone || data.company_email || data.company_siret) {
+        studentData.metadata = {
+          company: {
+            name: data.company_name || null,
+            address: data.company_address || null,
+            phone: data.company_phone || null,
+            email: data.company_email || null,
+            siret: data.company_siret || null,
+          },
+        }
+      }
+
       const { data: student, error: studentError } = await supabase
         .from('students')
-        .insert({
-          organization_id: user.organization_id,
-          student_number: studentNumber,
-          first_name: data.first_name,
-          last_name: data.last_name,
-          date_of_birth: data.date_of_birth || null,
-          gender: (data.gender as 'male' | 'female' | 'other') || null,
-          email: data.email || null,
-          phone: data.phone || null,
-          address: data.address || null,
-          city: data.city || null,
-          // class_id n'est pas inséré ici car il fait référence à "classes", pas "sessions"
-          // L'inscription à la session sera créée via la table "enrollments" ci-dessous
-          enrollment_date: data.enrollment_date,
-          status: 'active', // Statut par défaut pour un nouvel étudiant
-        })
+        .insert(studentData)
         .select()
         .single()
 
@@ -218,7 +323,7 @@ export default function NewStudentPage() {
         .from('student_guardians')
         .insert({
           student_id: student.id,
-          guardian_id: guardian.id,
+          guardian_id: guardianId,
           is_primary: true,
         })
 
@@ -227,7 +332,26 @@ export default function NewStudentPage() {
         throw new Error('Erreur lors de la liaison du tuteur à l\'élève')
       }
 
-      // 5. Créer l'inscription si une session est sélectionnée
+      // 5. Créer le rattachement à une entité si sélectionnée
+      if (data.entity_id && companyMode === 'existing' && user?.id) {
+        const { error: entityError } = await supabase
+          .from('student_entities')
+          .insert({
+            student_id: student.id,
+            entity_id: data.entity_id,
+            relationship_type: 'apprenticeship', // Par défaut, peut être modifié plus tard
+            is_current: true,
+            created_by: user.id,
+          })
+
+        if (entityError) {
+          console.error('Entity link error:', entityError)
+          // Ne pas faire échouer la création de l'élève si le rattachement échoue
+          console.warn('L\'élève a été créé mais le rattachement à l\'entité a échoué')
+        }
+      }
+
+      // 6. Créer l'inscription si une session est sélectionnée
       if (data.class_id) {
         const { error: enrollmentError } = await supabase
           .from('enrollments')
@@ -459,7 +583,7 @@ export default function NewStudentPage() {
         <CardHeader>
           <CardTitle>
             {step === 1 && 'Informations personnelles'}
-            {step === 2 && 'Informations du tuteur'}
+            {step === 2 && 'Rattachement (Tuteur, Organisation, Entreprise)'}
             {step === 3 && 'Informations académiques'}
           </CardTitle>
         </CardHeader>
@@ -579,109 +703,340 @@ export default function NewStudentPage() {
 
             {step === 2 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Section Tuteur */}
+                <div className="space-y-4 border-b pb-6">
+                  <h3 className="text-lg font-semibold">Tuteur / Responsable</h3>
+                  
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Prénom du tuteur *
+                      Mode de sélection
                     </label>
-                    <input
-                      type="text"
-                      required
-                      {...register('guardian_first_name')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.guardian_first_name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.guardian_first_name.message}</p>
-                    )}
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="existing"
+                          checked={guardianMode === 'existing'}
+                          onChange={(e) => {
+                            setGuardianMode(e.target.value as 'existing' | 'new')
+                            setValue('guardian_id', '')
+                            setValue('guardian_first_name', '')
+                            setValue('guardian_last_name', '')
+                            setValue('guardian_phone_primary', '')
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span>Sélectionner un tuteur existant</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="new"
+                          checked={guardianMode === 'new'}
+                          onChange={(e) => {
+                            setGuardianMode(e.target.value as 'existing' | 'new')
+                            setValue('guardian_id', '')
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span>Créer un nouveau tuteur</span>
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Nom du tuteur *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      {...register('guardian_last_name')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.guardian_last_name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.guardian_last_name.message}</p>
-                    )}
-                  </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Lien de parenté *
-                  </label>
-                  <select
-                    required
-                    {...register('guardian_relationship')}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  >
-                    <option value="parent">Parent</option>
-                    <option value="father">Père</option>
-                    <option value="mother">Mère</option>
-                    <option value="guardian">Tuteur</option>
-                    <option value="other">Autre</option>
-                  </select>
-                </div>
+                  {guardianMode === 'existing' ? (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Tuteur existant *
+                      </label>
+                      <select
+                        {...register('guardian_id')}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                      >
+                        <option value="">Sélectionner un tuteur</option>
+                        {existingGuardians?.map((guardian: any) => (
+                          <option key={guardian.id} value={guardian.id}>
+                            {guardian.first_name} {guardian.last_name} - {guardian.phone_primary}
+                            {guardian.email && ` (${guardian.email})`}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.guardian_id && (
+                        <p className="text-red-500 text-sm mt-1">{errors.guardian_id.message}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Prénom du tuteur *
+                          </label>
+                          <input
+                            type="text"
+                            {...register('guardian_first_name')}
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                          />
+                          {errors.guardian_first_name && (
+                            <p className="text-red-500 text-sm mt-1">{errors.guardian_first_name.message}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Nom du tuteur *
+                          </label>
+                          <input
+                            type="text"
+                            {...register('guardian_last_name')}
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                          />
+                          {errors.guardian_last_name && (
+                            <p className="text-red-500 text-sm mt-1">{errors.guardian_last_name.message}</p>
+                          )}
+                        </div>
+                      </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Téléphone principal *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      {...register('guardian_phone_primary')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.guardian_phone_primary && (
-                      <p className="text-red-500 text-sm mt-1">{errors.guardian_phone_primary.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Téléphone secondaire
-                    </label>
-                    <input
-                      type="tel"
-                      {...register('guardian_phone_secondary')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.guardian_phone_secondary && (
-                      <p className="text-red-500 text-sm mt-1">{errors.guardian_phone_secondary.message}</p>
-                    )}
-                  </div>
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Lien de parenté
+                        </label>
+                        <select
+                          {...register('guardian_relationship')}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                        >
+                          <option value="parent">Parent</option>
+                          <option value="father">Père</option>
+                          <option value="mother">Mère</option>
+                          <option value="guardian">Tuteur</option>
+                          <option value="other">Autre</option>
+                        </select>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Email du tuteur
-                  </label>
-                  <input
-                    type="email"
-                    {...register('guardian_email')}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  />
-                  {errors.guardian_email && (
-                    <p className="text-red-500 text-sm mt-1">{errors.guardian_email.message}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Téléphone principal *
+                          </label>
+                          <input
+                            type="tel"
+                            {...register('guardian_phone_primary')}
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                          />
+                          {errors.guardian_phone_primary && (
+                            <p className="text-red-500 text-sm mt-1">{errors.guardian_phone_primary.message}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Téléphone secondaire
+                          </label>
+                          <input
+                            type="tel"
+                            {...register('guardian_phone_secondary')}
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Email du tuteur
+                        </label>
+                        <input
+                          type="email"
+                          {...register('guardian_email')}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                        />
+                        {errors.guardian_email && (
+                          <p className="text-red-500 text-sm mt-1">{errors.guardian_email.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Adresse du tuteur
+                        </label>
+                        <input
+                          type="text"
+                          {...register('guardian_address')}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Adresse du tuteur
-                  </label>
-                  <input
-                    type="text"
-                    {...register('guardian_address')}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  />
-                  {errors.guardian_address && (
-                    <p className="text-red-500 text-sm mt-1">{errors.guardian_address.message}</p>
+                {/* Section Organisation */}
+                {organizations && organizations.length > 1 && (
+                  <div className="space-y-4 border-b pb-6 pt-6">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-brand-blue" />
+                      Organisation
+                    </h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Organisation
+                      </label>
+                      <select
+                        {...register('organization_id')}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                      >
+                        <option value="">Organisation actuelle (Par défaut)</option>
+                        {organizations
+                          .filter((org: any) => org.id !== user?.organization_id)
+                          .map((org: any) => (
+                            <option key={org.id} value={org.id}>
+                              {org.name} ({org.code})
+                            </option>
+                          ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Laisser vide pour utiliser votre organisation actuelle
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Section Entreprise */}
+                <div className="space-y-4 pt-6">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Briefcase className="h-5 w-5 text-brand-blue" />
+                    Entreprise / Organisme (Optionnel)
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Renseignez ces informations si l'apprenant est en alternance ou rattaché à une entreprise/organisme
+                  </p>
+                  
+                  {/* Mode de sélection */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Mode de sélection
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="existing"
+                          checked={companyMode === 'existing'}
+                          onChange={(e) => {
+                            setCompanyMode(e.target.value as 'existing' | 'new')
+                            setValue('entity_id', '')
+                            setValue('company_name', '')
+                            setValue('company_address', '')
+                            setValue('company_phone', '')
+                            setValue('company_email', '')
+                            setValue('company_siret', '')
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span>Sélectionner une entité existante</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="new"
+                          checked={companyMode === 'new'}
+                          onChange={(e) => {
+                            setCompanyMode(e.target.value as 'existing' | 'new')
+                            setValue('entity_id', '')
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span>Saisir manuellement</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {companyMode === 'existing' ? (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Entreprise / Organisme
+                      </label>
+                      <select
+                        {...register('entity_id')}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                      >
+                        <option value="">Sélectionner une entité</option>
+                        {externalEntities?.map((entity: any) => (
+                          <option key={entity.id} value={entity.id}>
+                            {entity.name} {entity.siret && `(SIRET: ${entity.siret})`}
+                          </option>
+                        ))}
+                      </select>
+                      {externalEntities && externalEntities.length === 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Aucune entité disponible. <Link href="/dashboard/entities" className="text-primary underline">Créer une entité</Link>
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Nom de l'entreprise
+                        </label>
+                        <input
+                          type="text"
+                          {...register('company_name')}
+                          placeholder="Raison sociale"
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Adresse de l'entreprise
+                        </label>
+                        <input
+                          type="text"
+                          {...register('company_address')}
+                          placeholder="Adresse complète"
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Téléphone
+                          </label>
+                          <input
+                            type="tel"
+                            {...register('company_phone')}
+                            placeholder="Téléphone"
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            {...register('company_email')}
+                            placeholder="Email"
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                          />
+                          {errors.company_email && (
+                            <p className="text-red-500 text-sm mt-1">{errors.company_email.message}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          N° SIRET
+                        </label>
+                        <input
+                          type="text"
+                          {...register('company_siret')}
+                          placeholder="14 chiffres"
+                          maxLength={14}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
               </>
