@@ -399,9 +399,9 @@ export default function BlogPage() {
                               <AvatarImage src={post.author?.avatar_url || undefined} />
                               <AvatarFallback className="text-xs">
                                 {post.author?.full_name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')}
+                                  ?.split(' ')
+                                  .map((n) => n?.[0] || '')
+                                  .join('') || 'U'}
                               </AvatarFallback>
                             </Avatar>
                             <span className="text-sm">{post.author?.full_name}</span>
