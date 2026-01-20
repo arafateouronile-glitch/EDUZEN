@@ -639,7 +639,7 @@ export function ConfigApprenants({
           </div>
 
           <div className="space-y-4">
-            {filteredEntities.map((entity: any) => {
+            {(searchQuery ? filteredEntities : (externalEntities || [])).map((entity: any) => {
               const entityStudents = getStudentsForEntity(entity.id)
               const getTypeLabel = (type: string) => {
                 const labels: Record<string, string> = {
