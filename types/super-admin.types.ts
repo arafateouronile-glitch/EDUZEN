@@ -133,6 +133,7 @@ export interface OrganizationSubscription {
     id: string
     name: string
     logo_url: string | null
+    country?: string | null
   }
 }
 
