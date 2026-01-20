@@ -621,7 +621,7 @@ export function ConfigApprenants({
       )}
 
       {/* Entreprises et organismes - Afficher toutes les entités, même sans apprenants */}
-      {(searchMode === 'all' || searchMode === 'entities') && (filteredEntities.length > 0 || (!searchQuery && externalEntities && externalEntities.length > 0)) && (
+      {(searchMode === 'all' || searchMode === 'entities') && externalEntities && externalEntities.length > 0 && (
         <GlassCard variant="premium" className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
