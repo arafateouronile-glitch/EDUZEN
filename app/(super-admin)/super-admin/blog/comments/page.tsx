@@ -51,9 +51,9 @@ export default function BlogCommentsPage() {
   }
 
   // Fetch comments
-  const { data: comments, isLoading, refetch } = useQuery({
+  const { data: comments, isLoading, refetch } = useQuery<BlogComment[]>({
     queryKey: ['blog-comments'],
-    queryFn: async () => {
+    queryFn: async (): Promise<BlogComment[]> => {
       const { data, error } = await supabase
         .from('blog_comments')
         .select('*')

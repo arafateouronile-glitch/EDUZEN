@@ -40,9 +40,9 @@ export default function BlogTagsPage() {
   }
 
   // Fetch tags
-  const { data: tags, isLoading, refetch } = useQuery({
+  const { data: tags, isLoading, refetch } = useQuery<BlogTag[]>({
     queryKey: ['blog-tags'],
-    queryFn: async () => {
+    queryFn: async (): Promise<BlogTag[]> => {
       const { data, error } = await supabase
         .from('blog_tags')
         .select('*')

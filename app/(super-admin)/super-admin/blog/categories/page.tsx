@@ -42,9 +42,9 @@ export default function BlogCategoriesPage() {
   }
 
   // Fetch categories
-  const { data: categories, isLoading, refetch } = useQuery({
+  const { data: categories, isLoading, refetch } = useQuery<BlogCategory[]>({
     queryKey: ['blog-categories'],
-    queryFn: async () => {
+    queryFn: async (): Promise<BlogCategory[]> => {
       const { data, error } = await supabase
         .from('blog_categories')
         .select('*')
