@@ -45,10 +45,11 @@ export default function BlogCategoriesPage() {
   const { data: categories, isLoading, refetch } = useQuery<BlogCategoryRow[]>({
     queryKey: ['blog-categories'],
     queryFn: async (): Promise<BlogCategoryRow[]> => {
-      const { data, error } = await supabase
+      // Utiliser any pour éviter l'inférence récursive de TypeScript
+      const { data, error } = await (supabase
         .from('blog_categories')
         .select('*')
-        .order('display_order', { ascending: true })
+        .order('display_order', { ascending: true }) as any)
 
       if (error) throw error
       return (data || []) as BlogCategoryRow[]
