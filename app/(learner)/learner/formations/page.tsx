@@ -120,13 +120,13 @@ export default function LearnerFormationsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Terminée</Badge>
+        return <Badge className="bg-brand-cyan-pale text-brand-cyan hover:bg-brand-cyan-pale">Terminée</Badge>
       case 'confirmed':
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Confirmée</Badge>
+        return <Badge className="bg-brand-blue-pale text-brand-blue hover:bg-brand-blue-pale">Confirmée</Badge>
       case 'pending':
-        return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">En attente</Badge>
+        return <Badge className="bg-brand-cyan-ghost text-brand-cyan-dark hover:bg-brand-cyan-ghost">En attente</Badge>
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Annulée</Badge>
+        return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">Annulée</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -142,82 +142,121 @@ export default function LearnerFormationsPage() {
         href={`/learner/formations/${session?.id}`}
         className="block"
       >
-        <GlassCard className="p-6 hover:shadow-lg transition-all duration-300 group cursor-pointer">
-          <div className="flex flex-col md:flex-row md:items-start gap-4">
-            {/* Icon */}
-            <div className="p-3 bg-gradient-to-br from-brand-blue/10 to-indigo-100 rounded-xl group-hover:scale-105 transition-transform">
-              <GraduationCap className="h-8 w-8 text-brand-blue" />
-            </div>
+        <motion.div
+          whileHover={{ y: -4 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        >
+          <GlassCard variant="premium" hoverable glow className="p-6 relative overflow-hidden group cursor-pointer">
+            {/* Gradient overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 via-transparent to-brand-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  {program && (
-                    <p className="text-xs font-medium text-brand-blue uppercase tracking-wider mb-1">
-                      {program.name}
-                    </p>
-                  )}
-                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-blue transition-colors">
-                    {formation?.name || session?.name || 'Formation'}
-                  </h3>
+            {/* Shine effect */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"
+            />
+
+            <div className="relative flex flex-col md:flex-row md:items-start gap-4">
+              {/* Icon avec animation */}
+              <motion.div
+                className="p-4 bg-gradient-to-br from-brand-blue to-indigo-600 rounded-2xl shadow-lg shadow-brand-blue/20"
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <GraduationCap className="h-8 w-8 text-white" />
+              </motion.div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    {program && (
+                      <p className="text-xs font-bold text-brand-blue uppercase tracking-widest mb-1">
+                        {program.name}
+                      </p>
+                    )}
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-blue transition-colors duration-300">
+                      {formation?.name || session?.name || 'Formation'}
+                    </h3>
+                  </div>
+                  {getStatusBadge(enrollment.status)}
                 </div>
-                {getStatusBadge(enrollment.status)}
-              </div>
 
-              {formation?.description && (
-                <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                  {formation.description}
-                </p>
-              )}
-
-              {/* Infos */}
-              <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-gray-500">
-                {session?.start_date && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {formatDate(session.start_date)}
-                    {session.end_date && session.end_date !== session.start_date && 
-                      ` - ${formatDate(session.end_date)}`
-                    }
-                  </span>
+                {formation?.description && (
+                  <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                    {formation.description}
+                  </p>
                 )}
-                {/* Durée de la formation */}
-                {session?.location && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {session.location}
-                  </span>
-                )}
-              </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
-                <Button variant="outline" size="sm" className="group-hover:border-brand-blue group-hover:text-brand-blue">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Documents
-                </Button>
-                {enrollment.status === 'completed' && (
-                  <Button variant="outline" size="sm">
-                    <Award className="h-4 w-4 mr-2" />
-                    Certificat
+                {/* Infos avec icônes améliorées */}
+                <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-gray-500">
+                  {session?.start_date && (
+                    <span className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
+                      <Calendar className="h-4 w-4 text-brand-blue" />
+                      {formatDate(session.start_date)}
+                      {session.end_date && session.end_date !== session.start_date &&
+                        ` - ${formatDate(session.end_date)}`
+                      }
+                    </span>
+                  )}
+                  {session?.location && (
+                    <span className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">
+                      <MapPin className="h-4 w-4 text-brand-blue" />
+                      {session.location}
+                    </span>
+                  )}
+                </div>
+
+                {/* Actions améliorées */}
+                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="group-hover:border-brand-blue group-hover:text-brand-blue group-hover:bg-brand-blue/5 transition-all duration-300"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Documents
                   </Button>
-                )}
-                <div className="flex-1" />
-                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-brand-blue group-hover:translate-x-1 transition-all" />
+                  {enrollment.status === 'completed' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="group-hover:border-brand-cyan group-hover:text-brand-cyan group-hover:bg-brand-cyan-pale transition-all duration-300"
+                    >
+                      <Award className="h-4 w-4 mr-2" />
+                      Certificat
+                    </Button>
+                  )}
+                  <div className="flex-1" />
+                  <motion.div
+                    className="p-2 rounded-full bg-gray-50 group-hover:bg-brand-blue/10 transition-colors"
+                    whileHover={{ x: 5 }}
+                  >
+                    <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-brand-blue transition-colors" />
+                  </motion.div>
+                </div>
               </div>
             </div>
-          </div>
-        </GlassCard>
+          </GlassCard>
+        </motion.div>
       </Link>
     )
   }
 
   const EmptyState = ({ message }: { message: string }) => (
-    <div className="text-center py-12">
-      <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-      <p className="text-gray-500">{message}</p>
-    </div>
+    <GlassCard variant="premium" className="p-12 text-center relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-slate-100/30" />
+      <div className="relative">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"
+        >
+          <GraduationCap className="h-10 w-10 text-gray-400" />
+        </motion.div>
+        <p className="text-gray-500 font-medium">{message}</p>
+      </div>
+    </GlassCard>
   )
 
   const containerVariants = {
@@ -237,36 +276,104 @@ export default function LearnerFormationsPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
+      {/* Header Premium */}
       <motion.div variants={itemVariants}>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-brand-blue/10 rounded-xl">
-            <GraduationCap className="h-8 w-8 text-brand-blue" />
+        <GlassCard variant="premium" className="p-6 md:p-8 relative overflow-hidden">
+          {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 via-brand-cyan-ghost/30 to-brand-cyan-pale/20" />
+
+          {/* Floating orbs */}
+          <motion.div
+            animate={{ y: [0, -10, 0], x: [0, 5, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-10 -right-10 w-40 h-40 bg-brand-blue/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, 10, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl"
+          />
+
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="p-4 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-2xl shadow-lg shadow-brand-blue/25"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <GraduationCap className="h-8 w-8 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 via-brand-blue to-brand-cyan bg-clip-text text-transparent">
+                  Mes formations
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  Gérez vos inscriptions et suivez votre progression
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Badge className="bg-gradient-to-r from-brand-blue/10 to-brand-cyan-pale text-brand-blue border-0 px-4 py-2">
+                <GraduationCap className="h-4 w-4 mr-2" />
+                {enrollments?.length || 0} formation{(enrollments?.length || 0) > 1 ? 's' : ''}
+              </Badge>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Mes formations
-            </h1>
-            <p className="text-gray-500">
-              Gérez vos inscriptions et suivez votre progression
-            </p>
-          </div>
-        </div>
+        </GlassCard>
       </motion.div>
 
-      {/* Stats rapides */}
+      {/* Stats rapides - Premium */}
       <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
-        <GlassCard className="p-4 text-center">
-          <div className="text-2xl font-bold text-brand-blue">{upcomingEnrollments.length}</div>
-          <p className="text-sm text-gray-500">À venir</p>
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 flex items-center justify-center">
+              <Calendar className="h-6 w-6 text-brand-blue" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">
+              {upcomingEnrollments.length}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">À venir</p>
+          </motion.div>
         </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">{ongoingEnrollments.length}</div>
-          <p className="text-sm text-gray-500">En cours</p>
+
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-cyan/5 to-brand-cyan-dark/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-brand-cyan/10 to-brand-cyan-dark/10 flex items-center justify-center">
+              <PlayCircle className="h-6 w-6 text-brand-cyan" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-brand-cyan to-brand-cyan-dark bg-clip-text text-transparent">
+              {ongoingEnrollments.length}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">En cours</p>
+          </motion.div>
         </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <div className="text-2xl font-bold text-purple-600">{completedEnrollments.length}</div>
-          <p className="text-sm text-gray-500">Terminées</p>
+
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-brand-blue" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">
+              {completedEnrollments.length}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Terminées</p>
+          </motion.div>
         </GlassCard>
       </motion.div>
 

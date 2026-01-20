@@ -13,6 +13,13 @@ import { extractDocumentVariables } from '@/lib/utils/document-generation/variab
 import { generatePDFFromHTML } from '@/lib/utils/pdf-generator'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import Link from 'next/link'
@@ -232,11 +239,18 @@ export function GestionFinances({
       const student = invoice.students as StudentWithRelations | undefined
       const invoiceData = invoice as InvoiceWithRelations
 
+      let sessionModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+      if (sessionData?.id) {
+        const { data: mods } = await supabase.from('session_modules' as any).select('id, name, amount, currency').eq('session_id', sessionData.id).order('display_order', { ascending: true })
+        sessionModules = (mods?.length ? mods : undefined) as Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+      }
+
       const variables = extractDocumentVariables({
         student,
         organization: org as any,
         session: sessionData,
         invoice: invoiceData,
+        sessionModules,
         academicYear,
         language: 'fr',
         issueDate: invoice.issue_date,
@@ -384,6 +398,7 @@ export function GestionFinances({
       return invoiceService.create({
         organization_id: user.organization_id,
         student_id: enrollment.student_id,
+        enrollment_id: enrollment.id,
         invoice_number: '',
         type: 'tuition',
         document_type: 'quote',
@@ -924,8 +939,9 @@ export function GestionFinances({
                 size="sm"
                 onClick={() => {
                   setSelectedEnrollmentId(null)
-                  setShowQuoteForm(true)
+                  setShowPaymentForm(false)
                   setShowInvoiceForm(false)
+                  setShowQuoteForm(true)
                 }}
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -1003,12 +1019,13 @@ export function GestionFinances({
                         size="sm"
                         onClick={() => {
                           setSelectedEnrollmentId(enrollment.id)
+                          setShowPaymentForm(false)
+                          setShowInvoiceForm(false)
                           setInvoiceForm({
                             ...invoiceForm,
-                            amount: enrollment.total_amount ? String(enrollment.total_amount) : '',
+                            amount: (enrollment.total_amount != null && enrollment.total_amount !== '') ? String(enrollment.total_amount) : '0',
                           })
                           setShowQuoteForm(true)
-                          setShowInvoiceForm(false)
                         }}
                       >
                         <FileText className="mr-2 h-3 w-3" />
@@ -1362,119 +1379,112 @@ export function GestionFinances({
         </Card>
       )}
 
-      {/* Formulaire de devis */}
-      {showQuoteForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Créer un devis</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!selectedEnrollmentId && (
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  ⚠️ Veuillez sélectionner un étudiant depuis la liste ci-dessus avant de créer le devis.
-                </p>
-              </div>
-            )}
-            {selectedEnrollmentId && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  Étudiant sélectionné : {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.first_name} {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.last_name}
-                </p>
-              </div>
-            )}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                createQuoteMutation.mutate()
-              }}
-              className="space-y-4"
-            >
+      {/* Formulaire de devis (Dialog) */}
+      <Dialog open={showQuoteForm} onOpenChange={(open) => { setShowQuoteForm(open); if (!open) setSelectedEnrollmentId(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Créer un devis</DialogTitle>
+          </DialogHeader>
+          {!selectedEnrollmentId && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                ⚠️ Veuillez sélectionner un étudiant depuis la liste ci-dessus avant de créer le devis.
+              </p>
+            </div>
+          )}
+          {selectedEnrollmentId && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Étudiant sélectionné : {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.first_name} {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.last_name}
+              </p>
+            </div>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createQuoteMutation.mutate()
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label className="block text-sm font-medium mb-2">Montant HT *</label>
+              <input
+                type="number"
+                required
+                step="0.01"
+                min="0"
+                value={invoiceForm.amount}
+                onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">TVA</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={invoiceForm.tax_amount}
+                onChange={(e) => setInvoiceForm({ ...invoiceForm, tax_amount: e.target.value })}
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Montant HT *</label>
+                <label className="block text-sm font-medium mb-2">Date d'émission *</label>
                 <input
-                  type="number"
+                  type="date"
                   required
-                  step="0.01"
-                  min="0.01"
-                  value={invoiceForm.amount}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+                  value={invoiceForm.issue_date}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, issue_date: e.target.value })}
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="0.00"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium mb-2">TVA</label>
+                <label className="block text-sm font-medium mb-2">Date d'échéance *</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={invoiceForm.tax_amount}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, tax_amount: e.target.value })}
+                  type="date"
+                  required
+                  value={invoiceForm.due_date}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="0.00"
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Date d'émission *</label>
-                  <input
-                    type="date"
-                    required
-                    value={invoiceForm.issue_date}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, issue_date: e.target.value })}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Date d'échéance *</label>
-                  <input
-                    type="date"
-                    required
-                    value={invoiceForm.due_date}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Notes</label>
+              <textarea
+                value={invoiceForm.notes}
+                onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
+                rows={2}
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                placeholder="Notes supplémentaires..."
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-2">Notes</label>
-                <textarea
-                  value={invoiceForm.notes}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
-                  rows={2}
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Notes supplémentaires..."
-                />
-              </div>
-
-              <div className="flex space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setShowQuoteForm(false)
-                    setSelectedEnrollmentId(null)
-                  }}
-                >
-                  Annuler
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="flex-1" 
-                  disabled={createQuoteMutation.isPending || !selectedEnrollmentId}
-                >
-                  {createQuoteMutation.isPending ? 'Création...' : 'Créer le devis'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setShowQuoteForm(false); setSelectedEnrollmentId(null) }}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                disabled={createQuoteMutation.isPending || !selectedEnrollmentId}
+              >
+                {createQuoteMutation.isPending ? 'Création...' : 'Créer le devis'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Formulaire de charge */}
       {showChargeForm && (

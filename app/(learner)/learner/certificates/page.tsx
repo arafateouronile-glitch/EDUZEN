@@ -116,8 +116,8 @@ export default function LearnerCertificatesPage() {
       {/* Header */}
       <motion.div variants={itemVariants}>
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-amber-100 rounded-xl">
-            <Award className="h-8 w-8 text-amber-600" />
+          <div className="p-2 bg-brand-cyan-pale rounded-xl">
+            <Award className="h-8 w-8 text-brand-cyan" />
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
@@ -133,7 +133,7 @@ export default function LearnerCertificatesPage() {
       {/* Stats */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <GlassCard className="p-4 text-center">
-          <Award className="h-6 w-6 text-amber-600 mx-auto mb-2" />
+          <Award className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900">{allCertificates.length}</div>
           <p className="text-xs text-gray-500">Total certificats</p>
         </GlassCard>
@@ -145,7 +145,7 @@ export default function LearnerCertificatesPage() {
           <p className="text-xs text-gray-500">E-Learning</p>
         </GlassCard>
         <GlassCard className="p-4 text-center">
-          <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" />
+          <CheckCircle2 className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
           <div className="text-2xl font-bold text-gray-900">
             {sessionCertificates?.length || 0}
           </div>
@@ -172,13 +172,13 @@ export default function LearnerCertificatesPage() {
               >
                 <GlassCard className="overflow-hidden hover:shadow-lg transition-all duration-300 group">
                   {/* Header gradient */}
-                  <div className="h-3 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500" />
+                  <div className="h-3 bg-gradient-to-r from-brand-blue to-brand-cyan" />
                   
                   <div className="p-6">
                     <div className="flex items-start gap-4">
                       {/* Icon */}
-                      <div className="p-3 bg-gradient-to-br from-amber-100 to-amber-50 rounded-xl">
-                        <Award className="h-8 w-8 text-amber-600" />
+                      <div className="p-3 bg-gradient-to-br from-brand-cyan-pale to-brand-cyan-ghost rounded-xl">
+                        <Award className="h-8 w-8 text-brand-cyan" />
                       </div>
 
                       {/* Content */}
@@ -221,7 +221,7 @@ export default function LearnerCertificatesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 group-hover:border-amber-500 group-hover:text-amber-600"
+                        className="flex-1 group-hover:border-brand-cyan group-hover:text-brand-cyan"
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         Voir

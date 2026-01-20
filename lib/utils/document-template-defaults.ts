@@ -800,23 +800,14 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
       <table style="width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 10pt;">
         <thead>
           <tr style="background-color: #1A1A1A; color: white;">
-            <th style="padding: 10px 12px; text-align: left; font-weight: bold;">Description de la formation</th>
+            <th style="padding: 10px 12px; text-align: left; font-weight: bold;">Description</th>
             <th style="padding: 10px 12px; text-align: center; font-weight: bold; width: 80px;">Durée</th>
             <th style="padding: 10px 12px; text-align: right; font-weight: bold; width: 100px;">Prix HT</th>
             <th style="padding: 10px 12px; text-align: right; font-weight: bold; width: 100px;">Montant HT</th>
           </tr>
         </thead>
         <tbody>
-          <tr style="border-bottom: 1px solid #E5E7EB;">
-            <td style="padding: 12px;">
-              <p style="margin: 0; font-weight: 600;">{formation_nom}</p>
-              <p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Période : {session_debut} au {session_fin}</p>
-              <p style="margin: 2px 0 0 0; font-size: 9pt; color: #666;">Lieu : {session_lieu}</p>
-            </td>
-            <td style="padding: 12px; text-align: center; font-weight: 500;">{formation_duree}</td>
-            <td style="padding: 12px; text-align: right; font-weight: 500;">{montant_ht} €</td>
-            <td style="padding: 12px; text-align: right; font-weight: 600;">{montant_ht} €</td>
-          </tr>
+          {modules_lignes}
         </tbody>
       </table>
 

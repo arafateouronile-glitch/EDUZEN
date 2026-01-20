@@ -136,11 +136,11 @@ export default function LearnerPaymentsPage() {
     const totalAmount = Number(invoice.total_amount || 0)
     
     if (paidAmount >= totalAmount) {
-      return { status: 'paid', label: 'Payée', icon: CheckCircle, color: 'text-emerald-600' }
+      return { status: 'paid', label: 'Payée', icon: CheckCircle, color: 'text-brand-cyan' }
     } else if (paidAmount > 0) {
-      return { status: 'partial', label: 'Partiellement payée', icon: Clock, color: 'text-yellow-600' }
+      return { status: 'partial', label: 'Partiellement payée', icon: Clock, color: 'text-brand-cyan-dark' }
     } else {
-      return { status: 'unpaid', label: 'Impayée', icon: AlertCircle, color: 'text-red-600' }
+      return { status: 'unpaid', label: 'Impayée', icon: AlertCircle, color: 'text-gray-600' }
     }
   }
 
@@ -184,10 +184,10 @@ export default function LearnerPaymentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">Total payé</p>
-                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</p>
+                <p className="text-2xl font-bold text-brand-cyan">{formatCurrency(totalPaid)}</p>
               </div>
-              <div className="p-3 bg-emerald-100 rounded-full">
-                <CheckCircle className="h-6 w-6 text-emerald-600" />
+              <div className="p-3 bg-brand-cyan-pale rounded-full">
+                <CheckCircle className="h-6 w-6 text-brand-cyan" />
               </div>
             </div>
           </CardContent>
@@ -198,10 +198,10 @@ export default function LearnerPaymentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">En attente</p>
-                <p className="text-2xl font-bold text-red-600">{formatCurrency(totalPending)}</p>
+                <p className="text-2xl font-bold text-gray-600">{formatCurrency(totalPending)}</p>
               </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+              <div className="p-3 bg-gray-100 rounded-full">
+                <AlertCircle className="h-6 w-6 text-gray-600" />
               </div>
             </div>
           </CardContent>

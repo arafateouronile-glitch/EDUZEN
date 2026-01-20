@@ -195,7 +195,7 @@ export default function NewStudentPage() {
       const { data: organization } = await supabase
         .from('organizations')
         .select('code')
-        .eq('id', user.organization_id)
+        .eq('id', targetOrganizationId)
         .single()
 
       const orgCode = organization?.code || 'EDUZEN'
@@ -206,7 +206,7 @@ export default function NewStudentPage() {
       const { data: lastStudent } = await supabase
         .from('students')
         .select('student_number')
-        .eq('organization_id', user.organization_id)
+        .eq('organization_id', targetOrganizationId)
         .like('student_number', `${prefix}%`)
         .order('student_number', { ascending: false })
         .limit(1)

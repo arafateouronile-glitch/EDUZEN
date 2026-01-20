@@ -202,7 +202,7 @@ export default function SettingsPage() {
                     Utiliser une connexion sécurisée pour l'envoi d'emails
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={true} />
               </div>
             </CardContent>
           </Card>
@@ -222,7 +222,7 @@ export default function SettingsPage() {
                     Envoyer un email de bienvenue aux nouveaux utilisateurs
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={true} />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -232,7 +232,7 @@ export default function SettingsPage() {
                     Notifier les utilisateurs des changements d'abonnement
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={true} />
               </div>
             </CardContent>
           </Card>
@@ -263,7 +263,7 @@ export default function SettingsPage() {
                     Activer la facturation automatique pour les abonnements
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={true} />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -273,7 +273,7 @@ export default function SettingsPage() {
                     Offrir une période d'essai gratuite aux nouveaux clients
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={true} />
               </div>
             </CardContent>
           </Card>
@@ -311,7 +311,7 @@ export default function SettingsPage() {
                     Activer la limitation de taux pour les API
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={true} />
               </div>
             </CardContent>
           </Card>
@@ -334,7 +334,7 @@ export default function SettingsPage() {
                     Envoyer des notifications par email aux administrateurs
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={true} />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -344,7 +344,7 @@ export default function SettingsPage() {
                     Recevoir des alertes pour les activités suspectes
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={true} />
               </div>
             </CardContent>
           </Card>

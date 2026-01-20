@@ -374,10 +374,10 @@ export default function LearnerDocumentsPage() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'convocation': return <Mail className="h-5 w-5 text-blue-600" />
-      case 'convention': return <FileCheck className="h-5 w-5 text-purple-600" />
-      case 'attestation': return <ClipboardList className="h-5 w-5 text-green-600" />
-      case 'certificate': return <Award className="h-5 w-5 text-amber-600" />
+      case 'convocation': return <Mail className="h-5 w-5 text-brand-blue" />
+      case 'convention': return <FileCheck className="h-5 w-5 text-brand-blue-light" />
+      case 'attestation': return <ClipboardList className="h-5 w-5 text-brand-cyan" />
+      case 'certificate': return <Award className="h-5 w-5 text-brand-cyan-light" />
       case 'invoice': return <Receipt className="h-5 w-5 text-gray-600" />
       default: return <FileText className="h-5 w-5 text-gray-600" />
     }
@@ -385,10 +385,10 @@ export default function LearnerDocumentsPage() {
 
   const getTypeBadge = (type: string) => {
     const colors: Record<string, string> = {
-      convocation: 'bg-blue-100 text-blue-700',
-      convention: 'bg-purple-100 text-purple-700',
-      attestation: 'bg-green-100 text-green-700',
-      certificate: 'bg-amber-100 text-amber-700',
+      convocation: 'bg-brand-blue-pale text-brand-blue',
+      convention: 'bg-brand-blue-ghost text-brand-blue-dark',
+      attestation: 'bg-brand-cyan-pale text-brand-cyan',
+      certificate: 'bg-brand-cyan-ghost text-brand-cyan-dark',
       invoice: 'bg-gray-100 text-gray-700',
     }
     const labels: Record<string, string> = {
@@ -422,52 +422,91 @@ export default function LearnerDocumentsPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
+      {/* Header Premium */}
       <motion.div variants={itemVariants}>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-green-100 rounded-xl">
-            <FileText className="h-8 w-8 text-green-600" />
+        <GlassCard variant="premium" className="p-6 md:p-8 relative overflow-hidden">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-cyan/5 via-brand-cyan-ghost/30 to-brand-cyan-pale/20" />
+
+          {/* Floating orbs */}
+          <motion.div
+            animate={{ y: [0, -10, 0], x: [0, 5, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-10 -right-10 w-40 h-40 bg-brand-cyan/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, 10, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-cyan/10 rounded-full blur-3xl"
+          />
+
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="p-4 bg-gradient-to-br from-brand-cyan to-brand-cyan-dark rounded-2xl shadow-lg shadow-brand-cyan/25"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <FileText className="h-8 w-8 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 via-brand-blue to-brand-cyan bg-clip-text text-transparent">
+                  Mes documents
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  Accédez à tous vos documents de formation
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Badge className="bg-gradient-to-r from-brand-cyan/10 to-brand-cyan-pale text-brand-cyan border-0 px-4 py-2">
+                <Folder className="h-4 w-4 mr-2" />
+                {allDocuments?.length || 0} document{(allDocuments?.length || 0) > 1 ? 's' : ''}
+              </Badge>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Mes documents
-            </h1>
-            <p className="text-gray-500">
-              Accédez à tous vos documents de formation
-            </p>
-          </div>
-        </div>
+        </GlassCard>
       </motion.div>
 
-      {/* Search & Filter */}
+      {/* Search & Filter Premium */}
       <motion.div variants={itemVariants}>
-        <GlassCard className="p-4">
+        <GlassCard variant="premium" className="p-5">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 type="search"
                 placeholder="Rechercher un document..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-12 h-12 bg-gray-50/50 border-gray-200/80 rounded-xl focus:ring-2 focus:ring-brand-cyan/20 focus:border-brand-cyan/50"
               />
             </div>
 
             {/* Type Filter */}
             <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
               {documentTypes.map((type) => (
-                <Button
+                <motion.div
                   key={type.id}
-                  variant={activeType === type.id ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setActiveType(type.id)}
-                  className={`whitespace-nowrap ${activeType === type.id ? 'bg-brand-blue' : ''}`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <type.icon className="h-4 w-4 mr-1" />
-                  {type.label}
-                </Button>
+                  <Button
+                    variant={activeType === type.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActiveType(type.id)}
+                    className={`whitespace-nowrap rounded-xl h-10 ${
+                      activeType === type.id
+                        ? 'bg-gradient-to-r from-brand-cyan to-brand-cyan-dark border-0 shadow-lg shadow-brand-cyan/25'
+                        : 'hover:border-brand-cyan hover:text-brand-cyan hover:bg-brand-cyan-pale'
+                    }`}
+                  >
+                    <type.icon className="h-4 w-4 mr-1.5" />
+                    {type.label}
+                  </Button>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -495,10 +534,10 @@ export default function LearnerDocumentsPage() {
                   <div className="flex items-center gap-4">
                     {/* Icon */}
                     <div className={`p-3 rounded-xl ${
-                      doc.type === 'certificate' ? 'bg-amber-50' :
-                      doc.type === 'convocation' ? 'bg-blue-50' :
-                      doc.type === 'convention' ? 'bg-purple-50' :
-                      doc.type === 'attestation' ? 'bg-green-50' :
+                      doc.type === 'certificate' ? 'bg-brand-cyan-ghost' :
+                      doc.type === 'convocation' ? 'bg-brand-blue-pale' :
+                      doc.type === 'convention' ? 'bg-brand-blue-ghost' :
+                      doc.type === 'attestation' ? 'bg-brand-cyan-pale' :
                       'bg-gray-50'
                     }`}>
                       {getTypeIcon(doc.type)}
@@ -580,14 +619,14 @@ export default function LearnerDocumentsPage() {
           <p className="text-xs text-gray-500">Convocations</p>
         </GlassCard>
         <GlassCard className="p-4 text-center">
-          <ClipboardList className="h-6 w-6 text-green-600 mx-auto mb-2" />
+          <ClipboardList className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">
             {documents?.filter((d: any) => d.type === 'attestation').length || 0}
           </div>
           <p className="text-xs text-gray-500">Attestations</p>
         </GlassCard>
         <GlassCard className="p-4 text-center">
-          <Award className="h-6 w-6 text-amber-600 mx-auto mb-2" />
+          <Award className="h-6 w-6 text-brand-cyan-light mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">
             {certificates?.length || 0}
           </div>

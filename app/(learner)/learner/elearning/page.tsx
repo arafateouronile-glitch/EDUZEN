@@ -236,9 +236,9 @@ export default function LearnerElearningPage() {
 
   const getLevelBadge = (level: string) => {
     const colors: Record<string, string> = {
-      beginner: 'bg-green-100 text-green-700',
-      intermediate: 'bg-amber-100 text-amber-700',
-      advanced: 'bg-red-100 text-red-700',
+      beginner: 'bg-brand-cyan-pale text-brand-cyan',
+      intermediate: 'bg-brand-blue-pale text-brand-blue',
+      advanced: 'bg-brand-blue-ghost text-brand-blue-dark',
     }
     const labels: Record<string, string> = {
       beginner: 'Débutant',
@@ -260,13 +260,13 @@ export default function LearnerElearningPage() {
     // on affiche une carte "placeholder" au lieu de ne rien montrer.
     if (!course?.slug) {
       return (
-        <GlassCard className="overflow-hidden border border-amber-200 bg-amber-50/40">
+        <GlassCard className="overflow-hidden border border-brand-cyan-pale bg-brand-cyan-ghost/40">
           <div className="p-4">
             <div className="flex items-start justify-between gap-2 mb-2">
               <h3 className="font-semibold text-gray-900 line-clamp-2">
                 Cours assigné (détails indisponibles)
               </h3>
-              <Badge className="bg-amber-500 text-white">Configuration</Badge>
+              <Badge className="bg-brand-cyan text-white">Configuration</Badge>
             </div>
             <p className="text-sm text-gray-600">
               Ce cours a été assigné à votre session, mais ses informations ne sont pas encore accessibles.
@@ -282,123 +282,136 @@ export default function LearnerElearningPage() {
         href={`/learner/elearning/${course?.slug}`}
         className="block"
       >
-        <GlassCard className="overflow-hidden hover:shadow-lg transition-all duration-300 group">
-          {/* Thumbnail */}
-          <div className="relative h-40 bg-gradient-to-br from-brand-blue/20 to-indigo-100">
-            {course?.thumbnail_url ? (
-              <img
-                src={course.thumbnail_url}
-                alt={course.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <BookOpen className="h-16 w-16 text-brand-blue/30" />
+        <motion.div
+          whileHover={{ y: -4 }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        >
+          <GlassCard variant="premium" hoverable glow className="overflow-hidden group">
+            {/* Thumbnail */}
+            <div className="relative h-44 bg-gradient-to-br from-brand-blue/20 to-brand-cyan-pale">
+              {course?.thumbnail_url ? (
+                <img
+                  src={course.thumbnail_url}
+                  alt={course.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10">
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <BookOpen className="h-16 w-16 text-brand-blue/30" />
+                  </motion.div>
+                </div>
+              )}
+
+              {/* Play overlay avec animation */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  whileHover={{ scale: 1 }}
+                  className="w-16 h-16 rounded-full bg-white/95 flex items-center justify-center shadow-xl backdrop-blur-sm"
+                >
+                  <Play className="h-8 w-8 text-brand-blue ml-1" />
+                </motion.div>
               </div>
-            )}
-            
-            {/* Play overlay */}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
-                <Play className="h-8 w-8 text-brand-blue ml-1" />
-              </div>
+
+              {/* Status badge amélioré */}
+              {!isAvailable && (
+                <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
+                  {enrollment.status === 'completed' ? (
+                    <Badge className="bg-gradient-to-r from-brand-cyan to-brand-cyan-dark text-white border-0 shadow-lg">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Terminé
+                    </Badge>
+                  ) : progress > 0 ? (
+                    <Badge className="bg-gradient-to-r from-brand-blue to-brand-cyan text-white border-0 shadow-lg">
+                      En cours
+                    </Badge>
+                  ) : null}
+                  {enrollment.is_required && (
+                    <Badge className="bg-white/90 backdrop-blur-sm text-brand-cyan text-xs border-0 shadow">
+                      Obligatoire
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {/* Session name */}
+              {!isAvailable && enrollment.session?.name && (
+                <div className="absolute bottom-3 left-3">
+                  <Badge className="bg-white/90 backdrop-blur-sm text-gray-700 text-xs border-0 shadow">
+                    {enrollment.session.name}
+                  </Badge>
+                </div>
+              )}
             </div>
 
-            {/* Status badge */}
-            {!isAvailable && (
-              <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
-                {enrollment.status === 'completed' ? (
-                  <Badge className="bg-green-500 text-white">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Terminé
-                  </Badge>
-                ) : progress > 0 ? (
-                  <Badge className="bg-brand-blue text-white">
-                    En cours
-                  </Badge>
-                ) : null}
-                {enrollment.is_required && (
-                  <Badge variant="secondary" className="text-xs">
-                    Obligatoire
-                  </Badge>
-                )}
-              </div>
-            )}
-
-            {/* Session name */}
-            {!isAvailable && enrollment.session?.name && (
-              <div className="absolute bottom-3 left-3">
-                <Badge variant="outline" className="bg-white/90 text-xs">
-                  {enrollment.session.name}
-                </Badge>
-              </div>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="p-4">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="font-semibold text-gray-900 line-clamp-2 group-hover:text-brand-blue transition-colors">
+            {/* Content */}
+            <div className="p-5">
+              <h3 className="font-bold text-gray-900 line-clamp-2 group-hover:text-purple-600 transition-colors mb-2">
                 {course?.title}
               </h3>
-            </div>
 
-            {(course?.description || course?.short_description) && (
-              <p className="text-sm text-gray-500 line-clamp-2 mb-3">
-                {course.short_description || course.description}
-              </p>
-            )}
-
-            <div className="flex items-center gap-3 text-sm text-gray-500 mb-3">
-              {/* Nombre de leçons */}
-              {enrollment.total_lessons > 0 && (
-                <span className="flex items-center gap-1">
-                  <Layers className="h-4 w-4" />
-                  {enrollment.total_lessons} leçons
-                </span>
+              {(course?.description || course?.short_description) && (
+                <p className="text-sm text-gray-500 line-clamp-2 mb-4">
+                  {course.short_description || course.description}
+                </p>
               )}
-              {course?.estimated_duration_hours && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {course.estimated_duration_hours}h
-                </span>
-              )}
-              {course?.difficulty_level && getLevelBadge(course.difficulty_level)}
-            </div>
 
-            {/* Due date */}
-            {!isAvailable && enrollment.due_date && (
-              <div className="text-xs text-amber-600 mb-2 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                Échéance: {new Date(enrollment.due_date).toLocaleDateString('fr-FR')}
-              </div>
-            )}
-
-            {/* Progress bar */}
-            {!isAvailable && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">
-                    {enrollment.completed_lessons}/{enrollment.total_lessons} leçons
+              <div className="flex items-center gap-2 flex-wrap text-sm text-gray-500 mb-4">
+                {enrollment.total_lessons > 0 && (
+                  <span className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
+                    <Layers className="h-4 w-4 text-brand-blue" />
+                    {enrollment.total_lessons} leçons
                   </span>
-                  <span className="font-semibold text-brand-blue">{progress}%</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-brand-blue to-indigo-500 rounded-full transition-all duration-500"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
+                )}
+                {course?.estimated_duration_hours && (
+                  <span className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
+                    <Clock className="h-4 w-4 text-purple-500" />
+                    {course.estimated_duration_hours}h
+                  </span>
+                )}
+                {course?.difficulty_level && getLevelBadge(course.difficulty_level)}
               </div>
-            )}
 
-            {isAvailable && (
-              <Button className="w-full mt-2" variant="outline">
-                Commencer le cours
-              </Button>
-            )}
-          </div>
-        </GlassCard>
+              {/* Due date */}
+              {!isAvailable && enrollment.due_date && (
+                <div className="text-xs text-brand-cyan mb-3 flex items-center gap-1.5 bg-brand-cyan-pale px-3 py-1.5 rounded-lg w-fit">
+                  <Clock className="h-3.5 w-3.5" />
+                  Échéance: {new Date(enrollment.due_date).toLocaleDateString('fr-FR')}
+                </div>
+              )}
+
+              {/* Progress bar améliorée */}
+              {!isAvailable && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">
+                      {enrollment.completed_lessons}/{enrollment.total_lessons} leçons
+                    </span>
+                    <span className="font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">{progress}%</span>
+                  </div>
+                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                      className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {isAvailable && (
+                <Button className="w-full mt-2 bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan-dark text-white border-0">
+                  Commencer le cours
+                </Button>
+              )}
+            </div>
+          </GlassCard>
+        </motion.div>
       </Link>
     )
   }
@@ -420,56 +433,121 @@ export default function LearnerElearningPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
+      {/* Header Premium */}
       <motion.div variants={itemVariants}>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-purple-100 rounded-xl">
-            <PlayCircle className="h-8 w-8 text-purple-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              E-Learning
-            </h1>
-            <p className="text-gray-500">
-              Apprenez à votre rythme avec nos cours en ligne
-            </p>
-          </div>
-        </div>
-      </motion.div>
+        <GlassCard variant="premium" className="p-6 md:p-8 relative overflow-hidden">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 via-brand-cyan-ghost/30 to-brand-cyan-pale/20" />
 
-      {/* Stats */}
-      <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
-        <GlassCard className="p-4 text-center">
-          <PlayCircle className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">{inProgressCourses.length}</div>
-          <p className="text-xs text-gray-500">En cours</p>
-        </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">{completedCourses.length}</div>
-          <p className="text-xs text-gray-500">Terminés</p>
-        </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <TrendingUp className="h-6 w-6 text-brand-blue mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">
-            {enrollments?.reduce((acc: number, e: any) => acc + (e.progress_percentage || 0), 0) / (enrollments?.length || 1) || 0}%
-          </div>
-          <p className="text-xs text-gray-500">Progression moyenne</p>
-        </GlassCard>
-      </motion.div>
-
-      {/* Search */}
-      <motion.div variants={itemVariants}>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="search"
-            placeholder="Rechercher un cours..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+          {/* Floating orbs */}
+          <motion.div
+            animate={{ y: [0, -10, 0], x: [0, 5, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-10 -right-10 w-40 h-40 bg-brand-blue/10 rounded-full blur-3xl"
           />
-        </div>
+          <motion.div
+            animate={{ y: [0, 10, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-cyan/10 rounded-full blur-3xl"
+          />
+
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="p-4 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-2xl shadow-lg shadow-brand-blue/25"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <PlayCircle className="h-8 w-8 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 via-brand-blue to-brand-cyan bg-clip-text text-transparent">
+                  E-Learning
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  Apprenez à votre rythme avec nos cours en ligne
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Badge className="bg-gradient-to-r from-brand-blue/10 to-brand-cyan-pale text-brand-blue border-0 px-4 py-2">
+                <BookOpen className="h-4 w-4 mr-2" />
+                {enrollments?.length || 0} cours
+              </Badge>
+            </div>
+          </div>
+        </GlassCard>
+      </motion.div>
+
+      {/* Stats Premium */}
+      <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 flex items-center justify-center">
+              <PlayCircle className="h-6 w-6 text-brand-blue" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">
+              {inProgressCourses.length}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">En cours</p>
+          </motion.div>
+        </GlassCard>
+
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-brand-cyan/10 to-brand-cyan-dark/10 flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-brand-cyan" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-brand-cyan to-brand-cyan-dark bg-clip-text text-transparent">
+              {completedCourses.length}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Terminés</p>
+          </motion.div>
+        </GlassCard>
+
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 flex items-center justify-center">
+              <TrendingUp className="h-6 w-6 text-brand-blue" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-brand-blue to-indigo-500 bg-clip-text text-transparent">
+              {Math.round(enrollments?.reduce((acc: number, e: any) => acc + (e.progress_percentage || 0), 0) / (enrollments?.length || 1) || 0)}%
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Progression</p>
+          </motion.div>
+        </GlassCard>
+      </motion.div>
+
+      {/* Search Premium */}
+      <motion.div variants={itemVariants}>
+        <GlassCard variant="subtle" className="p-2">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              type="search"
+              placeholder="Rechercher un cours..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-12 h-12 bg-transparent border-0 focus:ring-2 focus:ring-brand-blue/20 rounded-xl text-base"
+            />
+          </div>
+        </GlassCard>
       </motion.div>
 
       {/* Tabs */}

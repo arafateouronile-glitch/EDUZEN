@@ -125,12 +125,11 @@ export function generateCSP(config: CSPConfig = {}): string {
   const styleSrc = ["'self'"]
 
   if (allowInlineStyles) {
-    if (styleNonce) {
-      styleSrc.push(`'nonce-${styleNonce}'`)
-    } else {
-      // Tailwind et CSS-in-JS nécessitent unsafe-inline pour les styles
-      styleSrc.push("'unsafe-inline'")
-    }
+    // IMPORTANT: Les nonces ne fonctionnent pas pour les attributs style inline dans React
+    // (style={{...}}) car les nonces ne s'appliquent qu'aux balises <style>
+    // Donc on utilise uniquement 'unsafe-inline' pour les styles, pas de nonce
+    // Le nonce est réservé pour les scripts uniquement
+    styleSrc.push("'unsafe-inline'")
   }
 
   styleSrc.push('https://fonts.googleapis.com')

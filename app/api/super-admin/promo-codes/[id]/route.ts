@@ -27,7 +27,7 @@ export async function PATCH(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !admin.permissions?.manage_promo_codes) {
+    if (!admin || !(admin.permissions as any)?.manage_promo_codes) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -97,7 +97,7 @@ export async function DELETE(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !admin.permissions?.manage_promo_codes) {
+    if (!admin || !(admin.permissions as any)?.manage_promo_codes) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 

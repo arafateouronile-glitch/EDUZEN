@@ -15,7 +15,7 @@ export function OfflineIndicator() {
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -50 }}
-          className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white px-4 py-2 shadow-lg"
+          className="fixed top-0 left-0 right-0 z-50 bg-brand-cyan-dark text-white px-4 py-2 shadow-lg"
         >
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ export function OfflineBadge({ isAvailableOffline }: { isAvailableOffline: boole
   return (
     <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
       isAvailableOffline 
-        ? 'bg-green-100 text-green-700' 
+        ? 'bg-brand-cyan-pale text-brand-cyan' 
         : 'bg-gray-100 text-gray-500'
     }`}>
       {isAvailableOffline ? (

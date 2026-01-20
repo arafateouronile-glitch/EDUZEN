@@ -696,7 +696,7 @@ export default function LearnerCourseDetailPage() {
       {/* Progress bar */}
       <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
         <motion.div
-          className="h-full bg-gradient-to-r from-brand-blue to-indigo-500"
+          className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan"
           initial={{ width: 0 }}
           animate={{ width: `${progressPercentage}%` }}
           transition={{ duration: 0.5 }}
@@ -960,7 +960,7 @@ export default function LearnerCourseDetailPage() {
 
           {/* Certificate */}
           {progressPercentage >= 100 && (
-            <GlassCard className="p-4 bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200">
+            <GlassCard className="p-4 bg-gradient-to-br from-brand-cyan-pale to-brand-cyan-ghost/50 border-brand-cyan-pale">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-amber-100 rounded-xl">
                   <Award className="h-6 w-6 text-amber-600" />

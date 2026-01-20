@@ -13,12 +13,15 @@ type Invoice = TableRow<'invoices'>
 
 type Program = TableRow<'programs'>
 
+export type SessionModule = { id: string; name: string; amount: number; currency: string }
+
 export interface ExtractVariablesOptions {
   student?: StudentWithRelations | Student
   organization?: Organization
   session?: SessionWithRelations | Session
   invoice?: InvoiceWithRelations | Invoice
   program?: Program & { formations?: Array<{ id: string; name: string; duration_hours?: number }> }
+  sessionModules?: SessionModule[]
   academicYear?: { name: string } | null
   language?: 'fr' | 'en'
   issueDate?: string
@@ -34,10 +37,43 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     session,
     invoice,
     program,
+    sessionModules,
     academicYear,
     language = 'fr',
     issueDate = new Date().toISOString(),
   } = options
+
+  const formation = (session as SessionWithRelations)?.formations
+  const formationName = formation?.name || ''
+  const sessionDebut = session?.start_date ? new Date(session.start_date).toLocaleDateString('fr-FR') : ''
+  const sessionFin = session?.end_date ? new Date(session.end_date).toLocaleDateString('fr-FR') : ''
+  const formationDuree = (formation as any)?.duration_hours ? `${(formation as any).duration_hours} heures` : ''
+
+  let montantHt: string
+  let modulesLignes: string
+
+  if (sessionModules && sessionModules.length > 0) {
+    const total = sessionModules.reduce((s, m) => s + Number(m.amount), 0)
+    montantHt = total.toFixed(2)
+    const currency = sessionModules[0]?.currency || 'EUR'
+    modulesLignes = sessionModules.map((m) => {
+      const a = Number(m.amount).toFixed(2)
+      return `<tr style="border-bottom: 1px solid #E5E7EB;"><td style="padding: 12px;"><p style="margin: 0; font-weight: 600;">${escapeHtml(m.name)}</p><p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Période : ${sessionDebut} au ${sessionFin}</p></td><td style="padding: 12px; text-align: center; font-weight: 500;">${formationDuree}</td><td style="padding: 12px; text-align: right; font-weight: 500;">${a} ${currency}</td><td style="padding: 12px; text-align: right; font-weight: 600;">${a} ${currency}</td></tr>`
+    }).join('')
+  } else {
+    const fallbackAmount = (invoice?.amount != null ? Number(invoice.amount) : (formation as any)?.price != null ? Number((formation as any).price) : 0)
+    montantHt = fallbackAmount.toFixed(2)
+    const cur = (formation as any)?.currency || invoice?.currency || 'EUR'
+    modulesLignes = `<tr style="border-bottom: 1px solid #E5E7EB;"><td style="padding: 12px;"><p style="margin: 0; font-weight: 600;">${escapeHtml(formationName)}</p><p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Période : ${sessionDebut} au ${sessionFin}</p><p style="margin: 2px 0 0 0; font-size: 9pt; color: #666;">Lieu : ${escapeHtml((session as any)?.location || '')}</p></td><td style="padding: 12px; text-align: center; font-weight: 500;">${formationDuree}</td><td style="padding: 12px; text-align: right; font-weight: 500;">${montantHt} ${cur}</td><td style="padding: 12px; text-align: right; font-weight: 600;">${montantHt} ${cur}</td></tr>`
+  }
+
+  function escapeHtml (s: string) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
 
   const variables: any = {
     // Date actuelle
@@ -164,17 +200,12 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     date_echeance: invoice?.due_date
       ? new Date(invoice.due_date).toLocaleDateString('fr-FR')
       : '',
-    montant: invoice?.amount ? Number(invoice.amount).toFixed(2) : '0.00',
-    montant_ht: invoice?.amount ? Number(invoice.amount).toFixed(2) : '0.00',
-    montant_ttc: invoice?.total_amount
-      ? Number(invoice.total_amount).toFixed(2)
-      : '0.00',
-    tva: invoice?.tax_amount
-      ? Number(invoice.tax_amount).toFixed(2)
-      : '0.00',
-    taux_tva: invoice?.tax_amount && invoice?.amount
-      ? ((Number(invoice.tax_amount) / Number(invoice.amount)) * 100).toFixed(2)
-      : '0.00',
+    montant: montantHt,
+    montant_ht: montantHt,
+    modules_lignes: modulesLignes,
+    montant_ttc: sessionModules?.length ? montantHt : (invoice?.total_amount ? Number(invoice.total_amount).toFixed(2) : '0.00'),
+    tva: sessionModules?.length ? '0.00' : (invoice?.tax_amount ? Number(invoice.tax_amount).toFixed(2) : '0.00'),
+    taux_tva: sessionModules?.length ? '0.00' : (invoice?.tax_amount && invoice?.amount ? ((Number(invoice.tax_amount) / Number(invoice.amount)) * 100).toFixed(2) : '0.00'),
     facture_montant: invoice?.amount ? Number(invoice.amount).toFixed(2) : '0.00',
     facture_tva: invoice?.tax_amount
       ? Number(invoice.tax_amount).toFixed(2)

@@ -27,7 +27,7 @@ export function useCreateStudent() {
 
       // 1. Créer le tuteur
       const { data: guardian, error: guardianError } = await supabase
-        .from('guardians')
+        .from('guardians' as any)
         .insert({
           organization_id: user.organization_id,
           first_name: data.guardian_first_name,
@@ -136,7 +136,7 @@ export function useCreateStudent() {
         .from('student_guardians')
         .insert({
           student_id: student.id,
-          guardian_id: guardian.id,
+          guardian_id: (guardian as any).id,
           is_primary: true,
         })
 

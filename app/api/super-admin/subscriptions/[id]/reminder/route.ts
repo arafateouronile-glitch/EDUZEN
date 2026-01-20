@@ -26,7 +26,7 @@ export async function POST(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !admin.permissions?.manage_subscriptions) {
+    if (!admin || !(admin.permissions as any)?.manage_subscriptions) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 

@@ -178,8 +178,8 @@ export function ChatInterface({ conversationId, participant, onBack }: ChatInter
         <div className="relative">
           <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
             participant.role === 'support' 
-              ? 'bg-gradient-to-br from-brand-blue to-indigo-600'
-              : 'bg-gradient-to-br from-purple-500 to-pink-500'
+              ? 'bg-gradient-to-br from-brand-blue to-brand-cyan'
+              : 'bg-gradient-to-br from-brand-blue-light to-brand-cyan'
           }`}>
             {participant.avatar ? (
               <img src={participant.avatar} alt="" className="w-full h-full rounded-full object-cover" />
@@ -188,7 +188,7 @@ export function ChatInterface({ conversationId, participant, onBack }: ChatInter
             )}
           </div>
           {participant.online && (
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+            <div className="absolute bottom-0 right-0 w-3 h-3 bg-brand-cyan rounded-full border-2 border-white" />
           )}
         </div>
         <div className="flex-1">
@@ -235,7 +235,7 @@ export function ChatInterface({ conversationId, participant, onBack }: ChatInter
                   className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
                   {!isOwnMessage && showAvatar && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-blue to-indigo-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                       {participant.name.charAt(0)}
                     </div>
                   )}

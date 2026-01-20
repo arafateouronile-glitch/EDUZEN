@@ -32,6 +32,7 @@ export default function ProgramSessionsPage() {
     payment_status: 'pending' as 'pending' | 'partial' | 'paid' | 'overdue',
     total_amount: '',
     paid_amount: '0',
+    funding_type_id: '',
   })
 
   // Récupérer le programme
@@ -91,6 +92,24 @@ export default function ProgramSessionsPage() {
         .eq('organization_id', user.organization_id)
         .eq('status', 'active')
         .order('last_name', { ascending: true })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Récupérer les types de financement
+  const { data: fundingTypes } = useQuery({
+    queryKey: ['funding-types', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('funding_types' as any)
+        .select('id, name, code, description')
+        .eq('organization_id', user.organization_id)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+        .order('name', { ascending: true })
       if (error) throw error
       return data || []
     },
@@ -198,6 +217,7 @@ export default function ProgramSessionsPage() {
       payment_status: 'pending',
       total_amount: (program?.formations?.[0] as any)?.price?.toString() || '0',
       paid_amount: '0',
+      funding_type_id: '',
     })
     setShowEnrollmentForm(true)
   }
@@ -297,6 +317,7 @@ export default function ProgramSessionsPage() {
         payment_status: 'pending',
         total_amount: (program as any)?.price?.toString() || '0',
         paid_amount: '0',
+        funding_type_id: '',
       })
     },
   })
@@ -655,6 +676,41 @@ export default function ProgramSessionsPage() {
                     <option value="paid">Payé</option>
                     <option value="overdue">En retard</option>
                   </select>
+                </div>
+
+                {/* Type de financement */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Type de financement
+                  </label>
+                  <select
+                    value={enrollmentForm.funding_type_id}
+                    onChange={(e) =>
+                      setEnrollmentForm({
+                        ...enrollmentForm,
+                        funding_type_id: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                  >
+                    <option value="">Aucun (financement personnel)</option>
+                    {fundingTypes && fundingTypes.length > 0 ? (
+                      fundingTypes.map((type: any) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name} {type.code ? `(${type.code})` : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        Aucun type de financement disponible
+                      </option>
+                    )}
+                  </select>
+                  {fundingTypes && fundingTypes.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Créez des types de financement dans les paramètres pour les voir apparaître ici.
+                    </p>
+                  )}
                 </div>
               </div>
 

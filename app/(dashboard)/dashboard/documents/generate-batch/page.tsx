@@ -140,6 +140,12 @@ export default function GenerateBatchDocumentPage() {
     const pdfBlobs: { blob: Blob; filename: string }[] = []
     const session = selectedSession as SessionWithRelations
 
+    let batchSessionModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+    if (session?.id) {
+      const { data: mods } = await supabase.from('session_modules' as any).select('id, name, amount, currency').eq('session_id', session.id).order('display_order', { ascending: true })
+      batchSessionModules = (mods?.length ? mods : undefined) as Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+    }
+
     try {
       for (let i = 0; i < studentsToProcess.length; i++) {
         const student = studentsToProcess[i] as StudentWithRelations
@@ -156,6 +162,7 @@ export default function GenerateBatchDocumentPage() {
             organization: organization as Organization,
             session,
             invoice: undefined,
+            sessionModules: batchSessionModules,
             academicYear,
             language,
             issueDate: new Date().toISOString(),

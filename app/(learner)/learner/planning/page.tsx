@@ -212,61 +212,103 @@ export default function LearnerPlanningPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
+      {/* Header Premium */}
       <motion.div variants={itemVariants}>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-blue-100 rounded-xl">
-            <Calendar className="h-8 w-8 text-blue-600" />
+        <GlassCard variant="premium" className="p-6 md:p-8 relative overflow-hidden">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 via-brand-cyan-ghost/30 to-brand-cyan-pale/20" />
+
+          {/* Floating orbs */}
+          <motion.div
+            animate={{ y: [0, -10, 0], x: [0, 5, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-10 -right-10 w-40 h-40 bg-brand-blue/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, 10, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-cyan/10 rounded-full blur-3xl"
+          />
+
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="p-4 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-2xl shadow-lg shadow-brand-blue/25"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <Calendar className="h-8 w-8 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 via-brand-blue to-brand-cyan bg-clip-text text-transparent">
+                  Mon planning
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  Calendrier de vos sessions de formation
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Badge className="bg-gradient-to-r from-brand-blue/10 to-brand-cyan-pale text-brand-blue border-0 px-4 py-2">
+                <CalendarDays className="h-4 w-4 mr-2" />
+                {upcomingEvents?.length || 0} à venir
+              </Badge>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Mon planning
-            </h1>
-            <p className="text-gray-500">
-              Calendrier de vos sessions de formation
-            </p>
-          </div>
-        </div>
+        </GlassCard>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendrier */}
+        {/* Calendrier Premium */}
         <motion.div variants={itemVariants} className="lg:col-span-2">
-          <GlassCard className="p-6">
+          <GlassCard variant="premium" className="p-6 relative overflow-hidden">
+            {/* Subtle gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-blue-ghost/30 to-transparent pointer-events-none" />
+
             {/* Header du calendrier */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-900">
+            <div className="relative flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-brand-blue bg-clip-text text-transparent capitalize">
                 {format(currentDate, 'MMMM yyyy', { locale: fr })}
               </h2>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentDate(new Date())}
-                >
-                  Aujourd'hui
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+                    className="rounded-xl hover:border-brand-blue hover:text-brand-blue"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentDate(new Date())}
+                    className="rounded-xl hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                  >
+                    Aujourd'hui
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+                    className="rounded-xl hover:border-brand-blue hover:text-brand-blue"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </motion.div>
               </div>
             </div>
 
             {/* Jours de la semaine */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
+            <div className="relative grid grid-cols-7 gap-1 mb-3">
               {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day) => (
-                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                <div key={day} className="text-center text-sm font-semibold text-gray-500 py-2 uppercase tracking-wider">
                   {day}
                 </div>
               ))}
@@ -287,34 +329,38 @@ export default function LearnerPlanningPage() {
                 const isSelected = selectedDate && isSameDay(day, selectedDate)
 
                 return (
-                  <button
+                  <motion.button
                     key={dateKey}
                     onClick={() => setSelectedDate(day)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
                     className={`
-                      aspect-square p-1 rounded-lg transition-all relative
+                      aspect-square p-1 rounded-xl transition-all relative
                       ${isToday(day) ? 'ring-2 ring-brand-blue ring-offset-2' : ''}
-                      ${isSelected ? 'bg-brand-blue text-white' : 'hover:bg-gray-100'}
+                      ${isSelected ? 'bg-gradient-to-br from-brand-blue to-brand-cyan text-white shadow-lg shadow-brand-blue/25' : 'hover:bg-brand-blue-pale'}
                       ${!isSameMonth(day, currentDate) ? 'opacity-30' : ''}
                     `}
                   >
                     <div className="flex flex-col items-center justify-center h-full">
-                      <span className={`text-sm font-medium ${isSelected ? 'text-white' : ''}`}>
+                      <span className={`text-sm font-semibold ${isSelected ? 'text-white' : ''}`}>
                         {format(day, 'd')}
                       </span>
                       {hasEvents && (
                         <div className="flex gap-0.5 mt-1">
                           {dayEvents.slice(0, 3).map((_, i) => (
-                            <div
+                            <motion.div
                               key={i}
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
                               className={`w-1.5 h-1.5 rounded-full ${
-                                isSelected ? 'bg-white' : 'bg-brand-blue'
+                                isSelected ? 'bg-white' : 'bg-gradient-to-r from-brand-blue to-brand-cyan'
                               }`}
                             />
                           ))}
                         </div>
                       )}
                     </div>
-                  </button>
+                  </motion.button>
                 )
               })}
             </div>
@@ -369,7 +415,7 @@ export default function LearnerPlanningPage() {
                                 )}
                               </div>
                             </div>
-                            <Badge className={session?.is_remote ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}>
+                            <Badge className={session?.is_remote ? 'bg-brand-cyan-pale text-brand-cyan' : 'bg-brand-blue-pale text-brand-blue'}>
                               {session?.is_remote ? 'À distance' : 'Présentiel'}
                             </Badge>
                           </div>
@@ -387,55 +433,70 @@ export default function LearnerPlanningPage() {
           </GlassCard>
         </motion.div>
 
-        {/* Prochains événements */}
+        {/* Prochains événements Premium */}
         <motion.div variants={itemVariants}>
-          <GlassCard className="p-6 h-fit">
-            <div className="flex items-center gap-2 mb-4">
-              <CalendarDays className="h-5 w-5 text-brand-blue" />
+          <GlassCard variant="premium" hoverable className="p-6 h-fit relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent pointer-events-none" />
+
+            <div className="relative flex items-center gap-2 mb-5">
+              <div className="p-2 bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 rounded-xl">
+                <CalendarDays className="h-5 w-5 text-brand-blue" />
+              </div>
               <h3 className="font-bold text-gray-900">Prochaines sessions</h3>
             </div>
 
             {isLoading ? (
-              <div className="space-y-3">
+              <div className="relative space-y-3">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
                 ))}
               </div>
             ) : upcomingEvents.length > 0 ? (
-              <div className="space-y-3">
+              <div className="relative space-y-3">
                 {upcomingEvents.map((enrollment: any, index: number) => {
                   const session = enrollment.sessions
                   const displayDate = enrollment.displayDate || (session?.start_date ? parseISO(session.start_date) : null)
                   const slot = enrollment.slot
 
                   return (
-                    <div
+                    <motion.div
                       key={`${enrollment.id}-${slot?.id || index}`}
-                      className="p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ x: 4 }}
+                      className="p-4 bg-gradient-to-r from-blue-50/80 to-cyan-50/50 rounded-xl hover:from-blue-100/80 hover:to-cyan-100/50 transition-all cursor-pointer border border-blue-100/50"
                       onClick={() => displayDate && setSelectedDate(displayDate)}
                     >
-                      <h4 className="font-medium text-gray-900 text-sm mb-1">
+                      <h4 className="font-semibold text-gray-900 text-sm mb-2">
                         {session?.formations?.name || session?.name}
                       </h4>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Calendar className="h-3 w-3" />
-                        {displayDate && format(displayDate, 'dd MMM', { locale: fr })}
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1.5 bg-white/80 px-2 py-1 rounded-lg">
+                          <Calendar className="h-3 w-3 text-brand-blue" />
+                          {displayDate && format(displayDate, 'dd MMM', { locale: fr })}
+                        </span>
                         {(slot?.start_time || session?.start_time) && (
-                          <>
-                            <span>•</span>
-                            <Clock className="h-3 w-3" />
+                          <span className="flex items-center gap-1.5 bg-white/80 px-2 py-1 rounded-lg">
+                            <Clock className="h-3 w-3 text-blue-500" />
                             {slot?.start_time || session.start_time}
                             {(slot?.end_time || session?.end_time) && ` - ${slot?.end_time || session.end_time}`}
-                          </>
+                          </span>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   )
                 })}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <div className="relative text-center py-8">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"
+                >
+                  <Calendar className="h-8 w-8 text-gray-400" />
+                </motion.div>
                 <p className="text-sm text-gray-500">
                   Aucune session à venir
                 </p>
@@ -443,17 +504,17 @@ export default function LearnerPlanningPage() {
             )}
           </GlassCard>
 
-          {/* Légende */}
-          <GlassCard className="p-6 mt-4">
-            <h4 className="font-semibold text-gray-900 mb-3">Légende</h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-3 h-3 rounded-full bg-brand-blue" />
+          {/* Légende Premium */}
+          <GlassCard variant="subtle" className="p-5 mt-4">
+            <h4 className="font-semibold text-gray-900 mb-4">Légende</h4>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-4 h-4 rounded-full bg-gradient-to-r from-brand-blue to-brand-cyan shadow-lg shadow-brand-blue/30" />
                 <span className="text-gray-600">Session prévue</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-6 h-6 rounded ring-2 ring-brand-blue ring-offset-2 flex items-center justify-center">
-                  <span className="text-xs">{format(new Date(), 'd')}</span>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-7 h-7 rounded-lg ring-2 ring-blue-500 ring-offset-2 flex items-center justify-center bg-white">
+                  <span className="text-xs font-bold text-brand-blue">{format(new Date(), 'd')}</span>
                 </div>
                 <span className="text-gray-600">Aujourd'hui</span>
               </div>

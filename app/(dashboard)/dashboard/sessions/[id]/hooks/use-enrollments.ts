@@ -18,6 +18,7 @@ export function useEnrollments(sessionId: string) {
     payment_status: 'pending',
     total_amount: '',
     paid_amount: '0',
+    funding_type_id: '',
   })
 
   const createEnrollmentMutation = useMutation({
@@ -75,6 +76,7 @@ export function useEnrollments(sessionId: string) {
         payment_status: 'pending',
         total_amount: '',
         paid_amount: '0',
+        funding_type_id: '',
       })
     },
     onError: (error) => {

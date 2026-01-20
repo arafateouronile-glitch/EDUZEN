@@ -68,6 +68,8 @@ export default function SessionDetailPage() {
     users,
     sessionSlots,
     refetchSlots,
+    sessionModules,
+    refetchSessionModules,
     enrollments,
     organization,
     students,
@@ -348,6 +350,10 @@ export default function SessionDetailPage() {
                   onSlotConfigChange={setSlotConfig}
                   sessionSlots={sessionSlots}
                   onSlotsRefetch={refetchSlots}
+                  formation={formation || undefined}
+                  program={program || undefined}
+                  sessionModules={sessionModules || []}
+                  onModulesRefetch={refetchSessionModules}
                 />
               </Suspense>
             )}
@@ -390,6 +396,7 @@ export default function SessionDetailPage() {
                       ...form,
                       status: (form.status || 'pending') as 'pending' | 'completed' | 'cancelled' | 'confirmed' | 'failed',
                       payment_status: (form.payment_status || 'pending') as 'pending' | 'partial' | 'paid' | 'overdue',
+                      funding_type_id: form.funding_type_id || '',
                     })
                   }}
                   onCreateEnrollment={() => createEnrollmentMutation.mutate()}
@@ -443,6 +450,7 @@ export default function SessionDetailPage() {
                   ...form,
                   status: (form.status || 'pending') as 'pending' | 'completed' | 'cancelled' | 'confirmed' | 'failed',
                   payment_status: (form.payment_status || 'pending') as 'pending' | 'partial' | 'paid' | 'overdue',
+                  funding_type_id: (form as any).funding_type_id || '',
                 })
               }}
               onCreateEnrollment={() => createEnrollmentMutation.mutate()}

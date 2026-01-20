@@ -61,6 +61,7 @@ export interface EnrollmentFormData {
   payment_status: 'pending' | 'partial' | 'paid' | 'overdue'
   total_amount: string
   paid_amount: string
+  funding_type_id: string
 }
 
 export interface EvaluationFormData {
@@ -153,6 +154,7 @@ export function useSessionDetail(sessionId: string) {
     payment_status: 'pending',
     total_amount: '',
     paid_amount: '0',
+    funding_type_id: '',
   })
 
   const [showEvaluationForm, setShowEvaluationForm] = useState(false)
@@ -245,6 +247,22 @@ export function useSessionDetail(sessionId: string) {
     queryFn: async () => {
       if (!sessionId) return []
       return sessionSlotService.getBySessionId(sessionId)
+    },
+    enabled: !!sessionId,
+  })
+
+  const { data: sessionModules, refetch: refetchSessionModules } = useQuery({
+    queryKey: ['session-modules', sessionId],
+    queryFn: async () => {
+      if (!sessionId) return []
+      const { data, error } = await supabase
+        .from('session_modules' as any)
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data || []) as Array<{ id: string; session_id: string; name: string; amount: number; currency: string; display_order: number }>
     },
     enabled: !!sessionId,
   })
@@ -613,6 +631,7 @@ export function useSessionDetail(sessionId: string) {
           payment_status: enrollmentForm.payment_status,
           total_amount: parseFloat(enrollmentForm.total_amount) || 0,
           paid_amount: parseFloat(enrollmentForm.paid_amount) || 0,
+          funding_type_id: enrollmentForm.funding_type_id || null,
         })
         .select()
         .single()
@@ -637,6 +656,7 @@ export function useSessionDetail(sessionId: string) {
         payment_status: 'pending',
         total_amount: (formation as FormationWithRelations & { price?: number })?.price?.toString() || '0',
         paid_amount: '0',
+        funding_type_id: '',
       })
     },
   })
@@ -971,6 +991,8 @@ export function useSessionDetail(sessionId: string) {
     sessionPrograms: sessionPrograms as Program[] | undefined,
     users: users as User[] | undefined,
     sessionSlots: sessionSlots as SessionSlot[] | undefined,
+    sessionModules: sessionModules || [],
+    refetchSessionModules,
     enrollments: enrollments as EnrollmentWithRelations[] | undefined,
     payments: payments as any[] | undefined,
     students: students as any[] | undefined,

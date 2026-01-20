@@ -95,13 +95,14 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
       // The user info can be obtained from useAuth() hook
       return {
         ...adminData,
+        permissions: (adminData.permissions || {}) as unknown as AdminPermissions,
         user: {
           id: user.id,
           email: user.email || '',
           full_name: user.full_name || null,
           avatar_url: user.avatar_url || null,
         },
-      } as PlatformAdmin | null
+      } as unknown as PlatformAdmin
     },
     enabled: !!user?.id && !isAuthLoading,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
@@ -112,7 +113,7 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
 
   // Extract role and permissions
   const role = platformAdmin?.role ?? null
-  const permissions = platformAdmin?.permissions ?? {}
+  const permissions = (platformAdmin?.permissions ?? {}) as unknown as AdminPermissions
 
   // Helper to check permissions (with role-based defaults)
   const hasPermission = (permission: keyof AdminPermissions): boolean => {
@@ -120,8 +121,8 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
     if (role === 'super_admin') return true
 
     // Check explicit permission first
-    if (permissions[permission] !== undefined) {
-      return permissions[permission] as boolean
+    if ((permissions as any)[permission] !== undefined) {
+      return (permissions as any)[permission] as boolean
     }
 
     // Fall back to default permissions for role
@@ -154,7 +155,7 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
 
   return {
     // State
-    platformAdmin,
+    platformAdmin: platformAdmin ?? null,
     isLoading,
     error: error as Error | null,
 

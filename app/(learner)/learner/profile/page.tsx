@@ -176,7 +176,7 @@ export default function LearnerProfilePage() {
     >
       {/* Header avec photo */}
       <motion.div variants={itemVariants}>
-        <GlassCard variant="premium" className="p-6 md:p-8 bg-gradient-to-r from-brand-blue/5 via-indigo-50/50 to-purple-50/30">
+        <GlassCard variant="premium" className="p-6 md:p-8 bg-gradient-to-r from-brand-blue/5 via-brand-cyan-ghost/50 to-brand-cyan-pale/30">
           <div className="flex flex-col md:flex-row items-center gap-6">
             {/* Photo */}
             <div className="relative">
@@ -260,22 +260,22 @@ export default function LearnerProfilePage() {
           <p className="text-xs text-gray-500">Sessions</p>
         </GlassCard>
         <GlassCard className="p-4 text-center">
-          <BookOpen className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+          <BookOpen className="h-6 w-6 text-brand-blue mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">{stats?.totalCourses || 0}</div>
           <p className="text-xs text-gray-500">Cours</p>
         </GlassCard>
         <GlassCard className="p-4 text-center">
-          <Award className="h-6 w-6 text-amber-600 mx-auto mb-2" />
+          <Award className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">{stats?.certificates || 0}</div>
           <p className="text-xs text-gray-500">Certificats</p>
         </GlassCard>
         <GlassCard className="p-4 text-center">
-          <Clock className="h-6 w-6 text-green-600 mx-auto mb-2" />
+          <Clock className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">{stats?.completedSessions || 0}</div>
           <p className="text-xs text-gray-500">Terminées</p>
         </GlassCard>
         <GlassCard className="p-4 text-center">
-          <Calendar className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+          <Calendar className="h-6 w-6 text-brand-blue mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">
             {studentData?.created_at ? formatDate(studentData.created_at).split('/')[2] : '-'}
           </div>

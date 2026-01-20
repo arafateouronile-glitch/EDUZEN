@@ -3,14 +3,18 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash, Calendar, Clock, MapPin } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Plus, Trash, Calendar, Clock, MapPin, Package, Pencil } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 import type { SessionFormData, SlotConfig } from '../hooks/use-session-detail'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { sessionSlotService } from '@/lib/services/session-slot.service'
 import { useToast } from '@/components/ui/toast'
 
 type SessionSlot = TableRow<'session_slots'>
+
+type SessionModule = { id: string; session_id: string; name: string; amount: number; currency: string; display_order: number }
 
 interface ConfigDatesPrixProps {
   sessionId: string
@@ -20,6 +24,10 @@ interface ConfigDatesPrixProps {
   onSlotConfigChange: (config: SlotConfig) => void
   sessionSlots?: SessionSlot[]
   onSlotsRefetch: () => void
+  formation?: { name?: string; price?: number; currency?: string } | null
+  program?: { name?: string } | null
+  sessionModules?: SessionModule[]
+  onModulesRefetch: () => void
 }
 
 export function ConfigDatesPrix({
@@ -30,9 +38,67 @@ export function ConfigDatesPrix({
   onSlotConfigChange,
   sessionSlots = [],
   onSlotsRefetch,
+  formation,
+  program,
+  sessionModules = [],
+  onModulesRefetch,
 }: ConfigDatesPrixProps) {
   const { addToast } = useToast()
   const [isGenerating, setIsGenerating] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [newName, setNewName] = useState('')
+  const [newAmount, setNewAmount] = useState('')
+  const supabase = createClient()
+
+  const defaultModuleName = program?.name || formation?.name || 'Module'
+  const defaultModuleAmount = formation?.price != null ? String(formation.price) : '0'
+  const hasSuggested = sessionModules.length === 0 && (program || formation)
+
+  const handleAddModule = async (name: string, amount: string) => {
+    const n = name.trim()
+    const a = parseFloat(amount) || 0
+    if (!n) {
+      addToast({ type: 'error', title: 'Erreur', description: 'Le nom du module est requis.' })
+      return
+    }
+    try {
+      await supabase.from('session_modules' as any).insert({
+        session_id: sessionId,
+        name: n,
+        amount: a,
+        currency: formation?.currency || 'EUR',
+        display_order: sessionModules.length,
+      })
+      onModulesRefetch()
+      setNewName('')
+      setNewAmount('')
+      addToast({ type: 'success', title: 'Module ajouté', description: 'Le module a été ajouté.' })
+    } catch (e) {
+      addToast({ type: 'error', title: 'Erreur', description: (e as Error).message })
+    }
+  }
+
+  const handleUpdateModule = async (id: string, name: string, amount: number) => {
+    try {
+      await supabase.from('session_modules' as any).update({ name: name.trim(), amount }).eq('id', id)
+      onModulesRefetch()
+      setEditingId(null)
+      addToast({ type: 'success', title: 'Module mis à jour' })
+    } catch (e) {
+      addToast({ type: 'error', title: 'Erreur', description: (e as Error).message })
+    }
+  }
+
+  const handleDeleteModule = async (id: string) => {
+    if (!confirm('Supprimer ce module ?')) return
+    try {
+      await supabase.from('session_modules' as any).delete().eq('id', id)
+      onModulesRefetch()
+      addToast({ type: 'success', title: 'Module supprimé' })
+    } catch (e) {
+      addToast({ type: 'error', title: 'Erreur', description: (e as Error).message })
+    }
+  }
 
   const handleGenerateSlots = async () => {
     if (!formData.start_date || !formData.end_date) {
@@ -214,6 +280,117 @@ export function ConfigDatesPrix({
               placeholder="Ex: 25"
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Modules et prix (pour le devis) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Modules et prix
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Définissez les modules (lignes) qui apparaîtront sur le devis avec leurs prix. Par défaut : un module reprenant le programme et le prix de la formation.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {hasSuggested && (
+            <div className="p-4 bg-muted/50 rounded-xl border border-dashed">
+              <p className="text-sm font-medium mb-3">Module par défaut (à partir du programme)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Nom</label>
+                  <Input
+                    value={newName || defaultModuleName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Nom du module"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Prix ({formation?.currency || 'EUR'})</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={newAmount || defaultModuleAmount}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <Button
+                  onClick={() => handleAddModule(newName || defaultModuleName, newAmount || defaultModuleAmount)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter ce module
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {sessionModules.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Modules configurés</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {sessionModules.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-3 p-3 border rounded-lg bg-background"
+                  >
+                    {editingId === m.id ? (
+                      <>
+                        <Input
+                          className="flex-1"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          placeholder="Nom"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="w-28"
+                          value={newAmount}
+                          onChange={(e) => setNewAmount(e.target.value)}
+                        />
+                        <Button size="sm" onClick={() => handleUpdateModule(m.id, newName, parseFloat(newAmount) || 0)}>Enregistrer</Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setNewName(''); setNewAmount(''); }}>Annuler</Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1 font-medium">{m.name}</span>
+                        <span className="text-muted-foreground">{Number(m.amount).toFixed(2)} {m.currency}</span>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingId(m.id); setNewName(m.name); setNewAmount(String(m.amount)) }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteModule(m.id)}>
+                          <Trash className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {sessionModules.length > 0 && (
+            <div className="p-3 border rounded-lg bg-muted/30">
+              <p className="text-xs font-medium mb-2">Ajouter un autre module</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Nom</label>
+                  <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nom du module" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Prix</label>
+                  <Input type="number" step="0.01" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} placeholder="0" />
+                </div>
+                <Button onClick={() => handleAddModule(newName, newAmount)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

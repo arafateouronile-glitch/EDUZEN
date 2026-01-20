@@ -23,7 +23,7 @@ export async function PATCH(
 
     const { data: currentAdmin } = await supabase
       .from('platform_admins')
-      .select('role')
+      .select('id, role')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .maybeSingle()

@@ -142,6 +142,10 @@ export async function middleware(req: NextRequest) {
   const authRoutes = ['/auth/login', '/auth/register']
   const isAuthRoute = authRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
 
+  // Routes apprenant (ne nécessitent pas d'authentification Supabase, utilisent leur propre système)
+  const learnerRoutes = ['/learner', '/learner/access']
+  const isLearnerRoute = learnerRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
+
   // Si la route est protégée et l'utilisateur n'est pas connecté
   if (isProtectedRoute && !session) {
     // Pour les routes API, retourner une erreur au lieu de rediriger
@@ -155,11 +159,23 @@ export async function middleware(req: NextRequest) {
   }
 
   // Si l'utilisateur est connecté et essaie d'accéder aux routes d'authentification
+  // MAIS: Ne pas rediriger si le redirect pointe vers /learner (espace apprenant)
   if (isAuthRoute && session) {
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard'
-    return NextResponse.redirect(redirectUrl)
+    const redirectParam = req.nextUrl.searchParams.get('redirect')
+    // Si le redirect pointe vers /learner, laisser passer (pour permettre l'accès apprenant)
+    if (redirectParam && redirectParam.startsWith('/learner')) {
+      // Laisser passer sans redirection
+    } else {
+      // Rediriger vers le dashboard uniquement si ce n'est pas pour accéder à l'espace apprenant
+      const redirectUrl = req.nextUrl.clone()
+      redirectUrl.pathname = '/dashboard'
+      return NextResponse.redirect(redirectUrl)
+    }
   }
+
+  // Les routes apprenant ne nécessitent pas d'authentification Supabase
+  // Elles utilisent leur propre système d'authentification via student_id
+  // Ne pas interférer avec ces routes
 
   // Configuration CORS pour les routes API
   const origin = req.headers.get('origin')

@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         role: role as PlatformAdminRole,
-        permissions: finalPermissions,
+        permissions: finalPermissions as any,
         is_active: true,
         invited_by: currentAdmin.id,
         invited_at: new Date().toISOString(),

@@ -7,9 +7,12 @@ import { LearnerSidebar } from '@/components/learner/sidebar'
 import { LearnerHeader } from '@/components/learner/header'
 import { LearnerMobileNav } from '@/components/learner/mobile-nav'
 import { OfflineIndicator } from '@/components/learner/offline-indicator'
+import { ParticlesBackground } from '@/components/dashboard/particles-background'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { secureSessionStorage } from '@/lib/utils/secure-storage'
+import { motion } from '@/components/ui/motion'
+import { logger } from '@/lib/utils/logger'
 
 const LEARNER_STORAGE_KEY = 'learner_student_id'
 
@@ -60,11 +63,27 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
       // Utiliser le stockage sécurisé au lieu de localStorage
       const savedId = secureSessionStorage.get<string>(LEARNER_STORAGE_KEY)
       if (savedId) {
+        // Si on a un ID sauvegardé, rediriger vers la page d'accès pour le valider
         router.push(`/learner/access/${savedId}`)
       } else {
-        // Utiliser window.location pour éviter les problèmes de préchargement Next.js
-        if (typeof window !== 'undefined') {
-          window.location.href = '/auth/login?redirect=/learner'
+        // Si pas d'ID sauvegardé et qu'on est déjà sur une route learner,
+        // ne pas rediriger vers /auth/login (l'accès apprenant ne nécessite pas d'auth Supabase)
+        // Seulement rediriger si on est sur /learner directement sans ID
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
+        if (currentPath === '/learner' || currentPath.startsWith('/learner/')) {
+          // Ne rien faire, laisser l'utilisateur voir la page (qui affichera un message d'erreur)
+          // OU rediriger vers une page d'information
+          logger.warn('[LearnerLayout] No student ID found, but on learner route', {
+            currentPath,
+            hasStudent,
+            studentId
+          })
+        } else {
+          // Si on n'est pas sur une route learner, rediriger vers la page d'accès
+          // (ne devrait pas arriver normalement)
+          if (typeof window !== 'undefined') {
+            window.location.href = '/auth/login?redirect=/learner'
+          }
         }
       }
     }
@@ -73,7 +92,7 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
   // Afficher le loader pendant le chargement initial ou si pas encore monté
   if (!isMounted || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-brand-blue-ghost to-brand-cyan-ghost">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-brand-blue mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Chargement de votre espace...</p>
@@ -86,7 +105,7 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
   // Si on a un studentId mais pas encore de student, on attend le chargement
   if (!studentId && !isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-brand-blue-ghost to-brand-cyan-ghost">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-brand-blue mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Redirection...</p>
@@ -98,7 +117,7 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
   // Si on a un studentId mais pas de student après chargement, afficher l'erreur
   if (studentId && !isLoading && !student) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-brand-blue-ghost to-brand-cyan-ghost">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-brand-blue mx-auto mb-4" />
           <p className="text-gray-600 font-medium">
@@ -147,7 +166,7 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
   // (permet l'accès aux pages même si student n'est pas encore chargé)
   if (studentId && !student && isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-brand-blue-ghost to-brand-cyan-ghost">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-brand-blue mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Chargement de votre espace...</p>
@@ -157,23 +176,55 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-brand-blue-ghost/30 to-brand-cyan-ghost/50 relative">
+      {/* Animated background particles - effet subtil premium */}
+      <ParticlesBackground />
+
+      {/* Subtle gradient orbs for depth */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <motion.div
+          animate={{
+            y: [0, -30, 0],
+            x: [0, 20, 0],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute -top-40 -right-40 w-96 h-96 bg-brand-blue/5 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            y: [0, 30, 0],
+            x: [0, -20, 0],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 5
+          }}
+          className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"
+        />
+      </div>
+
       {/* Indicateur de mode offline */}
       <OfflineIndicator />
-      
+
       {/* Desktop Sidebar */}
-      <LearnerSidebar 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)} 
+      <LearnerSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
-      
+
       {/* Main Content */}
-      <div className="lg:pl-72">
+      <div className="lg:pl-72 relative z-10">
         {/* Header */}
         <LearnerHeader onMenuClick={() => setIsSidebarOpen(true)} />
-        
+
         {/* Page Content */}
-        <main className="py-6 px-4 sm:px-6 lg:px-8">
+        <main className="py-6 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
           {children}
         </main>
       </div>

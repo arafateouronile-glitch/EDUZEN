@@ -449,12 +449,18 @@ export default function LearnerDashboardPage() {
             })
           }
         } else {
-          // Si aucune information de temps disponible, on peut utiliser une durée par défaut
-          // ou ignorer cette présence
-          logger.warn('No time information available for attendance', {
-            studentId: studentId ? maskId(studentId) : undefined,
-            attendanceId: attendance?.id ? maskId(attendance.id) : undefined,
-          })
+          // Si aucune information de temps disponible, utiliser une durée par défaut de 2h
+          // au lieu de logger un avertissement (c'est normal si les sessions n'ont pas de slots)
+          const defaultHours = 2 // Durée par défaut pour une session
+          attendanceHours += defaultHours
+          // Logger seulement en debug pour éviter le spam dans la console
+          if (process.env.NODE_ENV === 'development') {
+            logger.info('Using default duration for attendance (no time info)', {
+              studentId: studentId ? maskId(studentId) : undefined,
+              attendanceId: attendance?.id ? maskId(attendance.id) : undefined,
+              defaultHours,
+            })
+          }
         }
       })
     }
@@ -540,32 +546,81 @@ export default function LearnerDashboardPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Hero Header avec effet premium */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-blue via-indigo-600 to-purple-700 opacity-90" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
+      {/* Hero Header Ultra-Premium avec gradient anime et glassmorphism */}
+      <motion.div
+        variants={itemVariants}
+        className="relative overflow-hidden rounded-[2rem] shadow-[0_20px_80px_-20px_rgba(51,90,207,0.4)]"
+      >
+        {/* Gradient de fond anime avec shimmer et effet mesh */}
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-br from-brand-blue to-brand-cyan"
+          animate={{
+            backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          style={{ backgroundSize: '200% 200%' }}
+        />
 
-        {/* Floating elements */}
+        {/* Mesh gradient overlay pour plus de profondeur */}
+        <div className="absolute inset-0 opacity-40" style={{
+          backgroundImage: 'radial-gradient(at 40% 20%, rgba(255, 255, 255, 0.3) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(52, 185, 238, 0.4) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(39, 68, 114, 0.3) 0px, transparent 50%)',
+        }} />
+
+        {/* Radial overlay avec effet de profondeur ameliore */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-brand-cyan/30 via-transparent to-transparent" />
+
+        {/* Floating orbs avec effet de profondeur */}
         <motion.div
           animate={floatingAnimation}
-          className="absolute top-10 right-10 w-32 h-32 bg-white/5 rounded-full blur-3xl"
+          className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"
+          style={{
+            boxShadow: '0 0 80px 40px rgba(255, 255, 255, 0.1)',
+          }}
         />
         <motion.div
-          animate={{ ...floatingAnimation, transition: { ...floatingAnimation.transition, delay: 1 } }}
-          className="absolute bottom-10 left-10 w-40 h-40 bg-purple-400/10 rounded-full blur-3xl"
+          animate={{ ...floatingAnimation, transition: { ...floatingAnimation.transition, delay: 0.5 } }}
+          className="absolute bottom-10 left-10 w-40 h-40 bg-brand-cyan/10 rounded-full blur-3xl"
+          style={{
+            boxShadow: '0 0 80px 40px rgba(167, 139, 250, 0.15)',
+          }}
+        />
+
+        {/* Orbs additionnels pour plus de profondeur */}
+        <motion.div
+          animate={{
+            y: [15, -15, 15],
+            x: [10, -10, 10],
+            transition: {
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }
+          }}
+          className="absolute top-1/2 left-1/2 w-64 h-64 bg-white/5 rounded-full blur-3xl"
         />
 
         <div className="relative z-10 p-8 md:p-12">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex-1">
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
-                className="flex items-center gap-2 mb-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="flex items-center gap-4 mb-3"
               >
-                <Sparkles className="h-5 w-5 text-yellow-300" />
-                <span className="text-sm font-semibold text-yellow-200 uppercase tracking-wider">
+                <motion.div
+                  className="p-3 bg-white/15 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(255,255,255,0.1)] border border-white/20"
+                  whileHover={{ scale: 1.15, rotate: 10 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                >
+                  <Sparkles className="h-6 w-6 text-brand-cyan-light drop-shadow-lg" />
+                </motion.div>
+                <span className="text-sm font-bold text-white/90 uppercase tracking-[0.15em]">
                   Bienvenue sur votre espace
                 </span>
               </motion.div>
@@ -573,8 +628,8 @@ export default function LearnerDashboardPage() {
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-                className="text-3xl md:text-5xl font-bold text-white mb-3"
+                transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="text-4xl md:text-6xl font-display font-bold text-white tracking-tighter leading-none drop-shadow-2xl mb-4"
               >
                 Bonjour, {studentData?.first_name || 'Apprenant'} 👋
               </motion.h1>
@@ -582,27 +637,77 @@ export default function LearnerDashboardPage() {
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-                className="text-lg text-white/80 max-w-2xl"
+                transition={{ delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="text-lg md:text-xl text-white/90 max-w-2xl font-medium tracking-tight drop-shadow-lg"
               >
-                Prêt à continuer votre parcours d'excellence ? Découvrez vos formations et suivez votre progression.
+                Pret a continuer votre parcours d'excellence ? Decouvrez vos formations et suivez votre progression.
               </motion.p>
+
+              {/* Stats rapides dans le hero avec effets premium */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="flex flex-wrap items-center gap-3 mt-8"
+              >
+                <motion.div
+                  className="group flex items-center gap-3 bg-white/15 backdrop-blur-xl rounded-full px-5 py-3 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_40px_rgba(255,255,255,0.2)]"
+                  whileHover={{ scale: 1.08, y: -3 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                >
+                  <motion.div
+                    className="p-1.5 bg-white/20 rounded-full"
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <GraduationCap className="h-5 w-5 text-white drop-shadow-md" />
+                  </motion.div>
+                  <span className="text-white font-bold text-lg tracking-tight drop-shadow-md">{stats.totalEnrollments}</span>
+                  <span className="text-white/90 text-sm font-semibold">sessions</span>
+                </motion.div>
+                <motion.div
+                  className="group flex items-center gap-3 bg-white/15 backdrop-blur-xl rounded-full px-5 py-3 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_40px_rgba(255,255,255,0.2)]"
+                  whileHover={{ scale: 1.08, y: -3 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                >
+                  <motion.div
+                    className="p-1.5 bg-white/20 rounded-full"
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <PlayCircle className="h-5 w-5 text-white drop-shadow-md" />
+                  </motion.div>
+                  <span className="text-white font-bold text-lg tracking-tight drop-shadow-md">{stats.totalCourses}</span>
+                  <span className="text-white/90 text-sm font-semibold">cours</span>
+                </motion.div>
+              </motion.div>
             </div>
 
+            {/* Stats box premium */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6, duration: 0.6 }}
-              className="flex items-center gap-4"
+              transition={{ delay: 0.7, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              className="flex items-center gap-6 bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)]"
             >
-              <div className="text-right">
-                <div className="text-4xl font-bold text-white">{stats.totalHours}h</div>
-                <div className="text-sm text-white/70">Temps de formation</div>
+              <div className="text-center">
+                <motion.div
+                  className="text-5xl font-bold text-white mb-1 drop-shadow-xl"
+                  whileHover={{ scale: 1.1 }}
+                >
+                  {stats.totalHours}h
+                </motion.div>
+                <div className="text-sm text-white/70 font-medium">Temps de formation</div>
               </div>
               <div className="w-px h-16 bg-white/20" />
-              <div className="text-right">
-                <div className="text-4xl font-bold text-white">{stats.certificates}</div>
-                <div className="text-sm text-white/70">Certificats</div>
+              <div className="text-center">
+                <motion.div
+                  className="text-5xl font-bold text-white mb-1 drop-shadow-xl"
+                  whileHover={{ scale: 1.1 }}
+                >
+                  {stats.certificates}
+                </motion.div>
+                <div className="text-sm text-white/70 font-medium">Certificats</div>
               </div>
             </motion.div>
           </div>
@@ -614,7 +719,7 @@ export default function LearnerDashboardPage() {
         <QuickActions />
       </motion.div>
 
-      {/* Stats Cards avec effet 3D premium */}
+      {/* Stats Cards Ultra-Premium avec effet 3D et glassmorphism */}
       <motion.div
         variants={itemVariants}
         className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
@@ -623,72 +728,105 @@ export default function LearnerDashboardPage() {
           {
             label: 'Sessions inscrites',
             value: stats.totalEnrollments,
-            subtitle: `${stats.completedSessions} terminée${stats.completedSessions > 1 ? 's' : ''}`,
+            subtitle: `${stats.completedSessions} terminee${stats.completedSessions > 1 ? 's' : ''}`,
             icon: GraduationCap,
-            gradient: 'from-blue-500 to-indigo-600',
-            iconBg: 'bg-blue-100',
-            iconColor: 'text-blue-600',
+            gradient: 'from-brand-blue to-brand-blue-dark',
+            iconBg: 'bg-gradient-to-br from-brand-blue-pale to-brand-blue-ghost',
+            iconColor: 'text-brand-blue',
+            glowColor: 'rgba(39, 68, 114, 0.4)',
           },
           {
             label: 'Cours e-learning',
             value: stats.totalCourses,
-            subtitle: `${stats.completedCourses} complété${stats.completedCourses > 1 ? 's' : ''}`,
+            subtitle: `${stats.completedCourses} complete${stats.completedCourses > 1 ? 's' : ''}`,
             icon: PlayCircle,
-            gradient: 'from-purple-500 to-pink-600',
-            iconBg: 'bg-purple-100',
-            iconColor: 'text-purple-600',
+            gradient: 'from-brand-blue to-brand-cyan',
+            iconBg: 'bg-gradient-to-br from-brand-blue-pale to-brand-cyan-pale',
+            iconColor: 'text-brand-blue',
+            glowColor: 'rgba(52, 185, 238, 0.4)',
           },
           {
             label: 'Heures de formation',
             value: `${stats.totalHours}h`,
             subtitle: 'Temps total',
             icon: Clock,
-            gradient: 'from-emerald-500 to-teal-600',
-            iconBg: 'bg-emerald-100',
-            iconColor: 'text-emerald-600',
+            gradient: 'from-brand-cyan to-brand-cyan-dark',
+            iconBg: 'bg-gradient-to-br from-brand-cyan-pale to-brand-cyan-ghost',
+            iconColor: 'text-brand-cyan',
+            glowColor: 'rgba(16, 185, 129, 0.4)',
           },
           {
             label: 'Certificats',
             value: stats.certificates,
-            subtitle: 'Diplômes obtenus',
+            subtitle: 'Diplomes obtenus',
             icon: Award,
-            gradient: 'from-amber-500 to-orange-600',
-            iconBg: 'bg-amber-100',
-            iconColor: 'text-amber-600',
+            gradient: 'from-brand-blue-light to-brand-cyan',
+            iconBg: 'bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-pale',
+            iconColor: 'text-brand-blue',
+            glowColor: 'rgba(39, 68, 114, 0.4)',
           },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
-            whileHover={{ y: -8, scale: 1.02 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 * index, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ y: -8, scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
           >
-            <GlassCard className="relative p-6 overflow-hidden group cursor-pointer">
-              {/* Gradient overlay on hover */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+            <GlassCard
+              variant="premium"
+              hoverable
+              glow={index < 2}
+              glowColor={stat.glowColor}
+              className="relative p-6 md:p-8 overflow-hidden group cursor-pointer border-2 border-gray-100/50 hover:border-gray-200/80 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)]"
+            >
+              {/* Gradient anime en background au survol */}
+              <motion.div
+                className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`}
+              />
 
-              {/* Glow effect */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500" />
+              {/* Shine effect on hover */}
+              <motion.div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                initial={{ x: '-100%', y: '-100%' }}
+                whileHover={{ x: '100%', y: '100%' }}
+                transition={{ duration: 0.8, ease: "easeInOut" }}
+                style={{
+                  background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
+                }}
+              />
 
               <div className="relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 ${stat.iconBg} rounded-xl group-hover:scale-110 transition-transform duration-300`}>
-                    <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
-                  </div>
-                  <TrendingUp className="h-4 w-4 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex flex-row items-center justify-between mb-6">
+                  <p className="text-xs md:text-sm font-bold text-gray-500 group-hover:text-gray-700 transition-colors tracking-tight uppercase">
+                    {stat.label}
+                  </p>
+                  <motion.div
+                    className={`p-3 md:p-4 ${stat.iconBg} rounded-xl md:rounded-2xl transition-all duration-500 shadow-lg group-hover:shadow-xl`}
+                    whileHover={{ rotate: 15, scale: 1.2 }}
+                    transition={{ type: "spring", stiffness: 600, damping: 15 }}
+                  >
+                    <stat.icon className={`h-5 w-5 md:h-6 md:w-6 ${stat.iconColor}`} />
+                  </motion.div>
                 </div>
 
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">{stat.label}</p>
+                <div className="space-y-3">
                   <motion.p
-                    className="text-3xl font-bold text-gray-900"
-                    initial={{ scale: 1 }}
-                    whileHover={{ scale: 1.1 }}
-                    transition={{ duration: 0.2 }}
+                    className="text-4xl md:text-5xl font-bold tracking-tighter text-gray-900 font-display"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
                     {stat.value}
                   </motion.p>
-                  <p className="text-xs text-gray-500 mt-2">{stat.subtitle}</p>
+                  <motion.div
+                    className="flex items-center gap-2 text-xs md:text-sm font-bold text-brand-blue bg-gradient-to-r from-brand-blue-pale to-brand-blue-ghost w-fit px-3 py-1.5 rounded-full shadow-sm border border-brand-blue-pale"
+                    whileHover={{ scale: 1.05, x: 3 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                  >
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    <span className="tracking-tight">{stat.subtitle}</span>
+                  </motion.div>
                 </div>
               </div>
             </GlassCard>
@@ -696,68 +834,150 @@ export default function LearnerDashboardPage() {
         ))}
       </motion.div>
 
-      {/* Analytics Section */}
-      <motion.div variants={itemVariants}>
-        <GlassCard className="p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Votre progression</h2>
-              <p className="text-sm text-gray-500">Activité des 14 derniers jours</p>
-            </div>
-          </div>
+      {/* Analytics Section - Premium */}
+      <motion.div
+        variants={itemVariants}
+        whileHover={{ scale: 1.005 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      >
+        <GlassCard
+          variant="premium"
+          className="relative overflow-hidden p-6 md:p-10 border-2 border-gray-100/50 hover:border-brand-blue/20 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)]"
+        >
+          {/* Animated gradient overlay */}
+          <motion.div
+            className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-brand-blue/5 to-transparent rounded-full blur-3xl"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.5, 0.3],
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
 
-          <ProgressChart />
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-8">
+              <motion.div
+                className="p-3 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-2xl shadow-xl"
+                whileHover={{ rotate: 10, scale: 1.15 }}
+                transition={{ type: "spring", stiffness: 500, damping: 15 }}
+              >
+                <TrendingUp className="h-6 w-6 text-white drop-shadow-lg" />
+              </motion.div>
+              <div>
+                <h2 className="text-2xl font-display font-bold text-gray-900 tracking-tight">Votre progression</h2>
+                <p className="text-sm text-gray-600 font-semibold tracking-tight">Activite des 14 derniers jours</p>
+              </div>
+            </div>
+
+            <ProgressChart />
+          </div>
         </GlassCard>
       </motion.div>
 
-      {/* Stats Ring & Activity Heatmap */}
+      {/* Stats Ring & Activity Heatmap - Premium Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div variants={itemVariants}>
-          <GlassCard className="p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
-                <Target className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Objectifs</h2>
-                <p className="text-sm text-gray-500">Votre avancement</p>
-              </div>
-            </div>
+        <motion.div
+          variants={itemVariants}
+          whileHover={{ scale: 1.005 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        >
+          <GlassCard
+            variant="premium"
+            className="relative overflow-hidden p-6 md:p-10 h-full border-2 border-gray-100/50 hover:border-brand-blue/20 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)]"
+          >
+            {/* Animated gradient overlay */}
+            <motion.div
+              className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-brand-blue/5 to-transparent rounded-full blur-3xl"
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.3, 0.5, 0.3],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
 
-            <div className="grid grid-cols-2 gap-6 mt-8">
-              <StatsRingChart
-                value={stats.completedSessions}
-                max={stats.totalEnrollments}
-                label="Sessions"
-                color="#3b82f6"
-              />
-              <StatsRingChart
-                value={stats.completedCourses}
-                max={stats.totalCourses}
-                label="Cours"
-                color="#a855f7"
-              />
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-8">
+                <motion.div
+                  className="p-3 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-2xl shadow-xl"
+                  whileHover={{ rotate: 10, scale: 1.15 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                >
+                  <Target className="h-6 w-6 text-white drop-shadow-lg" />
+                </motion.div>
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-gray-900 tracking-tight">Objectifs</h2>
+                  <p className="text-sm text-gray-600 font-semibold tracking-tight">Votre avancement</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 mt-8">
+                <StatsRingChart
+                  value={stats.completedSessions}
+                  max={stats.totalEnrollments}
+                  label="Sessions"
+                  color="#3b82f6"
+                />
+                <StatsRingChart
+                  value={stats.completedCourses}
+                  max={stats.totalCourses}
+                  label="Cours"
+                  color="#a855f7"
+                />
+              </div>
             </div>
           </GlassCard>
         </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <GlassCard className="p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl">
-                <Flame className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Activité</h2>
-                <p className="text-sm text-gray-500">Heatmap de vos 12 dernières semaines</p>
-              </div>
-            </div>
+        <motion.div
+          variants={itemVariants}
+          whileHover={{ scale: 1.005 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        >
+          <GlassCard
+            variant="premium"
+            className="relative overflow-hidden p-6 md:p-10 h-full border-2 border-gray-100/50 hover:border-brand-cyan/20 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)]"
+          >
+            {/* Animated gradient overlay */}
+            <motion.div
+              className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-brand-cyan/5 to-transparent rounded-full blur-3xl"
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.3, 0.5, 0.3],
+              }}
+              transition={{
+                duration: 5,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 1
+              }}
+            />
 
-            <div className="mt-6">
-              <ActivityHeatmap weeks={12} />
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-8">
+                <motion.div
+                  className="p-3 bg-gradient-to-br from-brand-cyan to-brand-cyan-dark rounded-2xl shadow-xl"
+                  whileHover={{ rotate: 10, scale: 1.15 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                >
+                  <Flame className="h-6 w-6 text-white drop-shadow-lg" />
+                </motion.div>
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-gray-900 tracking-tight">Activite</h2>
+                  <p className="text-sm text-gray-600 font-semibold tracking-tight">12 dernieres semaines</p>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <ActivityHeatmap weeks={12} />
+              </div>
             </div>
           </GlassCard>
         </motion.div>
@@ -769,7 +989,7 @@ export default function LearnerDashboardPage() {
           <GlassCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-brand-blue to-indigo-600 rounded-xl">
+                <div className="p-2 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-xl">
                   <Calendar className="h-5 w-5 text-white" />
                 </div>
                 <div>
@@ -844,7 +1064,7 @@ export default function LearnerDashboardPage() {
           <GlassCard className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
+                <div className="p-2 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-xl">
                   <PlayCircle className="h-5 w-5 text-white" />
                 </div>
                 <div>
@@ -874,7 +1094,7 @@ export default function LearnerDashboardPage() {
                       <Link href={courseHref}>
                         <motion.div
                           whileHover={{ x: 4, backgroundColor: 'rgba(249, 250, 251, 0.8)' }}
-                          className="p-4 bg-gray-50/50 rounded-xl transition-all group cursor-pointer border border-transparent hover:border-purple-500/20"
+                          className="p-4 bg-gray-50/50 rounded-xl transition-all group cursor-pointer border border-transparent hover:border-brand-blue/20"
                         >
                           <div className="flex items-start gap-4">
                             {course?.thumbnail_url ? (
@@ -899,7 +1119,7 @@ export default function LearnerDashboardPage() {
                                     initial={{ width: 0 }}
                                     animate={{ width: `${progress}%` }}
                                     transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                                    className="h-full bg-gradient-to-r from-brand-blue to-indigo-500 rounded-full"
+                                    className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
                                     style={{
                                       boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
                                     }}
@@ -938,7 +1158,7 @@ export default function LearnerDashboardPage() {
         <GlassCard className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl">
+              <div className="p-2 bg-gradient-to-br from-brand-cyan to-brand-cyan-dark rounded-xl">
                 <FileText className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -960,18 +1180,18 @@ export default function LearnerDashboardPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                   whileHover={{ y: -4, scale: 1.02 }}
-                  className="p-4 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-all cursor-pointer border border-transparent hover:border-emerald-500/20"
+                  className="p-4 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-all cursor-pointer border border-transparent hover:border-brand-cyan/20"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${
-                      doc.type === 'certificate' ? 'bg-amber-100' :
-                      doc.type === 'convocation' ? 'bg-blue-100' :
+                      doc.type === 'certificate' ? 'bg-brand-cyan-pale' :
+                      doc.type === 'convocation' ? 'bg-brand-blue-pale' :
                       'bg-gray-100'
                     }`}>
                       {doc.type === 'certificate' ? (
-                        <Award className="h-5 w-5 text-amber-600" />
+                        <Award className="h-5 w-5 text-brand-cyan" />
                       ) : (
-                        <FileText className="h-5 w-5 text-gray-600" />
+                        <FileText className="h-5 w-5 text-brand-blue" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -996,7 +1216,7 @@ export default function LearnerDashboardPage() {
       {/* Motivation card */}
       <motion.div variants={itemVariants}>
         <div className="relative overflow-hidden rounded-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600" />
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue to-brand-cyan" />
           <div className="absolute inset-0 bg-[url('/patterns/dots.svg')] opacity-10" />
 
           {/* Animated orbs */}
@@ -1030,8 +1250,8 @@ export default function LearnerDashboardPage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="h-6 w-6 text-yellow-300" />
-                  <span className="text-sm font-semibold text-yellow-200 uppercase tracking-wider">
+                  <Trophy className="h-6 w-6 text-brand-cyan-light" />
+                  <span className="text-sm font-semibold text-white uppercase tracking-wider">
                     Continuez comme ça !
                   </span>
                 </div>

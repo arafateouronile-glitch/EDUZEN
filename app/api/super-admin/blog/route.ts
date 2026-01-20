@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !admin.permissions?.manage_blog) {
+    if (!admin || !(admin.permissions as any)?.manage_blog) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !admin.permissions?.manage_blog) {
+    if (!admin || !(admin.permissions as any)?.manage_blog) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         category_id: body.category_id || null,
         allow_comments: body.allow_comments ?? true,
         is_featured: body.is_featured ?? false,
-        metadata: body.metadata || {},
+        metadata: (body.metadata || {}) as any,
       })
       .select()
       .single()

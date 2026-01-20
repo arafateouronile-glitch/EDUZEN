@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { createLearnerClient } from '@/lib/supabase/learner-client'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+import { secureSessionStorage, TTL } from '@/lib/utils/secure-storage'
 
 export default function LearnerAccessPage() {
   const params = useParams()
@@ -63,9 +64,9 @@ export default function LearnerAccessPage() {
 
         logger.info('Learner Access - Student validated successfully')
         
-        // Sauvegarder l'ID dans localStorage pour la persistance
+        // Sauvegarder l'ID dans le stockage sécurisé pour la persistance (24h)
         if (typeof window !== 'undefined') {
-          localStorage.setItem('learner_student_id', studentId)
+          secureSessionStorage.set('learner_student_id', studentId, { ttl: TTL.DAY })
         }
 
         // Redirection vers l'espace apprenant
@@ -192,7 +193,7 @@ export default function LearnerAccessPage() {
                 onClick={() => {
                   try {
                     if (typeof window !== 'undefined') {
-                      localStorage.setItem('learner_student_id', studentId)
+                      secureSessionStorage.set('learner_student_id', studentId, { ttl: TTL.DAY })
                       window.location.replace('/learner')
                     }
                   } catch (_e) {}

@@ -70,7 +70,7 @@ export async function PATCH(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !admin.permissions?.manage_blog) {
+    if (!admin || !(admin.permissions as any)?.manage_blog) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -166,7 +166,7 @@ export async function DELETE(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !admin.permissions?.manage_blog) {
+    if (!admin || !(admin.permissions as any)?.manage_blog) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 

@@ -33,6 +33,7 @@ export function WorkflowProgress({ activeStep, onStepChange }: WorkflowProgressP
         return (
           <button
             key={step.id}
+            type="button"
             onClick={() => onStepChange(step.id)}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
               isActive

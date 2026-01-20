@@ -16,7 +16,7 @@ import {
   Settings, Users, Shield, Bell, CreditCard, Globe, FileText, 
   Layout, Code, Save, Building2, Mail, Phone, MapPin, 
   Calendar, DollarSign, Languages, Moon, Sun, Key,
-  Briefcase, Video, GraduationCap, ChevronRight, Upload, Image, Award, Palette, X, Clock
+  Briefcase, Video, GraduationCap, ChevronRight, Upload, Image, Award, Palette, X, Clock, Receipt
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -535,6 +535,8 @@ export default function SettingsPage() {
     { id: 'email-templates', label: 'Modèles d\'emails', icon: Mail, href: '/dashboard/settings/email-templates' },
     { id: 'email-schedules', label: 'Planification d\'emails', icon: Clock, href: '/dashboard/settings/email-schedules' },
     { id: 'email-test', label: 'Test Email', icon: Mail, href: '/dashboard/settings/email-test' },
+    { id: 'funding-types', label: 'Types de financement', icon: DollarSign, href: '/dashboard/settings/funding-types' },
+    { id: 'charge-categories', label: 'Catégories de charges', icon: Receipt, href: '/dashboard/settings/charge-categories' },
     { id: 'api', label: 'API', icon: Key, href: '/dashboard/settings/api' },
   ]
 

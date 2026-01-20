@@ -265,6 +265,21 @@ export default function GenerateDocumentPage() {
     },
     enabled: !!user?.organization_id && !!documentType,
   })
+
+  const { data: sessionModules } = useQuery({
+    queryKey: ['session-modules', selectedSessionId],
+    queryFn: async () => {
+      if (!selectedSessionId) return []
+      const { data, error } = await supabase
+        .from('session_modules' as any)
+        .select('id, name, amount, currency, display_order')
+        .eq('session_id', selectedSessionId)
+        .order('display_order', { ascending: true })
+      if (error) throw error
+      return (data || []) as Array<{ id: string; name: string; amount: number; currency: string }>
+    },
+    enabled: !!selectedSessionId,
+  })
   
   // Réinitialiser l'apprenant sélectionné quand la session change
   useEffect(() => {
@@ -351,6 +366,7 @@ export default function GenerateDocumentPage() {
         session,
         invoice,
         program,
+        sessionModules: sessionModules?.length ? sessionModules.map((m) => ({ id: m.id, name: m.name, amount: Number(m.amount), currency: m.currency || 'EUR' })) : undefined,
         academicYear,
         language,
         issueDate: new Date().toISOString(),

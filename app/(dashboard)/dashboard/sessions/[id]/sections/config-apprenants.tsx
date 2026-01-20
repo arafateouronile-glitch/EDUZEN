@@ -53,6 +53,7 @@ interface ConfigApprenantsProps {
     payment_status: Enrollment['payment_status']
     total_amount: string
     paid_amount: string
+    funding_type_id: string
   }
   onEnrollmentFormChange: (form: ConfigApprenantsProps['enrollmentForm']) => void
   onCreateEnrollment: () => void
@@ -83,6 +84,24 @@ export function ConfigApprenants({
   const [showEnrollmentForm, setShowEnrollmentForm] = useState(false)
   const [showNewStudentForm, setShowNewStudentForm] = useState(false)
   const [searchMode, setSearchMode] = useState<'all' | 'students' | 'entities'>('all')
+
+  // Récupérer les types de financement
+  const { data: fundingTypes } = useQuery({
+    queryKey: ['funding-types', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('funding_types' as any)
+        .select('id, name, code, description')
+        .eq('organization_id', user.organization_id)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+        .order('name', { ascending: true })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user?.organization_id,
+  })
 
   // Récupérer les candidats de la formation (étudiants inscrits à d'autres sessions de la même formation)
   const { data: formationCandidates } = useQuery({
@@ -311,6 +330,7 @@ export function ConfigApprenants({
       student_id: studentId,
       enrollment_date: new Date().toISOString().split('T')[0],
       total_amount: formationPrice?.toString() || enrollmentForm.total_amount || '0',
+      funding_type_id: enrollmentForm.funding_type_id || '',
     })
     setShowEnrollmentForm(true)
   }
@@ -620,8 +640,8 @@ export function ConfigApprenants({
         </GlassCard>
       )}
 
-      {/* Entreprises et organismes - Afficher toutes les entités, même sans apprenants */}
-      {(searchMode === 'all' || searchMode === 'entities') && externalEntities && externalEntities.length > 0 && (
+      {/* Entreprises et organismes - Afficher uniquement lors de la recherche */}
+      {(searchMode === 'all' || searchMode === 'entities') && searchQuery && filteredEntities.length > 0 && (
         <GlassCard variant="premium" className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -634,12 +654,12 @@ export function ConfigApprenants({
               </p>
             </div>
             <Badge variant="outline" className="text-orange-600 border-orange-200">
-              {searchQuery ? filteredEntities.length : (externalEntities?.length || 0)} entité{(searchQuery ? filteredEntities.length : (externalEntities?.length || 0)) > 1 ? 's' : ''}
+              {filteredEntities.length} trouvé{filteredEntities.length > 1 ? 's' : ''}
             </Badge>
           </div>
 
           <div className="space-y-4">
-            {(searchQuery ? filteredEntities : (externalEntities || [])).map((entity: any) => {
+            {filteredEntities.map((entity: any) => {
               const entityStudents = getStudentsForEntity(entity.id)
               const getTypeLabel = (type: string) => {
                 const labels: Record<string, string> = {
@@ -1122,6 +1142,7 @@ export function ConfigApprenants({
                       payment_status: 'pending',
                       total_amount: formationPrice?.toString() || '0',
                       paid_amount: '0',
+                      funding_type_id: '',
                     })
                   }}
                 >
@@ -1226,6 +1247,39 @@ export function ConfigApprenants({
                   </select>
                 </div>
 
+                <div>
+                  <Label htmlFor="funding_type_id">Type de financement</Label>
+                  <select
+                    id="funding_type_id"
+                    value={enrollmentForm.funding_type_id || ''}
+                    onChange={(e) =>
+                      onEnrollmentFormChange({
+                        ...enrollmentForm,
+                        funding_type_id: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm"
+                  >
+                    <option value="">Aucun (financement personnel)</option>
+                    {fundingTypes && fundingTypes.length > 0 ? (
+                      fundingTypes.map((type: any) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name} {type.code ? `(${type.code})` : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        Aucun type de financement disponible
+                      </option>
+                    )}
+                  </select>
+                  {fundingTypes && fundingTypes.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Créez des types de financement dans les paramètres pour les voir apparaître ici.
+                    </p>
+                  )}
+                </div>
+
                 {createEnrollmentMutation.error && (
                   <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
@@ -1249,6 +1303,7 @@ export function ConfigApprenants({
                         payment_status: 'pending',
                         total_amount: formationPrice?.toString() || '0',
                         paid_amount: '0',
+                        funding_type_id: '',
                       })
                     }}
                   >
