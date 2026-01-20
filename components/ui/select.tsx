@@ -187,19 +187,26 @@ interface SelectContextValue {
 
 const SelectContext = React.createContext<SelectContextValue>({})
 
-interface SelectRootProps {
+export interface SelectRootProps {
   value?: string
+  defaultValue?: string
   onValueChange?: (value: string) => void
   children: React.ReactNode
 }
 
 // Wrapper pour utiliser Select comme composant Radix
 export const SelectRoot = React.forwardRef<HTMLDivElement, SelectRootProps>(
-  ({ value, onValueChange, children }, ref) => {
+  ({ value, defaultValue, onValueChange, children }, ref) => {
     const [open, setOpen] = React.useState(false)
+    const [internalValue, setInternalValue] = React.useState<string | undefined>(value || defaultValue)
+    
+    const handleValueChange = (newValue: string) => {
+      setInternalValue(newValue)
+      onValueChange?.(newValue)
+    }
     
     return (
-      <SelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
+      <SelectContext.Provider value={{ value: value || internalValue, onValueChange: handleValueChange, open, setOpen }}>
         <div className="relative" ref={ref}>{children}</div>
       </SelectContext.Provider>
     )

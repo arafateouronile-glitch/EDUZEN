@@ -529,7 +529,7 @@ export default function TeamPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Rôle</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={(value: string) => field.onChange(value)} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue />

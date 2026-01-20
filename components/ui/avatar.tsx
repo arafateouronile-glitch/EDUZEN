@@ -106,3 +106,13 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
 )
 Avatar.displayName = 'Avatar'
 
+// Exports pour compatibilité avec les composants qui utilisent AvatarImage, AvatarFallback
+export const AvatarImage = ({ src, alt, className }: { src?: string; alt?: string; className?: string }) => {
+  if (!src) return null
+  return <img src={src} alt={alt} className={className} />
+}
+
+export const AvatarFallback = ({ children, className }: { children: React.ReactNode; className?: string }) => {
+  return <div className={className}>{children}</div>
+}
+

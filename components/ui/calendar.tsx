@@ -7,13 +7,29 @@ import { Button } from './button'
 
 export interface CalendarProps {
   value?: Date
+  selected?: Date
+  mode?: string
+  onSelect?: (date: Date | undefined) => void
   onChange?: (date: Date) => void
+  locale?: any
+  disabled?: (date: Date) => boolean
+  initialFocus?: boolean
   className?: string
 }
 
-export function Calendar({ value, onChange, className }: CalendarProps) {
-  const [currentDate, setCurrentDate] = React.useState(value || new Date())
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(value || null)
+export function Calendar({ 
+  value, 
+  selected, 
+  mode,
+  onSelect, 
+  onChange, 
+  locale,
+  disabled,
+  initialFocus,
+  className 
+}: CalendarProps) {
+  const [currentDate, setCurrentDate] = React.useState(value || selected || new Date())
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(value || selected || null)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -33,6 +49,7 @@ export function Calendar({ value, onChange, className }: CalendarProps) {
   const handleDateClick = (day: number) => {
     const newDate = new Date(year, month, day)
     setSelectedDate(newDate)
+    onSelect?.(newDate)
     onChange?.(newDate)
   }
 
