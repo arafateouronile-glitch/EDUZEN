@@ -67,7 +67,7 @@ export function Footer() {
               links: [
                 { label: 'À propos', href: '#' },
                 { label: 'Carrières', href: '#' },
-                { label: 'Blog', href: '#' },
+                { label: 'Blog', href: '/blog' },
                 { label: 'Contact', href: '#' },
               ]
             },

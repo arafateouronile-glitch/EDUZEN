@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PlatformAdminGuard } from '@/components/super-admin/platform-admin-guard'
 import { BlogPostEditor } from '@/components/super-admin/blog/blog-post-editor'
@@ -7,21 +8,58 @@ import { motion } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import type { CreateBlogPostInput } from '@/types/super-admin.types'
 
 export default function NewBlogPostPage() {
   const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSave = async (data: CreateBlogPostInput) => {
-    // In production, this would call the API
-    console.log('Saving draft:', data)
-    // After saving, could redirect or stay on page
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/super-admin/blog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, status: 'draft' }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la sauvegarde')
+      }
+
+      const result = await response.json()
+      toast.success('Brouillon sauvegardé avec succès')
+      router.push(`/super-admin/blog/${result.post.id}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handlePublish = async (data: CreateBlogPostInput) => {
-    // In production, this would call the API
-    console.log('Publishing:', data)
-    router.push('/super-admin/blog')
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/super-admin/blog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...data, status: 'published' }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la publication')
+      }
+
+      toast.success('Article publié avec succès')
+      router.push('/super-admin/blog')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la publication')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

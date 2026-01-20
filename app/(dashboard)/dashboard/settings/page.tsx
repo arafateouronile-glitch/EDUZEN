@@ -36,26 +36,11 @@ export default function SettingsPage() {
     }
   }, [])
   
-  // Debug: afficher les infos de l'utilisateur
+  // Note: Debug logs removed for production
   useEffect(() => {
     if (authLoading) {
-      console.log('⏳ [SETTINGS] Chargement en cours...')
       return
     }
-    
-    console.log('🔍 [SETTINGS] État:', {
-      authLoading,
-      isAuthenticated,
-      hasSession: !!session,
-      sessionUserId: session?.user?.id,
-      user: user ? {
-        id: user.id,
-        email: user.email,
-        organization_id: user.organization_id,
-        role: user.role,
-      } : null,
-      hasUser: !!user,
-    })
     
     if (user) {
       console.log('✅ [SETTINGS] Utilisateur chargé:', {

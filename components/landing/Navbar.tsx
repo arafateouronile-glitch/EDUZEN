@@ -20,6 +20,7 @@ export function Navbar() {
 
   const navItems = [
     { label: 'Fonctionnalités', href: '#features' },
+    { label: 'Blog', href: '/blog' },
     { label: 'Tarifs', href: '#tarifs' },
     { label: 'Témoignages', href: '#testimonials' },
     { label: 'FAQ', href: '#faq' },

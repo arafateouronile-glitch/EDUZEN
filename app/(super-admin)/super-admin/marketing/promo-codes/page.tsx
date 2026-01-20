@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { PlatformAdminGuard } from '@/components/super-admin/platform-admin-guard'
 import { motion } from '@/components/ui/motion'
@@ -186,30 +186,88 @@ export default function PromoCodesPage() {
   }
 
   const handleCreate = async (data: CreatePromoCodeInput) => {
-    // In production, this would call the API
-    console.log('Creating promo code:', data)
-    setCreateDialogOpen(false)
-    toast.success('Code promo créé avec succès')
+    try {
+      const response = await fetch('/api/super-admin/promo-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la création')
+      }
+
+      setCreateDialogOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['promo-codes'] })
+      toast.success('Code promo créé avec succès')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la création')
+    }
   }
 
   const handleEdit = async (data: CreatePromoCodeInput) => {
-    // In production, this would call the API
-    console.log('Editing promo code:', editingCode?.id, data)
-    setEditingCode(null)
-    toast.success('Code promo modifié avec succès')
+    if (!editingCode) return
+
+    try {
+      const response = await fetch(`/api/super-admin/promo-codes/${editingCode.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la modification')
+      }
+
+      setEditingCode(null)
+      queryClient.invalidateQueries({ queryKey: ['promo-codes'] })
+      toast.success('Code promo modifié avec succès')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la modification')
+    }
   }
 
   const handleDelete = async () => {
-    // In production, this would call the API
-    console.log('Deleting promo code:', deletingCode?.id)
-    setDeletingCode(null)
-    toast.success('Code promo supprimé')
+    if (!deletingCode) return
+
+    try {
+      const response = await fetch(`/api/super-admin/promo-codes/${deletingCode.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la suppression')
+      }
+
+      setDeletingCode(null)
+      queryClient.invalidateQueries({ queryKey: ['promo-codes'] })
+      toast.success('Code promo supprimé')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la suppression')
+    }
   }
 
   const handleToggleActive = async (code: PromoCode) => {
-    // In production, this would call the API
-    console.log('Toggling active status:', code.id, !code.is_active)
-    toast.success(code.is_active ? 'Code désactivé' : 'Code activé')
+    try {
+      const response = await fetch(`/api/super-admin/promo-codes/${code.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !code.is_active }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la modification')
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['promo-codes'] })
+      toast.success(code.is_active ? 'Code désactivé' : 'Code activé')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la modification')
+    }
   }
 
   const formatDate = (date: string | null) => {

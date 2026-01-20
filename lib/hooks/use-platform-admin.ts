@@ -63,36 +63,45 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
     queryFn: async () => {
       if (!user?.id) return null
 
-      const { data, error } = await supabase
+      // First, get the platform admin record
+      const { data: adminData, error: adminError } = await supabase
         .from('platform_admins')
-        .select(`
-          *,
-          user:users!platform_admins_user_id_fkey (
-            id,
-            email,
-            full_name,
-            avatar_url
-          ),
-          inviter:platform_admins!platform_admins_invited_by_fkey (
-            user:users!platform_admins_user_id_fkey (
-              id,
-              email,
-              full_name,
-              avatar_url
-            )
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .maybeSingle()
 
-      if (error) {
+      if (adminError) {
+        // Log error for debugging
+        console.error('[usePlatformAdmin] Error fetching platform admin:', adminError)
         // If table doesn't exist yet, return null silently
-        if (error.code === '42P01') return null
-        throw error
+        if (adminError.code === '42P01') return null
+        // If RLS policy blocks access, log it
+        if (adminError.code === '42501' || adminError.message?.includes('permission denied')) {
+          console.error('[usePlatformAdmin] RLS policy blocked access. Check policies.')
+        }
+        throw adminError
       }
 
-      return data as PlatformAdmin | null
+      if (!adminData) {
+        console.log('[usePlatformAdmin] No platform admin found for user:', user.id)
+        return null
+      }
+
+      console.log('[usePlatformAdmin] Platform admin found:', adminData)
+
+      // Try to get user info from auth.users (via RPC or direct query if possible)
+      // For now, we'll just return the admin data without the user relation
+      // The user info can be obtained from useAuth() hook
+      return {
+        ...adminData,
+        user: {
+          id: user.id,
+          email: user.email || '',
+          full_name: user.full_name || null,
+          avatar_url: user.avatar_url || null,
+        },
+      } as PlatformAdmin | null
     },
     enabled: !!user?.id && !isAuthLoading,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes

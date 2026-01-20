@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -98,9 +99,9 @@ export function SuperAdminHeader({ sidebarCollapsed = false }: SuperAdminHeaderP
         <Breadcrumb>
           <BreadcrumbList>
             {breadcrumbs.map((crumb, index) => (
-              <BreadcrumbItem key={crumb.href}>
-                {index < breadcrumbs.length - 1 ? (
-                  <>
+              <React.Fragment key={crumb.href}>
+                <BreadcrumbItem>
+                  {index < breadcrumbs.length - 1 ? (
                     <BreadcrumbLink asChild>
                       <Link
                         href={crumb.href}
@@ -109,14 +110,14 @@ export function SuperAdminHeader({ sidebarCollapsed = false }: SuperAdminHeaderP
                         {crumb.name}
                       </Link>
                     </BreadcrumbLink>
-                    <BreadcrumbSeparator />
-                  </>
-                ) : (
-                  <BreadcrumbPage className="text-sm font-medium">
-                    {crumb.name}
-                  </BreadcrumbPage>
-                )}
-              </BreadcrumbItem>
+                  ) : (
+                    <BreadcrumbPage className="text-sm font-medium">
+                      {crumb.name}
+                    </BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+              </React.Fragment>
             ))}
           </BreadcrumbList>
         </Breadcrumb>
