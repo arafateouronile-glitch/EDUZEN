@@ -228,7 +228,7 @@ export default function SubscriptionsPage() {
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">
-                          {selectedSubscription.payment_method.brand} •••• {selectedSubscription.payment_method.last4}
+                          {(selectedSubscription.payment_method as any)?.brand || 'N/A'} •••• {(selectedSubscription.payment_method as any)?.last4 || '****'}
                         </span>
                       </div>
                     </div>
