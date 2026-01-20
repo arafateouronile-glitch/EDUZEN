@@ -135,6 +135,7 @@ export interface OrganizationSubscription {
     code?: string | null
     logo_url: string | null
     country?: string | null
+    created_at?: string
   }
 }
 
