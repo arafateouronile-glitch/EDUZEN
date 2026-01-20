@@ -381,6 +381,12 @@ export interface AdminActivityLog {
   admin?: PlatformAdmin
 }
 
+export interface InviteAdminInput {
+  email: string
+  role: PlatformAdminRole
+  permissions?: Partial<AdminPermissions>
+}
+
 // =====================================================
 // 6. PLATFORM METRICS & ANALYTICS
 // =====================================================
