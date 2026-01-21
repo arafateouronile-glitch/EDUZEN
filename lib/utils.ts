@@ -41,7 +41,8 @@ export function formatRelativeTime(date: string | Date): string {
   return formatDate(date)
 }
 
-export function formatDate(date: Date | string, locale: string = 'fr-FR'): string {
+export function formatDate(date: Date | string | null | undefined, locale: string = 'fr-FR'): string {
+  if (!date) return ''
   return new Intl.DateTimeFormat(locale, {
     year: 'numeric',
     month: 'long',

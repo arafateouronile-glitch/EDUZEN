@@ -10,7 +10,8 @@ import { documentTemplateService } from '@/lib/services/document-template.servic
 import { sessionChargesService, type SessionChargeWithCategory } from '@/lib/services/session-charges.service'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
-import { generatePDFFromHTML } from '@/lib/utils/pdf-generator'
+import { generatePDFFromHTML, generatePDFBlobFromHTML } from '@/lib/utils/pdf-generator'
+import { emailService } from '@/lib/services/email.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
@@ -29,7 +30,7 @@ import {
   Download, FileText, Plus, Receipt, DollarSign, 
   FileCheck, FileX, Eye, CreditCard, ChevronDown, ChevronUp,
   Trash2, Edit, TrendingDown, ArrowRightLeft, Wallet, PieChart as PieChartIcon,
-  TrendingUp, AlertCircle, CheckCircle2
+  TrendingUp, AlertCircle, CheckCircle2, Mail
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
@@ -80,11 +81,25 @@ export function GestionFinances({
   const [showQuoteForm, setShowQuoteForm] = useState(false)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null)
   const [isDownloading, setIsDownloading] = useState<string | null>(null)
+  const [isEmailSending, setIsEmailSending] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
   const [convertingQuoteId, setConvertingQuoteId] = useState<string | null>(null)
   const [showCharges, setShowCharges] = useState(true)
   const [showChargeForm, setShowChargeForm] = useState(false)
   const [editingCharge, setEditingCharge] = useState<SessionChargeWithCategory | null>(null)
+
+  type EmailPreviewState = {
+    invoice: any
+    type: 'invoice' | 'quote'
+    to: string
+    subject: string
+    bodyText: string
+    filename: string
+    docLabel: 'Facture' | 'Devis'
+    invoiceNumber: string
+  }
+
+  const [emailPreview, setEmailPreview] = useState<EmailPreviewState | null>(null)
 
   // Récupérer les factures et devis pour tous les étudiants de la session (1 requête au lieu de N)
   const studentIds = enrollments.map((e) => e.student_id).filter(Boolean) as string[]
@@ -94,7 +109,7 @@ export function GestionFinances({
       if (!user?.organization_id || studentIds.length === 0) return []
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, students(id, first_name, last_name, student_number), payments(id, amount, status, paid_at)')
+        .select('*, students(id, first_name, last_name, student_number, email), payments(id, amount, status, paid_at)')
         .eq('organization_id', user.organization_id)
         .in('student_id', studentIds)
         .order('issue_date', { ascending: false })
@@ -350,6 +365,178 @@ export function GestionFinances({
           document.body.removeChild(div)
         }
       })
+    }
+  }
+
+  // Génère un PDF Blob (sans téléchargement) pour prévisualisation / envoi email
+  const generatePdfBlobForEmail = async (invoice: any, type: 'invoice' | 'quote'): Promise<Blob> => {
+    if (!org || !invoice) throw new Error('Données manquantes pour la génération du document.')
+
+    const student = invoice.students as (StudentWithRelations & { email?: string | null }) | undefined
+    const template = type === 'invoice' ? invoiceTemplate : quoteTemplate
+    if (!template) throw new Error(`Aucun modèle de ${type === 'invoice' ? 'facture' : 'devis'} trouvé.`)
+
+    let tempContainer: HTMLDivElement | null = null
+
+    try {
+      const invoiceData = invoice as InvoiceWithRelations
+
+      let sessionModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+      if (sessionData?.id) {
+        const { data: mods } = await supabase
+          .from('session_modules' as any)
+          .select('id, name, amount, currency')
+          .eq('session_id', sessionData.id)
+          .order('display_order', { ascending: true })
+        sessionModules = (mods?.length ? mods : undefined) as Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+      }
+
+      const variables = extractDocumentVariables({
+        student,
+        organization: org as any,
+        session: sessionData,
+        invoice: invoiceData,
+        sessionModules,
+        academicYear,
+        language: 'fr',
+        issueDate: invoice.issue_date,
+      })
+
+      const result = await generateHTML(template, variables, undefined, user?.organization_id || undefined)
+
+      const tempDiv = document.createElement('div')
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '0'
+      tempDiv.style.width = '794px'
+      tempDiv.style.minHeight = '1123px'
+      tempDiv.style.backgroundColor = '#ffffff'
+      tempDiv.style.overflow = 'visible'
+      tempDiv.style.fontFamily = 'Arial, sans-serif'
+      document.body.appendChild(tempDiv)
+      tempContainer = tempDiv
+
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(result.html, 'text/html')
+      tempDiv.innerHTML = doc.body.innerHTML
+
+      let element = tempDiv.querySelector('.document-container') || tempDiv.querySelector('[id$="-document"]') || tempDiv
+      if (!element || !(element instanceof HTMLElement)) {
+        element = tempDiv
+      }
+
+      const elementId = `temp-email-preview-${type}-${invoice.id}-${Date.now()}`
+      if (element instanceof HTMLElement) {
+        element.id = elementId
+        if (!element.style.width) element.style.width = '794px'
+        if (!element.style.minHeight) element.style.minHeight = '1123px'
+        element.style.backgroundColor = '#ffffff'
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 700))
+      return await generatePDFBlobFromHTML(elementId)
+    } finally {
+      if (tempContainer && tempContainer.parentNode === document.body) {
+        document.body.removeChild(tempContainer)
+      }
+    }
+  }
+
+  // Ouvrir la fenêtre d'édition avant envoi
+  const handleSendDocumentByEmail = async (invoice: any, type: 'invoice' | 'quote') => {
+    if (!org || !invoice) {
+      addToast({ type: 'error', title: 'Erreur', description: 'Données manquantes pour l’envoi du document.' })
+      return
+    }
+
+    const student = invoice.students as (StudentWithRelations & { email?: string | null }) | undefined
+    const studentEmail = student?.email || null
+    if (!studentEmail) {
+      addToast({ type: 'error', title: 'Email manquant', description: 'Aucun email n’est renseigné pour cet apprenant.' })
+      return
+    }
+
+    const template = type === 'invoice' ? invoiceTemplate : quoteTemplate
+    if (!template) {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: `Aucun modèle de ${type === 'invoice' ? 'facture' : 'devis'} trouvé.`,
+      })
+      return
+    }
+
+    const docLabel: 'Facture' | 'Devis' = type === 'invoice' ? 'Facture' : 'Devis'
+    const invoiceNumber = invoice.invoice_number || 'Brouillon'
+    const filenameSafe = String(invoiceNumber).replace(/[^\w.-]+/g, '_')
+    const filename = `${docLabel.toLowerCase()}_${filenameSafe}.pdf`
+
+    const orgName = (org as any)?.name || 'EDUZEN'
+    const sessionName = sessionData?.name ? ` – ${sessionData.name}` : ''
+    const subject = `${docLabel} ${invoiceNumber}${sessionName} (${orgName})`
+
+    const bodyText =
+      `Bonjour ${student?.first_name || ''} ${student?.last_name || ''},\n\n` +
+      `Veuillez trouver en pièce jointe votre ${docLabel.toLowerCase()} ${invoiceNumber}.\n\n` +
+      `Cordialement,\n${orgName}\n`
+
+    setEmailPreview({
+      invoice,
+      type,
+      to: studentEmail,
+      subject,
+      bodyText,
+      filename,
+      docLabel,
+      invoiceNumber,
+    })
+  }
+
+  const handleConfirmSendFromPreview = async () => {
+    if (!emailPreview) return
+
+    setIsEmailSending(emailPreview.invoice.id)
+    try {
+      const pdfBlob = await generatePdfBlobForEmail(emailPreview.invoice, emailPreview.type)
+
+      const escapeHtml = (value: string) =>
+        value
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+
+      const htmlBody =
+        `<div style="font-family: Arial, sans-serif; line-height: 1.5; white-space: normal;">` +
+        `${escapeHtml(emailPreview.bodyText).replace(/\n/g, '<br/>')}` +
+        `</div>`
+
+      await emailService.sendDocument(
+        emailPreview.to,
+        emailPreview.subject,
+        pdfBlob,
+        emailPreview.filename,
+        htmlBody,
+        emailPreview.bodyText
+      )
+
+      addToast({
+        type: 'success',
+        title: 'Email envoyé',
+        description: `${emailPreview.docLabel} envoyé(e) à ${emailPreview.to}.`,
+      })
+
+      setEmailPreview(null)
+    } catch (error) {
+      console.error('Erreur lors de l’envoi email du document:', error)
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de l’envoi par email.',
+      })
+    } finally {
+      setIsEmailSending(null)
     }
   }
 
@@ -1034,6 +1221,14 @@ export function GestionFinances({
                                   >
                                     {isDownloading === quote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
                                   </button>
+                                  <button
+                                    onClick={() => handleSendDocumentByEmail(quote, 'quote')}
+                                    disabled={isEmailSending === quote.id}
+                                    className="text-gray-400 hover:text-purple-600 transition-colors"
+                                    title="Envoyer par email"
+                                  >
+                                    {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                  </button>
                                   <button 
                                     onClick={() => {
                                       const ok = window.confirm('Transformer ce devis en facture ? (La facture sera créée en brouillon)')
@@ -1063,6 +1258,14 @@ export function GestionFinances({
                                     title="Télécharger PDF"
                                   >
                                     {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                  </button>
+                                  <button
+                                    onClick={() => handleSendDocumentByEmail(invoice, 'invoice')}
+                                    disabled={isEmailSending === invoice.id}
+                                    className="text-blue-400 hover:text-purple-600 transition-colors"
+                                    title="Envoyer par email"
+                                  >
+                                    {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
                                   </button>
                                   <Link href={`/dashboard/payments/${invoice.id}`} className="text-blue-400 hover:text-blue-700 transition-colors" title="Voir détails">
                                     <Eye className="h-3 w-3" />
@@ -1369,6 +1572,87 @@ export function GestionFinances({
           </GlassCard>
         </div>
       </div>
+
+      {/* Prévisualisation email + PDF avant envoi */}
+      <Dialog
+        open={!!emailPreview}
+        onOpenChange={(open) => {
+          if (!open) setEmailPreview(null)
+        }}
+      >
+        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Envoyer par e-mail</DialogTitle>
+          </DialogHeader>
+
+          {emailPreview && (
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-700">
+                  Document : <span className="font-semibold">{emailPreview.docLabel}</span> —{' '}
+                  <span className="font-semibold">{emailPreview.invoiceNumber}</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Pièce jointe : <span className="font-medium">{emailPreview.filename}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">À</label>
+                <input
+                  type="email"
+                  value={emailPreview.to}
+                  onChange={(e) => setEmailPreview((prev) => (prev ? { ...prev, to: e.target.value } : prev))}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="destinataire@exemple.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Objet</label>
+                <input
+                  type="text"
+                  value={emailPreview.subject}
+                  onChange={(e) => setEmailPreview((prev) => (prev ? { ...prev, subject: e.target.value } : prev))}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Contenu du mail</label>
+                <textarea
+                  value={emailPreview.bodyText}
+                  onChange={(e) => setEmailPreview((prev) => (prev ? { ...prev, bodyText: e.target.value } : prev))}
+                  rows={10}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Écris ton message ici..."
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Le document sera généré en PDF et joint automatiquement lors de l’envoi.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEmailPreview(null)}>
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmSendFromPreview}
+              disabled={
+                !emailPreview ||
+                isEmailSending === emailPreview?.invoice?.id ||
+                !emailPreview.to?.trim() ||
+                !emailPreview.subject?.trim()
+              }
+            >
+              {emailPreview && isEmailSending === emailPreview.invoice.id ? 'Envoi...' : 'Envoyer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Formulaire de paiement (Dialog) */}
       <Dialog

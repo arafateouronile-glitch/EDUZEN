@@ -4,6 +4,7 @@ import { z } from 'zod'
 export const studentSchema = z.object({
   first_name: z.string().min(1, 'Le prénom est requis').max(100, 'Le prénom est trop long'),
   last_name: z.string().min(1, 'Le nom est requis').max(100, 'Le nom est trop long'),
+  photo_url: z.string().optional().or(z.literal('')),
   date_of_birth: z.string().optional().or(z.literal('')),
   gender: z.enum(['male', 'female', 'other']).optional().or(z.literal('')),
   email: z.string().email('Email invalide').optional().or(z.literal('')),
@@ -47,6 +48,7 @@ export const studentSchema = z.object({
 export const studentUpdateSchema = z.object({
   first_name: z.string().min(1, 'Le prénom est requis').max(100, 'Le prénom est trop long'),
   last_name: z.string().min(1, 'Le nom est requis').max(100, 'Le nom est trop long'),
+  photo_url: z.string().optional().or(z.literal('')),
   date_of_birth: z.string().optional().or(z.literal('')),
   gender: z.enum(['male', 'female', 'other']).optional().or(z.literal('')),
   email: z.string().email('Email invalide').optional().or(z.literal('')),

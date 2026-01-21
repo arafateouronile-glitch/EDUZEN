@@ -4,20 +4,20 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { invoiceService } from '@/lib/services/invoice.service.client'
-import { paymentService } from '@/lib/services/payment.service.client'
 import { sessionChargesService } from '@/lib/services/session-charges.service'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
-import { Plus, Search, FileText, AlertCircle, CheckCircle, TrendingUp, Calendar, Download, Filter, X, ArrowRight, DollarSign, Receipt, CreditCard, ArrowUpRight, SlidersHorizontal, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { Plus, Search, FileText, AlertCircle, CheckCircle, TrendingUp, X, DollarSign, Receipt, CreditCard, ArrowUpRight, SlidersHorizontal, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import Link from 'next/link'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+// Note: BarChart et Bar sont utilisés dans le graphique d'évolution des charges
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { InvoiceWithRelations } from '@/lib/types/query-types'
-import { CardTitle } from '@/components/ui/card'
 import { RoleGuard, FINANCE_ROLES } from '@/components/auth/role-guard'
 
 type Payment = TableRow<'payments'>
@@ -87,7 +87,7 @@ function PaymentsPageContent() {
       if (!user?.organization_id) return []
       return await sessionChargesService.getAll(user.organization_id)
     },
-    enabled: !!user?.organization_id && showChargesSection,
+    enabled: !!user?.organization_id,
   })
 
   // Formulaire de charge
@@ -849,470 +849,790 @@ function PaymentsPageContent() {
             </motion.div>
           </GlassCard>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            <AnimatePresence mode="popLayout">
-              {(filteredInvoices as InvoiceWithRelations[]).map((invoice, index) => {
-                const isQuote = (invoice as any).document_type === 'quote'
-                const student = invoice.students
-                return (
-                  <motion.div
-                    key={invoice.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: -20 }}
-                    transition={{ delay: index * 0.04, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <Link href={`/dashboard/payments/${invoice.id}`}>
-                      <motion.div
-                        whileHover={{ y: -8, scale: 1.02 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <GlassCard
-                          variant="premium"
-                          hoverable
-                          className="h-full p-6 group flex flex-col justify-between relative overflow-hidden border-2 border-gray-100 hover:border-brand-blue/30 transition-all duration-300"
-                        >
-                          {/* Badge Devis/Facture */}
-                          {isQuote && (
-                            <div className="absolute top-0 right-0 bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 text-[10px] font-bold px-3 py-1.5 rounded-bl-2xl uppercase tracking-widest shadow-sm">
-                              Devis
-                            </div>
-                          )}
+          <GlassCard variant="premium" className="p-6 border-2 border-gray-100">
+            {(() => {
+              const byStatus = (filteredInvoices as InvoiceWithRelations[]).reduce(
+                (acc, invoice) => {
+                  const status = invoice.status || 'draft'
+                  if (!acc[status]) acc[status] = []
+                  acc[status].push(invoice)
+                  return acc
+                },
+                {} as Record<string, InvoiceWithRelations[]>
+              )
 
-                          <div>
-                            <div className="flex items-start justify-between mb-5">
-                              <motion.div
-                                whileHover={{ scale: 1.15, rotate: 8 }}
-                                transition={{ duration: 0.3 }}
-                                className={cn(
-                                  'h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg',
-                                  isQuote
-                                    ? 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600'
-                                    : 'bg-gradient-to-br from-brand-blue-ghost to-brand-blue-pale text-brand-blue'
-                                )}
-                              >
-                                {isQuote ? <FileText className="h-6 w-6" /> : <Receipt className="h-6 w-6" />}
-                              </motion.div>
-                              <span
-                                className={cn(
-                                  'px-3 py-1.5 rounded-xl text-xs font-bold border-2 shadow-sm',
-                                  getStatusColor(invoice.status || 'draft')
-                                )}
-                              >
-                                {getStatusLabel(invoice.status || 'draft')}
-                              </span>
-                            </div>
+              const preferredOrder = ['draft', 'sent', 'partial', 'overdue', 'paid', 'cancelled']
+              const allStatuses = Object.keys(byStatus)
+              const orderedStatuses = [
+                ...preferredOrder.filter((s) => (byStatus[s]?.length || 0) > 0),
+                ...allStatuses.filter((s) => !preferredOrder.includes(s)).sort(),
+              ]
 
-                            <div className="mb-5">
-                              <h3 className="text-lg font-black text-gray-900 truncate group-hover:text-brand-blue transition-colors font-display tracking-tight">
-                                {invoice.invoice_number || 'Brouillon'}
-                              </h3>
-                              <p className="text-sm text-gray-500 mt-1.5 font-medium">
-                                {student ? `${student.first_name} ${student.last_name}` : 'Client inconnu'}
-                              </p>
-                            </div>
+              return (
+                <Accordion type="multiple" className="divide-y divide-gray-100">
+                  {orderedStatuses.map((status) => {
+                    const invoicesForStatus = byStatus[status] || []
+                    const count = invoicesForStatus.length
+                    if (count === 0) return null
 
-                            <div className="space-y-3 text-sm">
-                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                                <span className="text-gray-500 font-medium">Montant</span>
-                                <span className="text-lg font-black text-brand-blue font-display">
-                                  {formatCurrency(Number(invoice.total_amount), invoice.currency || 'EUR')}
-                                </span>
-                              </div>
-                              {invoice.issue_date && (
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-gray-400 font-medium">Date d'émission</span>
-                                  <span className="text-gray-600 font-semibold">{formatDate(invoice.issue_date)}</span>
-                                </div>
+                    return (
+                      <AccordionItem key={status} value={status} className="border-0">
+                        <AccordionTrigger className="py-5">
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={cn(
+                                'px-3 py-1.5 rounded-xl text-xs font-bold border-2 shadow-sm',
+                                getStatusColor(status)
                               )}
-                            </div>
-                          </div>
-
-                          <div className="mt-6 pt-5 border-t-2 border-gray-100 flex items-center justify-between">
-                            {isQuote ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 text-xs font-semibold hover:text-brand-blue hover:bg-brand-blue-ghost -ml-2 px-3"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  convertQuoteMutation.mutate(invoice.id)
-                                }}
-                                disabled={convertQuoteMutation.isPending}
-                              >
-                                Convertir en facture
-                              </Button>
-                            ) : (
-                              <span className="text-xs text-gray-400 font-medium">Voir les détails</span>
-                            )}
-                            <motion.div
-                              whileHover={{ x: 2, y: -2 }}
-                              transition={{ duration: 0.2 }}
                             >
-                              <ArrowUpRight className="h-5 w-5 text-gray-300 group-hover:text-brand-blue transition-colors" />
-                            </motion.div>
+                              {getStatusLabel(status)}
+                            </span>
+                            <span className="text-sm text-gray-500 font-medium">
+                              {count} document{count > 1 ? 's' : ''}
+                            </span>
                           </div>
-                        </GlassCard>
-                      </motion.div>
-                    </Link>
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-          </div>
+                        </AccordionTrigger>
+
+                        <AccordionContent className="pt-2 pb-6 text-gray-900 text-base">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                            <AnimatePresence mode="popLayout">
+                              {invoicesForStatus.map((invoice, index) => {
+                                const isQuote = (invoice as any).document_type === 'quote'
+                                const student = invoice.students
+                                return (
+                                  <motion.div
+                                    key={invoice.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -12 }}
+                                    transition={{ delay: index * 0.02, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                                  >
+                                    <Link href={`/dashboard/payments/${invoice.id}`}>
+                                      <motion.div whileHover={{ y: -8, scale: 1.02 }} transition={{ duration: 0.3 }}>
+                                        <GlassCard
+                                          variant="premium"
+                                          hoverable
+                                          className="h-full p-6 group flex flex-col justify-between relative overflow-hidden border-2 border-gray-100 hover:border-brand-blue/30 transition-all duration-300"
+                                        >
+                                          {/* Badge Devis/Facture */}
+                                          {isQuote && (
+                                            <div className="absolute top-0 right-0 bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 text-[10px] font-bold px-3 py-1.5 rounded-bl-2xl uppercase tracking-widest shadow-sm">
+                                              Devis
+                                            </div>
+                                          )}
+
+                                          <div>
+                                            <div className="flex items-start justify-between mb-5">
+                                              <motion.div
+                                                whileHover={{ scale: 1.15, rotate: 8 }}
+                                                transition={{ duration: 0.3 }}
+                                                className={cn(
+                                                  'h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg',
+                                                  isQuote
+                                                    ? 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600'
+                                                    : 'bg-gradient-to-br from-brand-blue-ghost to-brand-blue-pale text-brand-blue'
+                                                )}
+                                              >
+                                                {isQuote ? <FileText className="h-6 w-6" /> : <Receipt className="h-6 w-6" />}
+                                              </motion.div>
+                                              <span
+                                                className={cn(
+                                                  'px-3 py-1.5 rounded-xl text-xs font-bold border-2 shadow-sm',
+                                                  getStatusColor(invoice.status || 'draft')
+                                                )}
+                                              >
+                                                {getStatusLabel(invoice.status || 'draft')}
+                                              </span>
+                                            </div>
+
+                                            <div className="mb-5">
+                                              <h3 className="text-lg font-black text-gray-900 truncate group-hover:text-brand-blue transition-colors font-display tracking-tight">
+                                                {invoice.invoice_number || 'Brouillon'}
+                                              </h3>
+                                              <p className="text-sm text-gray-500 mt-1.5 font-medium">
+                                                {student ? `${student.first_name} ${student.last_name}` : 'Client inconnu'}
+                                              </p>
+                                            </div>
+
+                                            <div className="space-y-3 text-sm">
+                                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                                <span className="text-gray-500 font-medium">Montant</span>
+                                                <span className="text-lg font-black text-brand-blue font-display">
+                                                  {formatCurrency(Number(invoice.total_amount), invoice.currency || 'EUR')}
+                                                </span>
+                                              </div>
+                                              {invoice.issue_date && (
+                                                <div className="flex items-center justify-between text-xs">
+                                                  <span className="text-gray-400 font-medium">Date d'émission</span>
+                                                  <span className="text-gray-600 font-semibold">{formatDate(invoice.issue_date)}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          <div className="mt-6 pt-5 border-t-2 border-gray-100 flex items-center justify-between">
+                                            {isQuote ? (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-9 text-xs font-semibold hover:text-brand-blue hover:bg-brand-blue-ghost -ml-2 px-3"
+                                                onClick={(e) => {
+                                                  e.preventDefault()
+                                                  convertQuoteMutation.mutate(invoice.id)
+                                                }}
+                                                disabled={convertQuoteMutation.isPending}
+                                              >
+                                                Convertir en facture
+                                              </Button>
+                                            ) : (
+                                              <span className="text-xs text-gray-400 font-medium">Voir les détails</span>
+                                            )}
+                                            <motion.div whileHover={{ x: 2, y: -2 }} transition={{ duration: 0.2 }}>
+                                              <ArrowUpRight className="h-5 w-5 text-gray-300 group-hover:text-brand-blue transition-colors" />
+                                            </motion.div>
+                                          </div>
+                                        </GlassCard>
+                                      </motion.div>
+                                    </Link>
+                                  </motion.div>
+                                )
+                              })}
+                            </AnimatePresence>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )
+                  })}
+                </Accordion>
+              )
+            })()}
+          </GlassCard>
         )}
       </motion.div>
 
-      {/* Section Charges */}
+      {/* Section Charges - Tableau de Bord */}
       <motion.div variants={itemVariants}>
-        <GlassCard variant="default" className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-red-600" />
-              <h3 className="font-bold text-gray-900">Charges de session</h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowChargeForm(true)
-                  setShowChargesSection(true)
-                }}
+        <GlassCard variant="premium" className="p-8 border-2 border-gray-100">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="p-3 rounded-2xl bg-gradient-to-br from-red-50 to-red-100"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ duration: 0.3 }}
               >
-                <Plus className="mr-2 h-4 w-4" />
-                Nouvelle charge
-              </Button>
+                <TrendingDown className="h-6 w-6 text-red-600" />
+              </motion.div>
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight font-display">
+                  Tableau de bord des charges
+                </h2>
+                <p className="text-sm text-gray-500 font-medium mt-1">
+                  Suivez et analysez vos dépenses de session
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowChargeForm(true)
+                    setShowChargesSection(true)
+                  }}
+                  className="h-11 px-5 font-semibold"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nouvelle charge
+                </Button>
+              </motion.div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowChargesSection(!showChargesSection)}
+                className="h-11 w-11"
               >
-                {showChargesSection ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {showChargesSection ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
               </Button>
             </div>
           </div>
 
-          {showChargesSection && (
-            <div className="space-y-4">
-              {showChargeForm && (
-                <div className="border rounded-lg p-6 bg-gray-50">
-                  <h4 className="font-semibold mb-4">Créer une nouvelle charge</h4>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      createChargeMutation.mutate()
-                    }}
-                    className="space-y-4"
-                  >
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Session *</label>
-                      <select
-                        required
-                        value={selectedSessionId}
-                        onChange={(e) => setSelectedSessionId(e.target.value)}
-                        className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                      >
-                        <option value="">Sélectionner une session</option>
-                        {sessions?.map((session: any) => (
-                          <option key={session.id} value={session.id}>
-                            {session.name} ({session.start_date ? new Date(session.start_date).toLocaleDateString('fr-FR') : 'N/A'})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+          {/* Statistiques des charges */}
+          {(() => {
+            const chargesArray = allCharges || []
+            const totalCharges = chargesArray.reduce((sum: number, c: any) => sum + Number(c.amount), 0)
+            const paidCharges = chargesArray.filter((c: any) => c.payment_status === 'paid')
+            const totalPaidCharges = paidCharges.reduce((sum: number, c: any) => sum + Number(c.amount), 0)
+            const pendingCharges = chargesArray.filter((c: any) => c.payment_status === 'pending')
+            const totalPendingCharges = pendingCharges.reduce((sum: number, c: any) => sum + Number(c.amount), 0)
+            const cancelledCharges = chargesArray.filter((c: any) => c.payment_status === 'cancelled')
+            const totalCancelledCharges = cancelledCharges.reduce((sum: number, c: any) => sum + Number(c.amount), 0)
 
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Description *</label>
-                      <input
-                        type="text"
-                        required
-                        value={chargeForm.description}
-                        onChange={(e) => setChargeForm({ ...chargeForm, description: e.target.value })}
-                        className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        placeholder="Ex: Location de salle pour la formation"
-                      />
-                    </div>
+            // Grouper par catégorie
+            const byCategory: Record<string, { name: string; amount: number; count: number }> = {}
+            chargesArray.forEach((c: any) => {
+              const catId = c.category_id || 'uncategorized'
+              const catName = c.charge_categories?.name || 'Non catégorisé'
+              if (!byCategory[catId]) {
+                byCategory[catId] = { name: catName, amount: 0, count: 0 }
+              }
+              byCategory[catId].amount += Number(c.amount)
+              byCategory[catId].count += 1
+            })
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Montant *</label>
-                        <input
-                          type="number"
-                          required
-                          step="0.01"
-                          min="0.01"
-                          value={chargeForm.amount}
-                          onChange={(e) => setChargeForm({ ...chargeForm, amount: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                          placeholder="0.00"
-                        />
+            const categoryData = Object.entries(byCategory).map(([id, data], index) => ({
+              name: data.name,
+              value: Math.round(data.amount),
+              count: data.count,
+              color: ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899'][index % 7],
+            }))
+
+            // Grouper par mois
+            const byMonth: Record<string, number> = {}
+            chargesArray.forEach((c: any) => {
+              if (c.charge_date) {
+                const date = new Date(c.charge_date)
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+                byMonth[monthKey] = (byMonth[monthKey] || 0) + Number(c.amount)
+              }
+            })
+
+            const monthlyChargesData = Object.entries(byMonth)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .slice(-6)
+              .map(([month, amount]) => ({
+                month: new Date(month + '-01').toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
+                amount: Math.round(amount),
+              }))
+
+            return (
+              <>
+                {/* Cartes statistiques */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  {[
+                    {
+                      title: 'Total des charges',
+                      value: formatCurrency(totalCharges, 'EUR'),
+                      count: chargesArray.length,
+                      icon: TrendingDown,
+                      color: 'text-red-600',
+                      bg: 'bg-gradient-to-br from-red-50 to-red-100/50',
+                      borderColor: 'border-red-200',
+                    },
+                    {
+                      title: 'Charges payées',
+                      value: formatCurrency(totalPaidCharges, 'EUR'),
+                      count: paidCharges.length,
+                      icon: CheckCircle,
+                      color: 'text-emerald-600',
+                      bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50',
+                      borderColor: 'border-emerald-200',
+                    },
+                    {
+                      title: 'En attente',
+                      value: formatCurrency(totalPendingCharges, 'EUR'),
+                      count: pendingCharges.length,
+                      icon: AlertCircle,
+                      color: 'text-amber-600',
+                      bg: 'bg-gradient-to-br from-amber-50 to-amber-100/50',
+                      borderColor: 'border-amber-200',
+                    },
+                    {
+                      title: 'Annulées',
+                      value: formatCurrency(totalCancelledCharges, 'EUR'),
+                      count: cancelledCharges.length,
+                      icon: X,
+                      color: 'text-gray-600',
+                      bg: 'bg-gradient-to-br from-gray-50 to-gray-100/50',
+                      borderColor: 'border-gray-200',
+                    },
+                  ].map((stat, index) => (
+                    <motion.div
+                      key={stat.title}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ y: -4, scale: 1.02 }}
+                    >
+                      <div className={cn("p-5 rounded-2xl border-2", stat.borderColor, stat.bg)}>
+                        <div className="flex items-start justify-between mb-3">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {stat.title}
+                          </p>
+                          <div className={cn("p-2 rounded-xl", stat.bg)}>
+                            <stat.icon className={cn("h-4 w-4", stat.color)} />
+                          </div>
+                        </div>
+                        <div className={cn("text-2xl font-black tracking-tight font-display", stat.color)}>
+                          {stat.value}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 font-medium">
+                          {stat.count} charge{stat.count > 1 ? 's' : ''}
+                        </p>
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Devise</label>
-                        <select
-                          value={chargeForm.currency}
-                          onChange={(e) => setChargeForm({ ...chargeForm, currency: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        >
-                          <option value="EUR">EUR</option>
-                          <option value="USD">USD</option>
-                          <option value="XOF">XOF</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Date *</label>
-                        <input
-                          type="date"
-                          required
-                          value={chargeForm.charge_date}
-                          onChange={(e) => setChargeForm({ ...chargeForm, charge_date: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Catégorie</label>
-                        <select
-                          value={chargeForm.category_id}
-                          onChange={(e) => setChargeForm({ ...chargeForm, category_id: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        >
-                          <option value="">Sélectionner une catégorie</option>
-                          {chargeCategories?.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Méthode de paiement</label>
-                        <select
-                          value={chargeForm.payment_method}
-                          onChange={(e) => setChargeForm({ ...chargeForm, payment_method: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        >
-                          <option value="">Non spécifié</option>
-                          <option value="cash">Espèces</option>
-                          <option value="bank_transfer">Virement bancaire</option>
-                          <option value="card">Carte bancaire</option>
-                          <option value="mobile_money">Mobile Money</option>
-                          <option value="check">Chèque</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Statut de paiement</label>
-                        <select
-                          value={chargeForm.payment_status}
-                          onChange={(e) => setChargeForm({ ...chargeForm, payment_status: e.target.value as 'pending' | 'paid' | 'cancelled' })}
-                          className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        >
-                          <option value="pending">En attente</option>
-                          <option value="paid">Payé</option>
-                          <option value="cancelled">Annulé</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Fournisseur</label>
-                      <input
-                        type="text"
-                        value={chargeForm.vendor}
-                        onChange={(e) => setChargeForm({ ...chargeForm, vendor: e.target.value })}
-                        className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        placeholder="Nom du fournisseur/prestataire"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">N° facture fournisseur</label>
-                        <input
-                          type="text"
-                          value={chargeForm.vendor_invoice_number}
-                          onChange={(e) => setChargeForm({ ...chargeForm, vendor_invoice_number: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                          placeholder="N° de facture"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Date facture fournisseur</label>
-                        <input
-                          type="date"
-                          value={chargeForm.vendor_invoice_date}
-                          onChange={(e) => setChargeForm({ ...chargeForm, vendor_invoice_date: e.target.value })}
-                          className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Notes</label>
-                      <textarea
-                        value={chargeForm.notes}
-                        onChange={(e) => setChargeForm({ ...chargeForm, notes: e.target.value })}
-                        rows={3}
-                        className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
-                        placeholder="Notes supplémentaires..."
-                      />
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => {
-                          setShowChargeForm(false)
-                          setSelectedSessionId('')
-                        }}
-                      >
-                        Annuler
-                      </Button>
-                      <Button
-                        type="submit"
-                        className="flex-1"
-                        disabled={createChargeMutation.isPending}
-                      >
-                        {createChargeMutation.isPending ? 'Création...' : 'Créer la charge'}
-                      </Button>
-                    </div>
-                  </form>
+                    </motion.div>
+                  ))}
                 </div>
-              )}
 
-              {!showChargeForm && (
-                <div className="space-y-4">
-                  {isLoadingCharges ? (
-                    <div className="text-center py-8">
-                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
-                      <p className="mt-4 text-muted-foreground">Chargement des charges...</p>
-                    </div>
-                  ) : allCharges && allCharges.length > 0 ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-semibold text-gray-900">
-                          {allCharges.length} charge{allCharges.length > 1 ? 's' : ''} enregistrée{allCharges.length > 1 ? 's' : ''}
-                        </h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowChargeForm(true)}
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Ajouter une charge
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {allCharges.map((charge: any) => {
-                          const session = charge.sessions
-                          const category = charge.charge_categories
-                          const statusColors = {
-                            pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                            paid: 'bg-green-100 text-green-800 border-green-200',
-                            cancelled: 'bg-red-100 text-red-800 border-red-200',
-                          }
-                          return (
-                            <div
-                              key={charge.id}
-                              className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow"
+                {/* Graphiques */}
+                {chargesArray.length > 0 && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {/* Répartition par catégorie */}
+                    {categoryData.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="bg-white/80 rounded-2xl p-6 border border-gray-200"
+                      >
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100">
+                            <Receipt className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900">Répartition par catégorie</h4>
+                            <p className="text-xs text-gray-500">Analyse des dépenses</p>
+                          </div>
+                        </div>
+                        <div className="h-[280px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={categoryData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={90}
+                                paddingAngle={4}
+                                dataKey="value"
+                              >
+                                {categoryData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(value) => formatCurrency(Number(value), 'EUR')}
+                                contentStyle={{
+                                  borderRadius: '12px',
+                                  border: 'none',
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                  padding: '10px 14px',
+                                  fontWeight: '600',
+                                }}
+                              />
+                              <Legend
+                                verticalAlign="bottom"
+                                height={36}
+                                wrapperStyle={{ fontSize: '12px', fontWeight: '500' }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Évolution mensuelle des charges */}
+                    {monthlyChargesData.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="bg-white/80 rounded-2xl p-6 border border-gray-200"
+                      >
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 rounded-xl bg-gradient-to-br from-red-50 to-red-100">
+                            <TrendingDown className="h-5 w-5 text-red-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900">Évolution des charges</h4>
+                            <p className="text-xs text-gray-500">6 derniers mois</p>
+                          </div>
+                        </div>
+                        <div className="h-[280px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={monthlyChargesData}>
+                              <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#E5E7EB" />
+                              <XAxis
+                                dataKey="month"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#6B7280', fontSize: 11, fontWeight: '500' }}
+                                dy={8}
+                              />
+                              <YAxis
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#6B7280', fontSize: 11, fontWeight: '500' }}
+                                dx={-8}
+                              />
+                              <Tooltip
+                                formatter={(value) => formatCurrency(Number(value), 'EUR')}
+                                contentStyle={{
+                                  borderRadius: '12px',
+                                  border: 'none',
+                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                  padding: '10px 14px',
+                                  fontWeight: '600',
+                                }}
+                              />
+                              <Bar
+                                dataKey="amount"
+                                fill="url(#chargeGradient)"
+                                radius={[6, 6, 0, 0]}
+                              />
+                              <defs>
+                                <linearGradient id="chargeGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#EF4444" />
+                                  <stop offset="100%" stopColor="#F97316" />
+                                </linearGradient>
+                              </defs>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+              </>
+            )
+          })()}
+
+          {/* Liste détaillée des charges (dépliable) */}
+          <AnimatePresence>
+            {showChargesSection && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="pt-6 border-t border-gray-200 space-y-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Liste des charges</h3>
+
+                  {showChargeForm && (
+                    <div className="border rounded-xl p-6 bg-gray-50/80 backdrop-blur-sm">
+                      <h4 className="font-semibold mb-4">Créer une nouvelle charge</h4>
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          createChargeMutation.mutate()
+                        }}
+                        className="space-y-4"
+                      >
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Session *</label>
+                          <select
+                            required
+                            value={selectedSessionId}
+                            onChange={(e) => setSelectedSessionId(e.target.value)}
+                            className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                          >
+                            <option value="">Sélectionner une session</option>
+                            {sessions?.map((session: any) => (
+                              <option key={session.id} value={session.id}>
+                                {session.name} ({session.start_date ? new Date(session.start_date).toLocaleDateString('fr-FR') : 'N/A'})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Description *</label>
+                          <input
+                            type="text"
+                            required
+                            value={chargeForm.description}
+                            onChange={(e) => setChargeForm({ ...chargeForm, description: e.target.value })}
+                            className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            placeholder="Ex: Location de salle pour la formation"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Montant *</label>
+                            <input
+                              type="number"
+                              required
+                              step="0.01"
+                              min="0.01"
+                              value={chargeForm.amount}
+                              onChange={(e) => setChargeForm({ ...chargeForm, amount: e.target.value })}
+                              className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                              placeholder="0.00"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Devise</label>
+                            <select
+                              value={chargeForm.currency}
+                              onChange={(e) => setChargeForm({ ...chargeForm, currency: e.target.value })}
+                              className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
                             >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <h5 className="font-semibold text-gray-900">
-                                      {charge.description}
-                                    </h5>
-                                    <span
-                                      className={`px-2 py-1 rounded text-xs font-medium border ${
-                                        statusColors[charge.payment_status as keyof typeof statusColors] || statusColors.pending
-                                      }`}
+                              <option value="EUR">EUR</option>
+                              <option value="USD">USD</option>
+                              <option value="XOF">XOF</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Date *</label>
+                            <input
+                              type="date"
+                              required
+                              value={chargeForm.charge_date}
+                              onChange={(e) => setChargeForm({ ...chargeForm, charge_date: e.target.value })}
+                              className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Catégorie</label>
+                            <select
+                              value={chargeForm.category_id}
+                              onChange={(e) => setChargeForm({ ...chargeForm, category_id: e.target.value })}
+                              className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            >
+                              <option value="">Sélectionner une catégorie</option>
+                              {chargeCategories?.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Méthode de paiement</label>
+                            <select
+                              value={chargeForm.payment_method}
+                              onChange={(e) => setChargeForm({ ...chargeForm, payment_method: e.target.value })}
+                              className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            >
+                              <option value="">Non spécifié</option>
+                              <option value="cash">Espèces</option>
+                              <option value="bank_transfer">Virement bancaire</option>
+                              <option value="card">Carte bancaire</option>
+                              <option value="mobile_money">Mobile Money</option>
+                              <option value="check">Chèque</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Statut de paiement</label>
+                            <select
+                              value={chargeForm.payment_status}
+                              onChange={(e) => setChargeForm({ ...chargeForm, payment_status: e.target.value as 'pending' | 'paid' | 'cancelled' })}
+                              className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            >
+                              <option value="pending">En attente</option>
+                              <option value="paid">Payé</option>
+                              <option value="cancelled">Annulé</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Fournisseur</label>
+                          <input
+                            type="text"
+                            value={chargeForm.vendor}
+                            onChange={(e) => setChargeForm({ ...chargeForm, vendor: e.target.value })}
+                            className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            placeholder="Nom du fournisseur/prestataire"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">N° facture fournisseur</label>
+                            <input
+                              type="text"
+                              value={chargeForm.vendor_invoice_number}
+                              onChange={(e) => setChargeForm({ ...chargeForm, vendor_invoice_number: e.target.value })}
+                              className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                              placeholder="N° de facture"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Date facture fournisseur</label>
+                            <input
+                              type="date"
+                              value={chargeForm.vendor_invoice_date}
+                              onChange={(e) => setChargeForm({ ...chargeForm, vendor_invoice_date: e.target.value })}
+                              className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Notes</label>
+                          <textarea
+                            value={chargeForm.notes}
+                            onChange={(e) => setChargeForm({ ...chargeForm, notes: e.target.value })}
+                            rows={3}
+                            className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                            placeholder="Notes supplémentaires..."
+                          />
+                        </div>
+
+                        <div className="flex space-x-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => {
+                              setShowChargeForm(false)
+                              setSelectedSessionId('')
+                            }}
+                          >
+                            Annuler
+                          </Button>
+                          <Button
+                            type="submit"
+                            className="flex-1"
+                            disabled={createChargeMutation.isPending}
+                          >
+                            {createChargeMutation.isPending ? 'Création...' : 'Créer la charge'}
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {!showChargeForm && (
+                    <div className="space-y-4">
+                      {(() => {
+                        if (isLoadingCharges) {
+                          return (
+                            <div className="text-center py-8">
+                              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                              <p className="mt-4 text-muted-foreground">Chargement des charges...</p>
+                            </div>
+                          )
+                        }
+
+                        if (allCharges && allCharges.length > 0) {
+                          return (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between mb-4">
+                                <p className="text-sm text-gray-600">
+                                  {allCharges.length} charge{allCharges.length > 1 ? 's' : ''} enregistrée{allCharges.length > 1 ? 's' : ''}
+                                </p>
+                                <Button variant="outline" size="sm" onClick={() => setShowChargeForm(true)}>
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Ajouter
+                                </Button>
+                              </div>
+                              <div className="space-y-2">
+                                {allCharges.map((charge: any) => {
+                                  const session = charge.sessions
+                                  const category = charge.charge_categories
+                                  const statusColors = {
+                                    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                                    paid: 'bg-green-100 text-green-800 border-green-200',
+                                    cancelled: 'bg-red-100 text-red-800 border-red-200',
+                                  }
+                                  return (
+                                    <motion.div
+                                      key={charge.id}
+                                      initial={{ opacity: 0, y: 10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      className="border rounded-xl p-4 bg-white hover:shadow-md transition-all duration-200"
                                     >
-                                      {charge.payment_status === 'pending'
-                                        ? 'En attente'
-                                        : charge.payment_status === 'paid'
-                                        ? 'Payé'
-                                        : 'Annulé'}
-                                    </span>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                                    <div>
-                                      <span className="font-medium">Montant:</span>{' '}
-                                      <span className="font-bold text-gray-900">
-                                        {formatCurrency(Number(charge.amount), charge.currency || 'EUR')}
-                                      </span>
-                                    </div>
-                                    {session && (
-                                      <div>
-                                        <span className="font-medium">Session:</span>{' '}
-                                        <span className="text-gray-900">{session.name}</span>
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <h5 className="font-semibold text-gray-900">{charge.description}</h5>
+                                            <span
+                                              className={`px-2 py-1 rounded-lg text-xs font-medium border ${
+                                                statusColors[charge.payment_status as keyof typeof statusColors] || statusColors.pending
+                                              }`}
+                                            >
+                                              {charge.payment_status === 'pending'
+                                                ? 'En attente'
+                                                : charge.payment_status === 'paid'
+                                                ? 'Payé'
+                                                : 'Annulé'}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                            <div>
+                                              <span className="font-medium">Montant:</span>{' '}
+                                              <span className="font-bold text-gray-900">
+                                                {formatCurrency(Number(charge.amount), charge.currency || 'EUR')}
+                                              </span>
+                                            </div>
+                                            {session && (
+                                              <div>
+                                                <span className="font-medium">Session:</span>{' '}
+                                                <span className="text-gray-900">{session.name}</span>
+                                              </div>
+                                            )}
+                                            {category && (
+                                              <div>
+                                                <span className="font-medium">Catégorie:</span>{' '}
+                                                <span className="text-gray-900">{category.name}</span>
+                                              </div>
+                                            )}
+                                            {charge.charge_date && (
+                                              <div>
+                                                <span className="font-medium">Date:</span>{' '}
+                                                <span className="text-gray-900">{formatDate(charge.charge_date)}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {charge.vendor && (
+                                            <div className="mt-2 text-sm text-gray-600">
+                                              <span className="font-medium">Fournisseur:</span>{' '}
+                                              <span className="text-gray-900">{charge.vendor}</span>
+                                            </div>
+                                          )}
+                                          {charge.notes && (
+                                            <div className="mt-2 text-sm text-gray-600">
+                                              <span className="font-medium">Notes:</span>{' '}
+                                              <span className="text-gray-900">{charge.notes}</span>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
-                                    )}
-                                    {category && (
-                                      <div>
-                                        <span className="font-medium">Catégorie:</span>{' '}
-                                        <span className="text-gray-900">{category.name}</span>
-                                      </div>
-                                    )}
-                                    {charge.charge_date && (
-                                      <div>
-                                        <span className="font-medium">Date:</span>{' '}
-                                        <span className="text-gray-900">
-                                          {formatDate(charge.charge_date)}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  {charge.vendor && (
-                                    <div className="mt-2 text-sm text-gray-600">
-                                      <span className="font-medium">Fournisseur:</span>{' '}
-                                      <span className="text-gray-900">{charge.vendor}</span>
-                                    </div>
-                                  )}
-                                  {charge.notes && (
-                                    <div className="mt-2 text-sm text-gray-600">
-                                      <span className="font-medium">Notes:</span>{' '}
-                                      <span className="text-gray-900">{charge.notes}</span>
-                                    </div>
-                                  )}
-                                </div>
+                                    </motion.div>
+                                  )
+                                })}
                               </div>
                             </div>
                           )
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <TrendingDown className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Gérez les charges (dépenses) associées aux sessions de formation.</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => setShowChargeForm(true)}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Ajouter une charge
-                      </Button>
+                        }
+
+                        return (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <TrendingDown className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>Aucune charge enregistrée pour le moment.</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-4"
+                              onClick={() => setShowChargeForm(true)}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Ajouter une charge
+                            </Button>
+                          </div>
+                        )
+                      })()}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </GlassCard>
       </motion.div>
     </motion.div>

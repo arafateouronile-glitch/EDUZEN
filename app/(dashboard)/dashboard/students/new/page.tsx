@@ -7,14 +7,35 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
-import { studentService } from '@/lib/services/student.service'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Building2, Users, Briefcase } from 'lucide-react'
+import { GlassCard } from '@/components/ui/glass-card'
+import { 
+  ArrowLeft, 
+  Building2, 
+  Users, 
+  Briefcase, 
+  UserPlus, 
+  ChevronRight, 
+  User, 
+  Calendar, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  GraduationCap, 
+  Check, 
+  AlertCircle,
+  Sparkles,
+  Shield,
+  Camera,
+  Upload,
+  X
+} from 'lucide-react'
 import Link from 'next/link'
 import { studentSchema, type StudentFormData } from '@/lib/validations/schemas'
-import { usePageAnalytics } from '@/lib/hooks/use-page-analytics'
-import { useCreateStudent } from '@/lib/hooks/use-create-student'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import Image from 'next/image'
 
 export default function NewStudentPage() {
   const router = useRouter()
@@ -22,14 +43,15 @@ export default function NewStudentPage() {
   const { user, isLoading: userLoading, session } = auth
   const supabase = createClient()
 
-  // Tous les hooks doivent être appelés avant les early returns
   const [step, setStep] = useState(1)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   
-  // React Hook Form avec validation Zod
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors, isValid, isDirty },
     setValue,
     trigger,
     watch,
@@ -39,6 +61,7 @@ export default function NewStudentPage() {
     defaultValues: {
       first_name: '',
       last_name: '',
+      photo_url: '',
       date_of_birth: '',
       gender: '',
       email: '',
@@ -65,10 +88,8 @@ export default function NewStudentPage() {
     },
   })
 
-  // État pour le mode de sélection du tuteur
   const [guardianMode, setGuardianMode] = useState<'existing' | 'new'>('new')
   
-  // Récupérer les sessions (remplace les classes)
   const { data: sessions } = useQuery({
     queryKey: ['program-sessions-all', user?.organization_id],
     queryFn: async () => {
@@ -90,7 +111,6 @@ export default function NewStudentPage() {
     enabled: !!user?.organization_id && !userLoading,
   })
 
-  // Récupérer les tuteurs existants
   const { data: existingGuardians } = useQuery({
     queryKey: ['guardians', user?.organization_id],
     queryFn: async () => {
@@ -106,12 +126,9 @@ export default function NewStudentPage() {
     enabled: !!user?.organization_id && !userLoading,
   })
 
-  // Récupérer les organisations (pour sélection)
   const { data: organizations } = useQuery({
     queryKey: ['organizations'],
     queryFn: async () => {
-      // Si l'utilisateur est super admin, récupérer toutes les organisations
-      // Sinon, seulement la sienne
       if (user?.role === 'super_admin') {
         const { data, error } = await supabase
           .from('organizations')
@@ -120,7 +137,6 @@ export default function NewStudentPage() {
         if (error) throw error
         return data || []
       } else {
-        // Pour les autres rôles, seulement leur organisation
         if (!user?.organization_id) return []
         const { data, error } = await supabase
           .from('organizations')
@@ -133,7 +149,6 @@ export default function NewStudentPage() {
     enabled: !userLoading,
   })
 
-  // Récupérer les entités externes (entreprises/organismes)
   const { data: externalEntities } = useQuery({
     queryKey: ['external-entities', user?.organization_id],
     queryFn: async () => {
@@ -150,48 +165,88 @@ export default function NewStudentPage() {
     enabled: !!user?.organization_id && !userLoading,
   })
 
-  // État pour le mode de sélection de l'entreprise
   const [companyMode, setCompanyMode] = useState<'existing' | 'new'>('new')
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setPhotoFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removePhoto = () => {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setValue('photo_url', '')
+  }
 
   const createMutation = useMutation({
     mutationFn: async (data: StudentFormData) => {
-      // Déterminer l'organisation à utiliser
       const targetOrganizationId = data.organization_id || user?.organization_id
       if (!targetOrganizationId) throw new Error('Organization ID manquant')
 
-      // 1. Gérer le tuteur (existant ou nouveau)
+      // Upload photo if exists
+      let uploadedPhotoUrl = data.photo_url
+      if (photoFile) {
+        const fileExt = photoFile.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+        const filePath = `${targetOrganizationId}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('student-photos')
+          .upload(filePath, photoFile)
+
+        if (uploadError) {
+          console.error('Photo upload error:', uploadError)
+          // Continue without photo if upload fails
+        } else {
+          const { data: { publicUrl } } = supabase.storage
+            .from('student-photos')
+            .getPublicUrl(filePath)
+          uploadedPhotoUrl = publicUrl
+        }
+      }
+
       let guardianId: string
       
       if (data.guardian_id && guardianMode === 'existing') {
-        // Utiliser un tuteur existant
         guardianId = data.guardian_id
       } else {
-        // Créer un nouveau tuteur
-        if (!data.guardian_first_name || !data.guardian_last_name || !data.guardian_phone_primary) {
-          throw new Error('Les informations du tuteur sont requises')
-        }
-        
-        const { data: guardian, error: guardianError } = await supabase
-          .from('guardians')
-          .insert({
-            organization_id: targetOrganizationId,
-            first_name: data.guardian_first_name,
-            last_name: data.guardian_last_name,
-            relationship: data.guardian_relationship || 'parent',
-            phone_primary: data.guardian_phone_primary,
-            phone_secondary: data.guardian_phone_secondary || null,
-            email: data.guardian_email || null,
-            address: data.guardian_address || null,
-          })
-          .select()
-          .single()
+        // Create new guardian if info provided, otherwise skip
+        if (data.guardian_first_name && data.guardian_last_name) {
+          const guardianPhonePrimary = (data.guardian_phone_primary ?? '').trim()
+          if (!guardianPhonePrimary) {
+            throw new Error('Téléphone du tuteur obligatoire.')
+          }
 
-        if (guardianError) throw guardianError
-        guardianId = guardian.id
+          const { data: guardian, error: guardianError } = await supabase
+            .from('guardians')
+            .insert({
+              organization_id: targetOrganizationId,
+              first_name: data.guardian_first_name,
+              last_name: data.guardian_last_name,
+              relationship: data.guardian_relationship || 'parent',
+              phone_primary: guardianPhonePrimary,
+              phone_secondary: data.guardian_phone_secondary || null,
+              email: data.guardian_email || null,
+              address: data.guardian_address || null,
+            })
+            .select()
+            .single()
+
+          if (guardianError) throw guardianError
+          guardianId = guardian.id
+        } else {
+          // No guardian created
+          guardianId = ''
+        }
       }
 
-      // 2. Générer un numéro étudiant unique
-      // Récupérer le code de l'organisation
       const { data: organization } = await supabase
         .from('organizations')
         .select('code')
@@ -201,7 +256,6 @@ export default function NewStudentPage() {
       const orgCode = organization?.code || 'EDUZEN'
       const year = new Date().getFullYear().toString().slice(-2)
       
-      // Récupérer le dernier numéro d'élève pour cette organisation et cette année
       const prefix = `${orgCode}${year}`
       const { data: lastStudent } = await supabase
         .from('students')
@@ -212,17 +266,14 @@ export default function NewStudentPage() {
         .limit(1)
         .maybeSingle()
       
-      // Générer le prochain numéro
       let sequence = 1
       if (lastStudent?.student_number) {
-        // Extraire la séquence du dernier numéro
         const lastSequence = parseInt(lastStudent.student_number.slice(-4)) || 0
         sequence = lastSequence + 1
       }
       
       let studentNumber = `${prefix}${String(sequence).padStart(4, '0')}`
       
-      // Double vérification : s'assurer que ce numéro n'existe pas déjà
       const { data: existingCheck } = await supabase
         .from('students')
         .select('id')
@@ -231,7 +282,6 @@ export default function NewStudentPage() {
         .maybeSingle()
       
       if (existingCheck) {
-        // Si le numéro existe encore (cas de course), incrémenter jusqu'à trouver un numéro libre
         let attempts = 0
         while (attempts < 100) {
           sequence++
@@ -245,7 +295,6 @@ export default function NewStudentPage() {
             .maybeSingle()
           
           if (!check) {
-            // Numéro disponible
             break
           }
           attempts++
@@ -256,14 +305,12 @@ export default function NewStudentPage() {
         }
       }
 
-      // 3. Créer l'élève
-      // Note: class_id n'est pas inséré car il fait référence à la table "classes", 
-      // pas aux sessions. L'inscription à la session est gérée via la table "enrollments"
       const studentData: any = {
         organization_id: targetOrganizationId,
         student_number: studentNumber,
         first_name: data.first_name,
         last_name: data.last_name,
+        photo_url: uploadedPhotoUrl || null,
         date_of_birth: data.date_of_birth || null,
         gender: (data.gender as 'male' | 'female' | 'other') || null,
         email: data.email || null,
@@ -271,11 +318,9 @@ export default function NewStudentPage() {
         address: data.address || null,
         city: data.city || null,
         enrollment_date: data.enrollment_date,
-        status: 'active', // Statut par défaut pour un nouvel étudiant
+        status: 'active',
       }
 
-      // Si une entité existante est sélectionnée, créer le rattachement après la création de l'étudiant
-      // Sinon, ajouter les informations d'entreprise dans metadata si fournies
       if (data.entity_id && companyMode === 'existing') {
         // Le rattachement sera créé après la création de l'étudiant
       } else if (data.company_name || data.company_address || data.company_phone || data.company_email || data.company_siret) {
@@ -298,60 +343,46 @@ export default function NewStudentPage() {
 
       if (studentError) {
         console.error('Student creation error:', studentError)
-        console.error('Error details:', {
-          code: studentError.code,
-          message: studentError.message,
-          details: studentError.details,
-          hint: studentError.hint,
-        })
-        
-        // Gérer spécifiquement l'erreur de duplication de numéro d'élève
         if (studentError.code === '23505') {
           throw new Error(
             `Un élève avec le numéro "${studentNumber}" existe déjà dans votre organisation. Veuillez réessayer ou contacter le support.`
           )
         }
-        
-        throw new Error(
-          studentError.message ||
-          'Une erreur est survenue lors de la création de l\'élève'
-        )
+        throw new Error(studentError.message || 'Une erreur est survenue lors de la création de l\'élève')
       }
 
-      // 4. Lier le tuteur à l'élève
-      const { error: linkError } = await supabase
-        .from('student_guardians')
-        .insert({
-          student_id: student.id,
-          guardian_id: guardianId,
-          is_primary: true,
-        })
+      if (guardianId) {
+        const { error: linkError } = await supabase
+          .from('student_guardians')
+          .insert({
+            student_id: student.id,
+            guardian_id: guardianId,
+            is_primary: true,
+          })
 
-      if (linkError) {
-        console.error('Link guardian error:', linkError)
-        throw new Error('Erreur lors de la liaison du tuteur à l\'élève')
+        if (linkError) {
+          console.error('Link guardian error:', linkError)
+          // Non-blocking error
+        }
       }
 
-      // 5. Créer le rattachement à une entité si sélectionnée
       if (data.entity_id && companyMode === 'existing' && user?.id) {
         const { error: entityError } = await supabase
           .from('student_entities')
           .insert({
             student_id: student.id,
             entity_id: data.entity_id,
-            relationship_type: 'apprenticeship', // Par défaut, peut être modifié plus tard
+            relationship_type: 'apprenticeship',
             is_current: true,
             created_by: user.id,
           })
 
         if (entityError) {
           console.error('Entity link error:', entityError)
-          // Ne pas faire échouer la création de l'élève si le rattachement échoue
           console.warn('L\'élève a été créé mais le rattachement à l\'entité a échoué')
         }
       }
 
-      // 6. Créer l'inscription si une session est sélectionnée
       if (data.class_id) {
         const { error: enrollmentError } = await supabase
           .from('enrollments')
@@ -367,8 +398,6 @@ export default function NewStudentPage() {
 
         if (enrollmentError) {
           console.error('Enrollment error:', enrollmentError)
-          // Ne pas faire échouer la création de l'élève si l'inscription échoue
-          // On peut toujours créer l'inscription plus tard
           console.warn('L\'élève a été créé mais l\'inscription à la session a échoué')
         }
       }
@@ -384,774 +413,753 @@ export default function NewStudentPage() {
   })
 
   const onSubmit = async (data: StudentFormData) => {
-    console.log('onSubmit called:', { step, data })
-    
     if (step < 3) {
-      // Valider les champs de l'étape actuelle
-      let fieldsToValidate: (keyof StudentFormData)[] = []
+      // Étape 1 : valider uniquement l'identité
       if (step === 1) {
-        // Étape 1 : Informations personnelles (sans enrollment_date qui est à l'étape 3)
-        fieldsToValidate = ['first_name', 'last_name']
-      } else if (step === 2) {
-        // Étape 2 : Informations du tuteur
-        fieldsToValidate = ['guardian_first_name', 'guardian_last_name', 'guardian_phone_primary']
+        const isValidStep = await trigger(['first_name', 'last_name'])
+        if (isValidStep) setStep(2)
+        return
       }
-      
-      console.log('Validating fields:', fieldsToValidate)
-      const isValidStep = await trigger(fieldsToValidate)
-      console.log('Validation result:', { step, fieldsToValidate, isValidStep, errors })
-      
-      if (isValidStep) {
-        console.log('Validation passed, moving to step', step + 1)
-        setStep(step + 1)
-      } else {
-        console.log('Validation failed for step', step, 'Errors:', errors)
+
+      // Étape 2 : NE DOIT PAS être bloquante
+      if (step === 2) {
+        setStep(3)
+        return
       }
     } else {
       // Dernière étape : soumettre (valider tous les champs requis)
-      console.log('Final step, validating all fields')
-      const allFieldsValid = await trigger(['first_name', 'last_name', 'guardian_first_name', 'guardian_last_name', 'guardian_phone_primary', 'enrollment_date'])
-      if (allFieldsValid) {
-        console.log('All fields valid, creating student')
-        createMutation.mutate(data)
+      const requiredFields: (keyof StudentFormData)[] = ['first_name', 'last_name', 'enrollment_date']
+
+      // Validation tuteur optionnelle
+      if (guardianMode === 'existing') {
+        // Si mode existant sélectionné mais pas d'ID, on ignore (pas de tuteur)
       } else {
-        console.log('Final validation failed, errors:', errors)
+        // Si mode nouveau, on vérifie si des champs sont remplis partiellement
+        const gf = watch('guardian_first_name')
+        const gl = watch('guardian_last_name')
+        const gp = watch('guardian_phone_primary')
+        
+        // Si un champ est rempli, les autres deviennent requis pour la cohérence
+        if (gf || gl || gp) {
+           // Mais pour l'instant on laisse passer, la mutation gérera
+        }
       }
+
+      const allFieldsValid = await trigger(requiredFields)
+      if (!allFieldsValid) {
+        // Si erreur sur step 1, retour step 1
+        const fn = watch('first_name')
+        const ln = watch('last_name')
+        if (!fn || !ln) setStep(1)
+        return
+      }
+
+      createMutation.mutate(data)
     }
   }
 
-  // État pour suivre si l'étape actuelle est valide
-  const [isStepValid, setIsStepValid] = useState(false)
-  
-  // Observer les valeurs spécifiques du formulaire pour valider l'étape
-  const first_name = watch('first_name')
-  const last_name = watch('last_name')
-  const enrollment_date = watch('enrollment_date')
-  const guardian_first_name = watch('guardian_first_name')
-  const guardian_last_name = watch('guardian_last_name')
-  const guardian_phone_primary = watch('guardian_phone_primary')
-
-  // Valider l'étape actuelle quand les champs changent
-  const validateCurrentStep = async () => {
-    try {
-      if (step === 1) {
-        // Étape 1 : Seulement prénom et nom (enrollment_date est à l'étape 3)
-        const isValid = await trigger(['first_name', 'last_name'])
-        setIsStepValid(isValid)
-        return isValid
-      }
-      if (step === 2) {
-        const isValid = await trigger(['guardian_first_name', 'guardian_last_name', 'guardian_phone_primary'])
-        setIsStepValid(isValid)
-        return isValid
-      }
-      // Étape 3 : Valider tous les champs requis
-      if (step === 3) {
-        const isValid = await trigger(['enrollment_date'])
-        setIsStepValid(isValid)
-        return isValid
-      }
-      setIsStepValid(true)
-      return true
-    } catch (error) {
-      console.error('Validation error:', error)
-      setIsStepValid(false)
-      return false
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
     }
   }
 
-  // Valider l'étape quand elle change ou quand les valeurs pertinentes changent
-  useEffect(() => {
-    validateCurrentStep()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, first_name, last_name, enrollment_date, guardian_first_name, guardian_last_name, guardian_phone_primary])
-  
-  // Valider aussi au montage initial
-  useEffect(() => {
-    if (step === 1) {
-      validateCurrentStep()
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }
 
-  // Early returns après tous les hooks
   if (userLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Chargement...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50/50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
       </div>
     )
   }
 
-  if (!user) {
+  if (!user || !user.organization_id) {
     return (
-      <div className="space-y-6">
-        <div className="bg-warning-bg border border-warning-border rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-warning-primary mb-2">
-            Utilisateur non trouvé
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-md text-center">
+          <AlertCircle className="h-10 w-10 text-red-600 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-red-800 mb-2">
+            Organisation manquante
           </h2>
-          <p className="text-warning-primary mb-4">
-            Votre compte n'existe pas encore dans la base de données. Cela peut arriver si votre compte a été créé récemment.
+          <p className="text-red-700">
+            Votre compte n'est pas associé à une organisation. Veuillez contacter le support.
           </p>
-          <div className="mt-4 space-y-2">
-            <p className="text-sm text-warning-primary">
-              Session ID : {session?.user?.id || 'Non défini'}
-            </p>
-            <p className="text-sm text-warning-primary">
-              Email de session : {session?.user?.email || 'Non défini'}
-            </p>
-            <p className="text-sm text-warning-primary mt-4">
-              <strong>Solution :</strong> Déconnectez-vous et créez un nouveau compte via <Link href="/auth/register" className="text-primary underline">/auth/register</Link>
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user.organization_id) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-red-800 mb-2">
-            Organization ID manquant
-          </h2>
-          <p className="text-red-700 mb-4">
-            Votre compte n'est pas associé à une organisation. Suivez les étapes ci-dessous pour corriger cela.
-          </p>
-          <div className="mt-4 space-y-2">
-            <p className="text-sm text-red-600">
-              User ID : {user.id || 'Non défini'}
-            </p>
-            <p className="text-sm text-red-600">
-              Email : {user.email || 'Non défini'}
-            </p>
-            <div className="mt-4 p-3 bg-gray-50 rounded">
-              <p className="text-sm font-semibold mb-2">Pour corriger :</p>
-              <ol className="text-sm text-gray-700 list-decimal list-inside space-y-1">
-                <li>Allez dans le SQL Editor de Supabase</li>
-                <li>Exécutez le script dans <code className="bg-gray-200 px-1 rounded">supabase/fix_missing_organization.sql</code></li>
-                <li>Ou créez un nouveau compte via <Link href="/auth/register" className="text-primary underline">/auth/register</Link></li>
-              </ol>
-            </div>
-          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/dashboard/students">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nouvel élève</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Inscrivez un nouvel élève en quelques étapes
-          </p>
-        </div>
+    <motion.div 
+      className="min-h-screen pb-24 relative"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Background Decor */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-blue/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-brand-cyan/5 rounded-full blur-3xl" />
       </div>
 
-      {/* Progress bar */}
-      <div className="flex items-center space-x-2">
-        {[1, 2, 3].map((s) => (
-          <div key={s} className="flex-1 flex items-center">
-            <div
-              className={`flex-1 h-2 rounded ${
-                step >= s ? 'bg-primary' : 'bg-gray-200'
-              }`}
-            />
-            {s < 3 && (
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  step > s ? 'bg-primary' : 'bg-gray-200'
-                }`}
-              />
-            )}
+      {/* Header */}
+      <motion.div variants={itemVariants} className="mb-8 space-y-4">
+        <nav className="flex items-center text-sm text-gray-500 mb-4">
+          <Link href="/dashboard/students" className="hover:text-brand-blue transition-colors flex items-center gap-1">
+            <Users className="h-4 w-4" />
+            Élèves
+          </Link>
+          <ChevronRight className="h-4 w-4 mx-2 text-gray-300" />
+          <span className="text-brand-blue font-medium bg-brand-blue/10 px-2 py-0.5 rounded-full text-xs">Nouveau</span>
+        </nav>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard/students">
+              <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white/50">
+                <ArrowLeft className="h-5 w-5 text-gray-500" />
+              </Button>
+            </Link>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="p-2 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-lg shadow-lg shadow-brand-blue/20">
+                  <UserPlus className="h-6 w-6 text-white" />
+                </div>
+                <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">
+                  Nouvel élève
+                </h1>
+              </div>
+              <p className="text-gray-500 pl-[3.25rem]">
+                Inscrivez un nouvel élève en suivant les étapes.
+              </p>
+            </div>
           </div>
-        ))}
-        <div className="ml-4 text-sm text-muted-foreground">
-          Étape {step} sur 3
         </div>
-      </div>
+      </motion.div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {step === 1 && 'Informations personnelles'}
-            {step === 2 && 'Rattachement (Tuteur, Organisation, Entreprise)'}
-            {step === 3 && 'Informations académiques'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Progress Steps */}
+          <motion.div variants={itemVariants}>
+            <GlassCard className="p-4">
+              <div className="flex items-center justify-between">
+                {[1, 2, 3].map((s) => (
+                  <div key={s} className="flex flex-col items-center relative z-10 w-1/3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 mb-2",
+                      step >= s 
+                        ? "bg-brand-blue text-white shadow-lg shadow-brand-blue/30 scale-110" 
+                        : "bg-gray-100 text-gray-400"
+                    )}>
+                      {step > s ? <Check className="h-5 w-5" /> : s}
+                    </div>
+                    <span className={cn(
+                      "text-xs font-medium transition-colors duration-300",
+                      step >= s ? "text-brand-blue" : "text-gray-400"
+                    )}>
+                      {s === 1 && 'Personnel'}
+                      {s === 2 && 'Rattachement'}
+                      {s === 3 && 'Académique'}
+                    </span>
+                    {s < 3 && (
+                      <div className="absolute top-5 left-1/2 w-full h-[2px] -z-10 bg-gray-100">
+                        <div 
+                          className="h-full bg-brand-blue transition-all duration-500 ease-out"
+                          style={{ width: step > s ? '100%' : '0%' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          </motion.div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {step === 1 && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Prénom *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      {...register('first_name')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.first_name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Nom *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      {...register('last_name')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.last_name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Date de naissance
-                    </label>
-                    <input
-                      type="date"
-                      {...register('date_of_birth')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.date_of_birth && (
-                      <p className="text-red-500 text-sm mt-1">{errors.date_of_birth.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Genre</label>
-                    <select
-                      {...register('gender')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    >
-                      <option value="">Sélectionner</option>
-                      <option value="male">Masculin</option>
-                      <option value="female">Féminin</option>
-                      <option value="other">Autre</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Email</label>
-                    <input
-                      type="email"
-                      {...register('email')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.email && (
-                      <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Téléphone</label>
-                    <input
-                      type="tel"
-                      {...register('phone')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
-                    {errors.phone && (
-                      <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Adresse</label>
-                  <input
-                    type="text"
-                    {...register('address')}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  />
-                  {errors.address && (
-                    <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Ville</label>
-                  <input
-                    type="text"
-                    {...register('city')}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  />
-                  {errors.city && (
-                    <p className="text-red-500 text-sm mt-1">{errors.city.message}</p>
-                  )}
-                </div>
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                {/* Section Tuteur */}
-                <div className="space-y-4 border-b pb-6">
-                  <h3 className="text-lg font-semibold">Tuteur / Responsable</h3>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Mode de sélection
-                    </label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          value="existing"
-                          checked={guardianMode === 'existing'}
-                          onChange={(e) => {
-                            setGuardianMode(e.target.value as 'existing' | 'new')
-                            setValue('guardian_id', '')
-                            setValue('guardian_first_name', '')
-                            setValue('guardian_last_name', '')
-                            setValue('guardian_phone_primary', '')
-                          }}
-                          className="w-4 h-4"
-                        />
-                        <span>Sélectionner un tuteur existant</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          value="new"
-                          checked={guardianMode === 'new'}
-                          onChange={(e) => {
-                            setGuardianMode(e.target.value as 'existing' | 'new')
-                            setValue('guardian_id', '')
-                          }}
-                          className="w-4 h-4"
-                        />
-                        <span>Créer un nouveau tuteur</span>
-                      </label>
+            <AnimatePresence mode="wait">
+              {step === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <GlassCard variant="premium" className="p-8 space-y-6">
+                    <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
+                      <User className="h-5 w-5 text-brand-blue" />
+                      <h2 className="text-xl font-bold text-gray-900">Informations personnelles</h2>
                     </div>
-                  </div>
 
-                  {guardianMode === 'existing' ? (
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Tuteur existant *
-                      </label>
-                      <select
-                        {...register('guardian_id')}
-                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                      >
-                        <option value="">Sélectionner un tuteur</option>
-                        {existingGuardians?.map((guardian: any) => (
-                          <option key={guardian.id} value={guardian.id}>
-                            {guardian.first_name} {guardian.last_name} - {guardian.phone_primary}
-                            {guardian.email && ` (${guardian.email})`}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.guardian_id && (
-                        <p className="text-red-500 text-sm mt-1">{errors.guardian_id.message}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Prénom du tuteur *
-                          </label>
-                          <input
-                            type="text"
-                            {...register('guardian_first_name')}
-                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                          />
-                          {errors.guardian_first_name && (
-                            <p className="text-red-500 text-sm mt-1">{errors.guardian_first_name.message}</p>
+                    {/* Photo Upload */}
+                    <div className="flex flex-col items-center justify-center p-6 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200 hover:border-brand-blue/50 transition-colors">
+                      <div className="relative group cursor-pointer">
+                        <div className={cn(
+                          "w-32 h-32 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-md border-4 border-white transition-all group-hover:scale-105",
+                          !photoPreview && "bg-gray-100"
+                        )}>
+                          {photoPreview ? (
+                            <Image 
+                              src={photoPreview} 
+                              alt="Aperçu" 
+                              width={128} 
+                              height={128} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Camera className="h-10 w-10 text-gray-400" />
                           )}
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Nom du tuteur *
-                          </label>
-                          <input
-                            type="text"
-                            {...register('guardian_last_name')}
-                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                          />
-                          {errors.guardian_last_name && (
-                            <p className="text-red-500 text-sm mt-1">{errors.guardian_last_name.message}</p>
+                        
+                        <label htmlFor="photo-upload" className="absolute bottom-0 right-0 p-2 bg-brand-blue text-white rounded-full shadow-lg cursor-pointer hover:bg-brand-blue-dark transition-colors">
+                          <Upload className="h-4 w-4" />
+                        </label>
+                        <input 
+                          id="photo-upload" 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handlePhotoChange}
+                        />
+
+                        {photoPreview && (
+                          <button
+                            type="button"
+                            onClick={removePhoto}
+                            className="absolute top-0 right-0 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      <p className="mt-3 text-sm text-gray-500 font-medium">Photo de profil</p>
+                      <p className="text-xs text-gray-400">JPG, PNG ou WEBP (Max 2Mo)</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Prénom *</label>
+                        <input
+                          type="text"
+                          {...register('first_name')}
+                          className={cn(
+                            "w-full px-4 py-3 bg-white/50 border rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all",
+                            errors.first_name ? "border-red-500" : "border-gray-200"
                           )}
+                          placeholder="Jean"
+                        />
+                        {errors.first_name && <p className="text-sm text-red-500">{errors.first_name.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Nom *</label>
+                        <input
+                          type="text"
+                          {...register('last_name')}
+                          className={cn(
+                            "w-full px-4 py-3 bg-white/50 border rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all",
+                            errors.last_name ? "border-red-500" : "border-gray-200"
+                          )}
+                          placeholder="Dupont"
+                        />
+                        {errors.last_name && <p className="text-sm text-red-500">{errors.last_name.message}</p>}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Date de naissance</label>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            {...register('date_of_birth')}
+                            className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                          />
                         </div>
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Lien de parenté
-                        </label>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Genre</label>
                         <select
-                          {...register('guardian_relationship')}
-                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                          {...register('gender')}
+                          className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none"
                         >
-                          <option value="parent">Parent</option>
-                          <option value="father">Père</option>
-                          <option value="mother">Mère</option>
-                          <option value="guardian">Tuteur</option>
+                          <option value="">Sélectionner</option>
+                          <option value="male">Masculin</option>
+                          <option value="female">Féminin</option>
                           <option value="other">Autre</option>
                         </select>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Téléphone principal *
-                          </label>
-                          <input
-                            type="tel"
-                            {...register('guardian_phone_primary')}
-                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                          />
-                          {errors.guardian_phone_primary && (
-                            <p className="text-red-500 text-sm mt-1">{errors.guardian_phone_primary.message}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Téléphone secondaire
-                          </label>
-                          <input
-                            type="tel"
-                            {...register('guardian_phone_secondary')}
-                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Email du tuteur
-                        </label>
-                        <input
-                          type="email"
-                          {...register('guardian_email')}
-                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                        />
-                        {errors.guardian_email && (
-                          <p className="text-red-500 text-sm mt-1">{errors.guardian_email.message}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Adresse du tuteur
-                        </label>
-                        <input
-                          type="text"
-                          {...register('guardian_address')}
-                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Section Organisation */}
-                {organizations && organizations.length > 1 && (
-                  <div className="space-y-4 border-b pb-6 pt-6">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-brand-blue" />
-                      Organisation
-                    </h3>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Organisation
-                      </label>
-                      <select
-                        {...register('organization_id')}
-                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                      >
-                        <option value="">Organisation actuelle (Par défaut)</option>
-                        {organizations
-                          .filter((org: any) => org.id !== user?.organization_id)
-                          .map((org: any) => (
-                            <option key={org.id} value={org.id}>
-                              {org.name} ({org.code})
-                            </option>
-                          ))}
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Laisser vide pour utiliser votre organisation actuelle
-                      </p>
                     </div>
-                  </div>
-                )}
 
-                {/* Section Entreprise */}
-                <div className="space-y-4 pt-6">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Briefcase className="h-5 w-5 text-brand-blue" />
-                    Entreprise / Organisme (Optionnel)
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    Renseignez ces informations si l'apprenant est en alternance ou rattaché à une entreprise/organisme
-                  </p>
-                  
-                  {/* Mode de sélection */}
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Mode de sélection
-                    </label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          value="existing"
-                          checked={companyMode === 'existing'}
-                          onChange={(e) => {
-                            setCompanyMode(e.target.value as 'existing' | 'new')
-                            setValue('entity_id', '')
-                            setValue('company_name', '')
-                            setValue('company_address', '')
-                            setValue('company_phone', '')
-                            setValue('company_email', '')
-                            setValue('company_siret', '')
-                          }}
-                          className="w-4 h-4"
-                        />
-                        <span>Sélectionner une entité existante</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          value="new"
-                          checked={companyMode === 'new'}
-                          onChange={(e) => {
-                            setCompanyMode(e.target.value as 'existing' | 'new')
-                            setValue('entity_id', '')
-                          }}
-                          className="w-4 h-4"
-                        />
-                        <span>Saisir manuellement</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {companyMode === 'existing' ? (
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Entreprise / Organisme
-                      </label>
-                      <select
-                        {...register('entity_id')}
-                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                      >
-                        <option value="">Sélectionner une entité</option>
-                        {externalEntities?.map((entity: any) => (
-                          <option key={entity.id} value={entity.id}>
-                            {entity.name} {entity.siret && `(SIRET: ${entity.siret})`}
-                          </option>
-                        ))}
-                      </select>
-                      {externalEntities && externalEntities.length === 0 && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Aucune entité disponible. <Link href="/dashboard/entities" className="text-primary underline">Créer une entité</Link>
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Nom de l'entreprise
-                        </label>
-                        <input
-                          type="text"
-                          {...register('company_name')}
-                          placeholder="Raison sociale"
-                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Adresse de l'entreprise
-                        </label>
-                        <input
-                          type="text"
-                          {...register('company_address')}
-                          placeholder="Adresse complète"
-                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Téléphone
-                          </label>
-                          <input
-                            type="tel"
-                            {...register('company_phone')}
-                            placeholder="Téléphone"
-                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Email
-                          </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Email</label>
+                        <div className="relative">
                           <input
                             type="email"
-                            {...register('company_email')}
-                            placeholder="Email"
-                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                            {...register('email')}
+                            className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                            placeholder="jean.dupont@email.com"
                           />
-                          {errors.company_email && (
-                            <p className="text-red-500 text-sm mt-1">{errors.company_email.message}</p>
-                          )}
+                          <Mail className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Téléphone</label>
+                        <div className="relative">
+                          <input
+                            type="tel"
+                            {...register('phone')}
+                            className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                            placeholder="+225 ..."
+                          />
+                          <Phone className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Adresse complète</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          {...register('address')}
+                          className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                          placeholder="Quartier, Rue, Porte..."
+                        />
+                        <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Ville</label>
+                      <input
+                        type="text"
+                        {...register('city')}
+                        className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                        placeholder="Abidjan"
+                      />
+                    </div>
+                  </GlassCard>
+                </motion.div>
+              )}
+
+              {step === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  {/* Tuteur */}
+                  <GlassCard variant="default" className="p-8 space-y-6">
+                    <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
+                      <Shield className="h-5 w-5 text-purple-600" />
+                      <h2 className="text-xl font-bold text-gray-900">Tuteur / Responsable</h2>
+                    </div>
+
+                    <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                      <div className="flex gap-6">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <div className={cn(
+                            "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+                            guardianMode === 'existing' ? "border-brand-blue bg-brand-blue" : "border-gray-300 group-hover:border-brand-blue"
+                          )}>
+                            {guardianMode === 'existing' && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <input
+                            type="radio"
+                            value="existing"
+                            checked={guardianMode === 'existing'}
+                            onChange={(e) => {
+                              setGuardianMode(e.target.value as 'existing' | 'new')
+                              setValue('guardian_id', '')
+                              setValue('guardian_first_name', '')
+                              setValue('guardian_last_name', '')
+                              setValue('guardian_phone_primary', '')
+                            }}
+                            className="hidden"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Sélectionner un tuteur existant</span>
+                        </label>
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <div className={cn(
+                            "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+                            guardianMode === 'new' ? "border-brand-blue bg-brand-blue" : "border-gray-300 group-hover:border-brand-blue"
+                          )}>
+                            {guardianMode === 'new' && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <input
+                            type="radio"
+                            value="new"
+                            checked={guardianMode === 'new'}
+                            onChange={(e) => {
+                              setGuardianMode(e.target.value as 'existing' | 'new')
+                              setValue('guardian_id', '')
+                            }}
+                            className="hidden"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Créer un nouveau tuteur</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {guardianMode === 'existing' ? (
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Tuteur existant *</label>
+                        <select
+                          {...register('guardian_id')}
+                          className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none"
+                        >
+                          <option value="">Sélectionner un tuteur</option>
+                          {existingGuardians?.map((guardian: any) => (
+                            <option key={guardian.id} value={guardian.id}>
+                              {guardian.first_name} {guardian.last_name} - {guardian.phone_primary}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.guardian_id && <p className="text-sm text-red-500">{errors.guardian_id.message}</p>}
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Prénom du tuteur</label>
+                            <input
+                              type="text"
+                              {...register('guardian_first_name')}
+                              className={cn(
+                                "w-full px-4 py-3 bg-white/50 border rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all",
+                                errors.guardian_first_name ? "border-red-500" : "border-gray-200"
+                              )}
+                            />
+                            {errors.guardian_first_name && <p className="text-sm text-red-500">{errors.guardian_first_name.message}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Nom du tuteur</label>
+                            <input
+                              type="text"
+                              {...register('guardian_last_name')}
+                              className={cn(
+                                "w-full px-4 py-3 bg-white/50 border rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all",
+                                errors.guardian_last_name ? "border-red-500" : "border-gray-200"
+                              )}
+                            />
+                            {errors.guardian_last_name && <p className="text-sm text-red-500">{errors.guardian_last_name.message}</p>}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Lien de parenté</label>
+                            <select
+                              {...register('guardian_relationship')}
+                              className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none"
+                            >
+                              <option value="parent">Parent</option>
+                              <option value="father">Père</option>
+                              <option value="mother">Mère</option>
+                              <option value="guardian">Tuteur</option>
+                              <option value="other">Autre</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Téléphone principal</label>
+                            <input
+                              type="tel"
+                              {...register('guardian_phone_primary')}
+                              className={cn(
+                                "w-full px-4 py-3 bg-white/50 border rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all",
+                                errors.guardian_phone_primary ? "border-red-500" : "border-gray-200"
+                              )}
+                            />
+                            {errors.guardian_phone_primary && <p className="text-sm text-red-500">{errors.guardian_phone_primary.message}</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </GlassCard>
+
+                  {/* Entreprise */}
+                  <GlassCard variant="default" className="p-8 space-y-6">
+                    <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
+                      <Briefcase className="h-5 w-5 text-brand-cyan" />
+                      <h2 className="text-xl font-bold text-gray-900">Entreprise / Organisme (Optionnel)</h2>
+                    </div>
+
+                    <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                      <div className="flex gap-6">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <div className={cn(
+                            "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+                            companyMode === 'existing' ? "border-brand-blue bg-brand-blue" : "border-gray-300 group-hover:border-brand-blue"
+                          )}>
+                            {companyMode === 'existing' && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <input
+                            type="radio"
+                            value="existing"
+                            checked={companyMode === 'existing'}
+                            onChange={(e) => {
+                              setCompanyMode(e.target.value as 'existing' | 'new')
+                              setValue('entity_id', '')
+                              setValue('company_name', '')
+                            }}
+                            className="hidden"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Entité existante</span>
+                        </label>
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                          <div className={cn(
+                            "w-5 h-5 rounded-full border flex items-center justify-center transition-colors",
+                            companyMode === 'new' ? "border-brand-blue bg-brand-blue" : "border-gray-300 group-hover:border-brand-blue"
+                          )}>
+                            {companyMode === 'new' && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <input
+                            type="radio"
+                            value="new"
+                            checked={companyMode === 'new'}
+                            onChange={(e) => {
+                              setCompanyMode(e.target.value as 'existing' | 'new')
+                              setValue('entity_id', '')
+                            }}
+                            className="hidden"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Saisie manuelle</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {companyMode === 'existing' ? (
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Sélectionner une entité</label>
+                        <select
+                          {...register('entity_id')}
+                          className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none"
+                        >
+                          <option value="">Sélectionner...</option>
+                          {externalEntities?.map((entity: any) => (
+                            <option key={entity.id} value={entity.id}>
+                              {entity.name} {entity.siret && `(SIRET: ${entity.siret})`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold text-gray-700">Nom de l'entreprise</label>
+                          <input
+                            type="text"
+                            {...register('company_name')}
+                            className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                            placeholder="Raison sociale"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold text-gray-700">SIRET</label>
+                          <input
+                            type="text"
+                            {...register('company_siret')}
+                            maxLength={14}
+                            className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                            placeholder="14 chiffres"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </GlassCard>
+                </motion.div>
+              )}
+
+              {step === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <GlassCard variant="premium" className="p-8 space-y-6">
+                    <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
+                      <GraduationCap className="h-5 w-5 text-brand-blue" />
+                      <h2 className="text-xl font-bold text-gray-900">Informations académiques</h2>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Session de formation</label>
+                        <div className="relative">
+                          <select
+                            {...register('class_id')}
+                            className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none"
+                          >
+                            <option value="">Sélectionner une session</option>
+                            {sessions?.map((session) => (
+                              <option key={session.id} value={session.id}>
+                                {session.name}
+                              </option>
+                            ))}
+                          </select>
+                          <Calendar className="absolute right-3 top-3.5 h-4 w-4 text-gray-400 pointer-events-none" />
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          N° SIRET
-                        </label>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Date d'inscription *</label>
                         <input
-                          type="text"
-                          {...register('company_siret')}
-                          placeholder="14 chiffres"
-                          maxLength={14}
-                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                          type="date"
+                          {...register('enrollment_date')}
+                          className={cn(
+                            "w-full px-4 py-3 bg-white/50 border rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all",
+                            errors.enrollment_date ? "border-red-500" : "border-gray-200"
+                          )}
                         />
+                        {errors.enrollment_date && <p className="text-sm text-red-500">{errors.enrollment_date.message}</p>}
                       </div>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
+                    </div>
 
-            {step === 3 && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Session
-                  </label>
-                  <select
-                    {...register('class_id')}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  >
-                    <option value="">Sélectionner une session</option>
-                    {sessions?.map((session) => (
-                      <option key={session.id} value={session.id}>
-                        {session.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 flex gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg h-fit">
+                        <Sparkles className="h-4 w-4 text-brand-blue" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-brand-blue text-sm mb-1">Résumé de l'inscription</h4>
+                        <p className="text-xs text-blue-700/80">
+                          Un numéro d'étudiant unique sera généré automatiquement lors de la création.
+                          L'étudiant recevra un email de bienvenue si son adresse email a été renseignée.
+                        </p>
+                      </div>
+                    </div>
+                  </GlassCard>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
+            {createMutation.error && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-50 text-red-600 px-4 py-3 rounded-xl text-sm border border-red-100 flex items-start gap-2"
+              >
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Date d'inscription
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    {...register('enrollment_date')}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  />
-                  {errors.enrollment_date && (
-                    <p className="text-red-500 text-sm mt-1">{errors.enrollment_date.message}</p>
-                  )}
+                  <p className="font-semibold">Erreur lors de la création</p>
+                  <p className="opacity-90">
+                    {createMutation.error instanceof Error ? createMutation.error.message : 'Une erreur est survenue'}
+                  </p>
                 </div>
-              </>
+              </motion.div>
             )}
 
             <div className="flex justify-between pt-4">
-              {step > 1 && (
+              {step > 1 ? (
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setStep(step - 1)}
+                  className="bg-white hover:bg-gray-50 border-gray-200"
                 >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
                   Précédent
                 </Button>
+              ) : (
+                <div /> // Spacer
               )}
-              <div className="ml-auto">
-                <Button
-                  type="button"
-                  onClick={async (e) => {
-                    e.preventDefault()
-                    console.log('Button clicked manually, step:', step)
-                    const formData = watch()
-                    console.log('Current form data:', formData)
-                    
-                    // Valider et passer à l'étape suivante
-                    if (step === 1) {
-                      const isValid = await trigger(['first_name', 'last_name'])
-                      console.log('Step 1 validation:', isValid, 'Errors:', errors)
-                      if (isValid) {
-                        console.log('Moving to step 2')
-                        setStep(2)
-                      }
-                    } else if (step === 2) {
-                      const isValid = await trigger(['guardian_first_name', 'guardian_last_name', 'guardian_phone_primary'])
-                      console.log('Step 2 validation:', isValid, 'Errors:', errors)
-                      if (isValid) {
-                        console.log('Moving to step 3')
-                        setStep(3)
-                      }
-                    } else {
-                      // Étape 3 : soumettre le formulaire
-                      await handleSubmit(onSubmit)(e as any)
-                    }
-                  }}
-                  disabled={createMutation.isPending}
-                >
-                  {step < 3
-                    ? 'Suivant'
-                    : createMutation.isPending
-                    ? 'Création...'
-                    : 'Créer l\'élève'}
-                </Button>
-              </div>
-            </div>
-
-            {createMutation.error && (
-              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg text-sm space-y-1">
-                <p className="font-semibold">Erreur lors de la création de l'élève :</p>
-                <p>
-                  {createMutation.error instanceof Error
-                    ? createMutation.error.message
-                    : 'Une erreur est survenue'}
-                </p>
-                {createMutation.error && 'code' in createMutation.error && (
-                  <p className="text-xs opacity-75">
-                    Code d'erreur: {String(createMutation.error.code)}
-                    {createMutation.error.code === '23505' && (
-                      <span className="block mt-1">
-                        ❌ Un élève avec ce numéro existe déjà. Le système va générer automatiquement un numéro unique lors de la prochaine tentative.
-                      </span>
-                    )}
-                  </p>
+              
+              <Button
+                type="button"
+                onClick={async (e) => {
+                  e.preventDefault()
+                  const formData = watch()
+                  
+                  if (step === 1) {
+                    const isValid = await trigger(['first_name', 'last_name'])
+                    if (isValid) setStep(2)
+                  } else if (step === 2) {
+                    setStep(3)
+                  } else {
+                    await handleSubmit(onSubmit)(e as any)
+                  }
+                }}
+                disabled={createMutation.isPending}
+                className="bg-gradient-to-r from-brand-blue to-brand-blue-dark hover:from-brand-blue-dark hover:to-brand-blue-darker text-white shadow-lg shadow-brand-blue/25 transition-all hover:scale-[1.02]"
+              >
+                {step < 3 ? (
+                  <>
+                    Suivant
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </>
+                ) : createMutation.isPending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Créer l'élève
+                  </>
                 )}
-              </div>
-            )}
+              </Button>
+            </div>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        {/* Sidebar Tips */}
+        <div className="space-y-6">
+          <motion.div variants={itemVariants} className="sticky top-6 space-y-6">
+            <GlassCard className="p-6 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <Sparkles className="h-5 w-5 text-brand-cyan" />
+                <h3 className="font-bold text-gray-900">Conseils</h3>
+              </div>
+              <ul className="space-y-3 text-sm text-gray-600">
+                <li className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand-blue mt-1.5 shrink-0" />
+                  Assurez-vous que les informations de contact (email/téléphone) sont correctes pour les notifications.
+                </li>
+                <li className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand-blue mt-1.5 shrink-0" />
+                  Le numéro d'étudiant est généré automatiquement selon le format de votre organisation.
+                </li>
+                <li className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand-blue mt-1.5 shrink-0" />
+                  La photo de profil est optionnelle mais recommandée pour l'identification.
+                </li>
+              </ul>
+            </GlassCard>
+
+            <GlassCard variant="subtle" className="p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Shield className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900 text-sm">Données sécurisées</h4>
+                  <p className="text-xs text-gray-500">Conforme RGPD</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Les données personnelles collectées sont strictement confidentielles et utilisées uniquement pour la gestion administrative et pédagogique.
+              </p>
+            </GlassCard>
+          </motion.div>
+        </div>
+      </div>
+    </motion.div>
   )
 }
-
