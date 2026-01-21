@@ -174,13 +174,33 @@ export default function LearnerProfilePage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header avec photo */}
+      {/* Header avec photo Premium */}
       <motion.div variants={itemVariants}>
-        <GlassCard variant="premium" className="p-6 md:p-8 bg-gradient-to-r from-brand-blue/5 via-brand-cyan-ghost/50 to-brand-cyan-pale/30">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Photo */}
+        <GlassCard variant="premium" className="p-6 md:p-8 relative overflow-hidden">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 via-indigo-50/30 to-purple-50/20" />
+
+          {/* Floating orbs */}
+          <motion.div
+            animate={{ y: [0, -10, 0], x: [0, 5, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-10 -right-10 w-40 h-40 bg-brand-blue/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, 10, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl"
+          />
+
+          <div className="relative flex flex-col md:flex-row items-center gap-6">
+            {/* Photo avec ring animé */}
             <div className="relative">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-brand-blue to-indigo-600 flex items-center justify-center text-white text-3xl md:text-4xl font-bold shadow-xl">
+              <motion.div
+                className="absolute -inset-1 bg-gradient-to-r from-brand-blue via-indigo-500 to-purple-600 rounded-full opacity-75"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              />
+              <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-brand-blue to-indigo-600 flex items-center justify-center text-white text-3xl md:text-4xl font-bold shadow-xl">
                 {studentData?.photo_url ? (
                   <img
                     src={studentData.photo_url}
@@ -193,9 +213,13 @@ export default function LearnerProfilePage() {
                   </>
                 )}
               </div>
-              <button className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors">
-                <Camera className="h-4 w-4 text-gray-600" />
-              </button>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="absolute bottom-0 right-0 p-2.5 bg-white rounded-full shadow-lg hover:bg-gray-50 transition-colors border border-gray-100"
+              >
+                <Camera className="h-4 w-4 text-brand-blue" />
+              </motion.button>
             </div>
 
             {/* Infos */}
@@ -252,34 +276,63 @@ export default function LearnerProfilePage() {
         </GlassCard>
       </motion.div>
 
-      {/* Stats */}
+      {/* Stats Premium */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <GlassCard className="p-4 text-center">
-          <BookOpen className="h-6 w-6 text-brand-blue mx-auto mb-2" />
-          <div className="text-xl font-bold text-gray-900">{stats?.totalSessions || 0}</div>
-          <p className="text-xs text-gray-500">Sessions</p>
+        <GlassCard variant="premium" hoverable glow className="p-4 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div className="relative" whileHover={{ scale: 1.05 }}>
+            <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-brand-blue/10 to-indigo-500/10 flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-brand-blue" />
+            </div>
+            <div className="text-2xl font-bold bg-gradient-to-r from-brand-blue to-indigo-500 bg-clip-text text-transparent">{stats?.totalSessions || 0}</div>
+            <p className="text-xs text-gray-500 mt-1">Sessions</p>
+          </motion.div>
         </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <BookOpen className="h-6 w-6 text-brand-blue mx-auto mb-2" />
-          <div className="text-xl font-bold text-gray-900">{stats?.totalCourses || 0}</div>
-          <p className="text-xs text-gray-500">Cours</p>
+
+        <GlassCard variant="premium" hoverable glow className="p-4 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div className="relative" whileHover={{ scale: 1.05 }}>
+            <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-purple-600" />
+            </div>
+            <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">{stats?.totalCourses || 0}</div>
+            <p className="text-xs text-gray-500 mt-1">Cours</p>
+          </motion.div>
         </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <Award className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
-          <div className="text-xl font-bold text-gray-900">{stats?.certificates || 0}</div>
-          <p className="text-xs text-gray-500">Certificats</p>
+
+        <GlassCard variant="premium" hoverable glow className="p-4 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div className="relative" whileHover={{ scale: 1.05 }}>
+            <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-amber-500/10 to-yellow-500/10 flex items-center justify-center">
+              <Award className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-500 bg-clip-text text-transparent">{stats?.certificates || 0}</div>
+            <p className="text-xs text-gray-500 mt-1">Certificats</p>
+          </motion.div>
         </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <Clock className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
-          <div className="text-xl font-bold text-gray-900">{stats?.completedSessions || 0}</div>
-          <p className="text-xs text-gray-500">Terminées</p>
+
+        <GlassCard variant="premium" hoverable glow className="p-4 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div className="relative" whileHover={{ scale: 1.05 }}>
+            <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-green-500/10 to-emerald-500/10 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">{stats?.completedSessions || 0}</div>
+            <p className="text-xs text-gray-500 mt-1">Terminées</p>
+          </motion.div>
         </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <Calendar className="h-6 w-6 text-brand-blue mx-auto mb-2" />
-          <div className="text-xl font-bold text-gray-900">
-            {studentData?.created_at ? formatDate(studentData.created_at).split('/')[2] : '-'}
-          </div>
-          <p className="text-xs text-gray-500">Membre depuis</p>
+
+        <GlassCard variant="premium" hoverable glow className="p-4 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div className="relative" whileHover={{ scale: 1.05 }}>
+            <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+              {studentData?.created_at ? formatDate(studentData.created_at).split('/')[2] : '-'}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Membre depuis</p>
+          </motion.div>
         </GlassCard>
       </motion.div>
 

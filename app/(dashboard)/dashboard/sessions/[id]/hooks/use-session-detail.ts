@@ -249,6 +249,7 @@ export function useSessionDetail(sessionId: string) {
       return sessionSlotService.getBySessionId(sessionId)
     },
     enabled: !!sessionId,
+    staleTime: 60 * 1000, // 1 min
   })
 
   const { data: sessionModules, refetch: refetchSessionModules } = useQuery({
@@ -262,9 +263,10 @@ export function useSessionDetail(sessionId: string) {
         .order('display_order', { ascending: true })
         .order('created_at', { ascending: true })
       if (error) throw error
-      return (data || []) as Array<{ id: string; session_id: string; name: string; amount: number; currency: string; display_order: number }>
+      return (data || []) as unknown as Array<{ id: string; session_id: string; name: string; amount: number; currency: string; display_order: number }>
     },
     enabled: !!sessionId,
+    staleTime: 60 * 1000, // 1 min
   })
 
   const { data: enrollments, isLoading: isEnrollmentsLoading } = useQuery({

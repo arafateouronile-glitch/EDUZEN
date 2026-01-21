@@ -509,6 +509,8 @@ export default function SessionDetailPage() {
                 program={program || undefined}
                 organization={organization}
                 enrollments={enrollments}
+                grades={grades}
+                attendanceStats={attendanceStats}
               />
             </Suspense>
           )}

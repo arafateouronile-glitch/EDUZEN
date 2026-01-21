@@ -503,6 +503,7 @@ export default function DashboardPage() {
 
   // Tous les hooks doivent être appelés AVANT les retours conditionnels
   // Récupérer les statistiques générales - ✅ OPTIMISÉ avec Promise.all
+
   const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['dashboard-stats', user?.organization_id],
     enabled: !!user?.organization_id && user?.role !== 'teacher',

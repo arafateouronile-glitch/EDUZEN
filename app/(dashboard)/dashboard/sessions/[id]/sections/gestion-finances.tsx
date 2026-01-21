@@ -12,6 +12,8 @@ import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
 import { generatePDFFromHTML } from '@/lib/utils/pdf-generator'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { GlassCard } from '@/components/ui/glass-card'
+import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,14 +22,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import Link from 'next/link'
 import { 
   Download, FileText, Plus, Receipt, DollarSign, 
   FileCheck, FileX, Eye, CreditCard, ChevronDown, ChevronUp,
-  Trash2, Edit, TrendingDown
+  Trash2, Edit, TrendingDown, ArrowRightLeft, Wallet, PieChart as PieChartIcon,
+  TrendingUp, AlertCircle, CheckCircle2
 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import type { EnrollmentWithRelations, StudentWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { SessionWithRelations } from '@/lib/types/query-types'
@@ -42,6 +47,20 @@ interface GestionFinancesProps {
   organization?: TableRow<'organizations'>
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/90 backdrop-blur-md border border-gray-100 p-3 rounded-xl shadow-xl z-50">
+        <p className="font-semibold text-gray-800 text-sm mb-1">{payload[0].name}</p>
+        <p className="text-sm font-bold" style={{ color: payload[0].fill }}>
+          {payload[0].value} étudiant{payload[0].value > 1 ? 's' : ''}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export function GestionFinances({
   enrollments = [],
   payments = [],
@@ -55,33 +74,35 @@ export function GestionFinances({
   const { addToast } = useToast()
   
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null)
+  const [selectedPaymentInvoiceId, setSelectedPaymentInvoiceId] = useState<string | null>(null)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [showInvoiceForm, setShowInvoiceForm] = useState(false)
   const [showQuoteForm, setShowQuoteForm] = useState(false)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null)
   const [isDownloading, setIsDownloading] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
-  const [showCharges, setShowCharges] = useState(false)
+  const [convertingQuoteId, setConvertingQuoteId] = useState<string | null>(null)
+  const [showCharges, setShowCharges] = useState(true)
   const [showChargeForm, setShowChargeForm] = useState(false)
   const [editingCharge, setEditingCharge] = useState<SessionChargeWithCategory | null>(null)
 
-  // Récupérer les factures et devis pour tous les étudiants de la session
-  const studentIds = enrollments.map((e) => e.student_id).filter(Boolean)
-  const { data: invoices } = useQuery({
+  // Récupérer les factures et devis pour tous les étudiants de la session (1 requête au lieu de N)
+  const studentIds = enrollments.map((e) => e.student_id).filter(Boolean) as string[]
+  const { data: invoices, isLoading: isInvoicesLoading } = useQuery({
     queryKey: ['session-invoices', sessionId, studentIds],
     queryFn: async () => {
       if (!user?.organization_id || studentIds.length === 0) return []
-      const allInvoices: any[] = []
-      for (const studentId of studentIds) {
-        if (!studentId) continue
-        const studentInvoices = await invoiceService.getAll(user.organization_id, {
-          studentId,
-        })
-        allInvoices.push(...studentInvoices)
-      }
-      return allInvoices
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*, students(id, first_name, last_name, student_number), payments(id, amount, status, paid_at)')
+        .eq('organization_id', user.organization_id)
+        .in('student_id', studentIds)
+        .order('issue_date', { ascending: false })
+      if (error) throw error
+      return (data || []) as any[]
     },
     enabled: !!user?.organization_id && studentIds.length > 0,
+    staleTime: 60 * 1000, // 1 min (invalidate après création facture/devis)
   })
 
   // Récupérer l'organisation
@@ -98,6 +119,7 @@ export function GestionFinances({
       return data
     },
     enabled: !!user?.organization_id,
+    staleTime: 5 * 60 * 1000, // 5 min
   })
 
   const org = organization || organizationData
@@ -120,6 +142,7 @@ export function GestionFinances({
       return data || null
     },
     enabled: !!user?.organization_id,
+    staleTime: 5 * 60 * 1000, // 5 min
   })
 
   // Récupérer les templates
@@ -141,6 +164,7 @@ export function GestionFinances({
       return templates.length > 0 ? templates[0] : null
     },
     enabled: !!user?.organization_id,
+    staleTime: 2 * 60 * 1000, // 2 min
   })
 
   // Récupérer les charges de la session
@@ -151,6 +175,7 @@ export function GestionFinances({
       return sessionChargesService.getBySession(sessionId)
     },
     enabled: !!sessionId,
+    staleTime: 60 * 1000, // 1 min
   })
 
   // Récupérer le résumé des charges
@@ -177,6 +202,7 @@ export function GestionFinances({
       return categories
     },
     enabled: !!user?.organization_id,
+    staleTime: 5 * 60 * 1000, // 5 min
   })
 
   // Formulaire de charge
@@ -275,7 +301,9 @@ export function GestionFinances({
       const bodyContent = doc.body.innerHTML
       tempDiv.innerHTML = bodyContent
 
-      let element = tempDiv.querySelector('.document-container') || tempDiv.querySelector('[id$="-document"]') || tempDiv.firstElementChild
+      // IMPORTANT: le HTML généré place souvent <header>, <footer>, <main> au niveau racine.
+      // Si on prend firstElementChild, on capture uniquement le header => PDF "vide".
+      let element = tempDiv.querySelector('.document-container') || tempDiv.querySelector('[id$="-document"]') || tempDiv
       if (!element || !(element instanceof HTMLElement)) {
         element = tempDiv
       }
@@ -342,6 +370,7 @@ export function GestionFinances({
       return invoiceService.create({
         organization_id: user.organization_id,
         student_id: enrollment.student_id,
+        enrollment_id: enrollment.id,
         invoice_number: '',
         type: 'tuition',
         document_type: 'invoice',
@@ -354,6 +383,22 @@ export function GestionFinances({
         status: 'sent',
         notes: invoiceForm.notes,
       })
+    },
+    onMutate: async () => {
+      const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
+      if (!enrollment?.student_id) return {}
+      const key = ['session-invoices', sessionId, studentIds] as const
+      const prev = queryClient.getQueryData(key)
+      const optimistic = {
+        id: `opt-inv-${Date.now()}`,
+        student_id: enrollment.student_id,
+        document_type: 'invoice',
+        invoice_number: '—',
+        _optimistic: true,
+        students: enrollment.students,
+      }
+      queryClient.setQueryData(key, [optimistic, ...(Array.isArray(prev) ? prev : [])])
+      return { previous: prev }
     },
     onSuccess: () => {
       addToast({
@@ -372,7 +417,10 @@ export function GestionFinances({
       })
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
-    onError: (error: any) => {
+    onError: (error: any, _vars, ctx) => {
+      if (ctx?.previous != null) {
+        queryClient.setQueryData(['session-invoices', sessionId, studentIds], ctx.previous)
+      }
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -412,6 +460,22 @@ export function GestionFinances({
         notes: invoiceForm.notes,
       })
     },
+    onMutate: async () => {
+      const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
+      if (!enrollment?.student_id) return {}
+      const key = ['session-invoices', sessionId, studentIds] as const
+      const prev = queryClient.getQueryData(key)
+      const optimistic = {
+        id: `opt-quote-${Date.now()}`,
+        student_id: enrollment.student_id,
+        document_type: 'quote',
+        invoice_number: '—',
+        _optimistic: true,
+        students: enrollment.students,
+      }
+      queryClient.setQueryData(key, [optimistic, ...(Array.isArray(prev) ? prev : [])])
+      return { previous: prev }
+    },
     onSuccess: () => {
       addToast({
         type: 'success',
@@ -429,12 +493,43 @@ export function GestionFinances({
       })
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
-    onError: (error: any) => {
+    onError: (error: any, _vars, ctx) => {
+      if (ctx?.previous != null) {
+        queryClient.setQueryData(['session-invoices', sessionId, studentIds], ctx.previous)
+      }
       addToast({
         type: 'error',
         title: 'Erreur',
         description: error?.message || 'Erreur lors de la création du devis.',
       })
+    },
+  })
+
+  // Mutation pour convertir un devis en facture
+  const convertQuoteToInvoiceMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      return invoiceService.convertQuoteToInvoice(quoteId)
+    },
+    onMutate: async (quoteId: string) => {
+      setConvertingQuoteId(quoteId)
+    },
+    onSuccess: () => {
+      addToast({
+        type: 'success',
+        title: 'Devis converti',
+        description: 'Le devis a été transformé en facture (brouillon).',
+      })
+      queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
+    },
+    onError: (error: any) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error?.message || 'Erreur lors de la conversion du devis en facture.',
+      })
+    },
+    onSettled: () => {
+      setConvertingQuoteId(null)
     },
   })
 
@@ -444,20 +539,18 @@ export function GestionFinances({
       if (!selectedEnrollmentId || !user?.organization_id) throw new Error('Données manquantes')
       const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
       if (!enrollment || !enrollment.students) throw new Error('Inscription non trouvée')
+      if (!selectedPaymentInvoiceId) {
+        throw new Error('Veuillez sélectionner une facture pour enregistrer ce paiement.')
+      }
 
       const amountNumber = parseFloat(paymentForm.amount)
       if (isNaN(amountNumber) || amountNumber <= 0) {
         throw new Error('Montant de paiement invalide')
       }
 
-      // Trouver la facture associée si possible
-      const relatedInvoice = invoices?.find(
-        (inv: any) => inv.student_id === enrollment.student_id && inv.document_type === 'invoice'
-      )
-
       return paymentService.create({
         organization_id: user.organization_id,
-        invoice_id: relatedInvoice?.id || null,
+        invoice_id: selectedPaymentInvoiceId,
         student_id: enrollment.student_id,
         amount: amountNumber,
         currency: paymentForm.currency,
@@ -478,6 +571,7 @@ export function GestionFinances({
         description: 'Le paiement a été enregistré avec succès.',
       })
       setShowPaymentForm(false)
+      setSelectedPaymentInvoiceId(null)
       setPaymentForm({
         amount: '',
         currency: 'EUR',
@@ -486,6 +580,7 @@ export function GestionFinances({
         notes: '',
       })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
     onError: (error: any) => {
       addToast({
@@ -513,6 +608,26 @@ export function GestionFinances({
   // Obtenir les factures et devis pour un étudiant
   const getInvoicesForStudent = (studentId: string) => {
     return invoices?.filter((inv: any) => inv.student_id === studentId) || []
+  }
+
+  const getInvoiceTotal = (inv: any) => {
+    const totalAmount = inv?.total_amount != null ? Number(inv.total_amount) : null
+    if (totalAmount != null && !Number.isNaN(totalAmount)) return totalAmount
+    const amount = inv?.amount != null ? Number(inv.amount) : 0
+    const tax = inv?.tax_amount != null ? Number(inv.tax_amount) : 0
+    return (Number.isNaN(amount) ? 0 : amount) + (Number.isNaN(tax) ? 0 : tax)
+  }
+
+  const getInvoicePaid = (inv: any) => {
+    const payments = Array.isArray(inv?.payments) ? inv.payments : []
+    return payments
+      .filter((p: any) => p?.status === 'completed')
+      .reduce((sum: number, p: any) => sum + Number(p?.amount || 0), 0)
+  }
+
+  const getInvoiceRemaining = (inv: any) => {
+    const remaining = getInvoiceTotal(inv) - getInvoicePaid(inv)
+    return remaining > 0 ? remaining : 0
   }
 
   // Mutation pour créer une charge
@@ -668,6 +783,9 @@ export function GestionFinances({
       vendor_invoice_date: charge.vendor_invoice_date || '',
       notes: charge.notes || '',
     })
+    setShowQuoteForm(false)
+    setShowInvoiceForm(false)
+    setShowPaymentForm(false)
     setShowChargeForm(true)
   }
 
@@ -686,504 +804,662 @@ export function GestionFinances({
       vendor_invoice_date: '',
       notes: '',
     })
+    setShowQuoteForm(false)
+    setShowInvoiceForm(false)
+    setShowPaymentForm(false)
     setShowChargeForm(true)
   }
 
+  // Préparer les données pour le graphique de répartition
+  const paymentStatusData = [
+    { name: 'Payé', value: enrollments.filter((e) => e.payment_status === 'paid').length, fill: '#10B981' },
+    { name: 'Partiel', value: enrollments.filter((e) => e.payment_status === 'partial').length, fill: '#3b82f6' },
+    { name: 'En attente', value: enrollments.filter((e) => e.payment_status === 'pending').length, fill: '#F59E0B' },
+    { name: 'En retard', value: enrollments.filter((e) => e.payment_status === 'overdue').length, fill: '#EF4444' },
+  ].filter(item => item.value > 0);
+
   return (
-    <div className="space-y-6">
-      {/* Statistiques financières */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">Revenu total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-brand-blue">
-              {formatCurrency(totalRevenue, 'EUR')}
+    <div className="space-y-8">
+      {/* Statistiques financières - BentoGrid */}
+      <BentoGrid columns={4} gap="md">
+        <BentoCard span={1}>
+          <GlassCard variant="premium" className="h-full flex flex-col p-6 border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500 min-w-0">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-brand-blue/10 rounded-xl">
+                <Wallet className="h-5 w-5 text-brand-blue" />
+              </div>
+              <h3 className="font-display font-bold text-gray-700 text-sm uppercase tracking-wider">Revenu total</h3>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {enrollments.length} inscription{enrollments.length > 1 ? 's' : ''}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">Montant payé</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency(totalPaid, 'EUR')}
+            <div className="mt-auto">
+              <div className="text-3xl font-bold text-gray-900 tracking-tight">
+                {formatCurrency(totalRevenue, 'EUR')}
+              </div>
+              <p className="text-xs text-gray-500 mt-2 font-medium">
+                {enrollments.length} inscription{enrollments.length > 1 ? 's' : ''}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {formatCurrency(paymentsViaPayments, 'EUR')} via paiements
-            </p>
-          </CardContent>
-        </Card>
+          </GlassCard>
+        </BentoCard>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">Reste à payer</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {formatCurrency(totalRemaining, 'EUR')}
+        <BentoCard span={1}>
+          <GlassCard variant="premium" className="h-full flex flex-col p-6 border-2 border-transparent hover:border-green-500/10 transition-all duration-500 min-w-0">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-green-500/10 rounded-xl">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <h3 className="font-display font-bold text-gray-700 text-sm uppercase tracking-wider">Encaissé</h3>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {enrollmentsWithBalance.length} inscription{enrollmentsWithBalance.length > 1 ? 's' : ''} avec solde
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium">Charges totales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(chargesSummary?.total_amount || 0, 'EUR')}
+            <div className="mt-auto">
+              <div className="text-3xl font-bold text-green-600 tracking-tight">
+                {formatCurrency(totalPaid, 'EUR')}
+              </div>
+              <p className="text-xs text-gray-500 mt-2 font-medium">
+                {formatCurrency(paymentsViaPayments, 'EUR')} via paiements
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {chargesSummary?.charge_count || 0} charge{(chargesSummary?.charge_count || 0) > 1 ? 's' : ''}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </GlassCard>
+        </BentoCard>
 
-      {/* Section Charges */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle>Charges de la session</CardTitle>
-              {chargesSummary && chargesSummary.charge_count > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  ({formatCurrency(chargesSummary.total_amount, 'EUR')})
-                </span>
+        <BentoCard span={1}>
+          <GlassCard variant="premium" className="h-full flex flex-col p-6 border-2 border-transparent hover:border-orange-500/10 transition-all duration-500 min-w-0">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-orange-500/10 rounded-xl">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+              </div>
+              <h3 className="font-display font-bold text-gray-700 text-sm uppercase tracking-wider">Reste à payer</h3>
+            </div>
+            <div className="mt-auto">
+              <div className="text-3xl font-bold text-orange-600 tracking-tight">
+                {formatCurrency(totalRemaining, 'EUR')}
+              </div>
+              <p className="text-xs text-gray-500 mt-2 font-medium">
+                {enrollmentsWithBalance.length} solde{enrollmentsWithBalance.length > 1 ? 's' : ''} restant{enrollmentsWithBalance.length > 1 ? 's' : ''}
+              </p>
+            </div>
+          </GlassCard>
+        </BentoCard>
+
+        <BentoCard span={1}>
+          <GlassCard variant="premium" className="h-full flex flex-col p-6 border-2 border-transparent hover:border-red-500/10 transition-all duration-500 min-w-0">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 bg-red-500/10 rounded-xl">
+                <TrendingDown className="h-5 w-5 text-red-600" />
+              </div>
+              <h3 className="font-display font-bold text-gray-700 text-sm uppercase tracking-wider">Charges</h3>
+            </div>
+            <div className="mt-auto">
+              <div className="text-3xl font-bold text-red-600 tracking-tight">
+                {formatCurrency(chargesSummary?.total_amount || 0, 'EUR')}
+              </div>
+              <p className="text-xs text-gray-500 mt-2 font-medium">
+                {chargesSummary?.charge_count || 0} dépense{(chargesSummary?.charge_count || 0) > 1 ? 's' : ''}
+              </p>
+            </div>
+          </GlassCard>
+        </BentoCard>
+      </BentoGrid>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Section Inscriptions & Paiements (2/3 largeur) */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Liste des inscriptions */}
+          <GlassCard variant="premium" className="overflow-hidden border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
+            <div className="p-6 border-b border-gray-100/50 bg-gray-50/50 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-brand-blue/10 rounded-lg">
+                  <Receipt className="h-5 w-5 text-brand-blue" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-gray-900">Inscriptions & Facturation</h3>
+                  <p className="text-sm text-gray-500">Gérez les factures, devis et paiements</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white hover:bg-gray-50 border-gray-200 text-gray-700 shadow-sm"
+                  onClick={() => {
+                    setSelectedEnrollmentId(null)
+                    setShowPaymentForm(false)
+                    setShowInvoiceForm(false)
+                    setShowChargeForm(false)
+                    setShowQuoteForm(true)
+                  }}
+                >
+                  <FileText className="mr-2 h-3.5 w-3.5" />
+                  Devis
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white hover:bg-gray-50 border-gray-200 text-gray-700 shadow-sm"
+                  onClick={() => {
+                    setSelectedEnrollmentId(null)
+                    setShowPaymentForm(false)
+                    setShowQuoteForm(false)
+                    setShowChargeForm(false)
+                    setShowInvoiceForm(true)
+                  }}
+                >
+                  <Plus className="mr-2 h-3.5 w-3.5" />
+                  Facture
+                </Button>
+              </div>
+            </div>
+            
+            <div className="p-0">
+              {isInvoicesLoading && enrollments.length > 0 && (
+                <div className="p-8 text-center text-muted-foreground animate-pulse">Chargement des données financières...</div>
+              )}
+              
+              {enrollments.length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Receipt className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <p className="font-medium text-gray-900">Aucune inscription</p>
+                  <p className="text-sm mt-1">Les inscriptions apparaîtront ici une fois créées.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {enrollments.map((enrollment) => {
+                    const student = enrollment.students
+                    if (!student) return null
+
+                    const total = Number(enrollment.total_amount || 0)
+                    const paid = Number(enrollment.paid_amount || 0)
+                    const remaining = total - paid
+                    const studentInvoices = enrollment.student_id ? getInvoicesForStudent(enrollment.student_id) : []
+                    const studentInvoicesList = studentInvoices.filter((inv: any) => inv.document_type === 'invoice')
+                    const studentQuotesList = studentInvoices.filter((inv: any) => inv.document_type === 'quote')
+
+                    return (
+                      <motion.div 
+                        key={enrollment.id} 
+                        className="p-5 hover:bg-gray-50/80 transition-colors group"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-gray-600 font-bold text-sm shadow-sm border border-white">
+                              {student.first_name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900">{student.first_name} {student.last_name}</p>
+                              <p className="text-xs text-gray-500 font-medium">{student.student_number || 'Sans matricule'}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-6 text-sm">
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total</p>
+                              <p className="font-bold text-gray-900">{formatCurrency(total, 'EUR')}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Payé</p>
+                              <p className="font-bold text-green-600">{formatCurrency(paid, 'EUR')}</p>
+                            </div>
+                            <div className="text-right min-w-[80px]">
+                              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Statut</p>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border inline-block mt-0.5 ${
+                                enrollment.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
+                                enrollment.payment_status === 'partial' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                enrollment.payment_status === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' :
+                                'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {enrollment.payment_status === 'paid' ? 'PAYÉ' :
+                                 enrollment.payment_status === 'partial' ? 'PARTIEL' :
+                                 enrollment.payment_status === 'overdue' ? 'RETARD' : 'ATTENTE'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions et Documents */}
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pl-14">
+                          <div className="flex flex-wrap gap-2">
+                            {/* Devis */}
+                            {studentQuotesList.map((quote: any) => (
+                              <div key={quote.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
+                                <FileText className="h-3 w-3 text-gray-500 mr-1.5" />
+                                <span className="text-xs font-medium text-gray-700 mr-2">{quote.invoice_number || 'Brouillon'}</span>
+                                <div className="flex gap-1 border-l border-gray-200 pl-2">
+                                  <button 
+                                    onClick={() => handleDownloadDocument(quote, 'quote')}
+                                    disabled={isDownloading === quote.id}
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
+                                    title="Télécharger PDF"
+                                  >
+                                    {isDownloading === quote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      const ok = window.confirm('Transformer ce devis en facture ? (La facture sera créée en brouillon)')
+                                      if (!ok) return
+                                      convertQuoteToInvoiceMutation.mutate(quote.id)
+                                    }}
+                                    disabled={convertingQuoteId === quote.id}
+                                    className="text-gray-400 hover:text-green-600 transition-colors"
+                                    title="Convertir en facture"
+                                  >
+                                    {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            
+                            {/* Factures */}
+                            {studentInvoicesList.map((invoice: any) => (
+                              <div key={invoice.id} className="flex items-center bg-blue-50/50 border border-blue-100 rounded-md px-2 py-1">
+                                <Receipt className="h-3 w-3 text-blue-500 mr-1.5" />
+                                <span className="text-xs font-medium text-blue-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
+                                <div className="flex gap-1 border-l border-blue-200 pl-2">
+                                  <button 
+                                    onClick={() => handleDownloadDocument(invoice, 'invoice')}
+                                    disabled={isDownloading === invoice.id}
+                                    className="text-blue-400 hover:text-blue-700 transition-colors"
+                                    title="Télécharger PDF"
+                                  >
+                                    {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                  </button>
+                                  <Link href={`/dashboard/payments/${invoice.id}`} className="text-blue-400 hover:text-blue-700 transition-colors" title="Voir détails">
+                                    <Eye className="h-3 w-3" />
+                                  </Link>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-gray-600 hover:text-brand-blue hover:bg-brand-blue/5"
+                              onClick={() => {
+                                setSelectedEnrollmentId(enrollment.id)
+                                setShowPaymentForm(false)
+                                setShowInvoiceForm(false)
+                                setShowChargeForm(false)
+                                setInvoiceForm({
+                                  ...invoiceForm,
+                                  amount: enrollment.total_amount != null ? String(enrollment.total_amount) : '0',
+                                })
+                                setShowQuoteForm(true)
+                              }}
+                            >
+                              <Plus className="mr-1 h-3 w-3" /> Devis
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-gray-600 hover:text-brand-blue hover:bg-brand-blue/5"
+                              onClick={() => {
+                                setSelectedEnrollmentId(enrollment.id)
+                                setShowPaymentForm(false)
+                                setShowQuoteForm(false)
+                                setShowChargeForm(false)
+                                setInvoiceForm({
+                                  ...invoiceForm,
+                                  amount: enrollment.total_amount != null ? String(enrollment.total_amount) : '0',
+                                })
+                                setShowInvoiceForm(true)
+                              }}
+                            >
+                              <Plus className="mr-1 h-3 w-3" /> Facture
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs bg-brand-blue hover:bg-brand-blue-dark text-white shadow-sm"
+                              onClick={() => {
+                                const total = Number(enrollment.total_amount || 0)
+                                const paid = Number(enrollment.paid_amount || 0)
+                                const remaining = total - paid
+                                setSelectedEnrollmentId(enrollment.id)
+                                const defaultInvoice =
+                                  (studentInvoicesList || []).find((inv: any) => !inv?._optimistic && getInvoiceRemaining(inv) > 0) ||
+                                  (studentInvoicesList || []).find((inv: any) => !inv?._optimistic) ||
+                                  null
+                                setSelectedPaymentInvoiceId(defaultInvoice?.id || null)
+                                setShowQuoteForm(false)
+                                setShowInvoiceForm(false)
+                                setShowChargeForm(false)
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  currency: defaultInvoice?.currency || paymentForm.currency,
+                                  amount: defaultInvoice ? String(getInvoiceRemaining(defaultInvoice)) : (remaining > 0 ? String(remaining) : '0'),
+                                })
+                                setShowPaymentForm(true)
+                              }}
+                            >
+                              <DollarSign className="mr-1 h-3 w-3" /> Paiement
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNewCharge}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Nouvelle charge
-              </Button>
+          </GlassCard>
+
+          {/* Paiements récents */}
+          {payments.length > 0 && (
+            <GlassCard variant="premium" className="overflow-hidden border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
+              <div className="p-6 border-b border-gray-100/50 bg-gray-50/50 backdrop-blur-sm">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <CreditCard className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-gray-900">Paiements récents</h3>
+                    <p className="text-sm text-gray-500">Historique des transactions</p>
+                  </div>
+                </div>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {payments.slice(0, 10).map((payment) => {
+                  const student = (payment as any).students
+                  return (
+                    <div key={payment.id} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          payment.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                        }`}>
+                          <DollarSign className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">
+                            {student ? `${student.first_name} ${student.last_name}` : 'Apprenant'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {payment.paid_at && new Date(payment.paid_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {payment.payment_method && ` • ${payment.payment_method === 'cash' ? 'Espèces' : payment.payment_method === 'card' ? 'Carte' : 'Virement'}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900">
+                          +{formatCurrency(Number(payment.amount || 0), payment.currency || 'EUR')}
+                        </p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${
+                          payment.status === 'completed' ? 'bg-green-50 text-green-700' :
+                          payment.status === 'pending' ? 'bg-amber-50 text-amber-700' :
+                          'bg-red-50 text-red-700'
+                        }`}>
+                          {payment.status === 'completed' ? 'COMPLÉTÉ' :
+                           payment.status === 'pending' ? 'EN ATTENTE' : 'ÉCHOUÉ'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </GlassCard>
+          )}
+        </div>
+
+        {/* Section Latérale (1/3 largeur) */}
+        <div className="space-y-8">
+          {/* Graphique Répartition */}
+          <GlassCard variant="premium" className="p-6 border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <PieChartIcon className="h-5 w-5 text-purple-600" />
+              </div>
+              <h3 className="font-display font-bold text-gray-900">Statut des paiements</h3>
+            </div>
+            
+            <div className="h-[250px] w-full relative">
+              {enrollments.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={paymentStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {paymentStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} strokeWidth={0} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36}
+                      formatter={(value) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-sm text-gray-500">
+                  <PieChartIcon className="h-8 w-8 text-gray-300 mb-2" />
+                  <p>Aucune donnée disponible</p>
+                </div>
+              )}
+              {/* Total au centre */}
+              {enrollments.length > 0 && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-8">
+                  <div className="text-center">
+                    <span className="text-2xl font-bold text-gray-900 block leading-none">{enrollments.length}</span>
+                    <span className="text-[10px] text-gray-500 uppercase font-medium">Inscrits</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+
+          {/* Section Charges */}
+          <GlassCard variant="premium" className="overflow-hidden border-2 border-transparent hover:border-red-500/10 transition-all duration-500">
+            <div className="p-6 border-b border-gray-100/50 bg-gray-50/50 backdrop-blur-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-500/10 rounded-lg">
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-gray-900">Charges</h3>
+                  {chargesSummary && chargesSummary.charge_count > 0 && (
+                    <p className="text-sm text-red-600 font-medium">
+                      -{formatCurrency(chargesSummary.total_amount, 'EUR')}
+                    </p>
+                  )}
+                </div>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowCharges(!showCharges)}
+                className="h-8 w-8 rounded-full hover:bg-white hover:shadow-sm"
+                onClick={handleNewCharge}
               >
-                {showCharges ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                <Plus className="h-4 w-4 text-gray-600" />
               </Button>
             </div>
-          </div>
-        </CardHeader>
-        {showCharges && (
-          <CardContent>
-            {charges && charges.length > 0 ? (
-              <div className="space-y-3">
-                {charges.map((charge) => (
-                  <div key={charge.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-medium">{charge.description}</h4>
+            
+            <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-4 space-y-3">
+              {charges && charges.length > 0 ? (
+                charges.map((charge) => (
+                  <motion.div 
+                    key={charge.id} 
+                    className="p-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all group"
+                    whileHover={{ y: -2 }}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-bold text-gray-800 text-sm line-clamp-1">{charge.description}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-gray-500">{new Date(charge.charge_date).toLocaleDateString('fr-FR')}</span>
                           {charge.charge_categories && (
-                            <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded">
+                            <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
                               {charge.charge_categories.name}
                             </span>
                           )}
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-muted-foreground">
-                          <div>
-                            <span className="font-medium">Montant:</span>{' '}
-                            <span className="text-red-600 font-bold">
-                              {formatCurrency(Number(charge.amount), charge.currency)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="font-medium">Date:</span>{' '}
-                            {new Date(charge.charge_date).toLocaleDateString('fr-FR')}
-                          </div>
-                          {charge.vendor && (
-                            <div>
-                              <span className="font-medium">Fournisseur:</span> {charge.vendor}
-                            </div>
-                          )}
-                          <div>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              charge.payment_status === 'paid' ? 'bg-green-100 text-green-700' :
-                              charge.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {charge.payment_status === 'paid' ? 'Payé' :
-                               charge.payment_status === 'pending' ? 'En attente' : 'Annulé'}
-                            </span>
-                          </div>
-                        </div>
-                        {charge.notes && (
-                          <p className="text-sm text-muted-foreground mt-2">{charge.notes}</p>
-                        )}
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                      <div className="text-right">
+                        <span className="font-bold text-red-600 text-sm">
+                          -{formatCurrency(Number(charge.amount), charge.currency)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                        charge.payment_status === 'paid' ? 'bg-green-50 text-green-700' :
+                        charge.payment_status === 'pending' ? 'bg-amber-50 text-amber-700' :
+                        'bg-red-50 text-red-700'
+                      }`}>
+                        {charge.payment_status === 'paid' ? 'Payé' :
+                         charge.payment_status === 'pending' ? 'En attente' : 'Annulé'}
+                      </span>
+                      
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
                           onClick={() => handleEditCharge(charge)}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-brand-blue"
                         >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                          <Edit className="h-3 w-3" />
+                        </button>
+                        <button 
                           onClick={() => {
                             if (confirm('Êtes-vous sûr de vouloir supprimer cette charge ?')) {
                               deleteChargeMutation.mutate(charge.id)
                             }
                           }}
+                          className="p-1 hover:bg-red-50 rounded text-gray-500 hover:text-red-600"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
-                {chargesSummary && (
-                  <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Total</p>
-                      <p className="text-lg font-bold text-red-600">
-                        {formatCurrency(chargesSummary.total_amount, 'EUR')}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Payé</p>
-                      <p className="text-lg font-bold text-green-600">
-                        {formatCurrency(chargesSummary.paid_amount, 'EUR')}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">En attente</p>
-                      <p className="text-lg font-bold text-yellow-600">
-                        {formatCurrency(chargesSummary.pending_amount, 'EUR')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <TrendingDown className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Aucune charge enregistrée pour cette session.</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={handleNewCharge}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Ajouter une charge
-                </Button>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">Aucune charge enregistrée</p>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="mt-2 text-brand-blue"
+                    onClick={handleNewCharge}
+                  >
+                    Ajouter une charge
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {chargesSummary && (
+              <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-4 text-center text-xs">
+                <div>
+                  <span className="text-gray-500 block mb-1">Payé</span>
+                  <span className="font-bold text-green-600">{formatCurrency(chargesSummary.paid_amount, 'EUR')}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500 block mb-1">En attente</span>
+                  <span className="font-bold text-amber-600">{formatCurrency(chargesSummary.pending_amount, 'EUR')}</span>
+                </div>
               </div>
             )}
-          </CardContent>
-        )}
-      </Card>
+          </GlassCard>
+        </div>
+      </div>
 
-      {/* Répartition par statut de paiement */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Répartition par statut de paiement</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">
-                {enrollments.filter((e) => e.payment_status === 'pending').length}
+      {/* Formulaire de paiement (Dialog) */}
+      <Dialog
+        open={showPaymentForm}
+        onOpenChange={(open) => {
+          setShowPaymentForm(open)
+          if (!open) {
+            setSelectedEnrollmentId(null)
+            setSelectedPaymentInvoiceId(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Enregistrer un paiement</DialogTitle>
+          </DialogHeader>
+          {selectedEnrollmentId && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Étudiant : {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.first_name} {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.last_name}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">En attente</p>
             </div>
-            <div className="text-center p-4 bg-brand-cyan-ghost rounded-lg">
-              <p className="text-2xl font-bold text-brand-cyan">
-                {enrollments.filter((e) => e.payment_status === 'partial').length}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Partiel</p>
-            </div>
-            <div className="text-center p-4 bg-brand-blue-ghost rounded-lg">
-              <p className="text-2xl font-bold text-brand-blue">
-                {enrollments.filter((e) => e.payment_status === 'paid').length}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Payé</p>
-            </div>
-            <div className="text-center p-4 bg-red-50 rounded-lg">
-              <p className="text-2xl font-bold text-red-600">
-                {enrollments.filter((e) => e.payment_status === 'overdue').length}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">En retard</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Liste des inscriptions avec détails financiers */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Détails des inscriptions</CardTitle>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedEnrollmentId(null)
-                  setShowPaymentForm(false)
-                  setShowInvoiceForm(false)
-                  setShowQuoteForm(true)
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Nouveau devis
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedEnrollmentId(null)
-                  setShowInvoiceForm(true)
-                  setShowQuoteForm(false)
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Nouvelle facture
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {enrollments.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Aucune inscription pour le moment
-              </p>
-            ) : (
-              enrollments.map((enrollment) => {
-                const student = enrollment.students
-                if (!student) return null
-
-                const total = Number(enrollment.total_amount || 0)
-                const paid = Number(enrollment.paid_amount || 0)
-                const remaining = total - paid
-                const studentInvoices = enrollment.student_id ? getInvoicesForStudent(enrollment.student_id) : []
-                const studentInvoicesList = studentInvoices.filter((inv: any) => inv.document_type === 'invoice')
-                const studentQuotesList = studentInvoices.filter((inv: any) => inv.document_type === 'quote')
-
-                return (
-                  <div key={enrollment.id} className="border rounded-lg p-4 hover:bg-gray-50 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium">{student.first_name} {student.last_name}</p>
-                        <p className="text-sm text-muted-foreground">{student.student_number}</p>
-                      </div>
-                      <div className="text-right space-y-1">
-                        <p className="text-sm">
-                          Total: <span className="font-medium">{formatCurrency(total, 'EUR')}</span>
-                        </p>
-                        <p className="text-sm">
-                          Payé: <span className="font-medium text-blue-600">{formatCurrency(paid, 'EUR')}</span>
-                        </p>
-                        {remaining > 0 && (
-                          <p className="text-sm">
-                            Reste: <span className="font-medium text-orange-600">{formatCurrency(remaining, 'EUR')}</span>
-                          </p>
-                        )}
-                        <span className={`text-xs px-2 py-1 rounded inline-block mt-2 ${
-                          enrollment.payment_status === 'paid' ? 'bg-brand-blue-ghost text-brand-blue' :
-                          enrollment.payment_status === 'partial' ? 'bg-brand-cyan-ghost text-brand-cyan' :
-                          enrollment.payment_status === 'overdue' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {enrollment.payment_status === 'paid' ? 'Payé' :
-                           enrollment.payment_status === 'partial' ? 'Partiel' :
-                           enrollment.payment_status === 'overdue' ? 'En retard' : 'En attente'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Actions rapides */}
-                    <div className="flex flex-wrap gap-2 pt-2 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedEnrollmentId(enrollment.id)
-                          setShowPaymentForm(false)
-                          setShowInvoiceForm(false)
-                          setInvoiceForm({
-                            ...invoiceForm,
-                            amount: (enrollment.total_amount != null && enrollment.total_amount !== '') ? String(enrollment.total_amount) : '0',
-                          })
-                          setShowQuoteForm(true)
-                        }}
-                      >
-                        <FileText className="mr-2 h-3 w-3" />
-                        Créer devis
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedEnrollmentId(enrollment.id)
-                          setInvoiceForm({
-                            ...invoiceForm,
-                            amount: enrollment.total_amount ? String(enrollment.total_amount) : '',
-                          })
-                          setShowInvoiceForm(true)
-                          setShowQuoteForm(false)
-                        }}
-                      >
-                        <Receipt className="mr-2 h-3 w-3" />
-                        Créer facture
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedEnrollmentId(enrollment.id)
-                          setShowPaymentForm(true)
-                        }}
-                      >
-                        <DollarSign className="mr-2 h-3 w-3" />
-                        Saisir paiement
-                      </Button>
-                    </div>
-
-                    {/* Liste des factures et devis */}
-                    {(studentInvoicesList.length > 0 || studentQuotesList.length > 0) && (
-                      <div className="pt-2 border-t space-y-2">
-                        {studentQuotesList.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Devis :</p>
-                            <div className="flex flex-wrap gap-2">
-                              {studentQuotesList.map((quote: any) => (
-                                <div key={quote.id} className="flex items-center gap-2 text-xs">
-                                  <span className="text-muted-foreground">{quote.invoice_number}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2"
-                                    onClick={() => handleDownloadDocument(quote, 'quote')}
-                                    disabled={isDownloading === quote.id}
-                                  >
-                                    {isDownloading === quote.id ? (
-                                      '...'
-                                    ) : (
-                                      <Download className="h-3 w-3" />
-                                    )}
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {studentInvoicesList.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-1">Factures :</p>
-                            <div className="flex flex-wrap gap-2">
-                              {studentInvoicesList.map((invoice: any) => (
-                                <div key={invoice.id} className="flex items-center gap-2 text-xs">
-                                  <span className="text-muted-foreground">{invoice.invoice_number}</span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2"
-                                    onClick={() => handleDownloadDocument(invoice, 'invoice')}
-                                    disabled={isDownloading === invoice.id}
-                                  >
-                                    {isDownloading === invoice.id ? (
-                                      '...'
-                                    ) : (
-                                      <Download className="h-3 w-3" />
-                                    )}
-                                  </Button>
-                                  <Link href={`/dashboard/payments/${invoice.id}`}>
-                                    <Button variant="ghost" size="sm" className="h-6 px-2">
-                                      <Eye className="h-3 w-3" />
-                                    </Button>
-                                  </Link>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Paiements récents */}
-      {payments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Paiements récents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {payments.slice(0, 10).map((payment) => {
-                const student = (payment as any).students
-                return (
-                  <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                    <div className="flex-1">
-                      <p className="font-medium">
-                        {student ? `${student.first_name} ${student.last_name}` : 'Apprenant'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {payment.paid_at && new Date(payment.paid_at).toLocaleDateString('fr-FR')}
-                        {payment.payment_method && ` • ${payment.payment_method}`}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg text-brand-blue">
-                        {formatCurrency(Number(payment.amount || 0), payment.currency || 'EUR')}
-                      </p>
-                      <p className={`text-xs px-2 py-1 rounded inline-block mt-1 ${
-                        payment.status === 'completed' ? 'bg-brand-blue-ghost text-brand-blue' :
-                        payment.status === 'pending' ? 'bg-brand-cyan-ghost text-brand-cyan' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {payment.status === 'completed' ? 'Complété' :
-                         payment.status === 'pending' ? 'En attente' : 'Échoué'}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Formulaire de paiement */}
-      {showPaymentForm && selectedEnrollmentId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Enregistrer un paiement</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                createPaymentMutation.mutate()
-              }}
-              className="space-y-4"
-            >
+          )}
+          {selectedEnrollmentId && (() => {
+            const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
+            const studentId = enrollment?.student_id
+            const studentInvoices = studentId ? getInvoicesForStudent(studentId) : []
+            const studentInvoiceList = studentInvoices.filter((inv: any) => inv.document_type === 'invoice' && !inv?._optimistic)
+            if (studentInvoiceList.length === 0) {
+              return (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ Aucune facture trouvée pour cet apprenant. Créez d’abord une facture, puis saisissez un paiement.
+                  </p>
+                </div>
+              )
+            }
+            const selected = selectedPaymentInvoiceId
+              ? studentInvoiceList.find((inv: any) => inv.id === selectedPaymentInvoiceId)
+              : null
+            const remaining = selected ? getInvoiceRemaining(selected) : null
+            return (
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Facture *</label>
+                  <select
+                    required
+                    value={selectedPaymentInvoiceId || ''}
+                    onChange={(e) => {
+                      const nextId = e.target.value || null
+                      setSelectedPaymentInvoiceId(nextId)
+                      const nextInv = nextId ? studentInvoiceList.find((inv: any) => inv.id === nextId) : null
+                      if (nextInv) {
+                        setPaymentForm({
+                          ...paymentForm,
+                          currency: nextInv.currency || paymentForm.currency,
+                          amount: String(getInvoiceRemaining(nextInv)),
+                        })
+                      }
+                    }}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="">Sélectionner une facture</option>
+                    {studentInvoiceList.map((inv: any) => {
+                      const total = getInvoiceTotal(inv)
+                      const paid = getInvoicePaid(inv)
+                      const rem = Math.max(total - paid, 0)
+                      return (
+                        <option key={inv.id} value={inv.id}>
+                          {inv.invoice_number} — Total {formatCurrency(total, inv.currency || 'EUR')} — Reste {formatCurrency(rem, inv.currency || 'EUR')}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  {selected && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Reste à payer sur cette facture : {formatCurrency(remaining || 0, selected.currency || 'EUR')}
+                    </p>
+                  )}
+                </div>
+              </>
+            )
+          })()}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createPaymentMutation.mutate()
+            }}
+            className="space-y-4"
+          >
+            <fieldset disabled={createPaymentMutation.isPending} className="border-0 p-0 m-0 min-w-0 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Montant *</label>
                 <input
@@ -1243,63 +1519,65 @@ export function GestionFinances({
                   placeholder="Notes supplémentaires..."
                 />
               </div>
+            </fieldset>
 
-              <div className="flex space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setShowPaymentForm(false)
-                    setSelectedEnrollmentId(null)
-                  }}
-                >
-                  Annuler
-                </Button>
-                <Button type="submit" className="flex-1" disabled={createPaymentMutation.isPending}>
-                  {createPaymentMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setShowPaymentForm(false); setSelectedEnrollmentId(null); setSelectedPaymentInvoiceId(null) }}
+              >
+                Annuler
+              </Button>
+              <Button type="submit" disabled={createPaymentMutation.isPending || !selectedEnrollmentId || !selectedPaymentInvoiceId}>
+                {createPaymentMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {/* Formulaire de facture */}
-      {showInvoiceForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Créer une facture</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!selectedEnrollmentId && (
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  ⚠️ Veuillez sélectionner un étudiant depuis la liste ci-dessus avant de créer la facture.
-                </p>
-              </div>
-            )}
-            {selectedEnrollmentId && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  Étudiant sélectionné : {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.first_name} {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.last_name}
-                </p>
-              </div>
-            )}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                createInvoiceMutation.mutate()
-              }}
-              className="space-y-4"
-            >
+      {/* Formulaire de facture (Dialog) */}
+      <Dialog
+        open={showInvoiceForm}
+        onOpenChange={(open) => {
+          setShowInvoiceForm(open)
+          if (!open) setSelectedEnrollmentId(null)
+        }}
+      >
+        <DialogContent className="max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Créer une facture</DialogTitle>
+          </DialogHeader>
+          {!selectedEnrollmentId && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                ⚠️ Veuillez sélectionner un étudiant depuis la liste ci-dessus avant de créer la facture.
+              </p>
+            </div>
+          )}
+          {selectedEnrollmentId && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                Étudiant sélectionné : {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.first_name} {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.last_name}
+              </p>
+            </div>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createInvoiceMutation.mutate()
+            }}
+            className="space-y-4"
+          >
+            <fieldset disabled={createInvoiceMutation.isPending} className="border-0 p-0 m-0 min-w-0 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Montant HT *</label>
                 <input
                   type="number"
                   required
                   step="0.01"
-                  min="0.01"
+                  min="0"
                   value={invoiceForm.amount}
                   onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1353,35 +1631,36 @@ export function GestionFinances({
                   placeholder="Notes supplémentaires..."
                 />
               </div>
+            </fieldset>
 
-              <div className="flex space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setShowInvoiceForm(false)
-                    setSelectedEnrollmentId(null)
-                  }}
-                >
-                  Annuler
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="flex-1" 
-                  disabled={createInvoiceMutation.isPending || !selectedEnrollmentId}
-                >
-                  {createInvoiceMutation.isPending ? 'Création...' : 'Créer la facture'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setShowInvoiceForm(false); setSelectedEnrollmentId(null) }}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="submit"
+                disabled={createInvoiceMutation.isPending || !selectedEnrollmentId}
+              >
+                {createInvoiceMutation.isPending ? 'Création...' : 'Créer la facture'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Formulaire de devis (Dialog) */}
-      <Dialog open={showQuoteForm} onOpenChange={(open) => { setShowQuoteForm(open); if (!open) setSelectedEnrollmentId(null) }}>
-        <DialogContent className="max-w-md">
+      <Dialog
+        open={showQuoteForm}
+        onOpenChange={(open) => {
+          setShowQuoteForm(open)
+          if (!open) setSelectedEnrollmentId(null)
+        }}
+      >
+        <DialogContent className="max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Créer un devis</DialogTitle>
           </DialogHeader>
@@ -1406,66 +1685,68 @@ export function GestionFinances({
             }}
             className="space-y-4"
           >
-            <div>
-              <label className="block text-sm font-medium mb-2">Montant HT *</label>
-              <input
-                type="number"
-                required
-                step="0.01"
-                min="0"
-                value={invoiceForm.amount}
-                onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">TVA</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={invoiceForm.tax_amount}
-                onChange={(e) => setInvoiceForm({ ...invoiceForm, tax_amount: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <fieldset disabled={createQuoteMutation.isPending} className="border-0 p-0 m-0 min-w-0 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Date d'émission *</label>
+                <label className="block text-sm font-medium mb-2">Montant HT *</label>
                 <input
-                  type="date"
+                  type="number"
                   required
-                  value={invoiceForm.issue_date}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, issue_date: e.target.value })}
+                  step="0.01"
+                  min="0"
+                  value={invoiceForm.amount}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0.00"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Date d'échéance *</label>
+                <label className="block text-sm font-medium mb-2">TVA</label>
                 <input
-                  type="date"
-                  required
-                  value={invoiceForm.due_date}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={invoiceForm.tax_amount}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, tax_amount: e.target.value })}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent mt-1"
+                  placeholder="0.00"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Notes</label>
-              <textarea
-                value={invoiceForm.notes}
-                onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
-                rows={2}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Notes supplémentaires..."
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date d'émission *</label>
+                  <input
+                    type="date"
+                    required
+                    value={invoiceForm.issue_date}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, issue_date: e.target.value })}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date d'échéance *</label>
+                  <input
+                    type="date"
+                    required
+                    value={invoiceForm.due_date}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Notes</label>
+                <textarea
+                  value={invoiceForm.notes}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Notes supplémentaires..."
+                />
+              </div>
+            </fieldset>
 
             <DialogFooter>
               <Button
@@ -1486,23 +1767,32 @@ export function GestionFinances({
         </DialogContent>
       </Dialog>
 
-      {/* Formulaire de charge */}
-      {showChargeForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingCharge ? 'Modifier la charge' : 'Nouvelle charge'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                if (editingCharge) {
-                  updateChargeMutation.mutate()
-                } else {
-                  createChargeMutation.mutate()
-                }
-              }}
-              className="space-y-4"
+      {/* Formulaire de charge (Dialog) */}
+      <Dialog
+        open={showChargeForm}
+        onOpenChange={(open) => {
+          setShowChargeForm(open)
+          if (!open) setEditingCharge(null)
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>{editingCharge ? 'Modifier la charge' : 'Nouvelle charge'}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (editingCharge) {
+                updateChargeMutation.mutate()
+              } else {
+                createChargeMutation.mutate()
+              }
+            }}
+            className="space-y-4"
+          >
+            <fieldset
+              disabled={createChargeMutation.isPending || updateChargeMutation.isPending}
+              className="border-0 p-0 m-0 min-w-0 space-y-4"
             >
               <div>
                 <label className="block text-sm font-medium mb-2">Description *</label>
@@ -1523,7 +1813,7 @@ export function GestionFinances({
                     type="number"
                     required
                     step="0.01"
-                    min="0.01"
+                    min="0"
                     value={chargeForm.amount}
                     onChange={(e) => setChargeForm({ ...chargeForm, amount: e.target.value })}
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1649,22 +1939,18 @@ export function GestionFinances({
                   placeholder="Notes supplémentaires..."
                 />
               </div>
+            </fieldset>
 
-              <div className="flex space-x-2">
+              <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setShowChargeForm(false)
-                    setEditingCharge(null)
-                  }}
+                  onClick={() => { setShowChargeForm(false); setEditingCharge(null) }}
                 >
                   Annuler
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1"
                   disabled={createChargeMutation.isPending || updateChargeMutation.isPending}
                 >
                   {createChargeMutation.isPending || updateChargeMutation.isPending
@@ -1673,12 +1959,10 @@ export function GestionFinances({
                     ? 'Mettre à jour'
                     : 'Créer la charge'}
                 </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+              </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

@@ -152,7 +152,9 @@
     --color-bg: #F9FAFB;
     
     /* Premium Typography Scale */
-    /* Les variables --font-inter et --font-space-grotesk sont définies par next/font/google */
+    /* Définition locale des variables de polices (pas de fetch au build) */
+    --font-inter: 'Inter';
+    --font-space-grotesk: 'Space Grotesk';
     --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
     --font-display: var(--font-space-grotesk), var(--font-inter), sans-serif;
     

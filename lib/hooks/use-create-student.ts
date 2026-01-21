@@ -154,6 +154,8 @@ export function useCreateStudent() {
             enrollment_date: data.enrollment_date || new Date().toISOString(),
             status: 'confirmed',
             payment_status: 'pending',
+            total_amount: 0,
+            paid_amount: 0,
           } as any)
 
         if (enrollmentError) {

@@ -276,7 +276,7 @@ export default function GenerateDocumentPage() {
         .eq('session_id', selectedSessionId)
         .order('display_order', { ascending: true })
       if (error) throw error
-      return (data || []) as Array<{ id: string; name: string; amount: number; currency: string }>
+      return (data || []) as unknown as Array<{ id: string; name: string; amount: number; currency: string }>
     },
     enabled: !!selectedSessionId,
   })

@@ -6,6 +6,7 @@ import { useLearnerContext } from '@/lib/contexts/learner-context'
 import { createLearnerClient } from '@/lib/supabase/learner-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { CheckCircle, Clock, AlertCircle, CreditCard, Download, Eye, FileText, DollarSign } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
@@ -157,56 +158,118 @@ export default function LearnerPaymentsPage() {
 
   return (
     <div className="space-y-8 pb-24 lg:pb-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Paiements</h1>
-        <p className="text-gray-600">Gérez vos factures et paiements</p>
-      </div>
+      {/* Header Premium */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <GlassCard variant="premium" className="p-6 md:p-8 relative overflow-hidden">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 via-indigo-50/30 to-purple-50/20" />
 
-      {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <GlassCard>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+          {/* Floating orbs */}
+          <motion.div
+            animate={{ y: [0, -10, 0], x: [0, 5, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-10 -right-10 w-40 h-40 bg-brand-blue/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, 10, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-10 -left-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl"
+          />
+
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="p-4 bg-gradient-to-br from-brand-blue to-indigo-600 rounded-2xl shadow-lg shadow-brand-blue/25"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <CreditCard className="h-8 w-8 text-white" />
+              </motion.div>
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total factures</p>
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalInvoices)}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <FileText className="h-6 w-6 text-blue-600" />
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 via-brand-blue to-indigo-600 bg-clip-text text-transparent">
+                  Paiements
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  Gérez vos factures et paiements
+                </p>
               </div>
             </div>
-          </CardContent>
+
+            <div className="flex items-center gap-3">
+              <Badge className="bg-gradient-to-r from-brand-blue/10 to-indigo-100 text-brand-blue border-0 px-4 py-2">
+                <FileText className="h-4 w-4 mr-2" />
+                {invoices?.length || 0} facture{(invoices?.length || 0) > 1 ? 's' : ''}
+              </Badge>
+            </div>
+          </div>
+        </GlassCard>
+      </motion.div>
+
+      {/* Statistiques Premium */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <GlassCard variant="premium" hoverable glow className="p-5 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 mb-1">Total factures</p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-brand-blue to-indigo-600 bg-clip-text text-transparent">
+                {formatCurrency(totalInvoices)}
+              </p>
+            </div>
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="p-3 bg-gradient-to-br from-brand-blue/10 to-indigo-500/10 rounded-xl"
+            >
+              <FileText className="h-6 w-6 text-brand-blue" />
+            </motion.div>
+          </div>
         </GlassCard>
 
-        <GlassCard>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total payé</p>
-                <p className="text-2xl font-bold text-brand-cyan">{formatCurrency(totalPaid)}</p>
-              </div>
-              <div className="p-3 bg-brand-cyan-pale rounded-full">
-                <CheckCircle className="h-6 w-6 text-brand-cyan" />
-              </div>
+        <GlassCard variant="premium" hoverable glow className="p-5 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 mb-1">Total payé</p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+                {formatCurrency(totalPaid)}
+              </p>
             </div>
-          </CardContent>
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="p-3 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl"
+            >
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </motion.div>
+          </div>
         </GlassCard>
 
-        <GlassCard>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">En attente</p>
-                <p className="text-2xl font-bold text-gray-600">{formatCurrency(totalPending)}</p>
-              </div>
-              <div className="p-3 bg-gray-100 rounded-full">
-                <AlertCircle className="h-6 w-6 text-gray-600" />
-              </div>
+        <GlassCard variant="premium" hoverable glow className="p-5 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 mb-1">En attente</p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
+                {formatCurrency(totalPending)}
+              </p>
             </div>
-          </CardContent>
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="p-3 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl"
+            >
+              <AlertCircle className="h-6 w-6 text-amber-600" />
+            </motion.div>
+          </div>
         </GlassCard>
-      </div>
+      </motion.div>
 
       {/* Factures impayées */}
       {unpaidInvoices.length > 0 && (

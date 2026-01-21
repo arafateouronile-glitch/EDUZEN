@@ -34,7 +34,7 @@ export async function generatePDFFromHTML(
 
   try {
     // Vérifier que l'élément est visible et a des dimensions
-    const rect = element.getBoundingClientRect()
+    let rect = element.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) {
       console.warn('Élément sans dimensions, tentative de correction...')
       // Forcer des dimensions minimales
@@ -43,6 +43,7 @@ export async function generatePDFFromHTML(
         element.style.minHeight = element.style.minHeight || '297mm'
         // Attendre que le style soit appliqué
         await new Promise((resolve) => setTimeout(resolve, 100))
+        rect = element.getBoundingClientRect()
       }
     }
 
@@ -79,6 +80,21 @@ export async function generatePDFFromHTML(
       x: 0,
       y: 0,
       onclone: (clonedDoc, element) => {
+        // html2canvas peut planter avec certains background-image (url/svg/pattern) => canvas 0x0.
+        // On neutralise les backgrounds en URL (pas les couleurs) pour fiabiliser la génération PDF.
+        try {
+          const style = clonedDoc.createElement('style')
+          style.textContent = `
+            * { background-image: none !important; }
+            [style*="background-image"] { background-image: none !important; }
+            [style*="background: url"] { background-image: none !important; }
+            [style*="background:url"] { background-image: none !important; }
+          `
+          clonedDoc.head.appendChild(style)
+        } catch {
+          // ignore
+        }
+
         // S'assurer que toutes les images dans le clone sont chargées
         const clonedImages = clonedDoc.querySelectorAll('img')
         clonedImages.forEach((img) => {

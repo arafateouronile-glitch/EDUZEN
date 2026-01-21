@@ -113,43 +113,104 @@ export default function LearnerCertificatesPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
+      {/* Header Premium */}
       <motion.div variants={itemVariants}>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-brand-cyan-pale rounded-xl">
-            <Award className="h-8 w-8 text-brand-cyan" />
+        <GlassCard variant="premium" className="p-6 md:p-8 relative overflow-hidden">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-yellow-50/30 to-orange-50/20" />
+
+          {/* Floating orbs */}
+          <motion.div
+            animate={{ y: [0, -10, 0], x: [0, 5, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, 10, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-10 -left-10 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl"
+          />
+
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="p-4 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl shadow-lg shadow-amber-500/25"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <Award className="h-8 w-8 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 via-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                  Mes certificats
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  Diplômes et attestations obtenus
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Badge className="bg-gradient-to-r from-amber-500/10 to-yellow-100 text-amber-600 border-0 px-4 py-2">
+                <Award className="h-4 w-4 mr-2" />
+                {allCertificates.length} certificat{allCertificates.length > 1 ? 's' : ''}
+              </Badge>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-              Mes certificats
-            </h1>
-            <p className="text-gray-500">
-              Diplômes et attestations obtenus
-            </p>
-          </div>
-        </div>
+        </GlassCard>
       </motion.div>
 
-      {/* Stats */}
+      {/* Stats Premium */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <GlassCard className="p-4 text-center">
-          <Award className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">{allCertificates.length}</div>
-          <p className="text-xs text-gray-500">Total certificats</p>
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-yellow-500/10 flex items-center justify-center">
+              <Award className="h-6 w-6 text-amber-600" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-yellow-500 bg-clip-text text-transparent">
+              {allCertificates.length}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Total certificats</p>
+          </motion.div>
         </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <CheckCircle2 className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">
-            {courseCertificates?.length || 0}
-          </div>
-          <p className="text-xs text-gray-500">E-Learning</p>
+
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
+              {courseCertificates?.length || 0}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">E-Learning</p>
+          </motion.div>
         </GlassCard>
-        <GlassCard className="p-4 text-center">
-          <CheckCircle2 className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">
-            {sessionCertificates?.length || 0}
-          </div>
-          <p className="text-xs text-gray-500">Formations</p>
+
+        <GlassCard variant="premium" hoverable glow className="p-5 text-center relative overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <motion.div
+            className="relative"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+              {sessionCertificates?.length || 0}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Formations</p>
+          </motion.div>
         </GlassCard>
       </motion.div>
 

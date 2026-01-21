@@ -17,10 +17,29 @@ interface LogContext {
   [key: string]: unknown
 }
 
+function isValidSentryDsn(dsn: string | undefined): boolean {
+  if (!dsn) return false
+
+  // Empêcher les DSN d'exemple/placeholder (souvent présents en dev)
+  if (dsn.includes('votre-dsn') || dsn.includes('votre-projet-id')) return false
+
+  try {
+    const url = new URL(dsn)
+    // Format courant: https://<publicKey>@o<org>.ingest.sentry.io/<projectId>
+    const projectId = url.pathname.replace(/^\//, '')
+    if (!url.username) return false
+    if (!/^\d+$/.test(projectId)) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development'
   private isProduction = process.env.NODE_ENV === 'production'
-  private sentryEnabled = !!process.env.NEXT_PUBLIC_SENTRY_DSN
+  private sentryEnabled =
+    this.isProduction && isValidSentryDsn(process.env.NEXT_PUBLIC_SENTRY_DSN)
 
   /**
    * Initialise Sentry si disponible
@@ -30,10 +49,13 @@ class Logger {
       // Lazy load Sentry pour éviter d'augmenter la taille du bundle
       import('@sentry/nextjs').then((Sentry) => {
         try {
+          const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN
+          if (!isValidSentryDsn(dsn)) return
+
           // Vérifier si Sentry est déjà initialisé en essayant d'accéder au client
           // Si ce n'est pas le cas, l'initialiser
           Sentry.init({
-            dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+            dsn,
             environment: process.env.NODE_ENV,
             tracesSampleRate: 0.1, // 10% des transactions
             beforeSend(event) {

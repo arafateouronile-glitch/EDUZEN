@@ -1213,72 +1213,72 @@ function generateSessionReportTemplate(data: {
   const t = {
     fr: {
       title: 'RAPPORT DE SESSION',
-      subtitle: 'Rapport complet de la session de formation',
-      sessionInfo: 'Informations de la session',
+      subtitle: 'Bilan complet et analyse de performance',
+      sessionInfo: 'INFORMATIONS GÉNÉRALES',
       program: 'Programme',
       formation: 'Formation',
       session: 'Session',
-      dates: 'Dates',
+      dates: 'Période',
       times: 'Horaires',
       location: 'Lieu',
       status: 'Statut',
-      duration: 'Durée',
+      duration: 'Volume horaire',
       hours: 'heures',
-      statistics: 'Statistiques',
-      enrollments: 'Inscriptions',
-      active: 'Actives',
-      completed: 'Terminées',
-      attendanceRate: 'Taux de présence',
-      averageGrade: 'Note moyenne',
-      averagePercentage: 'Pourcentage moyen',
-      financial: 'Financier',
-      totalRevenue: 'Revenu total',
-      paidAmount: 'Montant payé',
-      remainingAmount: 'Reste à payer',
-      students: 'Apprenants',
-      studentName: 'Nom',
-      studentNumber: 'Numéro',
-      email: 'Email',
+      statistics: 'PERFORMANCE & STATISTIQUES',
+      enrollments: 'Inscrits',
+      active: 'Actifs',
+      completed: 'Terminés',
+      attendanceRate: 'Assiduité',
+      averageGrade: 'Moyenne générale',
+      averagePercentage: 'Réussite',
+      financial: 'BILAN FINANCIER',
+      totalRevenue: 'CA Total',
+      paidAmount: 'Encaissé',
+      remainingAmount: 'Reste à percevoir',
+      students: 'LISTE DES APPRENANTS',
+      studentName: 'Apprenant',
+      studentNumber: 'Matricule',
+      email: 'Contact',
       attendance: 'Présence',
-      grade: 'Note',
-      paymentStatus: 'Statut paiement',
-      enrollmentDate: 'Date d\'inscription',
+      grade: 'Résultat',
+      paymentStatus: 'Paiement',
+      enrollmentDate: 'Inscription',
       doneAt: 'Fait à',
       on: 'le',
       currency: 'FCFA',
     },
     en: {
       title: 'SESSION REPORT',
-      subtitle: 'Complete training session report',
-      sessionInfo: 'Session information',
+      subtitle: 'Complete assessment and performance analysis',
+      sessionInfo: 'GENERAL INFORMATION',
       program: 'Program',
       formation: 'Training',
       session: 'Session',
-      dates: 'Dates',
+      dates: 'Period',
       times: 'Schedule',
       location: 'Location',
       status: 'Status',
       duration: 'Duration',
       hours: 'hours',
-      statistics: 'Statistics',
-      enrollments: 'Enrollments',
+      statistics: 'PERFORMANCE & STATISTICS',
+      enrollments: 'Enrolled',
       active: 'Active',
       completed: 'Completed',
-      attendanceRate: 'Attendance rate',
-      averageGrade: 'Average grade',
-      averagePercentage: 'Average percentage',
-      financial: 'Financial',
-      totalRevenue: 'Total revenue',
-      paidAmount: 'Paid amount',
-      remainingAmount: 'Remaining amount',
-      students: 'Students',
-      studentName: 'Name',
-      studentNumber: 'Number',
-      email: 'Email',
+      attendanceRate: 'Attendance',
+      averageGrade: 'Average Grade',
+      averagePercentage: 'Success Rate',
+      financial: 'FINANCIAL REPORT',
+      totalRevenue: 'Total Revenue',
+      paidAmount: 'Collected',
+      remainingAmount: 'Outstanding',
+      students: 'STUDENT LIST',
+      studentName: 'Student',
+      studentNumber: 'ID',
+      email: 'Contact',
       attendance: 'Attendance',
-      grade: 'Grade',
-      paymentStatus: 'Payment status',
-      enrollmentDate: 'Enrollment date',
+      grade: 'Result',
+      paymentStatus: 'Payment',
+      enrollmentDate: 'Enrollment',
       doneAt: 'Done at',
       on: 'on',
       currency: 'FCFA',
@@ -1316,121 +1316,149 @@ function generateSessionReportTemplate(data: {
   }[lang]
 
   return `
-    <div id="session-report-document" style="max-width: 210mm; margin: 0 auto; padding: 15mm; font-family: Arial, sans-serif; color: #000; line-height: 1.6;">
-      {organization_logo && <div style="text-align: center; margin-bottom: 30px;">
-        <img src="{organization_logo}" alt="Logo" style="max-height: 80px;" />
-      </div>}
+    <div id="session-report-document" style="max-width: 210mm; margin: 0 auto; padding: 10mm 15mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #334155; line-height: 1.5; background-color: #ffffff;">
       
-      <h1 style="text-align: center; font-size: 28px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; color: #1e40af;">
-        {title}
-      </h1>
-      <p style="text-align: center; font-size: 14px; color: #6b7280; margin-bottom: 40px;">
-        {subtitle}
-      </p>
+      <!-- Header Premium -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #f1f5f9;">
+        <div style="flex: 1;">
+           {organization_logo && <div style="margin-bottom: 15px;">
+            <img src="{organization_logo}" alt="Logo" style="max-height: 60px; object-fit: contain;" />
+          </div>}
+          <div style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">{organization_name}</div>
+        </div>
+        <div style="text-align: right;">
+          <h1 style="font-size: 24px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.02em; text-transform: uppercase;">
+            {title}
+          </h1>
+          <p style="font-size: 11px; color: #64748b; margin-top: 5px; font-weight: 500;">
+            {subtitle}
+          </p>
+          <div style="margin-top: 10px; display: inline-block; padding: 4px 12px; background-color: #f1f5f9; border-radius: 20px; font-size: 10px; font-weight: 600; color: #475569;">
+            {issue_date}
+          </div>
+        </div>
+      </div>
       
-      <!-- Informations de la session -->
-      <div style="margin-bottom: 30px; padding: 20px; background-color: #f9fafb; border-radius: 8px; border-left: 4px solid #1e40af;">
-        <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #1e40af;">
+      <!-- Informations de la session (Grid Layout) -->
+      <div style="margin-bottom: 35px;">
+        <h2 style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 15px; border-left: 3px solid #3b82f6; padding-left: 10px;">
           {session_info}
         </h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          {IF program_name}<tr>
-            <td style="padding: 8px 0; font-weight: bold; width: 30%;">{program}:</td>
-            <td style="padding: 8px 0;">{program_name}</td>
-          </tr>{ENDIF}
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold; width: 30%;">{formation}:</td>
-            <td style="padding: 8px 0;">{formation_name}{IF formation_code} ({formation_code}){ENDIF}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold;">{session}:</td>
-            <td style="padding: 8px 0;">{session_name}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold;">{dates}:</td>
-            <td style="padding: 8px 0;">{session_start_date} - {session_end_date}</td>
-          </tr>
-          {IF session_start_time && session_end_time}<tr>
-            <td style="padding: 8px 0; font-weight: bold;">{times}:</td>
-            <td style="padding: 8px 0;">{session_start_time} - {session_end_time}</td>
-          </tr>{ENDIF}
-          {IF session_location}<tr>
-            <td style="padding: 8px 0; font-weight: bold;">{location}:</td>
-            <td style="padding: 8px 0;">{session_location}</td>
-          </tr>{ENDIF}
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold;">{status}:</td>
-            <td style="padding: 8px 0;">{session_status_label}</td>
-          </tr>
-          {IF formation_duration_hours}<tr>
-            <td style="padding: 8px 0; font-weight: bold;">{duration}:</td>
-            <td style="padding: 8px 0;">{formation_duration_hours} {hours}</td>
-          </tr>{ENDIF}
-        </table>
-      </div>
-
-      <!-- Statistiques -->
-      <div style="margin-bottom: 30px;">
-        <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #1e40af;">
-          {statistics}
-        </h2>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
-          <div style="padding: 15px; background-color: #eff6ff; border-radius: 8px; text-align: center;">
-            <div style="font-size: 24px; font-weight: bold; color: #1e40af;">{total_enrollments}</div>
-            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">{enrollments}</div>
-            <div style="font-size: 11px; color: #6b7280; margin-top: 3px;">{active_enrollments} {active}</div>
-          </div>
-          <div style="padding: 15px; background-color: #f0fdf4; border-radius: 8px; text-align: center;">
-            <div style="font-size: 24px; font-weight: bold; color: #335ACF;">{completed_enrollments}</div>
-            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">{completed}</div>
-            <div style="font-size: 11px; color: #6b7280; margin-top: 3px;">{attendance_rate}% {attendance_rate_label}</div>
-          </div>
-          <div style="padding: 15px; background-color: #fef3c7; border-radius: 8px; text-align: center;">
-            <div style="font-size: 24px; font-weight: bold; color: #d97706;">
-              {average_display}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background-color: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <div>
+            <div style="margin-bottom: 15px;">
+              <div style="font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">{formation}</div>
+              <div style="font-size: 14px; font-weight: 700; color: #0f172a;">{formation_name}</div>
+              {IF formation_code}<div style="font-size: 11px; color: #64748b; margin-top: 2px;">Code: {formation_code}</div>{ENDIF}
             </div>
-            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">
-              {average_label}
+            
+            <div>
+              <div style="font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">{session}</div>
+              <div style="font-size: 13px; font-weight: 600; color: #334155;">{session_name}</div>
+            </div>
+          </div>
+          
+          <div style="border-left: 1px solid #e2e8f0; padding-left: 20px;">
+            <div style="margin-bottom: 12px; display: flex; justify-content: space-between;">
+              <span style="font-size: 11px; color: #64748b;">{dates}</span>
+              <span style="font-size: 11px; font-weight: 600; color: #0f172a;">{session_start_date} - {session_end_date}</span>
+            </div>
+            
+            {IF session_location}<div style="margin-bottom: 12px; display: flex; justify-content: space-between;">
+              <span style="font-size: 11px; color: #64748b;">{location}</span>
+              <span style="font-size: 11px; font-weight: 600; color: #0f172a;">{session_location}</span>
+            </div>{ENDIF}
+            
+            <div style="margin-bottom: 12px; display: flex; justify-content: space-between;">
+              <span style="font-size: 11px; color: #64748b;">{duration}</span>
+              <span style="font-size: 11px; font-weight: 600; color: #0f172a;">{formation_duration_hours} {hours}</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: #64748b;">{status}</span>
+              <span style="font-size: 10px; font-weight: 700; color: #ffffff; background-color: #3b82f6; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">{session_status_label}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Statistiques financières -->
-      <div style="margin-bottom: 30px; padding: 20px; background-color: #f0fdf4; border-radius: 8px;">
-        <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #1e40af;">
-          {financial}
-        </h2>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-          <div style="text-align: center;">
-            <div style="font-size: 20px; font-weight: bold; color: #335ACF;">{total_revenue}</div>
-            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">{total_revenue_label}</div>
+      <!-- Statistiques & Financier (2 Colonnes) -->
+      <div style="display: flex; gap: 20px; margin-bottom: 35px;">
+        
+        <!-- Colonne Statistiques (60%) -->
+        <div style="flex: 3;">
+          <h2 style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 15px; border-left: 3px solid #10b981; padding-left: 10px;">
+            {statistics}
+          </h2>
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <!-- Card 1 -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <div style="font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1;">{total_enrollments}</div>
+              <div style="font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-top: 5px;">{enrollments}</div>
+              <div style="font-size: 9px; color: #10b981; margin-top: 2px; font-weight: 500;">{active_enrollments} {active}</div>
+            </div>
+            
+            <!-- Card 2 -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <div style="font-size: 28px; font-weight: 800; color: #3b82f6; line-height: 1;">{attendance_rate}%</div>
+              <div style="font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-top: 5px;">{attendanceRate}</div>
+              <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Moyenne globale</div>
+            </div>
+            
+            <!-- Card 3 -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <div style="font-size: 28px; font-weight: 800; color: #f59e0b; line-height: 1;">{average_display}</div>
+              <div style="font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-top: 5px;">{average_label}</div>
+              <div style="font-size: 9px; color: #64748b; margin-top: 2px;">Performance</div>
+            </div>
           </div>
-          <div style="text-align: center;">
-            <div style="font-size: 20px; font-weight: bold; color: #1e40af;">{paid_amount}</div>
-            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">{paid_amount_label}</div>
-          </div>
-          <div style="text-align: center;">
-            <div style="font-size: 20px; font-weight: bold; color: #d97706;">{remaining_amount}</div>
-            <div style="font-size: 12px; color: #6b7280; margin-top: 5px;">{remaining_amount_label}</div>
+        </div>
+        
+        <!-- Colonne Financier (40%) -->
+        <div style="flex: 2;">
+          <h2 style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 15px; border-left: 3px solid #f59e0b; padding-left: 10px;">
+            {financial}
+          </h2>
+          
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+              <span style="font-size: 11px; color: #64748b;">{totalRevenue}</span>
+              <span style="font-size: 13px; font-weight: 700; color: #0f172a;">{total_revenue}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 11px; color: #64748b;">{paidAmount}</span>
+              <span style="font-size: 12px; font-weight: 600; color: #10b981;">{paid_amount}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: #64748b;">{remainingAmount}</span>
+              <span style="font-size: 12px; font-weight: 600; color: #ef4444;">{remaining_amount}</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Liste des apprenants -->
       <div style="margin-bottom: 30px;">
-        <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #1e40af;">
-          {students} ({students_count})
-        </h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h2 style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; border-left: 3px solid #6366f1; padding-left: 10px; margin: 0;">
+            {students}
+          </h2>
+          <span style="font-size: 10px; font-weight: 600; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 10px;">
+            {students_count} {enrollments}
+          </span>
+        </div>
+        
+        <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
           <thead>
-            <tr style="background-color: #1e40af; color: white;">
-              <th style="padding: 10px; text-align: left; border: 1px solid #1e3a8a;">{student_name}</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #1e3a8a;">{student_number}</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #1e3a8a;">{attendance}</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #1e3a8a;">{grade}</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #1e3a8a;">{payment_status}</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #1e3a8a;">{enrollment_date}</th>
+            <tr style="background-color: #f1f5f9; color: #475569;">
+              <th style="padding: 12px 15px; text-align: left; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">{studentName}</th>
+              <th style="padding: 12px 15px; text-align: left; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">{studentNumber}</th>
+              <th style="padding: 12px 15px; text-align: center; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">{attendance}</th>
+              <th style="padding: 12px 15px; text-align: center; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">{grade}</th>
+              <th style="padding: 12px 15px; text-align: center; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">{paymentStatus}</th>
+              <th style="padding: 12px 15px; text-align: right; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0;">{enrollmentDate}</th>
             </tr>
           </thead>
           <tbody>
@@ -1439,17 +1467,17 @@ function generateSessionReportTemplate(data: {
         </table>
       </div>
 
-      <!-- Informations de l'organisation -->
-      <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
-        <p style="font-size: 12px; color: #6b7280; margin-bottom: 10px;">
-          <strong>{organization_name}</strong>
-        </p>
-        {IF organization_address}<p style="font-size: 12px; color: #6b7280;">{organization_address}</p>{ENDIF}
-        {IF organization_phone}<p style="font-size: 12px; color: #6b7280;">Tél: {organization_phone}</p>{ENDIF}
-        {IF organization_email}<p style="font-size: 12px; color: #6b7280;">Email: {organization_email}</p>{ENDIF}
-        <p style="font-size: 12px; color: #6b7280; margin-top: 20px;">
-          {done_at} <strong>{organization_address}</strong>, {on} <strong>{issue_date}</strong>
-        </p>
+      <!-- Footer Organization -->
+      <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div style="font-size: 10px; color: #94a3b8;">
+          <p style="margin-bottom: 4px;"><strong style="color: #64748b;">{organization_name}</strong></p>
+          {IF organization_address}<p style="margin-bottom: 2px;">{organization_address}</p>{ENDIF}
+          {IF organization_email}<p style="margin-bottom: 2px;">{organization_email}</p>{ENDIF}
+        </div>
+        <div style="text-align: right; font-size: 10px; color: #94a3b8;">
+          <p style="margin-bottom: 4px;">Document généré le <strong>{issue_date}</strong></p>
+          <p>Page <span class="pageNumber"></span> / <span class="totalPages"></span></p>
+        </div>
       </div>
     </div>
   `
@@ -1617,19 +1645,41 @@ export async function generateSessionReportHTML(data: {
   }[lang]
   
   // Formater la liste des étudiants en HTML
-  const studentsTableRows = data.students.map((student, index) => `
-    <tr style="${index % 2 === 0 ? 'background-color: #f9fafb;' : ''}">
-      <td style="padding: 8px; border: 1px solid #e5e7eb;">
-        <strong>${student.first_name} ${student.last_name}</strong>
-        ${student.email ? `<br/><span style="font-size: 10px; color: #6b7280;">${student.email}</span>` : ''}
+  const studentsTableRows = data.students.map((student, index) => {
+    const paymentStatusColor = {
+      paid: '#10b981', // green
+      pending: '#f59e0b', // amber
+      partial: '#3b82f6', // blue
+      overdue: '#ef4444', // red
+    }[student.paymentStatus] || '#64748b'
+
+    const paymentStatusLabel = paymentStatusLabels[student.paymentStatus as keyof typeof paymentStatusLabels] || student.paymentStatus
+
+    return `
+    <tr style="${index % 2 === 0 ? 'background-color: #ffffff;' : 'background-color: #f8fafc;'}">
+      <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; color: #334155;">
+        <div style="font-weight: 600; color: #0f172a;">${student.first_name} ${student.last_name}</div>
+        ${student.email ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">${student.email}</div>` : ''}
       </td>
-      <td style="padding: 8px; border: 1px solid #e5e7eb;">${student.student_number || '-'}</td>
-      <td style="padding: 8px; text-align: center; border: 1px solid #e5e7eb;">${student.attendanceRate}%</td>
-      <td style="padding: 8px; text-align: center; border: 1px solid #e5e7eb;">${student.averageGrade !== null && student.averageGrade !== undefined ? student.averageGrade : '-'}</td>
-      <td style="padding: 8px; text-align: center; border: 1px solid #e5e7eb;">${paymentStatusLabels[student.paymentStatus as keyof typeof paymentStatusLabels] || student.paymentStatus}</td>
-      <td style="padding: 8px; text-align: center; border: 1px solid #e5e7eb;">${formatDateForDocument(student.enrollmentDate)}</td>
+      <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; color: #64748b;">${student.student_number || '-'}</td>
+      <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+        <span style="font-weight: 600; color: ${student.attendanceRate >= 80 ? '#10b981' : student.attendanceRate >= 50 ? '#f59e0b' : '#ef4444'};">
+          ${student.attendanceRate}%
+        </span>
+      </td>
+      <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">
+        ${student.averageGrade !== null && student.averageGrade !== undefined ? student.averageGrade : '-'}
+      </td>
+      <td style="padding: 12px 15px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+        <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 9px; font-weight: 600; color: #ffffff; background-color: ${paymentStatusColor};">
+          ${paymentStatusLabel}
+        </span>
+      </td>
+      <td style="padding: 12px 15px; text-align: right; border-bottom: 1px solid #e2e8f0; color: #64748b;">
+        ${formatDateForDocument(student.enrollmentDate)}
+      </td>
     </tr>
-  `).join('')
+  `}).join('')
   
   // Générer le template avec balises
   const template = generateSessionReportTemplate(data)
@@ -1645,7 +1695,7 @@ export async function generateSessionReportHTML(data: {
     : t.averageGrade
   
   const variables: any = {
-    organisation_logo: data.organization.logo_url || '',
+    organization_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
     session_info: t.sessionInfo,
@@ -1705,8 +1755,21 @@ export async function generateSessionReportHTML(data: {
     issue_date: formatDateForDocument(data.issueDate),
   }
   
-  // Traiter le template avec le système de génération HTML
-  return await processTemplateWithTags(template, variables, data.documentId, data.organizationId)
+  // Traiter les conditionnels et variables directement
+  const { processConditionals } = await import('./document-generation/conditional-processor')
+  
+  // D'abord traiter les conditionnels
+  let processedHtml = processConditionals(template, variables)
+  
+  // Ensuite remplacer les variables simples
+  Object.keys(variables).forEach(key => {
+    const value = variables[key]
+    const regex = new RegExp(`\\{${key}\\}`, 'g')
+    const replacement = (value === null || value === undefined) ? '' : String(value)
+    processedHtml = processedHtml.replace(regex, replacement)
+  })
+  
+  return processedHtml
 }
 
 /**

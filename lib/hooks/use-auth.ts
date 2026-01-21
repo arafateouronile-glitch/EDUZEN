@@ -63,7 +63,7 @@ export function useAuth() {
 
         const userPromise = supabase
           .from('users')
-          .select('id, organization_id, email, full_name, phone, avatar_url, role, permissions, is_active, last_login_at, created_at, updated_at')
+          .select('id, organization_id, email, full_name, phone, avatar_url, role, permissions, is_active, last_login_at, created_at, updated_at, theme_preference')
           .eq('id', session.user.id)
           .maybeSingle()
           .then(async ({ data, error }) => {
@@ -99,7 +99,7 @@ export function useAuth() {
                   // Refetch l'utilisateur après synchronisation
                   const { data: syncedUser, error: refetchError } = await supabase
                     .from('users')
-                    .select('id, organization_id, email, full_name, phone, avatar_url, role, permissions, is_active, last_login_at, created_at, updated_at')
+                    .select('id, organization_id, email, full_name, phone, avatar_url, role, permissions, is_active, last_login_at, created_at, updated_at, theme_preference')
                     .eq('id', session.user.id)
                     .maybeSingle()
                   
@@ -378,7 +378,7 @@ export function useAuth() {
       
       try {
         // Essayer d'abord avec la fonction SQL
-        const { data: createdUserId, error: rpcUserError } = await (supabase.rpc as any)(
+        const { data: createdUserId, error: rpcUserError } = await (supabase as any).rpc(
           'create_user_for_organization',
           {
             user_id: userId,

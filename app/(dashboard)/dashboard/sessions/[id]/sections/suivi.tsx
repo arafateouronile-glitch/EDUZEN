@@ -115,6 +115,9 @@ export function Suivi({
     formation,
     program,
     organization,
+    enrollments,
+    grades,
+    attendanceStats,
   })
 
   // Récupérer les signatures liées à cette session
@@ -710,7 +713,7 @@ export function Suivi({
           </div>
         </div>
         <Button 
-          onClick={handleGenerateSessionReport}
+          onClick={() => handleGenerateSessionReport()}
           className="bg-brand-blue hover:bg-brand-blue-dark text-white shadow-lg shadow-brand-blue/20 px-8 py-6 h-auto text-base font-bold rounded-xl"
         >
           <Download className="mr-2 h-5 w-5" />

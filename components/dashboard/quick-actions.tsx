@@ -12,39 +12,51 @@ import {
   Clock,
   Target,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 const quickActions = [
   {
     icon: PlayCircle,
     label: 'Reprendre un cours',
     href: '/learner/elearning',
-    color: 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700',
-    iconColor: 'text-white',
+    cardBg: 'bg-gradient-to-br from-brand-blue/5 via-brand-blue/10 to-brand-cyan/5',
+    iconBg: 'bg-gradient-to-br from-brand-blue to-brand-blue-dark',
+    borderColor: 'border-brand-blue/20',
+    textColor: 'text-brand-blue',
+    glowColor: 'rgba(39, 68, 114, 0.15)',
     description: 'E-Learning',
   },
   {
     icon: Calendar,
     label: 'Mon planning',
     href: '/learner/planning',
-    color: 'bg-gradient-to-br from-purple-500 via-purple-600 to-pink-700',
-    iconColor: 'text-white',
+    cardBg: 'bg-gradient-to-br from-brand-cyan/5 via-brand-cyan/10 to-brand-blue/5',
+    iconBg: 'bg-gradient-to-br from-brand-cyan to-brand-cyan-dark',
+    borderColor: 'border-brand-cyan/20',
+    textColor: 'text-brand-cyan-dark',
+    glowColor: 'rgba(52, 185, 238, 0.15)',
     description: 'Calendrier',
   },
   {
     icon: FileText,
     label: 'Mes documents',
     href: '/learner/documents',
-    color: 'bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700',
-    iconColor: 'text-white',
-    description: 'Telecharger',
+    cardBg: 'bg-gradient-to-br from-emerald-50 via-emerald-100/50 to-teal-50',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    borderColor: 'border-emerald-200',
+    textColor: 'text-emerald-700',
+    glowColor: 'rgba(16, 185, 129, 0.15)',
+    description: 'Télécharger',
   },
   {
     icon: MessageCircle,
     label: 'Messages',
     href: '/learner/messages',
-    color: 'bg-gradient-to-br from-orange-500 via-orange-600 to-red-700',
-    iconColor: 'text-white',
+    cardBg: 'bg-gradient-to-br from-purple-50 via-purple-100/50 to-pink-50',
+    iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
+    borderColor: 'border-purple-200',
+    textColor: 'text-purple-700',
+    glowColor: 'rgba(168, 85, 247, 0.15)',
     description: 'Communiquer',
   },
 ]
@@ -81,93 +93,67 @@ export function QuickActions() {
       className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
     >
       {quickActions.map((action, index) => (
-        <motion.div key={action.href} variants={itemVariants}>
+        <motion.div
+          key={action.href}
+          variants={itemVariants}
+          whileHover={{ y: -6, scale: 1.02 }}
+          className="group relative"
+        >
           <Link href={action.href}>
-            <motion.div
-              whileHover={{ scale: 1.05, y: -8 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 400, damping: 20 }}
-              className="group relative overflow-hidden rounded-3xl cursor-pointer shadow-[0_10px_40px_-15px_rgba(0,0,0,0.2)] hover:shadow-[0_20px_60px_-15px_rgba(59,130,246,0.4)] transition-all duration-500"
+            <div
+              className={cn(
+                "relative overflow-hidden rounded-2xl p-5 md:p-6 border-2 transition-all duration-500 shadow-lg hover:shadow-2xl cursor-pointer",
+                action.cardBg,
+                action.borderColor
+              )}
+              style={{
+                boxShadow: `0 10px 40px -10px ${action.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.1)`
+              }}
             >
-              {/* Animated gradient background */}
-              <motion.div
-                className={`absolute inset-0 ${action.color}`}
-                animate={{
-                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-                }}
-                transition={{
-                  duration: 8,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: index * 0.5,
-                }}
-                style={{ backgroundSize: '200% 200%' }}
-              />
-
-              {/* Mesh gradient overlay */}
-              <div className="absolute inset-0 opacity-30" style={{
-                backgroundImage: 'radial-gradient(at 40% 20%, rgba(255, 255, 255, 0.3) 0px, transparent 50%), radial-gradient(at 80% 80%, rgba(255, 255, 255, 0.2) 0px, transparent 50%)',
-              }} />
-
-              {/* Floating orb */}
-              <motion.div
-                animate={{
-                  y: [0, -10, 0],
-                  x: [0, 5, 0],
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 4 + index,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"
-              />
-
-              {/* Shimmer effect on hover */}
+              {/* Shine effect */}
               <motion.div
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
                 initial={{ x: '-100%' }}
                 whileHover={{ x: '100%' }}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
+                transition={{ duration: 0.6, ease: "easeInOut" as const }}
               />
 
-              {/* Glow effect on hover */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
               {/* Content */}
-              <div className="relative z-10 flex flex-col items-center gap-4 text-center p-6 md:p-8">
+              <div className="relative z-10 flex flex-col items-center text-center gap-4">
                 <motion.div
-                  className="relative p-4 md:p-5 bg-white/20 backdrop-blur-md rounded-2xl md:rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] border border-white/30"
-                  whileHover={{ scale: 1.15, rotate: 8 }}
+                  className={cn('p-3.5 rounded-2xl shadow-xl', action.iconBg)}
+                  whileHover={{ rotate: 12, scale: 1.15 }}
                   transition={{ type: "spring", stiffness: 500, damping: 15 }}
                 >
-                  {/* Icon glow */}
-                  <motion.div
-                    className="absolute inset-0 bg-white/30 rounded-2xl md:rounded-3xl blur-xl opacity-0 group-hover:opacity-100"
-                    transition={{ duration: 0.3 }}
-                  />
-                  <action.icon className={`h-6 w-6 md:h-8 md:w-8 ${action.iconColor} drop-shadow-lg relative z-10`} />
+                  <action.icon className="h-6 w-6 md:h-7 md:w-7 text-white" />
                 </motion.div>
+
                 <div>
-                  <motion.span
-                    className="text-[10px] md:text-xs font-bold text-white/95 block mb-1.5 uppercase tracking-widest drop-shadow-md"
-                    whileHover={{ scale: 1.05 }}
-                  >
+                  <p className={cn("text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1", action.textColor)}>
                     {action.description}
-                  </motion.span>
-                  <motion.span
-                    className="text-sm md:text-base font-display font-bold text-white tracking-tight leading-tight drop-shadow-xl block"
-                    whileHover={{ scale: 1.05 }}
-                  >
+                  </p>
+                  <p className="text-sm md:text-base font-display font-bold text-gray-900 tracking-tight leading-tight">
                     {action.label}
-                  </motion.span>
+                  </p>
                 </div>
+
+                {/* Bottom accent bar */}
+                <motion.div
+                  className={cn("h-1 w-12 rounded-full mt-1", action.iconBg)}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
+                />
               </div>
 
-              {/* Bottom gradient accent */}
-              <div className="absolute bottom-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            </motion.div>
+              {/* Glow effect on hover */}
+              <div
+                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background: `radial-gradient(circle at 50% 50%, ${action.glowColor} 0%, transparent 70%)`
+                }}
+              />
+            </div>
           </Link>
         </motion.div>
       ))}

@@ -430,6 +430,9 @@ function replaceVariablesInHTML(html: string, variables: Record<string, any>): s
   // D'abord les variables longues, puis les courtes
   // EXCLURE COMPLÈTEMENT les variables de logo car elles sont déjà traitées dans processLogos
   const logoKeys = ['ecole_logo', 'organization_logo', 'organisation_logo']
+  // Variables autorisées à injecter du HTML brut (généré côté serveur/app)
+  // Exemple: lignes de modules (tableaux) pour devis/factures, lignes étudiants pour rapports.
+  const rawHtmlKeys = ['modules_lignes', 'students_table_rows']
   const sortedKeys = Object.keys(variables)
     .filter(key => !logoKeys.includes(key)) // Exclure les variables de logo
     .sort((a, b) => b.length - a.length)
@@ -441,9 +444,11 @@ function replaceVariablesInHTML(html: string, variables: Record<string, any>): s
     // Utiliser un pattern qui ne capture que les variables complètes (pas dans les mots)
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const regex = new RegExp(`\\{${escapedKey}\\}`, 'g')
-    const replacement = (value === null || value === undefined) 
-      ? '' 
-      : String(value).replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const replacement = (value === null || value === undefined)
+      ? ''
+      : rawHtmlKeys.includes(key)
+        ? String(value)
+        : String(value).replace(/</g, '&lt;').replace(/>/g, '&gt;')
     
     // Remplacer toutes les occurrences sauf celles dans data-logo-var
     result = result.replace(regex, (match, offset) => {

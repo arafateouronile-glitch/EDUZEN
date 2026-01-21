@@ -39,13 +39,13 @@ export async function GET(
     await resourceLibraryService.recordDownload(resourceId, user.id, ipAddress, userAgent)
 
     // Si c'est une URL externe, rediriger
-    if (resource.external_url) {
-      return NextResponse.redirect(resource.external_url)
+    if ((resource as any).external_url) {
+      return NextResponse.redirect((resource as any).external_url)
     }
 
     // Si c'est un fichier, rediriger vers l'URL
-    if (resource.file_url) {
-      return NextResponse.redirect(resource.file_url)
+    if ((resource as any).file_url) {
+      return NextResponse.redirect((resource as any).file_url)
     }
 
     return NextResponse.json({ error: 'Aucun fichier disponible' }, { status: 404 })

@@ -84,13 +84,12 @@ export class InvoiceService {
   private async generateInvoiceNumber(organizationId: string, documentType: 'quote' | 'invoice' = 'invoice'): Promise<string> {
     const year = new Date().getFullYear().toString()
     
-    // Trouver le dernier numéro pour cette organisation et ce type pour l'année en cours
+    // Trouver le dernier numéro pour cette organisation (TOUS types) pour l'année en cours
     // Format recherché: ANNEE-NUMERO (ex: 2025-001)
     const { data: lastInvoice } = await this.supabase
       .from('invoices')
       .select('invoice_number')
       .eq('organization_id', organizationId)
-      .eq('document_type', documentType)
       .like('invoice_number', `${year}-%`)
       .order('invoice_number', { ascending: false })
       .limit(1)
@@ -121,7 +120,8 @@ export class InvoiceService {
       // Générer le numéro de facture si vide ou non fourni
       const invoiceData = invoice as InvoiceInsert & { invoice_number?: string; document_type?: 'quote' | 'invoice' }
       let invoiceNumber = invoiceData.invoice_number
-      if (!invoiceNumber || invoiceNumber.trim() === '') {
+      const shouldAutoGenerateNumber = !invoiceNumber || invoiceNumber.trim() === ''
+      if (shouldAutoGenerateNumber) {
         const orgId = invoice.organization_id
         if (!orgId) {
           throw errorHandler.createValidationError('Organization ID is required to create an invoice.')
@@ -132,14 +132,43 @@ export class InvoiceService {
         )
       }
 
-      const { data, error } = await this.supabase
-        .from('invoices')
-        .insert({
-          ...invoice,
-          invoice_number: invoiceNumber,
-        } as InvoiceInsert)
-        .select()
-        .single()
+      // Insertion avec retry sur collision de numéro (contrainte unique org+invoice_number)
+      let data: any = null
+      let error: any = null
+      const maxAttempts = shouldAutoGenerateNumber ? 3 : 1
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const res = await this.supabase
+          .from('invoices')
+          .insert({
+            ...invoice,
+            invoice_number: invoiceNumber,
+          } as InvoiceInsert)
+          .select()
+          .single()
+
+        data = res.data
+        error = res.error
+
+        if (!error) break
+
+        const isUniqueViolation = error.code === '23505'
+        const isInvoiceNumberConflict =
+          isUniqueViolation &&
+          (String(error.message || '').includes('invoice_number') ||
+            String(error.message || '').includes('invoices_organization_id_invoice_number_key') ||
+            String(error.details || '').includes('invoice_number'))
+
+        if (shouldAutoGenerateNumber && isInvoiceNumberConflict && attempt < maxAttempts) {
+          // Régénérer et réessayer (collision possible en cas de créations simultanées)
+          invoiceNumber = await this.generateInvoiceNumber(
+            invoice.organization_id as string,
+            invoiceData.document_type || 'invoice'
+          )
+          continue
+        }
+
+        break
+      }
 
       if (error) {
         if (error.code === '23505') {

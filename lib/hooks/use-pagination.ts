@@ -7,8 +7,8 @@
 'use client'
 
 import React from 'react'
-import { useQuery, UseQueryOptions, keepPreviousData } from '@tanstack/react-query'
-import { parsePaginationParams, type PaginationParams, type PaginatedResponse } from '@/lib/utils/pagination'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { type PaginationParams, type PaginatedResponse } from '@/lib/utils/pagination'
 
 export interface UsePaginationOptions<T> {
   queryKey: (string | number | undefined)[]

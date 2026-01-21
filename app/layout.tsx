@@ -1,5 +1,16 @@
 import type { Metadata } from 'next'
-import { Inter, Space_Grotesk } from 'next/font/google'
+import '@fontsource/inter/300.css'
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
+import '@fontsource/inter/700.css'
+import '@fontsource/inter/800.css'
+import '@fontsource/inter/900.css'
+import '@fontsource/space-grotesk/300.css'
+import '@fontsource/space-grotesk/400.css'
+import '@fontsource/space-grotesk/500.css'
+import '@fontsource/space-grotesk/600.css'
+import '@fontsource/space-grotesk/700.css'
 import './globals.css'
 import { Providers } from './providers'
 import { cn } from '@/lib/utils'
@@ -9,20 +20,6 @@ import { NextIntlClientProvider } from 'next-intl'
 import { headers } from 'next/headers'
 import { CSP_NONCE_HEADER } from '@/lib/utils/csp'
 import { NonceProvider } from '@/lib/contexts/nonce-context'
-
-const inter = Inter({ 
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-  weight: ['300', '400', '500', '600', '700', '800', '900']
-})
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-space-grotesk',
-  display: 'swap',
-  weight: ['300', '400', '500', '600', '700']
-})
 
 export const metadata: Metadata = {
   title: {
@@ -121,10 +118,9 @@ export default async function RootLayout({
         {/* DNS prefetch pour améliorer les performances */}
         <link rel="dns-prefetch" href="https://*.supabase.co" />
         <link rel="dns-prefetch" href="https://*.sentry.io" />
-        {/* Note: Les polices Google sont déjà optimisées via next/font/google (Inter et Space_Grotesk) */}
-        {/* Pas besoin de preload/preconnect car next/font les gère automatiquement */}
+        {/* Note: Polices chargées localement via @fontsource (pas de fetch au build) */}
       </head>
-      <body className={cn(inter.variable, spaceGrotesk.variable, inter.className, 'smooth-scroll-premium')}>
+      <body className={cn('smooth-scroll-premium')}>
         <NonceProvider nonce={nonce}>
           <NextIntlClientProvider messages={messages}>
             <Providers>

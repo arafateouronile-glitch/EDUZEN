@@ -207,6 +207,7 @@ export function EspaceApprenant({
     formation,
     program,
     organization,
+    enrollments,
   })
 
   // Récupérer les données à jour pour l'apprenant sélectionné

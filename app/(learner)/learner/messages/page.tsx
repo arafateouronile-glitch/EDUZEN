@@ -291,41 +291,67 @@ export default function LearnerMessagesPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header */}
+      {/* Header Premium */}
       <motion.div variants={itemVariants}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-xl">
-              <MessageSquare className="h-8 w-8 text-indigo-600" />
+        <GlassCard variant="premium" className="p-6 md:p-8 relative overflow-hidden">
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-50/30 to-pink-50/20" />
+
+          {/* Floating orbs */}
+          <motion.div
+            animate={{ y: [0, -10, 0], x: [0, 5, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{ y: [0, 10, 0], x: [0, -5, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"
+          />
+
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div
+                className="p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/25"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                <MessageSquare className="h-8 w-8 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  Messages
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  Communiquez avec vos formateurs et le support
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Messages
-              </h1>
-              <p className="text-gray-500">
-                Communiquez avec vos formateurs et le support
-              </p>
-            </div>
+
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25 border-0">
+                <Plus className="h-4 w-4 mr-2" />
+                Nouveau message
+              </Button>
+            </motion.div>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau message
-          </Button>
-        </div>
+        </GlassCard>
       </motion.div>
 
-      {/* Search */}
+      {/* Search Premium */}
       <motion.div variants={itemVariants}>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="search"
-            placeholder="Rechercher une conversation..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <GlassCard variant="subtle" className="p-2">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              type="search"
+              placeholder="Rechercher une conversation..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-12 h-12 bg-transparent border-0 focus:ring-2 focus:ring-indigo-500/20 rounded-xl text-base"
+            />
+          </div>
+        </GlassCard>
       </motion.div>
 
       {/* Conversations */}
@@ -353,48 +379,62 @@ export default function LearnerMessagesPage() {
               }
               
               return (
-                <GlassCard
+                <motion.div
                   key={conversation.id}
-                  className="p-4 cursor-pointer hover:shadow-lg transition-all duration-300"
-                  onClick={() => router.push(`/learner/messages/${conversation.id}`)}
+                  whileHover={{ y: -2 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 >
-                  <div className="flex items-center gap-4">
-                    {/* Avatar */}
-                    <div className="relative">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold bg-gradient-to-br from-brand-blue to-indigo-600">
-                        <User className="h-6 w-6" />
-                      </div>
-                    </div>
+                  <GlassCard
+                    variant="premium"
+                    hoverable
+                    glow
+                    className="p-4 cursor-pointer relative overflow-hidden group"
+                    onClick={() => router.push(`/learner/messages/${conversation.id}`)}
+                  >
+                    {/* Hover gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900 truncate">
-                          {conversationName}
-                        </h3>
-                        {lastMessageTime && (
-                          <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(lastMessageTime), {
-                              addSuffix: true,
-                              locale: fr,
-                            })}
-                          </span>
+                    <div className="relative flex items-center gap-4">
+                      {/* Avatar */}
+                      <motion.div
+                        className="relative"
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
+                          <User className="h-6 w-6" />
+                        </div>
+                      </motion.div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
+                            {conversationName}
+                          </h3>
+                          {lastMessageTime && (
+                            <span className="text-xs text-gray-500 flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
+                              <Clock className="h-3 w-3" />
+                              {formatDistanceToNow(new Date(lastMessageTime), {
+                                addSuffix: true,
+                                locale: fr,
+                              })}
+                            </span>
+                          )}
+                        </div>
+                        {lastMessage && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm truncate text-gray-500">
+                              {conversation.conversation_type === 'group' && lastMessageSender ? (
+                                <span className="font-medium text-indigo-600">{lastMessageSender}: </span>
+                              ) : null}
+                              {lastMessage.content}
+                            </p>
+                          </div>
                         )}
                       </div>
-                      {lastMessage && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-sm truncate text-gray-500">
-                            {conversation.conversation_type === 'group' && lastMessageSender ? (
-                              <span className="font-medium">{lastMessageSender}: </span>
-                            ) : null}
-                            {lastMessage.content}
-                          </p>
-                        </div>
-                      )}
                     </div>
-                  </div>
-                </GlassCard>
+                  </GlassCard>
+                </motion.div>
               )
             })}
           </div>
@@ -415,23 +455,37 @@ export default function LearnerMessagesPage() {
         )}
       </motion.div>
 
-      {/* Quick actions */}
+      {/* Quick actions Premium */}
       <motion.div variants={itemVariants}>
-        <GlassCard className="p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Actions rapides</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="justify-start">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Contacter le support
-            </Button>
-            <Button variant="outline" className="justify-start">
-              <User className="h-4 w-4 mr-2" />
-              Contacter un formateur
-            </Button>
-            <Button variant="outline" className="justify-start">
-              <Send className="h-4 w-4 mr-2" />
-              Signaler un problème
-            </Button>
+        <GlassCard variant="premium" className="p-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-purple-50/30" />
+          <div className="relative">
+            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="p-2 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-lg">
+                <Send className="h-4 w-4 text-indigo-600" />
+              </div>
+              Actions rapides
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button variant="outline" className="w-full justify-start h-12 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Contacter le support
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button variant="outline" className="w-full justify-start h-12 hover:border-purple-500 hover:text-purple-600 hover:bg-purple-50 transition-all">
+                  <User className="h-4 w-4 mr-2" />
+                  Contacter un formateur
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button variant="outline" className="w-full justify-start h-12 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50 transition-all">
+                  <Send className="h-4 w-4 mr-2" />
+                  Signaler un problème
+                </Button>
+              </motion.div>
+            </div>
           </div>
         </GlassCard>
       </motion.div>

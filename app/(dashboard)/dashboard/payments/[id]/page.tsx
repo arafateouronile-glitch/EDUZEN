@@ -420,7 +420,8 @@ export default function InvoiceDetailPage() {
       tempDiv.innerHTML = bodyContent
 
       // Trouver l'élément principal du document
-      let element = tempDiv.querySelector('.document-container') || tempDiv.querySelector('[id$="-document"]') || tempDiv.firstElementChild
+      // IMPORTANT: ne pas capturer uniquement le <header> racine (sinon PDF "vide")
+      let element = tempDiv.querySelector('.document-container') || tempDiv.querySelector('[id$="-document"]') || tempDiv
 
       if (!element || !(element instanceof HTMLElement)) {
         element = tempDiv

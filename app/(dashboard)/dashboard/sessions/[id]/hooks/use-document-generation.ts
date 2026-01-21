@@ -9,6 +9,7 @@ import {
   generateProgramHTML,
   generateTermsHTML,
   generatePrivacyPolicyHTML,
+  generateSessionReportHTML,
 } from '@/lib/utils/document-templates'
 import { useToast } from '@/components/ui/toast'
 import { logger } from '@/lib/utils/logger'
@@ -29,6 +30,9 @@ interface DocumentGenerationProps {
   formation: FormationWithRelations | null | undefined
   program: Program | null | undefined
   organization: Organization | undefined
+  enrollments?: EnrollmentWithRelations[]
+  grades?: any[]
+  attendanceStats?: any
 }
 
 export function useDocumentGeneration({
@@ -36,6 +40,9 @@ export function useDocumentGeneration({
   formation,
   program,
   organization,
+  enrollments = [],
+  grades = [],
+  attendanceStats = null,
 }: DocumentGenerationProps) {
   const { addToast } = useToast()
   const [isGeneratingZip, setIsGeneratingZip] = useState(false)
@@ -621,13 +628,173 @@ export function useDocumentGeneration({
     }
   }
 
-  // Placeholder functions pour les fonctionnalités à venir
-  const handleGenerateSessionReport = async () => {
-    addToast({
-      type: 'info',
-      title: 'Fonctionnalité à venir',
-      description: 'La génération du rapport de session sera implémentée prochainement.',
-    })
+  const handleGenerateSessionReport = async (enrollmentsArg: EnrollmentWithRelations[] = []) => {
+    if (!sessionData) {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: 'Données de session manquantes pour générer le rapport.',
+      })
+      return
+    }
+
+    try {
+      const enrol = enrollmentsArg.length > 0 ? enrollmentsArg : enrollments
+
+      // Calculer les statistiques
+      const totalEnrollments = enrol.length
+      const activeEnrollments = enrol.filter((e) => e.status === 'active' || e.status === 'confirmed').length
+      const completedEnrollments = enrol.filter((e) => e.status === 'completed').length
+      const attendanceRate = attendanceStats && attendanceStats.total > 0
+        ? Math.round((attendanceStats.present / attendanceStats.total) * 100)
+        : 0
+
+      // Calculer la moyenne des notes
+      const allGrades = grades || []
+      let averageGrade: number | undefined
+      let averagePercentage: number | undefined
+      if (allGrades.length > 0) {
+        const totalScore = allGrades.reduce((sum: number, g: any) => {
+          const maxScore = Number(g.max_score) || 20
+          const score = Number(g.score) || 0
+          return sum + (score / maxScore) * 20
+        }, 0)
+        averageGrade = totalScore / allGrades.length
+        averagePercentage = Math.round((averageGrade / 20) * 100)
+      }
+
+      // Calculer les finances
+      const totalRevenue = enrol.reduce((sum, e) => sum + Number(e.total_amount || 0), 0)
+      const paidAmount = enrol.reduce((sum, e) => sum + Number(e.paid_amount || 0), 0)
+      const remainingAmount = totalRevenue - paidAmount
+
+      // Préparer la liste des étudiants avec leurs stats
+      const students = enrol.map((enrollment) => {
+        const student = enrollment.students
+        if (!student) return null
+
+        const studentGrades = allGrades.filter((g: any) => g.student_id === enrollment.student_id)
+        const studentAvgGrade = studentGrades.length > 0
+          ? studentGrades.reduce((sum: number, g: any) => {
+              const maxScore = Number(g.max_score) || 20
+              const score = Number(g.score) || 0
+              return sum + (score / maxScore) * 20
+            }, 0) / studentGrades.length
+          : undefined
+
+        const studentAttendance = enrollment.student_id && attendanceStats?.byStudent?.[enrollment.student_id]
+          ? attendanceStats.byStudent[enrollment.student_id]
+          : { present: 0, total: 0 }
+        const studentAttendanceRate = studentAttendance.total > 0
+          ? Math.round((studentAttendance.present / studentAttendance.total) * 100)
+          : 0
+
+        return {
+          first_name: student.first_name,
+          last_name: student.last_name,
+          student_number: student.student_number || undefined,
+          email: student.email || undefined,
+          attendanceRate: studentAttendanceRate,
+          averageGrade: studentAvgGrade,
+          paymentStatus: enrollment.payment_status || 'pending',
+          enrollmentDate: enrollment.enrollment_date || enrollment.created_at || '',
+        }
+      }).filter((s) => s !== null) as any[]
+
+      const html = await generateSessionReportHTML({
+        session: {
+          name: sessionData.name,
+          start_date: sessionData.start_date,
+          end_date: sessionData.end_date,
+          start_time: sessionData.start_time || undefined,
+          end_time: sessionData.end_time || undefined,
+          location: sessionData.location || undefined,
+          status: sessionData.status || 'planned',
+        },
+        formation: {
+          name: formation?.name || 'Formation',
+          code: formation?.code || undefined,
+          duration_hours: (formation as any)?.duration_hours || undefined,
+          price: (formation as any)?.price || undefined,
+        },
+        program: program ? { name: program.name } : undefined,
+        organization: {
+          name: organization?.name || 'Organisation',
+          address: organization?.address || undefined,
+          phone: organization?.phone || undefined,
+          email: organization?.email || undefined,
+          logo_url: organization?.logo_url || undefined,
+        },
+        statistics: {
+          totalEnrollments,
+          activeEnrollments,
+          completedEnrollments,
+          attendanceRate,
+          averageGrade,
+          averagePercentage,
+          totalRevenue,
+          paidAmount,
+          remainingAmount,
+        },
+        students,
+        issueDate: new Date().toISOString(),
+        language: 'fr',
+      })
+
+      // Créer un élément temporaire pour générer le PDF
+      const tempDiv = document.createElement('div')
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '0'
+      tempDiv.style.width = '794px'
+      tempDiv.style.minHeight = '1123px'
+      tempDiv.style.backgroundColor = '#ffffff'
+      tempDiv.style.overflow = 'visible'
+      tempDiv.style.fontFamily = 'Arial, sans-serif'
+      document.body.appendChild(tempDiv)
+
+      // Parser le HTML
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(html, 'text/html')
+      const bodyContent = doc.body.innerHTML
+      tempDiv.innerHTML = bodyContent
+
+      // Trouver l'élément principal du document
+      const element = tempDiv.querySelector('[id$="-document"]') || tempDiv
+      const elementId = `temp-session-report-${Date.now()}`
+      if (element instanceof HTMLElement) {
+        element.id = elementId
+        if (!element.style.width) element.style.width = '794px'
+        if (!element.style.minHeight) element.style.minHeight = '1123px'
+        element.style.backgroundColor = '#ffffff'
+      }
+
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Générer le PDF
+      await generatePDFFromHTML(elementId, `rapport_session_${sessionData.name.replace(/\s+/g, '_')}.pdf`)
+
+      // Nettoyer
+      if (tempDiv.parentNode === document.body) {
+        document.body.removeChild(tempDiv)
+      }
+
+      addToast({
+        type: 'success',
+        title: 'Rapport généré',
+        description: 'Le rapport de session complet a été généré et téléchargé.',
+      })
+    } catch (error) {
+      logger.error('Erreur lors de la génération du rapport de session', error as Error, {
+        sessionId: sessionData?.id,
+      })
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de la génération du rapport de session.',
+      })
+    }
   }
 
   const handleGenerateCertificate = async (enrollment: EnrollmentWithRelations) => {

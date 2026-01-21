@@ -61,6 +61,7 @@
     "test-output/**/*",
     "scripts/**/*",
     "supabase/functions/**/*",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "lib/services/_example-standardized.service.ts"
   ]
 }
