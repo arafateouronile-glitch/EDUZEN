@@ -67,6 +67,7 @@ export function GestionConventions({
     handleGeneratePrivacyPolicy,
     handleSendContractByEmail,
     handleSendContractByEmailWithCustomContent,
+    handleSendAllContractsByEmail,
     prepareContractEmail,
   } = useDocumentGeneration({
     sessionData,
@@ -169,23 +170,42 @@ export function GestionConventions({
                       )}
                     </div>
                   </div>
-                  <Button
-                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all duration-300 min-w-[200px]"
-                    onClick={() => handleGenerateAllConventionsZip(enrollments)}
-                    disabled={isGeneratingZip}
-                  >
-                    {isGeneratingZip ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        <span>Génération...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Download className="h-4 w-4" />
-                        <span>Générer l'archive ZIP</span>
-                      </div>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all duration-300"
+                      onClick={() => handleGenerateAllConventionsZip(enrollments)}
+                      disabled={isGeneratingZip}
+                    >
+                      {isGeneratingZip ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                          <span>Génération...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Download className="h-4 w-4" />
+                          <span>Générer l'archive ZIP</span>
+                        </div>
+                      )}
+                    </Button>
+                    <Button
+                      className="bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200 hover:shadow-green-300 transition-all duration-300"
+                      onClick={() => handleSendAllContractsByEmail(enrollments)}
+                      disabled={isGeneratingZip}
+                    >
+                      {isGeneratingZip ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                          <span>Envoi...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          <span>Envoyer par email</span>
+                        </div>
+                      )}
+                    </Button>
+                  </div>
                 </div>
 
                 {isGeneratingZip && (

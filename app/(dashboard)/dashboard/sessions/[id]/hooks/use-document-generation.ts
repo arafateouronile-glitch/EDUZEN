@@ -96,7 +96,15 @@ export function useDocumentGeneration({
       if (element) {
         element.id = `temp-convention-${Date.now()}`
         await new Promise((resolve) => setTimeout(resolve, 500))
-        await generatePDFFromHTML(element.id, `convention_${sessionData.name.replace(/\s+/g, '_')}.pdf`)
+        const pdfBlob = await generatePDFBlobFromHTML(html)
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `convention_${sessionData.name.replace(/\s+/g, '_')}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
       }
 
       document.body.removeChild(tempDiv)
@@ -174,7 +182,15 @@ export function useDocumentGeneration({
       if (element) {
         element.id = `temp-contract-${Date.now()}`
         await new Promise((resolve) => setTimeout(resolve, 500))
-        await generatePDFFromHTML(element.id, `contrat_${student.last_name}_${student.first_name}.pdf`)
+        const pdfBlob = await generatePDFBlobFromHTML(html)
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `contrat_${student.last_name}_${student.first_name}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
       }
 
       document.body.removeChild(tempDiv)
@@ -1295,6 +1311,99 @@ export function useDocumentGeneration({
   }
 
   /**
+   * Envoie tous les contrats par email (groupé)
+   */
+  const handleSendAllContractsByEmail = async (
+    enrollments: EnrollmentWithRelations[],
+    customSubject?: string,
+    customBody?: string
+  ) => {
+    if (!sessionData || !formation || !organization) return
+
+    const validEnrollments = enrollments.filter(
+      (e) => e.students && e.students.email && e.status !== 'cancelled'
+    )
+
+    if (validEnrollments.length === 0) {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: 'Aucun étudiant avec une adresse email valide trouvé.',
+      })
+      return
+    }
+
+    setIsGeneratingZip(true)
+    setZipGenerationProgress({ current: 0, total: validEnrollments.length })
+
+    try {
+      let successCount = 0
+      let errorCount = 0
+
+      for (const enrollment of validEnrollments) {
+        try {
+          const student = enrollment.students
+          if (!student) continue
+
+          // Si un contenu personnalisé est fourni, l'utiliser
+          if (customSubject && customBody) {
+            // Remplacer les variables dans le sujet et le corps
+            let subject = customSubject
+            let body = customBody
+
+            // Remplacer les variables
+            subject = subject
+              .replace(/{student_first_name}/g, student.first_name || '')
+              .replace(/{student_last_name}/g, student.last_name || '')
+              .replace(/{session_name}/g, sessionData.name || '')
+              .replace(/{formation_name}/g, formation.name || '')
+              .replace(/{session_start_date}/g, sessionData.start_date ? formatDate(sessionData.start_date) : '')
+              .replace(/{session_end_date}/g, sessionData.end_date ? formatDate(sessionData.end_date) : '')
+              .replace(/{session_location}/g, sessionData.location || '')
+
+            body = body
+              .replace(/{student_first_name}/g, student.first_name || '')
+              .replace(/{student_last_name}/g, student.last_name || '')
+              .replace(/{session_name}/g, sessionData.name || '')
+              .replace(/{formation_name}/g, formation.name || '')
+              .replace(/{session_start_date}/g, sessionData.start_date ? formatDate(sessionData.start_date) : '')
+              .replace(/{session_end_date}/g, sessionData.end_date ? formatDate(sessionData.end_date) : '')
+              .replace(/{session_location}/g, sessionData.location || '')
+
+            await handleSendContractByEmailWithCustomContent(enrollment, subject, body)
+          } else {
+            // Utiliser le comportement par défaut
+            await handleSendContractByEmail(enrollment)
+          }
+          successCount++
+        } catch (error) {
+          errorCount++
+          logger.error('Erreur lors de l\'envoi du contrat', error as Error, {
+            enrollmentId: enrollment.id,
+          })
+        }
+        setZipGenerationProgress((prev) => ({ ...prev, current: prev.current + 1 }))
+      }
+
+      addToast({
+        type: successCount > 0 ? 'success' : 'error',
+        title: 'Envoi terminé',
+        description: `${successCount} email(s) envoyé(s) avec succès${errorCount > 0 ? `, ${errorCount} erreur(s)` : ''}.`,
+      })
+    } catch (error) {
+      logger.error('Erreur lors de l\'envoi groupé des contrats', error as Error)
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de l\'envoi groupé.',
+      })
+    } finally {
+      setIsGeneratingZip(false)
+      setZipGenerationProgress({ current: 0, total: 0 })
+    }
+  }
+
+  /**
    * Envoie un contrat par email
    */
   const handleSendContractByEmail = async (enrollment: EnrollmentWithRelations) => {
@@ -1419,6 +1528,7 @@ export function useDocumentGeneration({
     handleSendAllConvocationsByEmail,
     handleSendContractByEmail,
     handleSendContractByEmailWithCustomContent,
+    handleSendAllContractsByEmail,
     prepareConvocationEmail,
     prepareContractEmail,
   }
