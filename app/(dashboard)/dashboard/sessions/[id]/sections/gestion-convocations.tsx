@@ -474,6 +474,7 @@ export function GestionConvocations({
                                 src={student.photo_url}
                                 alt={`${student.first_name} ${student.last_name}`}
                                 fill
+                                sizes="40px"
                                 className="rounded-full object-cover ring-2 ring-white shadow-sm"
                               />
                             ) : (

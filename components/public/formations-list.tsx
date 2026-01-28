@@ -33,6 +33,7 @@ export function PublicFormationsList({ formations, featured = false }: PublicFor
                 src={formation.cover_image_url}
                 alt={formation.public_title}
                 fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover"
               />
               {formation.is_featured && (

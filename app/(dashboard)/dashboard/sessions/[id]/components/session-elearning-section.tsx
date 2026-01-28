@@ -678,6 +678,7 @@ export function SessionElearningSection({
                                 src={course.thumbnail_url}
                                 alt={course.title}
                                 fill
+                                sizes="64px"
                                 className="rounded-lg object-cover"
                               />
                             </div>

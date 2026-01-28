@@ -41,6 +41,7 @@ export function PublicFormationDetail({ formation }: PublicFormationDetailProps)
             src={formation.cover_image_url}
             alt={formation.public_title}
             fill
+            sizes="100vw"
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -180,6 +181,7 @@ export function PublicFormationDetail({ formation }: PublicFormationDetailProps)
                           src={imageUrl}
                           alt={`${formation.public_title} - Image ${index + 1}`}
                           fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                           className="object-cover"
                         />
                       </div>

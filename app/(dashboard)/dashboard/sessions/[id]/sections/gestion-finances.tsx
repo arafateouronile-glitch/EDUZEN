@@ -1032,135 +1032,230 @@ export function GestionFinances({
     { name: 'En retard', value: enrollments.filter((e) => e.payment_status === 'overdue').length, fill: '#EF4444' },
   ].filter(item => item.value > 0);
 
+  // Calculs pour la barre de progression
+  const collectionRate = totalRevenue > 0 ? Math.round((totalPaid / totalRevenue) * 100) : 0
+  const netRevenue = totalPaid - (chargesSummary?.paid_amount || 0)
+
   return (
     <div className="space-y-8">
-      {/* Statistiques financières - BentoGrid */}
-      <BentoGrid columns={4} gap="md">
-        <BentoCard span={1}>
-          <GlassCard variant="premium" className="h-full flex flex-col p-6 border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500 min-w-0">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-brand-blue/10 rounded-xl">
-                <Wallet className="h-5 w-5 text-brand-blue" />
+      {/* En-tête financier avec résumé global - Style cohérent avec le branding */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-blue via-brand-blue-dark to-indigo-900 p-8 shadow-2xl"
+      >
+        {/* Motif décoratif */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-gradient-to-br from-cyan-400 to-blue-300 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full blur-3xl" />
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Tableau de bord financier</h2>
               </div>
-              <h3 className="font-display font-bold text-gray-700 text-sm uppercase tracking-wider">Revenu total</h3>
+              <p className="text-blue-100/80">Suivi des revenus et dépenses de la session</p>
             </div>
-            <div className="mt-auto">
-              <div className="text-3xl font-bold text-gray-900 tracking-tight">
+            <div className="flex items-center gap-4">
+              <div className="px-5 py-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg">
+                <span className="text-blue-100/80 text-sm block mb-1">Bénéfice net</span>
+                <p className={cn(
+                  "text-2xl font-bold",
+                  netRevenue >= 0 ? "text-emerald-300" : "text-rose-300"
+                )}>
+                  {netRevenue >= 0 ? '+' : ''}{formatCurrency(netRevenue, 'EUR')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Barre de progression des encaissements */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-blue-100 font-medium">Taux d'encaissement</span>
+              <span className="text-white font-bold text-lg">{collectionRate}%</span>
+            </div>
+            <div className="h-4 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm border border-white/10">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${collectionRate}%` }}
+                transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
+                className="h-full bg-gradient-to-r from-cyan-400 via-emerald-400 to-teal-300 rounded-full relative"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+              </motion.div>
+            </div>
+            <div className="flex items-center justify-between text-xs text-blue-100/70">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                {formatCurrency(totalPaid, 'EUR')} encaissé
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                {formatCurrency(totalRemaining, 'EUR')} restant
+              </span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Statistiques financières - Grille moderne */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-brand-blue/20 hover:border-brand-blue/40 transition-all duration-500 group">
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-brand-blue/20 to-cyan-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-brand-blue to-cyan-500 rounded-xl shadow-lg shadow-brand-blue/25">
+                  <Wallet className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-brand-blue bg-brand-blue/10 px-2 py-1 rounded-full">
+                  {enrollments.length} inscrit{enrollments.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <p className="text-sm font-medium text-gray-500 mb-1">Revenu total</p>
+              <p className="text-3xl font-bold text-gray-900 tracking-tight">
                 {formatCurrency(totalRevenue, 'EUR')}
-              </div>
-              <p className="text-xs text-gray-500 mt-2 font-medium">
-                {enrollments.length} inscription{enrollments.length > 1 ? 's' : ''}
               </p>
             </div>
           </GlassCard>
-        </BentoCard>
+        </motion.div>
 
-        <BentoCard span={1}>
-          <GlassCard variant="premium" className="h-full flex flex-col p-6 border-2 border-transparent hover:border-green-500/10 transition-all duration-500 min-w-0">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-green-500/10 rounded-xl">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-500 group">
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-lg shadow-emerald-500/25">
+                  <CheckCircle2 className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-full">
+                  {collectionRate}%
+                </span>
               </div>
-              <h3 className="font-display font-bold text-gray-700 text-sm uppercase tracking-wider">Encaissé</h3>
-            </div>
-            <div className="mt-auto">
-              <div className="text-3xl font-bold text-green-600 tracking-tight">
+              <p className="text-sm font-medium text-gray-500 mb-1">Encaissé</p>
+              <p className="text-3xl font-bold text-emerald-600 tracking-tight">
                 {formatCurrency(totalPaid, 'EUR')}
-              </div>
-              <p className="text-xs text-gray-500 mt-2 font-medium">
-                {formatCurrency(paymentsViaPayments, 'EUR')} via paiements
               </p>
             </div>
           </GlassCard>
-        </BentoCard>
+        </motion.div>
 
-        <BentoCard span={1}>
-          <GlassCard variant="premium" className="h-full flex flex-col p-6 border-2 border-transparent hover:border-orange-500/10 transition-all duration-500 min-w-0">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-orange-500/10 rounded-xl">
-                <AlertCircle className="h-5 w-5 text-orange-600" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-amber-500/20 hover:border-amber-500/40 transition-all duration-500 group">
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl shadow-lg shadow-amber-500/25">
+                  <AlertCircle className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-amber-600 bg-amber-500/10 px-2 py-1 rounded-full">
+                  {enrollmentsWithBalance.length} en cours
+                </span>
               </div>
-              <h3 className="font-display font-bold text-gray-700 text-sm uppercase tracking-wider">Reste à payer</h3>
-            </div>
-            <div className="mt-auto">
-              <div className="text-3xl font-bold text-orange-600 tracking-tight">
+              <p className="text-sm font-medium text-gray-500 mb-1">Reste à payer</p>
+              <p className="text-3xl font-bold text-amber-600 tracking-tight">
                 {formatCurrency(totalRemaining, 'EUR')}
-              </div>
-              <p className="text-xs text-gray-500 mt-2 font-medium">
-                {enrollmentsWithBalance.length} solde{enrollmentsWithBalance.length > 1 ? 's' : ''} restant{enrollmentsWithBalance.length > 1 ? 's' : ''}
               </p>
             </div>
           </GlassCard>
-        </BentoCard>
+        </motion.div>
 
-        <BentoCard span={1}>
-          <GlassCard variant="premium" className="h-full flex flex-col p-6 border-2 border-transparent hover:border-red-500/10 transition-all duration-500 min-w-0">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-red-500/10 rounded-xl">
-                <TrendingDown className="h-5 w-5 text-red-600" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+        >
+          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-rose-500/20 hover:border-rose-500/40 transition-all duration-500 group">
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-rose-500/20 to-pink-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl shadow-lg shadow-rose-500/25">
+                  <TrendingDown className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xs font-semibold text-rose-600 bg-rose-500/10 px-2 py-1 rounded-full">
+                  {chargesSummary?.charge_count || 0} charge{(chargesSummary?.charge_count || 0) > 1 ? 's' : ''}
+                </span>
               </div>
-              <h3 className="font-display font-bold text-gray-700 text-sm uppercase tracking-wider">Charges</h3>
-            </div>
-            <div className="mt-auto">
-              <div className="text-3xl font-bold text-red-600 tracking-tight">
+              <p className="text-sm font-medium text-gray-500 mb-1">Dépenses</p>
+              <p className="text-3xl font-bold text-rose-600 tracking-tight">
                 {formatCurrency(chargesSummary?.total_amount || 0, 'EUR')}
-              </div>
-              <p className="text-xs text-gray-500 mt-2 font-medium">
-                {chargesSummary?.charge_count || 0} dépense{(chargesSummary?.charge_count || 0) > 1 ? 's' : ''}
               </p>
             </div>
           </GlassCard>
-        </BentoCard>
-      </BentoGrid>
+        </motion.div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Section Inscriptions & Paiements (2/3 largeur) */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="xl:col-span-2 space-y-6">
           {/* Liste des inscriptions */}
-          <GlassCard variant="premium" className="overflow-hidden border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
-            <div className="p-6 border-b border-gray-100/50 bg-gray-50/50 backdrop-blur-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-brand-blue/10 rounded-lg">
-                  <Receipt className="h-5 w-5 text-brand-blue" />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <GlassCard variant="premium" className="overflow-hidden border border-gray-200/50 shadow-xl shadow-gray-200/20">
+              <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-white via-gray-50/50 to-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-br from-brand-blue to-indigo-600 rounded-xl shadow-lg shadow-brand-blue/20">
+                    <Receipt className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Inscriptions & Facturation</h3>
+                    <p className="text-sm text-gray-500">Gérez les factures, devis et paiements des apprenants</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-display font-bold text-gray-900">Inscriptions & Facturation</h3>
-                  <p className="text-sm text-gray-500">Gérez les factures, devis et paiements</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-white hover:bg-gray-50 border-gray-200 text-gray-700 shadow-sm hover:shadow transition-all"
+                    onClick={() => {
+                      setSelectedEnrollmentId(null)
+                      setShowPaymentForm(false)
+                      setShowInvoiceForm(false)
+                      setShowChargeForm(false)
+                      setShowQuoteForm(true)
+                    }}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Nouveau devis
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-brand-blue to-indigo-600 hover:from-brand-blue-dark hover:to-indigo-700 text-white shadow-lg shadow-brand-blue/25 transition-all"
+                    onClick={() => {
+                      setSelectedEnrollmentId(null)
+                      setShowPaymentForm(false)
+                      setShowQuoteForm(false)
+                      setShowChargeForm(false)
+                      setShowInvoiceForm(true)
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nouvelle facture
+                  </Button>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white hover:bg-gray-50 border-gray-200 text-gray-700 shadow-sm"
-                  onClick={() => {
-                    setSelectedEnrollmentId(null)
-                    setShowPaymentForm(false)
-                    setShowInvoiceForm(false)
-                    setShowChargeForm(false)
-                    setShowQuoteForm(true)
-                  }}
-                >
-                  <FileText className="mr-2 h-3.5 w-3.5" />
-                  Devis
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white hover:bg-gray-50 border-gray-200 text-gray-700 shadow-sm"
-                  onClick={() => {
-                    setSelectedEnrollmentId(null)
-                    setShowPaymentForm(false)
-                    setShowQuoteForm(false)
-                    setShowChargeForm(false)
-                    setShowInvoiceForm(true)
-                  }}
-                >
-                  <Plus className="mr-2 h-3.5 w-3.5" />
-                  Facture
-                </Button>
-              </div>
-            </div>
             
             <div className="p-0">
               {isInvoicesLoading && enrollments.length > 0 && (
@@ -1430,231 +1525,285 @@ export function GestionFinances({
               )}
             </div>
           </GlassCard>
+          </motion.div>
 
           {/* Paiements récents */}
           {payments.length > 0 && (
-            <GlassCard variant="premium" className="overflow-hidden border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
-              <div className="p-6 border-b border-gray-100/50 bg-gray-50/50 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <CreditCard className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-display font-bold text-gray-900">Paiements récents</h3>
-                    <p className="text-sm text-gray-500">Historique des transactions</p>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <GlassCard variant="premium" className="overflow-hidden border border-gray-200/50 shadow-xl shadow-gray-200/20">
+                <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-white via-emerald-50/30 to-white">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-lg shadow-emerald-500/20">
+                      <CreditCard className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Paiements récents</h3>
+                      <p className="text-sm text-gray-500">Historique des {payments.length} dernières transactions</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {payments.slice(0, 10).map((payment) => {
-                  const student = (payment as any).students
-                  return (
-                    <div key={payment.id} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          payment.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
-                        }`}>
-                          <DollarSign className="h-5 w-5" />
+                <div className="divide-y divide-gray-100/70">
+                  {payments.slice(0, 10).map((payment, index) => {
+                    const student = (payment as any).students
+                    return (
+                      <motion.div
+                        key={payment.id}
+                        className="flex items-center justify-between p-4 hover:bg-gray-50/80 transition-colors"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-11 h-11 rounded-xl flex items-center justify-center shadow-sm",
+                            payment.status === 'completed'
+                              ? 'bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600'
+                              : 'bg-gradient-to-br from-amber-100 to-orange-100 text-amber-600'
+                          )}>
+                            <DollarSign className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {student ? `${student.first_name} ${student.last_name}` : 'Apprenant'}
+                            </p>
+                            <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                              {payment.paid_at && new Date(payment.paid_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {payment.payment_method && (
+                                <>
+                                  <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                  <span>{payment.payment_method === 'cash' ? 'Espèces' : payment.payment_method === 'card' ? 'Carte' : 'Virement'}</span>
+                                </>
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-gray-900 text-sm">
-                            {student ? `${student.first_name} ${student.last_name}` : 'Apprenant'}
+                        <div className="text-right">
+                          <p className="font-bold text-emerald-600 text-lg">
+                            +{formatCurrency(Number(payment.amount || 0), payment.currency || 'EUR')}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            {payment.paid_at && new Date(payment.paid_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            {payment.payment_method && ` • ${payment.payment_method === 'cash' ? 'Espèces' : payment.payment_method === 'card' ? 'Carte' : 'Virement'}`}
-                          </p>
+                          <span className={cn(
+                            "text-[10px] font-bold px-2.5 py-1 rounded-full inline-block",
+                            payment.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                            payment.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                            'bg-red-100 text-red-700'
+                          )}>
+                            {payment.status === 'completed' ? 'COMPLÉTÉ' :
+                             payment.status === 'pending' ? 'EN ATTENTE' : 'ÉCHOUÉ'}
+                          </span>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-gray-900">
-                          +{formatCurrency(Number(payment.amount || 0), payment.currency || 'EUR')}
-                        </p>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${
-                          payment.status === 'completed' ? 'bg-green-50 text-green-700' :
-                          payment.status === 'pending' ? 'bg-amber-50 text-amber-700' :
-                          'bg-red-50 text-red-700'
-                        }`}>
-                          {payment.status === 'completed' ? 'COMPLÉTÉ' :
-                           payment.status === 'pending' ? 'EN ATTENTE' : 'ÉCHOUÉ'}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </GlassCard>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </GlassCard>
+            </motion.div>
           )}
         </div>
 
         {/* Section Latérale (1/3 largeur) */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Graphique Répartition */}
-          <GlassCard variant="premium" className="p-6 border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-purple-500/10 rounded-lg">
-                <PieChartIcon className="h-5 w-5 text-purple-600" />
-              </div>
-              <h3 className="font-display font-bold text-gray-900">Statut des paiements</h3>
-            </div>
-            
-            <div className="h-[250px] w-full relative">
-              {enrollments.length > 0 ? (
-                <RechartsResponsiveContainer width="100%" height="100%">
-                  <RechartsPieChart>
-                    <RechartsPie
-                      data={paymentStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      {...({} as any)}
-                    >
-                      {paymentStatusData.map((entry, index) => (
-                        <RechartsCell key={`cell-${index}`} fill={entry.fill} strokeWidth={0} {...({} as any)} />
-                      ))}
-                    </RechartsPie>
-                    <RechartsTooltip content={<CustomTooltip />} {...({} as any)} />
-                    <RechartsLegend 
-                      verticalAlign="bottom" 
-                      height={36}
-                      formatter={(value: any) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
-                      {...({} as any)}
-                    />
-                  </RechartsPieChart>
-                </RechartsResponsiveContainer>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-sm text-gray-500">
-                  <PieChartIcon className="h-8 w-8 text-gray-300 mb-2" />
-                  <p>Aucune donnée disponible</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <GlassCard variant="premium" className="p-6 border border-gray-200/50 shadow-xl shadow-gray-200/20">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-lg shadow-violet-500/20">
+                  <PieChartIcon className="h-5 w-5 text-white" />
                 </div>
-              )}
-              {/* Total au centre */}
-              {enrollments.length > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-8">
-                  <div className="text-center">
-                    <span className="text-2xl font-bold text-gray-900 block leading-none">{enrollments.length}</span>
-                    <span className="text-[10px] text-gray-500 uppercase font-medium">Inscrits</span>
+                <div>
+                  <h3 className="font-bold text-gray-900">Statut des paiements</h3>
+                  <p className="text-xs text-gray-500">Répartition par statut</p>
+                </div>
+              </div>
+
+              <div className="h-[280px] w-full relative">
+                {enrollments.length > 0 ? (
+                  <RechartsResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                      <RechartsPie
+                        data={paymentStatusData}
+                        cx="50%"
+                        cy="45%"
+                        innerRadius={55}
+                        outerRadius={85}
+                        paddingAngle={4}
+                        dataKey="value"
+                        {...({} as any)}
+                      >
+                        {paymentStatusData.map((entry, index) => (
+                          <RechartsCell key={`cell-${index}`} fill={entry.fill} strokeWidth={0} {...({} as any)} />
+                        ))}
+                      </RechartsPie>
+                      <RechartsTooltip content={<CustomTooltip />} {...({} as any)} />
+                      <RechartsLegend
+                        verticalAlign="bottom"
+                        height={50}
+                        formatter={(value: any) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
+                        {...({} as any)}
+                      />
+                    </RechartsPieChart>
+                  </RechartsResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-sm text-gray-500">
+                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                      <PieChartIcon className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="font-medium text-gray-600">Aucune donnée</p>
+                    <p className="text-xs text-gray-400">Les statistiques apparaîtront ici</p>
+                  </div>
+                )}
+                {/* Total au centre */}
+                {enrollments.length > 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ paddingBottom: '60px' }}>
+                    <div className="text-center bg-white/80 backdrop-blur-sm rounded-full w-20 h-20 flex flex-col items-center justify-center shadow-inner">
+                      <span className="text-3xl font-bold text-gray-900 leading-none">{enrollments.length}</span>
+                      <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wider">Inscrits</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </GlassCard>
+          </motion.div>
+
+          {/* Section Charges */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
+            <GlassCard variant="premium" className="overflow-hidden border border-gray-200/50 shadow-xl shadow-gray-200/20">
+              <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-white via-rose-50/30 to-white flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl shadow-lg shadow-rose-500/20">
+                    <TrendingDown className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900">Charges & Dépenses</h3>
+                    {chargesSummary && chargesSummary.charge_count > 0 && (
+                      <p className="text-sm text-rose-600 font-semibold">
+                        Total: -{formatCurrency(chargesSummary.total_amount, 'EUR')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white shadow-lg shadow-rose-500/25"
+                  onClick={handleNewCharge}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Ajouter
+                </Button>
+              </div>
+
+              <div className="max-h-[380px] overflow-y-auto custom-scrollbar p-4 space-y-3">
+                {charges && charges.length > 0 ? (
+                  charges.map((charge, index) => (
+                    <motion.div
+                      key={charge.id}
+                      className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-rose-200/50 transition-all group"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      whileHover={{ y: -2, scale: 1.01 }}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1 min-w-0 pr-3">
+                          <h4 className="font-semibold text-gray-900 text-sm line-clamp-1">{charge.description}</h4>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                              {new Date(charge.charge_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                            </span>
+                            {charge.charge_categories && (
+                              <span className="text-[10px] px-2 py-0.5 bg-gradient-to-r from-gray-100 to-gray-50 text-gray-600 rounded-full font-medium border border-gray-200/50">
+                                {charge.charge_categories.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-rose-600 text-base">
+                            -{formatCurrency(Number(charge.amount), charge.currency)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <span className={cn(
+                          "text-[10px] px-2.5 py-1 rounded-full font-semibold",
+                          charge.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
+                          charge.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-700'
+                        )}>
+                          {charge.payment_status === 'paid' ? '✓ Payé' :
+                           charge.payment_status === 'pending' ? '⏳ En attente' : '✕ Annulé'}
+                        </span>
+
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleEditCharge(charge)}
+                            className="p-1.5 hover:bg-brand-blue/10 rounded-lg text-gray-400 hover:text-brand-blue transition-colors"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm('Êtes-vous sûr de vouloir supprimer cette charge ?')) {
+                                deleteChargeMutation.mutate(charge.id)
+                              }
+                            }}
+                            className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                      <TrendingDown className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="font-medium text-gray-600 mb-1">Aucune charge</p>
+                    <p className="text-sm text-gray-400 mb-4">Les dépenses de la session apparaîtront ici</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-rose-200 text-rose-600 hover:bg-rose-50"
+                      onClick={handleNewCharge}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Ajouter une charge
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {chargesSummary && chargesSummary.charge_count > 0 && (
+                <div className="p-4 bg-gradient-to-r from-gray-50 via-white to-gray-50 border-t border-gray-100">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                      <span className="text-xs text-gray-500 block mb-1 font-medium">Payé</span>
+                      <span className="text-lg font-bold text-emerald-600">{formatCurrency(chargesSummary.paid_amount, 'EUR')}</span>
+                    </div>
+                    <div className="text-center p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                      <span className="text-xs text-gray-500 block mb-1 font-medium">En attente</span>
+                      <span className="text-lg font-bold text-amber-600">{formatCurrency(chargesSummary.pending_amount, 'EUR')}</span>
+                    </div>
                   </div>
                 </div>
               )}
-            </div>
-          </GlassCard>
-
-          {/* Section Charges */}
-          <GlassCard variant="premium" className="overflow-hidden border-2 border-transparent hover:border-red-500/10 transition-all duration-500">
-            <div className="p-6 border-b border-gray-100/50 bg-gray-50/50 backdrop-blur-sm flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-500/10 rounded-lg">
-                  <TrendingDown className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="font-display font-bold text-gray-900">Charges</h3>
-                  {chargesSummary && chargesSummary.charge_count > 0 && (
-                    <p className="text-sm text-red-600 font-medium">
-                      -{formatCurrency(chargesSummary.total_amount, 'EUR')}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full hover:bg-white hover:shadow-sm"
-                onClick={handleNewCharge}
-              >
-                <Plus className="h-4 w-4 text-gray-600" />
-              </Button>
-            </div>
-            
-            <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-4 space-y-3">
-              {charges && charges.length > 0 ? (
-                charges.map((charge) => (
-                  <motion.div 
-                    key={charge.id} 
-                    className="p-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all group"
-                    whileHover={{ y: -2 }}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-bold text-gray-800 text-sm line-clamp-1">{charge.description}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">{new Date(charge.charge_date).toLocaleDateString('fr-FR')}</span>
-                          {charge.charge_categories && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
-                              {charge.charge_categories.name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-bold text-red-600 text-sm">
-                          -{formatCurrency(Number(charge.amount), charge.currency)}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-2">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                        charge.payment_status === 'paid' ? 'bg-green-50 text-green-700' :
-                        charge.payment_status === 'pending' ? 'bg-amber-50 text-amber-700' :
-                        'bg-red-50 text-red-700'
-                      }`}>
-                        {charge.payment_status === 'paid' ? 'Payé' :
-                         charge.payment_status === 'pending' ? 'En attente' : 'Annulé'}
-                      </span>
-                      
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleEditCharge(charge)}
-                          className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-brand-blue"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (confirm('Êtes-vous sûr de vouloir supprimer cette charge ?')) {
-                              deleteChargeMutation.mutate(charge.id)
-                            }
-                          }}
-                          className="p-1 hover:bg-red-50 rounded text-gray-500 hover:text-red-600"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">Aucune charge enregistrée</p>
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="mt-2 text-brand-blue"
-                    onClick={handleNewCharge}
-                  >
-                    Ajouter une charge
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            {chargesSummary && (
-              <div className="p-4 bg-gray-50 border-t border-gray-100 grid grid-cols-2 gap-4 text-center text-xs">
-                <div>
-                  <span className="text-gray-500 block mb-1">Payé</span>
-                  <span className="font-bold text-green-600">{formatCurrency(chargesSummary.paid_amount, 'EUR')}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block mb-1">En attente</span>
-                  <span className="font-bold text-amber-600">{formatCurrency(chargesSummary.pending_amount, 'EUR')}</span>
-                </div>
-              </div>
-            )}
-          </GlassCard>
+            </GlassCard>
+          </motion.div>
         </div>
       </div>
 

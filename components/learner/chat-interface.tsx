@@ -187,6 +187,7 @@ export function ChatInterface({ conversationId, participant, onBack }: ChatInter
                 src={participant.avatar}
                 alt={participant.name}
                 fill
+                sizes="40px"
                 className="rounded-full object-cover"
               />
             ) : (
