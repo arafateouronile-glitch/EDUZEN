@@ -592,6 +592,7 @@ export function useDocumentGeneration({
           },
           issueDate: new Date().toISOString(),
           language: 'fr',
+          organizationId: organization.id,
         })
 
         const tempDiv = document.createElement('div')
