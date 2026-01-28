@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { CardTitle } from '@/components/ui/card'
@@ -163,6 +163,27 @@ export function GestionConvocations({
     },
     enabled: !!user?.organization_id && showBulkSendDialog,
   })
+
+  // Récupérer le template d'email par défaut
+  const { data: defaultEmailTemplate } = useQuery<EmailTemplate | null>({
+    queryKey: ['email-template-default', 'session_reminder', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return null
+      return emailTemplateService.getDefault(user.organization_id, 'session_reminder')
+    },
+    enabled: !!user?.organization_id && showBulkSendDialog,
+  })
+
+  // Charger le template par défaut quand le dialogue s'ouvre
+  useEffect(() => {
+    if (showBulkSendDialog && defaultEmailTemplate && !selectedEmailTemplateId && !bulkEmailContent.subject) {
+      setSelectedEmailTemplateId('default')
+      setBulkEmailContent({
+        subject: defaultEmailTemplate.subject || '',
+        body: defaultEmailTemplate.body_html || '',
+      })
+    }
+  }, [showBulkSendDialog, defaultEmailTemplate, selectedEmailTemplateId, bulkEmailContent.subject])
 
   const containerVariants = {
     hidden: { opacity: 0 },
