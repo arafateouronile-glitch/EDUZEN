@@ -423,7 +423,8 @@ export async function generatePDFBlobFromHTML(
             offsetHeight: clonedHeader.offsetHeight,
           })
         } else {
-          logger.warn('[PDF Generator] Header non trouvé dans le clone')
+          // Ne logger qu'en debug - c'est normal si le document n'a pas de header
+          logger.debug('[PDF Generator] Header non trouvé dans le clone (normal si le document n\'a pas de header)')
         }
         
         // Masquer le footer dans le clone principal car on l'ajoutera séparément sur chaque page

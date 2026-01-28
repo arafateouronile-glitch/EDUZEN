@@ -270,14 +270,15 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
       }
       
       if (!found) {
-        logger.warn(`[processLogos] ⚠️ Aucune balise logo trouvée avec ${key}`)
+        // Ne logger qu'en debug - c'est normal si le template n'utilise pas cette variable de logo
+        logger.debug(`[processLogos] Aucune balise logo trouvée avec ${key} (normal si non utilisé dans le template)`)
         // Chercher si data-logo-var existe dans le HTML
         if (result.includes('data-logo-var')) {
-          logger.warn(`[processLogos] ⚠️ data-logo-var trouvé dans le HTML mais pattern ne correspond pas`)
+          logger.debug(`[processLogos] data-logo-var trouvé dans le HTML mais pattern ne correspond pas`)
           // Afficher un extrait du HTML contenant data-logo-var
           const dataLogoVarIndex = result.indexOf('data-logo-var')
           const excerpt = result.substring(Math.max(0, dataLogoVarIndex - 50), Math.min(result.length, dataLogoVarIndex + 200))
-          logger.warn(`[processLogos] Extrait HTML`, { excerpt })
+          logger.debug(`[processLogos] Extrait HTML`, { excerpt })
         }
       }
       
