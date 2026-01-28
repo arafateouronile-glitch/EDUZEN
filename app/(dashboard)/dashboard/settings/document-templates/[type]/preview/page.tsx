@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
-import { studentService } from '@/lib/services/student.service'
+import { studentService } from '@/lib/services/student.service.client'
 import { invoiceService } from '@/lib/services/invoice.service.client'
 import { paymentService } from '@/lib/services/payment.service.client'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
@@ -26,6 +26,7 @@ import { SkeletonLoader } from '../edit/components/skeleton-loader'
 import { getDocumentTypeConfig } from '../edit/utils/document-type-config'
 import type { StudentWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Organization = TableRow<'organizations'>
 type Invoice = TableRow<'invoices'>
@@ -64,7 +65,7 @@ export default function DocumentTemplatePreviewPage() {
             return specificTemplate
           }
         } catch (error) {
-          console.error('Erreur lors du chargement du template spécifique:', error)
+          logger.error('Erreur lors du chargement du template spécifique:', error)
           // Continuer avec le chargement du template par défaut
         }
       }
@@ -143,7 +144,7 @@ export default function DocumentTemplatePreviewPage() {
           errorDetails?.toLowerCase().includes('relationship')
         
         if (isRelationError) {
-          console.warn('Relations non disponibles, récupération des paiements sans relations:', {
+          logger.warn('Relations non disponibles, récupération des paiements sans relations:', {
             errorCode,
             errorMessage,
             errorDetails,
@@ -158,17 +159,17 @@ export default function DocumentTemplatePreviewPage() {
               .limit(50)
             
             if (simpleError) {
-              console.warn('Erreur lors de la récupération simple des paiements:', simpleError)
+              logger.warn('Erreur lors de la récupération simple des paiements', sanitizeError(simpleError))
               return []
             }
             return data || []
           } catch (fallbackError: any) {
-            console.warn('Erreur lors de la récupération de fallback des paiements:', fallbackError)
+            logger.warn('Erreur lors de la récupération de fallback des paiements:', fallbackError)
             return []
           }
         }
         // Pour les autres erreurs, logger et retourner un tableau vide
-        console.error('Erreur lors de la récupération des paiements:', error)
+        logger.error('Erreur lors de la récupération des paiements:', error)
         return []
       }
     },
@@ -355,7 +356,7 @@ export default function DocumentTemplatePreviewPage() {
         const errorData = await response.json().catch(() => ({}))
         const errorMessage = errorData.error || `Erreur ${response.status}: ${response.statusText}`
         const errorStack = errorData.stack
-        console.error('Erreur API:', {
+        logger.error('Erreur API:', {
           status: response.status,
           statusText: response.statusText,
           error: errorMessage,
@@ -368,7 +369,7 @@ export default function DocumentTemplatePreviewPage() {
       const data = await response.json()
       return data.downloadUrl
     } catch (error) {
-      console.error('Erreur lors de la génération du preview:', error)
+      logger.error('Erreur lors de la génération du preview:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
       // Afficher l'erreur à l'utilisateur
       alert(`Erreur lors de la génération: ${errorMessage}`)

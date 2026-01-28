@@ -63,9 +63,9 @@ describe('Workflow: Paiement', () => {
     ;(mockSupabase as any).single.mockImplementation(() => Promise.resolve({ data: null, error: null }))
     ;(mockSupabase as any).maybeSingle.mockImplementation(() => Promise.resolve({ data: null, error: null }))
     ;(mockSupabase as any).range.mockImplementation(() => Promise.resolve({ data: [], error: null, count: 0 }))
-    paymentService = new PaymentService()
-    invoiceService = new InvoiceService()
-    notificationService = new NotificationService()
+    paymentService = new PaymentService(mockSupabase as any)
+    invoiceService = new InvoiceService(mockSupabase as any)
+    notificationService = new NotificationService(mockSupabase as any)
   })
 
   it('devrait créer un paiement et mettre à jour le statut de la facture', async () => {
@@ -206,33 +206,52 @@ describe('Workflow: Paiement', () => {
     mockSupabase.from.mockImplementation((table: string) => {
       fromCallCount++
       if (fromCallCount === 1 && table === 'payments') {
-        return mockSupabase // Créer le paiement
+        // Créer le paiement - insert().select().single()
+        const query: any = {
+          insert: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: payment, error: null }),
+        }
+        query.insert.mockReturnValue(query)
+        query.select.mockReturnValue(query)
+        return query
       }
       if (fromCallCount === 2 && table === 'payments') {
-        return createQueryWithThen([{ amount: 5000 }]) // updateInvoicePaymentStatus: récupérer paiements (sans single)
+        // updateInvoicePaymentStatus: récupérer paiements (sans single)
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          then: (resolve: any) => Promise.resolve({ data: [{ amount: 5000 }], error: null }).then(resolve),
+        }
+        query.select.mockReturnValue(query)
+        query.eq.mockReturnValue(query)
+        return query
       }
       if (fromCallCount === 3 && table === 'invoices') {
-        return mockSupabase // updateInvoicePaymentStatus: récupérer total_amount
+        // updateInvoicePaymentStatus: récupérer total_amount
+        return mockSupabase
       }
       if (fromCallCount === 4 && table === 'invoices') {
-        return mockSupabase // updateInvoicePaymentStatus: récupérer due_date
+        // updateInvoicePaymentStatus: récupérer due_date
+        return mockSupabase
       }
       if (fromCallCount === 5 && table === 'invoices') {
-        return mockSupabase // updateInvoicePaymentStatus: mettre à jour facture (pas de single)
+        // updateInvoicePaymentStatus: mettre à jour facture (pas de single)
+        const query: any = {
+          update: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        }
+        query.update.mockReturnValue(query)
+        return query
       }
       return mockSupabase
     })
 
     // L'ordre des appels à single() :
-    // 1. Créer le paiement (premier single)
+    // 1. Créer le paiement (premier single) - déjà mocké dans from()
     // 2. Récupérer total_amount (deuxième single)
     // 3. Récupérer due_date (troisième single)
     mockSupabase.single
-      .mockResolvedValueOnce({
-        // Créer le paiement partiel (premier appel à single())
-        data: payment,
-        error: null,
-      })
       .mockResolvedValueOnce({ data: { total_amount: 10000 }, error: null }) // updateInvoicePaymentStatus: récupérer total_amount (deuxième single)
       .mockResolvedValueOnce({ data: { due_date: new Date().toISOString() }, error: null }) // updateInvoicePaymentStatus: récupérer due_date (troisième single)
 

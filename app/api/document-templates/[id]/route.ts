@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // GET /api/document-templates/[id] - Récupère un template par son ID
 export async function GET(
@@ -35,7 +36,7 @@ export async function GET(
 
     return NextResponse.json(template)
   } catch (error) {
-    console.error('Erreur lors de la récupération du template:', error)
+    logger.error('Erreur lors de la récupération du template:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }
@@ -81,7 +82,7 @@ export async function PUT(
 
     return NextResponse.json(updatedTemplate)
   } catch (error) {
-    console.error('Erreur lors de la mise à jour du template:', error)
+    logger.error('Erreur lors de la mise à jour du template:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }
@@ -123,7 +124,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Erreur lors de la suppression du template:', error)
+    logger.error('Erreur lors de la suppression du template:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

@@ -6,6 +6,7 @@
 
 import { wordGeneratorService, ConventionData } from './word-generator.service'
 import * as path from 'path'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * Exemple de données pour une convention de formation
@@ -162,10 +163,10 @@ export async function generateExampleConvention() {
       outputPath
     )
 
-    console.log('✅ Convention générée avec succès:', outputPath)
+    logger.info('WordGeneratorExample - Convention générée avec succès', { outputPath })
     return outputPath
   } catch (error) {
-    console.error('❌ Erreur lors de la génération:', error)
+    logger.error('WordGeneratorExample - Erreur lors de la génération', error, { error: sanitizeError(error) })
     throw error
   }
 }
@@ -201,7 +202,7 @@ export async function generateConventionAPI(data: ConventionData) {
 
     return buffer
   } catch (error) {
-    console.error('[API] Erreur lors de la génération:', error)
+    logger.error('WordGeneratorExample - Erreur lors de la génération (API)', error, { error: sanitizeError(error) })
     throw error
   }
 }

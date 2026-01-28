@@ -13,6 +13,12 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: vi.fn(),
 }))
 
+// Mock helpers
+vi.mock('@/lib/utils/supabase-helpers', () => ({
+  getAllByOrganization: vi.fn(),
+  getById: vi.fn(),
+}))
+
 describe('InvoiceService', () => {
   let invoiceService: InvoiceService
   let mockSupabase: {
@@ -47,7 +53,7 @@ describe('InvoiceService', () => {
     // Mock createClient
     vi.mocked(createClient).mockReturnValue(mockSupabase as any)
 
-    invoiceService = new InvoiceService()
+    invoiceService = new InvoiceService(mockSupabase as any)
   })
 
   describe('getAll', () => {
@@ -57,16 +63,13 @@ describe('InvoiceService', () => {
         { id: '2', invoice_number: 'FAC-002', organization_id: 'org-1' },
       ]
 
-      const mockQuery = mockSupabase.from('invoices')
-      mockQuery.order.mockResolvedValue({
-        data: mockInvoices,
-        error: null,
-      })
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getAllByOrganization).mockResolvedValue(mockInvoices as any)
 
       const result = await invoiceService.getAll('org-1')
 
       expect(result).toEqual(mockInvoices)
-      expect(mockSupabase.from).toHaveBeenCalledWith('invoices')
+      expect(getAllByOrganization).toHaveBeenCalled()
     })
 
     it('devrait filtrer par statut', async () => {
@@ -74,23 +77,28 @@ describe('InvoiceService', () => {
         { id: '1', invoice_number: 'FAC-001', status: 'sent' },
       ]
 
-      const mockQuery = mockSupabase.from('invoices')
-      mockQuery.order.mockResolvedValue({
-        data: mockInvoices,
-        error: null,
-      })
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getAllByOrganization).mockResolvedValue(mockInvoices as any)
 
       await invoiceService.getAll('org-1', { status: 'sent' })
 
-      expect(mockQuery.eq).toHaveBeenCalledWith('status', 'sent')
+      expect(getAllByOrganization).toHaveBeenCalledWith(
+        expect.anything(),
+        'invoices',
+        'org-1',
+        expect.objectContaining({
+          filters: expect.objectContaining({ status: 'sent' }),
+        })
+      )
     })
 
     it('devrait gérer les erreurs', async () => {
-      const mockQuery = mockSupabase.from('invoices')
-      mockQuery.order.mockResolvedValue({
-        data: null,
-        error: { message: 'Database error', code: 'PGRST116' },
-      })
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+      const { AppError, ErrorCode, ErrorSeverity } = await import('@/lib/errors')
+      
+      vi.mocked(getAllByOrganization).mockRejectedValue(
+        new AppError('Database error', ErrorCode.DB_ERROR, ErrorSeverity.HIGH)
+      )
 
       await expect(invoiceService.getAll('org-1')).rejects.toThrow()
     })
@@ -104,24 +112,27 @@ describe('InvoiceService', () => {
         organization_id: 'org-1',
       }
 
-      const mockQuery = mockSupabase.from('invoices')
-      mockQuery.single.mockResolvedValue({
-        data: mockInvoice,
-        error: null,
-      })
+      const { getById } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getById).mockResolvedValue(mockInvoice as any)
 
       const result = await invoiceService.getById('1')
 
       expect(result).toEqual(mockInvoice)
-      expect(mockQuery.eq).toHaveBeenCalledWith('id', '1')
+      expect(getById).toHaveBeenCalledWith(
+        expect.anything(),
+        'invoices',
+        '1',
+        '*, students(*), enrollments(*), payments(*)'
+      )
     })
 
     it('devrait gérer les erreurs si la facture n\'existe pas', async () => {
-      const mockQuery = mockSupabase.from('invoices')
-      mockQuery.single.mockResolvedValue({
-        data: null,
-        error: { message: 'Not found', code: 'PGRST116' },
-      })
+      const { getById } = await import('@/lib/utils/supabase-helpers')
+      const { AppError, ErrorCode, ErrorSeverity } = await import('@/lib/errors')
+      
+      vi.mocked(getById).mockRejectedValue(
+        new AppError('Facture non trouvée', ErrorCode.DB_NOT_FOUND, ErrorSeverity.LOW, { id: '999' })
+      )
 
       await expect(invoiceService.getById('999')).rejects.toThrow()
     })
@@ -136,20 +147,41 @@ describe('InvoiceService', () => {
         currency: 'EUR',
       }
 
-      const mockQuery = mockSupabase.from('invoices')
-      mockQuery.single.mockResolvedValue({
-        data: { id: '1', ...newInvoice },
+      const createdInvoice = { id: '1', invoice_number: '2025-001', ...newInvoice }
+
+      // Mock generateInvoiceNumber pour éviter l'appel à maybeSingle
+      const generateSpy = vi.spyOn(InvoiceService.prototype as any, 'generateInvoiceNumber')
+      generateSpy.mockResolvedValue('2025-001')
+
+      // Mock la chaîne insert().select().single()
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: createdInvoice,
         error: null,
       })
+      const mockSelect = vi.fn().mockReturnValue({
+        single: mockSingle,
+      })
+      const mockInsert = vi.fn().mockReturnValue({
+        select: mockSelect,
+      })
+      const mockFrom = vi.fn().mockReturnValue({
+        insert: mockInsert,
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        like: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      })
 
-      // Mock generateInvoiceNumber
-      const generateSpy = vi.spyOn(InvoiceService.prototype as any, 'generateInvoiceNumber')
-      generateSpy.mockResolvedValue('FAC-ORG-24-000001')
+      mockSupabase.from = mockFrom
 
       const result = await invoiceService.create(newInvoice as any)
 
       expect(result).toHaveProperty('id')
-      expect(mockQuery.insert).toHaveBeenCalled()
+      expect(result).toEqual(createdInvoice)
+      expect(mockFrom).toHaveBeenCalledWith('invoices')
+      expect(mockInsert).toHaveBeenCalled()
     })
 
     it('devrait valider les champs requis', async () => {

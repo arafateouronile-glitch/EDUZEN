@@ -66,9 +66,9 @@ export default function TutorialsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="w-full p-4">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <PlayCircle className="h-8 w-8" />
           Vidéos Tutoriels
@@ -80,9 +80,9 @@ export default function TutorialsPage() {
 
       {/* Statistiques */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 pb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Vidéos complétées</p>
@@ -129,7 +129,7 @@ export default function TutorialsPage() {
       )}
 
       {/* Recherche */}
-      <div className="mb-6">
+      <div className="mb-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
@@ -181,7 +181,7 @@ export default function TutorialsPage() {
         {/* Liste des vidéos */}
         <div className="lg:col-span-3">
           {videos && videos.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {videos.map((video: any) => (
                 <Card key={video.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
@@ -232,7 +232,7 @@ export default function TutorialsPage() {
             </div>
           ) : (
             <Card>
-              <CardContent className="pt-6 text-center text-muted-foreground">
+              <CardContent className="pt-4 pb-4 text-center text-muted-foreground">
                 Aucune vidéo trouvée. {searchQuery && 'Essayez une autre recherche.'}
               </CardContent>
             </Card>

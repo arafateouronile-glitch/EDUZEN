@@ -261,7 +261,7 @@ export class GDPRService {
         organization_id: organizationId,
         user_id: userId,
         export_format: 'json',
-        file_url: '', // TODO: Générer le fichier et uploader
+        file_url: '', // NOTE: Fonctionnalité prévue - Générer le fichier JSON/ZIP et uploader vers Supabase Storage
         data_categories: Object.keys(userData),
         created_by: (await this.supabase.auth.getUser()).data.user?.id || '',
       })
@@ -270,7 +270,8 @@ export class GDPRService {
 
     if (error) throw error
 
-    // TODO: Générer le fichier JSON/ZIP et uploader
+    // NOTE: Fonctionnalité prévue - Générer le fichier JSON/ZIP et uploader vers Supabase Storage
+    // Le fichier devrait contenir toutes les données de l'utilisateur au format JSON ou ZIP
     // Pour l'instant, on retourne juste l'ID
 
     return {
@@ -297,7 +298,7 @@ export class GDPRService {
         organization_id: organizationId,
         user_id: userId,
         deletion_type: deletionType,
-        data_categories: ['all'], // TODO: Détailler les catégories
+        data_categories: ['all'], // NOTE: À améliorer - Détailler les catégories réelles (personal_data, financial_data, etc.)
         deletion_status: 'pending',
         performed_by: (await this.supabase.auth.getUser()).data.user?.id || '',
       })
@@ -306,7 +307,8 @@ export class GDPRService {
 
     if (error) throw error
 
-    // TODO: Implémenter la suppression/anonymisation réelle
+    // NOTE: Fonctionnalité prévue - Suppression/anonymisation réelle des données
+    // Nécessite: Implémenter la logique de suppression/anonymisation selon le type de données
     // Pour l'instant, on retourne juste l'enregistrement
 
     return {
@@ -354,7 +356,8 @@ export class GDPRService {
    * Notifier la CNIL d'une violation
    */
   async notifyCNIL(breachId: string): Promise<void> {
-    // TODO: Implémenter l'envoi réel à la CNIL
+    // NOTE: Fonctionnalité prévue - Envoi réel à la CNIL
+    // Nécessite: Intégration avec l'API CNIL ou envoi d'email formaté selon les exigences CNIL
     // Pour l'instant, on met juste à jour le statut
 
     const { error } = await this.supabase

@@ -22,11 +22,12 @@ export async function GET(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
 
-      // TODO: Vérifier avec l'API Stripe réelle
+      // NOTE: Vérification avec l'API Stripe réelle requise
+      // Nécessite: npm install stripe et configuration de STRIPE_SECRET_KEY
       // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
       // const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
-
-      // Pour l'instant, récupérer depuis la base de données
+      // 
+      // Pour l'instant, récupérer depuis la base de données (fallback)
       const { data: payment, error } = await supabase
         .from('payments')
         .select('*')

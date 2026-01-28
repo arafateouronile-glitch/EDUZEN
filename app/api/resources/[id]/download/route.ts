@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ResourceLibraryService } from '@/lib/services/resource-library.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * API Route pour télécharger une ressource
@@ -50,7 +51,7 @@ export async function GET(
 
     return NextResponse.json({ error: 'Aucun fichier disponible' }, { status: 404 })
   } catch (error: unknown) {
-    console.error('Error downloading resource:', error)
+    logger.error('Error downloading resource:', error)
     return NextResponse.json(
       {
         success: false,

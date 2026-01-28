@@ -39,7 +39,8 @@ export default function SEPASettingsPage() {
     queryFn: async () => {
       if (!user?.organization_id) return null
 
-      // TODO: Créer une table payment_providers pour stocker les configurations
+      // NOTE: Fonctionnalité prévue - Nécessite création de la table payment_providers dans Supabase
+      // La table devrait contenir: id, organization_id, provider_type (stripe/sepa), config (JSONB), is_active
       // Pour l'instant, on retourne une config vide
       return {
         creditor_name: '',
@@ -93,7 +94,7 @@ export default function SEPASettingsPage() {
         throw new Error('BIC invalide')
       }
 
-      // TODO: Sauvegarder dans une table payment_providers
+      // NOTE: Fonctionnalité prévue - Sauvegarder dans la table payment_providers
       await new Promise((resolve) => setTimeout(resolve, 500))
       return configData
     },

@@ -12,9 +12,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/toast'
-import { Save, Upload, Image as ImageIcon, Palette, Globe, FileText, Mail, Settings, ExternalLink } from 'lucide-react'
+import { Save, Upload, Image as ImageIcon, Palette, Globe, FileText, Mail, Settings, ExternalLink, Award } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import Image from 'next/image'
+import { BRAND_COLORS } from '@/lib/config/app-config'
 
 export default function CatalogSettingsPage() {
   const { user } = useAuth()
@@ -24,11 +26,14 @@ export default function CatalogSettingsPage() {
 
   const [formData, setFormData] = useState<PublicCatalogSettingsFormData>({
     is_enabled: false,
-    primary_color: '#274472',
+    primary_color: BRAND_COLORS.primary,
     background_color: '#ffffff',
     text_color: '#000000',
     hero_button_text: 'Découvrir nos formations',
     show_contact_form: true,
+    stats_trained_students: 1200,
+    stats_satisfaction_rate: 98,
+    stats_success_rate: 95,
   })
 
   // Récupérer l'organisation pour pré-remplir les données
@@ -103,6 +108,10 @@ export default function CatalogSettingsPage() {
         meta_description: settings?.meta_description ?? undefined,
         meta_image_url: settings?.meta_image_url ?? organization?.logo_url ?? undefined,
         custom_domain: settings?.custom_domain ?? undefined,
+        // Statistiques
+        stats_trained_students: settings?.stats_trained_students ?? 1200,
+        stats_satisfaction_rate: settings?.stats_satisfaction_rate ?? 98,
+        stats_success_rate: settings?.stats_success_rate ?? 95,
       })
     }
   }, [settings, organization])
@@ -217,6 +226,10 @@ export default function CatalogSettingsPage() {
             <TabsTrigger value="seo">
               <Globe className="w-4 h-4 mr-2" />
               SEO
+            </TabsTrigger>
+            <TabsTrigger value="stats">
+              <Award className="w-4 h-4 mr-2" />
+              Statistiques
             </TabsTrigger>
           </TabsList>
 
@@ -359,7 +372,14 @@ export default function CatalogSettingsPage() {
                   <Label>Logo</Label>
                   <div className="flex gap-4 mt-2">
                     {formData.logo_url && (
-                      <img src={formData.logo_url} alt="Logo" className="h-20 w-auto object-contain border rounded" />
+                      <div className="relative h-20 w-20">
+                        <Image
+                          src={formData.logo_url}
+                          alt="Logo"
+                          fill
+                          className="object-contain border rounded"
+                        />
+                      </div>
                     )}
                     <div>
                       <Input
@@ -388,7 +408,14 @@ export default function CatalogSettingsPage() {
                   <Label>Image de couverture (Hero)</Label>
                   <div className="flex gap-4 mt-2">
                     {formData.cover_image_url && (
-                      <img src={formData.cover_image_url} alt="Cover" className="h-32 w-auto object-cover border rounded" />
+                      <div className="relative h-32 w-48">
+                        <Image
+                          src={formData.cover_image_url}
+                          alt="Cover"
+                          fill
+                          className="object-cover border rounded"
+                        />
+                      </div>
                     )}
                     <div>
                       <Input
@@ -579,6 +606,58 @@ export default function CatalogSettingsPage() {
                     onChange={(e) => setFormData((prev) => ({ ...prev, google_analytics_id: e.target.value }))}
                     placeholder="G-XXXXXXXXXX"
                   />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Statistiques */}
+          <TabsContent value="stats" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Statistiques du catalogue</CardTitle>
+                <CardDescription>
+                  Configurez les statistiques affichées sur votre catalogue public
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="stats_trained_students">Apprenants formés</Label>
+                  <Input
+                    id="stats_trained_students"
+                    type="number"
+                    min="0"
+                    value={formData.stats_trained_students || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, stats_trained_students: parseInt(e.target.value) || 0 }))}
+                    placeholder="1200"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Nombre d'apprenants formés à afficher</p>
+                </div>
+                <div>
+                  <Label htmlFor="stats_satisfaction_rate">Taux de satisfaction (%)</Label>
+                  <Input
+                    id="stats_satisfaction_rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.stats_satisfaction_rate || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, stats_satisfaction_rate: parseInt(e.target.value) || 0 }))}
+                    placeholder="98"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Taux de satisfaction en pourcentage (0-100)</p>
+                </div>
+                <div>
+                  <Label htmlFor="stats_success_rate">Taux de réussite (%)</Label>
+                  <Input
+                    id="stats_success_rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.stats_success_rate || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, stats_success_rate: parseInt(e.target.value) || 0 }))}
+                    placeholder="95"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Taux de réussite en pourcentage (0-100)</p>
                 </div>
               </CardContent>
             </Card>

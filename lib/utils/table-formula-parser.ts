@@ -3,6 +3,8 @@
  * Supporte: SUM, AVERAGE, COUNT, MAX, MIN, et références de cellules (A1, B2, etc.)
  */
 
+import { logger, sanitizeError } from '@/lib/utils/logger'
+
 export interface CellReference {
   row: number
   col: number
@@ -201,14 +203,14 @@ export function evaluateFormula(
         const result = new Function('return ' + expression)()
         return typeof result === 'number' && !isNaN(result) ? result : 0
       } catch (e) {
-        console.error('Erreur lors de l\'évaluation de la formule:', e)
+        logger.error('Erreur lors de l\'évaluation de la formule:', e)
         return '#ERROR'
       }
     }
     
     return '#ERROR'
   } catch (error) {
-    console.error('Erreur lors de l\'évaluation de la formule:', error)
+    logger.error('Erreur lors de l\'évaluation de la formule', sanitizeError(error))
     return '#ERROR'
   }
 }

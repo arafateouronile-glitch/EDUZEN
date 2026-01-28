@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { CopyHeaderFooterInput } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // POST /api/document-templates/[id]/copy-header-footer - Copie header/footer d'un template vers un autre
 export async function POST(
@@ -48,7 +49,7 @@ export async function POST(
 
     return NextResponse.json(updatedTemplate)
   } catch (error) {
-    console.error('Erreur lors de la copie header/footer:', error)
+    logger.error('Erreur lors de la copie header/footer:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

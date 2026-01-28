@@ -14,10 +14,11 @@ import { CatalogFooter } from '@/components/public/catalog-footer'
 import { CatalogStyles } from '@/components/public/catalog-styles'
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params
   const supabase = await createClient()
   const { data: program } = await supabase
     .from('programs')
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       *,
       organizations(name, code)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('is_public', true)
     .eq('is_active', true)
     .maybeSingle()
@@ -51,6 +52,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ProgramDetailPage({ params }: PageProps) {
+  const { id } = await params
   const supabase = await createClient()
 
   // Récupérer le programme avec ses formations et sessions
@@ -64,7 +66,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
       ),
       organizations(*)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('is_public', true)
     .eq('is_active', true)
     .maybeSingle()

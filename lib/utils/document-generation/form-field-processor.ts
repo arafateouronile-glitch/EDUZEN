@@ -55,7 +55,7 @@ export function processFormFields(html: string, variables: Record<string, any> =
               // Évaluer l'expression (attention à la sécurité en production)
               return Function('"use strict"; return (' + expression + ')')()
             } catch (error) {
-              console.error('Erreur lors de l\'évaluation de la formule:', error)
+              logger.error('Erreur lors de l\'évaluation de la formule:', error)
               return 0
             }
           }

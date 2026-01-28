@@ -35,6 +35,22 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.supabase.co',
       },
+      {
+        protocol: 'https',
+        hostname: 'api.qrserver.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'barcode.tec-it.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.pravatar.cc',
+      },
     ],
     // Optimisation des images
     formats: ['image/avif', 'image/webp'],
@@ -107,12 +123,15 @@ const nextConfig = {
                 },
               ]
             : []),
-          // Content Security Policy - Protection contre XSS et injection
+          // Content Security Policy - Géré dynamiquement par le middleware avec nonces
+          // La CSP statique est en mode report-only pour observer sans bloquer
+          // Le middleware applique une CSP stricte avec nonces pour chaque requête
           {
-            key: 'Content-Security-Policy',
+            key: 'Content-Security-Policy-Report-Only',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://*.sentry.io",
+              // Autoriser unsafe-inline et unsafe-eval pour html2canvas/jsPDF et le hot reload Next.js
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.sentry.io",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: https: blob:",
@@ -122,7 +141,8 @@ const nextConfig = {
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'none'",
-              "upgrade-insecure-requests",
+              // upgrade-insecure-requests uniquement en production
+              ...(process.env.NODE_ENV === 'production' ? ["upgrade-insecure-requests"] : []),
             ].join('; '),
           },
         ],
@@ -135,6 +155,12 @@ const nextConfig = {
       // Puppeteer nécessite certaines configurations côté serveur
       // Ne pas externaliser framer-motion car il est utilisé dans les composants
       config.externals = [...(config.externals || []), 'canvas', 'jsdom']
+    } else {
+      // Côté client, ignorer canvas qui est un module Node.js
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        canvas: false,
+      }
     }
     // Exclure les fichiers .backup.* et .refactored.* du build en utilisant IgnorePlugin
     const webpack = require('webpack')
@@ -143,10 +169,29 @@ const nextConfig = {
         resourceRegExp: /\.(backup|refactored)\.(ts|tsx|js|jsx)$/,
       })
     )
-    // S'assurer que framer-motion est correctement résolu
+    // Ignorer canvas côté client (module Node.js uniquement)
+    if (!isServer) {
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^canvas$/,
+        })
+      )
+    }
+    // Optimiser framer-motion pour le tree-shaking
     config.resolve.alias = {
       ...config.resolve.alias,
+      'framer-motion': require.resolve('framer-motion'),
+      // Utiliser un stub pour canvas côté client (module Node.js uniquement)
+      ...(isServer ? {} : { canvas: require.resolve('./lib/stubs/canvas.ts') }),
     }
+    
+    // Optimiser les imports de framer-motion pour réduire le bundle
+    config.optimization = {
+      ...config.optimization,
+      usedExports: true,
+      sideEffects: false,
+    }
+    
     return config
   },
 }

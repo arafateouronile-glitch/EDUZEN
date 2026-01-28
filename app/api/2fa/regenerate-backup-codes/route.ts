@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { TwoFactorAuthService } from '@/lib/services/2fa.service'
 import { withRateLimit, authRateLimiter } from '@/lib/utils/rate-limiter'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * POST /api/2fa/regenerate-backup-codes
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
         message: 'Codes de récupération régénérés avec succès',
       })
     } catch (error: unknown) {
-      console.error('Error regenerating backup codes:', error)
+      logger.error('Error regenerating backup codes:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
       return NextResponse.json({ error: errorMessage }, { status: 500 })
     }

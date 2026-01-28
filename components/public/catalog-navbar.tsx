@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from '@/components/ui/motion'
+import { BRAND_COLORS } from '@/lib/config/app-config'
 
 interface CatalogNavbarProps {
   organizationName: string
@@ -9,7 +10,7 @@ interface CatalogNavbarProps {
   primaryColor?: string
 }
 
-export function CatalogNavbar({ organizationName, logoUrl, primaryColor = '#274472' }: CatalogNavbarProps) {
+export function CatalogNavbar({ organizationName, logoUrl, primaryColor = BRAND_COLORS.primary }: CatalogNavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {

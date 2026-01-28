@@ -1,0 +1,416 @@
+app/(dashboard)/dashboard/signing-processes/new/page.tsx(45,32): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+app/(public)/sign/[token]/page.tsx(301,21): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+app/(public)/sign/[token]/page.tsx(305,25): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+app/(public)/sign/[token]/page.tsx(311,15): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+app/api/documents/generate-word/route.ts(58,56): error TS2554: Expected 1-2 arguments, but got 3.
+app/api/documents/generate/route.ts(293,86): error TS2554: Expected 1-2 arguments, but got 3.
+app/api/documents/generate/route.ts(425,55): error TS2304: Cannot find name 'errorStack'.
+app/api/documents/generate/route.ts(425,77): error TS2304: Cannot find name 'errorStack'.
+app/api/electronic-attendance/sessions/route.ts(121,66): error TS2554: Expected 1-2 arguments, but got 3.
+app/api/enterprise/training-requests/route.ts(21,37): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/enterprise/training-requests/route.ts(22,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"company_managers"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"company_managers"' is not assignable to parameter of type '"organization_usage"'.
+app/api/enterprise/training-requests/route.ts(38,17): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/enterprise/training-requests/route.ts(39,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"training_requests"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"training_requests"' is not assignable to parameter of type '"organization_usage"'.
+app/api/enterprise/training-requests/route.ts(52,33): error TS2339: Property 'company_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(93,37): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/enterprise/training-requests/route.ts(94,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"company_managers"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"company_managers"' is not assignable to parameter of type '"organization_usage"'.
+app/api/enterprise/training-requests/route.ts(104,18): error TS2339: Property 'can_request_training' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(110,35): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/enterprise/training-requests/route.ts(111,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"training_requests"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"training_requests"' is not assignable to parameter of type '"organization_usage"'.
+app/api/enterprise/training-requests/route.ts(113,29): error TS2339: Property 'company_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(114,31): error TS2339: Property 'id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(143,39): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/enterprise/training-requests/route.ts(144,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"companies"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"companies"' is not assignable to parameter of type '"organization_usage"'.
+app/api/enterprise/training-requests/route.ts(146,27): error TS2339: Property 'company_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(149,20): error TS2339: Property 'organization_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(154,42): error TS2339: Property 'organization_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(161,21): error TS2339: Property 'organization_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(164,24): error TS2339: Property 'name' does not exist on type 'NonNullable<ResultOne>'.
+app/api/enterprise/training-requests/route.ts(165,56): error TS2339: Property 'company_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/learner/data/route.ts(64,64): error TS2554: Expected 1-2 arguments, but got 3.
+app/api/learner/data/route.ts(87,91): error TS2554: Expected 1-2 arguments, but got 3.
+app/api/learner/data/route.ts(124,85): error TS2554: Expected 1-2 arguments, but got 3.
+app/api/opco-access/[token]/route.ts(19,57): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/opco-access/[token]/route.ts(20,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"opco_share_links"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"opco_share_links"' is not assignable to parameter of type '"organization_usage"'.
+app/api/opco-access/[token]/route.ts(39,28): error TS2339: Property 'expires_at' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(44,19): error TS2339: Property 'max_access_count' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(44,49): error TS2339: Property 'access_count' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(44,75): error TS2339: Property 'max_access_count' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(45,14): error TS2304: Cannot find name 'apiError'.
+app/api/opco-access/[token]/route.ts(50,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"opco_share_links"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"opco_share_links"' is not assignable to parameter of type '"organization_usage"'.
+app/api/opco-access/[token]/route.ts(52,34): error TS2339: Property 'access_count' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(56,27): error TS2339: Property 'id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(59,39): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/opco-access/[token]/route.ts(60,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"company_employees"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"company_employees"' is not assignable to parameter of type '"organization_usage"'.
+app/api/opco-access/[token]/route.ts(73,35): error TS2339: Property 'company_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(79,28): error TS2339: Property 'title' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(80,34): error TS2339: Property 'description' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(81,30): error TS2339: Property 'company' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(82,33): error TS2339: Property 'expires_at' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(89,47): error TS2339: Property 'student_id' does not exist on type 'ResultOne'.
+app/api/opco-access/[token]/route.ts(111,19): error TS2339: Property 'document_types' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(111,47): error TS2339: Property 'document_types' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(112,69): error TS2339: Property 'document_types' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(119,20): error TS2339: Property 'document_types' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(119,48): error TS2339: Property 'document_types' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(119,89): error TS2339: Property 'document_types' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(140,21): error TS2339: Property 'invoice_ids' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(140,46): error TS2339: Property 'invoice_ids' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(141,58): error TS2339: Property 'invoice_ids' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(150,26): error TS2339: Property 'title' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(151,32): error TS2339: Property 'description' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(152,28): error TS2339: Property 'company' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(153,31): error TS2339: Property 'expires_at' does not exist on type 'NonNullable<ResultOne>'.
+app/api/opco-access/[token]/route.ts(158,15): error TS2339: Property 'id' does not exist on type 'ResultOne'.
+app/api/opco-access/[token]/route.ts(159,28): error TS2339: Property 'employee_number' does not exist on type 'ResultOne'.
+app/api/opco-access/[token]/route.ts(160,23): error TS2339: Property 'department' does not exist on type 'ResultOne'.
+app/api/opco-access/[token]/route.ts(161,22): error TS2339: Property 'job_title' does not exist on type 'ResultOne'.
+app/api/opco-access/[token]/route.ts(162,17): error TS2339: Property 'student' does not exist on type 'ResultOne'.
+app/api/opco-access/[token]/route.ts(162,33): error TS2339: Property 'student' does not exist on type 'ResultOne'.
+app/api/opco-access/[token]/route.ts(162,66): error TS2339: Property 'student' does not exist on type 'ResultOne'.
+app/api/sign/process-pdf-url/route.ts(22,25): error TS2448: Block-scoped variable 'process' used before its declaration.
+app/api/sign/process-pdf-url/route.ts(22,25): error TS2454: Variable 'process' is used before being assigned.
+app/api/sign/process-pdf-url/route.ts(22,25): error TS18047: 'process' is possibly 'null'.
+app/api/sign/process-pdf-url/route.ts(22,33): error TS2339: Property 'env' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/process-pdf-url/route.ts(24,48): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/sign/process-pdf-url/route.ts(25,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"signatories"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"signatories"' is not assignable to parameter of type '"organization_usage"'.
+app/api/sign/process-pdf-url/route.ts(34,13): error TS2339: Property 'signed_at' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/process-pdf-url/route.ts(41,53): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/sign/process-pdf-url/route.ts(42,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"signing_processes"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"signing_processes"' is not assignable to parameter of type '"organization_usage"'.
+app/api/sign/process-pdf-url/route.ts(44,21): error TS2339: Property 'process_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/process-pdf-url/route.ts(58,48): error TS2339: Property 'order_index' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/process-pdf-url/route.ts(67,13): error TS2339: Property 'order_index' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/public/[token]/route.ts(183,35): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/sign/public/[token]/route.ts(184,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"signatories"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"signatories"' is not assignable to parameter of type '"organization_usage"'.
+app/api/sign/public/[token]/route.ts(189,23): error TS2339: Property 'signed_at' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/public/[token]/route.ts(190,38): error TS2589: Type instantiation is excessively deep and possibly infinite.
+app/api/sign/public/[token]/route.ts(191,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"signing_processes"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"signing_processes"' is not assignable to parameter of type '"organization_usage"'.
+app/api/sign/public/[token]/route.ts(195,25): error TS2339: Property 'process_id' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/public/[token]/route.ts(198,26): error TS2339: Property 'status' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/public/[token]/route.ts(198,57): error TS2339: Property 'current_index' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/public/[token]/route.ts(198,79): error TS2339: Property 'order_index' does not exist on type 'NonNullable<ResultOne>'.
+app/api/sign/submit/route.ts(93,38): error TS1355: A 'const' assertions can only be applied to references to enum members, or string, number, boolean, array, or object literals.
+app/api/sirene/search/route.ts(149,7): error TS2552: Cannot find name 'siret'. Did you mean 'Set'?
+app/api/sirene/search/route.ts(150,7): error TS18004: No value exists in scope for the shorthand property 'siren'. Either declare one or provide an initializer.
+app/api/subscriptions/create-checkout/route.ts(8,3): error TS2322: Type '"2024-12-18.acacia"' is not assignable to type '"2025-12-15.clover"'.
+app/api/subscriptions/create-checkout/route.ts(64,15): error TS2551: Property 'stripe_price_id_yearly' does not exist on type '{ created_at: string | null; description: string | null; features: Json; id: string; is_active: boolean | null; max_sessions_per_month: number | null; max_students: number | null; ... 4 more ...; updated_at: string | null; }'. Did you mean 'stripe_price_id'?
+app/api/subscriptions/create-checkout/route.ts(65,15): error TS2339: Property 'stripe_price_id_monthly' does not exist on type '{ created_at: string | null; description: string | null; features: Json; id: string; is_active: boolean | null; max_sessions_per_month: number | null; max_students: number | null; ... 4 more ...; updated_at: string | null; }'.
+app/api/subscriptions/webhook/route.ts(7,3): error TS2322: Type '"2024-12-18.acacia"' is not assignable to type '"2025-12-15.clover"'.
+app/api/subscriptions/webhook/route.ts(66,59): error TS2339: Property 'current_period_start' does not exist on type 'Response<Subscription>'.
+app/api/subscriptions/webhook/route.ts(67,57): error TS2339: Property 'current_period_end' does not exist on type 'Response<Subscription>'.
+app/api/subscriptions/webhook/route.ts(96,57): error TS2339: Property 'current_period_start' does not exist on type 'Subscription'.
+app/api/subscriptions/webhook/route.ts(97,55): error TS2339: Property 'current_period_end' does not exist on type 'Subscription'.
+app/api/teacher-documents/upload/route.ts(90,9): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { created_at?: string | undefined; description?: string | null | undefined; document_type: string; file_name: string; file_size?: number | null | undefined; file_url: string; id?: string | undefined; ... 10 more ...; verified_by?: string | ... 1 more ... | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type 'string | null' is not assignable to type 'string'.
+      Type 'null' is not assignable to type 'string'.
+  Overload 2 of 2, '(values: { created_at?: string | undefined; description?: string | null | undefined; document_type: string; file_name: string; file_size?: number | null | undefined; file_url: string; id?: string | undefined; ... 10 more ...; verified_by?: string | ... 1 more ... | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'organization_id' does not exist in type '{ created_at?: string | undefined; description?: string | null | undefined; document_type: string; file_name: string; file_size?: number | null | undefined; file_url: string; id?: string | undefined; ... 10 more ...; verified_by?: string | ... 1 more ... | undefined; }[]'.
+app/api/users/create/route.ts(29,7): error TS2322: Type '(value: unknown) => { isValid: true; sanitized: null; } | { isValid: true; sanitized: string; }' is not assignable to type '(value: unknown) => ValidationResult'.
+  Type '{ isValid: true; sanitized: null; } | { isValid: true; sanitized: string; }' is not assignable to type 'ValidationResult'.
+    Type '{ isValid: true; sanitized: null; }' is not assignable to type 'ValidationResult'.
+      Types of property 'sanitized' are incompatible.
+        Type 'null' is not assignable to type 'string | undefined'.
+app/api/webhooks/stripe/route.ts(7,3): error TS2322: Type '"2024-11-20.acacia"' is not assignable to type '"2025-12-15.clover"'.
+app/api/webhooks/stripe/route.ts(136,51): error TS2339: Property 'current_period_start' does not exist on type 'Subscription'.
+app/api/webhooks/stripe/route.ts(137,49): error TS2339: Property 'current_period_end' does not exist on type 'Subscription'.
+app/api/webhooks/stripe/route.ts(229,36): error TS2339: Property 'subscription' does not exist on type 'Invoice'.
+app/api/webhooks/stripe/route.ts(262,36): error TS2339: Property 'subscription' does not exist on type 'Invoice'.
+app/cataloguepublic/[slug]/page.tsx(202,40): error TS2339: Property 'stats_trained_students' does not exist on type '{ about_content: string | null; about_image_url: string | null; about_title: string | null; accent_color: string | null; background_color: string | null; contact_address: string | null; ... 31 more ...; updated_at: string | null; }'.
+app/cataloguepublic/[slug]/page.tsx(203,46): error TS2339: Property 'stats_satisfaction_rate' does not exist on type '{ about_content: string | null; about_image_url: string | null; about_title: string | null; accent_color: string | null; background_color: string | null; contact_address: string | null; ... 31 more ...; updated_at: string | null; }'.
+app/cataloguepublic/[slug]/page.tsx(204,43): error TS2339: Property 'stats_success_rate' does not exist on type '{ about_content: string | null; about_image_url: string | null; about_title: string | null; accent_color: string | null; background_color: string | null; contact_address: string | null; ... 31 more ...; updated_at: string | null; }'.
+components/auditor-portal/AuditorPortal.tsx(596,21): error TS2322: Type '{ children: Element[]; type: "multiple"; value: string[]; onValueChange: Dispatch<SetStateAction<string[]>>; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionProps'.
+  Property 'value' does not exist on type 'IntrinsicAttributes & AccordionProps'.
+components/auditor-portal/AuditorPortal.tsx(620,29): error TS2322: Type '{ children: Element; className: string; onClick: () => void; }' is not assignable to type 'IntrinsicAttributes & AccordionTriggerProps'.
+  Property 'onClick' does not exist on type 'IntrinsicAttributes & AccordionTriggerProps'.
+components/bpf/BPFInconsistencyPanel.tsx(192,13): error TS2322: Type '{ children: Element[]; type: "multiple"; value: string[]; onValueChange: Dispatch<SetStateAction<string[]>>; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionProps'.
+  Property 'value' does not exist on type 'IntrinsicAttributes & AccordionProps'.
+components/bpf/BPFRevenueChart.tsx(78,9): error TS2322: Type '{ cx: any; cy: any; innerRadius: any; outerRadius: any; startAngle: any; endAngle: any; fill: any; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'cx' does not exist on type 'IntrinsicAttributes'.
+components/bpf/BPFRevenueChart.tsx(87,9): error TS2322: Type '{ cx: any; cy: any; innerRadius: any; outerRadius: any; startAngle: any; endAngle: any; fill: any; opacity: number; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'cx' does not exist on type 'IntrinsicAttributes'.
+components/bpf/BPFRevenueChart.tsx(203,20): error TS2322: Type '{ children: Element[]; activeIndex: number | undefined; activeShape: (props: any) => Element; data: ChartDataItem[]; cx: string; cy: string; innerRadius: number; ... 6 more ...; className: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'children' does not exist on type 'IntrinsicAttributes'.
+components/bpf/BPFRevenueChart.tsx(215,31): error TS7006: Parameter '_' implicitly has an 'any' type.
+components/bpf/BPFRevenueChart.tsx(215,34): error TS7006: Parameter 'index' implicitly has an 'any' type.
+components/bpf/BPFRevenueChart.tsx(221,25): error TS2322: Type '{ key: string; fill: string; stroke: string; strokeWidth: number; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'fill' does not exist on type 'IntrinsicAttributes'.
+components/bpf/BPFRevenueChart.tsx(228,21): error TS2322: Type '{ content: ({ active, payload }: { active: any; payload: any; }) => Element | null; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'content' does not exist on type 'IntrinsicAttributes'.
+components/bpf/BPFRevenueChart.tsx(228,33): error TS7031: Binding element 'active' implicitly has an 'any' type.
+components/bpf/BPFRevenueChart.tsx(228,41): error TS7031: Binding element 'payload' implicitly has an 'any' type.
+components/document-editor/DocumentEditor.tsx(504,67): error TS2554: Expected 1-2 arguments, but got 3.
+components/document-editor/DocumentEditor.tsx(505,61): error TS2554: Expected 1-2 arguments, but got 3.
+components/document-editor/element-palette.tsx(148,48): error TS2554: Expected 1-2 arguments, but got 4.
+components/document-editor/shape-editor.tsx(88,46): error TS2554: Expected 1-2 arguments, but got 4.
+components/enterprise/header.tsx(27,39): error TS2589: Type instantiation is excessively deep and possibly infinite.
+components/enterprise/header.tsx(28,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"company_managers"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"company_managers"' is not assignable to parameter of type '"organization_usage"'.
+components/enterprise/skills-evolution-chart.tsx(74,10): error TS2322: Type '{ children: Element[]; data: { monthLabel: string; month: string; averageSkillLevel: number; employeesCount: number; skillsAcquired: number; }[]; margin: { top: number; right: number; left: number; bottom: number; }; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'children' does not exist on type 'IntrinsicAttributes'.
+components/enterprise/skills-evolution-chart.tsx(88,34): error TS2322: Type '{ strokeDasharray: string; stroke: string; vertical: boolean; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'strokeDasharray' does not exist on type 'IntrinsicAttributes'.
+components/enterprise/skills-evolution-chart.tsx(90,13): error TS2322: Type '{ dataKey: string; axisLine: boolean; tickLine: boolean; tick: { fill: string; fontSize: number; }; dy: number; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'dataKey' does not exist on type 'IntrinsicAttributes'.
+components/enterprise/skills-evolution-chart.tsx(97,13): error TS2322: Type '{ yAxisId: string; axisLine: boolean; tickLine: boolean; tick: { fill: string; fontSize: number; }; domain: number[]; tickFormatter: (value: any) => string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'yAxisId' does not exist on type 'IntrinsicAttributes'.
+components/enterprise/skills-evolution-chart.tsx(102,29): error TS7006: Parameter 'value' implicitly has an 'any' type.
+components/enterprise/skills-evolution-chart.tsx(105,13): error TS2322: Type '{ yAxisId: string; orientation: string; axisLine: boolean; tickLine: boolean; tick: { fill: string; fontSize: number; }; domain: (string | number)[]; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'yAxisId' does not exist on type 'IntrinsicAttributes'.
+components/enterprise/skills-evolution-chart.tsx(112,28): error TS2322: Type '{ content: Element; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'content' does not exist on type 'IntrinsicAttributes'.
+components/enterprise/skills-evolution-chart.tsx(114,13): error TS2322: Type '{ verticalAlign: string; height: number; formatter: (value: string) => Element; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'verticalAlign' does not exist on type 'IntrinsicAttributes'.
+components/enterprise/skills-evolution-chart.tsx(125,13): error TS2322: Type '{ yAxisId: string; type: string; dataKey: string; stroke: "#274472"; strokeWidth: number; fill: string; dot: { fill: "#274472"; strokeWidth: number; r: number; }; activeDot: { r: number; stroke: "#274472"; strokeWidth: number; fill: string; }; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'yAxisId' does not exist on type 'IntrinsicAttributes'.
+components/enterprise/skills-evolution-chart.tsx(135,13): error TS2322: Type '{ yAxisId: string; type: string; dataKey: string; stroke: string; strokeWidth: number; fill: string; dot: { fill: string; strokeWidth: number; r: number; }; activeDot: { r: number; stroke: string; strokeWidth: number; fill: string; }; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'yAxisId' does not exist on type 'IntrinsicAttributes'.
+components/lazy/index.tsx(80,79): error TS2339: Property 'DocumentEditor' does not exist on type 'typeof import("/Users/arafatetoure/Documents/EDUZEN/components/document-editor/DocumentEditor")'.
+components/onboarding/import-assistant.tsx(62,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/onboarding/import-assistant.tsx(102,11): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/onboarding/import-assistant.tsx(108,11): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/onboarding/import-assistant.tsx(117,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/onboarding/organization-setup-wizard.tsx(88,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/onboarding/organization-setup-wizard.tsx(115,11): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/onboarding/organization-setup-wizard.tsx(123,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/onboarding/organization-setup-wizard.tsx(156,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/onboarding/organization-setup-wizard.tsx(222,9): error TS2353: Object literal may only specify known properties, and 'variant' does not exist in type 'Omit<Toast, "id">'.
+components/qualiopi/premium/qualiopi-dashboard-premium.tsx(365,37): error TS2589: Type instantiation is excessively deep and possibly infinite.
+components/qualiopi/premium/qualiopi-dashboard-premium.tsx(366,15): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"compliance_evidence_automated"' is not assignable to parameter of type '"permissions" | "organizations" | "users" | "students" | "accessibility_student_needs" | "accessibility_accommodations" | "accessibility_equipment" | "accounting_integrations" | ... 256 more ... | "videoconference_meeting_logs"'.
+  Overload 2 of 2, '(relation: "organization_usage"): PostgrestQueryBuilder<{ PostgrestVersion: "13.0.5"; }, { Tables: { academic_years: { Row: { created_at: string | null; end_date: string; id: string; is_current: boolean | null; name: string; organization_id: string | null; start_date: string; updated_at: string | null; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 263 more ...; videoconference_meeting_mappings: { ...; }; }; Views: { ...; }; Functions: { ...; }; Enums: { ...; }; CompositeTypes: {}; }, { ...; }, "organization_usage", []>', gave the following error.
+    Argument of type '"compliance_evidence_automated"' is not assignable to parameter of type '"organization_usage"'.
+components/sign/SignatureStepWithCheckbox.tsx(55,20): error TS18047: 'sigRef.current' is possibly 'null'.
+components/super-admin/dashboard/revenue-chart.tsx(135,14): error TS2322: Type '{ children: Element[]; data: { name: string; mrr: number; newRevenue: number; churnedRevenue: number; }[]; margin: { top: number; right: number; left: number; bottom: number; }; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'children' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/revenue-chart.tsx(149,38): error TS2322: Type '{ strokeDasharray: string; className: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'strokeDasharray' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/revenue-chart.tsx(151,17): error TS2322: Type '{ dataKey: string; axisLine: boolean; tickLine: boolean; tick: { fill: string; fontSize: number; }; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'dataKey' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/revenue-chart.tsx(157,17): error TS2322: Type '{ axisLine: boolean; tickLine: boolean; tick: { fill: string; fontSize: number; }; tickFormatter: (value: any) => string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'axisLine' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/revenue-chart.tsx(160,33): error TS7006: Parameter 'value' implicitly has an 'any' type.
+components/super-admin/dashboard/revenue-chart.tsx(162,32): error TS2322: Type '{ content: Element; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'content' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/revenue-chart.tsx(164,17): error TS2322: Type '{ verticalAlign: string; height: number; iconType: string; iconSize: number; formatter: (value: any) => Element; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'verticalAlign' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/revenue-chart.tsx(168,29): error TS7006: Parameter 'value' implicitly has an 'any' type.
+components/super-admin/dashboard/revenue-chart.tsx(173,17): error TS2322: Type '{ type: string; dataKey: string; name: string; stroke: string; strokeWidth: number; fillOpacity: number; fill: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'type' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/revenue-chart.tsx(182,17): error TS2322: Type '{ type: string; dataKey: string; name: string; stroke: string; strokeWidth: number; fillOpacity: number; fill: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'type' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/subscriptions-chart.tsx(116,16): error TS2322: Type '{ children: Element[]; data: { name: string; value: number; color: string; }[]; cx: string; cy: string; innerRadius: number; outerRadius: number; paddingAngle: number; dataKey: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'children' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/subscriptions-chart.tsx(126,55): error TS2322: Type '{ key: string; fill: string; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'fill' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/subscriptions-chart.tsx(129,32): error TS2322: Type '{ content: Element; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'content' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/dashboard/subscriptions-chart.tsx(130,31): error TS2322: Type '{ content: ({ payload }: any) => Element; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'content' does not exist on type 'IntrinsicAttributes'.
+components/super-admin/header.tsx(259,16): error TS2367: This comparison appears to be unintentional because the types '"light"' and '"dark"' have no overlap.
+components/super-admin/header.tsx(267,55): error TS2554: Expected 0 arguments, but got 1.
+components/super-admin/header.tsx(272,55): error TS2554: Expected 0 arguments, but got 1.
+components/super-admin/header.tsx(275,16): error TS2367: This comparison appears to be unintentional because the types '"light"' and '"dark"' have no overlap.
+components/super-admin/header.tsx(277,55): error TS2554: Expected 0 arguments, but got 1.
+components/super-admin/header.tsx(280,16): error TS2367: This comparison appears to be unintentional because the types '"light"' and '"system"' have no overlap.
+lib/hooks/use-platform-admin.ts(88,78): error TS2345: Argument of type 'string' is not assignable to parameter of type 'LogContext'.
+lib/services/import.service.ts(64,34): error TS2322: Type '"prenom"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(64,44): error TS2322: Type '"prénom"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(64,54): error TS2322: Type '"nom"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(64,61): error TS2322: Type '"name"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(64,69): error TS2820: Type '"firstname"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'. Did you mean '"first_name"'?
+lib/services/import.service.ts(65,32): error TS2322: Type '"nom"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(65,39): error TS2322: Type '"name"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(65,47): error TS2820: Type '"lastname"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'. Did you mean '"last_name"'?
+lib/services/import.service.ts(65,59): error TS2322: Type '"surname"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(66,24): error TS2820: Type '"mail"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'. Did you mean '"email"'?
+lib/services/import.service.ts(66,32): error TS2820: Type '"e-mail"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'. Did you mean '"email"'?
+lib/services/import.service.ts(66,42): error TS2322: Type '"courriel"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(66,54): error TS2322: Type '"email_address"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(67,24): error TS2322: Type '"téléphone"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(67,37): error TS2322: Type '"telephone"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(67,50): error TS2322: Type '"tel"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(67,57): error TS2322: Type '"mobile"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(67,67): error TS2322: Type '"portable"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(68,40): error TS2322: Type '"date_naissance"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(68,58): error TS2322: Type '"birthdate"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(68,71): error TS2322: Type '"dob"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(68,78): error TS2322: Type '"date naissance"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(69,28): error TS2820: Type '"adresse"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'. Did you mean '"address"'?
+lib/services/import.service.ts(69,39): error TS2322: Type '"street"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(69,49): error TS2322: Type '"rue"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(70,22): error TS2322: Type '"ville"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(71,36): error TS2322: Type '"code_postal"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(71,51): error TS2322: Type '"zip"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(71,58): error TS2322: Type '"cp"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(72,28): error TS2322: Type '"pays"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(73,42): error TS2322: Type '"numero_etudiant"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(73,61): error TS2322: Type '"num_etudiant"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(73,77): error TS2322: Type '"student_id"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(73,91): error TS2322: Type '"id"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(74,26): error TS2820: Type '"statut"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'. Did you mean '"status"'?
+lib/services/import.service.ts(74,36): error TS2322: Type '"etat"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/import.service.ts(74,44): error TS2322: Type '"state"' is not assignable to type 'requiredKeys<baseObjectOutputType<{ first_name: ZodString; last_name: ZodString; email: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 7 more ...; status: ZodDefault<...>; }>> | optionalKeys<...>'.
+lib/services/organization-setup.service.ts(154,9): error TS2322: Type '"attestation"' is not assignable to type 'DocumentType'.
+lib/services/organization-setup.service.ts(309,13): error TS2353: Object literal may only specify known properties, and 'is_active' does not exist in type 'CreateTemplateInput'.
+lib/services/organization-setup.service.ts(367,9): error TS2353: Object literal may only specify known properties, and 'certification_issued' does not exist in type 'FlexibleInsert<"programs">'.
+lib/services/organization-setup.service.ts(394,9): error TS2353: Object literal may only specify known properties, and 'max_students' does not exist in type 'FlexibleInsert<"sessions">'.
+lib/services/quota.service.ts(267,38): error TS2339: Property 'name' does not exist on type '{ name: any; features: any; }[]'.
+lib/services/quota.service.ts(268,38): error TS2339: Property 'features' does not exist on type '{ name: any; features: any; }[]'.
+lib/services/signature-request.service.ts(92,9): error TS2353: Object literal may only specify known properties, and 'token_expires_at' does not exist in type 'FlexibleInsert<"signature_requests">'.
+lib/services/signing-process.service.ts(118,12): error TS2352: Conversion of type '{ signatories: { id: any; email: any; name: any; order_index: any; token: any; signed_at: any; mail_sent_at: any; }[]; id: any; organization_id: any; document_id: any; status: any; current_index: any; intermediate_pdf_path: any; ... 4 more ...; document: { ...; }[]; }' to type 'ProcessWithSignatories' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'document' are incompatible.
+    Type '{ id: any; title: any; file_url: any; }[]' is missing the following properties from type '{ id: string; title: string; file_url: string | null; }': id, title, file_url
+lib/services/student.service.ts(254,13): error TS2345: Argument of type 'string' is not assignable to parameter of type 'ErrorCode | undefined'.
+lib/utils/analytics.ts(59,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/analytics.ts(66,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/api-error-response.ts(123,3): error TS2304: Cannot find name 'logger'.
+lib/utils/barcode-generator.ts(6,1): error TS2578: Unused '@ts-expect-error' directive.
+lib/utils/barcode-generator.ts(8,20): error TS2307: Cannot find module 'bwip-js' or its corresponding type declarations.
+lib/utils/document-generation/html-generator.ts(179,70): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(180,57): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'string[]'.
+lib/utils/document-generation/html-generator.ts(242,69): error TS2345: Argument of type 'string' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(267,52): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'string[]'.
+lib/utils/document-generation/html-generator.ts(281,55): error TS2345: Argument of type 'string' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(313,68): error TS2345: Argument of type 'string' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(334,67): error TS2345: Argument of type 'string' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(520,82): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(532,70): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(554,84): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(558,96): error TS2345: Argument of type 'string' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(705,59): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/document-generation/html-generator.ts(1164,92): error TS2554: Expected 1-2 arguments, but got 4.
+lib/utils/document-generation/pdf-generator.tsx(115,9): error TS2304: Cannot find name 'logger'.
+lib/utils/document-generation/pdf-generator.tsx(127,5): error TS2304: Cannot find name 'logger'.
+lib/utils/document-generation/pdf-generator.tsx(168,5): error TS2304: Cannot find name 'logger'.
+lib/utils/document-generation/pdf-generator.tsx(171,5): error TS2304: Cannot find name 'logger'.
+lib/utils/document-generation/pdf-generator.tsx(297,5): error TS2304: Cannot find name 'logger'.
+lib/utils/document-generation/qr-barcode-generator.ts(24,5): error TS2304: Cannot find name 'logger'.
+lib/utils/document-generation/qr-barcode-generator.ts(44,5): error TS2304: Cannot find name 'logger'.
+lib/utils/document-generation/signature-processor.ts(47,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/export.ts(88,9): error TS2304: Cannot find name 'logger'.
+lib/utils/i18n-format.ts(33,5): error TS2304: Cannot find name 'logger'.
+lib/utils/i18n-format.ts(52,5): error TS2304: Cannot find name 'logger'.
+lib/utils/i18n-format.ts(79,5): error TS2304: Cannot find name 'logger'.
+lib/utils/i18n-format.ts(109,5): error TS2304: Cannot find name 'logger'.
+lib/utils/keyboard-shortcuts.ts(44,5): error TS2304: Cannot find name 'logger'.
+lib/utils/keyboard-shortcuts.ts(61,5): error TS2304: Cannot find name 'logger'.
+lib/utils/pdf-generator.ts(336,75): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/pdf-generator.ts(502,88): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/pdf-generator.ts(547,75): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/pwa.ts(50,5): error TS2304: Cannot find name 'logger'.
+lib/utils/pwa.ts(59,13): error TS2304: Cannot find name 'logger'.
+lib/utils/pwa.ts(67,5): error TS2304: Cannot find name 'logger'.
+lib/utils/pwa.ts(88,5): error TS2304: Cannot find name 'logger'.
+lib/utils/report-pdf-export.ts(64,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/report-pdf-export.ts(240,83): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/sanitize-html.ts(102,19): error TS2503: Cannot find namespace 'DOMPurify'.
+lib/utils/sanitize-html.ts(126,37): error TS2339: Property 'includes' does not exist on type 'TrustedHTML'.
+lib/utils/sanitize-html.ts(128,21): error TS2339: Property 'replace' does not exist on type 'TrustedHTML'.
+lib/utils/sanitize-html.ts(130,10): error TS7006: Parameter 'match' implicitly has an 'any' type.
+lib/utils/sanitize-html.ts(130,17): error TS7006: Parameter 'before' implicitly has an 'any' type.
+lib/utils/sanitize-html.ts(130,25): error TS7006: Parameter 'after' implicitly has an 'any' type.
+lib/utils/sanitize-html.ts(135,16): error TS7006: Parameter '_' implicitly has an 'any' type.
+lib/utils/sanitize-html.ts(135,19): error TS7006: Parameter 'rel' implicitly has an 'any' type.
+lib/utils/sanitize-html.ts(148,5): error TS2322: Type 'TrustedHTML' is not assignable to type 'string'.
+lib/utils/seal-pdf.ts(62,47): error TS2345: Argument of type '"Helvetica"' is not assignable to parameter of type 'StandardFonts'.
+lib/utils/secure-storage.ts(138,7): error TS2304: Cannot find name 'logger'.
+lib/utils/secure-storage.ts(184,7): error TS2304: Cannot find name 'logger'.
+lib/utils/with-secure-api.ts(206,10): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(options: SecureAPIOptions<T> & { schema: T; }, handler: HandlerWithData<TypeOf<T>>): (req: NextRequest) => Promise<...>', gave the following error.
+    Argument of type '{ rateLimit: "MUTATION"; csrfProtection: true; schema: T; }' is not assignable to parameter of type 'SecureAPIOptions<T> & { schema: T; }'.
+      Type '{ rateLimit: "MUTATION"; csrfProtection: true; schema: T; }' is not assignable to type 'SecureAPIOptions<T>'.
+        Types of property 'rateLimit' are incompatible.
+          Type '"MUTATION"' is not assignable to type '"AUTH" | "PAYMENT" | "DOCUMENT_GENERATION" | "GENERAL" | undefined'.
+  Overload 2 of 2, '(options: SecureAPIOptions<ZodType<any, ZodTypeDef, any>>, handler: HandlerWithoutData): (req: NextRequest) => Promise<...>', gave the following error.
+    Type '"MUTATION"' is not assignable to type '"AUTH" | "PAYMENT" | "DOCUMENT_GENERATION" | "GENERAL" | undefined'.
+lib/utils/word-generator.ts(641,109): error TS2554: Expected 1-2 arguments, but got 3.
+lib/utils/word-generator.ts(659,89): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(675,76): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'string[]'.
+lib/utils/word-generator.ts(681,76): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'string[]'.
+lib/utils/word-generator.ts(1012,95): error TS2554: Expected 1-2 arguments, but got 4.
+lib/utils/word-generator.ts(1013,56): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(1035,90): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(1639,103): error TS2554: Expected 1-2 arguments, but got 3.
+lib/utils/word-generator.ts(1666,72): error TS2345: Argument of type '{ index: number; isTableInstance: boolean; tableType: string; }[]' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type '{ index: number; isTableInstance: boolean; tableType: string; }[]'.
+lib/utils/word-generator.ts(1714,57): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(1841,89): error TS2554: Expected 1-2 arguments, but got 5.
+lib/utils/word-generator.ts(1871,59): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(1872,116): error TS2554: Expected 1-2 arguments, but got 3.
+lib/utils/word-generator.ts(1906,104): error TS2554: Expected 1-2 arguments, but got 3.
+lib/utils/word-generator.ts(1990,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/word-generator.ts(1997,67): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+lib/utils/word-generator.ts(2221,64): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(2235,90): error TS2554: Expected 1-2 arguments, but got 7.
+lib/utils/word-generator.ts(2239,69): error TS2345: Argument of type '{ index: number; isTableInstance: boolean; tableType: string; }[]' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type '{ index: number; isTableInstance: boolean; tableType: string; }[]'.
+lib/utils/word-generator.ts(2264,66): error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(2268,59): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(2272,58): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(2347,97): error TS2554: Expected 1-2 arguments, but got 5.
+lib/utils/word-generator.ts(2385,66): error TS2554: Expected 1-2 arguments, but got 5.
+lib/utils/word-generator.ts(2398,66): error TS2554: Expected 1-2 arguments, but got 5.
+lib/utils/word-generator.ts(2463,79): error TS2554: Expected 1-2 arguments, but got 3.
+lib/utils/word-generator.ts(2464,70): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'string[]'.
+lib/utils/word-generator.ts(2467,62): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(2468,69): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.
+lib/utils/word-generator.ts(2469,60): error TS2345: Argument of type 'number' is not assignable to parameter of type 'LogContext'.

@@ -10,6 +10,7 @@ import { ArrowLeft, Edit, Calendar, Clock, MapPin, Users, BookOpen, DollarSign }
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import type { SessionWithRelations } from '@/lib/types/query-types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function SessionDetailPage() {
   const params = useParams()
@@ -53,7 +54,7 @@ export default function SessionDetailPage() {
         .single()
       if (error) {
         // Ne pas bloquer si l'enseignant n'est pas trouvé
-        console.error('Erreur lors de la récupération de l\'enseignant:', error)
+        logger.error('Erreur lors de la récupération de l\'enseignant:', error)
         return null
       }
       return data

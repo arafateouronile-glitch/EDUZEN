@@ -43,7 +43,7 @@ export function GestionTabs({ activeTab, onTabChange }: GestionTabsProps) {
             transition={{
               delay: index * 0.05,
               duration: 0.3,
-              ease: [0.16, 1, 0.3, 1]
+              ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
             }}
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}

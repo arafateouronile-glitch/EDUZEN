@@ -25,6 +25,8 @@ import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
+import { createClient } from '@/lib/supabase/client'
 
 export default function CalendarPage() {
   const { user } = useAuth()
@@ -52,11 +54,36 @@ export default function CalendarPage() {
     setFilters(prev => ({ ...prev, ...newFilters }))
   }, [])
 
+  const isTeacher = user?.role === 'teacher'
+
+  // Récupérer les sessions assignées à l'enseignant (pour les enseignants)
+  const { data: teacherSessionIds } = useQuery({
+    queryKey: ['teacher-session-ids-calendar', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('session_teachers')
+        .select('session_id')
+        .eq('teacher_id', user.id)
+      if (error) {
+        logger.error('Erreur récupération sessions enseignant', sanitizeError(error))
+        return []
+      }
+      return data?.map((st: any) => st.session_id) || []
+    },
+    enabled: !!user?.id && isTeacher,
+  })
+
   // Récupérer les événements du calendrier
+  // Pour les enseignants, filtrer uniquement les événements des sessions assignées
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: [
       'calendar-events',
       user?.organization_id,
+      user?.id,
+      isTeacher,
+      teacherSessionIds,
       dateRange.start.toISOString(),
       dateRange.end.toISOString(),
     ],
@@ -64,24 +91,55 @@ export default function CalendarPage() {
       if (!user?.organization_id) return []
       const startDate = dateRange.start.toISOString().split('T')[0]
       const endDate = dateRange.end.toISOString().split('T')[0]
-      // console.log('[CalendarPage] Récupération des événements:', { startDate, endDate, organizationId: user.organization_id })
+      
+      // Le service filtre déjà automatiquement pour les enseignants via userId
       const result = await calendarService.getCalendarEvents(
         user.organization_id,
         startDate,
         endDate,
         user.id
       )
-      // console.log('[CalendarPage] Événements reçus:', result.length, result)
       return result
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les statistiques
+  // Pour les apprenants, calculer les stats uniquement sur leurs propres tâches
   const { data: stats } = useQuery({
-    queryKey: ['calendar-stats', user?.organization_id],
+    queryKey: ['calendar-stats', user?.organization_id, user?.id, user?.role],
     queryFn: async () => {
       if (!user?.organization_id) return null
+      
+      // Pour les apprenants, calculer les stats uniquement sur leurs tâches
+      if (user?.role === 'learner' || user?.role === 'student') {
+        const today = new Date().toISOString().split('T')[0]
+        const todos = await calendarService.getTodos(user.organization_id, {
+          createdBy: user.id,
+        })
+        
+        const todosList = todos || []
+        const totalTodos = todosList.length
+        const pendingTodos = todosList.filter((t) => t.status === 'pending').length
+        const completedTodos = todosList.filter((t) => t.status === 'completed').length
+        const overdueTodos = todosList.filter(
+          (t) => t.status !== 'completed' && t.status !== 'cancelled' && t.due_date < today
+        ).length
+        const todayTodos = todosList.filter((t) => t.due_date === today).length
+        const upcomingTodos = todosList.filter(
+          (t) => t.status !== 'completed' && t.status !== 'cancelled' && t.due_date > today
+        ).length
+
+        return {
+          totalTodos,
+          pendingTodos,
+          completedTodos,
+          overdueTodos,
+          todayTodos,
+          upcomingTodos,
+        }
+      }
+      
       return calendarService.getCalendarStats(user.organization_id)
     },
     enabled: !!user?.organization_id,
@@ -98,16 +156,24 @@ export default function CalendarPage() {
   })
 
   // Récupérer les TODOs d'aujourd'hui
+  // Pour les apprenants, ne montrer que les tâches qu'ils ont créées
   const { data: todayTodos } = useQuery({
-    queryKey: ['today-todos', user?.organization_id],
+    queryKey: ['today-todos', user?.organization_id, user?.id, user?.role],
     queryFn: async () => {
       if (!user?.organization_id) return []
       const today = new Date().toISOString().split('T')[0]
-      return calendarService.getTodos(user.organization_id, {
+      const filters: any = {
         startDate: today,
         endDate: today,
         status: ['pending', 'in_progress'],
-      })
+      }
+      
+      // Pour les apprenants, filtrer uniquement les tâches qu'ils ont créées
+      if (user?.role === 'learner' || user?.role === 'student') {
+        filters.createdBy = user.id
+      }
+      
+      return calendarService.getTodos(user.organization_id, filters)
     },
     enabled: !!user?.organization_id,
   })
@@ -256,7 +322,7 @@ export default function CalendarPage() {
 
   // Callback pour mettre à jour la plage de dates lorsque la vue du calendrier change
   const handleDateRangeChange = useCallback((start: Date, end: Date) => {
-    // console.log('[CalendarPage] Plage de dates mise à jour:', { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] })
+    // logger.debug('[CalendarPage] Plage de dates mise à jour:', { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] })
     setDateRange({ start, end })
   }, [])
 
@@ -274,7 +340,7 @@ export default function CalendarPage() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] as [number, number, number, number] },
     },
   }
 
@@ -393,7 +459,7 @@ export default function CalendarPage() {
               transition={{
                 duration: 0.5,
                 delay: index * 0.05,
-                ease: [0.16, 1, 0.3, 1]
+                ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
               }}
               whileHover={{ y: -6, scale: 1.02 }}
               className="group relative"
@@ -450,7 +516,7 @@ export default function CalendarPage() {
                     }}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   />
                 </div>
 

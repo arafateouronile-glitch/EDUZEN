@@ -118,7 +118,9 @@ export default async function RootLayout({
         {/* DNS prefetch pour améliorer les performances */}
         <link rel="dns-prefetch" href="https://*.supabase.co" />
         <link rel="dns-prefetch" href="https://*.sentry.io" />
-        {/* Note: Polices chargées localement via @fontsource (pas de fetch au build) */}
+        {/* Preload fonts critiques pour améliorer LCP */}
+        {/* Note: Les polices sont chargées via @fontsource, les preloads sont optionnels */}
+        {/* Les chemins exacts seront générés au build par Next.js */}
       </head>
       <body className={cn('smooth-scroll-premium')}>
         <NonceProvider nonce={nonce}>

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FileText, Download, Plus, Search } from 'lucide-react'
 import Link from 'next/link'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function ReportCardsPage() {
   const { user } = useAuth()
@@ -34,7 +35,7 @@ export default function ReportCardsPage() {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Erreur lors de la récupération des bulletins:', error)
+        logger.error('Erreur lors de la récupération des bulletins:', error)
         return []
       }
 

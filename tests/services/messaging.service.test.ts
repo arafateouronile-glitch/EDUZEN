@@ -1,22 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MessagingService } from '@/lib/services/messaging.service'
-import { createMockSupabase, resetMockSupabase } from '@/tests/__mocks__/supabase-query-builder'
+import { createClient } from '@/lib/supabase/client'
 
-// Mock Supabase client avec vi.hoisted pour résoudre les problèmes d'initialisation
+// Mock Supabase client
 const { mockSupabaseClient } = vi.hoisted(() => {
-  const mock = createMockSupabase()
-  // Ajouter rpc pour MessagingService
-  ;(mock as any).rpc = vi.fn().mockReturnValue(mock)
-  // Configurer storage
-  mock.storage.from = vi.fn().mockReturnValue({
-    upload: vi.fn().mockResolvedValue({ data: { path: 'test/file.pdf' }, error: null }),
-    createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'https://example.com/signed' }, error: null }),
-  })
+  const mock: any = {
+    from: vi.fn(),
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn().mockResolvedValue({ data: { path: 'test/file.pdf' }, error: null }),
+        createSignedUrl: vi.fn().mockResolvedValue({ data: { signedUrl: 'https://example.com/signed' }, error: null }),
+      })),
+    },
+  }
   return { mockSupabaseClient: mock }
 })
 
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => mockSupabaseClient,
+  createClient: vi.fn(() => mockSupabaseClient),
 }))
 
 describe('MessagingService', () => {
@@ -24,15 +25,20 @@ describe('MessagingService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    resetMockSupabase(mockSupabaseClient)
-    service = new MessagingService()
+    // Réinitialiser from() - les tests vont le mocker individuellement
+    mockSupabaseClient.from.mockReset()
+    service = new MessagingService(mockSupabaseClient as any)
   })
 
   describe('getConversations', () => {
     it('should return empty array when no conversations found', async () => {
-      mockSupabaseClient.from.mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+      // Le service fait: from('conversation_participants').select().eq() qui retourne une promesse
+      mockSupabaseClient.from.mockImplementationOnce(() => {
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }
+        return query
       })
 
       const result = await service.getConversations('user-id', 'org-id')
@@ -64,49 +70,61 @@ describe('MessagingService', () => {
         avatar_url: null,
       }
 
-      // Mock the chain of calls
-      mockSupabaseClient.from
-        .mockReturnValueOnce({
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({
-            data: [{ conversation_id: 'conv-1' }],
-            error: null,
-          }),
-        })
-        .mockReturnValueOnce({
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          in: vi.fn().mockReturnThis(),
-          order: vi.fn().mockResolvedValue({
-            data: [mockConversation],
-            error: null,
-          }),
-        })
-        .mockReturnValueOnce({
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({
-            data: [mockParticipant],
-            error: null,
-          }),
-        })
-        .mockReturnValueOnce({
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: mockUser,
-            error: null,
-          }),
-        })
-        .mockReturnValue({
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          order: vi.fn().mockReturnThis(),
-          limit: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: null,
-            error: null,
-          }),
-        })
+      // Mock the chain of calls - le service fait plusieurs requêtes complexes
+      let fromCallCount = 0
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        fromCallCount++
+        const query: any = {
+          select: vi.fn(),
+          insert: vi.fn(),
+          update: vi.fn(),
+          eq: vi.fn(),
+          in: vi.fn(),
+          is: vi.fn(),
+          order: vi.fn(),
+          limit: vi.fn(),
+          range: vi.fn(),
+          single: vi.fn(),
+          maybeSingle: vi.fn(),
+        }
+        
+        // Toutes les méthodes chainables retournent le query builder
+        query.select.mockReturnValue(query)
+        query.insert.mockReturnValue(query)
+        query.update.mockReturnValue(query)
+        query.eq.mockReturnValue(query)
+        query.in.mockReturnValue(query)
+        query.is.mockReturnValue(query)
+        query.order.mockReturnValue(query)
+        query.limit.mockReturnValue(query)
+        
+        if (fromCallCount === 1 && table === 'conversation_participants') {
+          // Première requête: récupérer les conversations de l'utilisateur
+          query.eq.mockResolvedValue({ data: [{ conversation_id: 'conv-1' }], error: null })
+        } else if (fromCallCount === 2 && table === 'conversations') {
+          // Deuxième requête: récupérer les conversations - .in() retourne this, .order() retourne promesse
+          query.order.mockResolvedValue({ data: [mockConversation], error: null })
+        } else if (fromCallCount === 3 && table === 'conversation_participants') {
+          // Troisième requête: récupérer tous les participants - .in() retourne promesse directement
+          query.in.mockResolvedValue({ data: [mockParticipant], error: null })
+        } else if (fromCallCount === 4 && table === 'users') {
+          // Quatrième requête: récupérer les utilisateurs - .in() retourne promesse directement
+          query.in.mockResolvedValue({ data: [mockUser], error: null })
+        } else if (fromCallCount === 5 && table === 'students') {
+          // Cinquième requête: récupérer les étudiants (vide) - .in() retourne promesse directement
+          query.in.mockResolvedValue({ data: [], error: null })
+        } else if (table === 'messages') {
+          // Requêtes de messages: maybeSingle retourne null
+          query.maybeSingle.mockResolvedValue({ data: null, error: null })
+        } else {
+          // Par défaut, toutes les méthodes retournent le query builder
+          query.range.mockResolvedValue({ data: [], error: null, count: 0 })
+          query.single.mockResolvedValue({ data: null, error: null })
+          query.maybeSingle.mockResolvedValue({ data: null, error: null })
+        }
+        
+        return query
+      })
 
       const result = await service.getConversations('user-id', 'org-id')
       

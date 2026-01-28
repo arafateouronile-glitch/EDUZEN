@@ -192,44 +192,7 @@
     --shadow-inset: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-    
-    /* Dark Mode - Ajustements pour meilleure lisibilité */
-    --color-primary: #3B82F6; /* Bleu plus lumineux en dark mode */
-    --color-primary-hover: #60A5FA;
-    --color-success: #22C55E; /* Vert plus lumineux en dark mode */
-    --color-text: #F1F5F9;
-    
-    /* Dark mode pour l'éditeur */
-    --text-primary: #FFFFFF;
-    --text-secondary: #E5E7EB;
-    --text-tertiary: #9CA3AF;
-    --bg-white: #1F2937;
-    --bg-gray-50: #111827;
-    --bg-gray-100: #1F2937;
-    --bg-gray-200: #374151;
-    --color-text-secondary: #94A3B8;
-    --color-bg: #0F172A;
-  }
+  /* Mode sombre supprimé - Application en mode clair uniquement */
 }
 
 @layer base {
@@ -513,12 +476,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
-  .glass-dark {
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
+  /* .glass-dark supprimé - Mode sombre désactivé */
   
   /* Glass morphism premium - Revolut/TrendTrack style */
   .glass-morphism {
@@ -529,13 +487,7 @@
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
   }
   
-  .glass-morphism-dark {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-  }
+  /* .glass-morphism-dark supprimé - Mode sombre désactivé */
   
   /* Animated gradient border - Ultra premium */
   .animated-gradient-border {
@@ -982,36 +934,6 @@
       padding: 15mm 20mm !important;
       max-width: 100% !important;
     }
-  }
-  
-  /* Dark mode pour l'éditeur Tiptap */
-  .dark .ProseMirror {
-    background: #1F2937 !important;
-    color: #FFFFFF !important;
-    border-color: #374151 !important;
-  }
-  
-  .dark .tiptap-editor {
-    background: #111827 !important;
-  }
-  
-  .dark .tiptap-editor .toolbar {
-    background: #1F2937 !important;
-    border-color: #374151 !important;
-  }
-  
-  .dark .tiptap-editor button {
-    color: #E5E7EB !important;
-  }
-  
-  .dark .tiptap-editor button:hover {
-    background: #374151 !important;
-  }
-  
-  .dark .tiptap-editor select {
-    background: #1F2937 !important;
-    color: #FFFFFF !important;
-    border-color: #374151 !important;
   }
   
   /* Responsive mobile pour l'éditeur */
@@ -1407,12 +1329,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
-  .glass-dark {
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
+  /* .glass-dark supprimé - Mode sombre désactivé */
   
   /* Glass morphism premium - Revolut/TrendTrack style */
   .glass-morphism {
@@ -1423,13 +1340,7 @@
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
   }
   
-  .glass-morphism-dark {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-  }
+  /* .glass-morphism-dark supprimé - Mode sombre désactivé */
   
   /* Animated gradient border - Ultra premium */
   .animated-gradient-border {
@@ -1876,36 +1787,6 @@
       padding: 15mm 20mm !important;
       max-width: 100% !important;
     }
-  }
-  
-  /* Dark mode pour l'éditeur Tiptap */
-  .dark .ProseMirror {
-    background: #1F2937 !important;
-    color: #FFFFFF !important;
-    border-color: #374151 !important;
-  }
-  
-  .dark .tiptap-editor {
-    background: #111827 !important;
-  }
-  
-  .dark .tiptap-editor .toolbar {
-    background: #1F2937 !important;
-    border-color: #374151 !important;
-  }
-  
-  .dark .tiptap-editor button {
-    color: #E5E7EB !important;
-  }
-  
-  .dark .tiptap-editor button:hover {
-    background: #374151 !important;
-  }
-  
-  .dark .tiptap-editor select {
-    background: #1F2937 !important;
-    color: #FFFFFF !important;
-    border-color: #374151 !important;
   }
   
   /* Responsive mobile pour l'éditeur */
@@ -2301,12 +2182,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
   
-  .glass-dark {
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
+  /* .glass-dark supprimé - Mode sombre désactivé */
   
   /* Glass morphism premium - Revolut/TrendTrack style */
   .glass-morphism {
@@ -2317,13 +2193,7 @@
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
   }
   
-  .glass-morphism-dark {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-  }
+  /* .glass-morphism-dark supprimé - Mode sombre désactivé */
   
   /* Animated gradient border - Ultra premium */
   .animated-gradient-border {
@@ -2770,36 +2640,6 @@
       padding: 15mm 20mm !important;
       max-width: 100% !important;
     }
-  }
-  
-  /* Dark mode pour l'éditeur Tiptap */
-  .dark .ProseMirror {
-    background: #1F2937 !important;
-    color: #FFFFFF !important;
-    border-color: #374151 !important;
-  }
-  
-  .dark .tiptap-editor {
-    background: #111827 !important;
-  }
-  
-  .dark .tiptap-editor .toolbar {
-    background: #1F2937 !important;
-    border-color: #374151 !important;
-  }
-  
-  .dark .tiptap-editor button {
-    color: #E5E7EB !important;
-  }
-  
-  .dark .tiptap-editor button:hover {
-    background: #374151 !important;
-  }
-  
-  .dark .tiptap-editor select {
-    background: #1F2937 !important;
-    color: #FFFFFF !important;
-    border-color: #374151 !important;
   }
   
   /* Responsive mobile pour l'éditeur */

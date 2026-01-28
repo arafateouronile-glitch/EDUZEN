@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createStorageClient } from '@supabase/supabase-js'
 import { withRateLimit, uploadRateLimiter } from '@/app/api/_middleware/rate-limit'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * API Route pour uploader une ressource vers Supabase Storage
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('Upload error:', uploadError)
+      logger.error('Upload error:', uploadError)
       return NextResponse.json(
         { error: 'Erreur lors de l\'upload du fichier', details: uploadError.message },
         { status: 500 }
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (resourceError) {
-      console.error('Resource creation error:', resourceError)
+      logger.error('Resource creation error:', resourceError)
       // Supprimer le fichier uploadé en cas d'erreur
       await storageClient.storage.from('resources').remove([filePath])
       return NextResponse.json(
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
       fileUrl: publicUrl,
     })
   } catch (error: unknown) {
-    console.error('Error uploading resource:', error)
+    logger.error('Error uploading resource:', error)
     const errorMessage = error instanceof Error 
       ? error.message 
       : 'Erreur lors de l\'upload de la ressource'

@@ -10,52 +10,60 @@ import { useParallax } from '@/lib/hooks/useParallax'
 const plans = [
   {
     name: "Starter",
-    price: "49",
+    price: "79",
     period: "/mois",
-    description: "Idéal pour les organismes de formation qui démarrent.",
+    originalPrice: "79",
+    founderPrice: "39",
+    description: "L'essentiel pour débuter",
     features: [
-      "Jusqu'à 100 stagiaires/an",
-      "Gestion des sessions et inscriptions",
-      "Contrats et documents Qualiopi",
-      "Feuilles de présence",
-      "Support par email",
-      "3 utilisateurs"
+      "20 stagiaires / mois",
+      "Gestion Pédagogique",
+      "Émargement QR & Signature",
+      "Génération de Documents (Standard)",
+      "Facturation & Paiements",
+      "Support Email (48h)"
     ],
     cta: "Commencer l'essai gratuit",
     highlight: false,
     icon: Sparkles
   },
   {
-    name: "Professional",
-    price: "149",
+    name: "Pro",
+    price: "169",
     period: "/mois",
-    description: "La solution complète pour les organismes en croissance.",
+    originalPrice: "169",
+    founderPrice: "84",
+    description: "La sérénité administrative",
     features: [
-      "Stagiaires illimités",
+      "100 stagiaires / mois",
       "Tout du plan Starter",
-      "Facturation CPF automatique",
-      "Portail stagiaire & formateur",
-      "Reporting avancé",
-      "Conformité Datadock",
-      "Support prioritaire",
-      "10 utilisateurs"
+      "Dashboard Qualiopi",
+      "Automate BPF",
+      "Portail E-learning",
+      "Relances Automatiques",
+      "Génération de Documents (Illimitée)",
+      "Support Prioritaire (24h)"
     ],
-    cta: "Essayer le plan Professional",
+    cta: "Essayer le plan Pro",
     highlight: true,
     icon: Crown
   },
   {
     name: "Enterprise",
     price: "Sur mesure",
-    description: "Pour les réseaux de formation et grands organismes.",
+    period: "",
+    originalPrice: "349",
+    founderPrice: null,
+    description: "Pour changer d'échelle",
     features: [
-      "Tout du plan Professional",
-      "Multi-sites et franchises",
+      "Stagiaires illimités",
+      "Tout du plan Pro",
+      "Marque Blanche / URL",
+      "Multi-établissements",
       "API & Intégrations personnalisées",
       "Formation et accompagnement dédiés",
       "Account Manager dédié",
-      "Marque blanche complète",
-      "SLA garantis"
+      "Support Dédié & Téléphone"
     ],
     cta: "Contacter les ventes",
     highlight: false,
@@ -96,7 +104,7 @@ export function Pricing() {
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={isInView ? { opacity: 1, scale: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="relative inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-white/80 to-white/60 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(52,185,238,0.12)] mb-8 overflow-hidden group"
           >
             <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
@@ -109,7 +117,7 @@ export function Pricing() {
           <motion.h2
             initial={{ opacity: 0, y: 40 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tightest text-gray-900 mb-8 leading-tighter font-display"
           >
             Des tarifs{' '}
@@ -124,7 +132,7 @@ export function Pricing() {
           <motion.p
             initial={{ opacity: 0, y: 40 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="text-lg md:text-xl lg:text-2xl text-gray-700 leading-relaxed font-light tracking-tight"
           >
             Choisissez le plan qui{' '}
@@ -133,6 +141,19 @@ export function Pricing() {
               votre organisme
             </span>
           </motion.p>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+            className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-brand-cyan/10 to-brand-blue/10 border border-brand-cyan/20"
+          >
+            <Sparkles className="w-5 h-5 text-brand-cyan" />
+            <span className="text-sm font-semibold text-gray-900">
+              Offre Spéciale : -50% sur tous les tarifs en devenant "Membre Fondateur"
+            </span>
+            <span className="text-xs text-gray-500">(Limité aux 100 premiers inscrits)</span>
+          </motion.div>
         </div>
 
         {/* Pricing Cards */}
@@ -146,7 +167,7 @@ export function Pricing() {
                 y: 0,
                 scale: plan.highlight ? 1.08 : 1
               } : {}}
-              transition={{ duration: 0.8, delay: index * 0.15, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, delay: index * 0.15, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               whileHover={{
                 y: -16,
                 scale: plan.highlight ? 1.12 : 1.04,
@@ -189,7 +210,7 @@ export function Pricing() {
                 <motion.div
                   initial={{ opacity: 0, y: -20, scale: 0.8 }}
                   animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-                  transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   className="absolute -top-6 left-1/2 -translate-x-1/2"
                 >
                   <div className="relative px-6 py-2.5 rounded-full bg-gradient-to-r from-brand-cyan via-brand-cyan-light to-brand-cyan shadow-2xl shadow-brand-cyan/50 overflow-hidden group">
@@ -213,7 +234,7 @@ export function Pricing() {
                       : 'bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 border border-brand-blue/20'
                   }`}
                   whileHover={{ rotate: 360, scale: 1.1 }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 >
                   <plan.icon className={`w-8 h-8 md:w-10 md:h-10 ${
                     plan.highlight ? 'text-white' : 'text-brand-blue'
@@ -237,28 +258,58 @@ export function Pricing() {
                 {/* Price */}
                 <div className="mb-12">
                   {plan.price === "Sur mesure" ? (
-                    <span className={`text-4xl md:text-5xl lg:text-6xl font-black font-display ${
-                      plan.highlight ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      {plan.price}
-                    </span>
-                  ) : (
-                    <div className="flex items-baseline gap-2">
-                      <span className={`text-6xl md:text-7xl lg:text-8xl font-black font-display leading-none ${
+                    <div>
+                      <span className={`text-4xl md:text-5xl lg:text-6xl font-black font-display ${
                         plan.highlight ? 'text-white' : 'text-gray-900'
                       }`}>
                         {plan.price}
                       </span>
-                      <div className="flex flex-col">
-                        <span className={`text-2xl md:text-3xl font-bold ${
+                      <p className={`text-sm mt-2 ${
+                        plan.highlight ? 'text-white/80' : 'text-gray-600'
+                      }`}>
+                        Dès {plan.originalPrice}€ HT / mois
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      {plan.founderPrice && (
+                        <div className="mb-2 flex items-center gap-2 flex-wrap">
+                          <span className={`text-lg line-through ${
+                            plan.highlight ? 'text-white/60' : 'text-gray-400'
+                          }`}>
+                            {plan.originalPrice}€ HT
+                          </span>
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                            plan.highlight 
+                              ? 'bg-white/20 text-white' 
+                              : 'bg-brand-cyan/10 text-brand-cyan'
+                          }`}>
+                            -50% Offre Fondateur
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-baseline gap-2">
+                        <span className={`text-6xl md:text-7xl lg:text-8xl font-black font-display leading-none ${
                           plan.highlight ? 'text-white' : 'text-gray-900'
-                        }`}>€</span>
-                        <span className={`text-lg ${
-                          plan.highlight ? 'text-white/80' : 'text-gray-600'
                         }`}>
-                          {plan.period}
+                          {plan.founderPrice ? plan.founderPrice : plan.price}
                         </span>
+                        <div className="flex flex-col">
+                          <span className={`text-2xl md:text-3xl font-bold ${
+                            plan.highlight ? 'text-white' : 'text-gray-900'
+                          }`}>€</span>
+                          <span className={`text-lg ${
+                            plan.highlight ? 'text-white/80' : 'text-gray-600'
+                          }`}>
+                            {plan.period}
+                          </span>
+                        </div>
                       </div>
+                      <p className={`text-sm mt-1 ${
+                        plan.highlight ? 'text-white/80' : 'text-gray-500'
+                      }`}>
+                        HT
+                      </p>
                     </div>
                   )}
                 </div>
@@ -270,7 +321,7 @@ export function Pricing() {
                       key={i}
                       initial={{ opacity: 0, x: -20 }}
                       animate={isInView ? { opacity: 1, x: 0 } : {}}
-                      transition={{ duration: 0.6, delay: 0.5 + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: 0.6, delay: 0.5 + i * 0.08, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                       className="flex items-start gap-4"
                     >
                       <div className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center ${
@@ -326,7 +377,7 @@ export function Pricing() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 1, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.8, delay: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           className="mt-20 md:mt-24 text-center"
         >
           <div className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/60 backdrop-blur-xl border border-white/40 shadow-xl">

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { SelectRoot, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { RichTextEditorRef } from './rich-text-editor'
-import type { TableProperties } from '@/lib/utils/quill-table-helper'
+import type { TableProperties } from '@/lib/types/table-properties'
 
 export type { TableProperties }
 

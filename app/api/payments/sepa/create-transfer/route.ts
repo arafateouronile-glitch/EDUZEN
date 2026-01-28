@@ -53,11 +53,12 @@ const sepaTransferSchema: ValidationSchema = {
   debtor_iban: {
     type: 'string',
     required: true,
-    customValidator: (value: unknown) => {
+    customValidator: (value: unknown): { isValid: boolean; errors?: string[]; sanitized?: string } => {
       if (typeof value !== 'string') {
         return { isValid: false, errors: ['IBAN doit être une chaîne de caractères'] };
       }
-      return validateIBAN(value);
+      const result = validateIBAN(value);
+      return { isValid: result.isValid, errors: result.errors, sanitized: result.sanitized };
     },
   },
   debtor_bic: {
@@ -78,11 +79,12 @@ const sepaTransferSchema: ValidationSchema = {
   creditor_iban: {
     type: 'string',
     required: true,
-    customValidator: (value: unknown) => {
+    customValidator: (value: unknown): { isValid: boolean; errors?: string[]; sanitized?: string } => {
       if (typeof value !== 'string') {
         return { isValid: false, errors: ['IBAN doit être une chaîne de caractères'] };
       }
-      return validateIBAN(value);
+      const result = validateIBAN(value);
+      return { isValid: result.isValid, errors: result.errors, sanitized: result.sanitized };
     },
   },
   creditor_bic: {
@@ -103,8 +105,8 @@ const sepaTransferSchema: ValidationSchema = {
  * ✅ Validation stricte IBAN + BIC + Rate limiting
  */
 export async function POST(request: NextRequest) {
-  return withRateLimit(request, mutationRateLimiter, async (req) => {
-    return withBodyValidation(req as NextRequest, sepaTransferSchema, async (req, validatedData) => {
+  return withRateLimit(request, mutationRateLimiter, async () => {
+    return withBodyValidation(request, sepaTransferSchema, async (_req, validatedData) => {
       try {
         const supabase = await createClient()
         const {
@@ -163,7 +165,9 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Erreur lors de l\'enregistrement' }, { status: 500 })
         }
 
-        // TODO: Intégrer avec un service de traitement SEPA réel
+        // NOTE: Intégration avec un service SEPA réel requise
+        // Options: Banque de France, services tiers (Payoneer, Wise, etc.)
+        // Nécessite configuration des credentials API et gestion des erreurs bancaires
         // Pour l'instant, on retourne juste l'enregistrement
 
         return NextResponse.json({

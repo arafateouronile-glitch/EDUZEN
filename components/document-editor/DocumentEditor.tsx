@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
@@ -43,8 +43,13 @@ import {
   FileCode,
   Download,
   Eye,
+  Maximize2,
+  Minimize2,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Types pour les variables
 interface VariableItem {
@@ -130,9 +135,10 @@ interface ToolbarButtonProps {
   children: React.ReactNode
   title?: string
   className?: string
+  focusMode?: boolean
 }
 
-function ToolbarButton({ onClick, isActive, disabled, children, title, className }: ToolbarButtonProps) {
+function ToolbarButton({ onClick, isActive, disabled, children, title, className, focusMode }: ToolbarButtonProps) {
   return (
     <button
       type="button"
@@ -141,8 +147,16 @@ function ToolbarButton({ onClick, isActive, disabled, children, title, className
       title={title}
       className={cn(
         'p-2 rounded-md transition-colors',
-        'hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed',
-        isActive && 'bg-purple-100 text-purple-700',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
+        focusMode
+          ? cn(
+              'text-gray-400 hover:bg-gray-800 hover:text-gray-200',
+              isActive && 'bg-purple-900/50 text-purple-300'
+            )
+          : cn(
+              'hover:bg-gray-100',
+              isActive && 'bg-purple-100 text-purple-700'
+            ),
         className
       )}
     >
@@ -152,8 +166,8 @@ function ToolbarButton({ onClick, isActive, disabled, children, title, className
 }
 
 // Composant Séparateur de Toolbar
-function ToolbarDivider() {
-  return <div className="w-px h-6 bg-gray-300 mx-1" />
+function ToolbarDivider({ focusMode }: { focusMode?: boolean }) {
+  return <div className={cn("w-px h-6 mx-1", focusMode ? "bg-gray-700" : "bg-gray-300")} />
 }
 
 // Composant Badge Variable (Chip) - Draggable
@@ -202,95 +216,108 @@ function VariableBadge({ variable }: VariableBadgeProps) {
 // Composant Menu contextuel pour les tableaux
 interface TableMenuProps {
   editor: ReturnType<typeof useEditor>
+  focusMode?: boolean
 }
 
-function TableContextMenu({ editor }: TableMenuProps) {
+function TableContextMenu({ editor, focusMode }: TableMenuProps) {
   if (!editor || !editor.isActive('table')) {
     return null
   }
 
+  const btnClass = focusMode
+    ? "p-1.5 rounded hover:bg-gray-700 text-gray-400"
+    : "p-1.5 rounded hover:bg-gray-200 text-gray-600"
+
+  const dividerClass = focusMode ? "bg-gray-700" : "bg-gray-300"
+
   return (
-    <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-md border border-gray-200">
-      <span className="text-xs text-gray-500 mr-2">Tableau :</span>
-      
+    <div className={cn(
+      "flex items-center gap-1 px-2 py-1 rounded-md border",
+      focusMode ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-200"
+    )}>
+      <span className={cn("text-xs mr-2", focusMode ? "text-gray-400" : "text-gray-500")}>Tableau :</span>
+
       {/* Ajouter ligne */}
       <button
         type="button"
         onClick={() => editor.chain().focus().addRowAfter().run()}
         title="Ajouter une ligne après"
-        className="p-1.5 rounded hover:bg-gray-200 text-gray-600"
+        className={btnClass}
       >
         <Plus className="w-3.5 h-3.5" />
         <RowsIcon className="w-3.5 h-3.5" />
       </button>
-      
+
       {/* Supprimer ligne */}
       <button
         type="button"
         onClick={() => editor.chain().focus().deleteRow().run()}
         title="Supprimer la ligne"
-        className="p-1.5 rounded hover:bg-gray-200 text-gray-600"
+        className={btnClass}
       >
         <Minus className="w-3.5 h-3.5" />
         <RowsIcon className="w-3.5 h-3.5" />
       </button>
-      
-      <div className="w-px h-4 bg-gray-300 mx-1" />
-      
+
+      <div className={cn("w-px h-4 mx-1", dividerClass)} />
+
       {/* Ajouter colonne */}
       <button
         type="button"
         onClick={() => editor.chain().focus().addColumnAfter().run()}
         title="Ajouter une colonne après"
-        className="p-1.5 rounded hover:bg-gray-200 text-gray-600"
+        className={btnClass}
       >
         <Plus className="w-3.5 h-3.5" />
         <Columns className="w-3.5 h-3.5" />
       </button>
-      
+
       {/* Supprimer colonne */}
       <button
         type="button"
         onClick={() => editor.chain().focus().deleteColumn().run()}
         title="Supprimer la colonne"
-        className="p-1.5 rounded hover:bg-gray-200 text-gray-600"
+        className={btnClass}
       >
         <Minus className="w-3.5 h-3.5" />
         <Columns className="w-3.5 h-3.5" />
       </button>
-      
-      <div className="w-px h-4 bg-gray-300 mx-1" />
-      
+
+      <div className={cn("w-px h-4 mx-1", dividerClass)} />
+
       {/* Fusionner cellules */}
       <button
         type="button"
         onClick={() => editor.chain().focus().mergeCells().run()}
         disabled={!editor.can().mergeCells()}
         title="Fusionner les cellules"
-        className="p-1.5 rounded hover:bg-gray-200 text-gray-600 disabled:opacity-50"
+        className={cn(btnClass, "disabled:opacity-50")}
       >
         <Merge className="w-3.5 h-3.5" />
       </button>
-      
+
       {/* Diviser cellule */}
       <button
         type="button"
         onClick={() => editor.chain().focus().splitCell().run()}
         disabled={!editor.can().splitCell()}
         title="Diviser la cellule"
-        className="p-1.5 rounded hover:bg-gray-200 text-gray-600 disabled:opacity-50"
+        className={cn(btnClass, "disabled:opacity-50")}
       >
         <Split className="w-3.5 h-3.5" />
       </button>
-      
-      <div className="w-px h-4 bg-gray-300 mx-1" />
-      
+
+      <div className={cn("w-px h-4 mx-1", dividerClass)} />
+
       {/* Supprimer tableau */}
       <button
         type="button"
         onClick={() => editor.chain().focus().deleteTable().run()}
         title="Supprimer le tableau"
-        className="p-1.5 rounded hover:bg-red-100 text-red-600"
+        className={cn(
+          "p-1.5 rounded",
+          focusMode ? "hover:bg-red-900/30 text-red-400" : "hover:bg-red-100 text-red-600"
+        )}
       >
         <Trash2 className="w-3.5 h-3.5" />
       </button>
@@ -302,6 +329,38 @@ function TableContextMenu({ editor }: TableMenuProps) {
 export default function DocumentEditor() {
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [isFocusMode, setIsFocusMode] = useState(false)
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true)
+
+  // Raccourci clavier pour le Focus Mode (Escape pour quitter)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFocusMode) {
+        setIsFocusMode(false)
+        setIsSidebarVisible(true)
+      }
+      // F11 pour toggle focus mode
+      if (e.key === 'F11') {
+        e.preventDefault()
+        toggleFocusMode()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isFocusMode])
+
+  // Toggle Focus Mode
+  const toggleFocusMode = useCallback(() => {
+    setIsFocusMode(prev => {
+      const newValue = !prev
+      if (newValue) {
+        setIsSidebarVisible(false)
+      } else {
+        setIsSidebarVisible(true)
+      }
+      return newValue
+    })
+  }, [])
 
   // Initialisation de l'éditeur TipTap
   const editor = useEditor({
@@ -345,7 +404,7 @@ export default function DocumentEditor() {
     `,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg max-w-none focus:outline-none min-h-[250mm] p-0',
+        class: 'prose prose-lg xl:prose-xl max-w-none focus:outline-none min-h-[600px]',
       },
       handleDrop: (view, event, _slice, moved) => {
         if (moved) return false
@@ -441,12 +500,13 @@ export default function DocumentEditor() {
       const htmlContent = editor.getHTML()
 
       // Pour le moment, afficher dans la console
-      console.log('=== SAUVEGARDE DU DOCUMENT ===')
-      console.log('📋 Contenu JSON (pour réédition) :', jsonContent)
-      console.log('📄 Contenu HTML (pour PDF) :', htmlContent)
-      console.log('===============================')
+      logger.debug('=== SAUVEGARDE DU DOCUMENT ===')
+      logger.debug('📋 Contenu JSON (pour réédition)', { jsonContentLength: JSON.stringify(jsonContent).length })
+      logger.debug('📄 Contenu HTML (pour PDF)', { htmlContentLength: htmlContent?.length || 0 })
+      logger.debug('===============================')
 
-      // TODO: Envoyer au backend
+      // NOTE: Fonctionnalité prévue - Envoyer au backend
+      // Utiliser DocumentTemplateService.save() une fois l'implémentation complète
       // await documentService.saveTemplate({
       //   json: jsonContent,
       //   html: htmlContent,
@@ -457,7 +517,7 @@ export default function DocumentEditor() {
       // Notification de succès (simulée)
       alert('Document sauvegardé ! (voir console pour les données)')
     } catch (error) {
-      console.error('Erreur de sauvegarde:', error)
+      logger.error('Erreur de sauvegarde:', error)
       alert('Erreur lors de la sauvegarde')
     } finally {
       setIsSaving(false)
@@ -538,15 +598,30 @@ ${htmlContent}
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Zone principale - Éditeur */}
+    <div className={cn(
+      "flex h-screen bg-gray-200 transition-all duration-300",
+      isFocusMode && "fixed inset-0 z-50"
+    )}>
+      {/* Zone principale - Éditeur Full-Width */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header avec titre et actions */}
-        <div className="document-editor-header bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between no-print">
+        <div className={cn(
+          "document-editor-header bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between no-print transition-all duration-300",
+          isFocusMode && "bg-gray-900 border-gray-800"
+        )}>
           <div>
-            <h1 className="text-lg font-semibold text-gray-800">Éditeur de document</h1>
+            <h1 className={cn(
+              "text-lg font-semibold transition-colors",
+              isFocusMode ? "text-white" : "text-gray-800"
+            )}>
+              Éditeur de document
+              {isFocusMode && <span className="ml-2 text-xs font-normal text-gray-400">(Mode Focus - Appuyez sur Esc pour quitter)</span>}
+            </h1>
             {lastSaved && (
-              <p className="text-xs text-gray-500">
+              <p className={cn(
+                "text-xs transition-colors",
+                isFocusMode ? "text-gray-400" : "text-gray-500"
+              )}>
                 Dernière sauvegarde : {lastSaved.toLocaleTimeString()}
               </p>
             )}
@@ -558,34 +633,85 @@ ${htmlContent}
               type="button"
               onClick={handleExportJSON}
               title="Exporter en JSON"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
+                isFocusMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-600 hover:bg-gray-100"
+              )}
             >
               <FileJson className="w-4 h-4" />
               <span className="hidden sm:inline">JSON</span>
             </button>
-            
+
             {/* Export HTML */}
             <button
               type="button"
               onClick={handleExportHTML}
               title="Exporter en HTML"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
+                isFocusMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-600 hover:bg-gray-100"
+              )}
             >
               <FileCode className="w-4 h-4" />
               <span className="hidden sm:inline">HTML</span>
             </button>
-            
+
             {/* Aperçu / Imprimer */}
             <button
               type="button"
               onClick={handlePrint}
               title="Aperçu PDF / Imprimer"
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
+                isFocusMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-600 hover:bg-gray-100"
+              )}
             >
               <Printer className="w-4 h-4" />
               <span className="hidden sm:inline">Aperçu</span>
             </button>
-            
+
+            {/* Séparateur */}
+            <div className={cn(
+              "w-px h-6 mx-1",
+              isFocusMode ? "bg-gray-700" : "bg-gray-300"
+            )} />
+
+            {/* Toggle Sidebar */}
+            {!isFocusMode && (
+              <button
+                type="button"
+                onClick={() => setIsSidebarVisible(prev => !prev)}
+                title={isSidebarVisible ? "Masquer la sidebar" : "Afficher la sidebar"}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                {isSidebarVisible ? (
+                  <PanelRightClose className="w-4 h-4" />
+                ) : (
+                  <PanelRightOpen className="w-4 h-4" />
+                )}
+              </button>
+            )}
+
+            {/* Focus Mode */}
+            <button
+              type="button"
+              onClick={toggleFocusMode}
+              title={isFocusMode ? "Quitter le mode Focus (Esc)" : "Mode Focus (F11)"}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
+                isFocusMode
+                  ? "text-purple-300 hover:bg-gray-800 bg-gray-800"
+                  : "text-gray-600 hover:bg-purple-50 hover:text-purple-600"
+              )}
+            >
+              {isFocusMode ? (
+                <Minimize2 className="w-4 h-4" />
+              ) : (
+                <Maximize2 className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">{isFocusMode ? 'Quitter' : 'Focus'}</span>
+            </button>
+
             {/* Bouton Enregistrer */}
             <button
               type="button"
@@ -600,13 +726,17 @@ ${htmlContent}
         </div>
 
         {/* Barre d'outils sticky */}
-        <div className="document-editor-toolbar sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm no-print">
+        <div className={cn(
+          "document-editor-toolbar sticky top-0 z-10 border-b shadow-sm no-print transition-all duration-300",
+          isFocusMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"
+        )}>
           <div className="flex items-center gap-1 px-4 py-2 flex-wrap">
             {/* Historique */}
             <ToolbarButton
               onClick={() => editor.chain().focus().undo().run()}
               disabled={!editor.can().undo()}
               title="Annuler (Ctrl+Z)"
+              focusMode={isFocusMode}
             >
               <Undo className="w-4 h-4" />
             </ToolbarButton>
@@ -614,17 +744,19 @@ ${htmlContent}
               onClick={() => editor.chain().focus().redo().run()}
               disabled={!editor.can().redo()}
               title="Rétablir (Ctrl+Y)"
+              focusMode={isFocusMode}
             >
               <Redo className="w-4 h-4" />
             </ToolbarButton>
 
-            <ToolbarDivider />
+            <ToolbarDivider focusMode={isFocusMode} />
 
             {/* Formatage texte */}
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleBold().run()}
               isActive={editor.isActive('bold')}
               title="Gras (Ctrl+B)"
+              focusMode={isFocusMode}
             >
               <Bold className="w-4 h-4" />
             </ToolbarButton>
@@ -632,6 +764,7 @@ ${htmlContent}
               onClick={() => editor.chain().focus().toggleItalic().run()}
               isActive={editor.isActive('italic')}
               title="Italique (Ctrl+I)"
+              focusMode={isFocusMode}
             >
               <Italic className="w-4 h-4" />
             </ToolbarButton>
@@ -639,17 +772,19 @@ ${htmlContent}
               onClick={() => editor.chain().focus().toggleUnderline().run()}
               isActive={editor.isActive('underline')}
               title="Souligné (Ctrl+U)"
+              focusMode={isFocusMode}
             >
               <UnderlineIcon className="w-4 h-4" />
             </ToolbarButton>
 
-            <ToolbarDivider />
+            <ToolbarDivider focusMode={isFocusMode} />
 
             {/* Titres */}
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
               isActive={editor.isActive('heading', { level: 1 })}
               title="Titre 1"
+              focusMode={isFocusMode}
             >
               <Heading1 className="w-4 h-4" />
             </ToolbarButton>
@@ -657,17 +792,19 @@ ${htmlContent}
               onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
               isActive={editor.isActive('heading', { level: 2 })}
               title="Titre 2"
+              focusMode={isFocusMode}
             >
               <Heading2 className="w-4 h-4" />
             </ToolbarButton>
 
-            <ToolbarDivider />
+            <ToolbarDivider focusMode={isFocusMode} />
 
             {/* Alignement */}
             <ToolbarButton
               onClick={() => editor.chain().focus().setTextAlign('left').run()}
               isActive={editor.isActive({ textAlign: 'left' })}
               title="Aligner à gauche"
+              focusMode={isFocusMode}
             >
               <AlignLeft className="w-4 h-4" />
             </ToolbarButton>
@@ -675,6 +812,7 @@ ${htmlContent}
               onClick={() => editor.chain().focus().setTextAlign('center').run()}
               isActive={editor.isActive({ textAlign: 'center' })}
               title="Centrer"
+              focusMode={isFocusMode}
             >
               <AlignCenter className="w-4 h-4" />
             </ToolbarButton>
@@ -682,17 +820,19 @@ ${htmlContent}
               onClick={() => editor.chain().focus().setTextAlign('right').run()}
               isActive={editor.isActive({ textAlign: 'right' })}
               title="Aligner à droite"
+              focusMode={isFocusMode}
             >
               <AlignRight className="w-4 h-4" />
             </ToolbarButton>
 
-            <ToolbarDivider />
+            <ToolbarDivider focusMode={isFocusMode} />
 
             {/* Listes */}
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleBulletList().run()}
               isActive={editor.isActive('bulletList')}
               title="Liste à puces"
+              focusMode={isFocusMode}
             >
               <List className="w-4 h-4" />
             </ToolbarButton>
@@ -700,17 +840,19 @@ ${htmlContent}
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
               isActive={editor.isActive('orderedList')}
               title="Liste numérotée"
+              focusMode={isFocusMode}
             >
               <ListOrdered className="w-4 h-4" />
             </ToolbarButton>
 
-            <ToolbarDivider />
+            <ToolbarDivider focusMode={isFocusMode} />
 
             {/* Tableau */}
             <ToolbarButton
               onClick={handleInsertTable}
               isActive={editor.isActive('table')}
               title="Insérer un tableau 3x3"
+              focusMode={isFocusMode}
             >
               <TableIcon className="w-4 h-4" />
             </ToolbarButton>
@@ -719,11 +861,12 @@ ${htmlContent}
             <ToolbarButton
               onClick={handleInsertImage}
               title="Insérer une image"
+              focusMode={isFocusMode}
             >
               <ImageIcon className="w-4 h-4" />
             </ToolbarButton>
 
-            <ToolbarDivider />
+            <ToolbarDivider focusMode={isFocusMode} />
 
             {/* Blocs conditionnels */}
             <div className="relative group">
@@ -731,25 +874,35 @@ ${htmlContent}
                 onClick={() => editor.chain().focus().insertConditionalBlock({ type: 'if' }).run()}
                 isActive={editor.isActive('conditionalBlock')}
                 title="Insérer un bloc conditionnel (Ctrl+Shift+C)"
+                focusMode={isFocusMode}
               >
                 <GitBranch className="w-4 h-4" />
               </ToolbarButton>
               
               <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-20">
-                <div className="bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[180px]">
+                <div className={cn(
+                  "rounded-lg shadow-lg border py-1 min-w-[180px]",
+                  isFocusMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+                )}>
                   <button
                     type="button"
                     onClick={() => editor.chain().focus().insertConditionalBlock({ type: 'if' }).run()}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-teal-50 text-gray-700"
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 text-sm text-left",
+                      isFocusMode ? "text-gray-300 hover:bg-teal-900/30" : "text-gray-700 hover:bg-teal-50"
+                    )}
                   >
                     <div className="w-3 h-3 rounded-sm bg-teal-400" />
                     <span>Bloc SI</span>
-                    <span className="ml-auto text-xs text-gray-400">Ctrl+Shift+C</span>
+                    <span className={cn("ml-auto text-xs", isFocusMode ? "text-gray-500" : "text-gray-400")}>Ctrl+Shift+C</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => editor.chain().focus().insertConditionalBlock({ type: 'elseif' }).run()}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-amber-50 text-gray-700"
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 text-sm text-left",
+                      isFocusMode ? "text-gray-300 hover:bg-amber-900/30" : "text-gray-700 hover:bg-amber-50"
+                    )}
                   >
                     <div className="w-3 h-3 rounded-sm bg-amber-400" />
                     <span>Bloc SINON SI</span>
@@ -757,7 +910,10 @@ ${htmlContent}
                   <button
                     type="button"
                     onClick={() => editor.chain().focus().insertConditionalBlock({ type: 'else' }).run()}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-blue-50 text-gray-700"
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 text-sm text-left",
+                      isFocusMode ? "text-gray-300 hover:bg-blue-900/30" : "text-gray-700 hover:bg-blue-50"
+                    )}
                   >
                     <div className="w-3 h-3 rounded-sm bg-blue-400" />
                     <span>Bloc SINON</span>
@@ -769,77 +925,98 @@ ${htmlContent}
 
           {/* Menu contextuel pour les tableaux */}
           {editor.isActive('table') && (
-            <div className="px-4 py-2 border-t border-gray-100">
-              <TableContextMenu editor={editor} />
+            <div className={cn(
+              "px-4 py-2 border-t",
+              isFocusMode ? "border-gray-800" : "border-gray-100"
+            )}>
+              <TableContextMenu editor={editor} focusMode={isFocusMode} />
             </div>
           )}
         </div>
 
-        {/* Zone de contenu scrollable */}
-        <div 
-          className="flex-1 overflow-y-auto p-8"
+        {/* Zone de contenu scrollable - Full-Bleed Workspace */}
+        <div
+          className={cn(
+            "flex-1 overflow-y-auto overflow-x-auto transition-colors duration-300",
+            isFocusMode ? "bg-gray-800" : "bg-gray-100"
+          )}
           onDragOver={(e) => e.preventDefault()}
         >
-          {/* Simulation de page A4 */}
-          <div
-            className="document-editor-page mx-auto bg-white shadow-lg rounded-sm"
-            style={{
-              width: '210mm',
-              minHeight: '297mm',
-              padding: '20mm',
-            }}
-          >
-            <EditorContent editor={editor} />
+          {/* Workspace Full-Bleed - Prend TOUT l'espace disponible */}
+          <div className="w-full h-full p-4">
+            {/* Page du document - Feuille blanche fluide */}
+            <div
+              className={cn(
+                "document-editor-page bg-white w-full h-full transition-all duration-300",
+                isFocusMode
+                  ? "shadow-2xl shadow-black/30 rounded-lg"
+                  : "shadow-lg rounded-lg border border-gray-200"
+              )}
+            >
+              {/* Zone d'édition - Padding léger pour ne pas coller aux bords */}
+              <div className="w-full h-full p-6 lg:p-8">
+                <EditorContent editor={editor} />
+              </div>
+            </div>
           </div>
-          
-          <div className="h-16" />
         </div>
       </div>
 
-      {/* Sidebar - Variables */}
-      <div className="document-editor-sidebar w-[300px] bg-white border-l border-gray-200 flex flex-col overflow-hidden shadow-lg no-print">
-        {/* Header de la sidebar */}
-        <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
-          <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Variable className="w-5 h-5 text-purple-600" />
-            Variables
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Glissez ou cliquez pour insérer
-          </p>
-        </div>
+      {/* Sidebar - Variables (masquée en Focus Mode ou via toggle) */}
+      <div
+        className={cn(
+          "document-editor-sidebar bg-white border-l border-gray-200 flex flex-col overflow-hidden shadow-lg no-print transition-all duration-300",
+          isSidebarVisible && !isFocusMode ? "w-[300px]" : "w-0 border-l-0"
+        )}
+      >
+        {/* Contenu de la sidebar avec overflow hidden pour l'animation */}
+        <div className={cn(
+          "flex flex-col h-full transition-opacity duration-200",
+          isSidebarVisible && !isFocusMode ? "opacity-100" : "opacity-0"
+        )}>
+          {/* Header de la sidebar */}
+          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 shrink-0">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Variable className="w-5 h-5 text-purple-600" />
+              Variables
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Glissez ou cliquez pour insérer
+            </p>
+          </div>
 
-        {/* Liste des catégories et variables */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
-          {variableCategories.map((category) => (
-            <div key={category.id} className="space-y-2">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                <span>{category.icon}</span>
-                {category.name}
-              </h3>
-              
-              <div className="flex flex-wrap gap-2">
-                {category.variables.map((variable) => (
-                  <div
-                    key={variable.id}
-                    onClick={() => handleVariableClick(variable)}
-                    className="cursor-pointer"
-                  >
-                    <VariableBadge variable={variable} />
-                  </div>
-                ))}
+          {/* Liste des catégories et variables */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-5">
+            {variableCategories.map((category) => (
+              <div key={category.id} className="space-y-2">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                  <span>{category.icon}</span>
+                  {category.name}
+                </h3>
+
+                <div className="flex flex-wrap gap-2">
+                  {category.variables.map((variable) => (
+                    <div
+                      key={variable.id}
+                      onClick={() => handleVariableClick(variable)}
+                      className="cursor-pointer"
+                    >
+                      <VariableBadge variable={variable} />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Footer de la sidebar */}
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-start gap-2 text-xs text-gray-500">
-            <span className="text-lg">💡</span>
-            <div>
-              <p className="font-medium text-gray-600">Astuce</p>
-              <p>Les variables seront remplacées par leurs valeurs lors de la génération du document.</p>
+          {/* Footer de la sidebar */}
+          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 shrink-0">
+            <div className="flex items-start gap-2 text-xs text-gray-500">
+              <span className="text-lg">💡</span>
+              <div>
+                <p className="font-medium text-gray-600">Astuce</p>
+                <p>Les variables seront remplacées par leurs valeurs lors de la génération du document.</p>
+              </div>
             </div>
           </div>
         </div>

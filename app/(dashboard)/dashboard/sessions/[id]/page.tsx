@@ -2,18 +2,21 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GlassCard } from '@/components/ui/glass-card'
-import { ArrowLeft, Save, Copy, Archive, Trash2, Calendar, BookOpen, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft, Save, Copy, Archive, Trash2, Calendar, BookOpen, Sparkles,
+  LayoutDashboard, Users, Clock, CheckCircle2, TrendingUp, Zap,
+  MoreHorizontal, ExternalLink, ChevronRight
+} from 'lucide-react'
 import { useSessionDetail } from './hooks/use-session-detail'
-import { WorkflowProgress } from './components/workflow-progress'
-import { ConfigTabs } from './components/config-tabs'
-import { GestionTabs } from './components/gestion-tabs'
+import { SessionSidebar } from './components/session-sidebar'
 import { SkeletonLoader } from './components/skeleton-loader'
-import { motion, AnimatePresence } from '@/components/ui/motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { format, differenceInDays, isAfter, isBefore, parseISO } from 'date-fns'
+import { fr } from 'date-fns/locale'
 
 // Lazy loading des sections de configuration
 const ConfigInitialisation = lazy(() => import('./sections/config-initialisation').then(m => ({ default: m.ConfigInitialisation })))
@@ -100,530 +103,679 @@ export default function SessionDetailPage() {
     user,
   } = useSessionDetail(sessionId)
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  }
+  // Calculate session metrics
+  const sessionMetrics = useMemo(() => {
+    const enrollmentsCount = enrollments?.length || 0
+    const maxCapacity = (sessionData as any)?.max_participants || 20
+    const fillRate = Math.round((enrollmentsCount / maxCapacity) * 100)
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } },
-  }
+    const startDate = sessionData?.start_date ? parseISO(sessionData.start_date) : null
+    const endDate = sessionData?.end_date ? parseISO(sessionData.end_date) : null
+    const now = new Date()
+
+    let status: 'upcoming' | 'in_progress' | 'completed' = 'upcoming'
+    let daysInfo = ''
+    let progressPercent = 0
+
+    if (startDate && endDate) {
+      if (isBefore(now, startDate)) {
+        status = 'upcoming'
+        const daysUntil = differenceInDays(startDate, now)
+        daysInfo = daysUntil === 0 ? "Démarre aujourd'hui" : `Dans ${daysUntil} jour${daysUntil > 1 ? 's' : ''}`
+      } else if (isAfter(now, endDate)) {
+        status = 'completed'
+        daysInfo = 'Terminée'
+        progressPercent = 100
+      } else {
+        status = 'in_progress'
+        const totalDays = differenceInDays(endDate, startDate) || 1
+        const elapsedDays = differenceInDays(now, startDate)
+        progressPercent = Math.round((elapsedDays / totalDays) * 100)
+        const daysLeft = differenceInDays(endDate, now)
+        daysInfo = `${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}`
+      }
+    }
+
+    return { enrollmentsCount, maxCapacity, fillRate, status, daysInfo, progressPercent, startDate, endDate }
+  }, [enrollments, sessionData])
 
   if (isLoading) {
     return (
-      <motion.div
-        className="space-y-8 pb-8 max-w-[1600px] mx-auto"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        {/* Breadcrumbs skeleton */}
-        <div className="flex items-center space-x-2">
-          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-32 animate-pulse" />
-          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-4 animate-pulse" />
-          <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-24 animate-pulse" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-brand-blue/5">
+        <div className="space-y-8 pb-8 max-w-[1800px] mx-auto p-8">
+          <SkeletonLoader />
         </div>
-
-        {/* Header skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-brand-blue/20 to-brand-cyan/20 rounded-2xl animate-pulse" />
-            <div className="space-y-3">
-              <div className="h-10 bg-gradient-to-r from-gray-200 to-gray-300 rounded-xl w-64 animate-pulse" />
-              <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded w-48 animate-pulse" />
-            </div>
-          </div>
-          <div className="h-12 w-36 bg-gradient-to-br from-brand-blue/20 to-brand-cyan/20 rounded-xl animate-pulse" />
-        </div>
-
-        {/* Workflow skeleton */}
-        <div className="h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl animate-pulse" />
-
-        {/* Content skeleton */}
-        <SkeletonLoader />
-      </motion.div>
+      </div>
     )
   }
 
   if (!session) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="flex items-center justify-center min-h-screen"
-      >
-        <GlassCard variant="premium" className="p-16 text-center border-2 border-dashed border-gray-200">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="w-20 h-20 bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
-          >
-            <Calendar className="h-10 w-10 text-brand-blue" />
-          </motion.div>
-          <motion.h3
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="text-2xl font-display font-bold text-gray-900 mb-2 tracking-tight"
-          >
-            Session non trouvée
-          </motion.h3>
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="text-gray-600 mb-8 font-medium tracking-tight"
-          >
-            Cette session n'existe pas ou a été supprimée.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            whileHover={{ scale: 1.05, y: -3 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Link href="/dashboard/sessions">
-              <Button className="bg-gradient-to-br from-brand-blue to-brand-cyan text-white hover:from-brand-blue-dark hover:to-brand-cyan-dark shadow-xl shadow-brand-blue/20 hover:shadow-2xl hover:shadow-brand-cyan/30 transition-all duration-500 font-semibold tracking-tight px-6 py-6 text-base">
-                <ArrowLeft className="mr-2 h-5 w-5" />
-                Retour à la liste
-              </Button>
-            </Link>
-          </motion.div>
-        </GlassCard>
-      </motion.div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-brand-blue/5 flex items-center justify-center p-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+        >
+          <GlassCard variant="premium" className="p-16 text-center max-w-lg relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 via-transparent to-brand-cyan/5" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-brand-blue/10 to-transparent rounded-full blur-3xl -mr-32 -mt-32" />
+
+            <div className="relative z-10">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                className="w-24 h-24 bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-cyan rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-brand-blue/30"
+              >
+                <Calendar className="h-12 w-12 text-white" />
+              </motion.div>
+              <h3 className="text-3xl font-display font-bold text-gray-900 mb-3 tracking-tight">Session introuvable</h3>
+              <p className="text-gray-500 mb-10 text-lg">Cette session n'existe pas ou a été supprimée de votre espace.</p>
+              <Link href="/dashboard/sessions">
+                <Button size="lg" className="bg-gradient-to-r from-brand-blue to-brand-blue-dark hover:from-brand-blue-dark hover:to-brand-blue text-white shadow-xl shadow-brand-blue/25 px-8">
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Retour aux sessions
+                </Button>
+              </Link>
+            </div>
+          </GlassCard>
+        </motion.div>
+      </div>
     )
   }
 
-  return (
-    <motion.div
-      className="space-y-8 pb-8 max-w-[1600px] mx-auto"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* Breadcrumbs Ultra-Premium */}
-      <motion.div variants={itemVariants} className="flex items-center space-x-2 text-sm">
-        <Link href="/dashboard/sessions" className="text-gray-500 hover:text-brand-blue transition-colors font-medium tracking-tight">
-          Toutes mes sessions
-        </Link>
-        <span className="text-gray-300">/</span>
-        <span className="text-gray-700 font-semibold tracking-tight">{formData.name || sessionData?.name}</span>
-        {activeStep !== 'configuration' && (
-          <>
-            <span className="text-gray-300">/</span>
-            <span className="text-brand-blue font-bold tracking-tight">
-              {activeStep === 'gestion' ? 'Gestion' :
-               activeStep === 'espace_apprenant' ? 'Espace Apprenant' :
-               activeStep === 'suivi' ? 'Suivi' : ''}
-            </span>
-          </>
-        )}
-      </motion.div>
+  // Status badge config
+  const statusConfig = {
+    upcoming: { label: 'À venir', color: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+    in_progress: { label: 'En cours', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+    completed: { label: 'Terminée', color: 'bg-gray-100 text-gray-600 border-gray-200', dot: 'bg-gray-400' },
+  }
 
-      {/* Header Ultra-Premium */}
-      <motion.div variants={itemVariants} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/sessions">
-            <motion.div
-              whileHover={{ scale: 1.1, x: -3 }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 400, damping: 15 }}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-12 w-12 rounded-2xl hover:bg-gradient-to-br hover:from-brand-blue/10 hover:to-brand-cyan/10 transition-all"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </motion.div>
-          </Link>
-          <div>
-            <div className="flex items-center gap-3 mb-2">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-blue/[0.02] flex">
+      {/* Premium Session Sidebar */}
+      <aside className="hidden lg:flex lg:flex-shrink-0">
+        <div className="flex flex-col w-80 relative">
+          {/* Sidebar Background with premium effects */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/80 to-white" />
+          <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent" />
+          <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-brand-blue/[0.03] to-transparent" />
+
+          <div className="relative flex flex-col h-full pt-6 pb-6 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+            {/* Back Button */}
+            <div className="px-5 mb-6">
+              <Link href="/dashboard/sessions">
+                <motion.div
+                  whileHover={{ x: -4 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand-blue transition-colors group"
+                >
+                  <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                  <span>Sessions</span>
+                </motion.div>
+              </Link>
+            </div>
+
+            {/* Session Identity Card */}
+            <div className="px-5 mb-6">
               <motion.div
-                className="p-2.5 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-2xl shadow-lg shadow-brand-blue/20"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative p-5 rounded-2xl bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-blue overflow-hidden"
               >
-                <Calendar className="h-6 w-6 text-white" />
-              </motion.div>
-              <h1 className="text-3xl md:text-5xl font-display font-bold text-gray-900 tracking-tighter leading-none">
-                {formData.name || sessionData?.name}
-              </h1>
-              <motion.div
-                className="px-3 py-1.5 bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost border-2 border-brand-blue/20 rounded-xl flex items-center gap-2 shadow-sm"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                <Sparkles className="h-4 w-4 text-brand-blue" />
-                <span className="text-xs font-bold text-brand-blue uppercase tracking-wide">Session active</span>
+                {/* Decorative elements */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-brand-cyan/20 rounded-full blur-xl -ml-12 -mb-12" />
+
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={cn(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border",
+                      "bg-white/20 text-white border-white/30 backdrop-blur-sm"
+                    )}>
+                      <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", statusConfig[sessionMetrics.status].dot)} />
+                      {statusConfig[sessionMetrics.status].label}
+                    </div>
+                    <Button variant="ghost" size="icon" className="w-8 h-8 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <h2 className="text-lg font-bold text-white mb-1 line-clamp-2 leading-snug">
+                    {formData.name || sessionData?.name || 'Session'}
+                  </h2>
+
+                  {formation && (
+                    <p className="text-white/70 text-xs font-medium flex items-center gap-1.5 mt-2">
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span className="truncate">{formation.name}</span>
+                    </p>
+                  )}
+
+                  {/* Session Progress */}
+                  {sessionMetrics.status === 'in_progress' && (
+                    <div className="mt-4 pt-4 border-t border-white/20">
+                      <div className="flex items-center justify-between text-xs text-white/80 mb-2">
+                        <span>Progression</span>
+                        <span className="font-semibold">{sessionMetrics.progressPercent}%</span>
+                      </div>
+                      <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${sessionMetrics.progressPercent}%` }}
+                          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                          className="h-full bg-gradient-to-r from-brand-cyan to-white rounded-full"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Date Info */}
+                  <div className="mt-4 flex items-center gap-2 text-white/80 text-xs">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{sessionMetrics.daysInfo || 'Dates non définies'}</span>
+                  </div>
+                </div>
               </motion.div>
             </div>
-            {formation && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <BookOpen className="h-4 w-4 text-brand-cyan" />
-                <p className="text-base font-medium tracking-tight">
-                  {formation.name}
-                  {program && (
-                    <>
-                      <span className="mx-2 text-gray-300">•</span>
-                      <span className="text-brand-blue font-semibold">{program.name}</span>
-                    </>
-                  )}
-                </p>
+
+            {/* Quick Stats */}
+            <div className="px-5 mb-6">
+              <div className="grid grid-cols-2 gap-3">
+                <motion.div
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-default"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-brand-blue" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{sessionMetrics.enrollmentsCount}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Inscrits</p>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-default"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-brand-cyan/10 flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4 text-brand-cyan" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900">{sessionMetrics.fillRate}%</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Taux remplissage</p>
+                </motion.div>
               </div>
-            )}
+            </div>
+
+            {/* Section Label */}
+            <div className="px-5 mb-3">
+              <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Navigation</span>
+              </div>
+            </div>
+
+            {/* Navigation Menu */}
+            <div className="flex-1 px-4">
+              <SessionSidebar
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                activeGestionTab={activeGestionTab}
+                setActiveGestionTab={setActiveGestionTab}
+              />
+            </div>
+
+            {/* Quick Actions */}
+            <div className="px-5 mt-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-gray-100"
+              >
+                <h4 className="text-xs font-semibold text-gray-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                  <Zap className="w-3.5 h-3.5 text-brand-cyan" />
+                  Actions rapides
+                </h4>
+                <div className="space-y-1.5">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-brand-blue hover:shadow-sm rounded-xl text-xs font-medium">
+                    <Copy className="w-3.5 h-3.5 mr-2" /> Dupliquer la session
+                  </Button>
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm rounded-xl text-xs font-medium">
+                    <ExternalLink className="w-3.5 h-3.5 mr-2" /> Voir sur le portail
+                  </Button>
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm rounded-xl text-xs font-medium">
+                    <Archive className="w-3.5 h-3.5 mr-2" /> Archiver
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
           </div>
         </div>
-        <motion.div
-          whileHover={{ scale: 1.05, y: -3 }}
-          whileTap={{ scale: 0.98 }}
-          className="flex items-center space-x-3"
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 overflow-hidden w-0 min-w-0">
+        {/* Premium Sticky Header */}
+        <motion.header
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="sticky top-0 z-40"
         >
-          <Button
-            onClick={handleSave}
-            disabled={updateMutation.isPending}
-            className="bg-gradient-to-br from-brand-blue to-brand-cyan text-white hover:from-brand-blue-dark hover:to-brand-cyan-dark shadow-xl shadow-brand-blue/20 hover:shadow-2xl hover:shadow-brand-cyan/30 transition-all duration-500 font-semibold tracking-tight px-6 py-6 text-base"
-          >
-            <Save className="mr-2 h-5 w-5" />
-            {updateMutation.isPending ? 'Sauvegarde...' : 'Enregistrer'}
-          </Button>
-        </motion.div>
-      </motion.div>
+          <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100/80 shadow-sm shadow-gray-100/50">
+            <div className="px-6 lg:px-8 h-[72px] flex items-center justify-between">
+              {/* Left Section */}
+              <div className="flex items-center gap-4">
+                {/* Mobile back button */}
+                <Link href="/dashboard/sessions" className="lg:hidden">
+                  <Button variant="ghost" size="icon" className="w-10 h-10 rounded-xl hover:bg-gray-100 -ml-2">
+                    <ArrowLeft className="w-5 h-5 text-gray-500" />
+                  </Button>
+                </Link>
 
-      {/* Workflow Progress */}
-      <motion.div variants={itemVariants}>
-        <WorkflowProgress activeStep={activeStep} onStepChange={setActiveStep} />
-      </motion.div>
+                {/* Breadcrumb-style title */}
+                <div className="hidden lg:flex items-center gap-3">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-lg font-bold text-gray-900 tracking-tight line-clamp-1 max-w-md">
+                        {formData.name || sessionData?.name}
+                      </h1>
+                      <div className={cn(
+                        "hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+                        statusConfig[sessionMetrics.status].color
+                      )}>
+                        <span className={cn("w-1.5 h-1.5 rounded-full", statusConfig[sessionMetrics.status].dot)} />
+                        {statusConfig[sessionMetrics.status].label}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-mono text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
+                        {formData.code || (sessionData as any)?.internal_code || (sessionData as any)?.code || "SANS-CODE"}
+                      </span>
+                      {formation && (
+                        <>
+                          <ChevronRight className="w-3 h-3 text-gray-300" />
+                          <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                            {formation.name}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-      {/* Tabs */}
-      <div>
-        {activeStep === 'configuration' && (
-          <motion.div 
-            key="config-tabs"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <ConfigTabs activeTab={activeTab} onTabChange={setActiveTab} />
-          </motion.div>
-        )}
+                {/* Mobile title */}
+                <div className="lg:hidden flex flex-col">
+                  <h1 className="text-base font-bold text-gray-900 tracking-tight line-clamp-1">
+                    {formData.name || sessionData?.name}
+                  </h1>
+                  <span className="text-[10px] text-gray-500">
+                    {formData.code || "Session"}
+                  </span>
+                </div>
+              </div>
 
-        {activeStep === 'gestion' && (
-          <motion.div 
-            key="gestion-tabs"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <GestionTabs activeTab={activeGestionTab} onTabChange={setActiveGestionTab} />
-          </motion.div>
-        )}
-      </div>
+              {/* Right Section - Actions */}
+              <div className="flex items-center gap-2">
+                {/* Last saved indicator */}
+                {updateMutation.isSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="hidden md:flex items-center gap-1.5 text-xs text-emerald-600 mr-2"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Sauvegardé</span>
+                  </motion.div>
+                )}
 
-      {/* Main Content */}
-      <motion.div variants={itemVariants}>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 space-y-6">
-            {/* Configuration Tabs */}
-            {activeStep === 'configuration' && activeTab === 'initialisation' && (
-              <Suspense fallback={<SkeletonLoader />}>
-                <ConfigInitialisation
-                  formData={formData}
-                  onFormDataChange={setFormData}
-                  users={users}
-                />
-              </Suspense>
-            )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden md:flex gap-2 h-9 rounded-xl border-gray-200 hover:border-gray-300 text-gray-600"
+                >
+                  <Archive className="w-4 h-4" />
+                  <span className="hidden lg:inline">Archiver</span>
+                </Button>
 
-            {activeStep === 'configuration' && activeTab === 'dates_prix' && (
-              <Suspense fallback={<SkeletonLoader />}>
-                <ConfigDatesPrix
+                <Button
+                  onClick={handleSave}
+                  disabled={updateMutation.isPending}
+                  size="sm"
+                  className={cn(
+                    "h-9 px-4 rounded-xl font-semibold transition-all duration-200",
+                    "bg-gradient-to-r from-brand-blue to-brand-blue-dark",
+                    "hover:from-brand-blue-dark hover:to-brand-blue",
+                    "text-white shadow-lg shadow-brand-blue/25",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                >
+                  {updateMutation.isPending ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2"
+                      />
+                      <span className="hidden sm:inline">Sauvegarde...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      <span className="hidden sm:inline">Enregistrer</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.header>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 xl:p-8">
+          {/* Mobile Session Card + Menu */}
+          <div className="lg:hidden mb-6 space-y-4">
+            {/* Mobile Session Info Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative p-5 rounded-2xl bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-blue overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <div className={cn(
+                    "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border mb-2",
+                    "bg-white/20 text-white border-white/30"
+                  )}>
+                    <span className={cn("w-1.5 h-1.5 rounded-full", statusConfig[sessionMetrics.status].dot)} />
+                    {statusConfig[sessionMetrics.status].label}
+                  </div>
+                  <p className="text-white/80 text-xs">{sessionMetrics.daysInfo}</p>
+                </div>
+                <div className="flex gap-4 text-white">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{sessionMetrics.enrollmentsCount}</p>
+                    <p className="text-[10px] text-white/70">Inscrits</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold">{sessionMetrics.fillRate}%</p>
+                    <p className="text-[10px] text-white/70">Rempli</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Mobile Navigation */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <SessionSidebar
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                activeGestionTab={activeGestionTab}
+                setActiveGestionTab={setActiveGestionTab}
+              />
+            </div>
+          </div>
+
+          {/* Content Area with premium background */}
+          <div className="w-full">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${activeStep}-${activeTab}-${activeGestionTab}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+              >
+              {/* Configuration Content */}
+              {activeStep === 'configuration' && activeTab === 'initialisation' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <ConfigInitialisation
+                    formData={formData}
+                    onFormDataChange={setFormData}
+                    users={users}
+                  />
+                </Suspense>
+              )}
+
+              {activeStep === 'configuration' && activeTab === 'dates_prix' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <ConfigDatesPrix
+                    sessionId={sessionId}
+                    formData={formData}
+                    onFormDataChange={setFormData}
+                    slotConfig={slotConfig}
+                    onSlotConfigChange={setSlotConfig}
+                    sessionSlots={sessionSlots}
+                    onSlotsRefetch={refetchSlots}
+                    formation={formation || undefined}
+                    program={program || undefined}
+                    sessionModules={sessionModules || []}
+                    onModulesRefetch={refetchSessionModules}
+                  />
+                </Suspense>
+              )}
+
+              {activeStep === 'configuration' && activeTab === 'programme' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <ConfigProgramme
+                    formData={formData}
+                    onFormDataChange={setFormData}
+                    programs={programs}
+                    formations={formations}
+                    sessionPrograms={sessionPrograms}
+                    formation={formation || undefined}
+                    program={program || undefined}
+                  />
+                </Suspense>
+              )}
+
+              {activeStep === 'configuration' && activeTab === 'intervenants' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <ConfigIntervenants
+                    formData={formData}
+                    onFormDataChange={setFormData}
+                    users={users}
+                  />
+                </Suspense>
+              )}
+
+              {activeStep === 'configuration' && activeTab === 'apprenants' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <ConfigApprenants
+                    sessionId={sessionId}
+                    formationId={formData.formation_id}
+                    enrollments={enrollments}
+                    students={students}
+                    enrollmentForm={enrollmentForm}
+                    onEnrollmentFormChange={(form) => {
+                      setEnrollmentForm({
+                        ...form,
+                        status: (form.status || 'pending') as any,
+                        payment_status: (form.payment_status || 'pending') as any,
+                        funding_type_id: form.funding_type_id || '',
+                      })
+                    }}
+                    onCreateEnrollment={() => createEnrollmentMutation.mutate()}
+                    createEnrollmentMutation={createEnrollmentMutation}
+                    formationPrice={
+                      formation?.price
+                        ? typeof formation.price === 'number'
+                          ? formation.price
+                          : typeof formation.price === 'string'
+                          ? parseFloat(formation.price) || undefined
+                          : undefined
+                        : undefined
+                    }
+                  />
+                </Suspense>
+              )}
+
+              {/* Gestion Content */}
+              {activeStep === 'gestion' && activeGestionTab === 'conventions' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <GestionConventions
+                    sessionData={sessionData}
+                    formation={formation || undefined}
+                    program={program || undefined}
+                    organization={organization}
+                    enrollments={enrollments}
+                    isLoading={!enrollments}
+                    onShowEnrollmentForm={() => {
+                      setActiveGestionTab('convocations')
+                      setShowEnrollmentForm(true)
+                    }}
+                    onSwitchTab={(tab) => setActiveGestionTab(tab)}
+                  />
+                </Suspense>
+              )}
+
+              {activeStep === 'gestion' && activeGestionTab === 'convocations' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                <GestionConvocations
                   sessionId={sessionId}
-                  formData={formData}
-                  onFormDataChange={setFormData}
-                  slotConfig={slotConfig}
-                  onSlotConfigChange={setSlotConfig}
-                  sessionSlots={sessionSlots}
-                  onSlotsRefetch={refetchSlots}
+                  sessionData={sessionData}
                   formation={formation || undefined}
                   program={program || undefined}
-                  sessionModules={sessionModules || []}
-                  onModulesRefetch={refetchSessionModules}
-                />
-              </Suspense>
-            )}
-
-            {activeStep === 'configuration' && activeTab === 'programme' && (
-              <Suspense fallback={<SkeletonLoader />}>
-                <ConfigProgramme
-                  formData={formData}
-                  onFormDataChange={setFormData}
-                  programs={programs}
-                  formations={formations}
-                  sessionPrograms={sessionPrograms}
-                  formation={formation || undefined}
-                  program={program || undefined}
-                />
-              </Suspense>
-            )}
-
-            {activeStep === 'configuration' && activeTab === 'intervenants' && (
-              <Suspense fallback={<SkeletonLoader />}>
-                <ConfigIntervenants
-                  formData={formData}
-                  onFormDataChange={setFormData}
-                  users={users}
-                />
-              </Suspense>
-            )}
-
-            {activeStep === 'configuration' && activeTab === 'apprenants' && (
-              <Suspense fallback={<SkeletonLoader />}>
-                <ConfigApprenants
-                  sessionId={sessionId}
-                  formationId={formData.formation_id}
+                  organization={organization}
                   enrollments={enrollments}
                   students={students}
+                  showEnrollmentForm={showEnrollmentForm}
                   enrollmentForm={enrollmentForm}
                   onEnrollmentFormChange={(form) => {
-                    // Convertir status et payment_status null en valeurs par défaut
                     setEnrollmentForm({
                       ...form,
-                      status: (form.status || 'pending') as 'pending' | 'completed' | 'cancelled' | 'confirmed' | 'failed',
-                      payment_status: (form.payment_status || 'pending') as 'pending' | 'partial' | 'paid' | 'overdue',
-                      funding_type_id: form.funding_type_id || '',
+                      status: (form.status || 'pending') as any,
+                      payment_status: (form.payment_status || 'pending') as any,
+                      funding_type_id: (form as any).funding_type_id || '',
                     })
                   }}
                   onCreateEnrollment={() => createEnrollmentMutation.mutate()}
                   createEnrollmentMutation={createEnrollmentMutation}
-                  formationPrice={
-                    formation?.price
-                      ? typeof formation.price === 'number'
-                        ? formation.price
-                        : typeof formation.price === 'string'
-                        ? parseFloat(formation.price) || undefined
-                        : undefined
-                      : undefined
-                  }
+                  cancelEnrollmentMutation={cancelEnrollmentMutation}
+                  onCloseEnrollmentForm={() => setShowEnrollmentForm(false)}
+                  onShowEnrollmentForm={() => setShowEnrollmentForm(true)}
+                  isGeneratingZip={isGeneratingZip}
+                  zipGenerationProgress={zipGenerationProgress}
+                  lastZipGeneration={lastZipGeneration}
                 />
-              </Suspense>
-            )}
+                </Suspense>
+              )}
 
-          {/* Gestion Tabs */}
-          {activeStep === 'gestion' && activeGestionTab === 'conventions' && (
-            <Suspense fallback={<SkeletonLoader />}>
-              <GestionConventions
-                sessionData={sessionData}
-                formation={formation || undefined}
-                program={program || undefined}
-                organization={organization}
-                enrollments={enrollments}
-                isLoading={!enrollments}
-                onShowEnrollmentForm={() => {
-                  setActiveGestionTab('convocations')
-                  setShowEnrollmentForm(true)
-                }}
-                onSwitchTab={(tab) => setActiveGestionTab(tab)}
-              />
-            </Suspense>
-          )}
+              {activeStep === 'gestion' && activeGestionTab === 'evaluations' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <GestionEvaluations
+                  grades={grades}
+                  gradesStats={gradesStats}
+                  students={students}
+                  showEvaluationForm={showEvaluationForm}
+                  evaluationForm={evaluationForm}
+                  onEvaluationFormChange={setEvaluationForm}
+                  onCreateEvaluation={() => createEvaluationMutation.mutate()}
+                  createEvaluationMutation={createEvaluationMutation}
+                  onCloseEvaluationForm={() => setShowEvaluationForm(false)}
+                  onShowEvaluationForm={(type, subject) => {
+                    setEvaluationForm({
+                      ...evaluationForm,
+                      assessment_type: type || 'evaluation_generale',
+                      subject: subject || 'Évaluation générale',
+                    })
+                    setShowEvaluationForm(true)
+                  }}
+                  />
+                </Suspense>
+              )}
 
-          {activeStep === 'gestion' && activeGestionTab === 'convocations' && (
-            <Suspense fallback={<SkeletonLoader />}>
-            <GestionConvocations
-              sessionId={sessionId}
-              sessionData={sessionData}
-              formation={formation || undefined}
-              program={program || undefined}
-              organization={organization}
-              enrollments={enrollments}
-              students={students}
-              showEnrollmentForm={showEnrollmentForm}
-              enrollmentForm={enrollmentForm}
-              onEnrollmentFormChange={(form) => {
-                setEnrollmentForm({
-                  ...form,
-                  status: (form.status || 'pending') as 'pending' | 'completed' | 'cancelled' | 'confirmed' | 'failed',
-                  payment_status: (form.payment_status || 'pending') as 'pending' | 'partial' | 'paid' | 'overdue',
-                  funding_type_id: (form as any).funding_type_id || '',
-                })
-              }}
-              onCreateEnrollment={() => createEnrollmentMutation.mutate()}
-              createEnrollmentMutation={createEnrollmentMutation}
-              cancelEnrollmentMutation={cancelEnrollmentMutation}
-              onCloseEnrollmentForm={() => setShowEnrollmentForm(false)}
-              onShowEnrollmentForm={() => setShowEnrollmentForm(true)}
-              isGeneratingZip={isGeneratingZip}
-              zipGenerationProgress={zipGenerationProgress}
-              lastZipGeneration={lastZipGeneration}
-            />
-            </Suspense>
-          )}
+              {activeStep === 'gestion' && activeGestionTab === 'finances' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <GestionFinances
+                    enrollments={enrollments}
+                    payments={payments}
+                    sessionId={sessionId}
+                    sessionData={sessionData}
+                    organization={organization}
+                  />
+                </Suspense>
+              )}
 
-          {activeStep === 'gestion' && activeGestionTab === 'evaluations' && (
-            <Suspense fallback={<SkeletonLoader />}>
-              <GestionEvaluations
-              grades={grades}
-              gradesStats={gradesStats}
-              students={students}
-              showEvaluationForm={showEvaluationForm}
-              evaluationForm={evaluationForm}
-              onEvaluationFormChange={setEvaluationForm}
-              onCreateEvaluation={() => createEvaluationMutation.mutate()}
-              createEvaluationMutation={createEvaluationMutation}
-              onCloseEvaluationForm={() => setShowEvaluationForm(false)}
-              onShowEvaluationForm={(type, subject) => {
-                setEvaluationForm({
-                  ...evaluationForm,
-                  assessment_type: type || 'evaluation_generale',
-                  subject: subject || 'Évaluation générale',
-                })
-                setShowEvaluationForm(true)
-              }}
-              />
-            </Suspense>
-          )}
+              {activeStep === 'gestion' && activeGestionTab === 'espace_entreprise' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <GestionEspaceEntreprise
+                    sessionData={sessionData}
+                    formation={formation || undefined}
+                    program={program || undefined}
+                    organization={organization}
+                    enrollments={enrollments}
+                    grades={grades}
+                    attendanceStats={attendanceStats}
+                  />
+                </Suspense>
+              )}
 
-          {activeStep === 'gestion' && activeGestionTab === 'finances' && (
-            <Suspense fallback={<SkeletonLoader />}>
-              <GestionFinances
-                enrollments={enrollments}
-                payments={payments}
-                sessionId={sessionId}
-                sessionData={sessionData}
-                organization={organization}
-              />
-            </Suspense>
-          )}
+              {activeStep === 'gestion' && activeGestionTab === 'automatisation' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <GestionAutomatisation
+                    sessionId={sessionId}
+                    sessionData={sessionData}
+                  />
+                </Suspense>
+              )}
 
-          {activeStep === 'gestion' && activeGestionTab === 'espace_entreprise' && (
-            <Suspense fallback={<SkeletonLoader />}>
-              <GestionEspaceEntreprise
-                sessionData={sessionData}
-                formation={formation || undefined}
-                program={program || undefined}
-                organization={organization}
-                enrollments={enrollments}
-                grades={grades}
-                attendanceStats={attendanceStats}
-              />
-            </Suspense>
-          )}
+              {/* Other Steps */}
+              {activeStep === 'espace_apprenant' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <EspaceApprenant
+                    sessionId={sessionId}
+                    sessionData={sessionData}
+                    formation={formation || undefined}
+                    program={program || undefined}
+                    organization={organization}
+                    enrollments={enrollments}
+                    grades={grades}
+                    attendanceStats={attendanceStats}
+                    organizationId={user?.organization_id || undefined}
+                    onShowEnrollmentForm={() => {
+                      setActiveStep('gestion')
+                      setActiveGestionTab('convocations')
+                      setShowEnrollmentForm(true)
+                    }}
+                    onSwitchToGestion={() => {
+                      setActiveStep('gestion')
+                      setActiveGestionTab('convocations')
+                    }}
+                  />
+                </Suspense>
+              )}
 
-          {activeStep === 'gestion' && activeGestionTab === 'automatisation' && (
-            <Suspense fallback={<SkeletonLoader />}>
-              <GestionAutomatisation
-                sessionId={sessionId}
-                sessionData={sessionData}
-              />
-            </Suspense>
-          )}
-
-          {/* Espace Apprenant */}
-          {activeStep === 'espace_apprenant' && (
-            <Suspense fallback={<SkeletonLoader />}>
-              <EspaceApprenant
-              sessionId={sessionId}
-              sessionData={sessionData}
-              formation={formation || undefined}
-              program={program || undefined}
-              organization={organization}
-              enrollments={enrollments}
-              grades={grades}
-              attendanceStats={attendanceStats}
-              organizationId={user?.organization_id || undefined}
-              onShowEnrollmentForm={() => {
-                setActiveStep('gestion')
-                setActiveGestionTab('convocations')
-                setShowEnrollmentForm(true)
-              }}
-              onSwitchToGestion={() => {
-                setActiveStep('gestion')
-                setActiveGestionTab('convocations')
-              }}
-              />
-            </Suspense>
-          )}
-
-          {/* Suivi */}
-          {activeStep === 'suivi' && (
-            <Suspense fallback={<SkeletonLoader />}>
-              <Suivi
-              sessionData={sessionData}
-              formation={formation || undefined}
-              program={program || undefined}
-              organization={organization}
-              enrollments={enrollments}
-              grades={grades}
-              gradesStats={gradesStats}
-              attendanceStats={attendanceStats}
-              />
-            </Suspense>
-          )}
-        </div>
-
-        {/* Sidebar Ultra-Premium */}
-        <div className="lg:col-span-1 space-y-6">
-          <GlassCard variant="premium" className="overflow-hidden border-2 border-transparent hover:border-brand-blue/20 transition-all duration-500">
-            <div className="p-6 border-b-2 border-gray-100">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="p-2 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-xl shadow-md"
-                  whileHover={{ rotate: 5, scale: 1.1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
-                  <Sparkles className="h-5 w-5 text-white" />
-                </motion.div>
-                <h3 className="text-lg font-display font-bold text-gray-900 tracking-tight">Actions rapides</h3>
-              </div>
-            </div>
-            <div className="p-4 space-y-3">
-              <motion.div whileHover={{ x: 4, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-3 h-12 rounded-xl border-2 border-gray-200 hover:border-brand-blue/30 hover:bg-brand-blue-ghost transition-all font-semibold tracking-tight"
-                  size="sm"
-                >
-                  <div className="p-1.5 bg-brand-blue/10 rounded-lg">
-                    <Copy className="h-4 w-4 text-brand-blue" />
-                  </div>
-                  <span>Cloner la session</span>
-                </Button>
+              {activeStep === 'suivi' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <Suivi
+                    sessionData={sessionData}
+                    formation={formation || undefined}
+                    program={program || undefined}
+                    organization={organization}
+                    enrollments={enrollments}
+                    grades={grades}
+                    gradesStats={gradesStats}
+                    attendanceStats={attendanceStats}
+                  />
+                </Suspense>
+              )}
               </motion.div>
-              <motion.div whileHover={{ x: 4, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-3 h-12 rounded-xl border-2 border-gray-200 hover:border-brand-cyan/30 hover:bg-brand-cyan-ghost transition-all font-semibold tracking-tight"
-                  size="sm"
-                >
-                  <div className="p-1.5 bg-brand-cyan/10 rounded-lg">
-                    <Archive className="h-4 w-4 text-brand-cyan" />
-                  </div>
-                  <span>Archiver</span>
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ x: 4, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-3 h-12 rounded-xl border-2 border-red-200 hover:border-red-400 hover:bg-red-50 text-red-600 hover:text-red-700 transition-all font-semibold tracking-tight"
-                  size="sm"
-                >
-                  <div className="p-1.5 bg-red-100 rounded-lg">
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </div>
-                  <span>Supprimer</span>
-                </Button>
-              </motion.div>
-            </div>
-          </GlassCard>
-        </div>
-        </div>
-      </motion.div>
-    </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
+      </div>
+    </div>
   )
 }

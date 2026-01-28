@@ -51,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import {
   Accordion,
   AccordionContent,
@@ -241,7 +242,7 @@ export default function DocumentTemplatesPage() {
       queryClient.invalidateQueries({ queryKey: ['document-templates-by-type', user?.organization_id] })
     },
     onError: (error) => {
-      console.error('Erreur lors de la définition du modèle par défaut:', error)
+      logger.error('Erreur lors de la définition du modèle par défaut:', error)
       alert('Erreur lors de la définition du modèle par défaut')
     },
   })

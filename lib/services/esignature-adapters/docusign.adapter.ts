@@ -4,6 +4,8 @@
  * Documentation: https://developers.docusign.com/docs/esign-rest-api/
  */
 
+import { logger, sanitizeError } from '@/lib/utils/logger'
+
 export interface DocuSignConfig {
   accountId: string
   accessToken: string
@@ -130,7 +132,7 @@ export class DocuSignAdapter {
 
       return await response.json()
     } catch (error) {
-      console.error('Erreur lors de la création de l\'envelope DocuSign:', error)
+      logger.error('DocuSignAdapter - Erreur lors de la création de l\'envelope DocuSign', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -153,7 +155,7 @@ export class DocuSignAdapter {
 
       return await response.json()
     } catch (error) {
-      console.error('Erreur lors de la récupération du statut:', error)
+      logger.error('DocuSignAdapter - Erreur lors de la récupération du statut', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -178,7 +180,7 @@ export class DocuSignAdapter {
 
       return await response.blob()
     } catch (error) {
-      console.error('Erreur lors du téléchargement du document:', error)
+      logger.error('DocuSignAdapter - Erreur lors du téléchargement du document', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -205,7 +207,7 @@ export class DocuSignAdapter {
 
       return await response.json()
     } catch (error) {
-      console.error('Erreur lors de l\'annulation de l\'envelope:', error)
+      logger.error('DocuSignAdapter - Erreur lors de l\'annulation de l\'envelope', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -224,7 +226,7 @@ export class DocuSignAdapter {
 
       return response.ok
     } catch (error) {
-      console.error('Erreur de connexion à DocuSign:', error)
+      logger.error('DocuSignAdapter - Erreur de connexion à DocuSign', error, { error: sanitizeError(error) })
       return false
     }
   }
@@ -316,7 +318,7 @@ export class DocuSignAdapter {
       const data = await response.json()
       return data.url
     } catch (error) {
-      console.error('Erreur lors de la génération de l\'URL de signature:', error)
+      logger.error('DocuSignAdapter - Erreur lors de la génération de l\'URL de signature', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -348,7 +350,7 @@ export class DocuSignAdapter {
 
       return await response.json()
     } catch (error) {
-      console.error('Erreur lors de la récupération des envelopes:', error)
+      logger.error('DocuSignAdapter - Erreur lors de la récupération des envelopes', error, { error: sanitizeError(error) })
       throw error
     }
   }

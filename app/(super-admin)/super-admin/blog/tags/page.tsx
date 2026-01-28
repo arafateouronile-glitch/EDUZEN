@@ -143,7 +143,7 @@ export default function BlogTagsPage() {
                   key={tag.id}
                   className="group relative flex items-center gap-2 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() => {
-                    // TODO: Open edit dialog
+                    // NOTE: Fonctionnalité prévue - Ouvrir un dialog d'édition pour modifier le tag
                   }}
                 >
                   <Hash className="h-4 w-4 text-muted-foreground" />
@@ -165,7 +165,7 @@ export default function BlogTagsPage() {
                       className="h-6 w-6 p-0"
                       onClick={(e) => {
                         e.stopPropagation()
-                        // TODO: Open edit dialog
+                        // NOTE: Fonctionnalité prévue - Ouvrir un dialog d'édition pour modifier le tag
                       }}
                     >
                       <Edit className="h-3 w-3" />

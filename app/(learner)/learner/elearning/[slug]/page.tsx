@@ -334,8 +334,8 @@ export default function LearnerCourseDetailPage() {
       const newCompletedCount = completedLessons + 1
       const newProgress = Math.round((newCompletedCount / totalLessons) * 100)
       
-      // Table course_enrollments n'existe pas - désactivé pour l'instant
-      // TODO: Implémenter la sauvegarde de progression quand la table sera disponible
+      // NOTE: Table course_enrollments n'existe pas encore - désactivé pour l'instant
+      // Fonctionnalité prévue - Nécessite création de la table course_enrollments dans Supabase
       /*
       await supabase
         // Table course_enrollments n'existe pas - désactivé

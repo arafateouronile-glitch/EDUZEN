@@ -19,6 +19,7 @@ import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { extractDocumentVariables, mapDocumentTypeToTemplateType } from '@/lib/utils/document-generation/variable-extractor'
 import { generatePDFFromHTML } from '@/lib/utils/pdf-generator'
 import type { StudentWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Payment = TableRow<'payments'>
 
@@ -80,7 +81,7 @@ export default function InvoiceDetailPage() {
         .eq('is_current', true)
         .maybeSingle()
       if (error) {
-        console.warn('Erreur lors de la récupération de l\'année académique:', error)
+        logger.warn('Erreur lors de la récupération de l\'année académique', sanitizeError(error))
         return null
       }
       return data || null
@@ -221,7 +222,8 @@ export default function InvoiceDetailPage() {
       }
 
       // Créer un avoir (pour l'instant, on le stocke comme une facture avec un type spécial)
-      // TODO: Créer une table credit_notes dans la base de données
+      // NOTE: Fonctionnalité prévue - Nécessite création de la table credit_notes dans Supabase
+      // La table devrait contenir: id, invoice_id, amount, reason, created_at, created_by
       const { data, error } = await supabase
         .from('invoices')
         .insert({
@@ -461,7 +463,7 @@ export default function InvoiceDetailPage() {
         description: 'La facture a été générée et téléchargée avec succès.',
       })
     } catch (error) {
-      console.error('Erreur lors de la génération de la facture:', error)
+      logger.error('Erreur lors de la génération de la facture:', error)
       addToast({
         type: 'error',
         title: 'Erreur',

@@ -42,6 +42,7 @@ import {
 } from 'recharts'
 
 import { performanceMonitor } from '@/lib/utils/performance-monitor'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Payment = TableRow<'payments'>
 type Invoice = TableRow<'invoices'>
@@ -361,7 +362,7 @@ export default function DashboardPage() {
         .limit(5)
 
       if (error) {
-        console.error('Erreur lors de la récupération des inscriptions:', error)
+        logger.error('Erreur lors de la récupération des inscriptions:', error)
         return []
       }
 
@@ -575,7 +576,7 @@ export default function DashboardPage() {
                   analytics.export.pdf('dashboard_report')
                 }
               } catch (error) {
-                console.error('Erreur lors de l\'export PDF:', error)
+                logger.error('Erreur lors de l\'export PDF:', error)
                 addToast({
                   type: 'error',
                   title: 'Erreur d\'export',
@@ -637,7 +638,7 @@ export default function DashboardPage() {
                   analytics.export.pdf('dashboard_report')
                 }
               } catch (error) {
-                console.error('Erreur lors de l\'export PDF:', error)
+                logger.error('Erreur lors de l\'export PDF:', error)
                 addToast({
                   type: 'error',
                   title: 'Erreur d\'export',

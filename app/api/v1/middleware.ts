@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAPIService } from '@/lib/services/api.service'
 import { createClient } from '@/lib/supabase/server'
 
+// Interface pour les clés API
+interface APIKeyData {
+  id: string
+  organization_id: string
+  scopes: string[] | null
+  expires_at: string | null
+  allowed_ips: string[] | null
+  is_active: boolean
+}
+
 /**
  * Middleware pour l'authentification et le rate limiting de l'API
  */
@@ -21,13 +31,15 @@ export async function apiMiddleware(request: NextRequest) {
   const apiService = createAPIService(supabase)
 
   // Vérifier la clé API
-  const key = await apiService.verifyAPIKey(apiKey)
-  if (!key) {
+  const keyData = await apiService.verifyAPIKey(apiKey)
+  if (!keyData) {
     return NextResponse.json(
       { error: 'Invalid API key', message: 'The provided API key is invalid or has been revoked' },
       { status: 401 }
     )
   }
+
+  const key = keyData as APIKeyData
 
   // Vérifier l'expiration
   if (key.expires_at && new Date(key.expires_at) < new Date()) {
@@ -49,7 +61,7 @@ export async function apiMiddleware(request: NextRequest) {
   }
 
   // Vérifier le rate limiting
-  const rateLimit = await apiService.checkRateLimit(key, key.organization_id)
+  const rateLimit = await apiService.checkRateLimit(keyData, key.organization_id)
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
@@ -76,7 +88,7 @@ export async function apiMiddleware(request: NextRequest) {
   requestHeaders.set('x-api-scopes', JSON.stringify(key.scopes || []))
 
   return {
-    key,
+    key: keyData,
     organizationId: key.organization_id,
     scopes: key.scopes || [],
     requestHeaders,

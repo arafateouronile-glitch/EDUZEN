@@ -1,9 +1,11 @@
 'use server'
 
 import { NextRequest, NextResponse } from 'next/server'
-// import { wordGeneratorService, ConventionData } from '@/lib/services/word-generator.service' // TODO: Implémenter wordGeneratorService
+// NOTE: Service word-generator non implémenté - Fonctionnalité prévue pour une future version
+// import { wordGeneratorService, ConventionData } from '@/lib/services/word-generator.service'
 import * as path from 'path'
 import * as fs from 'fs/promises'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Type temporaire en attendant l'implémentation
 type ConventionData = any
@@ -33,7 +35,8 @@ export async function POST(request: NextRequest) {
       `convention-${Date.now()}.docx`
     )
 
-    // TODO: Implémenter wordGeneratorService.generateDoc dans lib/services/word-generator.service.ts
+    // NOTE: Fonctionnalité prévue - Implémenter wordGeneratorService.generateDoc
+    // Le service devrait générer des documents Word (.docx) à partir de templates
     return NextResponse.json(
       { error: 'La génération de documents Word via template n\'est pas encore implémentée.' },
       { status: 501 }
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('[API] Erreur lors de la génération Word:', error)
+    logger.error('[API] Erreur lors de la génération Word:', error)
     return NextResponse.json(
       { 
         error: 'Erreur lors de la génération du document Word',

@@ -2,9 +2,11 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { documentService } from '@/lib/services/document.service'
+import { DocumentService } from '@/lib/services/document.service'
 import { signatureService } from '@/lib/services/signature.service.client'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useToast } from '@/components/ui/toast'
@@ -20,6 +22,12 @@ export default function DocumentDetailPage() {
   const { user } = useAuth()
   const { addToast } = useToast()
   const documentId = params.id as string
+  
+  // Créer une instance du service avec le client côté client
+  const documentService = useMemo(() => {
+    const supabase = createClient()
+    return new DocumentService(supabase)
+  }, [])
 
   // Récupérer le document
   const { data: document, isLoading: documentLoading } = useQuery({

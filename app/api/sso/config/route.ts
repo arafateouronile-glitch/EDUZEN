@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  // TODO: Récupérer la configuration SSO depuis la base de données
+  // NOTE: Fonctionnalité prévue - Récupération depuis la table sso_configurations
   return NextResponse.json({
     providers: [],
     enabled: false,
@@ -10,7 +10,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  // TODO: Mettre à jour la configuration SSO
+  // NOTE: Fonctionnalité prévue - Mise à jour dans la table sso_configurations
   return NextResponse.json(
     { error: 'SSO configuration update not yet implemented' },
     { status: 501 }

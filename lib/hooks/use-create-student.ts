@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { studentSchema, type StudentFormData } from '@/lib/validations/schemas'
 import { useToast } from '@/components/ui/toast'
 import { useConversionTracking } from './use-page-analytics'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export function useCreateStudent() {
   const router = useRouter()
@@ -160,7 +161,7 @@ export function useCreateStudent() {
 
         if (enrollmentError) {
           // Ne pas faire échouer la création de l'élève si l'inscription échoue
-          console.warn('L\'élève a été créé mais l\'inscription à la session a échoué')
+          logger.warn('L\'élève a été créé mais l\'inscription à la session a échoué')
         }
       }
 

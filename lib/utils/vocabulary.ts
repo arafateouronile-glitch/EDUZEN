@@ -305,7 +305,7 @@ export function getVocabulary(organizationType: OrganizationType = 'school'): Vo
  * Hook React pour utiliser le vocabulaire dans les composants
  */
 export function useVocabulary(organizationType?: OrganizationType): Vocabulary {
-  // TODO: Récupérer le type d'organisation depuis le contexte/API
+  // NOTE: Fonctionnalité prévue - Récupérer le type d'organisation depuis le contexte/API
   // Pour l'instant, retourne le vocabulaire par défaut
   return getVocabulary(organizationType || 'school')
 }

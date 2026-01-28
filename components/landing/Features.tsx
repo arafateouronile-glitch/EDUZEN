@@ -103,7 +103,7 @@ export function Features() {
           <motion.h2
             initial={{ opacity: 0, y: 40 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tightest text-gray-900 mb-8 leading-tighter font-display"
           >
             <span className="font-extralight italic tracking-luxe">Tout ce dont vous avez besoin pour</span>{' '}
@@ -114,7 +114,7 @@ export function Features() {
           <motion.p
             initial={{ opacity: 0, y: 40 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="text-xl md:text-2xl text-gray-600 leading-relaxed"
           >
             Découvrez comment EduZen transforme la gestion de votre organisme pour générer plus de revenus, économiser du temps et améliorer la satisfaction de vos stagiaires.
@@ -127,14 +127,14 @@ export function Features() {
               key={index}
               initial={{ opacity: 0, y: 60, scale: 0.95 }}
               animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-              transition={{ duration: 0.8, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               whileHover={{ y: -12, scale: 1.02 }}
               className="group bg-white rounded-3xl p-10 md:p-12 shadow-xl border-2 border-gray-100 hover:border-brand-blue-pale hover:shadow-2xl hover:shadow-brand-blue/10 transition-all duration-600"
             >
               <motion.div
                 className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 ${feature.color}`}
                 whileHover={{ rotate: 360, scale: 1.1 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
                 <feature.icon className="w-8 h-8" />
               </motion.div>

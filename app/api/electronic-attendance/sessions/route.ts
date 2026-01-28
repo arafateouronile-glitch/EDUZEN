@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ElectronicAttendanceService } from '@/lib/services/electronic-attendance.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * GET /api/electronic-attendance/sessions
@@ -80,12 +81,12 @@ export async function GET(request: NextRequest) {
     if (sessionsError) {
       // Gérer le cas où la table n'existe pas encore
       if (sessionsError.code === '42P01' || sessionsError.message?.includes('does not exist')) {
-        console.warn('Table electronic_attendance_sessions does not exist yet')
+        logger.warn('Table electronic_attendance_sessions does not exist yet')
         return NextResponse.json([])
       }
       // Gérer le cas où la relation n'existe pas ou échoue
       if (sessionsError.code === 'PGRST200' || sessionsError.code === 'PGRST116' || sessionsError.message?.includes('relationship') || sessionsError.message?.includes('column')) {
-        console.warn('Relationship error in electronic_attendance_sessions query:', sessionsError.message)
+        logger.warn('Relationship error in electronic_attendance_sessions query', sanitizeError(sessionsError))
         // Essayer une requête sans les relations
         try {
           const { data: basicSessions, error: basicError } = await supabase
@@ -96,28 +97,28 @@ export async function GET(request: NextRequest) {
           
           if (basicError) {
             // Si même la requête basique échoue, retourner un tableau vide
-            console.warn('Basic query also failed:', basicError.message)
+            logger.warn('Basic query also failed', sanitizeError(basicError))
             return NextResponse.json([])
           }
           return NextResponse.json(basicSessions || [])
         } catch (fallbackError) {
-          console.warn('Fallback query failed:', fallbackError)
+          logger.warn('Fallback query failed', sanitizeError(fallbackError))
           return NextResponse.json([])
         }
       }
       // Pour toute autre erreur, logger et retourner un tableau vide
-      console.warn('Error fetching electronic attendance sessions:', sessionsError.message)
+      logger.warn('Error fetching electronic attendance sessions', sanitizeError(sessionsError))
       return NextResponse.json([])
     }
 
     return NextResponse.json(sessions || [])
   } catch (error) {
-    console.error('Erreur lors de la récupération des sessions d\'émargement:', error)
+    logger.error('Erreur lors de la récupération des sessions d\'émargement:', error)
     
     // Toujours retourner un tableau vide pour éviter les erreurs 500
     // qui bloquent le rendu de la page
     const errorMessage = error instanceof Error ? error.message : String(error)
-    console.warn('Returning empty array due to error:', errorMessage)
+    logger.warn('Returning empty array due to error', { errorMessage })
     return NextResponse.json([])
   }
 }
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(attendanceSession, { status: 201 })
   } catch (error) {
-    console.error('Erreur lors de la création de la session d\'émargement:', error)
+    logger.error('Erreur lors de la création de la session d\'émargement:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

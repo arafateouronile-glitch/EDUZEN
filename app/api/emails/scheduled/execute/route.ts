@@ -9,6 +9,7 @@ import { EmailScheduleService } from '@/lib/services/email-schedule.service'
 import { EmailTemplateService } from '@/lib/services/email-template.service'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Clé secrète pour sécuriser l'endpoint (à configurer dans les variables d'environnement)
 const CRON_SECRET = process.env.CRON_SECRET || process.env.EMAIL_SCHEDULE_SECRET
@@ -60,7 +61,7 @@ async function getMatchingSessions(
   const { data: sessions, error } = await query
 
   if (error) {
-    console.error('Error fetching sessions:', error)
+    logger.error('Error fetching sessions:', error)
     return []
   }
 
@@ -141,7 +142,7 @@ async function getMatchingEvaluations(
   const { data: evaluations, error } = await query
 
   if (error) {
-    console.error('Error fetching evaluations:', error)
+    logger.error('Error fetching evaluations:', error)
     return []
   }
 
@@ -348,7 +349,7 @@ async function getRecipientsForSchedule(
 
     return uniqueRecipients
   } catch (error) {
-    console.error('Error getting recipients:', error)
+    logger.error('Error getting recipients:', error)
     return recipients
   }
 }
@@ -456,7 +457,7 @@ export async function POST(request: NextRequest) {
           const recipients = await getRecipientsForSchedule(schedule, adminSupabase, now)
 
           if (recipients.length === 0) {
-            console.log(`No recipients for schedule ${schedule.id} at this time`)
+            logger.info(`No recipients for schedule ${schedule.id} at this time`)
             continue
           }
 
@@ -472,7 +473,7 @@ export async function POST(request: NextRequest) {
           }
 
           if (!template) {
-            console.warn(`No template found for schedule ${schedule.id}`)
+            logger.warn(`No template found for schedule ${schedule.id}`)
             continue
           }
 
@@ -524,7 +525,7 @@ export async function POST(request: NextRequest) {
                 email: recipient.email,
                 error: error instanceof Error ? error.message : 'Unknown error',
               })
-              console.error(`Error sending email to ${recipient.email}:`, error)
+              logger.error(`Error sending email to ${recipient.email}:`, error)
             }
           }
 
@@ -564,10 +565,10 @@ export async function POST(request: NextRequest) {
         } else if (schedule.trigger_type === 'fixed_date') {
           // Pour les dates fixes, on peut envoyer à tous les utilisateurs de l'organisation
           // Cette logique est simplifiée et peut être étendue
-          console.log(`Fixed date schedule ${schedule.id} - implementation simplified`)
+          logger.info(`Fixed date schedule ${schedule.id} - implementation simplified`)
         }
       } catch (error) {
-        console.error(`Error executing schedule ${schedule.id}:`, error)
+        logger.error(`Error executing schedule ${schedule.id}:`, error)
 
         await emailScheduleService.logExecution(
           schedule.id,
@@ -602,7 +603,7 @@ export async function POST(request: NextRequest) {
       results,
     })
   } catch (error) {
-    console.error('Error in scheduled email execution:', error)
+    logger.error('Error in scheduled email execution:', error)
     return NextResponse.json(
       {
         error: 'Internal server error',

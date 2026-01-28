@@ -8,7 +8,8 @@ export async function GET(
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   
-  // TODO: Implémenter le callback SSO pour échanger le code contre un token
+  // NOTE: Fonctionnalité prévue - Implémenter le callback SSO
+  // Nécessite: OAuth2 flow avec échange code/token, création de session utilisateur
   
   return NextResponse.json(
     { error: `SSO callback for '${provider}' not yet implemented` },

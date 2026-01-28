@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
       })
     
     if (uploadError) {
-      console.error('Erreur upload:', uploadError)
+      logger.error('Erreur upload:', uploadError)
       return NextResponse.json(
         { error: `Erreur lors de l'upload: ${uploadError.message}` },
         { status: 500 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     if (templateError) {
       // Si le template n'existe pas, on ne renvoie pas d'erreur
       // L'URL est quand même disponible
-      console.log('Template non trouvé ou erreur de mise à jour:', templateError.message)
+      logger.info('Template non trouvé ou erreur de mise à jour', sanitizeError(templateError))
     }
     
     return NextResponse.json({
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Erreur API upload-docx-template:', error)
+    logger.error('Erreur API upload-docx-template:', error)
     return NextResponse.json(
       { error: 'Erreur serveur' },
       { status: 500 }

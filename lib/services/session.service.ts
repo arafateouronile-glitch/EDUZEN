@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { calendarService } from './calendar.service'
 import { videoconferenceService } from './videoconference.service'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Types pour les sessions (niveau 3)
 type Session = TableRow<'sessions'>
@@ -121,7 +122,7 @@ export class SessionService {
         .single()
 
       if (formationError) {
-        console.error('Erreur lors de la vérification de la formation:', formationError)
+        logger.error('SessionService - Erreur lors de la vérification de la formation', formationError, { error: sanitizeError(formationError) })
         throw new Error(`Formation non trouvée: ${formationError.message}`)
       }
 
@@ -129,7 +130,7 @@ export class SessionService {
         throw new Error('Formation non trouvée')
       }
 
-      console.log('Formation trouvée:', formation)
+      logger.debug('SessionService - Formation trouvée', { formationId: formation.id })
     }
 
     // Créer la session
@@ -140,14 +141,38 @@ export class SessionService {
       .single()
 
     if (error) {
-      console.error('Erreur RLS lors de la création de la session:', {
+      logger.error('SessionService - Erreur RLS lors de la création de la session', error, {
         code: error.code,
         message: error.message,
         details: error.details,
         hint: error.hint,
         formation_id: session.formation_id,
+        error: sanitizeError(error),
       })
       throw error
+    }
+
+    // Synchroniser session_teachers si teacher_id est fourni
+    if (data && (session as any).teacher_id) {
+      try {
+        const { error: insertError } = await this.supabase
+          .from('session_teachers')
+          .insert({
+            session_id: data.id,
+            teacher_id: (session as any).teacher_id,
+            role: 'instructor',
+            is_primary: true, // Le teacher_id principal est considéré comme primary
+          })
+
+        if (insertError) {
+          logger.warn('SessionService - Erreur lors de la création de l\'assignation dans session_teachers', { error: sanitizeError(insertError) })
+        } else {
+          logger.debug('SessionService - Assignation créée dans session_teachers', { sessionId: data.id, teacherId: (session as any).teacher_id })
+        }
+      } catch (syncError) {
+        // Ne pas faire échouer la création de session si la synchronisation échoue
+        logger.error('SessionService - Erreur lors de la synchronisation session_teachers', syncError as Error, { error: sanitizeError(syncError) })
+      }
     }
 
     // Si des programmes sont fournis, créer les associations
@@ -171,14 +196,14 @@ export class SessionService {
           .insert(sessionPrograms)
 
         if (linkError) {
-          console.error('Erreur lors de la création des associations session-programme:', linkError)
+          logger.error('SessionService - Erreur lors de la création des associations session-programme', linkError, { error: sanitizeError(linkError) })
           // Ne pas échouer complètement, mais logger l'erreur
         }
 
         // Synchroniser avec les calendriers si activé
         if (formation.organization_id) {
           await this.syncWithCalendars(data.id, formation.organization_id, 'create').catch((error) => {
-            console.error('Erreur lors de la synchronisation calendrier:', error)
+            logger.error('SessionService - Erreur lors de la synchronisation calendrier', error, { error: sanitizeError(error) })
             // Ne pas échouer la création de session si la synchronisation échoue
           })
         }
@@ -186,14 +211,14 @@ export class SessionService {
         // Créer une réunion visioconférence si activé
         if (formation.organization_id) {
           await this.createVideoconferenceMeeting(data.id, formation.organization_id).catch((error) => {
-            console.error('Erreur lors de la création de la réunion visioconférence:', error)
+            logger.error('SessionService - Erreur lors de la création de la réunion visioconférence', error, { error: sanitizeError(error) })
             // Ne pas échouer la création de session si la création de réunion échoue
           })
         }
       }
     }
 
-    console.log('Session créée avec succès:', data)
+    logger.info('SessionService - Session créée avec succès', { sessionId: data.id })
     return data
   }
 
@@ -247,13 +272,17 @@ export class SessionService {
    * Met à jour une session
    */
   async updateSession(id: string, updates: FlexibleUpdate<'sessions'>) {
-    // Récupérer l'organization_id avant la mise à jour
+    // Récupérer la session existante avant la mise à jour pour comparer teacher_id
     const { data: existingSession } = await this.supabase
       .from('sessions')
-      .select('formation_id, formations(organization_id)')
+      .select('formation_id, teacher_id, formations(organization_id)')
       .eq('id', id)
       .single()
 
+    const oldTeacherId = existingSession?.teacher_id
+    const newTeacherId = (updates as any)?.teacher_id
+
+    // Mettre à jour la session
     const { data, error } = await this.supabase
       .from('sessions')
       .update(updates as SessionUpdate)
@@ -263,11 +292,76 @@ export class SessionService {
 
     if (error) throw error
 
+    // Synchroniser session_teachers si teacher_id a changé ou si c'est la première fois
+    // Le trigger SQL devrait aussi le faire, mais on le fait aussi côté TypeScript pour être sûr
+    if (oldTeacherId !== newTeacherId || (newTeacherId && !oldTeacherId)) {
+      try {
+        logger.debug('SessionService - Synchronisation session_teachers', { 
+          sessionId: id, 
+          oldTeacherId, 
+          newTeacherId 
+        })
+        
+        // Supprimer l'ancienne assignation si elle existe
+        if (oldTeacherId) {
+          const { error: deleteError } = await this.supabase
+            .from('session_teachers')
+            .delete()
+            .eq('session_id', id)
+            .eq('teacher_id', oldTeacherId)
+          
+          if (deleteError) {
+            logger.warn('SessionService - Erreur lors de la suppression de l\'ancienne assignation', { error: sanitizeError(deleteError) })
+          } else {
+            logger.debug('SessionService - Ancienne assignation supprimée', { sessionId: id, oldTeacherId })
+          }
+        }
+
+        // Créer la nouvelle assignation si un nouveau teacher_id est fourni
+        if (newTeacherId) {
+          // Vérifier si l'assignation existe déjà
+          const { data: existingAssignment } = await this.supabase
+            .from('session_teachers')
+            .select('id')
+            .eq('session_id', id)
+            .eq('teacher_id', newTeacherId)
+            .maybeSingle()
+
+          // Si elle n'existe pas, la créer
+          if (!existingAssignment) {
+            const { error: insertError } = await this.supabase
+              .from('session_teachers')
+              .insert({
+                session_id: id,
+                teacher_id: newTeacherId,
+                role: 'instructor',
+                is_primary: true, // Le teacher_id principal est considéré comme primary
+              })
+
+            if (insertError) {
+              logger.warn('SessionService - Erreur lors de la création de l\'assignation dans session_teachers', { 
+                error: sanitizeError(insertError),
+                code: insertError.code,
+                message: insertError.message,
+              })
+            } else {
+              logger.info('SessionService - Assignation créée dans session_teachers', { sessionId: id, teacherId: newTeacherId })
+            }
+          } else {
+            logger.debug('SessionService - Assignation existe déjà dans session_teachers', { sessionId: id, teacherId: newTeacherId })
+          }
+        }
+      } catch (syncError) {
+        // Ne pas faire échouer la mise à jour de la session si la synchronisation échoue
+        logger.error('SessionService - Erreur lors de la synchronisation session_teachers', syncError as Error, { error: sanitizeError(syncError) })
+      }
+    }
+
     // Synchroniser avec les calendriers si activé
     const formation = existingSession?.formations as { organization_id?: string } | null
     if (existingSession && formation?.organization_id) {
       await this.syncWithCalendars(id, formation.organization_id, 'update').catch((error) => {
-        console.error('Erreur lors de la synchronisation calendrier:', error)
+        logger.error('SessionService - Erreur lors de la synchronisation calendrier', error, { error: sanitizeError(error) })
       })
     }
 
@@ -289,7 +383,7 @@ export class SessionService {
     const formation = existingSession?.formations as { organization_id?: string } | null
     if (existingSession && formation?.organization_id) {
       await this.syncWithCalendars(id, formation.organization_id, 'delete').catch((error) => {
-        console.error('Erreur lors de la suppression de l\'événement calendrier:', error)
+        logger.error('SessionService - Erreur lors de la suppression de l\'événement calendrier', error, { error: sanitizeError(error) })
       })
     }
 
@@ -328,7 +422,7 @@ export class SessionService {
           { organizationId, provider: integration.provider as string }
         )
       } catch (error) {
-        console.error(`Erreur lors de la création de réunion avec ${integration.provider}:`, error)
+        logger.error(`SessionService - Erreur lors de la création de réunion avec ${integration.provider}`, error, { provider: integration.provider, error: sanitizeError(error) })
         // Continuer avec les autres intégrations même si une échoue
       }
     }
@@ -358,7 +452,8 @@ export class SessionService {
     // Synchroniser avec chaque calendrier
     for (const integration of integrations) {
       try {
-        // TODO: Implémenter deleteSessionEvent et syncSession dans CalendarService
+        // NOTE: Fonctionnalité prévue - Implémenter deleteSessionEvent et syncSession dans CalendarService
+        // Nécessite: Méthodes dans CalendarService pour synchroniser avec les calendriers externes (Google, Outlook)
         // if (action === 'delete') {
         //   await calendarService.deleteSessionEvent(
         //     organizationId,
@@ -372,9 +467,9 @@ export class SessionService {
         //     sessionId
         //   )
         // }
-        console.warn(`Calendar sync for ${action} not implemented yet for provider ${integration.provider}`)
+        logger.warn(`SessionService - Calendar sync for ${action} not implemented yet for provider ${integration.provider}`, { action, provider: integration.provider })
       } catch (error) {
-        console.error(`Erreur lors de la synchronisation avec ${integration.provider}:`, error)
+        logger.error(`SessionService - Erreur lors de la synchronisation avec ${integration.provider}`, error, { provider: integration.provider, error: sanitizeError(error) })
         // Continuer avec les autres intégrations même si une échoue
       }
     }
@@ -541,6 +636,29 @@ export class SessionService {
       .single()
 
     if (error) throw error
+
+    // Synchroniser session_teachers si teacher_id est fourni
+    if (data && (session as any).teacher_id) {
+      try {
+        const { error: insertError } = await this.supabase
+          .from('session_teachers')
+          .insert({
+            session_id: data.id,
+            teacher_id: (session as any).teacher_id,
+            role: 'instructor',
+            is_primary: true, // Le teacher_id principal est considéré comme primary
+          })
+
+        if (insertError) {
+          logger.warn('SessionService - Erreur lors de la création de l\'assignation dans session_teachers (session indépendante)', { error: sanitizeError(insertError) })
+        } else {
+          logger.debug('SessionService - Assignation créée dans session_teachers (session indépendante)', { sessionId: data.id, teacherId: (session as any).teacher_id })
+        }
+      } catch (syncError) {
+        // Ne pas faire échouer la création de session si la synchronisation échoue
+        logger.error('SessionService - Erreur lors de la synchronisation session_teachers (session indépendante)', syncError as Error, { error: sanitizeError(syncError) })
+      }
+    }
 
     // Associer les programmes si fournis
     if (programIds && programIds.length > 0 && data) {

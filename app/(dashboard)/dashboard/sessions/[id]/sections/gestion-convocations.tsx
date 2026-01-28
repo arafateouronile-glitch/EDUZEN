@@ -27,6 +27,7 @@ import type {
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
+import Image from 'next/image'
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
@@ -129,7 +130,7 @@ export function GestionConvocations({
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 
@@ -467,11 +468,16 @@ export function GestionConvocations({
                         className="group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-brand-blue/30 hover:shadow-md transition-all duration-300"
                       >
                         <div className="flex items-center gap-4 flex-1">
-                          <div className="relative">
+                          <div className="relative w-10 h-10">
                             {student.photo_url ? (
-                              <img src={student.photo_url} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm" />
+                              <Image
+                                src={student.photo_url}
+                                alt={`${student.first_name} ${student.last_name}`}
+                                fill
+                                className="rounded-full object-cover ring-2 ring-white shadow-sm"
+                              />
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ring-2 ring-white shadow-sm">
+                              <div className="w-full h-full rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ring-2 ring-white shadow-sm">
                                 <span className="text-sm font-bold text-gray-600">
                                   {student.first_name?.[0]}{student.last_name?.[0]}
                                 </span>

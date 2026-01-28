@@ -464,8 +464,14 @@ export function useSessionDetail(sessionId: string) {
     mutationFn: async (updates: Parameters<typeof sessionService.updateSession>[1]) => {
       return sessionService.updateSession(sessionId, updates)
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
+      // Si teacher_id a été modifié, invalider aussi les caches des sessions enseignants
+      if ((variables as any)?.teacher_id !== undefined) {
+        queryClient.invalidateQueries({ queryKey: ['teacher-dashboard-sessions'], exact: false })
+        queryClient.invalidateQueries({ queryKey: ['teacher-session-ids'], exact: false })
+        queryClient.invalidateQueries({ queryKey: ['teacher-sessions'], exact: false })
+      }
       // Toast sera géré par le composant parent
     },
     onError: (error) => {
@@ -827,7 +833,7 @@ export function useSessionDetail(sessionId: string) {
         return await evaluationService.create(user.organization_id, evaluationData)
       } catch (error: any) {
         // Logger l'erreur complète pour le débogage
-        console.error('Erreur détaillée création évaluation:', {
+        logger.error('Erreur détaillée création évaluation:', {
           error,
           message: error?.message,
           code: error?.code,

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type ElementType = 'image' | 'signature' | 'qrcode' | 'barcode' | 'link' | 'divider' | 'chart' | 'map' | 'attachment' | 'form'
 
@@ -144,7 +145,7 @@ export function ElementPalette({ onInsert, onClose, onChartEditorOpen, onSignatu
 
   const handleInsert = () => {
     const html = generateElementHTML()
-    console.log('Element HTML généré:', html, 'Type:', elementType)
+    logger.debug('Element HTML généré', { html, type: elementType })
     if (html && html.trim()) {
       try {
         onInsert(html)
@@ -153,11 +154,11 @@ export function ElementPalette({ onInsert, onClose, onChartEditorOpen, onSignatu
           onClose()
         }, 100)
       } catch (error) {
-        console.error('Erreur lors de l\'insertion de l\'élément:', error)
+        logger.error('Erreur lors de l\'insertion de l\'élément:', error)
         alert('Erreur lors de l\'insertion de l\'élément. Veuillez réessayer.')
       }
     } else {
-      console.error('Aucun HTML généré pour l\'élément', elementType)
+      logger.error('Aucun HTML généré pour l\'élément', elementType)
       alert('Impossible de générer l\'élément. Veuillez remplir tous les champs requis.')
     }
   }

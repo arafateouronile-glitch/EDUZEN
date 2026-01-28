@@ -9,9 +9,10 @@ import type { DocumentType, DocumentTemplate, DocumentContent } from '@/lib/type
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { ArrowLeft, Save, Eye, Copy, RotateCcw, History, Loader2, Moon, Sun, Keyboard, Clock, Users, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Save, Eye, Copy, RotateCcw, History, Loader2, Moon, Sun, Keyboard, Clock, Users, CheckCircle2, MousePointer2, Maximize2, Minimize2 } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
+import { useFocusMode } from '@/lib/contexts/focus-mode-context'
 import { HeaderEditor } from './components/header-editor'
 import { BodyEditor } from './components/body-editor'
 import { FooterEditor } from './components/footer-editor'
@@ -27,6 +28,7 @@ import { DocxTemplateUploader } from '@/components/document-templates/DocxTempla
 import { getDocumentTypeConfig } from './utils/document-type-config'
 import { getDefaultTemplateContent } from '@/lib/utils/document-template-defaults'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function DocumentTemplateEditPage() {
   const params = useParams()
@@ -35,6 +37,7 @@ export default function DocumentTemplateEditPage() {
   const { user } = useAuth()
   const { addToast } = useToast()
   const queryClient = useQueryClient()
+  const { isFocusMode, toggleFocusMode } = useFocusMode()
 
   const documentType = params.type as DocumentType
   const docConfig = getDocumentTypeConfig(documentType)
@@ -93,7 +96,7 @@ export default function DocumentTemplateEditPage() {
             return specificTemplate
           }
         } catch (error) {
-          console.error('Erreur lors du chargement du template spécifique:', error)
+          logger.error('Erreur lors du chargement du template spécifique:', error)
           // Continuer avec le chargement du template par défaut
         }
       }
@@ -182,7 +185,7 @@ export default function DocumentTemplateEditPage() {
         const trimmedContent = currentContent.trim()
         const hasContent = trimmedContent && trimmedContent.length >= 50
         
-        console.log('[Page] Template existant trouvé:', {
+        logger.debug('[Page] Template existant trouvé:', {
           templateId: firstTemplate.id,
           hasHtml: !!html,
           htmlLength: html?.length || 0,
@@ -193,7 +196,7 @@ export default function DocumentTemplateEditPage() {
         })
         
         if (!hasContent) {
-          console.log('[Page] Template vide, initialisation avec le contenu par défaut...')
+          logger.debug('[Page] Template vide, initialisation avec le contenu par défaut...')
           const defaultContent = getDefaultTemplateContent(documentType)
           // Mettre à jour le template avec le contenu par défaut
           try {
@@ -220,10 +223,10 @@ export default function DocumentTemplateEditPage() {
               content: defaultContent.footerContent,
             },
             })
-            console.log('[Page] Template mis à jour avec succès')
+            logger.debug('[Page] Template mis à jour avec succès')
             return updatedTemplate
       } catch (error) {
-            console.error('[Page] Erreur lors de la mise à jour du template:', error)
+            logger.error('[Page] Erreur lors de la mise à jour du template:', error)
             return firstTemplate
           }
         }
@@ -247,7 +250,7 @@ export default function DocumentTemplateEditPage() {
         // on peut proposer une mise à jour (mais on ne le fait pas automatiquement pour éviter de perdre des modifications)
         const isDefaultTemplate = defaultTemplate.is_default === true
         
-        console.log('[Page] Template par défaut trouvé:', {
+        logger.debug('[Page] Template par défaut trouvé:', {
           templateId: defaultTemplate.id,
           isDefault: isDefaultTemplate,
           hasHtml: !!html,
@@ -261,7 +264,7 @@ export default function DocumentTemplateEditPage() {
         
         // Si le template est vide, l'initialiser avec le contenu par défaut
         if (!hasContent) {
-          console.log('[Page] Template par défaut vide, initialisation avec le contenu par défaut...')
+          logger.debug('[Page] Template par défaut vide, initialisation avec le contenu par défaut...')
           try {
             const updatedTemplate = await documentTemplateService.updateTemplate({
               id: defaultTemplate.id,
@@ -286,10 +289,10 @@ export default function DocumentTemplateEditPage() {
               content: defaultContent.footerContent,
             },
             })
-            console.log('[Page] Template par défaut mis à jour avec succès')
+            logger.debug('[Page] Template par défaut mis à jour avec succès')
             return updatedTemplate
           } catch (error) {
-            console.error('[Page] Erreur lors de la mise à jour du template par défaut:', error)
+            logger.error('[Page] Erreur lors de la mise à jour du template par défaut:', error)
             return defaultTemplate
           }
         }
@@ -322,7 +325,7 @@ export default function DocumentTemplateEditPage() {
   useEffect(() => {
     if (existingTemplate && !savedTemplateRef.current) {
       savedTemplateRef.current = existingTemplate
-      console.log('[Page] savedTemplateRef initialisé avec le template existant')
+      logger.debug('[Page] savedTemplateRef initialisé avec le template existant')
     }
   }, [existingTemplate])
 
@@ -401,7 +404,7 @@ export default function DocumentTemplateEditPage() {
         description: 'Le template a été réinitialisé avec le contenu par défaut.',
       })
     } catch (error) {
-      console.error('Erreur lors de la réinitialisation:', error)
+      logger.error('Erreur lors de la réinitialisation:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -456,7 +459,7 @@ export default function DocumentTemplateEditPage() {
         
         // Ne pas afficher de toast pour l'auto-sauvegarde pour éviter le spam
       } catch (error) {
-        console.error('Erreur lors de l\'auto-sauvegarde:', error)
+        logger.error('Erreur lors de l\'auto-sauvegarde:', error)
         // En cas d'erreur, on garde hasChanges à true pour permettre une sauvegarde manuelle
       } finally {
         setIsAutoSaving(false)
@@ -557,9 +560,9 @@ export default function DocumentTemplateEditPage() {
 
   return (
     <div className={cn("h-screen flex flex-col", darkMode && "dark")}>
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-bg-gray-200 pb-4 px-6 pt-4 flex-shrink-0">
-        <div className="flex items-center gap-4">
+      {/* Header - Full width, zero horizontal padding */}
+      <div className="flex items-center justify-between border-b border-bg-gray-200 pb-4 px-0 pt-4 flex-shrink-0 w-full">
+        <div className="flex items-center gap-4 pl-4">
           <Link href="/dashboard/settings/document-templates">
             <Button variant="outline" size="icon">
               <ArrowLeft className="h-4 w-4" />
@@ -573,7 +576,7 @@ export default function DocumentTemplateEditPage() {
             <p className="text-sm text-text-tertiary mt-1">Éditeur de modèle de document</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pr-4">
           <Button
             variant="outline"
             onClick={() => setAccordionValue('versions')}
@@ -586,6 +589,12 @@ export default function DocumentTemplateEditPage() {
             <Eye className="h-4 w-4 mr-2" />
             Prévisualiser
           </Button>
+          <Link href={`/dashboard/settings/document-templates/${documentType}/sign-zones${templateIdParam ? `?template_id=${templateIdParam}` : ''}`}>
+            <Button variant="outline">
+              <MousePointer2 className="h-4 w-4 mr-2" />
+              Zones de signature
+            </Button>
+          </Link>
                 {isAutoSaving && (
                   <div className="flex items-center gap-2 text-sm text-text-tertiary">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -641,6 +650,15 @@ export default function DocumentTemplateEditPage() {
                   <CheckCircle2 className="h-4 w-4" />
                 </Button>
                 <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleFocusMode}
+                  title={isFocusMode ? 'Quitter le mode focus' : 'Mode focus (masquer les sidebars)'}
+                  className={isFocusMode ? 'bg-brand-blue/10 border-brand-blue' : ''}
+                >
+                  {isFocusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+                <Button
                   variant="default"
                   onClick={handleSave}
                   disabled={!hasChanges || saveMutation.isPending}
@@ -669,24 +687,24 @@ export default function DocumentTemplateEditPage() {
         </div>
       </div>
 
-      {/* Contenu principal avec sidebar */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Contenu principal avec sidebar - Canvas-First Architecture */}
+      <div className="flex-1 flex overflow-hidden w-full">
         {/* Zone des accordéons avec défilement vertical */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto py-4 w-full">
           <Accordion 
             type="single" 
             defaultValue={accordionValue || undefined}
             className="w-full space-y-4"
           >
             <AccordionItem value="header" className="border rounded-lg">
-              <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <AccordionTrigger className="px-4 py-4 hover:no-underline">
                 <div className="flex items-center gap-3">
                   <span className="text-xl">🔝</span>
                   <span className="text-lg font-semibold">En-tête</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-0">
-                <div className="px-6 pb-4">
+                <div className="px-4 pb-4">
                   <HeaderEditor
                     template={template}
                     onTemplateChange={handleTemplateChange}
@@ -705,7 +723,7 @@ export default function DocumentTemplateEditPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-0">
-                <div className="px-6 pb-4">
+                <div className="px-4 pb-4">
                   <BodyEditor
                     template={template}
                     onTemplateChange={handleTemplateChange}
@@ -724,7 +742,7 @@ export default function DocumentTemplateEditPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-0">
-                <div className="px-6 pb-4">
+                <div className="px-4 pb-4">
                   <FooterEditor
                     template={template}
                     onTemplateChange={handleTemplateChange}
@@ -743,7 +761,7 @@ export default function DocumentTemplateEditPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-0">
-                <div className="px-6 pb-4">
+                <div className="px-4 pb-4">
                   <VersionHistory
                     templateId={template.id}
                     onVersionRestore={() => {
@@ -772,7 +790,7 @@ export default function DocumentTemplateEditPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-0">
-                <div className="px-6 pb-4">
+                <div className="px-4 pb-4">
                   <DocxTemplateUploader
                     templateId={template.id}
                     currentDocxUrl={template.docx_template_url}
@@ -800,7 +818,12 @@ export default function DocumentTemplateEditPage() {
         </div>
 
         {/* Sidebar fixe à droite avec les balises */}
-        <div className="w-80 border-l border-gray-200 flex-shrink-0 overflow-y-auto bg-white flex flex-col">
+        <aside className={cn(
+          "border-l border-gray-200 flex-shrink-0 overflow-y-auto bg-white flex flex-col transition-all duration-300 ease-in-out",
+          isFocusMode 
+            ? "w-0 translate-x-full overflow-hidden opacity-0" 
+            : "w-80 opacity-100"
+        )}>
           <div className="p-4 border-b border-gray-200">
             <DocumentSettings
               template={template}
@@ -817,7 +840,7 @@ export default function DocumentTemplateEditPage() {
               className="h-full border-0 rounded-none"
             />
           </div>
-        </div>
+        </aside>
       </div>
 
       {/* Modal des raccourcis clavier */}

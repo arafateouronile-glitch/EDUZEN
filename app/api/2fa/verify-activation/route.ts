@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { TwoFactorAuthService } from '@/lib/services/2fa.service'
 import { withRateLimit, authRateLimiter } from '@/lib/utils/rate-limiter'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * POST /api/2fa/verify-activation
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
         message: '2FA activée avec succès',
       })
     } catch (error: unknown) {
-      console.error('Error verifying 2FA activation:', error)
+      logger.error('Error verifying 2FA activation:', error)
       const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
       return NextResponse.json({ error: errorMessage }, { status: 500 })
     }

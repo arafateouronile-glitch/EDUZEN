@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import { errorHandler, ErrorCode, AppError } from '@/lib/errors'
@@ -10,11 +9,11 @@ type DocumentInsert = Database['public']['Tables']['documents']['Insert']
 export class DocumentService {
   private supabase: SupabaseClient<Database>
 
-
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    if (!supabaseClient) {
+      throw new Error('SupabaseClient is required for DocumentService')
+    }
+    this.supabase = supabaseClient
   }
 
   /**
@@ -284,5 +283,6 @@ export class DocumentService {
   }
 }
 
-export const documentService = new DocumentService()
+// Note: Ne pas créer d'instance singleton car le service nécessite un client Supabase
+// Utiliser `new DocumentService(supabaseClient)` dans les routes API ou composants serveur
 

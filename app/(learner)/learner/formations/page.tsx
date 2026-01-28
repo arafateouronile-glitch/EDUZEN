@@ -78,18 +78,16 @@ export default function LearnerFormationsPage() {
             })
             return []
           }
-          logger.error('Error fetching enrollments', error, {
+          logger.error('Error fetching enrollments', sanitizeError(error), {
             studentId: maskId(studentId),
-            error: sanitizeError(error),
           })
           return []
         }
 
         return data || []
       } catch (error: any) {
-        logger.error('Unexpected error fetching enrollments', error, {
+        logger.error('Unexpected error fetching enrollments', sanitizeError(error), {
           studentId: maskId(studentId),
-          error: sanitizeError(error),
         })
         return []
       }
@@ -249,7 +247,7 @@ export default function LearnerFormationsPage() {
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center"
         >
           <GraduationCap className="h-10 w-10 text-gray-400" />

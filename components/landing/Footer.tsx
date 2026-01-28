@@ -15,7 +15,7 @@ export function Footer() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
               <Link href="/" className="inline-block mb-8">
                 <span className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-blue to-brand-cyan font-display">
@@ -41,7 +41,7 @@ export function Footer() {
                     href={href}
                     whileHover={{ scale: 1.1, y: -2 }}
                     whileTap={{ scale: 0.95 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     className="w-12 h-12 rounded-2xl bg-white border-2 border-gray-200 hover:border-brand-blue flex items-center justify-center text-gray-500 hover:text-brand-blue hover:shadow-lg transition-all duration-600"
                   >
                     <Icon className="w-5 h-5" />
@@ -86,7 +86,7 @@ export function Footer() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: colIndex * 0.1, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, delay: colIndex * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
               <h4 className="text-lg md:text-xl font-bold text-gray-900 mb-6 md:mb-8 font-display">{column.title}</h4>
               <ul className="space-y-4">
@@ -112,7 +112,7 @@ export function Footer() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="flex flex-col md:flex-row justify-between items-center gap-8 mb-10"
           >
             {/* Badges */}
@@ -120,7 +120,7 @@ export function Footer() {
               <div className="flex items-center gap-3">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   className="flex items-center gap-2 px-4 py-2.5 bg-brand-cyan-ghost border-2 border-brand-cyan-pale rounded-full"
                 >
                   <span className="w-2.5 h-2.5 rounded-full bg-brand-cyan animate-pulse"></span>
@@ -128,7 +128,7 @@ export function Footer() {
                 </motion.div>
                 <motion.div
                   whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   className="flex items-center gap-2 px-4 py-2.5 bg-brand-blue-ghost border-2 border-brand-blue-pale rounded-full"
                 >
                   <span className="text-sm font-bold text-brand-blue-darker">✓ RGPD conforme</span>
@@ -152,7 +152,7 @@ export function Footer() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-gray-200"
           >
             <p className="text-sm md:text-base text-gray-500">

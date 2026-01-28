@@ -15,6 +15,7 @@
  */
 
 import CryptoJS from 'crypto-js'
+import { logger } from '@/lib/utils/logger'
 
 // Clé de chiffrement (générée à partir d'un identifiant unique du navigateur)
 // Note: Cette approche n'est pas parfaite mais offre une protection contre
@@ -135,7 +136,7 @@ class SecureStorage {
       this.storage.setItem(key, encrypted)
       return true
     } catch (error) {
-      console.error('SecureStorage: Error storing data', error)
+      logger.error('SecureStorage: Error storing data', error)
       return false
     }
   }
@@ -181,7 +182,7 @@ class SecureStorage {
 
       return storedData.value
     } catch (error) {
-      console.error('SecureStorage: Error reading data', error)
+      logger.error('SecureStorage: Error reading data', error)
       this.remove(key)
       return null
     }

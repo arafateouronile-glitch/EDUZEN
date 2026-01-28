@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ComplianceService } from '@/lib/services/compliance.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * Middleware pour logger tous les accès utilisateur
@@ -44,7 +45,7 @@ export async function logAccess(request: NextRequest, action: string, resourceTy
     })
   } catch (error) {
     // Ne pas faire échouer la requête si le logging échoue
-    console.error('Error logging access:', error)
+    logger.error('[AccessLogger] Error logging access:', error)
   }
 }
 

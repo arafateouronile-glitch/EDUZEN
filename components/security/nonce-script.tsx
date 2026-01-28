@@ -2,6 +2,7 @@
 
 import { useNonce } from '@/lib/contexts/nonce-context'
 import Script, { type ScriptProps } from 'next/script'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * Composant Script avec nonce CSP automatique
@@ -12,7 +13,7 @@ import Script, { type ScriptProps } from 'next/script'
  * @example
  * ```tsx
  * <NonceScript id="analytics" strategy="afterInteractive">
- *   {`console.log('Analytics loaded')`}
+ *   {`logger.debug('Analytics loaded')`}
  * </NonceScript>
  * ```
  */

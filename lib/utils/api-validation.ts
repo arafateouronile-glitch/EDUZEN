@@ -163,8 +163,14 @@ export function validateObject(
       continue
     }
 
-    // Si non requis et absent, continuer
+    // Si non requis et absent (undefined ou null), continuer sans validation
+    // Mais si c'est une chaîne vide, on peut vouloir la valider selon le cas
     if (value === undefined || value === null) continue
+    
+    // Pour les champs optionnels avec pattern, si la valeur est une chaîne vide, la traiter comme absente
+    if (validation.pattern && typeof value === 'string' && value.trim() === '') {
+      continue
+    }
 
     // Valider selon le type
     const result = validateField(field, value, validation)

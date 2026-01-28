@@ -10,7 +10,9 @@ export const studentSchema = z.object({
   email: z.string().email('Email invalide').optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
+  postal_code: z.string().optional().or(z.literal('')),
   city: z.string().optional().or(z.literal('')),
+  address_complement: z.string().optional().or(z.literal('')),
   class_id: z.string().optional().or(z.literal('')),
   enrollment_date: z.string().min(1, 'La date d\'inscription est requise'),
   // Tuteur - Option 1: Sélectionner un tuteur existant

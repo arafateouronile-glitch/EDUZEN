@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { formationService } from '@/lib/services/formation.service'
@@ -13,7 +14,15 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Calendar, Clock, DollarSign, Users, BookOpen, GraduationCap, TrendingUp, CheckCircle, Plus, MapPin, Sparkles, FileText, Target, Award, List } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency, cn } from '@/lib/utils'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+// Lazy load recharts pour réduire le bundle initial
+import {
+  RechartsPieChart,
+  RechartsPie,
+  RechartsCell,
+  RechartsResponsiveContainer,
+  RechartsTooltip,
+  RechartsLegend,
+} from '@/components/charts/recharts-wrapper'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { FormationWithRelations, SessionWithRelations } from '@/lib/types/query-types'
 import { motion } from 'framer-motion'
@@ -187,7 +196,7 @@ export default function FormationDetailPage() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 
@@ -309,28 +318,32 @@ export default function FormationDetailPage() {
                 <CardTitle className="text-lg font-bold text-gray-900">Répartition des sessions</CardTitle>
               </div>
               <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={formationStats.sessionStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {formationStats.sessionStatusData.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                      itemStyle={{ color: '#1f2937', fontWeight: 600 }}
-                    />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                  </PieChart>
-                </ResponsiveContainer>
+                {/* @ts-ignore - RechartsResponsiveContainer types are complex and wrapped with as any */}
+                <RechartsResponsiveContainer width="100%" height="100%">
+                  {/* @ts-ignore - RechartsPieChart types are complex and wrapped with as any */}
+                  <RechartsPieChart>
+                    {/* @ts-ignore */}
+                    {React.createElement(RechartsPie as any, {
+                      data: formationStats.sessionStatusData,
+                      cx: "50%",
+                      cy: "50%",
+                      innerRadius: 60,
+                      outerRadius: 80,
+                      paddingAngle: 5,
+                      dataKey: "value"
+                    }, formationStats.sessionStatusData.map((entry: any, index: number) => (
+                      /* @ts-ignore */
+                      React.createElement(RechartsCell as any, { key: `cell-${index}`, fill: entry.color, strokeWidth: 0 })
+                    )))}
+                    {/* @ts-ignore */}
+                    {React.createElement(RechartsTooltip as any, {
+                      contentStyle: { backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' },
+                      itemStyle: { color: '#1f2937', fontWeight: 600 }
+                    })}
+                    {/* @ts-ignore */}
+                    {React.createElement(RechartsLegend as any, { verticalAlign: "bottom", height: 36, iconType: "circle" })}
+                  </RechartsPieChart>
+                </RechartsResponsiveContainer>
               </div>
             </GlassCard>
           )}
@@ -344,28 +357,32 @@ export default function FormationDetailPage() {
                 <CardTitle className="text-lg font-bold text-gray-900">Répartition des inscriptions</CardTitle>
               </div>
               <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={formationStats.enrollmentStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {formationStats.enrollmentStatusData.map((entry: any, index: number) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                      itemStyle={{ color: '#1f2937', fontWeight: 600 }}
-                    />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                  </PieChart>
-                </ResponsiveContainer>
+                {/* @ts-ignore - RechartsResponsiveContainer types are complex and wrapped with as any */}
+                <RechartsResponsiveContainer width="100%" height="100%">
+                  {/* @ts-ignore - RechartsPieChart types are complex and wrapped with as any */}
+                  <RechartsPieChart>
+                    {/* @ts-ignore */}
+                    {React.createElement(RechartsPie as any, {
+                      data: formationStats.enrollmentStatusData,
+                      cx: "50%",
+                      cy: "50%",
+                      innerRadius: 60,
+                      outerRadius: 80,
+                      paddingAngle: 5,
+                      dataKey: "value"
+                    }, formationStats.enrollmentStatusData.map((entry: any, index: number) => (
+                      /* @ts-ignore */
+                      React.createElement(RechartsCell as any, { key: `cell-${index}`, fill: entry.color, strokeWidth: 0 })
+                    )))}
+                    {/* @ts-ignore */}
+                    {React.createElement(RechartsTooltip as any, {
+                      contentStyle: { backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' },
+                      itemStyle: { color: '#1f2937', fontWeight: 600 }
+                    })}
+                    {/* @ts-ignore */}
+                    {React.createElement(RechartsLegend as any, { verticalAlign: "bottom", height: 36, iconType: "circle" })}
+                  </RechartsPieChart>
+                </RechartsResponsiveContainer>
               </div>
             </GlassCard>
           )}

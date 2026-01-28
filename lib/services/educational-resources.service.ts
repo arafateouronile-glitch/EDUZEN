@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 type EducationalResource = TableRow<'educational_resources'>
 type ResourceCategory = TableRow<'resource_categories'>
@@ -145,7 +146,7 @@ export class EducationalResourcesService {
         errorObj?.message?.includes('does not exist') ||
         errorObj?.message?.includes('schema cache')
       ) {
-        console.warn('Table educational_resources does not exist yet or invalid query:', errorObj?.message || String(error))
+        logger.warn('EducationalResourcesService - Table educational_resources does not exist yet or invalid query', { errorMessage: errorObj?.message || String(error) })
         return []
       }
       throw error
@@ -177,7 +178,7 @@ export class EducationalResourcesService {
       // Gérer les erreurs de table inexistante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST116' || errorObj?.code === '42P01') {
-        console.warn('Table educational_resources does not exist yet:', errorObj?.message || String(error))
+        logger.warn('EducationalResourcesService - Table educational_resources does not exist yet', { errorMessage: errorObj?.message || String(error) })
         throw error
       }
       throw error
@@ -236,7 +237,7 @@ export class EducationalResourcesService {
       })
     } catch (rpcError) {
       // Si la fonction RPC n'existe pas, on ignore l'erreur
-      console.warn('RPC increment not available, skipping favorite_count increment')
+      logger.warn('EducationalResourcesService - RPC increment not available, skipping favorite_count increment')
     }
 
     return data

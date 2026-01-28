@@ -397,7 +397,7 @@ export default function LearnerElearningPage() {
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
-                      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                       className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
                     />
                   </div>

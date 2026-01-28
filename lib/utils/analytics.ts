@@ -3,6 +3,7 @@
  * Supporte Plausible et Google Analytics
  */
 
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import { trackEvent as trackPlausible } from '@/components/analytics/plausible'
 import { trackEvent as trackGA } from '@/components/analytics/google-analytics'
 
@@ -55,14 +56,14 @@ export function trackAnalyticsEvent(
   try {
     trackPlausible(eventName, properties)
   } catch (error) {
-    console.warn('Error tracking event in Plausible:', error)
+    logger.warn('Error tracking event in Plausible', { error })
   }
 
   // Track dans Google Analytics
   try {
     trackGA(eventName, properties)
   } catch (error) {
-    console.warn('Error tracking event in Google Analytics:', error)
+    logger.warn('Error tracking event in Google Analytics', { error })
   }
 }
 

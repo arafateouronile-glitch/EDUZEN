@@ -19,11 +19,18 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 // Mock documentation service
-vi.mock('@/lib/services/documentation.service', () => ({
-  documentationService: {
-    createFeedback: vi.fn((data) => Promise.resolve({ id: 'feedback-1', ...data })),
-  },
-}))
+vi.mock('@/lib/services/documentation.service', () => {
+  const mockCreateFeedback = vi.fn((data) => Promise.resolve({ id: 'feedback-1', ...data }))
+  
+  return {
+    DocumentationService: class {
+      createFeedback = mockCreateFeedback
+      constructor(supabase: any) {
+        // Constructor accepts supabase but we don't need it for tests
+      }
+    },
+  }
+})
 
 describe('API Validation Security Tests', () => {
   describe('Documentation Feedback Validation', () => {

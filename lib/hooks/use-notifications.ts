@@ -2,10 +2,11 @@
  * Hook personnalisé pour gérer les notifications en temps réel
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './use-auth'
-import { notificationService, type Notification } from '@/lib/services/notification.service'
+import { NotificationService, type Notification } from '@/lib/services/notification.service'
+import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 
 export function useNotifications(options?: {
@@ -17,6 +18,12 @@ export function useNotifications(options?: {
   const queryClient = useQueryClient()
   const { addToast } = useToast()
   const [realtimeNotifications, setRealtimeNotifications] = useState<Notification[]>([])
+  
+  // Créer une instance du service avec le client côté client
+  const notificationService = useMemo(() => {
+    const supabase = createClient()
+    return new NotificationService(supabase)
+  }, [])
 
   // Récupérer les notifications
   const {
@@ -137,6 +144,12 @@ export function useNotifications(options?: {
 export function useUnreadNotificationsCount() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  
+  // Créer une instance du service avec le client côté client
+  const notificationService = useMemo(() => {
+    const supabase = createClient()
+    return new NotificationService(supabase)
+  }, [])
 
   const { data: count = 0 } = useQuery({
     queryKey: ['notifications', 'unread-count', user?.id],

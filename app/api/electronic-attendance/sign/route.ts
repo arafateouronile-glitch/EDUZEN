@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ElectronicAttendanceService } from '@/lib/services/electronic-attendance.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * POST /api/electronic-attendance/sign
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('Erreur lors de la signature de l\'émargement:', error)
+    logger.error('Erreur lors de la signature de l\'émargement:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

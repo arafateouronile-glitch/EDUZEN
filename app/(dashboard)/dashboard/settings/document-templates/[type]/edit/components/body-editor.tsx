@@ -42,6 +42,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { realtimeCollaborationService } from '@/lib/services/realtime-collaboration.service'
 import { getDefaultTemplateContent } from '@/lib/utils/document-template-defaults'
 import { convertTagsToVariableNodes, convertVariableNodesToTags } from '@/lib/utils/document-generation/template-converter'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface BodyEditorProps {
   template: DocumentTemplate
@@ -71,7 +72,7 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
     const currentContent = html || elementsContent || ''
     const trimmedContent = currentContent.trim()
     
-    console.log('[BodyEditor] Template chargé:', {
+    logger.debug('[BodyEditor] Template chargé:', {
       templateId: template.id,
       templateType: template.type,
       hasHtml: !!html,
@@ -84,17 +85,17 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
     const isContentEmpty = !trimmedContent || trimmedContent.length < 50
     
     if (isContentEmpty) {
-      console.log('[BodyEditor] Contenu vide ou trop court (' + trimmedContent.length + ' caractères), initialisation avec le contenu par défaut...')
+      logger.debug('[BodyEditor] Contenu vide ou trop court (' + trimmedContent.length + ' caractères), initialisation avec le contenu par défaut...')
       try {
         const defaultContent = getDefaultTemplateContent(template.type)
-        console.log('[BodyEditor] Contenu par défaut récupéré:', {
+        logger.debug('[BodyEditor] Contenu par défaut récupéré:', {
           hasBodyContent: !!defaultContent.bodyContent,
           bodyContentLength: defaultContent.bodyContent?.length || 0,
         })
         
         if (defaultContent.bodyContent && defaultContent.bodyContent.trim().length > 50) {
           const newBodyContent = defaultContent.bodyContent
-          console.log('[BodyEditor] Mise à jour du template avec le contenu par défaut (' + newBodyContent.length + ' caractères)')
+          logger.debug('[BodyEditor] Mise à jour du template avec le contenu par défaut (' + newBodyContent.length + ' caractères)')
           // Convertir les balises {variable} en nodes TipTap pour l'affichage dans l'éditeur
           const convertedContent = convertTagsToVariableNodes(newBodyContent)
           setBodyContent(convertedContent)
@@ -121,16 +122,16 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
             },
           })
         } else {
-          console.warn('[BodyEditor] Le contenu par défaut est également vide ou trop court')
+          logger.warn('[BodyEditor] Le contenu par défaut est également vide ou trop court')
         }
       } catch (error) {
-        console.error('[BodyEditor] Erreur lors de l\'initialisation du contenu par défaut:', error)
+        logger.error('[BodyEditor] Erreur lors de l\'initialisation du contenu par défaut:', error)
       }
     } else {
       // Synchroniser bodyContent avec le template seulement si le contenu est vraiment différent
       // et si on n'est pas en train de synchroniser (pour éviter les boucles)
       if (currentContent !== bodyContent && !isSyncingFromTemplateRef.current) {
-        console.log('[BodyEditor] Synchronisation du contenu depuis le template (' + trimmedContent.length + ' caractères)')
+        logger.debug('[BodyEditor] Synchronisation du contenu depuis le template (' + trimmedContent.length + ' caractères)')
         isSyncingFromTemplateRef.current = true
         // Convertir les balises {variable} en nodes TipTap lors de la synchronisation
         const convertedContent = convertTagsToVariableNodes(currentContent)
@@ -211,7 +212,7 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
           // Ne pas afficher d'erreur si c'est simplement que le serveur n'est pas configuré
           const errorMessage = error instanceof Error ? error.message : String(error)
           if (!errorMessage.includes('désactivée') && !errorMessage.includes('aucun serveur')) {
-            console.warn('Collaboration non disponible:', errorMessage)
+            logger.warn('Collaboration non disponible', { errorMessage })
           }
         }
       }
@@ -272,7 +273,7 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
 
   const handleInsertHTML = (html: string) => {
     if (editorRef.current) {
-      console.log('Insertion HTML:', html)
+      logger.debug('Insertion HTML', { html })
       // Utiliser la méthode insertHTML du RichTextEditor
       if (editorRef.current.insertHTML) {
         editorRef.current.insertHTML(html)
@@ -283,12 +284,12 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
           try {
             editor.chain().focus().insertContent(html).run()
           } catch (error) {
-            console.error('Erreur lors de l\'insertion:', error)
+            logger.error('Erreur lors de l\'insertion:', error)
           }
         }
       }
     } else {
-      console.error('editorRef.current est null')
+      logger.error('editorRef.current est null')
     }
   }
 
@@ -399,8 +400,8 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
           </div>
         </div>
 
-        {/* Editor */}
-        <GlassCard variant="premium" className="flex-1 flex flex-col overflow-hidden p-6">
+        {/* Editor - Full width, no horizontal padding constraints */}
+        <GlassCard variant="premium" className="flex-1 flex flex-col overflow-hidden w-full">
           <div className="flex-1 flex flex-col min-h-[600px]">
             <div
               onDragOver={(e) => {
@@ -447,16 +448,16 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
           </div>
         </GlassCard>
 
-      {/* Live Preview */}
+      {/* Live Preview - Full width workspace */}
       {showLivePreview && (
-        <div className="mt-4">
+        <div className="mt-4 w-full">
           <LivePreview
             htmlContent={bodyContent}
             headerContent={headerContent}
             footerContent={footerContent}
             pageSize={pageSize as 'A4' | 'A3' | 'Letter' | 'Legal'}
             margins={margins}
-            className="h-full"
+            className="h-full w-full"
           />
         </div>
       )}

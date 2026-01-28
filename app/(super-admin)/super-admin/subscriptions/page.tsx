@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import type { OrganizationSubscription } from '@/types/super-admin.types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function SubscriptionsPage() {
   const [selectedSubscription, setSelectedSubscription] = useState<OrganizationSubscription | null>(null)
@@ -101,8 +102,8 @@ export default function SubscriptionsPage() {
           <CardContent>
             <SubscriptionsTable
               onViewDetails={handleViewDetails}
-              onEdit={(sub) => console.log('Edit', sub)}
-              onSendReminder={(sub) => console.log('Send reminder', sub)}
+              onEdit={(sub) => logger.debug('Edit', { subscription: sub })}
+              onSendReminder={(sub) => logger.debug('Send reminder', { subscription: sub })}
             />
           </CardContent>
         </Card>

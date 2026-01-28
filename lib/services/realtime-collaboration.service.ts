@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export interface ActiveUser {
   id: string
@@ -79,14 +80,17 @@ export class RealtimeCollaborationService {
         provider.on('status', (event: { status: string }) => {
           if (event.status === 'connected') {
             connectionAttempts = 0
-            console.log('Collaboration status: connected')
+            logger.info('RealtimeCollaboration - WebSocket connected')
           } else if (event.status === 'disconnected') {
             connectionAttempts++
             if (connectionAttempts <= maxAttempts) {
-              console.warn(`WebSocket disconnected (tentative ${connectionAttempts}/${maxAttempts})`)
+              logger.warn(`RealtimeCollaboration - WebSocket disconnected`, {
+                attempt: connectionAttempts,
+                maxAttempts,
+              })
             } else {
               // Arrêter les tentatives après maxAttempts
-              console.warn('WebSocket: trop de tentatives de connexion, collaboration désactivée')
+              logger.warn('RealtimeCollaboration - Trop de tentatives de connexion, collaboration désactivée', { maxAttempts })
               if (provider) {
                 provider.destroy()
                 this.providers.delete(templateId)
@@ -99,7 +103,7 @@ export class RealtimeCollaborationService {
         // Gérer les erreurs de connexion
         provider.on('connection-error', (event: any, provider: WebsocketProvider) => {
           const errorMessage = event?.message || event?.error?.message || String(event)
-          console.warn('Erreur de connexion WebSocket:', errorMessage)
+          logger.warn('RealtimeCollaboration - Erreur de connexion WebSocket', { errorMessage })
           // Ne pas lancer d'erreur, laisser le système gérer silencieusement
         })
 
@@ -110,7 +114,7 @@ export class RealtimeCollaborationService {
 
         this.providers.set(templateId, provider)
       } catch (error) {
-        console.warn('Erreur lors de la création du provider WebSocket:', error)
+        logger.warn('RealtimeCollaboration - Erreur lors de la création du provider WebSocket', { error: sanitizeError(error) })
         // Nettoyer en cas d'erreur
         if (provider) {
           try {
@@ -273,7 +277,7 @@ export class RealtimeCollaborationService {
       .eq('id', templateId)
 
     if (error) {
-      console.error('Erreur lors de la synchronisation:', error)
+      logger.error('RealtimeCollaboration - Erreur lors de la synchronisation', error, { error: sanitizeError(error) })
       throw error
     }
   }

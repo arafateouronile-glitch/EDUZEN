@@ -80,7 +80,7 @@ export function QuickActions() {
       scale: 1,
       transition: {
         duration: 0.6,
-        ease: [0.16, 1, 0.3, 1] as const,
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
       },
     },
   }
@@ -142,7 +142,7 @@ export function QuickActions() {
                   className={cn("h-1 w-12 rounded-full mt-1", action.iconBg)}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
+                  transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 />
               </div>
 

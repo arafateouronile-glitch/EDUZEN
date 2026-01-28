@@ -257,7 +257,7 @@ export default function SubscriptionPlansPage() {
                   size="sm"
                   className="flex-1"
                   onClick={() => {
-                    // TODO: Open edit dialog
+                    // NOTE: Fonctionnalité prévue - Ouvrir un dialog d'édition pour modifier le plan
                   }}
                 >
                   <Edit className="h-4 w-4 mr-1" />

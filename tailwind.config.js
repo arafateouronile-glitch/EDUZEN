@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ['class'],
+  darkMode: false, // Mode sombre désactivé - application en mode clair uniquement
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -20,6 +20,7 @@ module.exports = {
         sans: ['var(--font-sans)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         display: ['var(--font-display)', 'var(--font-sans)', 'sans-serif'],
         serif: ['Georgia', 'Times New Roman', 'serif'],
+        'space-grotesk': ['Space Grotesk', 'var(--font-sans)', 'sans-serif'],
       },
       fontWeight: {
         thin: '100',
@@ -103,6 +104,16 @@ module.exports = {
           lighter: '#8DDBF7',
           pale: '#BFEAFB',
           ghost: '#E5F6FD',
+        },
+        // Purple accent pour variations
+        'brand-purple': {
+          DEFAULT: '#8B5CF6',
+          dark: '#7C3AED',
+          darker: '#6D28D9',
+          light: '#A78BFA',
+          lighter: '#C4B5FD',
+          pale: '#EDE9FE',
+          ghost: '#F5F3FF',
         },
         // Primary alias pour compatibilité
         primary: {

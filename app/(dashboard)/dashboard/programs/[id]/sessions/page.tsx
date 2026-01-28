@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, Calendar, Clock, MapPin, Users, X, UserPlus } from 'lu
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Enrollment = TableRow<'enrollments'>
 
@@ -172,7 +173,7 @@ export default function ProgramSessionsPage() {
       refetch()
     },
     onError: (error) => {
-      console.error('Erreur lors de la création de la session:', error)
+      logger.error('Erreur lors de la création de la session:', error)
     },
   })
 
@@ -229,7 +230,7 @@ export default function ProgramSessionsPage() {
         throw new Error('Veuillez sélectionner un élève')
       }
 
-      console.log('Création d\'inscription:', {
+      logger.debug('Création d\'inscription:', {
         student_id: enrollmentForm.student_id,
             session_id: selectedSessionId, // Utiliser session_id
         enrollment_date: enrollmentForm.enrollment_date,
@@ -250,7 +251,7 @@ export default function ProgramSessionsPage() {
 
         // Si une erreur autre que "not found" se produit, la gérer
         if (checkError && checkError.code !== 'PGRST116') {
-          console.error('Erreur lors de la vérification de l\'inscription:', checkError)
+          logger.error('Erreur lors de la vérification de l\'inscription:', checkError)
         }
 
         // Si l'inscription existe déjà, refuser la création
@@ -282,7 +283,7 @@ export default function ProgramSessionsPage() {
               'Cet élève est déjà inscrit à cette session. Veuillez vérifier les inscriptions existantes.'
             )
           }
-          console.error('Erreur lors de la création de l\'inscription:', {
+          logger.error('Erreur lors de la création de l\'inscription:', {
             code: error.code,
             message: error.message,
             details: error.details,
@@ -291,10 +292,10 @@ export default function ProgramSessionsPage() {
           throw error
         }
 
-        console.log('Inscription créée avec succès:', data)
+        logger.debug('Inscription créée avec succès:', data)
         return data
       } catch (error) {
-        console.error('Erreur dans createEnrollmentMutation:', error)
+        logger.error('Erreur dans createEnrollmentMutation:', error)
         throw error
       }
     },

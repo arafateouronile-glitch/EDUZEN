@@ -55,6 +55,7 @@ import type {
   StudentWithRelations
 } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
@@ -224,7 +225,7 @@ export function EspaceApprenant({
         .order('paid_at', { ascending: false })
       
       if (error) {
-        console.warn('Error fetching student payments:', error)
+        logger.warn('Error fetching student payments', sanitizeError(error))
         return []
       }
       return data || []
@@ -248,7 +249,7 @@ export function EspaceApprenant({
         .order('created_at', { ascending: false })
       
       if (error) {
-        console.warn('Error fetching student attendance:', error)
+        logger.warn('Error fetching student attendance', sanitizeError(error))
         return []
       }
       return data || []
@@ -272,7 +273,7 @@ export function EspaceApprenant({
         .order('graded_at', { ascending: false })
       
       if (error) {
-        console.warn('Error fetching student grades:', error)
+        logger.warn('Error fetching student grades', sanitizeError(error))
         return []
       }
       return data || []
@@ -816,7 +817,7 @@ export function EspaceApprenant({
             transition={{
               duration: 0.5,
               delay: index * 0.05,
-              ease: [0.16, 1, 0.3, 1]
+              ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
             }}
             whileHover={{ y: -6, scale: 1.02 }}
             className="group relative"
@@ -868,7 +869,7 @@ export function EspaceApprenant({
                   }}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 />
               </div>
 

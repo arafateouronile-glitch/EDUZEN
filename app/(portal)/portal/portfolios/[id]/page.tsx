@@ -12,6 +12,7 @@ import {
   Clock, User, Award, Star, FileText, Printer
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { formatDate, cn } from '@/lib/utils'
 import { motion } from '@/components/ui/motion'
 
@@ -67,8 +68,8 @@ export default function ViewPortfolioPage() {
 
   const getFieldValue = (sectionId: string, fieldId: string) => {
     const key = `${sectionId}.${fieldId}`
-    const content = portfolio?.content as Record<string, any> | undefined
-    return entriesMap[key]?.value || content?.[key]
+    const content = portfolio?.content as Record<string, any> | undefined | null
+    return entriesMap[key]?.value || (content && typeof content === 'object' && !Array.isArray(content) ? content[key] : undefined)
   }
 
   const getFieldComment = (sectionId: string, fieldId: string) => {
@@ -203,17 +204,23 @@ export default function ViewPortfolioPage() {
       {/* En-tête du livret */}
       <Card 
         className="mb-6 print:border-0 print:shadow-none"
-        style={{ borderTopWidth: 4, borderTopColor: template?.primary_color || '#335ACF' }}
+        style={{ borderTopWidth: 4, borderTopColor: (template?.primary_color as string | undefined) || '#335ACF' }}
       >
         <CardContent className="py-6">
           <div className="flex items-center gap-6">
             {/* Logo/Avatar */}
             <div 
               className="w-20 h-20 rounded-xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
-              style={{ backgroundColor: template?.primary_color || '#335ACF' }}
+              style={{ backgroundColor: (template?.primary_color as string | undefined) || '#335ACF' }}
             >
               {student?.photo_url ? (
-                <img src={student.photo_url} alt="" className="w-20 h-20 rounded-xl object-cover" />
+                <Image
+                  src={student.photo_url}
+                  alt={`${student.first_name} ${student.last_name}`}
+                  width={80}
+                  height={80}
+                  className="w-20 h-20 rounded-xl object-cover"
+                />
               ) : (
                 `${student?.first_name?.[0]}${student?.last_name?.[0]}`
               )}
@@ -255,7 +262,7 @@ export default function ViewPortfolioPage() {
                   <><Clock className="h-3 w-3 mr-1" /> En cours</>
                 )}
               </Badge>
-              <div className="text-3xl font-bold" style={{ color: template?.primary_color || undefined }}>
+              <div className="text-3xl font-bold" style={{ color: (template?.primary_color as string | undefined) || undefined }}>
                 {Math.round(portfolio.progress_percentage || 0)}%
               </div>
               <p className="text-xs text-gray-500">Progression</p>
@@ -266,7 +273,7 @@ export default function ViewPortfolioPage() {
 
       {/* Sections du livret */}
       <div className="space-y-6">
-        {(template?.template_structure as any[])?.map((section: any, sectionIndex: number) => (
+        {Array.isArray(template?.template_structure) && (template.template_structure as any[]).map((section: any, sectionIndex: number) => (
           <motion.div
             key={section.id}
             initial={{ opacity: 0, y: 20 }}
@@ -277,12 +284,12 @@ export default function ViewPortfolioPage() {
             <Card className="print:border print:shadow-none">
               <CardHeader 
                 className="print:py-3"
-                style={{ borderBottomWidth: 2, borderBottomColor: template?.primary_color || undefined }}
+                style={{ borderBottomWidth: 2, borderBottomColor: (template?.primary_color as string | undefined) || undefined }}
               >
                 <CardTitle className="flex items-center gap-3">
                   <span 
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium print:border print:border-gray-300 print:bg-white print:text-gray-700"
-                    style={{ backgroundColor: template?.primary_color || undefined }}
+                    style={{ backgroundColor: (template?.primary_color as string | undefined) || undefined }}
                   >
                     {sectionIndex + 1}
                   </span>

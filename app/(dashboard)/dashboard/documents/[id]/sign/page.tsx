@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { documentService } from '@/lib/services/document.service'
+import { DocumentService } from '@/lib/services/document.service'
 import { signatureService } from '@/lib/services/signature.service.client'
+import { createClient } from '@/lib/supabase/client'
 import { SignaturePad } from '@/components/signatures'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -24,6 +25,12 @@ export default function SignDocumentPage() {
   const queryClient = useQueryClient()
   const { addToast } = useToast()
   const documentId = params.id as string
+  
+  // Créer une instance du service avec le client côté client
+  const documentService = useMemo(() => {
+    const supabase = createClient()
+    return new DocumentService(supabase)
+  }, [])
 
   const [signatureData, setSignatureData] = useState<string | null>(null)
   const [comment, setComment] = useState('')

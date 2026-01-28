@@ -104,7 +104,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erreur lors de l\'enregistrement' }, { status: 500 })
     }
 
-    // TODO: Intégrer avec un service de traitement SEPA réel
+    // NOTE: Intégration avec un service SEPA réel requise
+    // Options: Banque de France, services tiers (Payoneer, Wise, etc.)
+    // Nécessite configuration des credentials API et gestion des erreurs bancaires
     // Pour l'instant, on retourne juste l'enregistrement
 
     return NextResponse.json({

@@ -8,6 +8,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { logger } from '@/lib/utils/logger'
 import { PWAProvider } from '@/components/pwa/pwa-provider'
 import { ConsoleErrorFilter } from '@/components/console-error-filter'
+import { ThemeScript } from '@/components/theme-script'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -53,6 +54,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <ConsoleErrorFilter />
       <QueryClientProvider client={queryClient}>
+        <ThemeScript />
         <ToastProvider>
           <PWAProvider>
             {children}

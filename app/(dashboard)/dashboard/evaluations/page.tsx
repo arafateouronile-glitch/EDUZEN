@@ -86,27 +86,94 @@ export default function EvaluationsPage() {
 
   const formData = watch()
 
+  const isTeacher = user?.role === 'teacher'
+
+  // Récupérer les sessions assignées à l'enseignant (pour les enseignants)
+  const { data: teacherSessionIds } = useQuery({
+    queryKey: ['teacher-session-ids-evaluations', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const { data, error } = await supabase
+        .from('session_teachers')
+        .select('session_id')
+        .eq('teacher_id', user.id)
+      if (error) {
+        logger.error('Erreur récupération sessions enseignant', error)
+        return []
+      }
+      return data?.map((st: any) => st.session_id) || []
+    },
+    enabled: !!user?.id && isTeacher,
+  })
+
   // Récupérer les sessions pour les filtres
+  // Pour les enseignants, filtrer uniquement par leurs sessions assignées
   const { data: sessions } = useQuery({
-    queryKey: ['sessions-for-evaluations', user?.organization_id],
+    queryKey: ['sessions-for-evaluations', user?.organization_id, isTeacher, teacherSessionIds],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('sessions')
         .select('id, name, start_date, formations!inner(id, name, organization_id, programs(id, name))')
         .eq('formations.organization_id', user.organization_id)
         .order('start_date', { ascending: false })
+      
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner un tableau vide
+        return []
+      }
+      
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les étudiants pour les filtres
+  // Pour les enseignants, filtrer uniquement les étudiants de leurs sessions assignées
   const { data: students } = useQuery({
-    queryKey: ['students-for-evaluations', user?.organization_id],
+    queryKey: ['students-for-evaluations', user?.organization_id, isTeacher, teacherSessionIds],
     queryFn: async () => {
       if (!user?.organization_id) return []
+      
+      // Si enseignant, récupérer uniquement les étudiants des sessions assignées
+      if (isTeacher) {
+        if (!teacherSessionIds || teacherSessionIds.length === 0) return []
+        
+        // Récupérer les étudiants via les inscriptions dans les sessions de l'enseignant
+        const { data: enrollments, error: enrollmentsError } = await supabase
+          .from('enrollments')
+          .select('student_id, students(id, first_name, last_name, student_number, status)')
+          .in('session_id', teacherSessionIds)
+          .eq('status', 'active')
+        
+        if (enrollmentsError) throw enrollmentsError
+        
+        // Extraire les étudiants uniques
+        const uniqueStudents = new Map()
+        enrollments?.forEach((e: any) => {
+          const student = e.students
+          if (student && student.status === 'active' && !uniqueStudents.has(student.id)) {
+            uniqueStudents.set(student.id, {
+              id: student.id,
+              first_name: student.first_name,
+              last_name: student.last_name,
+              student_number: student.student_number,
+            })
+          }
+        })
+        
+        return Array.from(uniqueStudents.values()).sort((a, b) => 
+          (a.last_name || '').localeCompare(b.last_name || '')
+        )
+      }
+      
+      // Pour les admins, récupérer tous les étudiants
       const { data, error } = await supabase
         .from('students')
         .select('id, first_name, last_name, student_number')
@@ -116,14 +183,18 @@ export default function EvaluationsPage() {
       if (error) throw error
       return data || []
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les évaluations
+  // Pour les enseignants, filtrer uniquement les évaluations des sessions assignées
   const { data: evaluations, isLoading } = useQuery({
     queryKey: [
       'evaluations',
       user?.organization_id,
+      user?.id,
+      isTeacher,
+      teacherSessionIds,
       search,
       sessionFilter,
       studentFilter,
@@ -134,20 +205,44 @@ export default function EvaluationsPage() {
     ],
     queryFn: async () => {
       if (!user?.organization_id) return []
+      
+      // Pour les enseignants, s'assurer que seules les sessions assignées sont incluses
+      let sessionIdsForFilter = undefined
+      if (isTeacher) {
+        if (!teacherSessionIds || teacherSessionIds.length === 0) return []
+        // Si un filtre de session spécifique est sélectionné, vérifier qu'il appartient aux sessions de l'enseignant
+        if (sessionFilter !== 'all') {
+          if (!teacherSessionIds.includes(sessionFilter)) {
+            // La session sélectionnée n'appartient pas à l'enseignant
+            return []
+          }
+          sessionIdsForFilter = [sessionFilter]
+        } else {
+          // Utiliser toutes les sessions de l'enseignant
+          sessionIdsForFilter = teacherSessionIds
+        }
+      } else {
+        // Pour les admins, utiliser le filtre de session s'il est sélectionné
+        sessionIdsForFilter = sessionFilter !== 'all' ? [sessionFilter] : undefined
+      }
+      
       const filters = {
-        sessionId: sessionFilter !== 'all' ? sessionFilter : undefined,
+        sessionId: sessionIdsForFilter && sessionIdsForFilter.length === 1 ? sessionIdsForFilter[0] : undefined,
+        sessionIds: sessionIdsForFilter && sessionIdsForFilter.length > 1 ? sessionIdsForFilter : undefined,
         studentId: studentFilter !== 'all' ? studentFilter : undefined,
         subject: subjectFilter !== 'all' ? subjectFilter : (search && search.trim() ? search.trim() : undefined),
         assessmentType: typeFilter !== 'all' ? typeFilter : undefined,
         startDate: dateRange.start || undefined,
         endDate: dateRange.end || undefined,
       }
-      logger.debug('Récupération des évaluations', { filters, organizationId: user.organization_id })
+      logger.debug('Récupération des évaluations', { filters, organizationId: user.organization_id, isTeacher })
+      
+      // Utiliser le service qui gère maintenant sessionIds
       const result = await evaluationService.getAll(user.organization_id, filters)
       logger.debug('Évaluations récupérées', { count: result?.length || 0, filters })
       return result
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les statistiques
@@ -337,7 +432,7 @@ export default function EvaluationsPage() {
       y: 0, 
       transition: { 
         duration: 0.5, 
-        ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number] as [number, number, number, number]
       } 
     }
   }

@@ -2,6 +2,8 @@
  * Utilitaires pour les raccourcis clavier personnalisables
  */
 
+import { logger } from '@/lib/utils/logger'
+
 export interface ShortcutConfig {
   key: string
   ctrl?: boolean
@@ -41,7 +43,7 @@ export function loadCustomShortcuts(): Shortcuts {
       return JSON.parse(stored)
     }
   } catch (error) {
-    console.error('Erreur lors du chargement des raccourcis personnalisés:', error)
+    logger.error('Erreur lors du chargement des raccourcis personnalisés:', error)
   }
 
   return {}
@@ -58,7 +60,7 @@ export function saveCustomShortcuts(shortcuts: Shortcuts): void {
   try {
     localStorage.setItem('custom-keyboard-shortcuts', JSON.stringify(shortcuts))
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde des raccourcis personnalisés:', error)
+    logger.error('Erreur lors de la sauvegarde des raccourcis personnalisés:', error)
   }
 }
 

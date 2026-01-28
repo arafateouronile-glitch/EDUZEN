@@ -39,7 +39,8 @@ export class StripeAdapter {
   async createPaymentIntent(request: StripePaymentRequest): Promise<StripePaymentResponse> {
     // Note: Cette méthode devrait appeler l'API Stripe
     // Pour l'instant, on simule la création
-    // TODO: Implémenter l'appel réel à l'API Stripe
+    // NOTE: Intégration Stripe réelle requise
+    // Nécessite: npm install stripe et configuration de STRIPE_SECRET_KEY
     
     const response = await fetch('/api/payments/stripe/create-intent', {
       method: 'POST',

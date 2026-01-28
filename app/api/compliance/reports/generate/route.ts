@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ComplianceService } from '@/lib/services/compliance.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * GET /api/compliance/reports/generate
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(report)
   } catch (error: unknown) {
-    console.error('Error generating compliance report:', error)
+    logger.error('Error generating compliance report:', error)
     const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }

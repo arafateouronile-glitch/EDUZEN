@@ -36,6 +36,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function NewStudentPage() {
   const router = useRouter()
@@ -67,7 +68,9 @@ export default function NewStudentPage() {
       email: '',
       phone: '',
       address: '',
+      postal_code: '',
       city: '',
+      address_complement: '',
       guardian_id: '',
       guardian_first_name: '',
       guardian_last_name: '',
@@ -202,7 +205,7 @@ export default function NewStudentPage() {
           .upload(filePath, photoFile)
 
         if (uploadError) {
-          console.error('Photo upload error:', uploadError)
+          logger.error('Photo upload error:', uploadError)
           // Continue without photo if upload fails
         } else {
           const { data: { publicUrl } } = supabase.storage
@@ -316,7 +319,9 @@ export default function NewStudentPage() {
         email: data.email || null,
         phone: data.phone || null,
         address: data.address || null,
+        postal_code: data.postal_code || null,
         city: data.city || null,
+        address_complement: data.address_complement || null,
         enrollment_date: data.enrollment_date,
         status: 'active',
       }
@@ -342,7 +347,7 @@ export default function NewStudentPage() {
         .single()
 
       if (studentError) {
-        console.error('Student creation error:', studentError)
+        logger.error('Student creation error:', studentError)
         if (studentError.code === '23505') {
           throw new Error(
             `Un élève avec le numéro "${studentNumber}" existe déjà dans votre organisation. Veuillez réessayer ou contacter le support.`
@@ -361,7 +366,7 @@ export default function NewStudentPage() {
           })
 
         if (linkError) {
-          console.error('Link guardian error:', linkError)
+          logger.error('Link guardian error:', linkError)
           // Non-blocking error
         }
       }
@@ -378,8 +383,8 @@ export default function NewStudentPage() {
           })
 
         if (entityError) {
-          console.error('Entity link error:', entityError)
-          console.warn('L\'élève a été créé mais le rattachement à l\'entité a échoué')
+          logger.error('Entity link error:', entityError)
+          logger.warn('L\'élève a été créé mais le rattachement à l\'entité a échoué')
         }
       }
 
@@ -397,8 +402,8 @@ export default function NewStudentPage() {
           })
 
         if (enrollmentError) {
-          console.error('Enrollment error:', enrollmentError)
-          console.warn('L\'élève a été créé mais l\'inscription à la session a échoué')
+          logger.error('Enrollment error:', enrollmentError)
+          logger.warn('L\'élève a été créé mais l\'inscription à la session a échoué')
         }
       }
 
@@ -408,7 +413,7 @@ export default function NewStudentPage() {
       router.push(`/dashboard/students/${student.id}`)
     },
     onError: (error) => {
-      console.error('Student creation mutation error:', error)
+      logger.error('Student creation mutation error:', error)
     },
   })
 
@@ -471,7 +476,7 @@ export default function NewStudentPage() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 
@@ -721,7 +726,7 @@ export default function NewStudentPage() {
                             type="tel"
                             {...register('phone')}
                             className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                            placeholder="+225 ..."
+                            placeholder="+33 6 12 34 56 78"
                           />
                           <Phone className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                         </div>
@@ -735,19 +740,40 @@ export default function NewStudentPage() {
                           type="text"
                           {...register('address')}
                           className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                          placeholder="Quartier, Rue, Porte..."
+                          placeholder="Ex: 123 Rue de la République"
                         />
                         <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                       </div>
                     </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Code postal</label>
+                        <input
+                          type="text"
+                          {...register('postal_code')}
+                          className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                          placeholder="75001"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Ville</label>
+                        <input
+                          type="text"
+                          {...register('city')}
+                          className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                          placeholder="Paris"
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Ville</label>
+                      <label className="text-sm font-semibold text-gray-700">Complément d'adresse</label>
                       <input
                         type="text"
-                        {...register('city')}
+                        {...register('address_complement')}
                         className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                        placeholder="Abidjan"
+                        placeholder="Ex: Appartement 3B, Bâtiment A, Résidence Les Jardins"
                       />
                     </div>
                   </GlassCard>
@@ -877,15 +903,60 @@ export default function NewStudentPage() {
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-semibold text-gray-700">Téléphone principal</label>
-                            <input
-                              type="tel"
-                              {...register('guardian_phone_primary')}
-                              className={cn(
-                                "w-full px-4 py-3 bg-white/50 border rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all",
-                                errors.guardian_phone_primary ? "border-red-500" : "border-gray-200"
-                              )}
-                            />
+                            <div className="relative">
+                              <input
+                                type="tel"
+                                {...register('guardian_phone_primary')}
+                                className={cn(
+                                  "w-full pl-10 px-4 py-3 bg-white/50 border rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all",
+                                  errors.guardian_phone_primary ? "border-red-500" : "border-gray-200"
+                                )}
+                                placeholder="+33 6 12 34 56 78"
+                              />
+                              <Phone className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                            </div>
                             {errors.guardian_phone_primary && <p className="text-sm text-red-500">{errors.guardian_phone_primary.message}</p>}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Téléphone secondaire</label>
+                            <div className="relative">
+                              <input
+                                type="tel"
+                                {...register('guardian_phone_secondary')}
+                                className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                                placeholder="+33 1 23 45 67 89"
+                              />
+                              <Phone className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Email</label>
+                            <div className="relative">
+                              <input
+                                type="email"
+                                {...register('guardian_email')}
+                                className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                                placeholder="tuteur@email.com"
+                              />
+                              <Mail className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                            </div>
+                            {errors.guardian_email && <p className="text-sm text-red-500">{errors.guardian_email.message}</p>}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold text-gray-700">Adresse complète</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              {...register('guardian_address')}
+                              className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                              placeholder="Ex: 45 Avenue des Champs-Élysées"
+                            />
+                            <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
                           </div>
                         </div>
                       </div>
@@ -959,25 +1030,68 @@ export default function NewStudentPage() {
                         </select>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-sm font-semibold text-gray-700">Nom de l'entreprise</label>
-                          <input
-                            type="text"
-                            {...register('company_name')}
-                            className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                            placeholder="Raison sociale"
-                          />
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Nom de l'entreprise</label>
+                            <input
+                              type="text"
+                              {...register('company_name')}
+                              className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                              placeholder="Raison sociale"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">SIRET</label>
+                            <input
+                              type="text"
+                              {...register('company_siret')}
+                              maxLength={14}
+                              className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                              placeholder="14 chiffres"
+                            />
+                          </div>
                         </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Téléphone</label>
+                            <div className="relative">
+                              <input
+                                type="tel"
+                                {...register('company_phone')}
+                                className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                                placeholder="+33 1 23 45 67 89"
+                              />
+                              <Phone className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Email</label>
+                            <div className="relative">
+                              <input
+                                type="email"
+                                {...register('company_email')}
+                                className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                                placeholder="entreprise@email.com"
+                              />
+                              <Mail className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                            </div>
+                            {errors.company_email && <p className="text-sm text-red-500">{errors.company_email.message}</p>}
+                          </div>
+                        </div>
+
                         <div className="space-y-2">
-                          <label className="text-sm font-semibold text-gray-700">SIRET</label>
-                          <input
-                            type="text"
-                            {...register('company_siret')}
-                            maxLength={14}
-                            className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                            placeholder="14 chiffres"
-                          />
+                          <label className="text-sm font-semibold text-gray-700">Adresse complète</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              {...register('company_address')}
+                              className="w-full pl-10 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                              placeholder="Ex: 10 Rue de la Paix, 75002 Paris"
+                            />
+                            <MapPin className="absolute left-3 top-3.5 h-4 w-4 text-gray-400" />
+                          </div>
                         </div>
                       </div>
                     )}

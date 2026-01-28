@@ -239,8 +239,9 @@ export class ESignatureWebhookHandlerService {
       documentId: maskId(event.documentId),
     })
 
-    // TODO: Générer le document final avec toutes les signatures
-    // TODO: Envoyer une notification aux parties concernées
+    // NOTE: Fonctionnalités prévues:
+    // 1. Générer le document final avec toutes les signatures (utiliser SignatureService.getSignedDocument)
+    // 2. Envoyer une notification aux parties concernées (utiliser NotificationService.createForUsers)
 
     return {
       success: true,
@@ -382,7 +383,8 @@ export class ESignatureWebhookHandlerService {
       signerEmail: event.signerEmail,
     })
 
-    // TODO: Enregistrer dans un audit log si nécessaire
+    // NOTE: Fonctionnalité prévue - Enregistrer dans un audit log
+    // Créer une table audit_logs pour tracer toutes les actions de signature
 
     return {
       success: true,

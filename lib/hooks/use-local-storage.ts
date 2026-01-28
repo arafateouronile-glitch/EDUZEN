@@ -6,6 +6,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export function useLocalStorage<T>(
   key: string,
@@ -21,7 +22,7 @@ export function useLocalStorage<T>(
       const item = window.localStorage.getItem(key)
       return item ? JSON.parse(item) : initialValue
     } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error)
+      logger.error(`Error reading localStorage key "${key}":`, error)
       return initialValue
     }
   })
@@ -50,7 +51,7 @@ export function useLocalStorage<T>(
           )
         }
       } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error)
+        logger.error(`Error setting localStorage key "${key}":`, error)
       }
     },
     [key, storedValue]
@@ -69,7 +70,7 @@ export function useLocalStorage<T>(
         )
       }
     } catch (error) {
-      console.error(`Error removing localStorage key "${key}":`, error)
+      logger.error(`Error removing localStorage key "${key}":`, error)
     }
   }, [key, initialValue])
 
@@ -83,7 +84,7 @@ export function useLocalStorage<T>(
           try {
             setStoredValue(JSON.parse(e.newValue))
           } catch (error) {
-            console.error(`Error parsing localStorage value for key "${key}":`, error)
+            logger.error(`Error parsing localStorage value for key "${key}":`, error)
           }
         }
       } else if (e instanceof CustomEvent && e.detail?.key === key) {

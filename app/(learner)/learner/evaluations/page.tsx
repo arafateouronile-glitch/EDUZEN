@@ -33,8 +33,8 @@ export default function LearnerEvaluationsPage() {
     queryFn: async () => {
       if (!studentData?.id) return []
       
-      // Table course_enrollments n'existe pas - retourner un tableau vide
-      // TODO: Implémenter quand la table sera disponible
+      // NOTE: Table course_enrollments n'existe pas encore - retourner un tableau vide
+      // Fonctionnalité prévue - Nécessite création de la table course_enrollments dans Supabase
       return []
     },
     enabled: !!studentData?.id,

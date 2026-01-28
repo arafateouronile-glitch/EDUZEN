@@ -15,6 +15,7 @@ import {
   Download 
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import {
   Tooltip,
   TooltipContent,
@@ -104,7 +105,7 @@ export function DocxTemplateUploader({
       toast.success('Template DOCX uploadé avec succès')
       onUploadSuccess?.(result.docxTemplateUrl)
     } catch (error) {
-      console.error('Erreur upload:', error)
+      logger.error('Erreur upload:', error)
       toast.error(error instanceof Error ? error.message : 'Erreur lors de l\'upload')
     } finally {
       setIsUploading(false)
@@ -140,7 +141,7 @@ export function DocxTemplateUploader({
       toast.success('Template DOCX supprimé')
       onRemoveSuccess?.()
     } catch (error) {
-      console.error('Erreur suppression:', error)
+      logger.error('Erreur suppression:', error)
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la suppression')
     } finally {
       setIsRemoving(false)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ElectronicAttendanceService } from '@/lib/services/electronic-attendance.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * PATCH /api/electronic-attendance/requests/[id]
@@ -36,7 +37,7 @@ export async function PATCH(
       { status: 400 }
     )
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de la demande d\'émargement:', error)
+    logger.error('Erreur lors de la mise à jour de la demande d\'émargement:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

@@ -51,8 +51,8 @@ const createIntentSchema: ValidationSchema = {
  * ✅ Validation stricte + Rate limiting
  */
 export async function POST(request: NextRequest) {
-  return withRateLimit(request, mutationRateLimiter, async (req) => {
-    return withBodyValidation(req as NextRequest, createIntentSchema, async (req, validatedData) => {
+  return withRateLimit(request, mutationRateLimiter, async () => {
+    return withBodyValidation(request, createIntentSchema, async (_req, validatedData) => {
   try {
     const supabase = await createClient()
     const {
@@ -72,7 +72,8 @@ export async function POST(request: NextRequest) {
     const return_url = validatedData.return_url as string | undefined;
     const cancel_url = validatedData.cancel_url as string | undefined;
 
-    // TODO: Intégrer avec l'API Stripe réelle
+    // NOTE: Intégration Stripe réelle requise
+    // Nécessite: npm install stripe et configuration de STRIPE_SECRET_KEY
     // Pour l'instant, on simule la création d'une intention de paiement
     // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
     // const paymentIntent = await stripe.paymentIntents.create({

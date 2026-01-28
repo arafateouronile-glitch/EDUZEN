@@ -803,6 +803,26 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
         <p>{ecole_directeur}</p>
       </div>
     `,
+    attestation: `
+      <h1 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px;">
+        ATTESTATION DE FORMATION
+      </h1>
+      
+      <div style="margin-bottom: 40px;">
+        <p style="text-align: justify; font-size: 16px; line-height: 1.8;">
+          L'établissement <strong>{ecole_nom}</strong> certifie que 
+          <strong>{eleve_prenom} {eleve_nom}</strong> a suivi la formation 
+          <strong>"{formation_nom}"</strong>.
+        </p>
+      </div>
+      
+      <div style="margin-top: 60px; text-align: center;">
+        <p style="margin-bottom: 50px;">{ecole_ville}, le {date_jour}</p>
+        <p><strong>Le Directeur</strong></p>
+        <p style="margin-top: 60px;">________________________</p>
+        <p>{ecole_directeur}</p>
+      </div>
+    `,
     livret_accueil: `
       <h1 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px;">
         LIVRET D'ACCUEIL

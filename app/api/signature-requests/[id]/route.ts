@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SignatureRequestService } from '@/lib/services/signature-request.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * PATCH /api/signature-requests/[id]
@@ -41,7 +42,7 @@ export async function PATCH(
       { status: 400 }
     )
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de la demande de signature:', error)
+    logger.error('Erreur lors de la mise à jour de la demande de signature:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

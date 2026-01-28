@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Database } from '@/types/database.types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type ScheduledNotification = {
   id: string
@@ -253,7 +254,7 @@ export class NotificationSchedulerService {
     const whatsappConfig = settings.whatsapp || {}
 
     if (!whatsappConfig.account_sid || !whatsappConfig.auth_token) {
-      console.warn('WhatsApp not configured for organization', organizationId)
+      logger.warn('NotificationScheduler - WhatsApp not configured for organization', { organizationId })
       return false
     }
 
@@ -277,7 +278,7 @@ export class NotificationSchedulerService {
 
       return response.ok
     } catch (error) {
-      console.error('WhatsApp send error:', error)
+      logger.error('NotificationScheduler - WhatsApp send error', error, { error: sanitizeError(error) })
       return false
     }
   }
@@ -340,7 +341,7 @@ export class NotificationSchedulerService {
         if (success) sent++
         else failed++
       } catch (error) {
-        console.error('Notification processing error:', error)
+        logger.error('NotificationScheduler - Notification processing error', error, { error: sanitizeError(error) })
         await supabaseAdmin
           .from('scheduled_notifications')
           .update({ status: 'failed' })
@@ -407,4 +408,3 @@ export class NotificationSchedulerService {
 }
 
 export const notificationSchedulerService = new NotificationSchedulerService()
-

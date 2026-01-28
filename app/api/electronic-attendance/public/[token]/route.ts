@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ElectronicAttendanceService } from '@/lib/services/electronic-attendance.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * GET /api/electronic-attendance/public/[token]
@@ -18,7 +19,7 @@ export async function GET(
 
     return NextResponse.json(attendanceRequest)
   } catch (error) {
-    console.error('Erreur lors de la récupération de la demande d\'émargement:', error)
+    logger.error('Erreur lors de la récupération de la demande d\'émargement:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

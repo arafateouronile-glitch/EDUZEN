@@ -44,7 +44,8 @@ export async function POST(
       return NextResponse.json({ error: 'Abonnement non trouvé' }, { status: 404 })
     }
 
-    // TODO: Implémenter l'envoi d'email de rappel
+    // NOTE: Fonctionnalité prévue - Implémenter l'envoi d'email de rappel
+    // Utiliser l'API route /api/email/send ou intégration directe avec Resend/SendGrid
     // Pour l'instant, on retourne juste un succès
 
     return NextResponse.json({ 

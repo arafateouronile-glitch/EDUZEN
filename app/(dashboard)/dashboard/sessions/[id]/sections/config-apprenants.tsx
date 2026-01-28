@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
-import { studentService } from '@/lib/services/student.service'
+import { studentService } from '@/lib/services/student.service.client'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

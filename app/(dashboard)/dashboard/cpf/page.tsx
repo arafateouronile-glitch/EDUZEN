@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -57,7 +58,7 @@ export default function CPFPage() {
           error?.message?.includes('does not exist') ||
           error?.message?.includes('schema cache')
         ) {
-          console.warn('Error fetching CPF eligible trainings:', error?.message)
+          logger.warn('Error fetching CPF eligible trainings:', error?.message)
           return []
         }
         throw error
@@ -86,7 +87,7 @@ export default function CPFPage() {
           error?.message?.includes('does not exist') ||
           error?.message?.includes('schema cache')
         ) {
-          console.warn('Error fetching CPF enrollments:', error?.message)
+          logger.warn('Error fetching CPF enrollments:', error?.message)
           return []
         }
         throw error
@@ -107,7 +108,7 @@ export default function CPFPage() {
 
   if (isLoadingTrainings || isLoadingEnrollments) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full p-4">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-8 w-8 animate-spin text-brand-blue" />
         </div>
@@ -116,9 +117,9 @@ export default function CPFPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="w-full p-4">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <GraduationCap className="h-8 w-8 text-brand-blue" />
           Compte Personnel de Formation (CPF)
@@ -177,7 +178,7 @@ export default function CPFPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="trainings" className="space-y-6">
+      <Tabs defaultValue="trainings" className="space-y-4">
         <TabsList>
           <TabsTrigger value="trainings">Formations éligibles</TabsTrigger>
           <TabsTrigger value="enrollments">Inscriptions</TabsTrigger>
@@ -187,7 +188,7 @@ export default function CPFPage() {
         {/* Formations éligibles */}
         <TabsContent value="trainings">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Formations éligibles CPF</CardTitle>
@@ -203,11 +204,11 @@ export default function CPFPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 pb-4">
               {eligibleTrainings.length === 0 ? (
-                <div className="text-center py-12">
-                  <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
+                <div className="text-center py-8">
+                  <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-3">
                     Aucune formation éligible CPF configurée
                   </p>
                   <Button asChild>
@@ -275,7 +276,7 @@ export default function CPFPage() {
         {/* Inscriptions */}
         <TabsContent value="enrollments">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Inscriptions CPF</CardTitle>
@@ -291,7 +292,7 @@ export default function CPFPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 pb-4">
               {enrollments.length === 0 ? (
                 <div className="text-center py-12">
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -373,16 +374,16 @@ export default function CPFPage() {
         {/* Droits des stagiaires */}
         <TabsContent value="learners">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 pt-4">
               <CardTitle>Droits CPF des stagiaires</CardTitle>
               <CardDescription>
                 Consultez et synchronisez les droits CPF de vos stagiaires
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">
+            <CardContent className="pt-0 pb-4">
+              <div className="text-center py-8">
+                <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground mb-3">
                   Fonctionnalité en cours de développement
                 </p>
                 <p className="text-sm text-muted-foreground">

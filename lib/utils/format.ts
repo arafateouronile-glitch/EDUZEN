@@ -4,6 +4,7 @@
 
 import { format as dateFnsFormat } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * Formate une date selon le format français
@@ -20,7 +21,7 @@ export function formatDate(
     
     return dateFnsFormat(dateObj, format, { locale: fr })
   } catch (error) {
-    console.error('Error formatting date:', error)
+    logger.error('Error formatting date', sanitizeError(error), { date, format })
     return ''
   }
 }
@@ -90,7 +91,7 @@ export function formatRelativeTime(date: string | Date): string {
     const diffInYears = Math.floor(diffInDays / 365)
     return `Il y a ${diffInYears} an${diffInYears > 1 ? 's' : ''}`
   } catch (error) {
-    console.error('Error formatting relative time:', error)
+    logger.error('Error formatting relative time', sanitizeError(error), { date })
     return ''
   }
 }

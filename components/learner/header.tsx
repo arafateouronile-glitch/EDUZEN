@@ -76,7 +76,7 @@ export function LearnerHeader({ onMenuClick }: LearnerHeaderProps) {
             animate={{
               scale: isSearchFocused ? 1.02 : 1,
             }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           >
             {/* Search glow effect when focused */}
             <AnimatePresence>
@@ -184,7 +184,7 @@ export function LearnerHeader({ onMenuClick }: LearnerHeaderProps) {
                   initial={{ opacity: 0, y: 10, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-2xl shadow-gray-200/50 overflow-hidden"
                 >
                   {/* Profile Header */}

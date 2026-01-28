@@ -4,6 +4,8 @@
  * Documentation: https://developers.hellosign.com/api/reference/
  */
 
+import { logger, sanitizeError } from '@/lib/utils/logger'
+
 export interface HelloSignConfig {
   apiKey: string
   clientId?: string
@@ -175,7 +177,7 @@ export class HelloSignAdapter {
       const data = await response.json()
       return data.signature_request
     } catch (error) {
-      console.error('Erreur lors de la création de la demande HelloSign:', error)
+      logger.error('HelloSignAdapter - Erreur lors de la création de la demande HelloSign', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -199,7 +201,7 @@ export class HelloSignAdapter {
       const data = await response.json()
       return data.signature_request
     } catch (error) {
-      console.error('Erreur lors de la récupération du statut:', error)
+      logger.error('HelloSignAdapter - Erreur lors de la récupération du statut', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -222,7 +224,7 @@ export class HelloSignAdapter {
 
       return await response.blob()
     } catch (error) {
-      console.error('Erreur lors du téléchargement du document:', error)
+      logger.error('HelloSignAdapter - Erreur lors du téléchargement du document', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -243,7 +245,7 @@ export class HelloSignAdapter {
         throw new Error(`HelloSign API Error: ${response.statusText}`)
       }
     } catch (error) {
-      console.error('Erreur lors de l\'annulation de la demande:', error)
+      logger.error('HelloSignAdapter - Erreur lors de l\'annulation de la demande', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -268,7 +270,7 @@ export class HelloSignAdapter {
         throw new Error(`HelloSign API Error: ${response.statusText}`)
       }
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du rappel:', error)
+      logger.error('HelloSignAdapter - Erreur lors de l\'envoi du rappel', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -292,7 +294,7 @@ export class HelloSignAdapter {
       const data = await response.json()
       return data.signature_request.signing_url
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'URL de signature:', error)
+      logger.error('HelloSignAdapter - Erreur lors de la récupération de l\'URL de signature', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -324,7 +326,7 @@ export class HelloSignAdapter {
 
       return await response.json()
     } catch (error) {
-      console.error('Erreur lors de la récupération des demandes:', error)
+      logger.error('HelloSignAdapter - Erreur lors de la récupération des demandes', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -343,7 +345,7 @@ export class HelloSignAdapter {
 
       return response.ok
     } catch (error) {
-      console.error('Erreur de connexion à HelloSign:', error)
+      logger.error('HelloSignAdapter - Erreur de connexion à HelloSign', error, { error: sanitizeError(error) })
       return false
     }
   }
@@ -418,7 +420,7 @@ export class HelloSignAdapter {
       const data = await response.json()
       return data.account
     } catch (error) {
-      console.error('Erreur lors de la récupération du compte:', error)
+      logger.error('HelloSignAdapter - Erreur lors de la récupération du compte', error, { error: sanitizeError(error) })
       throw error
     }
   }

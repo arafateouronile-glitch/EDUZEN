@@ -20,6 +20,7 @@ import { Search, MessageSquare, Users, Plus, MoreVertical, Loader2, AlertCircle,
 import Link from 'next/link'
 import { formatRelativeTime } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,22 +72,53 @@ export default function MessagesPage() {
     },
   })
 
+  const isTeacher = user?.role === 'teacher'
+
+  // Récupérer les sessions assignées à l'enseignant (pour les enseignants)
+  const { data: teacherSessionIds } = useQuery({
+    queryKey: ['teacher-session-ids-messages', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const { data, error } = await supabase
+        .from('session_teachers')
+        .select('session_id')
+        .eq('teacher_id', user.id)
+      if (error) {
+        logger.error('Erreur récupération sessions enseignant', sanitizeError(error))
+        return []
+      }
+      return data?.map((st: any) => st.session_id) || []
+    },
+    enabled: !!user?.id && isTeacher,
+  })
+
   // Récupérer les sessions pour les messages groupés
+  // Pour les enseignants, filtrer uniquement par leurs sessions assignées
   const { data: sessions, isLoading: isLoadingSessions } = useQuery({
-    queryKey: ['sessions-for-messages', user?.organization_id],
+    queryKey: ['sessions-for-messages', user?.organization_id, isTeacher, teacherSessionIds],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('sessions')
         .select('id, name, start_date, end_date, formations(name)')
         .eq('organization_id', user.organization_id)
         .order('start_date', { ascending: false })
         .limit(100)
       
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner un tableau vide
+        return []
+      }
+      
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },
-    enabled: !!user?.organization_id && showNewConversationDialog,
+    enabled: !!user?.organization_id && showNewConversationDialog && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les étudiants (candidats) d'une session sélectionnée
@@ -106,7 +138,7 @@ export default function MessagesPage() {
         .eq('session_id', selectedSessionId)
       
       if (enrollmentsError) {
-        console.error('Erreur récupération inscriptions:', enrollmentsError)
+        logger.error('Erreur récupération inscriptions:', enrollmentsError)
         throw enrollmentsError
       }
       
@@ -350,7 +382,8 @@ export default function MessagesPage() {
   }
 
   const getUnreadCount = (conversation: any) => {
-    // TODO: Implémenter le comptage des messages non lus
+    // NOTE: Fonctionnalité prévue - Comptage des messages non lus
+    // Utiliser MessagingService.getUnreadCount() ou requête directe à la table messages
     return 0
   }
 

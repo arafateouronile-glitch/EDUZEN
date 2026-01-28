@@ -18,8 +18,10 @@ import {
   User, Calendar, Star, Award, FileText, Send, Upload
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from '@/components/ui/motion'
 import { formatDate, cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function EditPortfolioPage() {
   const params = useParams()
@@ -72,7 +74,7 @@ export default function EditPortfolioPage() {
         .eq('portfolio_id', portfolioId)
 
       if (error) {
-        console.log('Erreur ou table inexistante:', error)
+        logger.debug('Erreur ou table inexistante', sanitizeError(error))
         return []
       }
       return data || []
@@ -154,7 +156,7 @@ export default function EditPortfolioPage() {
           .upsert(entriesToUpsert, { onConflict: 'portfolio_id,section_id,field_id' })
 
         if (entriesError) {
-          console.error('Erreur sauvegarde entrées:', entriesError)
+          logger.error('Erreur sauvegarde entrées:', entriesError)
         }
       }
     },
@@ -318,7 +320,8 @@ export default function EditPortfolioPage() {
               type="file"
               className="hidden"
               onChange={(e) => {
-                // TODO: Implémenter l'upload de fichier
+                // NOTE: Fonctionnalité prévue - Implémenter l'upload vers Supabase Storage
+                // Utiliser supabase.storage.from('portfolio-files').upload() avec gestion d'erreurs
                 const file = e.target.files?.[0]
                 if (file) {
                   updateField(section.id, field.id, { name: file.name, size: file.size })
@@ -419,12 +422,17 @@ export default function EditPortfolioPage() {
       <Card className="mb-6" style={{ borderLeftColor: template?.primary_color, borderLeftWidth: 4 }}>
         <CardContent className="py-4">
           <div className="flex items-center gap-4">
-            <div 
-              className="w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-medium"
+            <div
+              className="relative w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-medium"
               style={{ backgroundColor: template?.primary_color || '#335ACF' }}
             >
               {student?.photo_url ? (
-                <img src={student.photo_url} alt="" className="w-14 h-14 rounded-full object-cover" />
+                <Image
+                  src={student.photo_url}
+                  alt={`${student.first_name} ${student.last_name}`}
+                  fill
+                  className="rounded-full object-cover"
+                />
               ) : (
                 `${student?.first_name?.[0]}${student?.last_name?.[0]}`
               )}

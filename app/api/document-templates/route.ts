@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { CreateTemplateInput, UpdateTemplateInput, DocumentType } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // GET /api/document-templates - Récupère tous les templates d'une organisation
 export async function GET(request: NextRequest) {
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(templates)
   } catch (error) {
-    console.error('Erreur lors de la récupération des templates:', error)
+    logger.error('Erreur lors de la récupération des templates:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(template, { status: 201 })
   } catch (error) {
-    console.error('Erreur lors de la création du template:', error)
+    logger.error('Erreur lors de la création du template:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

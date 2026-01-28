@@ -1,6 +1,11 @@
 'use client'
 
-// TODO: Implémenter StylePalette
+/**
+ * Composant StylePalette - Palette de styles prédéfinis
+ * 
+ * NOTE: Composant non implémenté - Fonctionnalité prévue pour une future version
+ * Ce composant permettra d'appliquer des styles prédéfinis aux éléments du document.
+ */
 
 interface StylePaletteProps {
   onApplyStyle?: (style: {

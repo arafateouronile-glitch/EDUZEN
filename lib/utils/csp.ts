@@ -98,15 +98,14 @@ export function generateCSP(config: CSPConfig = {}): string {
     }
   }
 
-  // En développement, autoriser unsafe-eval pour le hot reload
+  // En développement, autoriser unsafe-eval pour le hot reload et les bibliothèques PDF (html2canvas, jsPDF)
   if (allowEval) {
     scriptSrc.push("'unsafe-eval'")
   }
 
-  // Si pas de nonce, fallback vers unsafe-inline (moins sécurisé)
-  if (!scriptNonce) {
-    scriptSrc.push("'unsafe-inline'")
-  }
+  // Autoriser unsafe-inline pour html2canvas et jsPDF qui injectent des scripts inline
+  // Ces bibliothèques sont nécessaires pour la génération PDF côté client
+  scriptSrc.push("'unsafe-inline'")
 
   // Domaines externes autorisés pour les scripts
   // Note: avec strict-dynamic, ces domaines sont ignorés mais gardés pour fallback

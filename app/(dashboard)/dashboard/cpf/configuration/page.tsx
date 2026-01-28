@@ -163,7 +163,8 @@ export default function CPFConfigurationPage() {
   }
 
   const handleSync = async () => {
-    // TODO: Implémenter la synchronisation avec Mon Compte Formation
+    // NOTE: Fonctionnalité prévue - Synchronisation avec Mon Compte Formation
+    // Utiliser CPFService.syncCatalog() une fois l'intégration API complète
     addToast({
       type: 'info',
       title: 'Synchronisation',

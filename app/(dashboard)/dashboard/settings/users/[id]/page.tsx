@@ -22,6 +22,7 @@ import {
   UserCog
 } from 'lucide-react'
 import Link from 'next/link'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrateur' },
@@ -108,7 +109,7 @@ function EditUserPageContent() {
       }, 300)
     },
     onError: (error: Error) => {
-      console.error('❌ [UPDATE USER] Erreur:', error)
+      logger.error('❌ [UPDATE USER] Erreur:', error)
       addToast({
         type: 'error',
         title: 'Erreur',

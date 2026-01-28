@@ -20,11 +20,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Clés API requises' }, { status: 400 })
     }
 
-    // TODO: Implémenter le test réel avec l'API Stripe
+    // NOTE: Test réel avec l'API Stripe requis
+    // Nécessite: npm install stripe
     // const stripe = require('stripe')(secret_key)
     // const account = await stripe.accounts.retrieve()
-    
-    // Pour l'instant, on simule le test
+    // 
+    // Pour l'instant, on simule le test (validation du format des clés uniquement)
     // Vérifier le format des clés
     const isValidPublishableKey = publishable_key.startsWith('pk_test_') || publishable_key.startsWith('pk_live_')
     const isValidSecretKey = secret_key.startsWith('sk_test_') || secret_key.startsWith('sk_live_')

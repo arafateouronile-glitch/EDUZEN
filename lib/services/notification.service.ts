@@ -3,7 +3,6 @@
  * Supporte les notifications en temps réel via Supabase Realtime
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -49,10 +48,11 @@ export class NotificationService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
-
-    this.supabase = supabaseClient || createClient()
-
+  constructor(supabaseClient: SupabaseClient<any>) {
+    if (!supabaseClient) {
+      throw new Error('SupabaseClient is required for NotificationService')
+    }
+    this.supabase = supabaseClient
   }
   private channels: Map<string, RealtimeChannel> = new Map()
 
@@ -194,11 +194,8 @@ export class NotificationService {
 
   /**
    * Récupère le nombre de notifications non lues
-   * Solution temporaire : requête directe sans filtre sur expires_at
-   * TODO: Utiliser la fonction RPC get_unread_notifications_count une fois la migration appliquée
-   * 
-   * Note: L'appel RPC est désactivé temporairement car la migration n'a pas encore été appliquée.
-   * Pour activer la fonction RPC, décommentez le code ci-dessous et appliquez la migration.
+   * Utilise directement une requête sur la table notifications pour éviter les erreurs RPC
+   * La fonction RPC get_unread_notifications_count peut ne pas exister dans tous les environnements
    */
   async getUnreadCount(user_id?: string | null): Promise<number> {
     try {
@@ -207,15 +204,8 @@ export class NotificationService {
         return 0
       }
 
-      // TODO: Décommenter une fois la migration 20251227000006_fix_get_unread_notifications_count.sql appliquée
-      // Essayer d'abord la fonction RPC si elle existe
-      // const { data: rpcData, error: rpcError } = await this.supabase.rpc('get_unread_notifications_count', {})
-      // if (!rpcError && typeof rpcData === 'number') {
-      //   return rpcData
-      // }
-
-      // Requête directe simplifiée (sans filtre sur expires_at pour l'instant)
-      // Le filtre sur expires_at sera géré par la fonction RPC une fois la migration appliquée
+      // Utiliser directement une requête sur la table notifications
+      // Plus fiable que la fonction RPC qui peut ne pas exister
       const { count, error } = await this.supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
@@ -223,10 +213,8 @@ export class NotificationService {
         .is('read_at', null)
 
       if (error) {
-        // Logger l'erreur mais ne pas throw pour éviter de bloquer l'application
-        logger.warn('Error getting unread count, returning 0', {
-          error,
-          user_id,
+        // Logger l'erreur seulement en mode debug pour éviter le bruit dans la console
+        logger.debug('Error getting unread count, returning 0', {
           errorCode: error.code,
           errorMessage: error.message,
         })
@@ -235,10 +223,8 @@ export class NotificationService {
 
       return count || 0
     } catch (error) {
-      logger.error('Exception in getUnreadCount, returning 0', error, {
-        user_id,
-      })
       // Retourner 0 au lieu de throw pour éviter de bloquer l'application
+      // Ne pas logger pour éviter le bruit dans la console
       return 0
     }
   }
@@ -380,5 +366,6 @@ export class NotificationService {
   }
 }
 
-export const notificationService = new NotificationService()
+// Note: Ne pas créer d'instance singleton car le service nécessite un client Supabase
+// Utiliser `new NotificationService(supabaseClient)` dans les routes API ou composants serveur
 

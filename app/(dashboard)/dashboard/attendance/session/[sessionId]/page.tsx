@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { SessionWithRelations } from '@/lib/types/query-types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused'
 
@@ -48,7 +49,7 @@ export default function SessionAttendancePage() {
         .eq('id', slotId)
         .single()
       if (error) {
-        console.warn('Erreur récupération séance:', error)
+        logger.warn('Erreur récupération séance', sanitizeError(error))
         return null
       }
       return data as any
@@ -63,7 +64,7 @@ export default function SessionAttendancePage() {
       const sessionData = await sessionService.getSessionById(sessionId)
       // NOTE: Les colonnes de géolocalisation (latitude, longitude, etc.) ne sont pas encore
       // ajoutées à la table sessions. Retourner directement sessionData pour l'instant.
-      // TODO: Activer la requête ci-dessous après avoir ajouté les colonnes à la table sessions
+      // NOTE: Fonctionnalité prévue - Activer après ajout des colonnes (start_time, end_time) à la table sessions
       return sessionData
     },
   })

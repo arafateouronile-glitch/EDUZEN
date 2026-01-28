@@ -202,7 +202,8 @@ export default function BlogCategoriesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // TODO: Open edit dialog
+                        // NOTE: Fonctionnalité prévue - Ouvrir un dialog d'édition pour modifier la catégorie
+                        // À implémenter avec un Dialog component et un formulaire d'édition
                       }}
                     >
                       <Edit className="h-4 w-4" />
@@ -267,7 +268,7 @@ export default function BlogCategoriesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                // TODO: Open edit dialog
+                                // NOTE: Fonctionnalité prévue - Ouvrir un dialog d'édition pour modifier la catégorie
                               }}
                             >
                               <Edit className="h-3 w-3" />

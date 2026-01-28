@@ -25,6 +25,7 @@ import { generateProgramDOCX, generateProgramHTML } from '@/lib/utils/program-ex
 import { GlassCard } from '@/components/ui/glass-card'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function ProgramDetailPage() {
   const params = useParams()
@@ -167,7 +168,7 @@ export default function ProgramDetailPage() {
       document.body.removeChild(container)
       addToast({ type: 'success', title: 'Export PDF réussi', description: 'Le fichier a été téléchargé.' })
     } catch (error) {
-      console.error(error)
+      logger.error('Erreur lors de l\'export PDF', sanitizeError(error))
       addToast({ type: 'error', title: 'Erreur export', description: 'Impossible de générer le PDF.' })
     } finally {
       setIsExporting(false)
@@ -181,7 +182,7 @@ export default function ProgramDetailPage() {
       await generateProgramDOCX(program)
       addToast({ type: 'success', title: 'Export Word réussi', description: 'Le fichier a été téléchargé.' })
     } catch (error) {
-       console.error(error)
+       logger.error('Erreur lors de l\'export PDF', sanitizeError(error))
        addToast({ type: 'error', title: 'Erreur export', description: 'Impossible de générer le Word.' })
     } finally {
       setIsExporting(false)

@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { motion } from '@/components/ui/motion'
 import { exportToExcel, exportToCSV } from '@/lib/utils/excel-export'
 import type { AttendanceWithRelations } from '@/lib/types/query-types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function AttendanceHistoryPage() {
   const { user } = useAuth()
@@ -24,24 +25,77 @@ export default function AttendanceHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 50
 
+  const isTeacher = user?.role === 'teacher'
+
+  // Récupérer les sessions assignées à l'enseignant (pour les enseignants)
+  // Avec fallback via sessions.teacher_id si session_teachers est vide
+  const { data: teacherSessionIds } = useQuery({
+    queryKey: ['teacher-session-ids', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      
+      // D'abord, essayer via session_teachers
+      const { data: sessionTeachers, error: sessionTeachersError } = await supabase
+        .from('session_teachers')
+        .select('session_id')
+        .eq('teacher_id', user.id)
+      
+      if (sessionTeachersError) {
+        logger.error('Erreur récupération session_teachers', sanitizeError(sessionTeachersError))
+      }
+      
+      if (sessionTeachers && sessionTeachers.length > 0) {
+        return sessionTeachers.map((st: any) => st.session_id)
+      }
+      
+      // Fallback : récupérer via sessions.teacher_id
+      // Note: Ce fallback est normal si session_teachers n'est pas encore synchronisé
+      logger.debug('session_teachers vide, utilisation du fallback via sessions.teacher_id pour historique présences')
+      const { data: sessionsByTeacherId, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('teacher_id', user.id)
+      
+      if (sessionsError) {
+        logger.error('Erreur récupération sessions via teacher_id', sanitizeError(sessionsError))
+        return []
+      }
+      
+      return (sessionsByTeacherId || []).map((s: any) => s.id)
+    },
+    enabled: !!user?.id && isTeacher,
+  })
+
   // Récupérer toutes les sessions pour le filtre
+  // Pour les enseignants, filtrer par leurs sessions assignées
   const { data: allSessions } = useQuery({
-    queryKey: ['all-sessions-for-history', user?.organization_id],
+    queryKey: ['all-sessions-for-history', user?.organization_id, isTeacher, teacherSessionIds],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('sessions')
         .select('id, name, formations!inner(name, organization_id)')
         .eq('formations.organization_id', user.organization_id)
         .order('name', { ascending: true })
       
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner un tableau vide
+        return []
+      }
+      
+      const { data, error } = await query
+      
       if (error) {
-        console.warn('Erreur récupération sessions:', error)
+        logger.warn('Erreur récupération sessions', sanitizeError(error))
         return []
       }
       return data || []
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les IDs d'étudiants correspondant à la recherche
@@ -57,7 +111,7 @@ export default function AttendanceHistoryPage() {
         .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,student_number.ilike.%${searchTerm}%`)
       
       if (error) {
-        console.warn('Erreur recherche étudiants:', error)
+        logger.warn('Erreur recherche étudiants', sanitizeError(error))
         return null
       }
       
@@ -67,10 +121,14 @@ export default function AttendanceHistoryPage() {
   })
 
   // Récupérer tous les émargements avec filtres
+  // Pour les enseignants, filtrer uniquement les émargements des sessions assignées
   const { data: attendanceData, isLoading } = useQuery({
     queryKey: [
       'attendance-history',
       user?.organization_id,
+      user?.id,
+      isTeacher,
+      teacherSessionIds,
       searchTerm,
       studentIds,
       statusFilter,
@@ -86,6 +144,14 @@ export default function AttendanceHistoryPage() {
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))', { count: 'exact' })
         .eq('organization_id', user.organization_id)
+
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('session_id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner vide
+        return { data: [], total: 0 }
+      }
 
       // Filtre par statut
       if (statusFilter !== 'all') {
@@ -127,7 +193,7 @@ export default function AttendanceHistoryPage() {
         total: count || 0,
       }
     },
-    enabled: !!user?.organization_id && (!searchTerm || studentIds !== undefined),
+    enabled: !!user?.organization_id && (!searchTerm || studentIds !== undefined) && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   const totalPages = Math.ceil((attendanceData?.total || 0) / itemsPerPage)
@@ -178,6 +244,15 @@ export default function AttendanceHistoryPage() {
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')
         .eq('organization_id', user.organization_id)
+
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('session_id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner vide
+        alert('Aucun émargement à exporter')
+        return
+      }
 
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter)
@@ -246,7 +321,7 @@ export default function AttendanceHistoryPage() {
       }
       alert(`Export ${format.toUpperCase()} réussi ! ${formattedData.length} émargement(s) exporté(s).`)
     } catch (error) {
-      console.error('Erreur lors de l\'export:', error)
+      logger.error('Erreur lors de l\'export', sanitizeError(error))
       alert('Erreur lors de l\'export des données')
     }
   }

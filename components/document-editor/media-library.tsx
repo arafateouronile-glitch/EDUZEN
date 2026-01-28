@@ -41,6 +41,7 @@ import {
 } from '@/lib/services/media-library.service'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/components/ui/toast'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface MediaLibraryProps {
   onSelect?: (media: MediaItem) => void
@@ -97,7 +98,7 @@ export function MediaLibrary({
       const media = await mediaLibraryService.getAll(user.organization_id, filters)
       setMediaItems(media)
     } catch (error) {
-      console.error('Erreur lors du chargement des médias:', error)
+      logger.error('Erreur lors du chargement des médias:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -134,7 +135,7 @@ export function MediaLibrary({
       })
       await loadMedia()
     } catch (error) {
-      console.error('Erreur lors de l\'upload:', error)
+      logger.error('Erreur lors de l\'upload:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -174,7 +175,7 @@ export function MediaLibrary({
       await mediaLibraryService.toggleFavorite(media.id, !media.is_favorite)
       await loadMedia()
     } catch (error) {
-      console.error('Erreur:', error)
+      logger.error('Erreur:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -199,7 +200,7 @@ export function MediaLibrary({
       })
       await loadMedia()
     } catch (error) {
-      console.error('Erreur:', error)
+      logger.error('Erreur:', error)
       addToast({
         type: 'error',
         title: 'Erreur',

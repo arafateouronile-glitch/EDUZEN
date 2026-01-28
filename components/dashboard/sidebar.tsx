@@ -41,9 +41,11 @@ import {
   Globe,
   MapPin,
   Badge,
+  PenLine,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { motion, AnimatePresence } from '@/components/ui/motion'
+import { UsageIndicator } from '@/components/quota/usage-indicator'
 
 type NavigationItem = {
   name: string
@@ -88,6 +90,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
     items: [
       { name: vocab.students, href: '/dashboard/students', icon: Users, allowedRoles: ADMIN_ROLES },
       { name: t('navigation.myStudents'), href: '/dashboard/my-students', icon: Users, allowedRoles: ['teacher'] },
+      { name: 'Mes documents', href: '/dashboard/teacher/documents', icon: FileText, allowedRoles: ['teacher'] },
       { name: 'Entreprises & Organismes', href: '/dashboard/entities', icon: Building2, allowedRoles: ADMIN_ROLES },
       {
         name: t('navigation.pedagogy'),
@@ -109,7 +112,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
           { name: vocab.attendance, href: '/dashboard/attendance', icon: ClipboardList },
           { name: vocab.evaluations, href: '/dashboard/evaluations', icon: FileCheck },
           { name: t('navigation.learningPortfolios'), href: '/dashboard/evaluations/portfolios', icon: BookMarked },
-          { name: 'Rapports & Analytics', href: '/dashboard/reports', icon: BarChart3 },
+          { name: 'Rapports & Analytics', href: '/dashboard/reports', icon: BarChart3, allowedRoles: ADMIN_ROLES },
         ],
       },
     ],
@@ -129,6 +132,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
         ],
       },
       { name: t('navigation.documents'), href: '/dashboard/documents', icon: FileText },
+      { name: 'Tour de contrôle (signature en cascade)', href: '/dashboard/signing-processes', icon: PenLine },
       { name: 'Sites et Antennes', href: '/dashboard/sites', icon: MapPin },
     ],
   },
@@ -322,7 +326,7 @@ export function Sidebar() {
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           className="relative flex flex-col flex-grow bg-gradient-to-b from-white via-gray-50/50 to-white backdrop-blur-xl border-r-2 border-gray-200/50 pt-8 pb-6 overflow-y-auto shadow-2xl shadow-gray-900/5"
           style={{
             background: 'linear-gradient(to bottom, rgba(255,255,255,0.98), rgba(249,250,251,0.95), rgba(255,255,255,0.98))',
@@ -385,7 +389,7 @@ export function Sidebar() {
                     transition={{
                       delay: sectionIndex * 0.08 + 0.3,
                       duration: 0.4,
-                      ease: [0.16, 1, 0.3, 1]
+                      ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
                     }}
                     className="px-3 mb-3"
                   >
@@ -424,7 +428,7 @@ export function Sidebar() {
                             transition={{
                               delay: sectionIndex * 0.1 + itemIndex * 0.04,
                               duration: 0.4,
-                              ease: [0.16, 1, 0.3, 1]
+                              ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
                             }}
                             whileHover={{ x: 4 }}
                           >
@@ -493,7 +497,7 @@ export function Sidebar() {
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: 'auto', opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                                   className="overflow-hidden"
                                 >
                                   <div className="ml-4 mt-2 space-y-1 pl-4 border-l-2 border-gradient-to-b from-brand-blue/30 to-brand-cyan/30">
@@ -508,7 +512,7 @@ export function Sidebar() {
                                           transition={{
                                             delay: childIndex * 0.05,
                                             duration: 0.3,
-                                            ease: [0.16, 1, 0.3, 1]
+                                            ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
                                           }}
                                           whileHover={{ x: 4 }}
                                         >
@@ -586,7 +590,7 @@ export function Sidebar() {
                             transition={{
                               delay: sectionIndex * 0.1 + itemIndex * 0.04,
                               duration: 0.4,
-                              ease: [0.16, 1, 0.3, 1]
+                              ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
                             }}
                             whileHover={{ x: 4 }}
                           >
@@ -659,7 +663,7 @@ export function Sidebar() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ delay: 0.6, duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="relative z-10 px-4 mt-auto pt-6 space-y-2"
             >
               {/* Séparateur décoratif */}
@@ -686,17 +690,24 @@ export function Sidebar() {
                 </div>
               </div>
 
-              <motion.div whileHover={{ x: 4 }}>
-                <Link
-                  href="/dashboard/settings"
-                  className={cn(
-                    'group relative flex items-center px-4 py-3 text-sm font-semibold rounded-xl overflow-hidden',
-                    'transition-all duration-300',
-                    pathname?.startsWith('/dashboard/settings')
-                      ? 'bg-gradient-to-br from-gray-700 to-gray-800 text-white shadow-xl shadow-gray-700/30'
-                      : 'text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-lg'
-                  )}
-                >
+              {/* Indicateur d'usage */}
+              <div className="px-4 mt-4">
+                <UsageIndicator />
+              </div>
+
+              {/* Masquer les paramètres pour les enseignants */}
+              {user?.role !== 'teacher' && (
+                <motion.div whileHover={{ x: 4 }}>
+                  <Link
+                    href="/dashboard/settings"
+                    className={cn(
+                      'group relative flex items-center px-4 py-3 text-sm font-semibold rounded-xl overflow-hidden',
+                      'transition-all duration-300',
+                      pathname?.startsWith('/dashboard/settings')
+                        ? 'bg-gradient-to-br from-gray-700 to-gray-800 text-white shadow-xl shadow-gray-700/30'
+                        : 'text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-lg'
+                    )}
+                  >
                   {/* Shine effect */}
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
@@ -727,6 +738,7 @@ export function Sidebar() {
                   <span className="relative z-10 tracking-tight">{t('common.settings')}</span>
                 </Link>
               </motion.div>
+              )}
 
               <motion.div whileHover={{ x: 4 }}>
                 <motion.button

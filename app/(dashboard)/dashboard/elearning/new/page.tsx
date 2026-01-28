@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Schéma de validation
 const courseSchema = z.object({
@@ -153,7 +154,7 @@ export default function NewCoursePage() {
         }
 
         if (lastError) {
-          console.error('Erreur upload miniature (storage):', lastError)
+          logger.error('Erreur upload miniature (storage):', lastError)
           throw new Error(
             lastError?.message ||
               "Erreur lors de l'upload de la miniature (bucket course-thumbnails/elearning-media/course-media)."

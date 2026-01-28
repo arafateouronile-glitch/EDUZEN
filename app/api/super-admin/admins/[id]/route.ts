@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DEFAULT_PERMISSIONS_BY_ROLE } from '@/types/super-admin.types'
 import type { PlatformAdminRole } from '@/types/super-admin.types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // PATCH - Modifier un administrateur
 export async function PATCH(
@@ -84,13 +85,13 @@ export async function PATCH(
       .single()
 
     if (error) {
-      console.error('[PATCH /api/super-admin/admins/[id]] Error:', error)
+      logger.error('[PATCH /api/super-admin/admins/[id]] Error:', error)
       return NextResponse.json({ error: 'Erreur lors de la mise à jour' }, { status: 500 })
     }
 
     return NextResponse.json({ admin: updatedAdmin })
   } catch (error) {
-    console.error('[PATCH /api/super-admin/admins/[id]] Unexpected error:', error)
+    logger.error('[PATCH /api/super-admin/admins/[id]] Unexpected error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -160,13 +161,13 @@ export async function DELETE(
       .eq('id', id)
 
     if (error) {
-      console.error('[DELETE /api/super-admin/admins/[id]] Error:', error)
+      logger.error('[DELETE /api/super-admin/admins/[id]] Error:', error)
       return NextResponse.json({ error: 'Erreur lors de la révocation' }, { status: 500 })
     }
 
     return NextResponse.json({ message: 'Accès révoqué avec succès' })
   } catch (error) {
-    console.error('[DELETE /api/super-admin/admins/[id]] Unexpected error:', error)
+    logger.error('[DELETE /api/super-admin/admins/[id]] Unexpected error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

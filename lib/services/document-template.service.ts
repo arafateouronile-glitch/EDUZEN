@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { TemplateCollaborationService } from './template-collaboration.service'
 import { TemplateSecurityService } from './template-security.service'
 import { convertTemplateContent } from '@/lib/utils/document-generation/template-converter'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import type {
   DocumentTemplate,
   DocumentType,
@@ -73,7 +74,7 @@ export class DocumentTemplateService {
         await this.templateSecurityService.logAudit(id, userId, 'view', {})
       } catch (auditError) {
         // Ne pas faire échouer la récupération si l'audit échoue
-        console.warn('Erreur lors du logging de l\'audit:', auditError)
+        logger.warn('DocumentTemplate - Erreur lors du logging de l\'audit', { error: sanitizeError(auditError) })
       }
     }
 
@@ -96,7 +97,7 @@ export class DocumentTemplateService {
         template.content = decrypted.content as any
         template.footer = decrypted.footer as any
       } catch (decryptError) {
-        console.error('Erreur lors du déchiffrement:', decryptError)
+        logger.error('DocumentTemplate - Erreur lors du déchiffrement', decryptError, { error: sanitizeError(decryptError) })
         // Ne pas exposer le contenu chiffré
         template.header = null
         template.content = { html: '', elements: [], pageSize: 'A4', margins: { top: 20, right: 20, bottom: 20, left: 20 } } as any
@@ -206,7 +207,7 @@ export class DocumentTemplateService {
         )
       } catch (logError) {
         // Ne pas faire échouer la création si le logging échoue
-        console.warn('Erreur lors du logging de l\'activité:', logError)
+        logger.warn('DocumentTemplate - Erreur lors du logging de l\'activité', { error: sanitizeError(logError) })
       }
     }
     
@@ -215,7 +216,7 @@ export class DocumentTemplateService {
       await this.createTemplateVersion(newTemplate.id, 'Version initiale', 'Version créée lors de la création du template')
     } catch (versionError) {
       // Ne pas faire échouer la création du template si la version échoue
-      console.warn('Erreur lors de la création de la version initiale:', versionError)
+      logger.warn('DocumentTemplate - Erreur lors de la création de la version initiale', { error: sanitizeError(versionError) })
     }
     
     return newTemplate
@@ -260,6 +261,7 @@ export class DocumentTemplateService {
     if (updates.margins !== undefined) updateData.margins = updates.margins
     if (updates.is_default !== undefined) updateData.is_default = updates.is_default
     if ((updates as any).is_active !== undefined) updateData.is_active = (updates as any).is_active
+    if ((updates as any).sign_zones !== undefined) updateData.sign_zones = (updates as any).sign_zones
 
     const { data, error } = await this.supabase
       .from('document_templates')
@@ -282,7 +284,7 @@ export class DocumentTemplateService {
         )
       } catch (logError) {
         // Ne pas faire échouer la mise à jour si le logging échoue
-        console.warn('Erreur lors du logging de l\'activité:', logError)
+        logger.warn('DocumentTemplate - Erreur lors du logging de l\'activité', { error: sanitizeError(logError) })
       }
 
       // Notifier les utilisateurs avec accès
@@ -298,12 +300,12 @@ export class DocumentTemplateService {
             )
           } catch (notifError) {
             // Ne pas faire échouer la mise à jour si la notification échoue
-            console.warn('Erreur lors de la création de la notification:', notifError)
+            logger.warn('DocumentTemplate - Erreur lors de la création de la notification', { error: sanitizeError(notifError) })
           }
         }
       } catch (shareError) {
         // Ne pas faire échouer la mise à jour si la récupération des partages échoue
-        console.warn('Erreur lors de la récupération des partages:', shareError)
+        logger.warn('DocumentTemplate - Erreur lors de la récupération des partages', { error: sanitizeError(shareError) })
       }
     }
 
@@ -332,7 +334,7 @@ export class DocumentTemplateService {
 
       return data
     } catch (error) {
-      console.error('Erreur lors de la récupération de la version:', error)
+      logger.error('DocumentTemplate - Erreur lors de la récupération de la version', error, { error: sanitizeError(error) })
       return null
     }
   }
@@ -351,7 +353,7 @@ export class DocumentTemplateService {
       if (error) {
         // Si la table n'existe pas, on retourne un tableau vide
         if (error.code === 'PGRST205' || error.code === '42P01') {
-          console.warn('Table document_template_versions n\'existe pas encore. Migration requise.')
+          logger.warn('DocumentTemplate - Table document_template_versions n\'existe pas encore. Migration requise.')
           return []
         }
         throw error
@@ -361,7 +363,7 @@ export class DocumentTemplateService {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST205' || errorObj?.code === '42P01' || errorObj?.message?.includes('does not exist')) {
-        console.warn('Table document_template_versions n\'existe pas encore. Migration requise.')
+        logger.warn('DocumentTemplateService - Table document_template_versions n\'existe pas encore. Migration requise.')
         return []
       }
       throw error
@@ -383,7 +385,7 @@ export class DocumentTemplateService {
       if (error) {
         // Si la table n'existe pas, on retourne null
         if (error.code === 'PGRST205' || error.code === '42P01') {
-          console.warn('Table document_template_versions n\'existe pas encore. Migration requise.')
+          logger.warn('DocumentTemplate - Table document_template_versions n\'existe pas encore. Migration requise.')
           return null
         }
         throw error
@@ -393,7 +395,7 @@ export class DocumentTemplateService {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST205' || errorObj?.code === '42P01' || errorObj?.message?.includes('does not exist')) {
-        console.warn('Table document_template_versions n\'existe pas encore. Migration requise.')
+        logger.warn('DocumentTemplateService - Table document_template_versions n\'existe pas encore. Migration requise.')
         return null
       }
       throw error
@@ -436,7 +438,7 @@ export class DocumentTemplateService {
       if (error) {
         // Si la table n'existe pas, on retourne null
         if (error.code === 'PGRST205' || error.code === '42P01') {
-          console.warn('Table document_template_versions n\'existe pas encore. Migration requise.')
+          logger.warn('DocumentTemplate - Table document_template_versions n\'existe pas encore. Migration requise.')
           return null
         }
         throw error
@@ -446,7 +448,7 @@ export class DocumentTemplateService {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST205' || errorObj?.code === '42P01' || errorObj?.message?.includes('does not exist')) {
-        console.warn('Table document_template_versions n\'existe pas encore. Migration requise.')
+        logger.warn('DocumentTemplateService - Table document_template_versions n\'existe pas encore. Migration requise.')
         return null
       }
       throw error

@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useRouter } from 'next/navigation'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function AttendancePage() {
   const { user } = useAuth()
@@ -42,19 +43,40 @@ export default function AttendancePage() {
   const isTeacher = user?.role === 'teacher'
 
   // Récupérer les sessions assignées à l'enseignant (pour les enseignants)
+  // Avec fallback via sessions.teacher_id si session_teachers est vide
   const { data: teacherSessionIds } = useQuery({
     queryKey: ['teacher-session-ids', user?.id],
     queryFn: async () => {
       if (!user?.id) return []
-      const { data, error } = await supabase
+      
+      // D'abord, essayer via session_teachers
+      const { data: sessionTeachers, error: sessionTeachersError } = await supabase
         .from('session_teachers')
         .select('session_id')
         .eq('teacher_id', user.id)
-      if (error) {
-        console.error('Erreur récupération sessions enseignant:', error)
+      
+      if (sessionTeachersError) {
+        logger.error('Erreur récupération session_teachers', sanitizeError(sessionTeachersError))
+      }
+      
+      if (sessionTeachers && sessionTeachers.length > 0) {
+        return sessionTeachers.map((st: any) => st.session_id)
+      }
+      
+      // Fallback : récupérer via sessions.teacher_id
+      // Note: Ce fallback est normal si session_teachers n'est pas encore synchronisé
+      logger.debug('session_teachers vide, utilisation du fallback via sessions.teacher_id pour présences')
+      const { data: sessionsByTeacherId, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('teacher_id', user.id)
+      
+      if (sessionsError) {
+        logger.error('Erreur récupération sessions via teacher_id', sanitizeError(sessionsError))
         return []
       }
-      return data?.map((st: any) => st.session_id) || []
+      
+      return (sessionsByTeacherId || []).map((s: any) => s.id)
     },
     enabled: !!user?.id && isTeacher,
   })
@@ -105,7 +127,7 @@ export default function AttendancePage() {
         .order('date', { ascending: true })
         .order('start_time', { ascending: true })
       if (error) {
-        console.warn('Erreur récupération séances:', error)
+        logger.warn('Erreur récupération séances', sanitizeError(error))
         return []
       }
       return data || []
@@ -147,38 +169,80 @@ export default function AttendancePage() {
   })
 
   // Récupérer les statistiques du jour basées UNIQUEMENT sur les données réelles de la table attendance
+  // Pour les enseignants, filtrer uniquement les émargements des sessions assignées
   const { data: todayStats, refetch: refetchTodayStats, isLoading: isLoadingStats } = useQuery({
-    queryKey: ['attendance-stats', user?.organization_id, selectedDate],
+    queryKey: ['attendance-stats', user?.organization_id, user?.id, isTeacher, teacherSessionIds, selectedDate],
     queryFn: async () => {
       if (!user?.organization_id) {
-        console.warn('[ATTENDANCE STATS] Pas d\'organisation ID')
+        logger.warn('[ATTENDANCE STATS] Pas d\'organisation ID')
         return null
       }
 
       const dateStr = selectedDate
 
-      // 1. Récupérer toutes les séances (slots) prévues pour cette date
-      const { data: slotsForDate, error: slotsError } = await supabase
+      // 1. Récupérer les séances (slots) prévues pour cette date
+      // Pour les enseignants, filtrer directement par leurs sessions assignées
+      let slotsQuery = supabase
         .from('session_slots')
         .select('id, session_id, date, time_slot')
         .eq('date', dateStr)
       
+      // Si l'enseignant a des sessions assignées, filtrer les slots par ces sessions
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        slotsQuery = slotsQuery.in('session_id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner des stats vides
+        return {
+          total: 0,
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+          attendanceRate: 0,
+          statusData: []
+        }
+      }
+      
+      const { data: slotsForDate, error: slotsError } = await slotsQuery
+      
       if (slotsError) {
-        console.warn('[ATTENDANCE STATS] ⚠️ Erreur récupération slots:', slotsError)
+        logger.warn('[ATTENDANCE STATS] ⚠️ Erreur récupération slots', sanitizeError(slotsError))
       }
 
       const sessionIds = (slotsForDate as Array<{ session_id: string }>)?.map(s => s.session_id) || []
       const slotIds = (slotsForDate as Array<{ id: string }>)?.map(s => s.id) || []
 
-      // 2. Récupérer TOUS les émargements pour cette date (toutes les séances de la journée)
-      const { data: attendanceData, error: attendanceError } = await supabase
+      // Si aucun slot trouvé (pour les enseignants, cela signifie qu'ils n'ont pas de sessions ce jour-là)
+      if (isTeacher && (!sessionIds || sessionIds.length === 0)) {
+        return {
+          total: 0,
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+          attendanceRate: 0,
+          statusData: []
+        }
+      }
+
+      // 2. Récupérer les émargements pour cette date
+      // Pour les enseignants, filtrer uniquement les émargements des sessions assignées
+      let attendanceQuery = supabase
         .from('attendance')
         .select('*')
         .eq('organization_id', user.organization_id)
         .eq('date', dateStr)
       
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        // Utiliser directement teacherSessionIds (déjà filtré)
+        attendanceQuery = attendanceQuery.in('session_id', teacherSessionIds)
+      }
+      
+      const { data: attendanceData, error: attendanceError } = await attendanceQuery
+      
       if (attendanceError) {
-        console.error('[ATTENDANCE STATS] ❌ Erreur Supabase:', attendanceError)
+        logger.error('[ATTENDANCE STATS] ❌ Erreur Supabase:', attendanceError)
         throw attendanceError
       }
 
@@ -245,7 +309,7 @@ export default function AttendancePage() {
         ].filter(item => item.value > 0)
       }
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     staleTime: 0, // Toujours considérer les données comme périmées
@@ -253,8 +317,9 @@ export default function AttendancePage() {
   })
 
   // Statistiques sur une période
+  // Pour les enseignants, filtrer uniquement les émargements des sessions assignées
   const { data: periodStats } = useQuery({
-    queryKey: ['attendance-period-stats', user?.organization_id, periodFilter],
+    queryKey: ['attendance-period-stats', user?.organization_id, user?.id, isTeacher, teacherSessionIds, periodFilter],
     queryFn: async () => {
       if (!user?.organization_id) return null
 
@@ -279,12 +344,31 @@ export default function AttendancePage() {
           startDate.setDate(now.getDate() - 7)
       }
 
-      const { data, error } = await supabase
+      // Pour les enseignants, filtrer uniquement les émargements des sessions assignées
+      let periodQuery = supabase
         .from('attendance')
-        .select('date, status')
+        .select('date, status, session_id')
         .eq('organization_id', user.organization_id)
         .gte('date', startDate.toISOString().split('T')[0])
         .lte('date', now.toISOString().split('T')[0])
+      
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        periodQuery = periodQuery.in('session_id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner des stats vides
+        return {
+          total: 0,
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+          attendanceRate: 0,
+          dailyData: []
+        }
+      }
+      
+      const { data, error } = await periodQuery
 
       if (error) throw error
 
@@ -333,11 +417,13 @@ export default function AttendancePage() {
   })
 
   // Derniers émargements
+  // Pour les enseignants, filtrer uniquement les émargements des sessions assignées
   const { data: recentAttendance } = useQuery({
-    queryKey: ['recent-attendance', user?.organization_id],
+    queryKey: ['recent-attendance', user?.organization_id, isTeacher, teacherSessionIds],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')
         .eq('organization_id', user.organization_id)
@@ -345,15 +431,25 @@ export default function AttendancePage() {
         .order('created_at', { ascending: false })
         .limit(20)
       
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('session_id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner un tableau vide
+        return []
+      }
+      
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Rapports mensuels/annuels
+  // Pour les enseignants, filtrer uniquement les émargements des sessions assignées
   const { data: monthlyReport } = useQuery({
-    queryKey: ['monthly-attendance-report', user?.organization_id, selectedReportMonth],
+    queryKey: ['monthly-attendance-report', user?.organization_id, user?.id, isTeacher, teacherSessionIds, selectedReportMonth],
     queryFn: async () => {
       if (!user?.organization_id || reportPeriod !== 'monthly') return null
 
@@ -364,13 +460,32 @@ export default function AttendancePage() {
         0
       ).toISOString().split('T')[0]
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')
         .eq('organization_id', user.organization_id)
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: true })
+      
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('session_id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner un rapport vide
+        return {
+          total: 0,
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+          attendanceRate: 0,
+          dailyData: [],
+          studentData: [],
+        }
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
@@ -452,23 +567,41 @@ export default function AttendancePage() {
         studentData,
       }
     },
-    enabled: !!user?.organization_id && reportPeriod === 'monthly',
+    enabled: !!user?.organization_id && reportPeriod === 'monthly' && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
+  // Pour les enseignants, filtrer uniquement les émargements des sessions assignées
   const { data: yearlyReport } = useQuery({
-    queryKey: ['yearly-attendance-report', user?.organization_id, selectedReportYear],
+    queryKey: ['yearly-attendance-report', user?.organization_id, user?.id, isTeacher, teacherSessionIds, selectedReportYear],
     queryFn: async () => {
       if (!user?.organization_id || reportPeriod !== 'yearly') return null
 
       const startDate = `${selectedReportYear}-01-01`
       const endDate = `${selectedReportYear}-12-31`
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('attendance')
-        .select('date, status')
+        .select('date, status, session_id')
         .eq('organization_id', user.organization_id)
         .gte('date', startDate)
         .lte('date', endDate)
+      
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('session_id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner un rapport vide
+        return {
+          total: 0,
+          present: 0,
+          absent: 0,
+          late: 0,
+          attendanceRate: 0,
+          monthlyData: [],
+        }
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
@@ -513,7 +646,7 @@ export default function AttendancePage() {
         monthlyData,
       }
     },
-    enabled: !!user?.organization_id && reportPeriod === 'yearly',
+    enabled: !!user?.organization_id && reportPeriod === 'yearly' && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   const getStatusIcon = (status: string) => {
@@ -594,7 +727,7 @@ export default function AttendancePage() {
       }
       alert(`Export ${format.toUpperCase()} réussi ! ${exportData.length} émargement(s) exporté(s).`)
     } catch (error) {
-      console.error('Erreur lors de l\'export:', error)
+      logger.error('Erreur lors de l\'export', sanitizeError(error))
       alert('Erreur lors de l\'export des données')
     }
   }
@@ -611,7 +744,7 @@ export default function AttendancePage() {
       y: 0, 
       transition: { 
         duration: 0.5, 
-        ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number] as [number, number, number, number]
       } 
     }
   }
@@ -746,7 +879,7 @@ export default function AttendancePage() {
               transition={{
                 duration: 0.5,
                 delay: index * 0.05,
-                ease: [0.16, 1, 0.3, 1]
+                ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
               }}
               whileHover={{ y: -6, scale: 1.02 }}
               className="group relative"
@@ -803,7 +936,7 @@ export default function AttendancePage() {
                     }}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   />
                 </div>
 
@@ -1079,7 +1212,7 @@ export default function AttendancePage() {
                     key={attendance.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ delay: index * 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     whileHover={{ x: 4, backgroundColor: "rgba(249, 250, 251, 0.5)" }}
                     className="p-4 transition-all flex items-center justify-between group"
                   >

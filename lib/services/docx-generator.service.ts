@@ -3,6 +3,7 @@ import PizZip from 'pizzip'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import type { DocumentVariables } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * Service de génération de documents Word avec docxtemplater
@@ -62,10 +63,10 @@ class DocxGeneratorService {
         compression: 'DEFLATE',
       })
 
-      console.log('[DocxGenerator] ✅ Document généré avec succès')
+      logger.info('DocxGenerator - Document généré avec succès')
       return outputBuffer as Buffer
     } catch (error: any) {
-      console.error('[DocxGenerator] ❌ Erreur lors de la génération:', error)
+      logger.error('DocxGenerator - Erreur lors de la génération', error, { error: sanitizeError(error) })
       
       // Gestion des erreurs spécifiques à docxtemplater
       if (error.properties && error.properties.errors instanceof Array) {
@@ -100,7 +101,7 @@ class DocxGeneratorService {
       const templateBuffer = await response.arrayBuffer()
       return this.generateFromTemplate(Buffer.from(templateBuffer), variables)
     } catch (error) {
-      console.error('[DocxGenerator] ❌ Erreur lors du téléchargement du template:', error)
+      logger.error('DocxGenerator - Erreur lors du téléchargement du template', error, { error: sanitizeError(error) })
       throw error
     }
   }
@@ -174,7 +175,7 @@ class DocxGeneratorService {
       }
       return format(date, 'd MMMM yyyy', { locale: fr })
     } catch (error) {
-      console.error('[DocxGenerator] Erreur de formatage de date:', error)
+      logger.error('DocxGenerator - Erreur de formatage de date', error, { error: sanitizeError(error) })
       return dateString
     }
   }

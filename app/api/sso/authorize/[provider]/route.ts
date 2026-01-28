@@ -6,7 +6,8 @@ export async function GET(
 ) {
   const { provider } = await params
   
-  // TODO: Implémenter l'autorisation SSO pour différents providers
+  // NOTE: Fonctionnalité prévue - Implémenter l'autorisation SSO
+  // Nécessite: Support de multiples providers (Google, Microsoft, etc.) avec OAuth2
   // (Google, Microsoft, Okta, etc.)
   
   return NextResponse.json(

@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { EmailTemplate } from './email-template.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type EmailSchedule = Database['public']['Tables']['email_schedules']['Row']
 type EmailScheduleInsert = Database['public']['Tables']['email_schedules']['Insert']
@@ -193,7 +194,7 @@ export class EmailScheduleService {
       .single()
 
     if (error) {
-      console.error('Error creating email schedule:', error)
+      logger.error('EmailScheduleService - Error creating email schedule', error, { error: sanitizeError(error) })
       throw error
     }
     return data

@@ -109,7 +109,7 @@ export function ActivityHeatmap({ activityData = [], weeks = 12 }: ActivityHeatm
                   transition={{
                     delay: (weekIndex * 7 + dayIndex) * 0.01,
                     duration: 0.3,
-                    ease: [0.16, 1, 0.3, 1],
+                    ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
                   }}
                   className="group relative"
                 >

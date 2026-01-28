@@ -52,20 +52,40 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => mockSupabase,
 }))
 
+// Créer la map en dehors du describe pour qu'elle persiste entre les tests
+const channelsMap = new Map<string, any>()
+
 describe('Workflow: Notifications', () => {
   let notificationService: NotificationService
 
   beforeEach(() => {
     vi.clearAllMocks()
     resetMockSupabase(mockSupabase)
+    
+    // Nettoyer la map avant chaque test
+    channelsMap.clear()
+    
     // Réappliquer les mocks pour channel et removeChannel
-    ;(mockSupabase as any).channel = vi.fn(() => ({
-      on: vi.fn(() => ({
-        subscribe: vi.fn(),
-      })),
-    }))
+    // Le service stocke le channel dans this.channels, donc on doit retourner le même objet pour chaque channelName
+    // IMPORTANT: Le channel retourné doit être le même objet que celui stocké dans le service
+    const channelFactory = vi.fn((channelName: string) => {
+      if (!channelsMap.has(channelName)) {
+        const channelMock: any = {
+          on: vi.fn(),
+          subscribe: vi.fn(),
+        }
+        // Permettre le chaînage de .on() - chaque appel à .on() retourne le channelMock
+        channelMock.on.mockReturnValue(channelMock)
+        // subscribe() retourne aussi le channelMock pour que le service puisse le stocker
+        channelMock.subscribe.mockReturnValue(channelMock)
+        channelsMap.set(channelName, channelMock)
+      }
+      return channelsMap.get(channelName)
+    })
+    ;(mockSupabase as any).channel = channelFactory
     ;(mockSupabase as any).removeChannel = vi.fn()
-    notificationService = new NotificationService()
+    
+    notificationService = new NotificationService(mockSupabase as any)
   })
 
   describe('Workflow complet de notification', () => {
@@ -113,26 +133,24 @@ describe('Workflow: Notifications', () => {
       const user_ids = ['user-1', 'user-2', 'user-3']
       const organization_id = 'org-1'
 
-      // Mock pour chaque création
-      user_ids.forEach(() => {
-        mockSupabase.rpc.mockResolvedValueOnce({
-          data: `notification-${Math.random()}`,
-          error: null,
-        })
-        mockSupabase.single.mockResolvedValueOnce({
-          data: {
-            id: `notification-${Math.random()}`,
-            user_id: user_ids[0],
-            organization_id,
-            type: 'info',
-            title: 'Test',
-            message: 'Message',
-            data: {},
-            created_at: new Date().toISOString(),
-          },
-          error: null,
-        })
-      })
+      // Le service fait: from('notifications').insert(...).select() qui retourne une promesse
+      const mockNotifications = user_ids.map((user_id, index) => ({
+        id: `notification-${index + 1}`,
+        user_id,
+        organization_id,
+        type: 'info',
+        title: 'Test',
+        message: 'Message',
+        data: {},
+        created_at: new Date().toISOString(),
+      }))
+
+      // Mock insert().select() qui retourne une promesse
+      const insertQueryBuilder: any = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: mockNotifications, error: null }),
+      }
+      mockSupabase.from.mockReturnValueOnce(insertQueryBuilder)
 
       const notifications = await notificationService.createForUsers(
         user_ids,
@@ -143,7 +161,7 @@ describe('Workflow: Notifications', () => {
       )
 
       expect(notifications).toHaveLength(3)
-      expect(mockSupabase.rpc).toHaveBeenCalledTimes(3)
+      expect(mockSupabase.from).toHaveBeenCalledWith('notifications')
     })
 
     it('devrait marquer une notification comme lue', async () => {
@@ -183,17 +201,19 @@ describe('Workflow: Notifications', () => {
       const userId = 'user-1'
       const count = 3
 
-      mockSupabase.rpc.mockResolvedValueOnce({
-        data: count,
-        error: null,
-      })
+      // Le service fait: from('notifications').select('*', { count: 'exact', head: true }).eq().is()
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ count, error: null }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValueOnce(queryBuilder)
 
       const result = await notificationService.getUnreadCount(userId)
 
       expect(result).toBe(count)
-      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_unread_notifications_count', {
-        p_user_id: userId,
-      })
+      expect(mockSupabase.from).toHaveBeenCalledWith('notifications')
     })
   })
 
@@ -212,10 +232,46 @@ describe('Workflow: Notifications', () => {
       const userId = 'user-1'
       const callback = vi.fn()
 
+      // S'abonner d'abord pour créer le channel
+      // Le service fait: channel().on().on().subscribe() puis stocke le channel dans this.channels
       notificationService.subscribeToNotifications(userId, callback)
+      
+      // Vérifier que le channel a été créé
+      expect(mockSupabase.channel).toHaveBeenCalledWith(`notifications:${userId}`)
+      
+      // Vérifier que le channel est bien stocké dans le service
+      const serviceChannels = (notificationService as any).channels
+      const channelName = `notifications:${userId}`
+      
+      // Le channel devrait être stocké après subscribe()
+      if (!serviceChannels.has(channelName)) {
+        // Si le channel n'est pas stocké, c'est que subscribe() n'a pas été appelé correctement
+        // Vérifier que subscribe() a été appelé
+        const expectedChannel = channelsMap.get(channelName)
+        if (expectedChannel) {
+          expect(expectedChannel.subscribe).toHaveBeenCalled()
+        }
+      }
+      
+      expect(serviceChannels.has(channelName)).toBe(true)
+      
+      // Récupérer le channel stocké
+      const storedChannel = serviceChannels.get(channelName)
+      expect(storedChannel).toBeDefined()
+      
+      // Vérifier que le channel stocké correspond à celui dans channelsMap
+      const expectedChannel = channelsMap.get(channelName)
+      expect(storedChannel).toBe(expectedChannel)
+      
+      // Se désabonner - le service vérifie si le channel existe dans this.channels
+      // et appelle removeChannel seulement s'il existe
       notificationService.unsubscribeFromNotifications(userId)
 
-      expect(mockSupabase.removeChannel).toHaveBeenCalled()
+      // Le service appelle removeChannel avec le channel stocké
+      expect(mockSupabase.removeChannel).toHaveBeenCalledWith(expectedChannel)
+      
+      // Vérifier que le channel a été supprimé de la map
+      expect(serviceChannels.has(channelName)).toBe(false)
     })
   })
 })

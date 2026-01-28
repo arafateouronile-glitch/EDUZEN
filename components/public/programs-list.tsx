@@ -1,10 +1,12 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { motion } from '@/components/ui/motion'
 import { Calendar, ArrowRight, BookOpen } from 'lucide-react'
 import { GlassCard } from '@/components/ui/glass-card'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { BRAND_COLORS } from '@/lib/config/app-config'
 
 type Program = TableRow<'programs'> & {
   formations?: Array<TableRow<'formations'> & {
@@ -17,7 +19,7 @@ interface PublicProgramsListProps {
   primaryColor?: string
 }
 
-export function PublicProgramsList({ programs, primaryColor = '#274472' }: PublicProgramsListProps) {
+export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.primary }: PublicProgramsListProps) {
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('fr-FR', {
       day: 'numeric',
@@ -48,11 +50,12 @@ export function PublicProgramsList({ programs, primaryColor = '#274472' }: Publi
             }}
             className="h-full"
           >
-            <GlassCard 
-              variant="premium"
-              hoverable
-              className="h-full flex flex-col p-0 overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-500 group bg-white"
-            >
+            <Link href={`/programmes/${program.id}`} className="block h-full">
+              <GlassCard 
+                variant="premium"
+                hoverable
+                className="h-full flex flex-col p-0 overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-500 group bg-white cursor-pointer"
+              >
               {/* Image de couverture avec effet de zoom au survol */}
               <div className="relative h-56 w-full overflow-hidden">
                 {program.public_image_url ? (
@@ -132,16 +135,7 @@ export function PublicProgramsList({ programs, primaryColor = '#274472' }: Publi
                   )}
 
                   {/* Bouton d'action */}
-                  <a
-                    href={`#programmes`}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      // Scroll vers la section programmes ou afficher plus d'infos
-                      // Pour l'instant, on scroll vers le haut de la section
-                      document.getElementById('programmes')?.scrollIntoView({ behavior: 'smooth' })
-                    }}
-                    className="group/btn block w-full"
-                  >
+                  <div className="group/btn block w-full">
                     <div 
                       className="relative w-full py-3.5 rounded-xl font-bold text-white text-center overflow-hidden transition-all duration-300 shadow-md group-hover/btn:shadow-lg hover:-translate-y-0.5"
                       style={{ backgroundColor: primaryColor }}
@@ -153,10 +147,11 @@ export function PublicProgramsList({ programs, primaryColor = '#274472' }: Publi
                       {/* Effet de brillance au survol du bouton */}
                       <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
                     </div>
-                  </a>
+                  </div>
                 </div>
               </div>
             </GlassCard>
+            </Link>
           </motion.div>
         )
       })}

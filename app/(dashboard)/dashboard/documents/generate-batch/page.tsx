@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
-import { documentService } from '@/lib/services/document.service'
+import { DocumentService } from '@/lib/services/document.service'
 import { generatePDFFromHTML } from '@/lib/utils/pdf-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { extractDocumentVariables, mapDocumentTypeToTemplateType } from '@/lib/utils/document-generation/variable-extractor'
@@ -19,6 +19,7 @@ import { useToast } from '@/components/ui/toast'
 import type { StudentWithRelations, SessionWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { createZipFromPDFs } from '@/lib/utils/pdf-generator'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Organization = TableRow<'organizations'>
 type Student = TableRow<'students'>
@@ -29,6 +30,9 @@ export default function GenerateBatchDocumentPage() {
   const { user } = useAuth()
   const supabase = createClient()
   const { addToast } = useToast()
+  
+  // Créer une instance du service avec le client côté client
+  const documentService = useMemo(() => new DocumentService(supabase), [supabase])
 
   const [documentType, setDocumentType] = useState<string>('attestation')
   const [selectedSessionId, setSelectedSessionId] = useState<string>('')
@@ -93,7 +97,7 @@ export default function GenerateBatchDocumentPage() {
         .eq('is_current', true)
         .maybeSingle()
       if (error) {
-        console.warn('Erreur lors de la récupération de l\'année académique:', error)
+        logger.warn('Erreur lors de la récupération de l\'année académique', sanitizeError(error))
         return null
       }
       return data || null
@@ -240,7 +244,7 @@ export default function GenerateBatchDocumentPage() {
             document.body.removeChild(tempDiv)
           }
         } catch (error) {
-          console.error(`Erreur lors de la génération pour ${student.first_name} ${student.last_name}:`, error)
+          logger.error(`Erreur lors de la génération pour ${student.first_name} ${student.last_name}:`, error)
           // Continuer avec les autres étudiants même en cas d'erreur
         }
       }
@@ -266,7 +270,7 @@ export default function GenerateBatchDocumentPage() {
         })
       }
     } catch (error) {
-      console.error('Erreur lors de la génération en masse:', error)
+      logger.error('Erreur lors de la génération en masse:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -373,7 +377,7 @@ export default function GenerateBatchDocumentPage() {
                       description: 'Le modèle a été dupliqué avec succès.',
                     })
                   } catch (error) {
-                    console.error('Erreur lors de la duplication:', error)
+                    logger.error('Erreur lors de la duplication:', error)
                     addToast({
                       type: 'error',
                       title: 'Erreur',

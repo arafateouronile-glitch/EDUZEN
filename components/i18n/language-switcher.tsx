@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter, usePathname } from '@/i18n/navigation'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,12 @@ export function LanguageSwitcher() {
   const router = useRouter()
   const pathname = usePathname()
   const [isChanging, setIsChanging] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Éviter l'erreur d'hydratation en ne rendant le DropdownMenu qu'après le montage côté client
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const currentLanguage = languages.find((lang) => lang.code === locale) || languages[0]
 
@@ -36,6 +42,22 @@ export function LanguageSwitcher() {
     setTimeout(() => {
       setIsChanging(false)
     }, 500)
+  }
+
+  // Rendre un bouton simple pendant le SSR pour éviter l'erreur d'hydratation
+  if (!mounted) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-2"
+        disabled
+      >
+        <Globe className="h-4 w-4" />
+        <span className="hidden sm:inline">{currentLanguage.flag} {currentLanguage.label}</span>
+        <span className="sm:hidden">{currentLanguage.flag}</span>
+      </Button>
+    )
   }
 
   return (

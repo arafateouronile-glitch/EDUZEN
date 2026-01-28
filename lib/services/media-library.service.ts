@@ -1,7 +1,12 @@
 /**
  * Service pour gérer la bibliothèque de médias
- * TODO: Implémenter le service de bibliothèque de médias
+ * 
+ * NOTE: Service non implémenté - Fonctionnalité prévue pour une future version
+ * Ce service permettra de gérer une bibliothèque centralisée de médias (images, documents, vidéos)
+ * avec upload, catégorisation, favoris, et gestion des permissions.
  */
+
+import { logger } from '@/lib/utils/logger'
 
 export type MediaItem = {
   id: string
@@ -23,43 +28,46 @@ export const mediaLibraryService = {
   /**
    * Récupère tous les médias d'une organisation
    */
+  /**
+   * Récupère tous les médias d'une organisation
+   * @deprecated Service non implémenté - Fonctionnalité prévue pour une future version
+   */
   async getAll(organizationId: string, filters?: Record<string, any>): Promise<MediaItem[]> {
-    // TODO: Implémenter la récupération des médias
-    console.warn('mediaLibraryService.getAll not implemented')
+    logger.warn('MediaLibraryService - getAll not implemented', { organizationId })
     return []
   },
   
   /**
    * Upload un fichier
+   * @deprecated Service non implémenté - Fonctionnalité prévue pour une future version
    */
   async uploadFile(file: File, organizationId: string, userId: string, options?: { category?: MediaCategory }): Promise<MediaItem | null> {
-    // TODO: Implémenter l'upload de fichier
-    console.warn('mediaLibraryService.uploadFile not implemented')
+    logger.warn('MediaLibraryService - uploadFile not implemented', { organizationId, userId })
     return null
   },
 
   /**
    * Obtient l'URL publique d'un fichier
+   * @deprecated Service non implémenté - Fonctionnalité prévue pour une future version
    */
   getPublicUrl(filePath: string): string {
-    // TODO: Implémenter getPublicUrl
-    console.warn('mediaLibraryService.getPublicUrl not implemented')
+    logger.warn('MediaLibraryService - getPublicUrl not implemented', { filePath })
     return filePath
   },
 
   /**
    * Toggle le statut favori d'un média
+   * @deprecated Service non implémenté - Fonctionnalité prévue pour une future version
    */
   async toggleFavorite(mediaId: string, isFavorite: boolean): Promise<void> {
-    // TODO: Implémenter toggleFavorite
-    console.warn('mediaLibraryService.toggleFavorite not implemented')
+    logger.warn('MediaLibraryService - toggleFavorite not implemented', { mediaId, isFavorite })
   },
 
   /**
    * Supprime un média
+   * @deprecated Service non implémenté - Fonctionnalité prévue pour une future version
    */
   async delete(mediaId: string): Promise<void> {
-    // TODO: Implémenter delete
-    console.warn('mediaLibraryService.delete not implemented')
+    logger.warn('MediaLibraryService - delete not implemented', { mediaId })
   },
 }

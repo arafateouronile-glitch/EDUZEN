@@ -2,6 +2,7 @@
  * HOF (Higher-Order Function) pour appliquer le rate limiting aux API routes
  */
 
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import { NextRequest, NextResponse } from 'next/server'
 import { applyRateLimit, RATE_LIMITS } from './rate-limit'
 
@@ -25,7 +26,7 @@ export function withRateLimit(
       try {
         userId = await getUserId(req)
       } catch (error) {
-        console.error('Error extracting user ID for rate limit:', error)
+        logger.error('Error extracting user ID for rate limit:', error)
       }
     }
 

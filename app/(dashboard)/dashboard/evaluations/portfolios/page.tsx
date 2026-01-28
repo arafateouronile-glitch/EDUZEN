@@ -18,6 +18,7 @@ import {
 import Link from 'next/link'
 import { motion } from '@/components/ui/motion'
 import { formatDate, cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function PortfoliosPage() {
   const { user } = useAuth()
@@ -27,14 +28,34 @@ export default function PortfoliosPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sessionFilter, setSessionFilter] = useState<string>('all')
 
+  const isTeacher = user?.role === 'teacher'
+
+  // Récupérer les sessions assignées à l'enseignant (pour les enseignants)
+  const { data: teacherSessionIds } = useQuery({
+    queryKey: ['teacher-session-ids-portfolios', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const { data, error } = await supabase
+        .from('session_teachers')
+        .select('session_id')
+        .eq('teacher_id', user.id)
+      if (error) {
+        logger.error('Erreur récupération sessions enseignant', sanitizeError(error))
+        return []
+      }
+      return data?.map((st: any) => st.session_id) || []
+    },
+    enabled: !!user?.id && isTeacher,
+  })
+
   // Récupérer les livrets
+  // Pour les enseignants, filtrer uniquement les livrets des sessions assignées
   const { data: portfolios, isLoading } = useQuery({
-    queryKey: ['learning-portfolios', user?.organization_id, statusFilter, sessionFilter],
+    queryKey: ['learning-portfolios', user?.organization_id, user?.id, isTeacher, teacherSessionIds, statusFilter, sessionFilter],
     queryFn: async () => {
       if (!user?.organization_id) return []
       
-      // Vérifier si la table existe
-      const { data, error } = await supabase
+      let query = supabase
         .from('learning_portfolios')
         .select(`
           *,
@@ -45,33 +66,66 @@ export default function PortfoliosPage() {
         .eq('organization_id', user.organization_id)
         .order('updated_at', { ascending: false })
 
-      if (error) {
-        if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
-          console.log('Table learning_portfolios n\'existe pas encore')
+      // Pour les enseignants, filtrer uniquement les livrets des sessions assignées
+      if (isTeacher) {
+        if (!teacherSessionIds || teacherSessionIds.length === 0) {
+          // Si l'enseignant n'a pas de sessions, retourner un tableau vide
           return []
         }
-        console.error('Erreur récupération portfolios:', error)
+        // Filtrer les livrets qui ont une session assignée à l'enseignant OU qui n'ont pas de session (livrets indépendants)
+        // Note: On garde les livrets sans session pour permettre à l'enseignant de voir ses propres livrets créés
+        query = query.or(`session_id.in.(${teacherSessionIds.join(',')}),session_id.is.null`)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+          logger.debug('Table learning_portfolios n\'existe pas encore')
+          return []
+        }
+        logger.error('Erreur récupération portfolios:', error)
         return []
       }
+      
+      // Pour les enseignants, filtrer aussi côté client pour s'assurer que seuls les livrets des sessions assignées sont inclus
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        return (data || []).filter((p: any) => 
+          !p.session_id || teacherSessionIds.includes(p.session_id)
+        )
+      }
+      
       return data || []
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les sessions pour le filtre
+  // Pour les enseignants, filtrer uniquement par leurs sessions assignées
   const { data: sessions } = useQuery({
-    queryKey: ['sessions-filter', user?.organization_id],
+    queryKey: ['sessions-filter-portfolios', user?.organization_id, isTeacher, teacherSessionIds],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('sessions')
         .select('id, name, formations!inner(organization_id)')
         .eq('formations.organization_id', user.organization_id)
         .order('start_date', { ascending: false })
+      
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner un tableau vide
+        return []
+      }
+      
+      const { data, error } = await query
       if (error) return []
       return data || []
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les templates
@@ -85,7 +139,7 @@ export default function PortfoliosPage() {
         .eq('organization_id', user.organization_id)
         .eq('is_active', true)
       if (error) {
-        console.log('Table learning_portfolio_templates n\'existe pas encore')
+        logger.debug('Table learning_portfolio_templates n\'existe pas encore')
         return []
       }
       return data || []
@@ -141,7 +195,7 @@ export default function PortfoliosPage() {
       y: 0,
       transition: { 
         duration: 0.5, 
-        ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number] as [number, number, number, number]
       }
     }
   }
@@ -222,7 +276,7 @@ export default function PortfoliosPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+              transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] as [number, number, number, number] }}
               className="flex items-center gap-4"
             >
               <motion.div
@@ -245,7 +299,7 @@ export default function PortfoliosPage() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+              transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] as [number, number, number, number] }}
               className="flex gap-3"
             >
               <Link href="/dashboard/evaluations/portfolios/templates">
@@ -553,128 +607,123 @@ export default function PortfoliosPage() {
               transition={{ delay: index * 0.05 }}
               whileHover={{ y: -8, scale: 1.02 }}
             >
-              <Link href={`/dashboard/evaluations/portfolios/${portfolio.id}`}>
-                <GlassCard variant="premium" className="relative overflow-hidden h-full border-2 border-gray-100/50 hover:border-brand-blue/30 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_60px_-15px_rgba(51,90,207,0.3)] cursor-pointer group">
-                  {/* Shine effect on hover */}
-                  <motion.div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100"
-                    initial={{ x: '-100%', y: '-100%' }}
-                    whileHover={{ x: '100%', y: '100%' }}
-                    transition={{ duration: 0.8, ease: "easeInOut" }}
-                    style={{
-                      background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
-                    }}
-                  />
+              <GlassCard variant="premium" className="relative overflow-hidden h-full border-2 border-gray-100/50 hover:border-brand-blue/30 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_60px_-15px_rgba(51,90,207,0.3)] cursor-pointer group">
+                {/* Shine effect on hover */}
+                <motion.div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                  initial={{ x: '-100%', y: '-100%' }}
+                  whileHover={{ x: '100%', y: '100%' }}
+                  transition={{ duration: 0.8, ease: "easeInOut" }}
+                  style={{
+                    background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
+                  }}
+                />
 
-                  <div className="relative z-10 p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <motion.div
-                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
-                          style={{ backgroundColor: portfolio.template?.primary_color || '#335ACF' }}
-                          whileHover={{ scale: 1.1, rotate: 5 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                        >
-                          {portfolio.student?.first_name?.[0]}{portfolio.student?.last_name?.[0]}
-                        </motion.div>
-                        <div>
-                          <h3 className="font-bold text-gray-900 group-hover:text-brand-blue transition-colors">
-                            {portfolio.student?.first_name} {portfolio.student?.last_name}
-                          </h3>
-                          <p className="text-sm text-gray-600 font-medium">
-                            {portfolio.template?.name}
-                          </p>
-                        </div>
-                      </div>
-                      <motion.div whileHover={{ scale: 1.05 }}>
-                        {getStatusBadge(portfolio.status)}
-                      </motion.div>
-                    </div>
-
-                    {portfolio.session && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 bg-gray-50 rounded-lg p-3">
-                        <Calendar className="h-4 w-4 text-brand-blue" />
-                        <span className="font-medium">{portfolio.session.name}</span>
-                      </div>
-                    )}
-
-                    {/* Barre de progression premium */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between text-sm font-bold text-gray-700 mb-2">
-                        <span>Progression</span>
-                        <motion.span
-                          className="text-brand-blue"
-                          whileHover={{ scale: 1.1 }}
-                        >
-                          {Math.round(portfolio.progress_percentage || 0)}%
-                        </motion.span>
-                      </div>
-                      <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-                        <motion.div
-                          className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan shadow-lg"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${portfolio.progress_percentage || 0}%` }}
-                          transition={{ duration: 0.8, ease: "easeOut" }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-xs text-gray-500 font-medium mb-4">
-                      <span>Modifié le {formatDate(portfolio.updated_at)}</span>
-                      {portfolio.is_visible_to_student && (
-                        <motion.span
-                          className="flex items-center gap-1 text-green-600 font-bold"
-                          whileHover={{ scale: 1.05 }}
-                        >
-                          <Eye className="h-3 w-3" />
-                          Visible
-                        </motion.span>
-                      )}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
+                <div className="relative z-10 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
                       <motion.div
-                        className="flex-1"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        <Link href={`/dashboard/evaluations/portfolios/${portfolio.id}`} className="block">
-                          <Button variant="outline" size="sm" className="w-full border-2 hover:border-brand-blue hover:text-brand-blue font-bold">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Modifier
-                          </Button>
-                        </Link>
-                      </motion.div>
-                      <motion.div
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
+                        style={{ backgroundColor: portfolio.template?.primary_color || '#335ACF' }}
                         whileHover={{ scale: 1.1, rotate: 5 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={(e) => e.preventDefault()}
+                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
                       >
-                        <Link href={`/dashboard/evaluations/portfolios/${portfolio.id}/preview`}>
-                          <Button variant="ghost" size="sm" className="hover:bg-brand-blue/10 hover:text-brand-blue">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        {portfolio.student?.first_name?.[0]}{portfolio.student?.last_name?.[0]}
                       </motion.div>
-                      {portfolio.pdf_url && (
-                        <motion.div
-                          whileHover={{ scale: 1.1, rotate: -5 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={(e) => e.preventDefault()}
-                        >
-                          <a href={portfolio.pdf_url} target="_blank" rel="noopener noreferrer">
-                            <Button variant="ghost" size="sm" className="hover:bg-green-50 hover:text-green-600">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </a>
-                        </motion.div>
-                      )}
+                      <div>
+                        <h3 className="font-bold text-gray-900 group-hover:text-brand-blue transition-colors">
+                          {portfolio.student?.first_name} {portfolio.student?.last_name}
+                        </h3>
+                        <p className="text-sm text-gray-600 font-medium">
+                          {portfolio.template?.name}
+                        </p>
+                      </div>
+                    </div>
+                    <motion.div whileHover={{ scale: 1.05 }}>
+                      {getStatusBadge(portfolio.status)}
+                    </motion.div>
+                  </div>
+
+                  {portfolio.session && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-4 bg-gray-50 rounded-lg p-3">
+                      <Calendar className="h-4 w-4 text-brand-blue" />
+                      <span className="font-medium">{portfolio.session.name}</span>
+                    </div>
+                  )}
+
+                  {/* Barre de progression premium */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-sm font-bold text-gray-700 mb-2">
+                      <span>Progression</span>
+                      <motion.span
+                        className="text-brand-blue"
+                        whileHover={{ scale: 1.1 }}
+                      >
+                        {Math.round(portfolio.progress_percentage || 0)}%
+                      </motion.span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan shadow-lg"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${portfolio.progress_percentage || 0}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                      />
                     </div>
                   </div>
-                </GlassCard>
-              </Link>
+
+                  <div className="flex items-center justify-between text-xs text-gray-500 font-medium mb-4">
+                    <span>Modifié le {formatDate(portfolio.updated_at)}</span>
+                    {portfolio.is_visible_to_student && (
+                      <motion.span
+                        className="flex items-center gap-1 text-green-600 font-bold"
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        <Eye className="h-3 w-3" />
+                        Visible
+                      </motion.span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
+                    <motion.div
+                      className="flex-1"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Link href={`/dashboard/evaluations/portfolios/${portfolio.id}`} className="block">
+                        <Button variant="outline" size="sm" className="w-full border-2 hover:border-brand-blue hover:text-brand-blue font-bold">
+                          <Edit className="h-4 w-4 mr-1" />
+                          Modifier
+                        </Button>
+                      </Link>
+                    </motion.div>
+                    <motion.div
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Link href={`/dashboard/evaluations/portfolios/${portfolio.id}/preview`}>
+                        <Button variant="ghost" size="sm" className="hover:bg-brand-blue/10 hover:text-brand-blue">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </motion.div>
+                    {portfolio.pdf_url && (
+                      <motion.div
+                        whileHover={{ scale: 1.1, rotate: -5 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <a href={portfolio.pdf_url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="ghost" size="sm" className="hover:bg-green-50 hover:text-green-600">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </GlassCard>
             </motion.div>
           ))}
         </div>

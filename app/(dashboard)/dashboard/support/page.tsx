@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function SupportPage() {
   const { user } = useAuth()
@@ -64,7 +65,7 @@ export default function SupportPage() {
           error?.message?.includes('does not exist') ||
           error?.message?.includes('schema cache')
         ) {
-          console.warn('Error fetching support categories:', error?.message)
+          logger.warn('Error fetching support categories:', error?.message)
           return []
         }
         throw error
@@ -107,7 +108,7 @@ export default function SupportPage() {
         ) {
           // Ne pas logger en mode production pour éviter le bruit dans la console
           if (process.env.NODE_ENV === 'development') {
-            console.warn('Error fetching support tickets:', error?.message)
+            logger.warn('Error fetching support tickets:', error?.message)
           }
           return []
         }
@@ -212,8 +213,8 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="mb-8">
+    <div className="w-full p-4">
+      <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Support client</h1>
@@ -354,12 +355,12 @@ export default function SupportPage() {
 
       {/* Liste des tickets */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3 pt-4">
           <CardTitle>Mes tickets</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 pb-4">
           {tickets && tickets.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {tickets.map((ticket: any) => (
                 <Link
                   key={ticket.id}
@@ -408,7 +409,7 @@ export default function SupportPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground">
               Aucun ticket trouvé
             </div>
           )}

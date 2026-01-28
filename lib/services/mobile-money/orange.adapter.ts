@@ -1,7 +1,10 @@
 import type { MobileMoneyAdapter, MobileMoneyConfig, InitiatePaymentRequest, InitiatePaymentResponse, PaymentStatusResponse, WebhookPayload } from './mobile-money.types'
 
 /**
- * TODO: Implémenter Orange Money adapter
+ * Adapter Orange Money
+ * 
+ * NOTE: Adapter non implémenté - Fonctionnalité prévue pour une future version
+ * Nécessite intégration avec l'API Orange Money (credentials API, endpoints de paiement)
  * Adapter stub pour permettre le build
  */
 export class OrangeAdapter implements MobileMoneyAdapter {

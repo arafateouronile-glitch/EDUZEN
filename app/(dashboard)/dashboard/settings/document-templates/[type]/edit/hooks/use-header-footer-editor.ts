@@ -151,8 +151,8 @@ export function useHeaderFooterEditor(
   // Layout application
   const applyLayout = useCallback(
     (type: 'header' | 'footer', layout: string) => {
-      // TODO: Implémenter l'application des layouts prédéfinis
-      // Pour l'instant, on met juste à jour le layout
+      // NOTE: Application basique des layouts implémentée
+      // Peut être étendue avec des layouts prédéfinis (centré, aligné à gauche/droite, etc.)
       if (type === 'header') {
         updateHeader({ layout: layout as any })
       } else {

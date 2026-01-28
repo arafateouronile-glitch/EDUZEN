@@ -57,7 +57,7 @@ export function ProgressBar({
           animate={{ width: `${clampedProgress}%` }}
           transition={{
             duration: animated ? 1 : 0,
-            ease: [0.16, 1, 0.3, 1],
+            ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
           }}
         />
       </div>

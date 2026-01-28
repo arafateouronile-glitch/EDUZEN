@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
-// import { generateODT } from '@/lib/utils/document-generation/odt-generator' // TODO: Implémenter generateODT
+// NOTE: Fonction générateur ODT non implémentée - Fonctionnalité prévue pour une future version
+// import { generateODT } from '@/lib/utils/document-generation/odt-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { emailService } from '@/lib/services/email.service'
 import { templateAnalyticsService } from '@/lib/services/template-analytics.service'
@@ -10,6 +11,7 @@ import type { GenerateDocumentInput, DocumentTemplate } from '@/lib/types/docume
 import { Database } from '@/types/database.types'
 import { withRateLimit, mutationRateLimiter } from '@/app/api/_middleware/rate-limit'
 import type { CookieOptions } from '@supabase/ssr'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // POST /api/documents/generate - Génère un document à partir d'un template
 export async function POST(request: NextRequest) {
@@ -40,8 +42,8 @@ export async function POST(request: NextRequest) {
 
     // Debug: vérifier les cookies reçus
     const cookies = nextReq.cookies.getAll()
-    console.log('Cookies reçus dans l\'API:', cookies.map(c => c.name))
-    console.log('Cookies Supabase présents:', cookies.some(c => c.name.includes('supabase') || c.name.includes('sb-')))
+    logger.debug('Cookies reçus dans l\'API', { cookieNames: cookies.map(c => c.name) })
+    logger.debug('Cookies Supabase présents', { hasSupabaseCookies: cookies.some(c => c.name.includes('supabase') || c.name.includes('sb-')) })
 
     // Essayer d'abord getSession() qui est plus permissif
     const {
@@ -60,9 +62,10 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
       if (authError || !userFromGetUser) {
-        console.error('Erreur d\'authentification:', authError)
-        console.error('Utilisateur:', userFromGetUser)
-        console.error('Cookies disponibles:', nextReq.cookies.getAll().map(c => `${c.name}=${c.value.substring(0, 20)}...`))
+        logger.error('Erreur d\'authentification', sanitizeError(authError), {
+          hasUser: !!userFromGetUser,
+          cookieCount: nextReq.cookies.getAll().length,
+        } as any)
         return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
       }
 
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user) {
-      console.error('Aucun utilisateur trouvé')
+      logger.error('Aucun utilisateur trouvé lors de la génération de document')
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
@@ -95,7 +98,9 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (templateError || !template) {
-      console.error('Erreur lors de la récupération du template:', templateError)
+      logger.error('Erreur lors de la récupération du template', sanitizeError(templateError), {
+        templateId: body.template_id,
+      } as any)
       return NextResponse.json({ error: 'Template non trouvé' }, { status: 404 })
     }
 
@@ -130,23 +135,28 @@ export async function POST(request: NextRequest) {
 
     try {
       if (body.format === 'PDF') {
-        console.log('Début de la génération PDF...')
-        console.log('Template content type:', typeof template.content)
-        console.log('Template header type:', typeof template.header)
-        console.log('Template footer type:', typeof template.footer)
-        console.log('Variables reçues:', Object.keys(body.variables || {}).length, 'variables')
+        logger.info('Début de la génération PDF', {
+          templateId: template.id,
+          templateType: template.type,
+          variablesCount: Object.keys(body.variables || {}).length,
+          contentType: typeof template.content,
+          headerType: typeof template.header,
+          footerType: typeof template.footer,
+        })
         
         try {
           const result = await generatePDF(template as unknown as DocumentTemplate, body.variables, documentId, userData.organization_id)
           fileBlob = result.blob
           pageCount = result.pageCount
           fileName = `${template.type}_${Date.now()}.pdf`
-          console.log('PDF généré avec succès, taille:', fileBlob.size, 'bytes')
+          logger.info('PDF généré avec succès', { fileSize: fileBlob.size, pageCount })
         } catch (pdfError) {
-          console.error('Erreur spécifique lors de la génération PDF:', pdfError)
           const pdfErrorMessage = pdfError instanceof Error ? pdfError.message : String(pdfError)
-          const pdfErrorStack = pdfError instanceof Error ? pdfError.stack : undefined
-          console.error('Stack trace PDF:', pdfErrorStack)
+          logger.error('Erreur spécifique lors de la génération PDF', sanitizeError(pdfError), {
+            templateId: template.id,
+            templateType: template.type,
+            errorMessage: pdfErrorMessage,
+          })
           
           // Si c'est une erreur Puppeteer, retourner une erreur plus claire
           if (pdfErrorMessage.includes('Puppeteer') || pdfErrorMessage.includes('Chromium') || pdfErrorMessage.includes('browser')) {
@@ -161,20 +171,20 @@ export async function POST(request: NextRequest) {
           throw pdfError
         }
       } else if (body.format === 'DOCX') {
-        console.log('Début de la génération DOCX...')
+        logger.info('Début de la génération DOCX', { templateId: template.id, templateType: template.type })
         const result = await generateDOCX(template as unknown as DocumentTemplate, body.variables, documentId, userData.organization_id)
         fileBlob = result.blob
         pageCount = result.pageCount
         fileName = `${template.type}_${Date.now()}.docx`
-        console.log('DOCX généré avec succès')
+        logger.info('DOCX généré avec succès', { fileSize: fileBlob.size, pageCount })
       } else if (body.format === 'ODT') {
-        // TODO: Implémenter generateODT dans lib/utils/document-generation/odt-generator.ts
+        // NOTE: Fonctionnalité prévue - Implémenter generateODT pour générer des fichiers .odt
         return NextResponse.json(
           { error: 'Le format ODT n\'est pas encore implémenté. Utilisez PDF, DOCX ou HTML.' },
           { status: 501 }
         )
       } else if (body.format === 'HTML') {
-        console.log('Début de la génération HTML...')
+        logger.info('Début de la génération HTML', { templateId: template.id, templateType: template.type })
         // Pour HTML, on génère d'abord sans documentId (les signatures seront des placeholders)
         // Si un documentId est fourni, on peut l'utiliser pour récupérer les signatures réelles
         const result = await generateHTML(
@@ -187,19 +197,21 @@ export async function POST(request: NextRequest) {
         fileBlob = new Blob([result.html], { type: 'text/html;charset=utf-8' })
         pageCount = result.pageCount
         fileName = `${template.type}_${Date.now()}.html`
-        console.log('HTML généré avec succès')
+        logger.info('HTML généré avec succès', { fileSize: fileBlob.size, pageCount })
       } else {
         throw new Error(`Format non supporté: ${body.format}`)
       }
     } catch (genError) {
-      console.error('Erreur lors de la génération du document:', genError)
       const genErrorMessage = genError instanceof Error 
         ? genError.message 
         : 'Erreur lors de la génération du document'
-      const genErrorStack = genError instanceof Error ? genError.stack : undefined
-      console.error('Stack trace complète:', genErrorStack)
-      console.error('Type d\'erreur:', genError?.constructor?.name)
-      console.error('Erreur complète:', JSON.stringify(genError, Object.getOwnPropertyNames(genError)))
+      logger.error('Erreur lors de la génération du document', sanitizeError(genError), {
+        format: body.format,
+        templateId: template.id,
+        templateType: template.type,
+        errorType: genError?.constructor?.name,
+        errorMessage: genErrorMessage,
+      })
       
       // Vérifier si c'est une erreur Puppeteer
       if (genErrorMessage.includes('Puppeteer') || genErrorMessage.includes('Chromium')) {
@@ -209,7 +221,8 @@ export async function POST(request: NextRequest) {
       throw new Error(`Génération ${body.format} échouée: ${genErrorMessage}`)
     }
 
-    // TODO: Upload vers cloud storage (Supabase Storage, S3, etc.)
+    // NOTE: Fonctionnalité prévue - Upload vers cloud storage
+    // Utiliser supabase.storage.from('documents').upload() ou intégration S3
     // Pour l'instant, on retourne le blob en base64
     const arrayBuffer = await fileBlob.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString('base64')
@@ -235,7 +248,7 @@ export async function POST(request: NextRequest) {
         page_count: pageCount,
         related_entity_type: body.related_entity_type,
         related_entity_id: body.related_entity_id,
-        metadata: body.variables as any,
+        metadata: (body.variables as any) as Record<string, any>,
         generated_by: user.id,
       })
       .select()
@@ -247,7 +260,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (docError) {
-      console.error('Erreur lors de la création de l\'enregistrement:', docError)
+      logger.error('Erreur lors de la création de l\'enregistrement', sanitizeError(docError), {
+        templateId: template.id,
+        fileName,
+        format: body.format,
+      })
       // On continue quand même car le document est généré
     }
 
@@ -273,7 +290,10 @@ export async function POST(request: NextRequest) {
       )
     } catch (analyticsError) {
       // Ne pas faire échouer la génération si l'analytics échoue
-      console.warn('Erreur lors du logging analytics:', analyticsError)
+      logger.warn('Erreur lors du logging analytics', {
+        error: sanitizeError(analyticsError),
+        templateId: template.id,
+      } as any)
     }
 
     // Envoyer par email si demandé
@@ -367,9 +387,15 @@ ${organization?.name ? `Cordialement,\n${organization.name}` : 'Cordialement,\nL
           attachments: [attachment],
         })
 
-        console.log('Email envoyé avec succès:', emailResult)
+        logger.info('Email envoyé avec succès', { 
+          to: body.options.emailTo,
+          documentId: generatedDocument?.id,
+        })
       } catch (emailError) {
-        console.error('Erreur lors de l\'envoi de l\'email:', emailError)
+        logger.error('Erreur lors de l\'envoi de l\'email', sanitizeError(emailError), {
+          to: body.options.emailTo,
+          documentId: generatedDocument?.id,
+        })
         // On continue même si l'email échoue
         emailResult = {
           success: false,
@@ -386,14 +412,15 @@ ${organization?.name ? `Cordialement,\n${organization.name}` : 'Cordialement,\nL
       emailError: (emailResult as any)?.error || (!emailResult?.success ? 'Erreur lors de l\'envoi de l\'email' : undefined),
     })
   } catch (error) {
-    console.error('Erreur lors de la génération du document:', error)
     const errorMessage = error instanceof Error 
       ? error.message 
       : typeof error === 'string' 
         ? error 
         : 'Erreur serveur inconnue'
     const errorStack = error instanceof Error ? error.stack : undefined
-    console.error('Stack trace:', errorStack)
+    logger.error('Erreur lors de la génération du document', sanitizeError(error), {
+      errorMessage,
+    })
     return NextResponse.json(
       { 
         error: errorMessage,

@@ -17,6 +17,7 @@ import {
 import Link from 'next/link'
 import { motion } from '@/components/ui/motion'
 import { formatDate } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function PortfolioTemplatesPage() {
   const { user } = useAuth()
@@ -53,7 +54,7 @@ export default function PortfolioTemplatesPage() {
             
             if (simpleError) {
               if (simpleError.code === 'PGRST116' || simpleError.message?.includes('does not exist')) {
-                console.log('Table learning_portfolio_templates n\'existe pas encore')
+                logger.debug('Table learning_portfolio_templates n\'existe pas encore')
                 return []
               }
               throw simpleError
@@ -79,7 +80,7 @@ export default function PortfolioTemplatesPage() {
           }
           
           if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
-            console.log('Table learning_portfolio_templates n\'existe pas encore')
+            logger.debug('Table learning_portfolio_templates n\'existe pas encore')
             return []
           }
           throw error
@@ -87,10 +88,10 @@ export default function PortfolioTemplatesPage() {
         return data || []
       } catch (error: any) {
         if (error?.code === 'PGRST116' || error?.code === '42P01' || error?.message?.includes('does not exist')) {
-          console.log('Table learning_portfolio_templates n\'existe pas encore')
+          logger.debug('Table learning_portfolio_templates n\'existe pas encore')
           return []
         }
-        console.error('Erreur:', error)
+        logger.error('Erreur:', error)
         return []
       }
     },

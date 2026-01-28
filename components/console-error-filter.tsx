@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * Filtre les erreurs de console provenant d'extensions de navigateur

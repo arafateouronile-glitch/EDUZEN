@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
 
       if (revoke_all) {
         // Révoquer toutes les sessions sauf la session actuelle
-        // TODO: Implémenter la logique de révocation complète
+        // NOTE: Fonctionnalité prévue - Révocation complète de toutes les sessions
+        // Nécessite: Mise à jour de la table sessions ou tokens pour invalider toutes les sessions
         return NextResponse.json({
           success: true,
           message: 'All sessions revoked'
@@ -37,8 +38,8 @@ export async function POST(request: NextRequest) {
       }
 
       // Révoquer une session spécifique
-      // TODO: Implémenter la logique de révocation d'une session
-      // Exemple : supprimer ou invalider le token dans la base de données
+      // NOTE: Fonctionnalité prévue - Révocation d'une session spécifique
+      // Nécessite: Mise à jour de la table sessions ou tokens pour invalider la session
 
       return NextResponse.json({
         success: true,

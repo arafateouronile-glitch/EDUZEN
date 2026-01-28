@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Course = TableRow<'courses'>
 type Lesson = TableRow<'lessons'>
@@ -73,7 +74,7 @@ export class ELearningService {
           error.message?.includes('does not exist') ||
           error.message?.includes('schema cache')
         ) {
-          console.warn('Table courses does not exist yet or invalid query:', error.message)
+          logger.warn('ELearningService - Table courses does not exist yet or invalid query', { errorMessage: error.message })
           return []
         }
         throw error
@@ -93,7 +94,7 @@ export class ELearningService {
         errorObj?.message?.includes('does not exist') ||
         errorObj?.message?.includes('schema cache')
       ) {
-        console.warn('Table courses does not exist yet or invalid query:', errorObj?.message || String(error))
+        logger.warn('ELearningService - Table courses does not exist yet or invalid query', { errorMessage: errorObj?.message || String(error) })
         return []
       }
       throw error
@@ -130,7 +131,7 @@ export class ELearningService {
           error.message?.includes('does not exist') ||
           error.message?.includes('schema cache')
         ) {
-          console.warn('Table courses or relations do not exist yet or invalid query:', error.message)
+          logger.warn('ELearningService - Table courses or relations do not exist yet or invalid query', { errorMessage: error.message })
           return null
         }
         throw error
@@ -150,7 +151,7 @@ export class ELearningService {
         errorObj?.message?.includes('does not exist') ||
         errorObj?.message?.includes('schema cache')
       ) {
-        console.warn('Table courses or relations do not exist yet or invalid query:', errorObj?.message)
+        logger.warn('ELearningService - Table courses or relations do not exist yet or invalid query', { errorMessage: errorObj?.message })
         return null
       }
       throw error
@@ -383,7 +384,7 @@ export class ELearningService {
           error.message?.includes('does not exist') ||
           error.message?.includes('schema cache')
         ) {
-          console.warn('Table course_enrollments does not exist yet or invalid query:', error.message)
+          logger.warn('ELearningService - Table course_enrollments does not exist yet or invalid query', { errorMessage: error.message })
           return []
         }
         throw error
@@ -403,7 +404,7 @@ export class ELearningService {
         errorObj?.message?.includes('does not exist') ||
         errorObj?.message?.includes('schema cache')
       ) {
-        console.warn('Table course_enrollments does not exist yet or invalid query:', errorObj?.message || String(error))
+        logger.warn('ELearningService - Table course_enrollments does not exist yet or invalid query', { errorMessage: errorObj?.message || String(error) })
         return []
       }
       throw error
@@ -720,7 +721,8 @@ export class ELearningService {
 
     if (error) throw error
 
-    // TODO: Générer le PDF du certificat et uploader vers Supabase Storage
+    // NOTE: Fonctionnalité prévue - Générer le PDF du certificat et uploader vers Supabase Storage
+    // Utiliser PDFGenerator ou un service de génération de certificats
     // Pour l'instant, on retourne juste l'enregistrement
 
     return data

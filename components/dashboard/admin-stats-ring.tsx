@@ -36,16 +36,24 @@ export function AdminStatsRing({
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (progress / 100) * circumference
 
+  const progressLabel = `${label}${sublabel ? ` ${sublabel}` : ''}: ${value} sur ${max} (${Math.round(percentage)}%)`
+
   return (
     <div className="flex flex-col items-center gap-3">
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
         className="relative"
         style={{ width: size, height: size }}
       >
-        <svg width={size} height={size} className="transform -rotate-90">
+        <svg 
+          width={size} 
+          height={size} 
+          className="transform -rotate-90"
+          role="img"
+          aria-label={progressLabel}
+        >
           {/* Glow filter */}
           <defs>
             <filter id={`glow-${label}`} x="-50%" y="-50%" width="200%" height="200%">
@@ -81,10 +89,15 @@ export function AdminStatsRing({
             strokeDashoffset={offset}
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             style={{
               filter: `drop-shadow(0 0 8px ${color}40)`,
             }}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={max}
+            aria-valuenow={value}
+            aria-label={progressLabel}
           />
         </svg>
 
@@ -93,7 +106,7 @@ export function AdminStatsRing({
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.5, delay: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="text-center"
           >
             <div className="text-4xl font-display font-bold text-gray-900 mb-1 tracking-tighter">{value}</div>

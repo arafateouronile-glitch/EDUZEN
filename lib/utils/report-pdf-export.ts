@@ -2,6 +2,7 @@
  * Utilitaires pour exporter les rapports en PDF
  */
 
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import { jsPDF } from 'jspdf'
 import { formatDate, formatCurrency } from '@/lib/utils/format'
 
@@ -60,7 +61,7 @@ export async function generateReportPDF(data: ReportData): Promise<Blob> {
       // Si le logo est une URL, on pourrait l'inclure
       // Pour l'instant, on passe cette partie
     } catch (error) {
-      console.warn('Impossible de charger le logo:', error)
+      logger.warn('Impossible de charger le logo', { error })
     }
   }
 
@@ -236,7 +237,7 @@ export async function downloadReportPDF(
       })
     } catch (error) {
       // Ne pas bloquer l'export si l'enregistrement de l'historique échoue
-      console.warn('Erreur lors de l\'enregistrement de l\'historique d\'export:', error)
+      logger.warn('Erreur lors de l\'enregistrement de l\'historique d\'export', { error })
     }
   }
 }

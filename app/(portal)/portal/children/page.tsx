@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { User, Calendar, ClipboardList, BookOpen, CreditCard } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { StudentWithRelations } from '@/lib/types/query-types'
 
 export default function ChildrenPage() {
@@ -66,9 +67,11 @@ export default function ChildrenPage() {
               <CardHeader>
                 <div className="flex items-center space-x-4">
                   {child.photo_url ? (
-                    <img
+                    <Image
                       src={child.photo_url}
                       alt={`${child.first_name} ${child.last_name}`}
+                      width={80}
+                      height={80}
                       className="h-20 w-20 rounded-full object-cover"
                     />
                   ) : (

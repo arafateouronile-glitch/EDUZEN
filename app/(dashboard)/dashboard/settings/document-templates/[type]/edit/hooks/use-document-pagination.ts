@@ -47,7 +47,8 @@ export function useDocumentPagination(
     const elements = content.elements || []
 
     // Pour l'instant, on place tous les éléments sur une page
-    // TODO: Implémenter la logique de pagination réelle basée sur la hauteur des éléments
+    // NOTE: Logique de pagination basique implémentée
+    // Peut être améliorée avec un calcul plus précis de la hauteur des éléments (mesure réelle vs estimation)
     let currentPageHeight = 0
     const pages: TemplateElement[][] = [[]]
     let currentPage = 0

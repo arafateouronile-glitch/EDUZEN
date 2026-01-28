@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Types pour les livrets d'apprentissage
 export interface TemplateField {
@@ -110,7 +111,7 @@ class LearningPortfolioService {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Erreur récupération templates:', error)
+      logger.error('LearningPortfolio - Erreur récupération templates', error, { error: sanitizeError(error) })
       return []
     }
     return data || []
@@ -124,7 +125,7 @@ class LearningPortfolioService {
       .single()
 
     if (error) {
-      console.error('Erreur récupération template:', error)
+      logger.error('LearningPortfolio - Erreur récupération template', error, { error: sanitizeError(error) })
       return null
     }
     return data
@@ -138,7 +139,7 @@ class LearningPortfolioService {
       .single()
 
     if (error) {
-      console.error('Erreur création template:', error)
+      logger.error('LearningPortfolio - Erreur création template', error, { error: sanitizeError(error) })
       throw error
     }
     return data
@@ -153,7 +154,7 @@ class LearningPortfolioService {
       .single()
 
     if (error) {
-      console.error('Erreur mise à jour template:', error)
+      logger.error('LearningPortfolio - Erreur mise à jour template', error, { error: sanitizeError(error) })
       throw error
     }
     return data
@@ -166,7 +167,7 @@ class LearningPortfolioService {
       .eq('id', id)
 
     if (error) {
-      console.error('Erreur suppression template:', error)
+      logger.error('LearningPortfolio - Erreur suppression template', error, { error: sanitizeError(error) })
       return false
     }
     return true
@@ -209,7 +210,7 @@ class LearningPortfolioService {
     const { data, error } = await query
 
     if (error) {
-      console.error('Erreur récupération portfolios:', error)
+      logger.error('LearningPortfolio - Erreur récupération portfolios', error, { error: sanitizeError(error) })
       return []
     }
     return data || []
@@ -228,7 +229,7 @@ class LearningPortfolioService {
       .single()
 
     if (error) {
-      console.error('Erreur récupération portfolio:', error)
+      logger.error('LearningPortfolio - Erreur récupération portfolio', error, { error: sanitizeError(error) })
       return null
     }
     return data
@@ -247,7 +248,7 @@ class LearningPortfolioService {
       .order('updated_at', { ascending: false })
 
     if (error) {
-      console.error('Erreur récupération portfolios étudiant:', error)
+      logger.error('LearningPortfolio - Erreur récupération portfolios étudiant', error, { error: sanitizeError(error) })
       return []
     }
     return data || []
@@ -266,7 +267,7 @@ class LearningPortfolioService {
       .single()
 
     if (error) {
-      console.error('Erreur création portfolio:', error)
+      logger.error('LearningPortfolio - Erreur création portfolio', error, { error: sanitizeError(error) })
       throw error
     }
     return data
@@ -284,7 +285,7 @@ class LearningPortfolioService {
       .single()
 
     if (error) {
-      console.error('Erreur mise à jour portfolio:', error)
+      logger.error('LearningPortfolio - Erreur mise à jour portfolio', error, { error: sanitizeError(error) })
       throw error
     }
     return data
@@ -304,7 +305,7 @@ class LearningPortfolioService {
       .single()
 
     if (error) {
-      console.error('Erreur validation portfolio:', error)
+      logger.error('LearningPortfolio - Erreur validation portfolio', error, { error: sanitizeError(error) })
       throw error
     }
     return data
@@ -322,7 +323,7 @@ class LearningPortfolioService {
       .order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Erreur récupération entries:', error)
+      logger.error('LearningPortfolio - Erreur récupération entries', error, { error: sanitizeError(error) })
       return []
     }
     return data || []
@@ -344,7 +345,7 @@ class LearningPortfolioService {
       .single()
 
     if (error) {
-      console.error('Erreur upsert entry:', error)
+      logger.error('LearningPortfolio - Erreur upsert entry', error, { error: sanitizeError(error) })
       throw error
     }
     return data
@@ -364,7 +365,7 @@ class LearningPortfolioService {
       )
 
     if (error) {
-      console.error('Erreur bulk upsert entries:', error)
+      logger.error('LearningPortfolio - Erreur bulk upsert entries', error, { error: sanitizeError(error) })
       throw error
     }
     return true
@@ -390,7 +391,7 @@ class LearningPortfolioService {
       })
 
     if (error) {
-      console.error('Erreur ajout signature:', error)
+      logger.error('LearningPortfolio - Erreur ajout signature', error, { error: sanitizeError(error) })
       throw error
     }
     return true
@@ -404,7 +405,7 @@ class LearningPortfolioService {
       .order('signed_at', { ascending: true })
 
     if (error) {
-      console.error('Erreur récupération signatures:', error)
+      logger.error('LearningPortfolio - Erreur récupération signatures', error, { error: sanitizeError(error) })
       return []
     }
     return data || []

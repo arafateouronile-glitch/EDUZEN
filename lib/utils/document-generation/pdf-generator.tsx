@@ -9,6 +9,7 @@ import { Document, Page, View, Text, Image, StyleSheet, pdf, renderToStream } fr
 import type { DocumentTemplate, DocumentVariables, TemplateElement } from '@/lib/types/document-templates'
 import puppeteer from 'puppeteer'
 import { generateHTML } from './html-generator'
+import { logger } from '@/lib/utils/logger'
 
 export interface PDFGenerationResult {
   blob: Blob
@@ -112,7 +113,7 @@ export async function generatePDF(
       try {
         return await generatePDFFromHTML(template, variables, documentId, organizationId)
       } catch (puppeteerError) {
-        console.error('Erreur Puppeteer:', puppeteerError)
+        logger.error('Erreur Puppeteer', puppeteerError)
         const errorMessage = puppeteerError instanceof Error ? puppeteerError.message : String(puppeteerError)
         throw new Error(
           `Impossible de générer le PDF avec Puppeteer: ${errorMessage}. ` +
@@ -124,7 +125,7 @@ export async function generatePDF(
     // Ancien format avec éléments - utiliser React-PDF
     return await generatePDFFromElements(template, variables)
   } catch (error) {
-    console.error('Erreur lors de la génération PDF:', error)
+    logger.error('Erreur lors de la génération PDF', error)
     const errorMessage = error instanceof Error ? error.message : String(error)
     throw new Error(`Erreur lors de la génération PDF: ${errorMessage}`)
   }
@@ -165,10 +166,10 @@ async function generatePDFFromHTML(
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     })
   } catch (launchError) {
-    console.error('Erreur lors du lancement de Puppeteer:', launchError)
+    logger.error('Erreur lors du lancement de Puppeteer', launchError)
     const errorMessage = launchError instanceof Error ? launchError.message : String(launchError)
     const errorStack = launchError instanceof Error ? launchError.stack : undefined
-    console.error('Stack trace Puppeteer:', errorStack)
+    logger.error('Stack trace Puppeteer', undefined, { stack: errorStack })
     throw new Error(
       `Impossible de lancer Puppeteer. Erreur: ${errorMessage}. ` +
       `Veuillez vérifier que Chromium est correctement installé.`
@@ -294,7 +295,7 @@ async function generatePDFFromElements(
       pageCount: pages.length,
     }
   } catch (reactPdfError) {
-    console.error('Erreur React-PDF:', reactPdfError)
+    logger.error('Erreur React-PDF', reactPdfError)
     const errorMessage = reactPdfError instanceof Error ? reactPdfError.message : String(reactPdfError)
     throw new Error(`Erreur lors de la génération PDF avec React-PDF: ${errorMessage}`)
   }
@@ -430,7 +431,8 @@ function renderElements(
         )
 
       case 'image':
-        // TODO: Implémenter le rendu d'images (nécessite une URL ou base64)
+        // NOTE: Amélioration prévue - Implémenter le rendu d'images
+        // Nécessite: URL publique ou données base64 de l'image
         return (
           <View key={element.id || index} style={styles.element}>
             <Text style={styles.text}>[Image: {element.source || 'Non définie'}]</Text>
@@ -441,7 +443,7 @@ function renderElements(
         if (!element.tableData) return null
         return (
           <View key={element.id || index} style={styles.element}>
-            {/* TODO: Implémenter le rendu de tableaux */}
+            {/* NOTE: Amélioration prévue - Implémenter le rendu de tableaux avec @react-pdf/renderer */}
             <Text style={styles.text}>[Tableau: {element.tableData.headers.length} colonnes]</Text>
           </View>
         )
@@ -489,7 +491,8 @@ function renderElements(
 
       case 'qrcode':
       case 'barcode':
-        // TODO: Implémenter le rendu de QR codes et codes-barres
+        // NOTE: Amélioration prévue - Implémenter le rendu de QR codes et codes-barres
+        // Nécessite: Bibliothèque de génération de QR codes (qrcode, jsbarcode) et conversion en image
         return (
           <View key={element.id || index} style={styles.element}>
             <Text style={styles.text}>

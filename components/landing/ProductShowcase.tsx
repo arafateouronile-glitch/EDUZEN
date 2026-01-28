@@ -96,13 +96,13 @@ export function ProductShowcase() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           className="text-center mb-20 md:mb-28 max-w-4xl mx-auto"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-blue-ghost border border-brand-blue-pale mb-8"
           >
             <Play className="w-4 h-4 text-brand-blue" />
@@ -128,7 +128,7 @@ export function ProductShowcase() {
           ref={containerRef}
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           className="flex flex-col md:flex-row justify-center gap-4 mb-16 md:mb-20"
         >
           {showcases.map((showcase, index) => {
@@ -151,7 +151,7 @@ export function ProductShowcase() {
                   <motion.div
                     layoutId="activeTab"
                     className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent rounded-2xl"
-                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   />
                 )}
               </motion.button>
@@ -166,7 +166,7 @@ export function ProductShowcase() {
               key={showcase.id}
               initial={{ opacity: 0, y: 40 }}
               animate={activeTab === index ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className={activeTab === index ? 'block' : 'hidden'}
             >
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
@@ -174,7 +174,7 @@ export function ProductShowcase() {
                 <motion.div
                   initial={{ opacity: 0, x: -40 }}
                   animate={activeTab === index ? { opacity: 1, x: 0 } : {}}
-                  transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   className="space-y-8"
                 >
                   <div>
@@ -195,7 +195,7 @@ export function ProductShowcase() {
                           key={idx}
                           initial={{ opacity: 0, y: 20 }}
                           animate={activeTab === index ? { opacity: 1, y: 0 } : {}}
-                          transition={{ duration: 0.6, delay: 0.3 + idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                          transition={{ duration: 0.6, delay: 0.3 + idx * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                           whileHover={{ y: -4, scale: 1.02 }}
                           className="p-6 rounded-2xl bg-gradient-aurora border border-gray-200 hover-glow"
                         >
@@ -216,7 +216,7 @@ export function ProductShowcase() {
                         key={idx}
                         initial={{ opacity: 0, x: -20 }}
                         animate={activeTab === index ? { opacity: 1, x: 0 } : {}}
-                        transition={{ duration: 0.6, delay: 0.5 + idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: 0.6, delay: 0.5 + idx * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                         className="flex items-center gap-3"
                       >
                         <div className="w-6 h-6 rounded-full bg-brand-blue/10 flex items-center justify-center flex-shrink-0">
@@ -232,7 +232,7 @@ export function ProductShowcase() {
                 <motion.div
                   initial={{ opacity: 0, x: 40 }}
                   animate={activeTab === index ? { opacity: 1, x: 0 } : {}}
-                  transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   whileHover={{ scale: 1.02, rotateY: 2 }}
                   className="relative group"
                   style={{ transformStyle: 'preserve-3d' }}
@@ -308,7 +308,7 @@ export function ProductShowcase() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           className="text-center mt-20 md:mt-28"
         >
           <motion.button

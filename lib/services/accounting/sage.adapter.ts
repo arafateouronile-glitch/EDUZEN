@@ -1,6 +1,9 @@
 /**
  * Adapter pour Sage
- * TODO: Implémenter l'intégration Sage
+ * Adapter Sage - Intégration comptable
+ * 
+ * NOTE: Adapter non implémenté - Fonctionnalité prévue pour une future version
+ * Nécessite intégration avec l'API Sage (OAuth2, endpoints de synchronisation comptable)
  */
 
 import type { AccountingAdapter, AccountingConfig, InvoiceData, PaymentData, ExpenseData, SyncResult } from './accounting.types'

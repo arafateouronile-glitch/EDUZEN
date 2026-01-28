@@ -1589,6 +1589,38 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
   },
 
   // ==========================================
+  // ATTESTATION (GÉNÉRIQUE)
+  // ==========================================
+  attestation: {
+    type: 'attestation',
+    name: 'Attestation de Formation',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
+          ATTESTATION DE FORMATION
+        </h1>
+      </div>
+
+      <div style="margin-bottom: 40px;">
+        <p style="text-align: justify; font-size: 16px; line-height: 1.8;">
+          L'établissement <strong>{ecole_nom}</strong> certifie que 
+          <strong>{eleve_prenom} {eleve_nom}</strong> a suivi la formation 
+          <strong>"{formation_nom}"</strong>.
+        </p>
+      </div>
+      
+      <div style="margin-top: 60px; text-align: center;">
+        <p style="margin-bottom: 50px;">{ecole_ville}, le {date_jour}</p>
+        <p><strong>Le Directeur</strong></p>
+        <p style="margin-top: 40px;">________________________</p>
+        <p>{ecole_directeur}</p>
+      </div>
+    `,
+    footerContent: premiumFooter,
+  },
+
+  // ==========================================
   // LIVRET D'ACCUEIL
   // ==========================================
   livret_accueil: {

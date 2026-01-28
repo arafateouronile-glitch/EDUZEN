@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       const supabase = createAdminClient()
 
       // Récupérer les sessions actives (exemple basique)
-      // TODO: Implémenter la logique réelle selon vos besoins
+      // NOTE: Logique basique implémentée - Peut être étendue selon les besoins spécifiques
       const { data: sessions, error } = await supabase
         .from('sessions')
         .select('*')

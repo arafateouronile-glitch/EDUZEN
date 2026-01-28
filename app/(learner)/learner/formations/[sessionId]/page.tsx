@@ -36,6 +36,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+import { sanitizeHTML } from '@/lib/utils/sanitize-html'
 
 export default function LearnerSessionDetailPage() {
   const params = useParams()
@@ -133,9 +134,8 @@ export default function LearnerSessionDetailPage() {
         }
         return data
       } catch (error: any) {
-        logger.error('Unexpected error fetching session', error, {
+        logger.error('Unexpected error fetching session', sanitizeError(error), {
           sessionId: maskId(sessionId),
-          error: sanitizeError(error),
         })
         return null
       }
@@ -171,7 +171,7 @@ export default function LearnerSessionDetailPage() {
         }
         return data
       } catch (error: any) {
-        logger.error('Unexpected error fetching enrollment', error, {
+        logger.error('Unexpected error fetching enrollment', sanitizeError(error), {
           sessionId: maskId(sessionId),
           studentId: studentData?.id ? maskId(studentData.id) : undefined,
           error: sanitizeError(error),
@@ -239,7 +239,7 @@ export default function LearnerSessionDetailPage() {
         
         return filtered
       } catch (error: any) {
-        logger.error('Unexpected error fetching documents', error, {
+        logger.error('Unexpected error fetching documents', sanitizeError(error), {
           sessionId: maskId(sessionId),
           studentId: studentData?.id ? maskId(studentData.id) : undefined,
           error: sanitizeError(error),
@@ -367,7 +367,7 @@ export default function LearnerSessionDetailPage() {
 
         return data || []
       } catch (error: any) {
-        logger.error('Unexpected error fetching grades', error, {
+        logger.error('Unexpected error fetching grades', sanitizeError(error), {
           sessionId: maskId(sessionId),
           studentId: studentData?.id ? maskId(studentData.id) : undefined,
           error: sanitizeError(error),
@@ -414,7 +414,7 @@ export default function LearnerSessionDetailPage() {
 
         return data || []
       } catch (error: any) {
-        logger.error('Unexpected error fetching attendance', error, {
+        logger.error('Unexpected error fetching attendance', sanitizeError(error), {
           sessionId: maskId(sessionId),
           studentId: studentData?.id ? maskId(studentData.id) : undefined,
           error: sanitizeError(error),
@@ -628,9 +628,9 @@ export default function LearnerSessionDetailPage() {
                   <Target className="h-5 w-5 text-brand-blue" />
                   Objectifs pédagogiques
                 </h3>
-                <div 
+                <div
                   className="prose prose-sm max-w-none text-gray-600"
-                  dangerouslySetInnerHTML={{ __html: formation.objectives }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(formation.objectives) }}
                 />
               </GlassCard>
             )}

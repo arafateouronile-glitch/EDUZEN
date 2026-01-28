@@ -80,18 +80,16 @@ export default function LearnerPlanningPage() {
             })
             return []
           }
-          logger.error('Error fetching enrollments', error, {
+          logger.error('Error fetching enrollments', sanitizeError(error), {
             studentId: maskId(studentId),
-            error: sanitizeError(error),
           })
           return []
         }
 
         return data || []
       } catch (error: any) {
-        logger.error('Unexpected error fetching enrollments', error, {
+        logger.error('Unexpected error fetching enrollments', sanitizeError(error), {
           studentId: maskId(studentId),
-          error: sanitizeError(error),
         })
         return []
       }

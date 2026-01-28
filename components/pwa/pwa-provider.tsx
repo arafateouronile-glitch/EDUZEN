@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { registerServiceWorker, onOnlineStatusChange } from '@/lib/utils/pwa'
 import { useToast } from '@/components/ui/toast'
 import { toast as sonnerToast } from 'sonner'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export function PWAProvider({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = useState(true)
@@ -17,7 +18,7 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
     // Enregistrer le service worker uniquement en production
     if (process.env.NODE_ENV === 'production') {
       registerServiceWorker().catch((error) => {
-        console.error('Failed to register service worker:', error)
+        logger.error('Failed to register service worker:', error)
       })
     }
 

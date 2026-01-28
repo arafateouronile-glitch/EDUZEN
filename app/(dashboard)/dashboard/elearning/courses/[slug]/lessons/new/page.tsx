@@ -30,6 +30,7 @@ import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Schéma de validation
 const lessonSchema = z.object({
@@ -211,7 +212,7 @@ export default function NewLessonPage() {
         description: 'L\'image a été uploadée avec succès.',
       })
     } catch (error: any) {
-      console.error('Erreur lors de l\'upload:', error)
+      logger.error('Erreur lors de l\'upload:', error)
       addToast({
         type: 'error',
         title: 'Erreur d\'upload',

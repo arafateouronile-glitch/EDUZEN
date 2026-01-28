@@ -174,7 +174,8 @@ export class ElectronicAttendanceService {
         ?.map((e: any) => e.students)
         .filter((s: any) => s && s.email) || []
 
-      // Créer les demandes d'émargement pour chaque étudiant
+      const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
+
       const requests = students.map((student: any) => ({
         organization_id: attendanceSession.organization_id,
         attendance_session_id: attendanceSessionId,
@@ -183,6 +184,8 @@ export class ElectronicAttendanceService {
         student_name: `${student.first_name} ${student.last_name}`,
         status: 'pending' as const,
         signature_token: this.generateSignatureToken(),
+        access_token: crypto.randomUUID(),
+        token_expires_at: tokenExpiresAt,
       }))
 
       const { data: createdRequests, error: requestsError } = await this.supabase
@@ -562,7 +565,8 @@ export class ElectronicAttendanceService {
       }
 
       const session = request.attendance_session as any
-      const attendanceUrl = this.generateAttendanceUrl(request.signature_token)
+      const token = (request as any).access_token ?? request.signature_token
+      const attendanceUrl = this.generateAttendanceUrl(token)
 
       await this.sendAttendanceReminderEmail(
         request.student_email,
@@ -651,14 +655,15 @@ export class ElectronicAttendanceService {
   }
 
   /**
-   * Génère l'URL d'émargement
+   * Génère l'URL d'émargement (portail unifié /sign/[token])
+   * Préfère access_token (UUID v4) pour les liens email.
    */
   private generateAttendanceUrl(token: string): string {
     const baseUrl = typeof window !== 'undefined'
       ? window.location.origin
       : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-    return `${baseUrl}/attendance/${token}`
+    return `${baseUrl}/sign/${token}`
   }
 
   /**
@@ -671,7 +676,8 @@ export class ElectronicAttendanceService {
   ) {
     const results = await Promise.allSettled(
       requests.map(async (request) => {
-        const attendanceUrl = this.generateAttendanceUrl(request.signature_token)
+        const token = (request as any).access_token ?? request.signature_token
+        const attendanceUrl = this.generateAttendanceUrl(token)
         return this.sendAttendanceRequestEmail(
           request.student_email,
           request.student_name,

@@ -120,14 +120,32 @@ export function resetMockSupabase(mock: MockSupabaseQueryBuilder): void {
   ]
 
   // Utiliser mockImplementation pour que cela persiste même après mockClear()
+  // Vérifier que la méthode existe avant d'appeler mockImplementation
   chainableMethods.forEach((method) => {
-    ;(mock as any)[method].mockImplementation(() => mock)
+    if ((mock as any)[method] && typeof (mock as any)[method].mockImplementation === 'function') {
+      ;(mock as any)[method].mockImplementation(() => mock)
+    } else {
+      // Si la méthode n'existe pas, la créer
+      ;(mock as any)[method] = vi.fn().mockImplementation(() => mock)
+    }
   })
   
   // Réinitialiser single(), maybeSingle(), et range()
-  ;(mock as any).single.mockImplementation(() => Promise.resolve({ data: null, error: null }))
-  ;(mock as any).maybeSingle.mockImplementation(() => Promise.resolve({ data: null, error: null }))
-  ;(mock as any).range.mockImplementation(() => Promise.resolve({ data: [], error: null, count: 0 }))
+  if ((mock as any).single && typeof (mock as any).single.mockImplementation === 'function') {
+    ;(mock as any).single.mockImplementation(() => Promise.resolve({ data: null, error: null }))
+  } else {
+    ;(mock as any).single = vi.fn().mockResolvedValue({ data: null, error: null })
+  }
+  if ((mock as any).maybeSingle && typeof (mock as any).maybeSingle.mockImplementation === 'function') {
+    ;(mock as any).maybeSingle.mockImplementation(() => Promise.resolve({ data: null, error: null }))
+  } else {
+    ;(mock as any).maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+  }
+  if ((mock as any).range && typeof (mock as any).range.mockImplementation === 'function') {
+    ;(mock as any).range.mockImplementation(() => Promise.resolve({ data: [], error: null, count: 0 }))
+  } else {
+    ;(mock as any).range = vi.fn().mockResolvedValue({ data: [], error: null, count: 0 })
+  }
 }
 
 /**

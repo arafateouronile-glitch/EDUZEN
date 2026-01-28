@@ -416,11 +416,11 @@ export default function HealthDashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Environnement</p>
-              <p className="font-medium">
+              <div className="font-medium">
                 <Badge className={process.env.NODE_ENV === 'production' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
                   {process.env.NODE_ENV || 'development'}
                 </Badge>
-              </p>
+              </div>
             </div>
             <div>
               <p className="text-muted-foreground">Dernière mise à jour</p>
@@ -430,23 +430,23 @@ export default function HealthDashboardPage() {
             </div>
             <div>
               <p className="text-muted-foreground">Sentry</p>
-              <p className="font-medium">
+              <div className="font-medium">
                 {process.env.NEXT_PUBLIC_SENTRY_DSN ? (
                   <Badge className="bg-green-100 text-green-700">Activé</Badge>
                 ) : (
                   <Badge className="bg-gray-100 text-gray-700">Désactivé</Badge>
                 )}
-              </p>
+              </div>
             </div>
             <div>
               <p className="text-muted-foreground">Analytics</p>
-              <p className="font-medium">
+              <div className="font-medium">
                 {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || process.env.NEXT_PUBLIC_GA_ID ? (
                   <Badge className="bg-green-100 text-green-700">Activé</Badge>
                 ) : (
                   <Badge className="bg-gray-100 text-gray-700">Désactivé</Badge>
                 )}
-              </p>
+              </div>
             </div>
             <div>
               <p className="text-muted-foreground">Version</p>
@@ -454,13 +454,13 @@ export default function HealthDashboardPage() {
             </div>
             <div>
               <p className="text-muted-foreground">Base de données</p>
-              <p className="font-medium">
+              <div className="font-medium">
                 {dbHealth?.status === 'healthy' ? (
                   <Badge className="bg-green-100 text-green-700">Connectée</Badge>
                 ) : (
                   <Badge className="bg-red-100 text-red-700">Erreur</Badge>
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </CardContent>

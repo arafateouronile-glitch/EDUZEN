@@ -4,8 +4,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { ComplianceService } from '@/lib/services/compliance.service'
-// Note: twoFactorAuthService n'est plus utilisé dans ce fichier
-// import { ssoService } from '@/lib/services/sso.service' // Service SSO non disponible
+import { ssoService } from '@/lib/services/sso.service'
 
 /**
  * Vérifie la conformité 2FA et crée/met à jour les contrôles correspondants

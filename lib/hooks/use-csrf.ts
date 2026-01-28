@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const CSRF_COOKIE_NAME = 'csrf_token'
 const CSRF_HEADER_NAME = 'x-csrf-token'
@@ -62,7 +63,7 @@ export function useCSRF() {
       })
 
       if (!response.ok) {
-        console.error('Failed to fetch CSRF token')
+        logger.error('Failed to fetch CSRF token')
         return null
       }
 
@@ -70,7 +71,7 @@ export function useCSRF() {
       setCSRFToken(data.token)
       return data.token
     } catch (error) {
-      console.error('Error fetching CSRF token:', error)
+      logger.error('Error fetching CSRF token:', error)
       return null
     }
   }, [])

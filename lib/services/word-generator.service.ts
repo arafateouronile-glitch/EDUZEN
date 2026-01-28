@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * Interface pour les données d'une convention de formation
@@ -157,9 +158,9 @@ export class WordGeneratorService {
       // 8. Sauvegarder le document
       await fs.writeFile(outputPath, buffer)
 
-      console.log(`[WordGeneratorService] Document généré avec succès: ${outputPath}`)
+      logger.info('WordGeneratorService - Document généré avec succès', { outputPath })
     } catch (error: any) {
-      console.error('[WordGeneratorService] Erreur lors de la génération:', error)
+      logger.error('WordGeneratorService - Erreur lors de la génération', error, { error: sanitizeError(error) })
       
       // Gestion des erreurs spécifiques à docxtemplater
       if (error.properties && error.properties.errors instanceof Array) {
@@ -292,7 +293,7 @@ export class WordGeneratorService {
       const date = new Date(dateString)
       return format(date, 'd MMMM yyyy', { locale: fr })
     } catch (error) {
-      console.error('[WordGeneratorService] Erreur de formatage de date:', error)
+      logger.error('WordGeneratorService - Erreur de formatage de date', error, { error: sanitizeError(error) })
       return dateString
     }
   }

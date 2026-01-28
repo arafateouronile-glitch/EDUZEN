@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Calendar, Clock, MapPin, Users, X, UserPlus } from 'lu
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Enrollment = TableRow<'enrollments'>
 type Payment = TableRow<'payments'>
@@ -128,7 +129,7 @@ export default function FormationSessionsPage() {
         })
         return result
       } catch (error) {
-        console.error('Erreur lors de la création de la session:', error)
+        logger.error('Erreur lors de la création de la session:', error)
         throw error
       }
     },

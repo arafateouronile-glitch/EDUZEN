@@ -9,14 +9,20 @@ import { createMockSupabase, resetMockSupabase } from '@/tests/__mocks__/supabas
 
 // Mock dependencies
 vi.mock('@/lib/services/compliance.service', () => ({
-  complianceService: {
-    getCriticalRisks: vi.fn(),
+  ComplianceService: class {
+    getCriticalRisks = vi.fn()
+    constructor(supabaseClient: any) {
+      // Constructor accepts supabase but we don't need it for tests
+    }
   },
 }))
 
 vi.mock('@/lib/services/push-notifications.service', () => ({
-  pushNotificationsService: {
-    sendNotification: vi.fn(),
+  PushNotificationsService: class {
+    sendNotification = vi.fn()
+    constructor(supabaseClient: any) {
+      // Constructor accepts supabase but we don't need it for tests
+    }
   },
 }))
 
@@ -69,15 +75,16 @@ vi.mock('@/lib/utils/logger', () => ({
   sanitizeError: (error: any) => ({ message: error?.message || 'Unknown error' }),
 }))
 
-import { complianceService } from '@/lib/services/compliance.service'
-import { pushNotificationsService } from '@/lib/services/push-notifications.service'
+import { ComplianceService } from '@/lib/services/compliance.service'
+import { PushNotificationsService } from '@/lib/services/push-notifications.service'
 
 describe('ComplianceAlertsService - Parallel Notifications Optimization', () => {
   let service: ComplianceAlertsService
+  let complianceServiceInstance: any
+  let pushNotificationsServiceInstance: any
 
   beforeEach(() => {
     vi.clearAllMocks()
-    resetMockSupabase(mockSupabase)
     // Réappliquer les implémentations après clearAllMocks
     const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
     chainableMethods.forEach((method) => {
@@ -87,7 +94,13 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
     delete (mockSupabase as any).then
     // Réinitialiser from() pour qu'il retourne mockSupabase par défaut
     mockSupabase.from.mockImplementation(() => mockSupabase)
-    service = new ComplianceAlertsService()
+    // Réinitialiser single, maybeSingle, range
+    mockSupabase.single.mockResolvedValue({ data: null, error: null })
+    mockSupabase.maybeSingle.mockResolvedValue({ data: null, error: null })
+    mockSupabase.range.mockResolvedValue({ data: [], error: null, count: 0 })
+    service = new ComplianceAlertsService(mockSupabase as any)
+    complianceServiceInstance = (service as any).complianceService
+    pushNotificationsServiceInstance = (service as any).pushNotificationsService
   })
 
   describe('checkCriticalRisks - Pattern #5 Parallel Optimization', () => {
@@ -104,7 +117,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
         owner_id: `owner-${i}`, // Owners différents des admins
       }))
 
-      ;(complianceService.getCriticalRisks as any).mockResolvedValue(mockCriticalRisks)
+      complianceServiceInstance.getCriticalRisks.mockResolvedValue(mockCriticalRisks)
 
       // Mock 10 admins
       const mockAdmins = Array.from({ length: 10 }, (_, i) => ({
@@ -115,15 +128,13 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       }))
 
       // La requête est: from('users').select().eq().in() (sans single)
-      // On doit mocker from() pour retourner un objet avec then() et toutes les méthodes chainables
+      // La dernière méthode .in() doit retourner une promesse
       const createUsersQuery = () => {
-        const query: any = {}
-        const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
-        chainableMethods.forEach((method) => {
-          query[method] = vi.fn().mockImplementation(() => query)
-        })
-        query.single = vi.fn()
-        query.then = (resolve: any) => Promise.resolve({ data: mockAdmins, error: null }).then(resolve)
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: mockAdmins, error: null }),
+        }
         return query
       }
       
@@ -135,7 +146,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       })
 
       // Mock sendNotification (will be called in parallel)
-      ;(pushNotificationsService.sendNotification as any).mockResolvedValue({
+      pushNotificationsServiceInstance.sendNotification.mockResolvedValue({
         id: 'notif-1',
         status: 'sent',
       })
@@ -149,7 +160,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       expect(result.criticalRisks).toBe(5)
 
       // Vérifier que toutes les notifications ont été envoyées en parallèle
-      expect(pushNotificationsService.sendNotification).toHaveBeenCalledTimes(55)
+      expect(pushNotificationsServiceInstance.sendNotification).toHaveBeenCalledTimes(55)
     })
 
     it('devrait gérer les échecs individuels sans bloquer les autres alertes', async () => {
@@ -160,7 +171,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
         { id: 'risk-2', title: 'Risk 2', level: 'critical', owner_id: 'owner-2' },
       ]
 
-      ;(complianceService.getCriticalRisks as any).mockResolvedValue(mockCriticalRisks)
+      complianceServiceInstance.getCriticalRisks.mockResolvedValue(mockCriticalRisks)
 
       const mockAdmins = [
         { id: 'admin-1', role: 'admin' },
@@ -169,15 +180,13 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       ]
 
       // La requête est: from('users').select().eq().in() (sans single)
-      // On doit mocker from() pour retourner un objet avec then() et toutes les méthodes chainables
+      // La dernière méthode .in() doit retourner une promesse
       const createUsersQuery = () => {
-        const query: any = {}
-        const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
-        chainableMethods.forEach((method) => {
-          query[method] = vi.fn().mockImplementation(() => query)
-        })
-        query.single = vi.fn()
-        query.then = (resolve: any) => Promise.resolve({ data: mockAdmins, error: null }).then(resolve)
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: mockAdmins, error: null }),
+        }
         return query
       }
       
@@ -190,7 +199,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
 
       // Mock sendNotification avec succès et échecs mixtes
       let callCount = 0
-      ;(pushNotificationsService.sendNotification as any).mockImplementation(() => {
+      pushNotificationsServiceInstance.sendNotification.mockImplementation(() => {
         callCount++
         if (callCount % 2 === 0) {
           return Promise.reject(new Error('No active devices'))
@@ -222,20 +231,18 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
         },
       ]
 
-      ;(complianceService.getCriticalRisks as any).mockResolvedValue(mockCriticalRisks)
+      complianceServiceInstance.getCriticalRisks.mockResolvedValue(mockCriticalRisks)
 
       const mockAdmins = [{ id: 'admin-1', role: 'admin' }]
 
       // La requête est: from('users').select().eq().in() (sans single)
-      // On doit mocker from() pour retourner un objet avec then() et toutes les méthodes chainables
+      // La dernière méthode .in() doit retourner une promesse
       const createUsersQuery = () => {
-        const query: any = {}
-        const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
-        chainableMethods.forEach((method) => {
-          query[method] = vi.fn().mockImplementation(() => query)
-        })
-        query.single = vi.fn()
-        query.then = (resolve: any) => Promise.resolve({ data: mockAdmins, error: null }).then(resolve)
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: mockAdmins, error: null }),
+        }
         return query
       }
       
@@ -246,7 +253,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
         return mockSupabase
       })
 
-      ;(pushNotificationsService.sendNotification as any).mockResolvedValue({
+      pushNotificationsServiceInstance.sendNotification.mockResolvedValue({
         id: 'notif-1',
         status: 'sent',
       })
@@ -255,13 +262,15 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
 
       // 1 admin + 1 owner (external-owner différent de admin-1) = 2 notifications
       expect(result.alertsSent).toBe(2)
-      expect(pushNotificationsService.sendNotification).toHaveBeenCalledTimes(2)
+      expect(pushNotificationsServiceInstance.sendNotification).toHaveBeenCalledTimes(2)
     })
 
     it('devrait retourner 0 si aucun risque critique', async () => {
       const organizationId = 'org-1'
+      const complianceServiceInstance = (service as any).complianceService
+      const pushNotificationsServiceInstance = (service as any).pushNotificationsService
 
-      ;(complianceService.getCriticalRisks as any).mockResolvedValue([])
+      complianceServiceInstance.getCriticalRisks.mockResolvedValue([])
 
       // Le service retourne { alertsSent: 0 } directement sans appeler Supabase
       // Donc pas besoin de mocker from()
@@ -271,8 +280,8 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       expect(result).toBeDefined()
       expect(result?.alertsSent).toBe(0)
       // Le service ne retourne pas criticalRisks quand il n'y a pas de risques
-      // expect(result.criticalRisks).toBe(0)
-      expect(pushNotificationsService.sendNotification).not.toHaveBeenCalled()
+        // expect(result.criticalRisks).toBe(0)
+        expect(pushNotificationsServiceInstance.sendNotification).not.toHaveBeenCalled()
     })
   })
 
@@ -312,13 +321,11 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       // On doit mocker from() pour retourner un objet avec then() pour chaque table
       let fromCallCount = 0
       const createQueryWithThen = (data: any) => {
-        const query: any = {}
-        const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
-        chainableMethods.forEach((method) => {
-          query[method] = vi.fn().mockImplementation(() => query)
-        })
-        query.single = vi.fn()
-        query.then = (resolve: any) => Promise.resolve({ data, error: null }).then(resolve)
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data, error: null }),
+        }
         return query
       }
       
@@ -334,7 +341,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
         return mockSupabase
       })
 
-      ;(pushNotificationsService.sendNotification as any).mockResolvedValue({
+      pushNotificationsServiceInstance.sendNotification.mockResolvedValue({
         id: 'notif-1',
         status: 'sent',
       })
@@ -373,32 +380,48 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       const mockAdmins = Array.from({ length: 3 }, (_, i) => ({ id: `admin-${i}` }))
       
       // Les requêtes utilisent .eq() et .in() qui retournent directement { data, error }
-      // On doit mocker from() pour retourner un objet avec then() pour chaque table
-      const createQueryWithThen = (data: any) => {
-        const query: any = {}
-        const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
-        chainableMethods.forEach((method) => {
-          query[method] = vi.fn().mockImplementation(() => query)
-        })
-        query.single = vi.fn()
-        query.then = (resolve: any) => Promise.resolve({ data, error: null }).then(resolve)
+      // La première requête fait: select().eq().eq().eq() - la dernière .eq() doit retourner une promesse
+      // La deuxième requête fait: select().eq().in() - .in() retourne une promesse
+      let eqCallCount = 0
+      const createControlsQuery = () => {
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockImplementation(() => {
+            eqCallCount++
+            // La troisième fois qu'on appelle .eq(), on retourne une promesse
+            if (eqCallCount === 3) {
+              return Promise.resolve({ data: mockControls, error: null })
+            }
+            return query
+          }),
+        }
+        return query
+      }
+      
+      const createUsersQuery = () => {
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: mockAdmins, error: null }),
+        }
         return query
       }
       
       let fromCallCount = 0
       mockSupabase.from.mockImplementation((table: string) => {
         fromCallCount++
+        eqCallCount = 0 // Reset counter for each from() call
         if (table === 'security_controls') {
           // Première requête: controls
-          return createQueryWithThen(mockControls)
+          return createControlsQuery()
         } else if (table === 'users') {
           // Deuxième requête: admins
-          return createQueryWithThen(mockAdmins)
+          return createUsersQuery()
         }
         return mockSupabase
       })
 
-      ;(pushNotificationsService.sendNotification as any).mockResolvedValue({
+      pushNotificationsServiceInstance.sendNotification.mockResolvedValue({
         id: 'notif-1',
         status: 'sent',
       })
@@ -410,7 +433,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       expect(result.nonCompliantControls).toBe(15)
 
       // Vérifier que la notification contient le bon message
-      expect(pushNotificationsService.sendNotification).toHaveBeenCalledWith(
+      expect(pushNotificationsServiceInstance.sendNotification).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           title: '⚠️ Contrôles non conformes',
@@ -424,7 +447,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
     it('devrait exécuter toutes les vérifications', async () => {
       const organizationId = 'org-1'
 
-      ;(complianceService.getCriticalRisks as any).mockResolvedValue([])
+      complianceServiceInstance.getCriticalRisks.mockResolvedValue([])
       // Les requêtes utilisent .in() et .eq() qui retournent directement { data, error }
       // On doit mocker then() pour ces requêtes
       ;(mockSupabase as any).then = vi.fn((resolve: any) => {
@@ -495,19 +518,17 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       const organizationId = 'org-1'
 
       const mockCriticalRisks = [{ id: 'risk-1', title: 'Risk 1', level: 'critical' }]
-      ;(complianceService.getCriticalRisks as any).mockResolvedValue(mockCriticalRisks)
+      complianceServiceInstance.getCriticalRisks.mockResolvedValue(mockCriticalRisks)
 
       const mockAdmins = Array.from({ length: 10 }, (_, i) => ({ id: `admin-${i}` }))
       // La requête est: from('users').select().eq().in() (sans single)
-      // On doit mocker from() pour retourner un objet avec then() et toutes les méthodes chainables
+      // La dernière méthode .in() doit retourner une promesse
       const createUsersQuery = () => {
-        const query: any = {}
-        const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
-        chainableMethods.forEach((method) => {
-          query[method] = vi.fn().mockImplementation(() => query)
-        })
-        query.single = vi.fn()
-        query.then = (resolve: any) => Promise.resolve({ data: mockAdmins, error: null }).then(resolve)
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: mockAdmins, error: null }),
+        }
         return query
       }
       
@@ -520,7 +541,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
 
       // 50% de succès, 50% d'échecs
       let callCount = 0
-      ;(pushNotificationsService.sendNotification as any).mockImplementation(() => {
+      pushNotificationsServiceInstance.sendNotification.mockImplementation(() => {
         callCount++
         if (callCount % 2 === 0) {
           return Promise.reject(new Error('Failed'))
@@ -545,19 +566,17 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
       const organizationId = 'org-1'
 
       const mockCriticalRisks = [{ id: 'risk-1', title: 'Risk 1', level: 'critical', owner_id: 'owner-1' }]
-      ;(complianceService.getCriticalRisks as any).mockResolvedValue(mockCriticalRisks)
+      complianceServiceInstance.getCriticalRisks.mockResolvedValue(mockCriticalRisks)
 
       const mockAdmins = [{ id: 'admin-1' }]
       // La requête est: from('users').select().eq().in() (sans single)
-      // On doit mocker from() pour retourner un objet avec then() et toutes les méthodes chainables
+      // La dernière méthode .in() doit retourner une promesse
       const createUsersQuery = () => {
-        const query: any = {}
-        const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
-        chainableMethods.forEach((method) => {
-          query[method] = vi.fn().mockImplementation(() => query)
-        })
-        query.single = vi.fn()
-        query.then = (resolve: any) => Promise.resolve({ data: mockAdmins, error: null }).then(resolve)
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: mockAdmins, error: null }),
+        }
         return query
       }
       
@@ -568,7 +587,7 @@ describe('ComplianceAlertsService - Parallel Notifications Optimization', () => 
         return mockSupabase
       })
 
-      ;(pushNotificationsService.sendNotification as any).mockRejectedValue(
+      pushNotificationsServiceInstance.sendNotification.mockRejectedValue(
         new Error('Network error')
       )
 

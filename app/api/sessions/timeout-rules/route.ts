@@ -33,7 +33,8 @@ export async function GET() {
     const supabase = createAdminClient()
 
     // Récupérer les règles de timeout de session
-    // TODO: Implémenter la récupération des règles depuis la base de données
+    // NOTE: Fonctionnalité prévue - Récupération depuis la table organization_settings
+    // Pour l'instant, retourner des valeurs par défaut
     const defaultRules = {
       session_timeout: 30 * 60 * 1000, // 30 minutes
       idle_timeout: 15 * 60 * 1000, // 15 minutes
@@ -54,8 +55,8 @@ export async function PUT(request: NextRequest) {
     try {
       const supabase = createAdminClient()
 
-      // TODO: Implémenter la mise à jour des règles de timeout
-      // Exemple : sauvegarder dans la table organization_settings
+      // NOTE: Fonctionnalité prévue - Sauvegarder dans la table organization_settings
+      // La table devrait contenir: organization_id, session_timeout, idle_timeout, max_sessions_per_user, etc.
 
       return NextResponse.json({
         success: true,

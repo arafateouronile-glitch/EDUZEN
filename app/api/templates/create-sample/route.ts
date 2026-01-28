@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, Header, Footer, HeadingLevel, convertMillimetersToTwip } from 'docx'
 import { createClient } from '@/lib/supabase/server'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * API Route pour créer un template DOCX exemple
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
-    console.error('Erreur création template:', error)
+    logger.error('Erreur création template:', error)
     return NextResponse.json({ error: String(error) }, { status: 500 })
   }
 }

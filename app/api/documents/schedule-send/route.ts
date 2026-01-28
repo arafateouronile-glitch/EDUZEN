@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('Insert error:', insertError)
+      logger.error('Insert error:', insertError)
       return NextResponse.json(
         { error: 'Erreur lors de la planification', details: insertError.message },
         { status: 500 }
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
       data: scheduled,
     })
   } catch (error) {
-    console.error('Schedule document send error:', error)
+    logger.error('Schedule document send error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur interne' },
       { status: 500 }
@@ -168,7 +169,7 @@ export async function GET(request: NextRequest) {
       data: data || [],
     })
   } catch (error) {
-    console.error('Get scheduled sends error:', error)
+    logger.error('Get scheduled sends error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur interne' },
       { status: 500 }
@@ -222,7 +223,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Envoi annulé avec succès',
     })
   } catch (error) {
-    console.error('Cancel scheduled send error:', error)
+    logger.error('Cancel scheduled send error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur interne' },
       { status: 500 }

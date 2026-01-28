@@ -104,8 +104,8 @@ export default function ResourcesPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="mb-8 flex items-start justify-between">
+    <div className="w-full p-4">
+      <div className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
             <Library className="h-8 w-8" />
@@ -124,9 +124,9 @@ export default function ResourcesPage() {
       </div>
 
       {/* Barre de recherche et filtres */}
-      <Card className="mb-8">
-        <CardContent className="pt-6">
-          <div className="space-y-4">
+      <Card className="mb-4">
+        <CardContent className="pt-4 pb-4">
+          <div className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
@@ -168,7 +168,7 @@ export default function ResourcesPage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
+        <TabsList className="mb-4">
           <TabsTrigger value="all">Toutes les ressources</TabsTrigger>
           <TabsTrigger value="featured">En vedette</TabsTrigger>
           <TabsTrigger value="favorites">Mes favoris</TabsTrigger>
@@ -197,7 +197,7 @@ export default function ResourcesPage() {
                           )}
                         </div>
                       )}
-                      <CardHeader>
+                      <CardHeader className="pb-3 pt-4">
                         <div className="flex items-start gap-2">
                           <Icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
@@ -248,7 +248,7 @@ export default function ResourcesPage() {
             </div>
           ) : (
             <Card>
-              <CardContent className="pt-6 text-center text-muted-foreground">
+              <CardContent className="pt-4 pb-4 text-center text-muted-foreground">
                 Aucune ressource disponible
               </CardContent>
             </Card>
@@ -276,7 +276,7 @@ export default function ResourcesPage() {
                           </div>
                         </div>
                       )}
-                      <CardHeader>
+                      <CardHeader className="pb-3 pt-4">
                         <div className="flex items-start gap-2">
                           <Icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
@@ -308,7 +308,7 @@ export default function ResourcesPage() {
             </div>
           ) : (
             <Card>
-              <CardContent className="pt-6 text-center text-muted-foreground">
+              <CardContent className="pt-4 pb-4 text-center text-muted-foreground">
                 Aucune ressource en vedette
               </CardContent>
             </Card>
@@ -335,7 +335,7 @@ export default function ResourcesPage() {
                           />
                         </div>
                       )}
-                      <CardHeader>
+                      <CardHeader className="pb-3 pt-4">
                         <div className="flex items-start gap-2">
                           <Icon className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
@@ -367,7 +367,7 @@ export default function ResourcesPage() {
             </div>
           ) : (
             <Card>
-              <CardContent className="pt-6 text-center text-muted-foreground">
+              <CardContent className="pt-4 pb-4 text-center text-muted-foreground">
                 Aucun favori pour le moment
               </CardContent>
             </Card>

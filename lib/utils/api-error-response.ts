@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server'
 import { AppError, ErrorCode, ErrorSeverity } from '@/lib/errors/error-handler'
+import { logger } from '@/lib/utils/logger'
 
 interface ErrorResponseOptions {
   /** Code HTTP de la réponse (default: 500) */
@@ -120,7 +121,7 @@ export function createSecureErrorResponse(
   }
 
   // Log l'erreur côté serveur (avec tous les détails)
-  console.error(`[${correlationId}] API Error:`, {
+  logger.error(`[${correlationId}] API Error:`, {
     status,
     error: error instanceof Error ? {
       name: error.name,

@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { studentService } from '@/lib/services/student.service'
+import { studentService } from '@/lib/services/student.service.client'
 import { invoiceService } from '@/lib/services/invoice.service.client'
 import { paymentService } from '@/lib/services/payment.service.client'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { useState } from 'react'
 import { useToast } from '@/components/ui/toast'
+import { logger } from '@/lib/utils/logger'
 
 export default function StudentDetailPage() {
   const params = useParams()
@@ -49,14 +50,63 @@ export default function StudentDetailPage() {
     queryKey: ['session', student?.class_id],
     queryFn: async () => {
       if (!student?.class_id) return null
-      const { data, error } = await supabase
+      
+      // Récupérer d'abord la session sans relations
+      const { data: session, error: sessionError } = await supabase
         .from('sessions')
-        .select('*, formations(*, programs(*))')
+        .select('*')
         .eq('id', student.class_id)
         .single()
       
-      if (error) throw error
-      return data
+      if (sessionError) {
+        logger.warn('Erreur récupération session pour étudiant', { error: sessionError, class_id: student.class_id })
+        return null
+      }
+      
+      if (!session) return null
+      
+      // Enrichir avec la formation si nécessaire (sans relations imbriquées)
+      if (session.formation_id) {
+        try {
+          // Récupérer la formation sans relations
+          const { data: formation } = await supabase
+            .from('formations')
+            .select('*')
+            .eq('id', session.formation_id)
+            .maybeSingle()
+          
+          // Récupérer le programme si nécessaire
+          let program = null
+          if (formation?.program_id) {
+            const { data: programData } = await supabase
+              .from('programs')
+              .select('*')
+              .eq('id', formation.program_id)
+              .maybeSingle()
+            
+            program = programData
+          }
+          
+          return {
+            ...session,
+            formations: formation ? {
+              ...formation,
+              programs: program
+            } : null
+          }
+        } catch (formationError) {
+          logger.warn('Erreur récupération formation pour session', { error: formationError })
+          return {
+            ...session,
+            formations: null
+          }
+        }
+      }
+      
+      return {
+        ...session,
+        formations: null
+      }
     },
     enabled: !!student?.class_id,
   })

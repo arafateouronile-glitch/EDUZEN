@@ -2210,6 +2210,11 @@ export async function generateContractHTML(data: {
   // Générer le template avec balises
   const template = generateContractTemplate(data)
   
+  // Vérifier que le template n'est pas vide
+  if (!template || !template.trim()) {
+    throw new Error('Le template généré est vide')
+  }
+  
   // Préparer les variables pour le système de balises
   const variables: any = {
     organisation_logo: data.organization.logo_url || '',
@@ -3048,6 +3053,17 @@ export async function processTemplateWithTags(
   documentId?: string,
   organizationId?: string
 ): Promise<string> {
+  // Vérifier que le template n'est pas vide
+  if (!templateContent || !templateContent.trim()) {
+    const { logger } = await import('@/lib/utils/logger')
+    logger.error('[processTemplateWithTags] Template content is empty', {
+      templateContentType: typeof templateContent,
+      templateContentLength: templateContent?.length || 0,
+      templateContentPreview: templateContent?.substring(0, 100) || 'N/A',
+    })
+    throw new Error('Le contenu du template est vide')
+  }
+  
   // Créer un template minimal pour le système de génération HTML
   const template: any = {
     id: documentId || 'temp',

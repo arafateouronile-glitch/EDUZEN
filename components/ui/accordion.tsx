@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils"
 interface AccordionProps {
   type?: "single" | "multiple"
   defaultValue?: string | string[]
+  value?: string | string[]
+  onValueChange?: (value: string | string[]) => void
   className?: string
   children: React.ReactNode
 }
@@ -20,21 +22,32 @@ const AccordionContext = React.createContext<{
   toggleItem: () => {},
 })
 
-const Accordion = ({ type = "single", defaultValue, className, children }: AccordionProps) => {
-  const [openItems, setOpenItems] = React.useState<string[]>(
+const Accordion = ({ type = "single", defaultValue, value, onValueChange, className, children }: AccordionProps) => {
+  const [internalOpenItems, setInternalOpenItems] = React.useState<string[]>(
     Array.isArray(defaultValue) ? defaultValue : defaultValue ? [defaultValue] : []
   )
 
-  const toggleItem = (value: string) => {
-    setOpenItems((prev) => {
+  // Utiliser value si fourni (mode contrôlé), sinon utiliser l'état interne
+  const openItems = value !== undefined 
+    ? (Array.isArray(value) ? value : value ? [value] : [])
+    : internalOpenItems
+
+  const toggleItem = (itemValue: string) => {
+    const newItems = (() => {
       if (type === "single") {
-        return prev.includes(value) ? [] : [value]
+        return openItems.includes(itemValue) ? [] : [itemValue]
       } else {
-        return prev.includes(value)
-          ? prev.filter((item) => item !== value)
-          : [...prev, value]
+        return openItems.includes(itemValue)
+          ? openItems.filter((item) => item !== itemValue)
+          : [...openItems, itemValue]
       }
-    })
+    })()
+
+    if (onValueChange) {
+      onValueChange(type === "single" ? (newItems[0] || '') : newItems)
+    } else {
+      setInternalOpenItems(newItems)
+    }
   }
 
   return (
@@ -67,16 +80,26 @@ interface AccordionTriggerProps {
   className?: string
   children: React.ReactNode
   value?: string
+  onClick?: () => void
 }
 
-const AccordionTrigger = ({ className, children, value }: AccordionTriggerProps) => {
+const AccordionTrigger = ({ className, children, value, onClick }: AccordionTriggerProps) => {
   const { openItems, toggleItem } = React.useContext(AccordionContext)
   const isOpen = value ? openItems.includes(value) : false
+
+  const handleClick = () => {
+    if (value) {
+      toggleItem(value)
+    }
+    if (onClick) {
+      onClick()
+    }
+  }
 
   return (
     <button
       type="button"
-      onClick={() => value && toggleItem(value)}
+      onClick={handleClick}
       className={cn(
         "flex flex-1 items-center justify-between py-4 w-full font-medium transition-all hover:text-brand-blue text-left",
         isOpen ? "text-brand-blue" : "text-gray-700",

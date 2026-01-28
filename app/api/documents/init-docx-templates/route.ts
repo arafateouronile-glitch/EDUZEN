@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import * as fs from 'fs'
 import * as path from 'path'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const DOCUMENT_TYPES = ['facture', 'devis', 'convention'] as const
 
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
           .eq('organization_id', organizationId)
         
         if (updateError) {
-          console.log(`Template ${type} non trouvé dans la base, URL stockée quand même`)
+          logger.info(`Template ${type} non trouvé dans la base, URL stockée quand même`)
         }
         
         results.push({
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('Erreur API init-docx-templates:', error)
+    logger.error('Erreur API init-docx-templates:', error)
     return NextResponse.json(
       { error: 'Erreur serveur' },
       { status: 500 }

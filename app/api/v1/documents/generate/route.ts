@@ -4,7 +4,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     
-    // TODO: Implémenter la génération de documents via l'API v1
+    // NOTE: API v1 non implémentée - Fonctionnalité prévue pour une future version
+    // Utiliser DocumentGenerationService.generate() une fois l'API v1 complètement implémentée
     
     return NextResponse.json(
       { error: 'Document generation via API v1 not yet implemented' },

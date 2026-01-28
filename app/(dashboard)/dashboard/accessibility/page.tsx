@@ -82,7 +82,7 @@ export default function AccessibilityPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full p-4">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-8 w-8 animate-spin text-brand-blue" />
         </div>
@@ -93,7 +93,7 @@ export default function AccessibilityPage() {
   // Empty state - Configuration initiale
   if (!config) {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <div className="w-full p-4">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -131,9 +131,9 @@ export default function AccessibilityPage() {
   const pendingReviews = stats?.pending_reviews || 0
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="w-full p-4">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <Accessibility className="h-8 w-8 text-brand-blue" />
           Accessibilité Handicap
@@ -145,8 +145,8 @@ export default function AccessibilityPage() {
 
       {/* Alertes */}
       {!config.referent_user_id && (
-        <Card className="mb-6 border-yellow-200 bg-yellow-50">
-          <CardContent className="pt-6">
+        <Card className="mb-4 border-yellow-200 bg-yellow-50">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
               <div className="flex-1">
@@ -182,9 +182,9 @@ export default function AccessibilityPage() {
       )}
 
       {/* Statistiques - 4 cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Stagiaires concernés</p>
@@ -254,7 +254,7 @@ export default function AccessibilityPage() {
 
         {/* Vue d'ensemble */}
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Configuration */}
             <Card>
               <CardHeader>
@@ -304,10 +304,10 @@ export default function AccessibilityPage() {
 
             {/* Partenariats */}
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3 pt-4">
                 <CardTitle className="text-lg">Partenariats</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-0 pb-4">
                 <div className="flex items-center gap-3">
                   {config.partner_agefiph ? (
                     <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -347,7 +347,7 @@ export default function AccessibilityPage() {
           </div>
 
           {/* Actions rapides */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
             <Button asChild variant="outline" className="h-auto py-4">
               <Link href="/dashboard/accessibility/config">
                 <Settings className="h-5 w-5 mr-2" />
@@ -426,14 +426,14 @@ export default function AccessibilityPage() {
         {/* Aménagements */}
         <TabsContent value="accommodations">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 pt-4">
               <CardTitle>Aménagements en place</CardTitle>
               <CardDescription>
                 {activeAccommodations} aménagement{activeAccommodations > 1 ? 's' : ''} actif
                 {activeAccommodations > 1 ? 's' : ''}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 pb-4">
               {accommodations.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <CheckCircle2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -482,7 +482,7 @@ export default function AccessibilityPage() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {equipment.length === 0 ? (
                 <Card className="col-span-full">
                   <CardContent className="text-center py-8 text-muted-foreground">
@@ -514,7 +514,7 @@ export default function AccessibilityPage() {
                               : 'Retiré'}
                       </Badge>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-0 pb-4">
                       <p className="text-sm text-muted-foreground">
                         {eq.quantity_available} / {eq.quantity_total} disponible{eq.quantity_available > 1 ? 's' : ''}
                       </p>

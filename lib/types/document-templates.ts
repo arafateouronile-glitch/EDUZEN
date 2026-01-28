@@ -8,6 +8,7 @@ export type DocumentType =
   | 'devis'
   | 'convocation'
   | 'contrat'
+  | 'attestation' // Attestation générique
   | 'attestation_reussite'
   | 'certificat_realisation' // OF - Certificat de réalisation
   | 'certificat_scolarite'
@@ -55,8 +56,21 @@ export interface DocumentTemplate {
   // Si défini, utilisé pour la génération Word au lieu de la conversion HTML
   docx_template_url?: string | null
   
+  /** Zones de signature (Template Picker) : [{ id, page, x, y, w, h }, ...] en % (0–1) */
+  sign_zones?: SignZoneTemplate[]
+  
   created_at: string
   updated_at: string
+}
+
+export interface SignZoneTemplate {
+  id: string
+  page: number
+  x: number
+  y: number
+  w: number
+  h: number
+  label?: string
 }
 
 export interface HeaderConfig {
@@ -427,6 +441,8 @@ export interface CreateTemplateInput {
   }
   font_size?: number
   is_default?: boolean
+  is_active?: boolean
+  sign_zones?: SignZoneTemplate[]
 }
 
 export interface UpdateTemplateInput extends Partial<CreateTemplateInput> {

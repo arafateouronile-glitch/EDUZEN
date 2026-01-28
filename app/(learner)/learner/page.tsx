@@ -86,18 +86,16 @@ export default function LearnerDashboardPage() {
             })
             return []
           }
-          logger.error('Error fetching enrollments', error, {
+          logger.error('Error fetching enrollments', sanitizeError(error), {
             studentId: maskId(studentId),
-            error: sanitizeError(error),
           })
         return []
       }
 
       return data || []
       } catch (error: any) {
-        logger.error('Unexpected error fetching enrollments', error, {
+        logger.error('Unexpected error fetching enrollments', sanitizeError(error), {
           studentId: maskId(studentId),
-          error: sanitizeError(error),
         })
         return []
       }
@@ -525,18 +523,19 @@ export default function LearnerDashboardPage() {
       scale: 1,
       transition: {
         duration: 0.6,
-        ease: [0.16, 1, 0.3, 1] as const,
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
       }
     }
   }
 
   const floatingAnimation = {
-    y: [-10, 10, -10],
-    transition: {
-      duration: 6,
-      repeat: Infinity,
-      ease: "easeInOut" as const
-    }
+    y: [-10, 10, -10] as [number, number, number],
+  }
+  
+  const floatingTransition = {
+    duration: 6,
+    repeat: Infinity,
+    ease: "easeInOut" as const,
   }
 
   return (
@@ -577,13 +576,15 @@ export default function LearnerDashboardPage() {
         {/* Floating orbs avec effet de profondeur */}
         <motion.div
           animate={floatingAnimation}
+          transition={floatingTransition}
           className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"
           style={{
             boxShadow: '0 0 80px 40px rgba(255, 255, 255, 0.1)',
           }}
         />
         <motion.div
-          animate={{ ...floatingAnimation, transition: { ...floatingAnimation.transition, delay: 0.5 } }}
+          animate={floatingAnimation}
+          transition={{ ...floatingTransition, delay: 0.5 }}
           className="absolute bottom-10 left-10 w-40 h-40 bg-brand-cyan/10 rounded-full blur-3xl"
           style={{
             boxShadow: '0 0 80px 40px rgba(167, 139, 250, 0.15)',
@@ -595,11 +596,11 @@ export default function LearnerDashboardPage() {
           animate={{
             y: [15, -15, 15],
             x: [10, -10, 10],
-            transition: {
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut" as const,
           }}
           className="absolute top-1/2 left-1/2 w-64 h-64 bg-white/5 rounded-full blur-3xl"
         />
@@ -610,7 +611,7 @@ export default function LearnerDashboardPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 className="flex items-center gap-4 mb-3"
               >
                 <motion.div
@@ -628,7 +629,7 @@ export default function LearnerDashboardPage() {
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 className="text-4xl md:text-6xl font-display font-bold text-white tracking-tighter leading-none drop-shadow-2xl mb-4"
               >
                 Bonjour, {studentData?.first_name || 'Apprenant'} 👋
@@ -637,7 +638,7 @@ export default function LearnerDashboardPage() {
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 className="text-lg md:text-xl text-white/90 max-w-2xl font-medium tracking-tight drop-shadow-lg"
               >
                 Pret a continuer votre parcours d'excellence ? Decouvrez vos formations et suivez votre progression.
@@ -647,7 +648,7 @@ export default function LearnerDashboardPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: 0.6, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 className="flex flex-wrap items-center gap-3 mt-8"
               >
                 <motion.div
@@ -687,7 +688,7 @@ export default function LearnerDashboardPage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.7, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ delay: 0.7, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="flex items-center gap-6 bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)]"
             >
               <div className="text-center">
@@ -770,7 +771,7 @@ export default function LearnerDashboardPage() {
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 * index, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.1 * index, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             whileHover={{ y: -8, scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -1118,7 +1119,7 @@ export default function LearnerDashboardPage() {
                                   <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${progress}%` }}
-                                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                                     className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
                                     style={{
                                       boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',

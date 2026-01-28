@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -61,7 +62,7 @@ export function usePWA() {
 
       return false
     } catch (error) {
-      console.error('Error installing PWA:', error)
+      logger.error('Error installing PWA:', error)
       return false
     }
   }

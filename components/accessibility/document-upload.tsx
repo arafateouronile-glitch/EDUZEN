@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { Upload, File, Trash2, Eye, CheckCircle, AlertCircle, Download } from 'lucide-react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface DocumentUploadProps {
   organizationId: string
@@ -73,7 +74,7 @@ export function DocumentUpload({
         })
 
       if (uploadError) {
-        console.error('Upload error:', uploadError)
+        logger.error('Upload error:', uploadError)
         throw new Error(`Erreur d'upload: ${uploadError.message}`)
       }
 

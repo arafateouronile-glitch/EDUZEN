@@ -30,7 +30,7 @@ export function Navbar() {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-600 ${
         isScrolled
           ? 'bg-white/90 backdrop-blur-xl border-b-2 border-gray-200 py-4 md:py-5 shadow-xl shadow-brand-blue/5'
@@ -43,7 +43,7 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-2">
             <motion.span
               whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="text-3xl md:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-brand-blue to-brand-cyan font-display tracking-tighter italic"
             >
               EDUZEN
@@ -57,7 +57,7 @@ export function Navbar() {
                 key={item.label}
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 + index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.6, delay: 0.1 + index * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
                 <Link
                   href={item.href}
@@ -75,7 +75,7 @@ export function Navbar() {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
               <Link
                 href="/auth/login"
@@ -87,13 +87,13 @@ export function Navbar() {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
               <Link href="/auth/register">
                 <motion.div
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 >
                   <Button className="h-12 md:h-14 px-8 text-base md:text-lg font-bold bg-brand-blue hover:bg-brand-blue-dark text-white rounded-full shadow-xl shadow-brand-blue/30 hover:shadow-2xl hover:shadow-brand-blue/40 transition-all duration-600">
                     Commencer
@@ -122,7 +122,7 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl border-b-2 border-gray-200 shadow-2xl overflow-hidden"
           >
             <div className="container mx-auto px-4 py-8">
@@ -132,7 +132,7 @@ export function Navbar() {
                     key={item.label}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.4, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   >
                     <Link
                       href={item.href}
@@ -147,7 +147,7 @@ export function Navbar() {
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 >
                   <Link
                     href="/auth/login"
@@ -160,7 +160,7 @@ export function Navbar() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.4, delay: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 >
                   <Link href="/auth/register" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button className="w-full h-14 text-lg font-bold bg-brand-blue hover:bg-brand-blue-dark text-white rounded-full shadow-xl shadow-brand-blue/30">

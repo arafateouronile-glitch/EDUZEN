@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Grade = TableRow<'grades'>
 type GradeInsert = TableInsert<'grades'>
@@ -9,6 +10,7 @@ type GradeUpdate = TableUpdate<'grades'>
 
 export interface EvaluationFilters {
   sessionId?: string
+  sessionIds?: string[] // Pour filtrer par plusieurs sessions (utile pour les enseignants)
   studentId?: string
   subject?: string
   assessmentType?: string
@@ -100,6 +102,8 @@ class EvaluationService {
 
       if (filters?.sessionId) {
         simpleQuery = simpleQuery.eq('session_id', filters.sessionId)
+      } else if (filters?.sessionIds && filters.sessionIds.length > 0) {
+        simpleQuery = simpleQuery.in('session_id', filters.sessionIds)
       }
       if (filters?.studentId) {
         simpleQuery = simpleQuery.eq('student_id', filters.studentId)
@@ -217,7 +221,7 @@ class EvaluationService {
     ]
     
     if (insertData.assessment_type && !validAssessmentTypes.includes(insertData.assessment_type)) {
-      console.error('❌ [EVALUATION SERVICE] assessment_type invalide:', {
+      logger.error('EvaluationService - assessment_type invalide', new Error('Invalid assessment_type'), {
         received: insertData.assessment_type,
         validTypes: validAssessmentTypes,
       })
@@ -234,7 +238,7 @@ class EvaluationService {
       .single()
 
     if (insertError) {
-      console.error('Erreur insertion évaluation:', insertError)
+      logger.error('EvaluationService - Erreur insertion évaluation', insertError, { error: sanitizeError(insertError) })
       throw insertError
     }
     

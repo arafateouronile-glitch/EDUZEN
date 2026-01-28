@@ -15,6 +15,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // =====================================================
 // INTERFACES
@@ -253,7 +254,7 @@ export class AccessibilityService {
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
-          console.warn('Table accessibility_configurations does not exist yet:', error?.message)
+          logger.warn('AccessibilityService - Table accessibility_configurations does not exist yet', { errorMessage: error?.message })
           return null
         }
         throw error
@@ -327,8 +328,8 @@ export class AccessibilityService {
         .single()
 
       if (error) {
-        console.error('[AccessibilityService] Erreur lors de la mise à jour de la configuration:', {
-          error,
+        logger.error('AccessibilityService - Erreur lors de la mise à jour de la configuration', error, {
+          error: sanitizeError(error),
           code: error.code,
           message: error.message,
           details: error.details,
@@ -357,11 +358,11 @@ export class AccessibilityService {
         .single()
 
       if (error) {
-        console.error('[AccessibilityService] Erreur lors de la création de la configuration:', {
-          error,
+        logger.error('AccessibilityService - Erreur lors de la création de la configuration', error, {
           code: error.code,
           message: error.message,
           details: error.details,
+          error: sanitizeError(error),
           hint: error.hint,
           insertData,
         })
@@ -409,7 +410,7 @@ export class AccessibilityService {
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
-          console.warn('Table accessibility_disability_types does not exist yet')
+          logger.warn('AccessibilityService - Table accessibility_disability_types does not exist yet')
           return []
         }
         throw error
@@ -456,7 +457,7 @@ export class AccessibilityService {
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
-          console.warn('Table accessibility_student_needs does not exist yet')
+          logger.warn('AccessibilityService - Table accessibility_student_needs does not exist yet')
           return []
         }
         throw error
@@ -580,7 +581,7 @@ export class AccessibilityService {
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
-          console.warn('Table accessibility_accommodations does not exist yet')
+          logger.warn('AccessibilityService - Table accessibility_accommodations does not exist yet')
           return []
         }
         throw error
@@ -670,7 +671,7 @@ export class AccessibilityService {
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
-          console.warn('Table accessibility_equipment does not exist yet')
+          logger.warn('AccessibilityService - Table accessibility_equipment does not exist yet')
           return []
         }
         throw error
@@ -811,7 +812,7 @@ export class AccessibilityService {
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
-          console.warn('Table accessibility_equipment_assignments does not exist yet')
+          logger.warn('AccessibilityService - Table accessibility_equipment_assignments does not exist yet')
           return []
         }
         throw error
@@ -854,7 +855,7 @@ export class AccessibilityService {
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
-          console.warn('Table accessibility_documents does not exist yet')
+          logger.warn('AccessibilityService - Table accessibility_documents does not exist yet')
           return []
         }
         throw error
@@ -887,7 +888,47 @@ export class AccessibilityService {
    * Supprimer un document
    */
   async deleteDocument(documentId: string): Promise<void> {
-    // TODO: Supprimer aussi le fichier du Storage
+    // Récupérer le document pour obtenir le file_path avant suppression
+    const { data: document, error: fetchError } = await this.supabase
+      .from('accessibility_documents')
+      .select('file_path')
+      .eq('id', documentId)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    // Supprimer le fichier du Storage si file_path existe
+    if (document?.file_path) {
+      try {
+        // Extraire le bucket et le path du file_path
+        // Format attendu: "bucket-name/path/to/file.pdf"
+        const pathParts = document.file_path.split('/')
+        if (pathParts.length >= 2) {
+          const bucket = pathParts[0]
+          const filePath = pathParts.slice(1).join('/')
+          
+          const { error: storageError } = await this.supabase.storage
+            .from(bucket)
+            .remove([filePath])
+
+          if (storageError) {
+            logger.warn('Failed to delete file from storage, continuing with DB deletion', {
+              error: sanitizeError(storageError),
+              file_path: document.file_path,
+            })
+            // On continue même si la suppression du Storage échoue
+          }
+        }
+      } catch (storageErr) {
+        logger.warn('Error deleting file from storage, continuing with DB deletion', {
+          error: sanitizeError(storageErr),
+          file_path: document.file_path,
+        })
+        // On continue même si la suppression du Storage échoue
+      }
+    }
+
+    // Supprimer l'enregistrement de la base de données
     const { error } = await this.supabase
       .from('accessibility_documents')
       .delete()
@@ -975,7 +1016,7 @@ export class AccessibilityService {
 
         if (is404Error) {
           if (process.env.NODE_ENV === 'development') {
-            console.warn('Function calculate_accessibility_compliance_rate does not exist yet')
+            logger.warn('AccessibilityService - Function calculate_accessibility_compliance_rate does not exist yet')
           }
           return 0
         }
@@ -988,6 +1029,73 @@ export class AccessibilityService {
         return 0
       }
       throw err
+    }
+  }
+
+  /**
+   * Récupère le nombre total d'étudiants d'une organisation
+   */
+  private async getTotalStudentsCount(organizationId: string): Promise<number> {
+    try {
+      const { count, error } = await this.supabase
+        .from('students')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+
+      if (error) {
+        logger.warn('Error getting total students count, returning 0', {
+          error: sanitizeError(error),
+          organizationId,
+        })
+        return 0
+      }
+
+      return count || 0
+    } catch (error) {
+      logger.warn('Exception getting total students count, returning 0', {
+        error: sanitizeError(error),
+        organizationId,
+      })
+      return 0
+    }
+  }
+
+  /**
+   * Calcule le nombre d'équipements réellement utilisés (total - disponibles)
+   */
+  private async getUsedEquipmentCount(organizationId: string): Promise<number> {
+    try {
+      const { data: equipment, error } = await this.supabase
+        .from('accessibility_equipment')
+        .select('quantity_total, quantity_available')
+        .eq('organization_id', organizationId)
+
+      if (error) {
+        logger.warn('Error getting equipment count, returning 0', {
+          error: sanitizeError(error),
+          organizationId,
+        })
+        return 0
+      }
+
+      if (!equipment || equipment.length === 0) {
+        return 0
+      }
+
+      // Calculer le total utilisé = somme(quantity_total - quantity_available)
+      const totalUsed = equipment.reduce((sum, eq) => {
+        const total = eq.quantity_total || 0
+        const available = eq.quantity_available || 0
+        return sum + Math.max(0, total - available)
+      }, 0)
+
+      return totalUsed
+    } catch (error) {
+      logger.warn('Exception getting used equipment count, returning 0', {
+        error: sanitizeError(error),
+        organizationId,
+      })
+      return 0
     }
   }
 
@@ -1009,11 +1117,13 @@ export class AccessibilityService {
       title: `Rapport de conformité accessibilité ${new Date().getFullYear()}`,
       period_start: periodStart,
       period_end: periodEnd,
-      total_students: 0, // TODO: Récupérer depuis students
+      // Récupérer le total d'étudiants de l'organisation
+      total_students: await this.getTotalStudentsCount(organizationId),
       students_with_disabilities: stats.total_students_with_needs,
       accommodations_requested: stats.total_students_with_needs,
       accommodations_implemented: stats.active_accommodations,
-      equipment_used: 0, // TODO: Calculer équipements utilisés
+      // Calculer le nombre d'équipements réellement utilisés (non disponibles)
+      equipment_used: await this.getUsedEquipmentCount(organizationId),
       referent_training_up_to_date: !!config?.referent_training_date,
       physical_accessibility_compliant: !!config?.physical_accessibility_statement,
       digital_accessibility_compliant: !!config?.digital_accessibility_statement,

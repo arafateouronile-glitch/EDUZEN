@@ -5,6 +5,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 export interface QualiopiIndicator {
   id: string
@@ -113,7 +114,7 @@ export class QualiopiService {
         error.message?.includes('does not exist') ||
         error.message?.includes('schema cache')
       ) {
-        console.warn('Table qualiopi_indicators does not exist yet or invalid query:', error?.message)
+        logger.warn('QualiopiService - Table qualiopi_indicators does not exist yet or invalid query', { errorMessage: error?.message })
         return []
       }
       throw error
@@ -304,7 +305,7 @@ export class QualiopiService {
         if (is404Error) {
           // Ne pas logger en mode production pour éviter le bruit dans la console
           if (process.env.NODE_ENV === 'development') {
-            console.warn('Function calculate_qualiopi_compliance_rate does not exist yet. This is normal if the function has not been created in Supabase yet.')
+            logger.warn('QualiopiService - Function calculate_qualiopi_compliance_rate does not exist yet. This is normal if the function has not been created in Supabase yet.')
           }
           return 0
         }
@@ -324,7 +325,7 @@ export class QualiopiService {
         errorObj?.message?.toLowerCase().includes('does not exist')
       ) {
         if (process.env.NODE_ENV === 'development') {
-          console.warn('Function calculate_qualiopi_compliance_rate does not exist yet. This is normal if the function has not been created in Supabase yet.')
+          logger.warn('QualiopiService - Function calculate_qualiopi_compliance_rate does not exist yet. This is normal if the function has not been created in Supabase yet.')
         }
         return 0
       }
@@ -411,7 +412,7 @@ export class QualiopiService {
         error.message?.includes('does not exist') ||
         error.message?.includes('schema cache')
       ) {
-        console.warn('Table qualiopi_indicators does not exist yet. Please create the table first:', error?.message)
+        logger.warn('QualiopiService - Table qualiopi_indicators does not exist yet. Please create the table first', { errorMessage: error?.message })
         throw new Error('La table qualiopi_indicators n\'existe pas encore. Veuillez créer la table dans la base de données.')
       }
       throw error

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { attendanceService } from '@/lib/services/attendance.service.client'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -290,9 +291,11 @@ export default function ClassAttendancePage() {
                   >
                     <div className="flex-shrink-0">
                       {student.photo_url ? (
-                        <img
+                        <Image
                           src={student.photo_url}
                           alt={`${student.first_name} ${student.last_name}`}
+                          width={48}
+                          height={48}
                           className="h-12 w-12 rounded-full object-cover"
                         />
                       ) : (

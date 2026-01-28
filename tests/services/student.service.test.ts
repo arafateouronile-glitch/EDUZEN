@@ -13,6 +13,7 @@ const { mockSupabase } = vi.hoisted(() => {
     select: vi.fn(),
     eq: vi.fn(),
     in: vi.fn(),
+    or: vi.fn(),
     single: vi.fn(),
     maybeSingle: vi.fn(),
     insert: vi.fn(),
@@ -26,7 +27,7 @@ const { mockSupabase } = vi.hoisted(() => {
   
   // Toutes les méthodes chainables retournent le mock lui-même
   // Utiliser mockImplementation pour que cela persiste même après mockClear()
-  const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
+  const chainableMethods = ['from', 'select', 'eq', 'in', 'or', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
   chainableMethods.forEach((method) => {
     mock[method].mockImplementation(() => mock)
   })
@@ -50,14 +51,14 @@ describe('StudentService', () => {
     vi.clearAllMocks()
     // Réinitialiser le chaînage après clearAllMocks
     // Utiliser mockImplementation pour que cela persiste même après mockClear()
-    const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
+    const chainableMethods = ['from', 'select', 'eq', 'in', 'or', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
     chainableMethods.forEach((method) => {
       ;(mockSupabase as any)[method].mockImplementation(() => mockSupabase)
     })
-    ;(mockSupabase as any).single.mockImplementation(() => Promise.resolve({ data: null, error: null }))
-    ;(mockSupabase as any).maybeSingle.mockImplementation(() => Promise.resolve({ data: null, error: null }))
-    ;(mockSupabase as any).range.mockImplementation(() => Promise.resolve({ data: [], error: null, count: 0 }))
-    service = new StudentService()
+    ;(mockSupabase as any).single.mockResolvedValue({ data: null, error: null })
+    ;(mockSupabase as any).maybeSingle.mockResolvedValue({ data: null, error: null })
+    ;(mockSupabase as any).range.mockResolvedValue({ data: [], error: null, count: 0 })
+    service = new StudentService(mockSupabase as any)
   })
 
   describe('getAll', () => {

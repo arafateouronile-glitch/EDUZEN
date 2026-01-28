@@ -326,8 +326,8 @@ export function useAuth() {
           .single()
 
         if (orgError) {
-          console.error('Organization creation error:', orgError)
-          console.error('Error details:', {
+          logger.error('Organization creation error:', orgError)
+          logger.error('Error details:', {
             code: orgError.code,
             message: orgError.message,
             details: orgError.details,

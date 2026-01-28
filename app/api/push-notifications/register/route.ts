@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { PushNotificationsService } from '@/lib/services/push-notifications.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * POST /api/push-notifications/register
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ device })
   } catch (error: unknown) {
-    console.error('Error registering device:', error)
+    logger.error('Error registering device:', error)
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Erreur inconnue' }, { status: 500 })
   }
 }

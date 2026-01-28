@@ -1,6 +1,8 @@
 'use client'
 
 import { motion } from '@/components/ui/motion'
+import { sanitizeHTML } from '@/lib/utils/sanitize-html'
+import { BRAND_COLORS } from '@/lib/config/app-config'
 
 interface CatalogFooterProps {
   organizationName: string
@@ -17,7 +19,7 @@ export function CatalogFooter({
   contactEmail,
   contactPhone,
   contactAddress,
-  primaryColor = '#274472',
+  primaryColor = BRAND_COLORS.primary,
 }: CatalogFooterProps) {
   const currentYear = new Date().getFullYear()
 
@@ -32,7 +34,7 @@ export function CatalogFooter({
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
             className="mb-12 text-gray-600 prose prose-sm max-w-none prose-headings:text-gray-900 prose-a:text-blue-600 hover:prose-a:text-blue-700"
-            dangerouslySetInnerHTML={{ __html: footerContent }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHTML(footerContent) }}
           />
         )}
         

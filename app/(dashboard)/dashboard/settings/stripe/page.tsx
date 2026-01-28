@@ -37,7 +37,8 @@ export default function StripeSettingsPage() {
     queryFn: async () => {
       if (!user?.organization_id) return null
 
-      // TODO: Créer une table payment_providers pour stocker les configurations
+      // NOTE: Fonctionnalité prévue - Nécessite création de la table payment_providers dans Supabase
+      // La table devrait contenir: id, organization_id, provider_type (stripe/sepa), config (JSONB), is_active
       // Pour l'instant, on utilise les variables d'environnement
       return {
         publishable_key: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
@@ -53,7 +54,7 @@ export default function StripeSettingsPage() {
   // Sauvegarder la configuration
   const saveMutation = useMutation({
     mutationFn: async (configData: typeof config) => {
-      // TODO: Sauvegarder dans une table payment_providers
+      // NOTE: Fonctionnalité prévue - Sauvegarder dans la table payment_providers
       // Pour l'instant, on simule la sauvegarde
       await new Promise((resolve) => setTimeout(resolve, 500))
       return configData

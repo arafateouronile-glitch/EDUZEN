@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeftRight, Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export function CurrencyConverter() {
   const t = useTranslations('payments')
@@ -44,7 +45,7 @@ export function CurrencyConverter() {
       )
       setConvertedAmount(converted)
     } catch (error) {
-      console.error('Error converting currency:', error)
+      logger.error('Error converting currency:', error)
       toast.error('Erreur lors de la conversion')
     } finally {
       setIsConverting(false)

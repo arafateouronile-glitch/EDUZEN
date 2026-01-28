@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * API Route pour la géocodage inverse (coordonnées GPS -> adresse)
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       details: data.address,
     })
   } catch (error: unknown) {
-    console.error('Error in reverse geocoding:', error)
+    logger.error('Error in reverse geocoding:', error)
     const errorMessage = error instanceof Error ? error.message : 'Erreur lors du géocodage inverse'
     return NextResponse.json(
       {

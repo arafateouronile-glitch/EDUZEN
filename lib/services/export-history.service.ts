@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Types définis manuellement car la table n'existe pas encore dans database.types.ts
-// TODO: Supprimer ces définitions après avoir créé la table et régénéré les types
+// NOTE: Types temporaires - À supprimer après création de la table export_history et régénération des types
 export type ExportType = 'excel' | 'csv' | 'pdf'
 export type EntityType = 'students' | 'documents' | 'payments' | 'dashboard_report' | 'attendance_report' | 'other'
 

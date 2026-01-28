@@ -71,12 +71,24 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => mockSupabase,
 }))
 
-// Mock invoiceService
-vi.mock('@/lib/services/invoice.service', () => ({
-  invoiceService: {
+// Mock invoiceService avec vi.hoisted
+const { mockInvoiceService } = vi.hoisted(() => {
+  const mock = {
     getAll: vi.fn(),
     getById: vi.fn(),
+  }
+  return { mockInvoiceService: mock }
+})
+
+vi.mock('@/lib/services/invoice.service', () => ({
+  InvoiceService: class {
+    getAll = mockInvoiceService.getAll
+    getById = mockInvoiceService.getById
+    constructor(supabaseClient: any) {
+      // Constructor accepts supabase but we don't need it for tests
+    }
   },
+  invoiceService: mockInvoiceService,
 }))
 
 // Mock logger
@@ -113,9 +125,17 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
     // Supprimer then() s'il existe
     delete (mockSupabase as any).then
     delete (mockSupabase as any).catch
-    // Réinitialiser les mocks d'invoiceService
-    vi.mocked(invoiceService.getAll).mockReset()
-    service = new AccountingService()
+    
+    // S'assurer que from() est toujours défini
+    if (!mockSupabase.from) {
+      mockSupabase.from = vi.fn().mockImplementation(() => mockSupabase)
+    }
+    
+    service = new AccountingService(mockSupabase as any)
+      // Réinitialiser les mocks d'invoiceService
+      mockInvoiceService.getAll.mockReset()
+      mockInvoiceService.getById.mockReset()
+    service = new AccountingService(mockSupabase as any)
   })
 
   describe('syncAllInvoices - Pattern #3 Optimization', () => {
@@ -145,37 +165,43 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       ]
 
       // Mock getConfig (utilise .single())
+      // Le service appelle getConfig qui fait: from('accounting_integrations').select().eq().eq().single()
       mockSupabase.single.mockResolvedValueOnce({
         data: mockConfig,
         error: null,
       })
 
       // Mock invoiceService.getAll
-      vi.mocked(invoiceService.getAll).mockResolvedValueOnce(mockInvoices as any)
+      mockInvoiceService.getAll.mockResolvedValueOnce(mockInvoices as any)
 
       // Mock des mappings existants (vide = toutes les factures doivent être synchronisées)
-      // La requête se termine sans .single(), donc elle retourne directement { data, error }
-      // Solution: utiliser mockImplementationOnce sur from() pour différencier les requêtes
-      // getConfig utilise 'accounting_integrations' (1ère requête)
-      // Les mappings utilisent 'accounting_entity_mappings' (2ème requête)
-      const createMappingsQuery = () => {
-        const query: any = {}
-        const chainableMethods = ['from', 'select', 'eq', 'in', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
-        chainableMethods.forEach((method) => {
-          query[method] = vi.fn().mockImplementation(() => query)
-        })
-        query.single = vi.fn().mockImplementation(() => Promise.resolve({ data: null, error: null }))
-        query.then = (resolve: any) => Promise.resolve({ data: [], error: null }).then(resolve)
-        return query
-      }
-      
-      // Première requête: getConfig (accounting_integrations) - retourner mockSupabase normal
-      // On utilise mockReturnValueOnce pour que le premier appel retourne mockSupabase
-      mockSupabase.from.mockReturnValueOnce(mockSupabase)
-      // Deuxième requête: mappings (accounting_entity_mappings) - retourner objet avec then()
-      mockSupabase.from.mockImplementationOnce((table: string) => {
-        if (table === 'accounting_entity_mappings') {
-          return createMappingsQuery()
+      // Le service fait: from('accounting_entity_mappings').select('*').eq().eq() (sans .single())
+      // Cette requête retourne directement une promesse avec { data, error }
+      let fromCallCount = 0
+      mockSupabase.from.mockImplementation((table: string) => {
+        fromCallCount++
+        if (table === 'accounting_integrations') {
+          // Première requête: getConfig - retourne mockSupabase qui utilise .single()
+          return mockSupabase
+        } else if (table === 'accounting_entity_mappings') {
+          // Deuxième requête: récupérer mappings - retourne un query builder avec then()
+          if (fromCallCount === 2) {
+            const query: any = {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              then: (resolve: any) => Promise.resolve({ data: [], error: null }).then(resolve),
+            }
+            return query
+          } else {
+            // Troisième requête: insert mappings - retourne un query builder avec insert()
+            const query: any = {
+              insert: vi.fn().mockResolvedValue({ error: null }),
+            }
+            return query
+          }
+        } else if (table === 'accounting_sync_logs') {
+          // Quatrième requête: logSync - retourne mockSupabase pour insert
+          return mockSupabase
         }
         return mockSupabase
       })
@@ -187,13 +213,8 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
         data: { id: 'ext-123' },
       })
 
-      // Mock l'insertion des mappings
-      mockSupabase.insert.mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
-
-      // Mock logSync (appelé à la fin)
+      // Mock logSync (appelé à la fin via from('accounting_sync_logs').insert())
+      // Le service fait: from('accounting_sync_logs').insert(...) qui retourne { error }
       mockSupabase.insert.mockResolvedValueOnce({
         data: [],
         error: null,
@@ -207,7 +228,7 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       expect(result.records_failed).toBe(0)
 
       // Vérifier qu'on a bien utilisé invoiceService.getAll (batch)
-      expect(invoiceService.getAll).toHaveBeenCalledWith(organizationId, { documentType: 'invoice' })
+      expect(mockInvoiceService.getAll).toHaveBeenCalledWith(organizationId, { documentType: 'invoice' })
     })
 
     it('devrait gérer les erreurs individuelles sans bloquer tout le batch', async () => {
@@ -238,7 +259,7 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       })
 
       // Mock invoiceService.getAll
-      vi.mocked(invoiceService.getAll).mockResolvedValueOnce(mockInvoices as any)
+      mockInvoiceService.getAll.mockResolvedValueOnce(mockInvoices as any)
 
       // Mock des mappings existants (vide)
       ;(mockSupabase as any).then = vi.fn((resolve: any) => {
@@ -292,7 +313,7 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       })
 
       // Mock invoiceService.getAll retourne un tableau vide
-      vi.mocked(invoiceService.getAll).mockResolvedValueOnce([])
+      mockInvoiceService.getAll.mockResolvedValueOnce([])
 
       // Mock des mappings existants
       ;(mockSupabase as any).then = vi.fn((resolve: any) => {
@@ -309,7 +330,7 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
 
       expect(result.records_synced).toBe(0)
       expect(result.records_failed).toBe(0)
-      expect(invoiceService.getAll).toHaveBeenCalled()
+      expect(mockInvoiceService.getAll).toHaveBeenCalled()
     })
 
     it('devrait logger les performances de synchronisation', async () => {
@@ -343,7 +364,7 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       })
 
       // Mock invoiceService.getAll
-      vi.mocked(invoiceService.getAll).mockResolvedValueOnce(mockInvoices as any)
+      mockInvoiceService.getAll.mockResolvedValueOnce(mockInvoices as any)
 
       // Mock des mappings existants
       ;(mockSupabase as any).then = vi.fn((resolve: any) => {
@@ -466,7 +487,7 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       })
 
       // Mock invoiceService.getAll pour échouer
-      vi.mocked(invoiceService.getAll).mockRejectedValueOnce(new Error('Database connection failed'))
+      mockInvoiceService.getAll.mockRejectedValueOnce(new Error('Database connection failed'))
 
       await expect(service.syncAllInvoices(organizationId, provider)).rejects.toThrow()
     })
@@ -496,7 +517,7 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       const getConfigSpy = vi.spyOn(service, 'getConfig').mockResolvedValue(mockConfig as any)
 
       // Mock invoiceService.getAll
-      vi.mocked(invoiceService.getAll).mockResolvedValueOnce(mockInvoices as any)
+      mockInvoiceService.getAll.mockResolvedValueOnce(mockInvoices as any)
 
       // Mock des mappings existants (requête sans .single())
       // La requête est: from('accounting_entity_mappings').select('*').eq('integration_id', ...).eq('entity_type', 'invoice')
@@ -514,9 +535,15 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       }
       
       // Mocker from() pour retourner createMappingsQuery() seulement pour 'accounting_entity_mappings'
+      // Le service fait: from('accounting_entity_mappings').select('*').eq().eq() (sans .single())
       mockSupabase.from.mockImplementation((table: string) => {
         if (table === 'accounting_entity_mappings') {
-          return createMappingsQuery()
+          const query: any = {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: (resolve: any) => Promise.resolve({ data: [], error: null }).then(resolve),
+          }
+          return query
         }
         // Pour les autres tables, retourner mockSupabase normal
         return mockSupabase

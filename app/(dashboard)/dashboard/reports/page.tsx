@@ -13,6 +13,8 @@ import { formatDate } from '@/lib/utils/format'
 import { exportData } from '@/lib/utils/export'
 import { useToast } from '@/components/ui/toast'
 import dynamic from 'next/dynamic'
+import { logger, sanitizeError } from '@/lib/utils/logger'
+import { RoleGuard, ADMIN_ROLES } from '@/components/auth/role-guard'
 import {
   BarChart3,
   TrendingUp,
@@ -303,6 +305,14 @@ function FilterBar({
 
 // Page principale
 export default function ReportsPage() {
+  return (
+    <RoleGuard allowedRoles={ADMIN_ROLES}>
+      <ReportsPageContent />
+    </RoleGuard>
+  )
+}
+
+function ReportsPageContent() {
   const { user } = useAuth()
   const supabase = createClient()
   const { addToast } = useToast()
@@ -671,7 +681,7 @@ export default function ReportsPage() {
             },
             {
               'Métrique': 'Factures en attente',
-              'Valeur': formatCurrency(0), // TODO: Récupérer depuis les données
+              'Valeur': formatCurrency(0), // NOTE: À implémenter - Récupérer depuis les données financières réelles
             },
             {
               'Métrique': 'Impayés',
@@ -725,7 +735,7 @@ export default function ReportsPage() {
         description: `Les données ont été exportées avec succès (${dataToExport.length} ligne(s))`,
       })
     } catch (error) {
-      console.error('Erreur lors de l\'export:', error)
+      logger.error('Erreur lors de l\'export:', error)
       addToast({
         type: 'error',
         title: 'Erreur d\'export',

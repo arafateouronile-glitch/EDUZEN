@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type SessionCharge = TableRow<'session_charges'>
 type ChargeCategory = TableRow<'charge_categories'>
@@ -59,7 +60,7 @@ class SessionChargesService {
       .order('name', { ascending: true })
 
     if (error) {
-      console.error('Erreur récupération catégories:', error)
+      logger.error('SessionChargesService - Erreur récupération catégories', error, { error: sanitizeError(error) })
       return []
     }
     return data || []
@@ -114,7 +115,7 @@ class SessionChargesService {
       .order('charge_date', { ascending: false })
 
     if (error) {
-      console.error('Erreur récupération charges:', error)
+      logger.error('SessionChargesService - Erreur récupération charges', error, { error: sanitizeError(error) })
       return []
     }
     return (data || []) as SessionChargeWithCategory[]
@@ -162,7 +163,7 @@ class SessionChargesService {
     const { data, error } = await query.order('charge_date', { ascending: false })
 
     if (error) {
-      console.error('Erreur récupération charges:', error)
+      logger.error('SessionChargesService - Erreur récupération charges', error, { error: sanitizeError(error) })
       return []
     }
     return (data || []) as SessionChargeWithCategory[]
@@ -256,7 +257,7 @@ class SessionChargesService {
     })
 
     if (error) {
-      console.error('Erreur calcul résumé charges:', error)
+      logger.error('SessionChargesService - Erreur calcul résumé charges', error, { error: sanitizeError(error) })
       return null
     }
 

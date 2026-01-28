@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 type SupportTicket = TableRow<'support_tickets'>
 type SupportTicketMessage = TableRow<'support_ticket_messages'>
@@ -44,7 +45,7 @@ export class SupportService {
         errorObj.message?.includes('does not exist') ||
         errorObj.message?.includes('schema cache')
       ) {
-        console.warn('Table support_categories does not exist yet or invalid query:', errorObj?.message)
+        logger.warn('SupportService - Table support_categories does not exist yet or invalid query', { errorMessage: errorObj?.message })
         return []
       }
       throw error
@@ -145,7 +146,7 @@ export class SupportService {
       ) {
         // Ne pas logger en mode production pour éviter le bruit dans la console
         if (process.env.NODE_ENV === 'development') {
-          console.warn('Table support_tickets does not exist yet or invalid query:', error?.message)
+          logger.warn('SupportService - Table support_tickets does not exist yet or invalid query', { errorMessage: error?.message })
         }
         return []
       }

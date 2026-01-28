@@ -1,6 +1,7 @@
 import { getRequestConfig } from 'next-intl/server'
 import { cookies } from 'next/headers'
 import { routing } from './routing'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default getRequestConfig(async ({ requestLocale }) => {
   // Cette fonction sera appelée pour chaque requête
@@ -18,7 +19,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
       }
     } catch (error) {
       // En cas d'erreur lors de la lecture des cookies, utiliser la locale par défaut
-      console.error('Error reading locale cookie:', error)
+      logger.error('Error reading locale cookie', sanitizeError(error))
     }
   }
 
@@ -36,7 +37,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     }
   } catch (error) {
     // En cas d'erreur lors du chargement des messages, utiliser la locale par défaut
-    console.error('Error loading messages for locale:', locale, error)
+    logger.error('Error loading messages for locale', sanitizeError(error), { locale })
     return {
       locale: routing.defaultLocale,
       messages: (await import(`../messages/${routing.defaultLocale}.json`)).default,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ComplianceService } from '@/lib/services/compliance.service'
 import { PushNotificationsService } from '@/lib/services/push-notifications.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * GET /api/compliance/alerts/critical-risks
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
           }
         }
       } catch (error: unknown) {
-        console.error(`Error sending alert for risk ${risk.id}:`, error)
+        logger.error(`Error sending alert for risk ${risk.id}:`, error)
       }
     }
 
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
       alerts,
     })
   } catch (error: unknown) {
-    console.error('Error checking critical risks:', error)
+    logger.error('Error checking critical risks:', error)
     const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }

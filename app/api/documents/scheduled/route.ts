@@ -8,6 +8,7 @@ import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { mapDataToVariables } from '@/lib/utils/document-generation/variable-mapper'
 import { emailService } from '@/lib/services/email.service'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // GET /api/documents/scheduled - Récupère les générations programmées
 export async function GET(request: NextRequest) {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     const generations = await scheduledGenerationService.getAll(user.organization_id)
     return NextResponse.json(generations)
   } catch (error) {
-    console.error('Erreur lors de la récupération des générations programmées:', error)
+    logger.error('Erreur lors de la récupération des générations programmées:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(generation)
   } catch (error) {
-    console.error('Erreur lors de la création de la génération programmée:', error)
+    logger.error('Erreur lors de la création de la génération programmée:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }
@@ -143,7 +144,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(generation)
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de la génération programmée:', error)
+    logger.error('Erreur lors de la mise à jour de la génération programmée:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }
@@ -184,7 +185,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Erreur lors de la suppression de la génération programmée:', error)
+    logger.error('Erreur lors de la suppression de la génération programmée:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

@@ -5,6 +5,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 export interface CPFConfiguration {
   id: string
@@ -168,10 +169,15 @@ export class CPFService {
 
   /**
    * Synchroniser les droits CPF d'un stagiaire avec l'API Mon Compte Formation
+   * 
+   * NOTE: L'intégration avec l'API Mon Compte Formation nécessite:
+   * - OAuth2 avec France Connect ou credentials API
+   * - Implémentation du protocole d'échange de données CPF
+   * - Gestion de la confidentialité des données (RGPD)
+   * 
+   * Pour l'instant, on simule la synchronisation
    */
   async syncLearnerRights(organizationId: string, learnerId: string): Promise<CPFLearnerRights> {
-    // TODO: Implémenter l'appel réel à l'API Mon Compte Formation
-    // Pour l'instant, on simule la synchronisation
     
     const config = await this.getConfiguration(organizationId)
     if (!config || !config.is_active) {
@@ -225,7 +231,7 @@ export class CPFService {
         error.message?.includes('does not exist') ||
         error.message?.includes('schema cache')
       ) {
-        console.warn('Table cpf_eligible_trainings does not exist yet or invalid query:', error?.message)
+        logger.warn('CPFService - Table cpf_eligible_trainings does not exist yet or invalid query', { errorMessage: error?.message })
         return []
       }
       throw error
@@ -285,7 +291,7 @@ export class CPFService {
         error.message?.includes('does not exist') ||
         error.message?.includes('schema cache')
       ) {
-        console.warn('Table cpf_enrollments does not exist yet or invalid query:', error?.message)
+        logger.warn('CPFService - Table cpf_enrollments does not exist yet or invalid query', { errorMessage: error?.message })
         return []
       }
       throw error
@@ -444,13 +450,14 @@ export class CPFService {
     if (syncLogError) throw syncLogError
 
     try {
-      // TODO: Implémenter l'appel à l'API Caisse des Dépôts
-      // Pour l'instant, on retourne une structure de base
+      // NOTE: Implémentation de l'appel à l'API Caisse des Dépôts requise
       // L'implémentation réelle nécessitera:
-      // 1. Authentification avec api_key et api_secret
-      // 2. Appel à l'endpoint du catalogue CPF
-      // 3. Traitement des données reçues
-      // 4. Création/mise à jour des formations
+      // 1. Authentification avec api_key et api_secret (configurés dans cpf_configurations)
+      // 2. Appel à l'endpoint du catalogue CPF (https://api.cpf.fr/catalog)
+      // 3. Traitement des données reçues (parsing JSON, validation)
+      // 4. Création/mise à jour des formations dans la table programs
+      // 
+      // Pour l'instant, on retourne une structure de base
 
       // Mettre à jour le log de synchronisation
       await this.supabase

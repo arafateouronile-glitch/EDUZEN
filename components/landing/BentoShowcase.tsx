@@ -66,13 +66,13 @@ export function BentoShowcase() {
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           className="text-center mb-20 md:mb-24 lg:mb-28"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-cyan-ghost border border-brand-cyan-pale mb-8"
           >
             <Award className="w-4 h-4 text-brand-cyan" />
@@ -99,12 +99,12 @@ export function BentoShowcase() {
           <motion.div
             initial={{ opacity: 0, y: 60, scale: 0.95 }}
             animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="md:col-span-2 md:row-span-2 lg:col-span-2 lg:row-span-2"
           >
             <motion.div
               whileHover={{ y: -12, scale: 1.02 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="group h-full rounded-3xl bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-blue p-1 shadow-xl hover:shadow-2xl transition-all duration-600 relative overflow-hidden"
             >
               {/* Shimmer effect on hover */}
@@ -125,7 +125,7 @@ export function BentoShowcase() {
                 <div className="flex-1 grid grid-cols-2 gap-6 mb-8">
                   <motion.div
                     whileHover={{ scale: 1.05, rotateY: 5 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     className="p-6 rounded-2xl bg-gradient-aurora border border-brand-blue-pale hover-glow"
                     style={{ transformStyle: 'preserve-3d' }}
                   >
@@ -136,7 +136,7 @@ export function BentoShowcase() {
                   </motion.div>
                   <motion.div
                     whileHover={{ scale: 1.05, rotateY: -5 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     className="p-6 rounded-2xl bg-gradient-aurora border border-brand-cyan-pale hover-glow"
                     style={{ transformStyle: 'preserve-3d' }}
                   >
@@ -154,7 +154,7 @@ export function BentoShowcase() {
                       key={i}
                       initial={{ height: 0 }}
                       animate={isInView ? { height: `${height}%` } : {}}
-                      transition={{ duration: 0.8, delay: 0.5 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: 0.8, delay: 0.5 + i * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                       className="flex-1 bg-gradient-to-t from-brand-blue to-brand-cyan rounded-lg"
                     />
                   ))}
@@ -167,18 +167,18 @@ export function BentoShowcase() {
           <motion.div
             initial={{ opacity: 0, y: 60, scale: 0.95 }}
             animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="md:col-span-1 md:row-span-2 lg:col-span-1 lg:row-span-2"
           >
             <motion.div
               whileHover={{ y: -12, scale: 1.02 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="group h-full rounded-3xl bg-white border-2 border-gray-200 hover:border-brand-cyan-pale p-10 shadow-xl hover:shadow-2xl transition-all duration-600 hover-lift"
             >
               <motion.div
                 className="w-12 h-12 rounded-2xl bg-brand-cyan flex items-center justify-center mb-6"
                 whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
                 <BookOpen className="w-6 h-6 text-white" />
               </motion.div>
@@ -195,13 +195,13 @@ export function BentoShowcase() {
                     key={i}
                     initial={{ opacity: 0, x: -20 }}
                     animate={isInView ? { opacity: 1, x: 0 } : {}}
-                    transition={{ duration: 0.6, delay: item.delay, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.6, delay: item.delay, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     className="flex items-center gap-4 group/item"
                   >
                     <motion.div
                       className="w-8 h-8 rounded-full bg-brand-cyan/10 border-2 border-brand-cyan flex items-center justify-center font-bold text-brand-cyan text-sm"
                       whileHover={{ scale: 1.2, rotate: 360 }}
-                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     >
                       {i + 1}
                     </motion.div>
@@ -218,12 +218,12 @@ export function BentoShowcase() {
           <motion.div
             initial={{ opacity: 0, y: 60, scale: 0.95 }}
             animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="md:col-span-1 md:row-span-1 lg:col-span-1 lg:row-span-1"
           >
             <motion.div
               whileHover={{ y: -12, scale: 1.03, rotateZ: 2 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="group h-full min-h-[280px] rounded-3xl bg-gradient-to-br from-brand-cyan via-brand-cyan to-brand-cyan-dark p-10 shadow-xl hover:shadow-2xl transition-all duration-600 relative overflow-hidden"
               style={{ transformStyle: 'preserve-3d' }}
             >
@@ -232,7 +232,7 @@ export function BentoShowcase() {
               <motion.div
                 className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6"
                 whileHover={{ rotate: 360, scale: 1.1 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
                 <Users className="w-6 h-6 text-white" />
               </motion.div>
@@ -248,19 +248,19 @@ export function BentoShowcase() {
           <motion.div
             initial={{ opacity: 0, y: 60, scale: 0.95 }}
             animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="md:col-span-1 md:row-span-1 lg:col-span-1 lg:row-span-1"
           >
             <motion.div
               whileHover={{ y: -8, scale: 1.02 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="group h-full min-h-[280px] rounded-3xl bg-white border-2 border-gray-200 hover:border-brand-blue-pale p-10 shadow-xl hover:shadow-2xl transition-all duration-600 flex flex-col justify-between"
             >
               <div>
                 <motion.div
                   className="w-12 h-12 rounded-2xl bg-brand-blue flex items-center justify-center mb-6"
                   whileHover={{ rotate: -360, scale: 1.1 }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 >
                   <Award className="w-6 h-6 text-white" />
                 </motion.div>
@@ -273,7 +273,7 @@ export function BentoShowcase() {
                 className="w-full h-1 bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
                 initial={{ scaleX: 0 }}
                 animate={isInView ? { scaleX: 1 } : {}}
-                transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 style={{ transformOrigin: 'left' }}
               />
             </motion.div>

@@ -18,7 +18,8 @@ export default function FinancialReportsPage() {
       if (!user?.organization_id) return []
 
       // Pour l'instant, retourner un tableau vide
-      // TODO: Implémenter la récupération des rapports financiers depuis la base de données
+      // NOTE: Fonctionnalité prévue - Récupération depuis la table financial_reports
+      // Créer la table financial_reports avec les colonnes nécessaires (period, revenue, expenses, etc.)
       return []
     },
     enabled: !!user?.organization_id,
@@ -26,7 +27,7 @@ export default function FinancialReportsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full p-4">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-8 w-8 animate-spin text-brand-blue" />
         </div>
@@ -35,9 +36,9 @@ export default function FinancialReportsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="w-full p-4">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <FileText className="h-8 w-8 text-brand-blue" />
           Rapports financiers
@@ -48,7 +49,7 @@ export default function FinancialReportsPage() {
       </div>
 
       {/* Contenu principal */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {reports && reports.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
@@ -64,10 +65,10 @@ export default function FinancialReportsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {reports?.map((report: any) => (
               <Card key={report.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
+                <CardHeader className="pb-3 pt-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>{report.name}</CardTitle>
@@ -78,7 +79,7 @@ export default function FinancialReportsPage() {
                     <Download className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0 pb-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Période</p>

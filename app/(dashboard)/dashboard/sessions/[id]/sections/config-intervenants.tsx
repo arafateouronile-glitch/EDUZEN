@@ -31,7 +31,7 @@ export function ConfigIntervenants({
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
           >
             <option value="">Sélectionner un intervenant</option>
-            {users.filter((u) => u.role === 'teacher' || u.role === 'admin').map((u) => (
+            {users.filter((u) => u.role === 'teacher').map((u) => (
               <option key={u.id} value={u.id}>
                 {u.full_name}
               </option>

@@ -82,7 +82,7 @@ export default function GDPRPage() {
 
   if (isLoadingRequests || isLoadingBreaches || isLoadingRegistry) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full p-4">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-8 w-8 animate-spin text-brand-blue" />
         </div>
@@ -91,9 +91,9 @@ export default function GDPRPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="w-full p-4">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <Shield className="h-8 w-8 text-brand-blue" />
           Conformité RGPD
@@ -104,9 +104,9 @@ export default function GDPRPage() {
       </div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Demandes en attente</p>
@@ -152,7 +152,7 @@ export default function GDPRPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="requests" className="space-y-6">
+      <Tabs defaultValue="requests" className="space-y-4">
         <TabsList>
           <TabsTrigger value="requests">Demandes de droits</TabsTrigger>
           <TabsTrigger value="breaches">Violations de données</TabsTrigger>
@@ -181,9 +181,9 @@ export default function GDPRPage() {
             </CardHeader>
             <CardContent>
               {dataRequests.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-3">
                     Aucune demande de droits RGPD enregistrée
                   </p>
                 </div>
@@ -207,7 +207,7 @@ export default function GDPRPage() {
                                 </Badge>
                               )}
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mb-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm mb-3">
                               <div>
                                 <p className="text-muted-foreground">Demandeur</p>
                                 <p className="font-medium">{request.requested_by_name}</p>
@@ -267,9 +267,9 @@ export default function GDPRPage() {
             </CardHeader>
             <CardContent>
               {dataBreaches.length === 0 ? (
-                <div className="text-center py-12">
-                  <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
+                <div className="text-center py-8">
+                  <Lock className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-3">
                     Aucune violation de données déclarée
                   </p>
                 </div>
@@ -292,7 +292,7 @@ export default function GDPRPage() {
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mb-3">{breach.description}</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                               <div>
                                 <p className="text-muted-foreground">Date de violation</p>
                                 <p className="font-medium">{formatDate(breach.breach_date)}</p>
@@ -355,9 +355,9 @@ export default function GDPRPage() {
             </CardHeader>
             <CardContent>
               {processingRegistry.length === 0 ? (
-                <div className="text-center py-12">
-                  <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
+                <div className="text-center py-8">
+                  <Database className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-3">
                     Aucun traitement enregistré
                   </p>
                   <Button asChild>
@@ -376,7 +376,7 @@ export default function GDPRPage() {
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold mb-2">{processing.processing_name}</h3>
                             <p className="text-sm text-muted-foreground mb-3">{processing.processing_purpose}</p>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                               <div>
                                 <p className="text-muted-foreground">Base légale</p>
                                 <p className="font-medium">{processing.legal_basis.replace(/_/g, ' ')}</p>
@@ -433,7 +433,7 @@ export default function GDPRPage() {
       </Tabs>
 
       {/* Actions rapides */}
-      <div className="mt-8 flex gap-4">
+      <div className="mt-4 flex gap-3">
         <Button variant="outline" asChild>
           <Link href="/dashboard/gdpr/reports">
             <FileText className="h-4 w-4 mr-2" />

@@ -29,7 +29,7 @@ export function PremiumChartContainer({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
       className={cn(
         'chart-container-premium rounded-2xl p-6 md:p-8',
         'transition-all duration-500 ease-out',

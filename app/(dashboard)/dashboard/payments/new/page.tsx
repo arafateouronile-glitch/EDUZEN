@@ -94,7 +94,8 @@ export default function NewInvoicePage() {
       // Pour l'instant, on gère seulement les factures individuelles avec Zod
       // La génération en masse nécessiterait un schéma séparé
       if (invoiceType === 'bulk') {
-        // TODO: Créer un schéma pour la génération en masse
+        // NOTE: Fonctionnalité prévue - Créer un schéma pour la génération en masse de paiements
+        // Permettra de créer plusieurs paiements à la fois pour une facture ou plusieurs factures
         throw new Error('La génération en masse n\'est pas encore validée avec Zod')
       } else {
         // Facture individuelle

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
-import { documentService } from '@/lib/services/document.service'
+import { DocumentService } from '@/lib/services/document.service'
 import { programService } from '@/lib/services/program.service'
 import { generatePDFFromHTML, generateSimplePDF, generatePDFBlobFromHTML } from '@/lib/utils/pdf-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
@@ -39,6 +39,8 @@ import Link from 'next/link'
 import type { StudentWithRelations, SessionWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { DocumentType } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
+import { ContextualFAQ } from '@/components/knowledge-base/contextual-faq'
 
 type Organization = TableRow<'organizations'>
 type Student = TableRow<'students'>
@@ -49,6 +51,9 @@ export default function GenerateDocumentPage() {
   const router = useRouter()
   const { user } = useAuth()
   const supabase = createClient()
+  
+  // Créer une instance du service avec le client côté client
+  const documentService = useMemo(() => new DocumentService(supabase), [supabase])
 
   const [documentType, setDocumentType] = useState<DocumentType | ''>('')
   const [selectedStudentId, setSelectedStudentId] = useState<string>('')
@@ -96,7 +101,7 @@ export default function GenerateDocumentPage() {
           .in('status', ['confirmed', 'completed', 'active'])
         
         if (enrollmentsError) {
-          console.warn('Erreur lors de la récupération des inscriptions:', enrollmentsError)
+          logger.warn('Erreur lors de la récupération des inscriptions', sanitizeError(enrollmentsError))
           // Continuer avec tous les étudiants si erreur
         } else if (enrollments && enrollments.length > 0) {
           const studentIds = (enrollments as Array<{ student_id: string }>).map(e => e.student_id).filter(Boolean)
@@ -145,7 +150,7 @@ export default function GenerateDocumentPage() {
       
       // Si erreur 400, réessayer sans la jointure students
       if (error && (error.code === 'PGRST116' || error.message?.includes('400') || error.message?.includes('relationship'))) {
-        console.warn('Erreur récupération factures avec jointure, réessai sans jointure:', error)
+        logger.warn('Erreur récupération factures avec jointure, réessai sans jointure', sanitizeError(error))
         const { data: invoicesData, error: invoicesError } = await supabase
           .from('invoices')
           .select('id, invoice_number, student_id, issue_date, due_date, amount, tax_amount, total_amount, currency, items')
@@ -154,7 +159,7 @@ export default function GenerateDocumentPage() {
           .limit(100)
         
         if (invoicesError) {
-          console.error('Erreur récupération factures:', invoicesError)
+          logger.error('Erreur récupération factures:', invoicesError)
           return []
         }
         
@@ -181,7 +186,7 @@ export default function GenerateDocumentPage() {
       }
       
       if (error) {
-        console.error('Erreur récupération factures:', error)
+        logger.error('Erreur récupération factures:', error)
         return []
       }
       
@@ -304,7 +309,7 @@ export default function GenerateDocumentPage() {
         .eq('is_current', true)
         .maybeSingle()
       if (error) {
-        console.warn('Erreur lors de la récupération de l\'année académique:', error)
+        logger.warn('Erreur lors de la récupération de l\'année académique', sanitizeError(error))
         return null
       }
       return data || null
@@ -372,7 +377,7 @@ export default function GenerateDocumentPage() {
         issueDate: new Date().toISOString(),
       })
       
-      console.log('[Generate] Variables extraites:', {
+      logger.debug('[Generate] Variables extraites:', {
         hasStudent: !!student,
         studentName: student ? `${student.first_name} ${student.last_name}` : 'N/A',
         hasInvoice: !!invoice,
@@ -415,7 +420,7 @@ export default function GenerateDocumentPage() {
           variables: variables,
           filename: filename,
         }
-        console.log('[Generate] Génération Word automatique depuis template HTML')
+        logger.debug('[Generate] Génération Word automatique depuis template HTML')
       } else {
         // PDF : utiliser le générateur PDF standard
         apiEndpoint = '/api/documents/generate-pdf'
@@ -444,18 +449,18 @@ export default function GenerateDocumentPage() {
           if (responseContentType && responseContentType.includes('application/json')) {
             const errorData = await response.json()
             // Logger les détails complets de l'erreur pour déboguer
-            console.error(`[Generate ${exportFormat.toUpperCase()}] Erreur détaillée:`, errorData)
+            logger.error(`[Generate ${exportFormat.toUpperCase()}] Erreur détaillée:`, errorData)
             if (errorData.templateInfo) {
-              console.error(`[Generate ${exportFormat.toUpperCase()}] Template info:`, errorData.templateInfo)
+              logger.error(`[Generate ${exportFormat.toUpperCase()}] Template info:`, errorData.templateInfo)
             }
             if (errorData.stack) {
-              console.error(`[Generate ${exportFormat.toUpperCase()}] Stack trace:`, errorData.stack)
+              logger.error(`[Generate ${exportFormat.toUpperCase()}] Stack trace:`, errorData.stack)
             }
             throw new Error(errorData.error || errorData.message || errorData.details || `Erreur lors de la génération du ${exportFormat === 'word' ? 'document Word' : 'PDF'}`)
           } else {
             // Si c'est du HTML (page d'erreur Next.js), lire le texte
             const errorText = await response.text()
-            console.error('Erreur HTML reçue:', errorText.substring(0, 500))
+            logger.error('Erreur HTML reçue:', errorText.substring(0, 500))
             throw new Error(`Erreur serveur (${response.status}): ${response.statusText}`)
           }
         }
@@ -488,7 +493,7 @@ export default function GenerateDocumentPage() {
               })
             
             if (uploadError) {
-              console.error('Erreur lors de l\'upload du document:', uploadError)
+              logger.error('Erreur lors de l\'upload du document:', uploadError)
               // Même si l'upload échoue, on stocke le blob URL pour permettre le téléchargement
               const tempUrl = URL.createObjectURL(documentBlob)
               const docData = {
@@ -499,7 +504,7 @@ export default function GenerateDocumentPage() {
                 student: student || (invoiceStudentId ? (invoice as any)?.students : undefined),
               }
               setGeneratedDocument(docData)
-              console.log('[Generate] Document généré stocké (upload échoué):', docData)
+              logger.debug('[Generate] Document généré stocké (upload échoué):', docData)
             } else if (uploadData) {
               // 2. Obtenir l'URL publique
               const { data: urlData } = supabase.storage
@@ -515,7 +520,7 @@ export default function GenerateDocumentPage() {
                 student: student || (invoiceStudentId ? (invoice as any)?.students : undefined),
               }
               setGeneratedDocument(docData)
-              console.log('[Generate] Document généré stocké (upload réussi):', docData)
+              logger.debug('[Generate] Document généré stocké (upload réussi):', docData)
               
               // 3. Sauvegarder dans generated_documents
               const documentData: any = {
@@ -581,7 +586,7 @@ export default function GenerateDocumentPage() {
                 } else {
                   // Pour les autres documents, partager automatiquement
                   // Le document sera automatiquement visible par l'apprenant via RLS grâce à related_entity_type et related_entity_id
-                  console.log('Document partagé automatiquement avec l\'apprenant')
+                  logger.debug('Document partagé automatiquement avec l\'apprenant')
                 }
               } else if (!documentConcernsStudent) {
                 // Si le document ne concerne pas un apprenant, ne pas définir related_entity_type/id
@@ -600,24 +605,24 @@ export default function GenerateDocumentPage() {
                 .insert(documentData)
 
               if (saveError) {
-                console.error('Erreur lors de la sauvegarde du document:', saveError)
+                logger.error('Erreur lors de la sauvegarde du document:', saveError)
               } else {
-                console.log('Document sauvegardé avec succès dans generated_documents')
+                logger.debug('Document sauvegardé avec succès dans generated_documents')
               }
             }
           } catch (saveError) {
-            console.error('Erreur lors de la sauvegarde du document:', saveError)
+            logger.error('Erreur lors de la sauvegarde du document:', saveError)
             // Ne pas bloquer l'utilisateur si la sauvegarde échoue
           }
         }
       } catch (error) {
-        console.error('Erreur lors de la génération du PDF:', error)
+        logger.error('Erreur lors de la génération du PDF:', error)
         alert('Une erreur est survenue lors de la génération du document')
       } finally {
         setIsGenerating(false)
       }
     } catch (error) {
-      console.error('Erreur lors de la génération du document:', error)
+      logger.error('Erreur lors de la génération du document:', error)
       alert('Une erreur est survenue lors de la génération du document')
       setIsGenerating(false)
     }
@@ -636,9 +641,9 @@ export default function GenerateDocumentPage() {
       // Mais garder l'information dans les métadonnées pour référence
       delete documentDataToSave.related_entity_type
       delete documentDataToSave.related_entity_id
-      console.log('Document non partagé avec l\'apprenant (relevé de notes)')
+      logger.debug('Document non partagé avec l\'apprenant (relevé de notes)')
     } else {
-      console.log('Document partagé avec l\'apprenant')
+      logger.debug('Document partagé avec l\'apprenant')
     }
 
     // Sauvegarder le document
@@ -647,10 +652,10 @@ export default function GenerateDocumentPage() {
       .insert(documentDataToSave)
     
     if (saveError) {
-      console.error('Erreur lors de la sauvegarde du document:', saveError)
+      logger.error('Erreur lors de la sauvegarde du document:', saveError)
       alert('Erreur lors de la sauvegarde du document')
     } else {
-      console.log('Document sauvegardé avec succès dans generated_documents')
+      logger.debug('Document sauvegardé avec succès dans generated_documents')
     }
 
     setPendingDocumentData(null)
@@ -772,7 +777,7 @@ export default function GenerateDocumentPage() {
       setShowEmailModal(false)
       setEmailForm({ to: '', subject: '', message: '' })
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de l\'email:', error)
+      logger.error('Erreur lors de l\'envoi de l\'email:', error)
       alert('Erreur lors de l\'envoi de l\'email')
     } finally {
       setSendingEmail(false)
@@ -839,7 +844,7 @@ export default function GenerateDocumentPage() {
         } as any)
 
       if (error) {
-        console.error('Erreur lors de l\'insertion dans learner_documents:', error)
+        logger.error('Erreur lors de l\'insertion dans learner_documents:', error)
         throw error
       }
     },
@@ -848,7 +853,7 @@ export default function GenerateDocumentPage() {
       queryClient.invalidateQueries({ queryKey: ['learner-documents'] })
     },
     onError: (error: any) => {
-      console.error('Erreur lors de l\'envoi vers l\'espace apprenant:', error)
+      logger.error('Erreur lors de l\'envoi vers l\'espace apprenant:', error)
       alert(error.message || 'Erreur lors de l\'envoi vers l\'espace apprenant')
     },
   })
@@ -1042,7 +1047,7 @@ export default function GenerateDocumentPage() {
                     setSelectedTemplateId(duplicated.id)
                     alert('Modèle dupliqué avec succès')
                   } catch (error) {
-                    console.error('Erreur lors de la duplication:', error)
+                    logger.error('Erreur lors de la duplication:', error)
                     alert('Erreur lors de la duplication du modèle')
                   }
                 }}
@@ -1382,6 +1387,9 @@ export default function GenerateDocumentPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* FAQ Contextuelle */}
+      <ContextualFAQ />
     </div>
   )
 }

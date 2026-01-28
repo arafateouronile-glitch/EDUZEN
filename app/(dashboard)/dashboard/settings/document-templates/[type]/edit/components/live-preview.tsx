@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import type { DocumentVariables } from '@/lib/types/document-templates'
 import { cn } from '@/lib/utils'
 import { processConditionals } from '@/lib/utils/document-generation/conditional-processor'
+import { sanitizeDocumentTemplate } from '@/lib/utils/sanitize-html'
 
 // Données d'exemple pour la prévisualisation
 const SAMPLE_VARIABLES: DocumentVariables = {
@@ -67,13 +68,14 @@ interface LivePreviewProps {
 
 /**
  * Remplace les variables dans du HTML et traite les conditions
+ * Le contenu est sanitizé pour prévenir les attaques XSS
  */
 function replaceVariablesInHTML(html: string, variables: DocumentVariables): string {
   if (!html) return html
-  
+
   // D'abord, traiter les conditions
   let result = processConditionals(html, variables)
-  
+
   // Ensuite, remplacer les variables restantes
   Object.entries(variables).forEach(([key, value]) => {
     // Remplacer {variable} dans le HTML
@@ -81,7 +83,9 @@ function replaceVariablesInHTML(html: string, variables: DocumentVariables): str
     const replacement = value ? String(value).replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''
     result = result.replace(regex, replacement)
   })
-  return result
+
+  // Sanitize the final result to prevent XSS
+  return sanitizeDocumentTemplate(result)
 }
 
 // Dimensions des formats de page en mm
@@ -195,9 +199,9 @@ export function LivePreview({
   }
 
   return (
-    <GlassCard variant="premium" className={cn('flex flex-col overflow-hidden', className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+    <GlassCard variant="premium" className={cn('flex flex-col overflow-hidden w-full flex-1', className)}>
+      {/* Header - Sticky toolbar full-width */}
+      <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-2">
           <Eye className="h-5 w-5 text-brand-blue" />
           <h3 className="font-semibold text-text-primary">Prévisualisation en temps réel</h3>
@@ -281,11 +285,11 @@ export function LivePreview({
         </div>
       </div>
 
-      {/* Preview Content */}
-      <div className="flex-1 overflow-auto p-4 bg-gray-50 preview-container">
-        {/* Navigation des pages */}
+      {/* Preview Content - Canvas Workspace avec padding interne de confort */}
+      <div className="flex-1 overflow-auto p-8 md:p-12 bg-[#F3F4F6] preview-container w-full h-full">
+        {/* Navigation des pages - Centrée */}
         {totalPages > 1 && !printMode && !fullPageView && (
-          <div className="flex items-center justify-center gap-4 mb-4 preview-navigation">
+          <div className="flex items-center justify-center gap-4 mb-4 preview-navigation w-full">
             <Button
               variant="outline"
               size="sm"
@@ -308,8 +312,8 @@ export function LivePreview({
           </div>
         )}
 
-        {/* Sélecteur de format de page */}
-        <div className="mb-4 flex items-center gap-2 preview-controls">
+        {/* Sélecteur de format de page - Centré */}
+        <div className="mb-4 flex items-center justify-center gap-2 preview-controls">
           <label className="text-sm text-text-secondary">Format:</label>
           <select
             value={pageSize}
@@ -326,8 +330,11 @@ export function LivePreview({
           </select>
         </div>
 
-        {/* Pages Preview */}
-        <div className={cn('space-y-4', fullPageView && 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4')}>
+        {/* Pages Preview - Container full-width, page centrée dans l'océan gris */}
+        <div className={cn(
+          'w-full flex justify-center items-start',
+          fullPageView ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'
+        )}>
           {Array.from({ length: totalPages }).map((_, pageIndex) => {
             const pageNum = pageIndex + 1
             const isCurrentPage = pageNum === currentPage
@@ -336,15 +343,15 @@ export function LivePreview({
               <div
                 key={pageNum}
                 className={cn(
-                  'mx-auto bg-white shadow-lg rounded-lg overflow-hidden transition-all preview-page',
-                  fullPageView ? 'w-full' : '',
+                  'bg-white shadow-xl rounded-lg overflow-hidden transition-all preview-page',
+                  fullPageView ? 'w-full' : 'mx-auto', // Toujours centrer la feuille dans le workspace
                   isCurrentPage ? 'ring-2 ring-brand-blue' : fullPageView ? 'opacity-90' : 'opacity-60',
                   !isCurrentPage && totalPages > 1 && !printMode && !fullPageView && 'hidden'
                 )}
                 style={{ 
-                  width: `${pageDimensions.width}mm`,
+                  width: fullPageView ? '100%' : `${pageDimensions.width}mm`,
                   minHeight: `${pageDimensions.height}mm`,
-                  maxWidth: '100%',
+                  maxWidth: fullPageView ? '100%' : '900px', // Largeur max pour la feuille blanche (A4 ≈ 794px)
                   transform: `scale(${zoom})`,
                   transformOrigin: 'top center',
                   padding: `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`,

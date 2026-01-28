@@ -50,7 +50,7 @@ describe('PaymentService', () => {
     // Mock createClient
     vi.mocked(createClient).mockReturnValue(mockSupabase as any)
 
-    paymentService = new PaymentService()
+    paymentService = new PaymentService(mockSupabase as any)
   })
 
   describe('getAll', () => {
@@ -166,16 +166,86 @@ describe('PaymentService', () => {
         status: 'pending' as const,
       }
 
-      const mockQuery = mockSupabase.from('payments')
-      mockQuery.single.mockResolvedValue({
-        data: { id: '1', ...newPayment },
+      const createdPayment = { id: '1', ...newPayment }
+
+      // Mock la chaîne insert().select().single()
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: createdPayment,
         error: null,
       })
+      const mockSelect = vi.fn().mockReturnValue({
+        single: mockSingle,
+      })
+      const mockInsert = vi.fn().mockReturnValue({
+        select: mockSelect,
+      })
+      // Mock pour updateInvoicePaymentStatus qui fait plusieurs appels
+      // 1. Récupération des paiements (from('payments').select('amount').eq().eq())
+      const mockPaymentsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({
+            data: [{ amount: '1000' }],
+            error: null,
+          }),
+        }),
+      })
+      
+      // 2. Récupération de la facture (from('invoices').select('total_amount').eq().single())
+      const mockInvoiceSelect1 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'invoice-1', total_amount: 1000 },
+            error: null,
+          }),
+        }),
+      })
+      
+      // 3. Récupération de due_date (from('invoices').select('due_date').eq().single())
+      const mockInvoiceSelect2 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { due_date: new Date().toISOString() },
+            error: null,
+          }),
+        }),
+      })
+      
+      // 4. Update de la facture (from('invoices').update().eq())
+      const mockInvoiceUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          error: null,
+        }),
+      })
+      
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return {
+            insert: mockInsert,
+            select: mockPaymentsSelect,
+          }
+        }
+        if (table === 'invoices') {
+          let selectCallCount = 0
+          return {
+            select: vi.fn(() => {
+              selectCallCount++
+              if (selectCallCount === 1) return mockInvoiceSelect1()
+              return mockInvoiceSelect2()
+            }),
+            update: mockInvoiceUpdate,
+          }
+        }
+        return { insert: mockInsert }
+      })
+
+      mockSupabase.from = mockFrom
 
       const result = await paymentService.create(newPayment as any)
 
       expect(result).toHaveProperty('id')
-      expect(mockQuery.insert).toHaveBeenCalled()
+      expect(result).toEqual(createdPayment)
+      expect(mockFrom).toHaveBeenCalledWith('payments')
+      expect(mockInsert).toHaveBeenCalled()
     })
   })
 })

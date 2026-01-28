@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Administrateur',
@@ -80,12 +81,12 @@ function UsersSettingsPageContent() {
     queryKey: ['organization-users', user?.organization_id, searchQuery, roleFilter],
     queryFn: async () => {
       if (!user?.organization_id) {
-        console.log('⚠️ [USERS] Pas d\'organization_id pour l\'utilisateur:', user?.id)
+        logger.debug('⚠️ [USERS] Pas d\'organization_id pour l\'utilisateur', { userId: user?.id })
         return []
       }
       
-      console.log('🔍 [USERS] Récupération des utilisateurs pour organization_id:', user.organization_id)
-      console.log('🔍 [USERS] Utilisateur actuel:', {
+      logger.debug('🔍 [USERS] Récupération des utilisateurs pour organization_id', { organizationId: user.organization_id })
+      logger.debug('🔍 [USERS] Utilisateur actuel:', {
         id: user.id,
         email: user.email,
         role: user.role,
@@ -99,7 +100,7 @@ function UsersSettingsPageContent() {
         .eq('organization_id', user.organization_id)
         .order('created_at', { ascending: false })
       
-      console.log('🔍 [USERS] Requête Supabase construite, exécution...')
+      logger.debug('🔍 [USERS] Requête Supabase construite, exécution...')
 
       if (searchQuery) {
         query = query.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
@@ -107,17 +108,17 @@ function UsersSettingsPageContent() {
 
       if (roleFilter) {
         query = query.eq('role', roleFilter)
-        console.log('🔍 [USERS] Filtre par rôle appliqué:', roleFilter)
+        logger.debug('🔍 [USERS] Filtre par rôle appliqué', { roleFilter })
       }
 
       const { data, error } = await query
       
       if (error) {
-        console.error('❌ [USERS] Erreur lors de la récupération:', error)
+        logger.error('❌ [USERS] Erreur lors de la récupération', sanitizeError(error))
         throw error
       }
       
-      console.log('✅ [USERS] Utilisateurs récupérés:', data?.length || 0)
+      logger.debug('✅ [USERS] Utilisateurs récupérés', { count: data?.length || 0 })
       if (data && data.length > 0) {
         const usersDetails = data.map(u => ({
           id: u.id,
@@ -127,9 +128,9 @@ function UsersSettingsPageContent() {
           organization_id: u.organization_id,
           is_active: u.is_active,
         }))
-        console.log('📋 [USERS] Détails des utilisateurs:', usersDetails)
-        console.log('📋 [USERS] Détails complets (pour debug):', JSON.stringify(usersDetails, null, 2))
-        console.log('📊 [USERS] Répartition par rôle:', {
+        logger.debug('📋 [USERS] Détails des utilisateurs', { usersDetails })
+        logger.debug('📋 [USERS] Détails complets (pour debug)', { details: JSON.stringify(usersDetails, null, 2) })
+        logger.debug('📊 [USERS] Répartition par rôle:', {
           teachers: data.filter(u => u.role === 'teacher').length,
           admins: data.filter(u => u.role === 'admin' || u.role === 'super_admin').length,
           secretaries: data.filter(u => u.role === 'secretary').length,
@@ -137,7 +138,7 @@ function UsersSettingsPageContent() {
           others: data.filter(u => !['teacher', 'admin', 'super_admin', 'secretary', 'accountant'].includes(u.role)).length,
         })
       } else {
-        console.warn('⚠️ [USERS] Aucun utilisateur trouvé pour organization_id:', user.organization_id)
+        logger.warn('⚠️ [USERS] Aucun utilisateur trouvé pour organization_id', { organizationId: user.organization_id })
       }
       
       return data || []
@@ -146,6 +147,7 @@ function UsersSettingsPageContent() {
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     staleTime: 0, // Toujours considérer les données comme obsolètes pour forcer le refetch
+    gcTime: 0, // Ne pas mettre en cache pour toujours avoir les données à jour
   })
 
   // Mutation pour activer/désactiver un utilisateur

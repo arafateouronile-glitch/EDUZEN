@@ -2,10 +2,12 @@
  * EDUZEN - Service Bilan Pédagogique et Financier (BPF)
  *
  * Service pour le rapport annuel obligatoire des Organismes de Formation
+ * Module "BPF Magic Engine" - Calcul précis et automatisé
  */
 
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // =====================================================
 // TYPES & INTERFACES
@@ -82,6 +84,80 @@ export interface BPFTrainingDomain {
 }
 
 // =====================================================
+// BPF MAGIC ENGINE TYPES
+// =====================================================
+
+export interface BPFStats {
+  total_hours_realized: number
+  total_trainee_hours: number
+  total_students_count: number
+  total_sessions_count: number
+  total_programs_count: number
+  attendance_rate: number
+}
+
+export interface BPFRevenueBreakdown {
+  total_revenue: number
+  revenue_cpf: number
+  revenue_opco: number
+  revenue_companies: number
+  revenue_individuals: number
+  revenue_pole_emploi: number
+  revenue_regions: number
+  revenue_state: number
+  revenue_other: number
+  breakdown_details: Record<string, BPFRevenueDetail[]>
+}
+
+export interface BPFRevenueDetail {
+  enrollment_id: string
+  amount: number
+  funding_name: string
+  session_name: string
+  student_name: string
+}
+
+export interface BPFInconsistency {
+  inconsistency_type: string
+  severity: 'critical' | 'warning' | 'info'
+  description: string
+  affected_count: number
+  details: Record<string, any>[]
+}
+
+export interface BPFStudentBreakdown {
+  total_students: number
+  students_men: number
+  students_women: number
+  students_under_26: number
+  students_26_to_45: number
+  students_over_45: number
+  students_disabled: number
+  age_breakdown: Record<string, number>
+}
+
+export interface BPFDrillDownResult {
+  total_count: number
+  items: Record<string, any>[]
+}
+
+export type BPFDrillDownMetric = 'trainee_hours' | 'revenue' | 'students' | 'sessions'
+
+// BPF Category mappings for Cerfa
+export const BPF_CATEGORIES = {
+  cpf: { label: 'Mon Compte Formation (CPF)', cerfaLine: 'F1' },
+  opco: { label: 'Opérateurs de Compétences (OPCO)', cerfaLine: 'F2' },
+  companies: { label: 'Entreprises', cerfaLine: 'F3' },
+  individuals: { label: 'Particuliers', cerfaLine: 'F4' },
+  pole_emploi: { label: 'Pôle Emploi / France Travail', cerfaLine: 'F5' },
+  regions: { label: 'Conseils régionaux', cerfaLine: 'F6' },
+  state: { label: 'État', cerfaLine: 'F7' },
+  other: { label: 'Autres financements', cerfaLine: 'F8' },
+} as const
+
+export type BPFCategory = keyof typeof BPF_CATEGORIES
+
+// =====================================================
 // SERVICE
 // =====================================================
 
@@ -108,7 +184,7 @@ export class BPFService {
 
       if (error) {
         if (this.is404Error(error)) {
-          console.warn('[BPF] Reports table does not exist yet')
+          logger.warn('BPFService - Reports table does not exist yet')
           return []
         }
         throw error
@@ -222,13 +298,13 @@ export class BPFService {
       })
 
       if (error) {
-        console.warn('[BPF] Could not calculate metrics automatically:', error.message)
+        logger.warn('BPFService - Could not calculate metrics automatically', { errorMessage: error.message })
         return this.getDefaultMetrics()
       }
 
       return data || this.getDefaultMetrics()
     } catch (err) {
-      console.warn('[BPF] Error calculating metrics:', err)
+      logger.warn('BPFService - Error calculating metrics', { error: sanitizeError(err) })
       return this.getDefaultMetrics()
     }
   }
@@ -319,6 +395,315 @@ export class BPFService {
       error?.message?.includes('does not exist')
     )
   }
+
+  // =====================================================
+  // BPF MAGIC ENGINE METHODS
+  // =====================================================
+
+  /**
+   * Récupérer les statistiques BPF précises basées sur les émargements
+   * C'est LE calcul qui donne des sueurs froides aux directeurs d'OF
+   */
+  async getStats(organizationId: string, year: number): Promise<BPFStats> {
+    try {
+      const { data, error } = await this.supabase.rpc('get_bpf_stats', {
+        target_org_id: organizationId,
+        target_year: year,
+      })
+
+      if (error) {
+        logger.warn('BPFService - Could not get BPF stats', { errorMessage: error.message })
+        return this.getDefaultStats()
+      }
+
+      // RPC retourne un tableau, on prend le premier élément
+      const result = Array.isArray(data) ? data[0] : data
+      return result || this.getDefaultStats()
+    } catch (err) {
+      logger.warn('BPFService - Error getting stats', { error: sanitizeError(err) })
+      return this.getDefaultStats()
+    }
+  }
+
+  /**
+   * Récupérer la ventilation du CA par source de financement
+   */
+  async getRevenueBreakdown(organizationId: string, year: number): Promise<BPFRevenueBreakdown> {
+    try {
+      const { data, error } = await this.supabase.rpc('get_bpf_revenue_breakdown', {
+        target_org_id: organizationId,
+        target_year: year,
+      })
+
+      if (error) {
+        logger.warn('BPFService - Could not get revenue breakdown', { errorMessage: error.message })
+        return this.getDefaultRevenueBreakdown()
+      }
+
+      const result = Array.isArray(data) ? data[0] : data
+      return result || this.getDefaultRevenueBreakdown()
+    } catch (err) {
+      logger.warn('BPFService - Error getting revenue breakdown', { error: sanitizeError(err) })
+      return this.getDefaultRevenueBreakdown()
+    }
+  }
+
+  /**
+   * Détecter les incohérences de données qui pourraient fausser le BPF
+   * C'est le "vérificateur d'incohérences" qui signale les problèmes
+   */
+  async getInconsistencies(organizationId: string, year: number): Promise<BPFInconsistency[]> {
+    try {
+      const { data, error } = await this.supabase.rpc('get_bpf_inconsistencies', {
+        target_org_id: organizationId,
+        target_year: year,
+      })
+
+      if (error) {
+        logger.warn('BPFService - Could not get inconsistencies', { errorMessage: error.message })
+        return []
+      }
+
+      return (data || []).map((item: any) => ({
+        inconsistency_type: item.inconsistency_type,
+        severity: item.severity as 'critical' | 'warning' | 'info',
+        description: item.description,
+        affected_count: item.affected_count,
+        details: item.details || [],
+      }))
+    } catch (err) {
+      logger.warn('BPFService - Error getting inconsistencies', { error: sanitizeError(err) })
+      return []
+    }
+  }
+
+  /**
+   * Récupérer la répartition démographique des stagiaires
+   */
+  async getStudentBreakdown(organizationId: string, year: number): Promise<BPFStudentBreakdown> {
+    try {
+      const { data, error } = await this.supabase.rpc('get_bpf_student_breakdown', {
+        target_org_id: organizationId,
+        target_year: year,
+      })
+
+      if (error) {
+        logger.warn('BPFService - Could not get student breakdown', { errorMessage: error.message })
+        return this.getDefaultStudentBreakdown()
+      }
+
+      const result = Array.isArray(data) ? data[0] : data
+      return result || this.getDefaultStudentBreakdown()
+    } catch (err) {
+      logger.warn('BPFService - Error getting student breakdown', { error: sanitizeError(err) })
+      return this.getDefaultStudentBreakdown()
+    }
+  }
+
+  /**
+   * Drill-down sur un chiffre spécifique du BPF
+   * Mode Audit : voir le détail des calculs
+   */
+  async getDrillDown(
+    organizationId: string,
+    year: number,
+    metricType: BPFDrillDownMetric,
+    page: number = 1,
+    pageSize: number = 50
+  ): Promise<BPFDrillDownResult> {
+    try {
+      const { data, error } = await this.supabase.rpc('get_bpf_drill_down', {
+        target_org_id: organizationId,
+        target_year: year,
+        metric_type: metricType,
+        page_num: page,
+        page_size: pageSize,
+      })
+
+      if (error) {
+        logger.warn('BPFService - Could not get drill down', { errorMessage: error.message })
+        return { total_count: 0, items: [] }
+      }
+
+      const result = Array.isArray(data) ? data[0] : data
+      return {
+        total_count: result?.total_count || 0,
+        items: result?.items || [],
+      }
+    } catch (err) {
+      logger.warn('BPFService - Error getting drill down', { error: sanitizeError(err) })
+      return { total_count: 0, items: [] }
+    }
+  }
+
+  /**
+   * Recalculer et mettre à jour un rapport BPF avec les données actuelles
+   */
+  async recalculateReport(reportId: string, organizationId: string): Promise<BPFReport> {
+    const report = await this.getReport(reportId)
+    if (!report) {
+      throw new Error('Rapport BPF non trouvé')
+    }
+
+    const metrics = await this.calculateMetrics(organizationId, report.year)
+    return await this.updateReport(reportId, {
+      ...metrics,
+      generated_at: new Date().toISOString(),
+      status: 'in_progress',
+    })
+  }
+
+  /**
+   * Préparer les données pour l'export Cerfa
+   */
+  async prepareCerfaData(organizationId: string, year: number): Promise<BPFCerfaData> {
+    const [stats, revenue, students, inconsistencies] = await Promise.all([
+      this.getStats(organizationId, year),
+      this.getRevenueBreakdown(organizationId, year),
+      this.getStudentBreakdown(organizationId, year),
+      this.getInconsistencies(organizationId, year),
+    ])
+
+    // Récupérer les infos de l'organisation
+    const { data: org } = await this.supabase
+      .from('organizations')
+      .select('name, siret, address, city, postal_code, nda_number')
+      .eq('id', organizationId)
+      .single()
+
+    return {
+      organization: {
+        name: org?.name || '',
+        siret: org?.siret || '',
+        address: org?.address || '',
+        city: org?.city || '',
+        postal_code: org?.postal_code || '',
+        nda_number: org?.nda_number || '',
+      },
+      year,
+      // Cadre F - Origine des produits
+      cadreF: {
+        total: revenue.total_revenue,
+        cpf: revenue.revenue_cpf,
+        opco: revenue.revenue_opco,
+        companies: revenue.revenue_companies,
+        individuals: revenue.revenue_individuals,
+        pole_emploi: revenue.revenue_pole_emploi,
+        regions: revenue.revenue_regions,
+        state: revenue.revenue_state,
+        other: revenue.revenue_other,
+      },
+      // Cadre G - Stagiaires
+      cadreG: {
+        total: students.total_students,
+        men: students.students_men,
+        women: students.students_women,
+        under_26: students.students_under_26,
+        over_45: students.students_over_45,
+        disabled: students.students_disabled,
+      },
+      // Cadre H - Bilan d'activité
+      cadreH: {
+        total_hours: stats.total_hours_realized,
+        trainee_hours: stats.total_trainee_hours,
+        sessions_count: stats.total_sessions_count,
+        programs_count: stats.total_programs_count,
+        attendance_rate: stats.attendance_rate,
+      },
+      // Alertes
+      inconsistencies,
+      hasWarnings: inconsistencies.some((i) => i.severity === 'warning'),
+      hasCriticalIssues: inconsistencies.some((i) => i.severity === 'critical'),
+    }
+  }
+
+  // =====================================================
+  // DEFAULT VALUES
+  // =====================================================
+
+  private getDefaultStats(): BPFStats {
+    return {
+      total_hours_realized: 0,
+      total_trainee_hours: 0,
+      total_students_count: 0,
+      total_sessions_count: 0,
+      total_programs_count: 0,
+      attendance_rate: 0,
+    }
+  }
+
+  private getDefaultRevenueBreakdown(): BPFRevenueBreakdown {
+    return {
+      total_revenue: 0,
+      revenue_cpf: 0,
+      revenue_opco: 0,
+      revenue_companies: 0,
+      revenue_individuals: 0,
+      revenue_pole_emploi: 0,
+      revenue_regions: 0,
+      revenue_state: 0,
+      revenue_other: 0,
+      breakdown_details: {},
+    }
+  }
+
+  private getDefaultStudentBreakdown(): BPFStudentBreakdown {
+    return {
+      total_students: 0,
+      students_men: 0,
+      students_women: 0,
+      students_under_26: 0,
+      students_26_to_45: 0,
+      students_over_45: 0,
+      students_disabled: 0,
+      age_breakdown: {},
+    }
+  }
+}
+
+// =====================================================
+// CERFA DATA TYPE
+// =====================================================
+
+export interface BPFCerfaData {
+  organization: {
+    name: string
+    siret: string
+    address: string
+    city: string
+    postal_code: string
+    nda_number: string
+  }
+  year: number
+  cadreF: {
+    total: number
+    cpf: number
+    opco: number
+    companies: number
+    individuals: number
+    pole_emploi: number
+    regions: number
+    state: number
+    other: number
+  }
+  cadreG: {
+    total: number
+    men: number
+    women: number
+    under_26: number
+    over_45: number
+    disabled: number
+  }
+  cadreH: {
+    total_hours: number
+    trainee_hours: number
+    sessions_count: number
+    programs_count: number
+    attendance_rate: number
+  }
+  inconsistencies: BPFInconsistency[]
+  hasWarnings: boolean
+  hasCriticalIssues: boolean
 }
 
 // Export singleton

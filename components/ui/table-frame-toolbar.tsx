@@ -13,7 +13,8 @@ import {
 import { Table, Square, Box, Columns } from 'lucide-react'
 import type { RichTextEditorRef } from './rich-text-editor'
 import { TablePropertiesModal } from './table-properties-modal'
-import type { TableProperties } from '@/lib/utils/quill-table-helper'
+import type { TableProperties } from '@/lib/types/table-properties'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface TableFrameToolbarProps {
   editorRef: React.RefObject<RichTextEditorRef>
@@ -26,7 +27,7 @@ export function TableFrameToolbar({ editorRef }: TableFrameToolbarProps) {
       try {
         editorRef.current.insertTable(rows, cols)
       } catch (error) {
-        console.error('Error inserting table:', error)
+        logger.error('Error inserting table:', error)
       }
     }
   }
@@ -36,7 +37,7 @@ export function TableFrameToolbar({ editorRef }: TableFrameToolbarProps) {
       try {
         editorRef.current.insertAdminTable(headers, rows)
       } catch (error) {
-        console.error('Error inserting admin table:', error)
+        logger.error('Error inserting admin table:', error)
       }
     }
   }
@@ -71,7 +72,7 @@ export function TableFrameToolbar({ editorRef }: TableFrameToolbarProps) {
     try {
       editorRef.current.insertBorderedFrame(options[type])
     } catch (error) {
-      console.error('Error inserting frame:', error)
+      logger.error('Error inserting frame:', error)
     }
   }
 
@@ -80,7 +81,7 @@ export function TableFrameToolbar({ editorRef }: TableFrameToolbarProps) {
       try {
         editorRef.current.insertFramedSection('Titre de la section', color)
       } catch (error) {
-        console.error('Error inserting section:', error)
+        logger.error('Error inserting section:', error)
       }
     }
   }
@@ -90,7 +91,7 @@ export function TableFrameToolbar({ editorRef }: TableFrameToolbarProps) {
       try {
         editorRef.current.insertTableWithProperties(properties)
       } catch (error) {
-        console.error('Error inserting table with properties:', error)
+        logger.error('Error inserting table with properties:', error)
       }
     }
   }

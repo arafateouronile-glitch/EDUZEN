@@ -254,20 +254,23 @@ export class PushNotificationsService {
   }
 
   private async sendViaFCM(token: string, payload: PushNotificationPayload) {
-    // TODO: Implémenter avec firebase-admin SDK
+    // NOTE: Intégration Firebase Cloud Messaging requise
+    // Nécessite: npm install firebase-admin et configuration de FCM credentials
     // Pour l'instant, on simule l'envoi
     logger.debug('Sending FCM notification', { hasToken: !!token })
     return { success: true }
   }
 
   private async sendViaAPNS(token: string, payload: PushNotificationPayload) {
-    // TODO: Implémenter avec node-apn ou @parse/node-apn
+    // NOTE: Intégration Apple Push Notification Service requise
+    // Nécessite: npm install node-apn et configuration des certificats APN
     logger.debug('Sending APNS notification', { hasToken: !!token })
     return { success: true }
   }
 
   private async sendViaWebPush(token: string, payload: PushNotificationPayload) {
-    // TODO: Implémenter avec web-push library
+    // NOTE: Intégration Web Push API requise
+    // Nécessite: npm install web-push et génération de VAPID keys
     logger.debug('Sending Web Push notification', { hasToken: !!token })
     return { success: true }
   }

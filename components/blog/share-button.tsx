@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Share2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { BlogPost } from '@/types/super-admin.types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export function ShareButton({ post }: { post: BlogPost }) {
   const [copied, setCopied] = useState(false)
@@ -20,7 +21,7 @@ export function ShareButton({ post }: { post: BlogPost }) {
         })
       } catch (error) {
         // L'utilisateur a annulé le partage
-        console.log('Share cancelled')
+        logger.debug('Share cancelled')
       }
     } else {
       // Fallback : copier dans le presse-papier
@@ -29,7 +30,7 @@ export function ShareButton({ post }: { post: BlogPost }) {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       } catch (error) {
-        console.error('Failed to copy:', error)
+        logger.error('Failed to copy:', error)
       }
     }
   }

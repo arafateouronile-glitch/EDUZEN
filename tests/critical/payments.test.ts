@@ -8,20 +8,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { PaymentService } from '@/lib/services/payment.service'
 
-// Mock Supabase client
+// Mock Supabase client avec vi.hoisted
+const { mockSupabase } = vi.hoisted(() => {
+  const mock: any = {
+    from: vi.fn(),
+    select: vi.fn(),
+    eq: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    order: vi.fn(),
+    single: vi.fn(),
+  }
+  
+  const chainableMethods = ['from', 'select', 'eq', 'insert', 'update', 'order']
+  chainableMethods.forEach((method) => {
+    mock[method].mockImplementation(() => mock)
+  })
+  
+  mock.single.mockResolvedValue({ data: null, error: null })
+  
+  return { mockSupabase: mock }
+})
+
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({
-        data: [],
-        error: null,
-      }),
-    })),
-  })),
+  createClient: () => mockSupabase,
 }))
 
 describe('PaymentService - Création de paiement', () => {
@@ -30,7 +40,13 @@ describe('PaymentService - Création de paiement', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    paymentService = new PaymentService()
+    // Réinitialiser le chaînage
+    const chainableMethods = ['from', 'select', 'eq', 'insert', 'update', 'order']
+    chainableMethods.forEach((method) => {
+      ;(mockSupabase as any)[method].mockImplementation(() => mockSupabase)
+    })
+    ;(mockSupabase as any).single.mockResolvedValue({ data: null, error: null })
+    paymentService = new PaymentService(mockSupabase as any)
   })
 
   it('devrait créer un paiement avec succès', async () => {

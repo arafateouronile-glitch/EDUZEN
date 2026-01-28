@@ -21,8 +21,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import Link from 'next/link'
@@ -30,13 +34,22 @@ import {
   Download, FileText, Plus, Receipt, DollarSign, 
   FileCheck, FileX, Eye, CreditCard, ChevronDown, ChevronUp,
   Trash2, Edit, TrendingDown, ArrowRightLeft, Wallet, PieChart as PieChartIcon,
-  TrendingUp, AlertCircle, CheckCircle2, Mail
+  TrendingUp, AlertCircle, CheckCircle2, Mail, PenTool, Send
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+// Lazy load recharts pour réduire le bundle initial
+import {
+  RechartsPieChart,
+  RechartsPie,
+  RechartsCell,
+  RechartsResponsiveContainer,
+  RechartsTooltip,
+  RechartsLegend,
+} from '@/components/charts/recharts-wrapper'
 import type { EnrollmentWithRelations, StudentWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { SessionWithRelations } from '@/lib/types/query-types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Payment = TableRow<'payments'>
 
@@ -101,6 +114,20 @@ export function GestionFinances({
 
   const [emailPreview, setEmailPreview] = useState<EmailPreviewState | null>(null)
 
+  const [signatureRequestDialog, setSignatureRequestDialog] = useState<{
+    invoice: any
+    type: 'invoice' | 'quote'
+  } | null>(null)
+
+  const [signatureRequestForm, setSignatureRequestForm] = useState<{
+    recipientEmail: string
+    recipientName: string
+    subject: string
+    message: string
+  } | null>(null)
+
+  const [isSendingSignatureRequest, setIsSendingSignatureRequest] = useState(false)
+
   // Récupérer les factures et devis pour tous les étudiants de la session (1 requête au lieu de N)
   const studentIds = enrollments.map((e) => e.student_id).filter(Boolean) as string[]
   const { data: invoices, isLoading: isInvoicesLoading } = useQuery({
@@ -151,7 +178,7 @@ export function GestionFinances({
         .eq('is_current', true)
         .maybeSingle()
       if (error) {
-        console.warn('Erreur lors de la récupération de l\'année académique:', error)
+        logger.warn('Erreur lors de la récupération de l\'année académique', sanitizeError(error))
         return null
       }
       return data || null
@@ -351,7 +378,7 @@ export function GestionFinances({
         description: `Le ${type === 'invoice' ? 'facture' : 'devis'} a été généré et téléchargé avec succès.`,
       })
     } catch (error) {
-      console.error('Erreur lors de la génération du document:', error)
+      logger.error('Erreur lors de la génération du document:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -529,7 +556,7 @@ export function GestionFinances({
 
       setEmailPreview(null)
     } catch (error) {
-      console.error('Erreur lors de l’envoi email du document:', error)
+      logger.error('Erreur lors de l’envoi email du document:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -1229,6 +1256,34 @@ export function GestionFinances({
                                   >
                                     {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
                                   </button>
+                                  <button
+                                    onClick={() => {
+                                      const student = quote.students
+                                      if (!student?.email) {
+                                        addToast({
+                                          type: 'error',
+                                          title: 'Erreur',
+                                          description: 'L\'étudiant n\'a pas d\'email enregistré.',
+                                        })
+                                        return
+                                      }
+                                      setSignatureRequestDialog({
+                                        invoice: quote,
+                                        type: 'quote',
+                                      })
+                                      setSignatureRequestForm({
+                                        recipientEmail: student.email || '',
+                                        recipientName: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
+                                        subject: `Demande de signature : Devis ${quote.invoice_number || 'Brouillon'} - ${student.first_name} ${student.last_name}`,
+                                        message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre devis ${quote.invoice_number || ''} pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir le signer en ligne.\n\nCordialement,\n${org?.name || ''}`,
+                                      })
+                                    }}
+                                    disabled={!quote.students?.email}
+                                    className="text-gray-400 hover:text-purple-600 transition-colors"
+                                    title="Envoyer en demande de signature"
+                                  >
+                                    <PenTool className="h-3 w-3" />
+                                  </button>
                                   <button 
                                     onClick={() => {
                                       const ok = window.confirm('Transformer ce devis en facture ? (La facture sera créée en brouillon)')
@@ -1266,6 +1321,34 @@ export function GestionFinances({
                                     title="Envoyer par email"
                                   >
                                     {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const student = invoice.students
+                                      if (!student?.email) {
+                                        addToast({
+                                          type: 'error',
+                                          title: 'Erreur',
+                                          description: 'L\'étudiant n\'a pas d\'email enregistré.',
+                                        })
+                                        return
+                                      }
+                                      setSignatureRequestDialog({
+                                        invoice: invoice,
+                                        type: 'invoice',
+                                      })
+                                      setSignatureRequestForm({
+                                        recipientEmail: student.email || '',
+                                        recipientName: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
+                                        subject: `Demande de signature : Facture ${invoice.invoice_number || 'Brouillon'} - ${student.first_name} ${student.last_name}`,
+                                        message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre facture ${invoice.invoice_number || ''} pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir la signer en ligne.\n\nCordialement,\n${org?.name || ''}`,
+                                      })
+                                    }}
+                                    disabled={!invoice.students?.email}
+                                    className="text-blue-400 hover:text-purple-600 transition-colors"
+                                    title="Envoyer en demande de signature"
+                                  >
+                                    <PenTool className="h-3 w-3" />
                                   </button>
                                   <Link href={`/dashboard/payments/${invoice.id}`} className="text-blue-400 hover:text-blue-700 transition-colors" title="Voir détails">
                                     <Eye className="h-3 w-3" />
@@ -1417,9 +1500,9 @@ export function GestionFinances({
             
             <div className="h-[250px] w-full relative">
               {enrollments.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
+                <RechartsResponsiveContainer width="100%" height="100%">
+                  <RechartsPieChart>
+                    <RechartsPie
                       data={paymentStatusData}
                       cx="50%"
                       cy="50%"
@@ -1427,19 +1510,21 @@ export function GestionFinances({
                       outerRadius={80}
                       paddingAngle={5}
                       dataKey="value"
+                      {...({} as any)}
                     >
                       {paymentStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} strokeWidth={0} />
+                        <RechartsCell key={`cell-${index}`} fill={entry.fill} strokeWidth={0} {...({} as any)} />
                       ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend 
+                    </RechartsPie>
+                    <RechartsTooltip content={<CustomTooltip />} {...({} as any)} />
+                    <RechartsLegend 
                       verticalAlign="bottom" 
                       height={36}
-                      formatter={(value) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
+                      formatter={(value: any) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
+                      {...({} as any)}
                     />
-                  </PieChart>
-                </ResponsiveContainer>
+                  </RechartsPieChart>
+                </RechartsResponsiveContainer>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-sm text-gray-500">
                   <PieChartIcon className="h-8 w-8 text-gray-300 mb-2" />
@@ -1649,6 +1734,197 @@ export function GestionFinances({
               }
             >
               {emailPreview && isEmailSending === emailPreview.invoice.id ? 'Envoi...' : 'Envoyer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de demande de signature */}
+      <Dialog open={!!signatureRequestDialog} onOpenChange={(open) => {
+        if (!open) {
+          setSignatureRequestDialog(null)
+          setSignatureRequestForm(null)
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white/95 backdrop-blur-xl border-white/20 shadow-2xl">
+          <div className="p-6 border-b border-gray-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                <PenTool className="h-5 w-5 text-purple-600" />
+                Envoyer en demande de signature
+              </DialogTitle>
+              <DialogDescription className="text-gray-500">
+                Le document sera généré et envoyé au destinataire pour signature en ligne.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="p-6 space-y-6">
+            {signatureRequestForm && signatureRequestDialog && (
+              <div className="space-y-4">
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    Document : <span className="font-semibold">{signatureRequestDialog.type === 'quote' ? 'Devis' : 'Facture'}</span> —{' '}
+                    <span className="font-semibold">{signatureRequestDialog.invoice.invoice_number || 'Brouillon'}</span>
+                  </p>
+                </div>
+                
+                <div className="grid gap-2">
+                  <label htmlFor="sig-recipient-email" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Email du destinataire</label>
+                  <div className="relative">
+                    <input
+                      id="sig-recipient-email"
+                      type="email"
+                      value={signatureRequestForm.recipientEmail}
+                      onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, recipientEmail: e.target.value })}
+                      className="w-full pl-10 px-4 py-3 border rounded-lg focus:ring-purple-600/20 focus:border-purple-600 transition-all"
+                      placeholder="email@example.com"
+                    />
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <label htmlFor="sig-recipient-name" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Nom du destinataire</label>
+                  <input
+                    id="sig-recipient-name"
+                    type="text"
+                    value={signatureRequestForm.recipientName}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, recipientName: e.target.value })}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-purple-600/20 focus:border-purple-600 transition-all font-medium"
+                    placeholder="Nom complet"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <label htmlFor="sig-subject" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sujet</label>
+                  <input
+                    id="sig-subject"
+                    type="text"
+                    value={signatureRequestForm.subject}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, subject: e.target.value })}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-purple-600/20 focus:border-purple-600 transition-all font-medium"
+                    placeholder="Sujet de l'email"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <label htmlFor="sig-message" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Message</label>
+                  <textarea
+                    id="sig-message"
+                    value={signatureRequestForm.message}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, message: e.target.value })}
+                    className="min-h-[200px] font-mono text-sm w-full px-4 py-3 border rounded-lg focus:ring-purple-600/20 focus:border-purple-600 transition-all"
+                    placeholder="Message personnalisé"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-700">
+                  <div className="p-2 bg-white rounded-lg shadow-sm">
+                    <PenTool className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <p className="font-medium">
+                    Le destinataire recevra un email avec un lien sécurisé pour signer le document en ligne.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="p-6 bg-gray-50/50 border-t border-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSignatureRequestDialog(null)
+                setSignatureRequestForm(null)
+              }}
+              className="border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!signatureRequestDialog || !signatureRequestForm) return
+                
+                setIsSendingSignatureRequest(true)
+                try {
+                  // Générer le PDF côté client
+                  const pdfBlob = await generatePdfBlobForEmail(signatureRequestDialog.invoice, signatureRequestDialog.type)
+                  
+                  // Convertir le Blob en base64
+                  const pdfBase64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      const base64 = (reader.result as string).split(',')[1]
+                      resolve(base64)
+                    }
+                    reader.onerror = reject
+                    reader.readAsDataURL(pdfBlob)
+                  })
+                  
+                  const student = signatureRequestDialog.invoice.students
+                  const documentTitle = signatureRequestDialog.type === 'quote'
+                    ? `Devis ${signatureRequestDialog.invoice.invoice_number || 'Brouillon'} - ${student?.first_name || ''} ${student?.last_name || ''}`
+                    : `Facture ${signatureRequestDialog.invoice.invoice_number || 'Brouillon'} - ${student?.first_name || ''} ${student?.last_name || ''}`
+                  
+                  const response = await fetch('/api/signature-requests/send-from-invoice', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      pdfBase64,
+                      documentTitle,
+                      type: signatureRequestDialog.type,
+                      invoiceId: signatureRequestDialog.invoice.id,
+                      sessionId: sessionId,
+                      recipientEmail: signatureRequestForm.recipientEmail,
+                      recipientName: signatureRequestForm.recipientName,
+                      recipientId: student?.id,
+                      subject: signatureRequestForm.subject,
+                      message: signatureRequestForm.message,
+                      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    }),
+                  })
+
+                  if (!response.ok) {
+                    const error = await response.json()
+                    throw new Error(error.error || 'Erreur lors de l\'envoi')
+                  }
+
+                  setSignatureRequestDialog(null)
+                  setSignatureRequestForm(null)
+                  
+                  addToast({
+                    type: 'success',
+                    title: 'Demande de signature envoyée',
+                    description: 'Le document a été généré et envoyé au destinataire pour signature en ligne.',
+                  })
+                } catch (error) {
+                  logger.error('Erreur:', error)
+                  addToast({
+                    type: 'error',
+                    title: 'Erreur',
+                    description: error instanceof Error ? error.message : 'Erreur lors de l\'envoi de la demande de signature',
+                  })
+                } finally {
+                  setIsSendingSignatureRequest(false)
+                }
+              }}
+              disabled={!signatureRequestForm?.recipientEmail || !signatureRequestForm?.recipientName || !signatureRequestForm?.subject || isSendingSignatureRequest}
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200"
+            >
+              {isSendingSignatureRequest ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer la demande
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

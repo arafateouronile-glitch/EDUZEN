@@ -100,6 +100,12 @@ export function getDocumentTypeConfig(type: DocumentType) {
       icon: CheckCircle,
       color: '#335ACF',
     },
+    attestation: {
+      name: 'Attestation',
+      description: 'Attestation générique de formation',
+      icon: Award,
+      color: '#335ACF',
+    },
     certificat_realisation: {
       name: 'Certificat de réalisation',
       description: 'Certificat OF de réalisation de formation',

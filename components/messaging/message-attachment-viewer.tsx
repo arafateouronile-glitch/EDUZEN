@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface Attachment {
   url?: string // URL signée (pour compatibilité avec anciens messages)
@@ -40,13 +41,13 @@ export function MessageAttachmentViewer({ attachments, className }: MessageAttac
               .createSignedUrl(attachment.path, 3600)
             
             if (error) {
-              console.error('Erreur génération URL pièce jointe:', error)
+              logger.error('Erreur génération URL pièce jointe:', error)
               return { index, url: null }
             }
             
             return { index, url: data.signedUrl }
           } catch (error) {
-            console.error('Exception génération URL pièce jointe:', error)
+            logger.error('Exception génération URL pièce jointe:', error)
             return { index, url: null }
           }
         }
@@ -94,7 +95,7 @@ export function MessageAttachmentViewer({ attachments, className }: MessageAttac
     if (url) {
       window.open(url, '_blank')
     } else {
-      console.error('URL non disponible pour la pièce jointe:', attachment)
+      logger.error('URL non disponible pour la pièce jointe:', attachment)
     }
   }
 

@@ -43,7 +43,7 @@ export default function PaymentSettingsPage() {
     queryFn: async () => {
       if (!user?.organization_id) return null
 
-      // TODO: Récupérer depuis une table de configuration
+      // NOTE: Fonctionnalité prévue - Récupérer depuis une table payment_settings
       // Pour l'instant, on retourne null
       return null
     },
@@ -53,7 +53,7 @@ export default function PaymentSettingsPage() {
   // Sauvegarder la configuration Stripe
   const saveStripeConfig = useMutation({
     mutationFn: async () => {
-      // TODO: Sauvegarder dans la base de données
+      // NOTE: Fonctionnalité prévue - Sauvegarder dans la table payment_settings
       // Pour l'instant, on simule
       await new Promise((resolve) => setTimeout(resolve, 500))
       return { success: true }
@@ -71,7 +71,7 @@ export default function PaymentSettingsPage() {
   // Sauvegarder la configuration SEPA
   const saveSepaConfig = useMutation({
     mutationFn: async () => {
-      // TODO: Sauvegarder dans la base de données
+      // NOTE: Fonctionnalité prévue - Sauvegarder dans la table payment_settings
       await new Promise((resolve) => setTimeout(resolve, 500))
       return { success: true }
     },

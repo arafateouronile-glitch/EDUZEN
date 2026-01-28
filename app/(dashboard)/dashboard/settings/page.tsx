@@ -21,13 +21,29 @@ import {
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
+import { useRouter } from 'next/navigation'
 
 export default function SettingsPage() {
   const { user, isLoading: authLoading, session, isAuthenticated } = useAuth()
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { addToast } = useToast()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('organization')
+  
+  // Rediriger les enseignants vers le dashboard
+  useEffect(() => {
+    if (!authLoading && user?.role === 'teacher') {
+      logger.debug('SettingsPage - Redirection enseignant vers dashboard')
+      router.push('/dashboard')
+      addToast({
+        title: 'Accès refusé',
+        description: 'Les paramètres ne sont pas accessibles aux enseignants',
+        type: 'error',
+      })
+    }
+  }, [user, authLoading, router, addToast])
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -36,6 +52,11 @@ export default function SettingsPage() {
     }
   }, [])
   
+  // Ne rien afficher si l'utilisateur est un enseignant
+  if (!authLoading && user?.role === 'teacher') {
+    return null
+  }
+  
   // Note: Debug logs removed for production
   useEffect(() => {
     if (authLoading) {
@@ -43,16 +64,16 @@ export default function SettingsPage() {
     }
     
     if (user) {
-      console.log('✅ [SETTINGS] Utilisateur chargé:', {
+      logger.debug('✅ [SETTINGS] Utilisateur chargé:', {
         id: user.id,
         email: user.email,
         organization_id: user.organization_id,
         role: user.role,
       })
     } else if (isAuthenticated && !user) {
-      console.warn('⚠️ [SETTINGS] Session active mais aucun utilisateur dans la table users pour:', session?.user?.id)
+      logger.warn('⚠️ [SETTINGS] Session active mais aucun utilisateur dans la table users', { userId: session?.user?.id })
     } else if (!isAuthenticated) {
-      console.warn('⚠️ [SETTINGS] Utilisateur non authentifié')
+      logger.warn('⚠️ [SETTINGS] Utilisateur non authentifié')
     }
   }, [user, authLoading, session, isAuthenticated])
   
@@ -99,7 +120,7 @@ export default function SettingsPage() {
 
   // État pour les paramètres généraux
   const [generalSettings, setGeneralSettings] = useState({
-    theme: 'light',
+    // theme supprimé - Application en mode clair uniquement
     language: 'fr',
     dateFormat: 'DD/MM/YYYY',
     timeFormat: '24h',
@@ -118,24 +139,24 @@ export default function SettingsPage() {
     queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) {
-        console.warn('⚠️ [ORG] Aucun organization_id pour l\'utilisateur:', user?.id)
+        logger.warn('⚠️ [ORG] Aucun organization_id pour l\'utilisateur', { userId: user?.id })
         return null
       }
-      console.log('🔍 [ORG] Recherche de l\'organisation:', user.organization_id)
+      logger.debug('🔍 [ORG] Recherche de l\'organisation', { organizationId: user.organization_id })
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
         .eq('id', user.organization_id)
         .maybeSingle()
       if (error) {
-        console.error('❌ [ORG] Erreur lors de la récupération:', error)
+        logger.error('❌ [ORG] Erreur lors de la récupération', sanitizeError(error))
         throw error
       }
       if (!data) {
-        console.warn('⚠️ [ORG] Aucune organisation trouvée pour l\'ID:', user.organization_id)
+        logger.warn('⚠️ [ORG] Aucune organisation trouvée pour l\'ID', { organizationId: user.organization_id })
         return null
       }
-      console.log('✅ [ORG] Organisation récupérée:', data)
+      logger.debug('✅ [ORG] Organisation récupérée:', data)
       return data
     },
     enabled: !!user?.organization_id,
@@ -177,14 +198,14 @@ export default function SettingsPage() {
         try {
           setNotificationSettings(JSON.parse(savedNotifications))
         } catch (e) {
-          console.error('Error parsing notification settings:', e)
+          logger.error('Error parsing notification settings:', e)
         }
       }
       if (savedGeneral) {
         try {
           setGeneralSettings(JSON.parse(savedGeneral))
         } catch (e) {
-          console.error('Error parsing general settings:', e)
+          logger.error('Error parsing general settings:', e)
         }
       }
     }
@@ -274,8 +295,8 @@ export default function SettingsPage() {
         .eq('id', user.organization_id)
       
       if (error) {
-        console.error('❌ [UPDATE ORG] Erreur:', error)
-        console.error('❌ [UPDATE ORG] Champs envoyés:', validFields)
+        logger.error('❌ [UPDATE ORG] Erreur:', error)
+        logger.error('❌ [UPDATE ORG] Champs envoyés:', validFields)
         throw error
       }
     },
@@ -310,11 +331,8 @@ export default function SettingsPage() {
 
   const saveGeneralSettings = () => {
     localStorage.setItem('generalSettings', JSON.stringify(generalSettings))
-    if (generalSettings.theme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    // S'assurer que la classe dark n'est jamais ajoutée
+    document.documentElement.classList.remove('dark')
     addToast({
       title: 'Succès',
       description: 'Les paramètres généraux ont été sauvegardés',
@@ -386,7 +404,7 @@ export default function SettingsPage() {
         type: 'success',
       })
     } catch (error: any) {
-      console.error('Erreur upload logo:', error)
+      logger.error('Erreur upload logo:', error)
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors du téléchargement du logo',
@@ -457,7 +475,7 @@ export default function SettingsPage() {
         type: 'success',
       })
     } catch (error: any) {
-      console.error('Erreur upload Qualiopi:', error)
+      logger.error('Erreur upload Qualiopi:', error)
       addToast({
         title: 'Erreur',
         description: error.message || 'Erreur lors du téléchargement de l\'attestation',
@@ -482,7 +500,7 @@ export default function SettingsPage() {
         type: 'success',
       })
     } catch (error: any) {
-      console.error('Erreur suppression logo:', error)
+      logger.error('Erreur suppression logo:', error)
       addToast({
         title: 'Erreur',
         description: 'Erreur lors de la suppression du logo',
@@ -505,7 +523,7 @@ export default function SettingsPage() {
         type: 'success',
       })
     } catch (error: any) {
-      console.error('Erreur suppression Qualiopi:', error)
+      logger.error('Erreur suppression Qualiopi:', error)
       addToast({
         title: 'Erreur',
         description: 'Erreur lors de la suppression de l\'attestation',
@@ -547,7 +565,7 @@ export default function SettingsPage() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } }
   }
 
   const getRoleLabel = (role: string) => {
@@ -638,7 +656,7 @@ export default function SettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
+            transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="flex items-center gap-4"
           >
             <motion.div
@@ -1430,18 +1448,7 @@ export default function SettingsPage() {
                         Localisation & Affichage
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label>Thème</Label>
-                          <select
-                            value={generalSettings.theme}
-                            onChange={(e) => setGeneralSettings({ ...generalSettings, theme: e.target.value })}
-                            className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
-                          >
-                            <option value="light">Clair ☀️</option>
-                            <option value="dark">Sombre 🌙</option>
-                            <option value="auto">Système 💻</option>
-                          </select>
-                        </div>
+                        {/* Thème supprimé - Application en mode clair uniquement */}
                         <div className="space-y-2">
                             <Label>Langue</Label>
                             <select

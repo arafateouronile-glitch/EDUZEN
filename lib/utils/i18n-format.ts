@@ -6,6 +6,7 @@
 import { format as dateFnsFormat, formatRelative } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
 import { getLocale } from 'next-intl/server'
+import { logger } from '@/lib/utils/logger'
 
 // Mapping des locales next-intl vers date-fns
 const dateFnsLocales: Record<string, typeof fr> = {
@@ -30,7 +31,7 @@ export async function formatDateI18n(
     const dateFnsLocale = dateFnsLocales[locale] || fr
     return dateFnsFormat(dateObj, format, { locale: dateFnsLocale })
   } catch (error) {
-    console.error('Error formatting date:', error)
+    logger.error('Error formatting date:', error)
     return ''
   }
 }
@@ -49,7 +50,7 @@ export async function formatRelativeTimeI18n(date: string | Date): Promise<strin
     const dateFnsLocale = dateFnsLocales[locale] || fr
     return formatRelative(dateObj, new Date(), { locale: dateFnsLocale })
   } catch (error) {
-    console.error('Error formatting relative time:', error)
+    logger.error('Error formatting relative time:', error)
     return ''
   }
 }
@@ -76,7 +77,7 @@ export async function formatCurrencyI18n(
       currency: currency,
     }).format(amount)
   } catch (error) {
-    console.error('Error formatting currency:', error)
+    logger.error('Error formatting currency:', error)
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: currency,
@@ -106,7 +107,7 @@ export async function formatNumberI18n(
       maximumFractionDigits: decimals,
     }).format(value)
   } catch (error) {
-    console.error('Error formatting number:', error)
+    logger.error('Error formatting number:', error)
     return new Intl.NumberFormat('fr-FR', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,

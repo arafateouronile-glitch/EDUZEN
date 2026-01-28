@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { formationSchema, type FormationFormData } from '@/lib/validations/schemas'
 import { useToast } from '@/components/ui/toast'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Formation = TableRow<'formations'>
 
@@ -184,7 +185,7 @@ export default function EditFormationPage() {
             user.organization_id
           )
         } catch (error) {
-          console.error('Erreur lors de la mise à jour des sessions:', error)
+          logger.error('Erreur lors de la mise à jour des sessions:', error)
         }
       }
 

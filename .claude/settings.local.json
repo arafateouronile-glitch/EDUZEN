@@ -65,7 +65,13 @@
       "Bash(npm info:*)",
       "Bash(npm run lint:*)",
       "Bash(npm run test:components:*)",
-      "Bash(du -sh:*)"
+      "Bash(du -sh:*)",
+      "Bash(node -e:*)",
+      "Bash(npm run test:integration:*)"
+    ],
+    "additionalDirectories": [
+      "/Users/arafatetoure/Documents/EDUZEN/app/api/opco-access",
+      "/Users/arafatetoure/Documents/EDUZEN/app/(public)/opco-access"
     ]
   }
 }

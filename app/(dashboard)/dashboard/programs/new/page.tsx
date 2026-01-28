@@ -134,7 +134,8 @@ export default function NewProgramPage() {
         setThumbnailPreview(reader.result as string)
       }
       reader.readAsDataURL(file)
-      // TODO: Implement actual upload logic here
+      // NOTE: Fonctionnalité prévue - Implémenter l'upload vers Supabase Storage
+      // Utiliser supabase.storage.from('program-images').upload() avec gestion d'erreurs
     }
   }
 

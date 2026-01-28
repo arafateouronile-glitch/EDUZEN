@@ -5,16 +5,17 @@ import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+// Lazy load recharts pour réduire le bundle initial
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts'
+  RechartsAreaChart,
+  RechartsArea,
+  RechartsXAxis,
+  RechartsYAxis,
+  RechartsCartesianGrid,
+  RechartsTooltip,
+  RechartsResponsiveContainer,
+  RechartsLegend,
+} from '@/components/charts/recharts-wrapper'
 
 interface RevenueChartProps {
   data?: {
@@ -130,8 +131,9 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
+          <RechartsResponsiveContainer width="100%" height="100%">
+            <RechartsAreaChart
+              {...({} as any)}
               data={data}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
@@ -145,30 +147,34 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis
+              <RechartsCartesianGrid {...({} as any)} strokeDasharray="3 3" className="stroke-muted" />
+              <RechartsXAxis
+                {...({} as any)}
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
               />
-              <YAxis
+              <RechartsYAxis
+                {...({} as any)}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k€`}
+                tickFormatter={(value: any) => `${(value / 1000).toFixed(0)}k€`}
               />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
+              <RechartsTooltip {...({} as any)} content={<CustomTooltip />} />
+              <RechartsLegend
+                {...({} as any)}
                 verticalAlign="top"
                 height={36}
                 iconType="circle"
                 iconSize={8}
-                formatter={(value) => (
+                formatter={(value: any) => (
                   <span className="text-sm text-muted-foreground">{value}</span>
                 )}
               />
-              <Area
+              <RechartsArea
+                {...({} as any)}
                 type="monotone"
                 dataKey="mrr"
                 name="MRR"
@@ -177,7 +183,8 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
                 fillOpacity={1}
                 fill="url(#colorMrr)"
               />
-              <Area
+              <RechartsArea
+                {...({} as any)}
                 type="monotone"
                 dataKey="newRevenue"
                 name="Nouveau revenu"
@@ -186,8 +193,8 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
                 fillOpacity={1}
                 fill="url(#colorNew)"
               />
-            </AreaChart>
-          </ResponsiveContainer>
+            </RechartsAreaChart>
+          </RechartsResponsiveContainer>
         </div>
       </CardContent>
     </Card>

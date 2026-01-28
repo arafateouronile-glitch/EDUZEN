@@ -1,7 +1,10 @@
 import type { MobileMoneyAdapter, MobileMoneyConfig, InitiatePaymentRequest, InitiatePaymentResponse, PaymentStatusResponse, WebhookPayload } from './mobile-money.types'
 
 /**
- * TODO: Implémenter MTN Mobile Money adapter
+ * Adapter MTN Mobile Money
+ * 
+ * NOTE: Adapter non implémenté - Fonctionnalité prévue pour une future version
+ * Nécessite intégration avec l'API MTN Mobile Money (credentials API, endpoints de paiement)
  * Adapter stub pour permettre le build
  */
 export class MTNAdapter implements MobileMoneyAdapter {

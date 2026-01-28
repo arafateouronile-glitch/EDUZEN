@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Sécuriser l'endpoint avec un secret
 const CRON_SECRET = process.env.CRON_SECRET
@@ -270,7 +271,7 @@ export async function GET(request: NextRequest) {
       totalScheduled: results.reduce((sum, r) => sum + r.scheduled, 0),
     })
   } catch (error) {
-    console.error('CRON notification-reminders error:', error)
+    logger.error('CRON notification-reminders error:', error)
     return NextResponse.json(
       { 
         success: false, 

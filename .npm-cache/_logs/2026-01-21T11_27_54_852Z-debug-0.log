@@ -1,0 +1,668 @@
+0 verbose cli /usr/local/Cellar/node@20/20.19.5/bin/node /usr/local/opt/node@20/bin/npm
+1 info using npm@10.8.2
+2 info using node@v20.19.5
+3 silly config load:file:/usr/local/Cellar/node@20/20.19.5/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/arafatetoure/Documents/EDUZEN/.npmrc
+5 silly config load:file:/Users/arafatetoure/.npmrc
+6 silly config load:file:/usr/local/etc/npmrc
+7 verbose title npm install @fontsource/inter @fontsource/space-grotesk
+8 verbose argv "install" "@fontsource/inter" "@fontsource/space-grotesk"
+9 verbose logfile logs-max:10 dir:/Users/arafatetoure/Documents/EDUZEN/.npm-cache/_logs/2026-01-21T11_27_54_852Z-
+10 verbose logfile /Users/arafatetoure/Documents/EDUZEN/.npm-cache/_logs/2026-01-21T11_27_54_852Z-debug-0.log
+11 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+12 silly logfile done cleaning log files
+13 silly idealTree buildDeps
+14 silly fetch manifest @fontsource/inter@*
+15 silly packumentCache full:https://registry.npmjs.org/@fontsource%2finter cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/@fontsource%2finter 1237ms (cache miss)
+17 silly packumentCache full:https://registry.npmjs.org/@fontsource%2finter set size:undefined disposed:false
+18 silly fetch manifest @fontsource/space-grotesk@*
+19 silly packumentCache full:https://registry.npmjs.org/@fontsource%2fspace-grotesk cache-miss
+20 http fetch GET 200 https://registry.npmjs.org/@fontsource%2fspace-grotesk 1177ms (cache miss)
+21 silly packumentCache full:https://registry.npmjs.org/@fontsource%2fspace-grotesk set size:undefined disposed:false
+22 silly placeDep ROOT @fontsource/inter@5.2.8 OK for: eduzen@1.0.1 want: *
+23 silly placeDep ROOT @fontsource/space-grotesk@5.2.10 OK for: eduzen@1.0.1 want: *
+24 silly reify moves {}
+25 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-win32-x64-msvc
+26 silly reify mark deleted [
+26 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-win32-x64-msvc'
+26 silly reify ]
+27 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-win32-ia32-msvc
+28 silly reify mark deleted [
+28 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-win32-ia32-msvc'
+28 silly reify ]
+29 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-win32-arm64-msvc
+30 silly reify mark deleted [
+30 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-win32-arm64-msvc'
+30 silly reify ]
+31 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-wasm32-wasi
+32 silly reify mark deleted [
+32 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-wasm32-wasi'
+32 silly reify ]
+33 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@napi-rs/wasm-runtime
+34 silly reify mark deleted [
+34 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@napi-rs/wasm-runtime'
+34 silly reify ]
+35 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@emnapi/core
+36 silly reify mark deleted [ '/Users/arafatetoure/Documents/EDUZEN/node_modules/@emnapi/core' ]
+37 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@tybys/wasm-util
+38 silly reify mark deleted [
+38 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@tybys/wasm-util'
+38 silly reify ]
+39 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@emnapi/wasi-threads
+40 silly reify mark deleted [
+40 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@emnapi/wasi-threads'
+40 silly reify ]
+41 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-x64-musl
+42 silly reify mark deleted [
+42 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-x64-musl'
+42 silly reify ]
+43 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-x64-gnu
+44 silly reify mark deleted [
+44 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-x64-gnu'
+44 silly reify ]
+45 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-s390x-gnu
+46 silly reify mark deleted [
+46 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-s390x-gnu'
+46 silly reify ]
+47 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-riscv64-musl
+48 silly reify mark deleted [
+48 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-riscv64-musl'
+48 silly reify ]
+49 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-riscv64-gnu
+50 silly reify mark deleted [
+50 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-riscv64-gnu'
+50 silly reify ]
+51 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-ppc64-gnu
+52 silly reify mark deleted [
+52 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-ppc64-gnu'
+52 silly reify ]
+53 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-arm64-musl
+54 silly reify mark deleted [
+54 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-arm64-musl'
+54 silly reify ]
+55 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-arm64-gnu
+56 silly reify mark deleted [
+56 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-arm64-gnu'
+56 silly reify ]
+57 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-arm-musleabihf
+58 silly reify mark deleted [
+58 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-arm-musleabihf'
+58 silly reify ]
+59 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-arm-gnueabihf
+60 silly reify mark deleted [
+60 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-linux-arm-gnueabihf'
+60 silly reify ]
+61 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-freebsd-x64
+62 silly reify mark deleted [
+62 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-freebsd-x64'
+62 silly reify ]
+63 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-darwin-arm64
+64 silly reify mark deleted [
+64 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-darwin-arm64'
+64 silly reify ]
+65 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-android-arm64
+66 silly reify mark deleted [
+66 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-android-arm64'
+66 silly reify ]
+67 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-android-arm-eabi
+68 silly reify mark deleted [
+68 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@unrs/resolver-binding-android-arm-eabi'
+68 silly reify ]
+69 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-win32-x64-msvc
+70 silly reify mark deleted [
+70 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-win32-x64-msvc'
+70 silly reify ]
+71 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-win32-ia32-msvc
+72 silly reify mark deleted [
+72 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-win32-ia32-msvc'
+72 silly reify ]
+73 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-win32-arm64-msvc
+74 silly reify mark deleted [
+74 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-win32-arm64-msvc'
+74 silly reify ]
+75 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-x64-musl
+76 silly reify mark deleted [
+76 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-x64-musl'
+76 silly reify ]
+77 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-x64-gnu
+78 silly reify mark deleted [
+78 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-x64-gnu'
+78 silly reify ]
+79 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-arm64-musl
+80 silly reify mark deleted [
+80 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-arm64-musl'
+80 silly reify ]
+81 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-arm64-gnu
+82 silly reify mark deleted [
+82 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-arm64-gnu'
+82 silly reify ]
+83 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-arm-gnueabihf
+84 silly reify mark deleted [
+84 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-linux-arm-gnueabihf'
+84 silly reify ]
+85 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-darwin-arm64
+86 silly reify mark deleted [
+86 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@swc/core-darwin-arm64'
+86 silly reify ]
+87 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-win32-x64
+88 silly reify mark deleted [
+88 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-win32-x64'
+88 silly reify ]
+89 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-win32-i686
+90 silly reify mark deleted [
+90 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-win32-i686'
+90 silly reify ]
+91 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-win32-arm64
+92 silly reify mark deleted [
+92 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-win32-arm64'
+92 silly reify ]
+93 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-linux-x64
+94 silly reify mark deleted [
+94 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-linux-x64'
+94 silly reify ]
+95 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-linux-i686
+96 silly reify mark deleted [
+96 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-linux-i686'
+96 silly reify ]
+97 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-linux-arm64
+98 silly reify mark deleted [
+98 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-linux-arm64'
+98 silly reify ]
+99 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-linux-arm
+100 silly reify mark deleted [
+100 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@sentry/cli-linux-arm'
+100 silly reify ]
+101 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-win32-x64-msvc
+102 silly reify mark deleted [
+102 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-win32-x64-msvc'
+102 silly reify ]
+103 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-win32-x64-gnu
+104 silly reify mark deleted [
+104 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-win32-x64-gnu'
+104 silly reify ]
+105 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-win32-ia32-msvc
+106 silly reify mark deleted [
+106 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-win32-ia32-msvc'
+106 silly reify ]
+107 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-win32-arm64-msvc
+108 silly reify mark deleted [
+108 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-win32-arm64-msvc'
+108 silly reify ]
+109 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-openharmony-arm64
+110 silly reify mark deleted [
+110 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-openharmony-arm64'
+110 silly reify ]
+111 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-x64-musl
+112 silly reify mark deleted [
+112 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-x64-musl'
+112 silly reify ]
+113 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-x64-gnu
+114 silly reify mark deleted [
+114 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-x64-gnu'
+114 silly reify ]
+115 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-s390x-gnu
+116 silly reify mark deleted [
+116 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-s390x-gnu'
+116 silly reify ]
+117 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-riscv64-musl
+118 silly reify mark deleted [
+118 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-riscv64-musl'
+118 silly reify ]
+119 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-riscv64-gnu
+120 silly reify mark deleted [
+120 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-riscv64-gnu'
+120 silly reify ]
+121 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-ppc64-gnu
+122 silly reify mark deleted [
+122 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-ppc64-gnu'
+122 silly reify ]
+123 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-loong64-gnu
+124 silly reify mark deleted [
+124 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-loong64-gnu'
+124 silly reify ]
+125 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-arm64-musl
+126 silly reify mark deleted [
+126 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-arm64-musl'
+126 silly reify ]
+127 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-arm64-gnu
+128 silly reify mark deleted [
+128 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-arm64-gnu'
+128 silly reify ]
+129 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-arm-musleabihf
+130 silly reify mark deleted [
+130 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-arm-musleabihf'
+130 silly reify ]
+131 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-arm-gnueabihf
+132 silly reify mark deleted [
+132 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-linux-arm-gnueabihf'
+132 silly reify ]
+133 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-freebsd-x64
+134 silly reify mark deleted [
+134 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-freebsd-x64'
+134 silly reify ]
+135 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-freebsd-arm64
+136 silly reify mark deleted [
+136 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-freebsd-arm64'
+136 silly reify ]
+137 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-darwin-arm64
+138 silly reify mark deleted [
+138 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-darwin-arm64'
+138 silly reify ]
+139 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-android-arm64
+140 silly reify mark deleted [
+140 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-android-arm64'
+140 silly reify ]
+141 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-android-arm-eabi
+142 silly reify mark deleted [
+142 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@rollup/rollup-android-arm-eabi'
+142 silly reify ]
+143 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-win32-x64
+144 silly reify mark deleted [
+144 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-win32-x64'
+144 silly reify ]
+145 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-win32-ia32
+146 silly reify mark deleted [
+146 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-win32-ia32'
+146 silly reify ]
+147 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-win32-arm64
+148 silly reify mark deleted [
+148 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-win32-arm64'
+148 silly reify ]
+149 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-x64-musl
+150 silly reify mark deleted [
+150 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-x64-musl'
+150 silly reify ]
+151 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-x64-glibc
+152 silly reify mark deleted [
+152 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-x64-glibc'
+152 silly reify ]
+153 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-arm64-musl
+154 silly reify mark deleted [
+154 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-arm64-musl'
+154 silly reify ]
+155 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-arm64-glibc
+156 silly reify mark deleted [
+156 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-arm64-glibc'
+156 silly reify ]
+157 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-arm-musl
+158 silly reify mark deleted [
+158 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-arm-musl'
+158 silly reify ]
+159 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-arm-glibc
+160 silly reify mark deleted [
+160 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-linux-arm-glibc'
+160 silly reify ]
+161 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-freebsd-x64
+162 silly reify mark deleted [
+162 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-freebsd-x64'
+162 silly reify ]
+163 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-darwin-arm64
+164 silly reify mark deleted [
+164 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-darwin-arm64'
+164 silly reify ]
+165 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-android-arm64
+166 silly reify mark deleted [
+166 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@parcel/watcher-android-arm64'
+166 silly reify ]
+167 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-win32-x64-msvc
+168 silly reify mark deleted [
+168 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-win32-x64-msvc'
+168 silly reify ]
+169 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-win32-arm64-msvc
+170 silly reify mark deleted [
+170 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-win32-arm64-msvc'
+170 silly reify ]
+171 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-linux-x64-musl
+172 silly reify mark deleted [
+172 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-linux-x64-musl'
+172 silly reify ]
+173 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-linux-x64-gnu
+174 silly reify mark deleted [
+174 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-linux-x64-gnu'
+174 silly reify ]
+175 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-linux-arm64-musl
+176 silly reify mark deleted [
+176 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-linux-arm64-musl'
+176 silly reify ]
+177 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-linux-arm64-gnu
+178 silly reify mark deleted [
+178 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-linux-arm64-gnu'
+178 silly reify ]
+179 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-darwin-arm64
+180 silly reify mark deleted [
+180 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@next/swc-darwin-arm64'
+180 silly reify ]
+181 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-win32-x64
+182 silly reify mark deleted [
+182 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-win32-x64'
+182 silly reify ]
+183 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-win32-ia32
+184 silly reify mark deleted [
+184 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-win32-ia32'
+184 silly reify ]
+185 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-win32-arm64
+186 silly reify mark deleted [
+186 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-win32-arm64'
+186 silly reify ]
+187 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-wasm32
+188 silly reify mark deleted [
+188 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-wasm32'
+188 silly reify ]
+189 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linuxmusl-x64
+190 silly reify mark deleted [
+190 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linuxmusl-x64'
+190 silly reify ]
+191 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linuxmusl-arm64
+192 silly reify mark deleted [
+192 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linuxmusl-arm64'
+192 silly reify ]
+193 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-x64
+194 silly reify mark deleted [
+194 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-x64'
+194 silly reify ]
+195 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-s390x
+196 silly reify mark deleted [
+196 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-s390x'
+196 silly reify ]
+197 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-riscv64
+198 silly reify mark deleted [
+198 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-riscv64'
+198 silly reify ]
+199 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-ppc64
+200 silly reify mark deleted [
+200 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-ppc64'
+200 silly reify ]
+201 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-arm64
+202 silly reify mark deleted [
+202 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-arm64'
+202 silly reify ]
+203 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-arm
+204 silly reify mark deleted [
+204 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-linux-arm'
+204 silly reify ]
+205 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linuxmusl-x64
+206 silly reify mark deleted [
+206 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linuxmusl-x64'
+206 silly reify ]
+207 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linuxmusl-arm64
+208 silly reify mark deleted [
+208 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linuxmusl-arm64'
+208 silly reify ]
+209 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-x64
+210 silly reify mark deleted [
+210 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-x64'
+210 silly reify ]
+211 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-s390x
+212 silly reify mark deleted [
+212 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-s390x'
+212 silly reify ]
+213 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-riscv64
+214 silly reify mark deleted [
+214 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-riscv64'
+214 silly reify ]
+215 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-ppc64
+216 silly reify mark deleted [
+216 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-ppc64'
+216 silly reify ]
+217 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-arm64
+218 silly reify mark deleted [
+218 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-arm64'
+218 silly reify ]
+219 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-arm
+220 silly reify mark deleted [
+220 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-linux-arm'
+220 silly reify ]
+221 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-darwin-arm64
+222 silly reify mark deleted [
+222 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-libvips-darwin-arm64'
+222 silly reify ]
+223 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-darwin-arm64
+224 silly reify mark deleted [
+224 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@img/sharp-darwin-arm64'
+224 silly reify ]
+225 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/win32-x64
+226 silly reify mark deleted [
+226 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/win32-x64'
+226 silly reify ]
+227 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/win32-ia32
+228 silly reify mark deleted [
+228 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/win32-ia32'
+228 silly reify ]
+229 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/win32-arm64
+230 silly reify mark deleted [
+230 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/win32-arm64'
+230 silly reify ]
+231 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/sunos-x64
+232 silly reify mark deleted [
+232 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/sunos-x64'
+232 silly reify ]
+233 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/openharmony-arm64
+234 silly reify mark deleted [
+234 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/openharmony-arm64'
+234 silly reify ]
+235 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/openbsd-x64
+236 silly reify mark deleted [
+236 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/openbsd-x64'
+236 silly reify ]
+237 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/openbsd-arm64
+238 silly reify mark deleted [
+238 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/openbsd-arm64'
+238 silly reify ]
+239 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/netbsd-x64
+240 silly reify mark deleted [
+240 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/netbsd-x64'
+240 silly reify ]
+241 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/netbsd-arm64
+242 silly reify mark deleted [
+242 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/netbsd-arm64'
+242 silly reify ]
+243 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-x64
+244 silly reify mark deleted [
+244 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-x64'
+244 silly reify ]
+245 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-s390x
+246 silly reify mark deleted [
+246 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-s390x'
+246 silly reify ]
+247 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-riscv64
+248 silly reify mark deleted [
+248 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-riscv64'
+248 silly reify ]
+249 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-ppc64
+250 silly reify mark deleted [
+250 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-ppc64'
+250 silly reify ]
+251 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-mips64el
+252 silly reify mark deleted [
+252 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-mips64el'
+252 silly reify ]
+253 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-loong64
+254 silly reify mark deleted [
+254 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-loong64'
+254 silly reify ]
+255 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-ia32
+256 silly reify mark deleted [
+256 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-ia32'
+256 silly reify ]
+257 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-arm64
+258 silly reify mark deleted [
+258 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-arm64'
+258 silly reify ]
+259 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-arm
+260 silly reify mark deleted [
+260 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/linux-arm'
+260 silly reify ]
+261 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/freebsd-x64
+262 silly reify mark deleted [
+262 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/freebsd-x64'
+262 silly reify ]
+263 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/freebsd-arm64
+264 silly reify mark deleted [
+264 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/freebsd-arm64'
+264 silly reify ]
+265 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/darwin-arm64
+266 silly reify mark deleted [
+266 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/darwin-arm64'
+266 silly reify ]
+267 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/android-x64
+268 silly reify mark deleted [
+268 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/android-x64'
+268 silly reify ]
+269 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/android-arm64
+270 silly reify mark deleted [
+270 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/android-arm64'
+270 silly reify ]
+271 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/android-arm
+272 silly reify mark deleted [
+272 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/android-arm'
+272 silly reify ]
+273 verbose reify failed optional dependency /Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/aix-ppc64
+274 silly reify mark deleted [
+274 silly reify   '/Users/arafatetoure/Documents/EDUZEN/node_modules/@esbuild/aix-ppc64'
+274 silly reify ]
+275 silly tarball no local data for @tybys/wasm-util@https://registry.npmjs.org/@tybys/wasm-util/-/wasm-util-0.10.1.tgz. Extracting by manifest.
+276 silly tarball no local data for @fontsource/inter@https://registry.npmjs.org/@fontsource/inter/-/inter-5.2.8.tgz. Extracting by manifest.
+277 silly tarball no local data for @fontsource/space-grotesk@https://registry.npmjs.org/@fontsource/space-grotesk/-/space-grotesk-5.2.10.tgz. Extracting by manifest.
+278 silly tarball no local data for @napi-rs/wasm-runtime@https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-0.2.12.tgz. Extracting by manifest.
+279 silly tarball no local data for @emnapi/wasi-threads@https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-1.1.0.tgz. Extracting by manifest.
+280 silly tarball no local data for @emnapi/core@https://registry.npmjs.org/@emnapi/core/-/core-1.8.0.tgz. Extracting by manifest.
+281 http fetch GET 200 https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-1.1.0.tgz 424ms (cache miss)
+282 http fetch GET 200 https://registry.npmjs.org/@tybys/wasm-util/-/wasm-util-0.10.1.tgz 565ms (cache miss)
+283 http fetch GET 200 https://registry.npmjs.org/@emnapi/core/-/core-1.8.0.tgz 688ms (cache miss)
+284 http fetch GET 200 https://registry.npmjs.org/@fontsource/space-grotesk/-/space-grotesk-5.2.10.tgz 719ms (cache miss)
+285 http fetch GET 200 https://registry.npmjs.org/@napi-rs/wasm-runtime/-/wasm-runtime-0.2.12.tgz 942ms (cache miss)
+286 http fetch GET 200 https://registry.npmjs.org/@fontsource/inter/-/inter-5.2.8.tgz 1332ms (cache miss)
+287 silly ADD node_modules/@fontsource/space-grotesk
+288 silly ADD node_modules/@fontsource/inter
+289 silly ADD
+290 silly ADD
+291 silly ADD
+292 silly ADD
+293 silly ADD
+294 silly ADD
+295 silly ADD
+296 silly ADD
+297 silly ADD
+298 silly ADD
+299 silly ADD
+300 silly ADD
+301 silly ADD
+302 silly ADD
+303 silly ADD
+304 silly ADD
+305 silly ADD
+306 silly ADD
+307 silly ADD
+308 silly ADD
+309 silly ADD
+310 silly ADD
+311 silly ADD
+312 silly ADD
+313 silly ADD
+314 silly ADD
+315 silly ADD
+316 silly ADD
+317 silly ADD
+318 silly ADD
+319 silly ADD
+320 silly ADD
+321 silly ADD
+322 silly ADD
+323 silly ADD
+324 silly ADD
+325 silly ADD
+326 silly ADD
+327 silly ADD
+328 silly ADD
+329 silly ADD
+330 silly ADD
+331 silly ADD
+332 silly ADD
+333 silly ADD
+334 silly ADD
+335 silly ADD
+336 silly ADD
+337 silly ADD
+338 silly ADD
+339 silly ADD
+340 silly ADD
+341 silly ADD
+342 silly ADD
+343 silly ADD
+344 silly ADD
+345 silly ADD
+346 silly ADD
+347 silly ADD
+348 silly ADD
+349 silly ADD
+350 silly ADD
+351 silly ADD
+352 silly ADD
+353 silly ADD
+354 silly ADD
+355 silly ADD
+356 silly ADD
+357 silly ADD
+358 silly ADD
+359 silly ADD
+360 silly ADD
+361 silly ADD
+362 silly ADD
+363 silly ADD
+364 silly ADD
+365 silly ADD
+366 silly ADD
+367 silly ADD
+368 silly ADD
+369 silly ADD
+370 silly ADD
+371 silly ADD
+372 silly ADD
+373 silly ADD
+374 silly ADD
+375 silly ADD
+376 silly ADD
+377 silly ADD
+378 silly ADD
+379 silly ADD
+380 silly ADD
+381 silly ADD
+382 silly ADD
+383 silly ADD
+384 silly ADD
+385 silly ADD
+386 silly ADD
+387 silly ADD
+388 silly ADD
+389 silly ADD
+390 silly ADD
+391 silly ADD
+392 silly ADD
+393 silly ADD
+394 silly ADD
+395 silly ADD
+396 silly ADD
+397 silly ADD
+398 silly ADD
+399 silly ADD
+400 silly ADD
+401 silly ADD
+402 silly ADD
+403 silly ADD
+404 silly ADD
+405 silly ADD
+406 silly ADD
+407 silly ADD
+408 silly ADD
+409 silly ADD
+410 silly ADD
+411 silly ADD
+412 silly ADD
+413 silly ADD
+414 verbose cwd /Users/arafatetoure/Documents/EDUZEN
+415 verbose os Darwin 24.6.0
+416 verbose node v20.19.5
+417 verbose npm  v10.8.2
+418 verbose exit 0
+419 info ok

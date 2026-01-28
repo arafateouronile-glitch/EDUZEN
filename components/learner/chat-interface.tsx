@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import Image from 'next/image'
 import { fr } from 'date-fns/locale'
 
 interface Message {
@@ -176,13 +177,18 @@ export function ChatInterface({ conversationId, participant, onBack }: ChatInter
           </Button>
         )}
         <div className="relative">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
-            participant.role === 'support' 
+          <div className={`relative w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
+            participant.role === 'support'
               ? 'bg-gradient-to-br from-brand-blue to-brand-cyan'
               : 'bg-gradient-to-br from-brand-blue-light to-brand-cyan'
           }`}>
             {participant.avatar ? (
-              <img src={participant.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+              <Image
+                src={participant.avatar}
+                alt={participant.name}
+                fill
+                className="rounded-full object-cover"
+              />
             ) : (
               participant.name.charAt(0)
             )}

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type ShapeType = 'rectangle' | 'circle' | 'line' | 'triangle'
 
@@ -84,7 +85,7 @@ export function ShapeEditor({ onInsert, onClose }: ShapeEditorProps) {
 
   const handleInsert = () => {
     const html = generateShapeHTML()
-    console.log('Shape HTML généré:', html, 'Type:', shapeType)
+    logger.debug('Shape HTML généré', { html, type: shapeType })
     if (html && html.trim()) {
       try {
         onInsert(html)
@@ -93,11 +94,11 @@ export function ShapeEditor({ onInsert, onClose }: ShapeEditorProps) {
           onClose()
         }, 100)
       } catch (error) {
-        console.error('Erreur lors de l\'insertion de la forme:', error)
+        logger.error('Erreur lors de l\'insertion de la forme:', error)
         alert('Erreur lors de l\'insertion de la forme. Veuillez réessayer.')
       }
     } else {
-      console.error('Aucun HTML généré pour la forme')
+      logger.error('Aucun HTML généré pour la forme')
       alert('Impossible de générer la forme. Veuillez vérifier les paramètres.')
     }
   }

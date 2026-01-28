@@ -37,6 +37,7 @@ import {
 } from 'docx'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import { documentTemplateDefaults } from '@/lib/utils/document-template-defaults'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Constantes pour les dimensions
 const A4_WIDTH_TWIPS = 11906 // 210mm en twips
@@ -51,7 +52,9 @@ export async function generateDocxFromHtmlTemplate(
   template: DocumentTemplate,
   variables: DocumentVariables
 ): Promise<Buffer> {
-  console.log('[AutoDocx] 🚀 Génération automatique du DOCX depuis le template HTML')
+  logger.info('AutoDocx - Génération automatique du DOCX depuis le template HTML', {
+    templateType: template.type,
+  })
   
   // Récupérer le template par défaut si nécessaire
   const defaultTemplate = documentTemplateDefaults[template.type]
@@ -88,17 +91,19 @@ export async function generateDocxFromHtmlTemplate(
     footerHtml = defaultTemplate.footerContent || ''
   }
   
-  console.log('[AutoDocx] 📝 Header HTML length:', headerHtml.length)
-  console.log('[AutoDocx] 📝 Body HTML length:', bodyHtml.length)
-  console.log('[AutoDocx] 📝 Footer HTML length:', footerHtml.length)
+  logger.debug('AutoDocx - HTML lengths', {
+    headerLength: headerHtml.length,
+    bodyLength: bodyHtml.length,
+    footerLength: footerHtml.length,
+  })
   
   // Afficher les variables de logo disponibles
   const varKeys = Object.keys(variables)
-  console.log('[AutoDocx] 📊 Variables reçues:', varKeys.length, 'variables')
   const varsAsAny = variables as any
-  console.log('[AutoDocx] 🖼️ Variables logo:', {
-    ecole_logo: varsAsAny.ecole_logo ? 'URL présente' : 'Non défini',
-    organization_logo: varsAsAny.organization_logo ? 'URL présente' : 'Non défini',
+  logger.debug('AutoDocx - Variables reçues', {
+    variableCount: varKeys.length,
+    hasEcoleLogo: !!varsAsAny.ecole_logo,
+    hasOrganizationLogo: !!varsAsAny.organization_logo,
   })
   
   // Remplacer les variables dans le HTML AVANT la conversion
@@ -108,10 +113,12 @@ export async function generateDocxFromHtmlTemplate(
   
   // Log après remplacement pour vérifier les images
   const hasImgInHeader = processedHeader.includes('<img')
-  console.log('[AutoDocx] 📝 Header après remplacement - contient <img>:', hasImgInHeader)
   if (hasImgInHeader) {
     const imgMatch = processedHeader.match(/<img[^>]*src="([^"]{0,50})/i)
-    console.log('[AutoDocx] 📝 Source image (premiers 50 chars):', imgMatch ? imgMatch[1] : 'Non trouvé')
+    logger.debug('AutoDocx - Header contient image', {
+      hasImage: true,
+      imageSrcPreview: imgMatch ? imgMatch[1].substring(0, 50) : 'Non trouvé',
+    })
   }
   
   // Taille de police par défaut
@@ -122,9 +129,11 @@ export async function generateDocxFromHtmlTemplate(
   const bodyChildren = await htmlToDocxElements(processedBody, 'body', variables, defaultFontSize)
   const footerChildren = await htmlToDocxElements(processedFooter, 'footer', variables, defaultFontSize)
   
-  console.log('[AutoDocx] 📊 Header elements:', headerChildren.length)
-  console.log('[AutoDocx] 📊 Body elements:', bodyChildren.length)
-  console.log('[AutoDocx] 📊 Footer elements:', footerChildren.length)
+  logger.debug('AutoDocx - Elements créés', {
+    headerElements: headerChildren.length,
+    bodyElements: bodyChildren.length,
+    footerElements: footerChildren.length,
+  })
   
   // Créer le header Word
   const docxHeader = new Header({
@@ -168,7 +177,9 @@ export async function generateDocxFromHtmlTemplate(
   
   // Générer le buffer
   const buffer = await Packer.toBuffer(doc)
-  console.log('[AutoDocx] ✅ Document généré avec succès, taille:', buffer.length, 'bytes')
+  logger.info('AutoDocx - Document généré avec succès', {
+    bufferSize: buffer.length,
+  })
   
   return Buffer.from(buffer)
 }
@@ -203,7 +214,7 @@ function replaceVariables(html: string, variables: DocumentVariables): string {
       const logoRegex = new RegExp(`\\{${logoVar}\\}`, 'g')
       const imgTag = `<img src="${logoValue}" alt="Logo" style="max-height: 55px; max-width: 140px; object-fit: contain;" />`
       result = result.replace(logoRegex, imgTag)
-      console.log(`[AutoDocx] 🖼️ Variable {${logoVar}} convertie en balise <img>`)
+      logger.debug(`AutoDocx - Variable logo convertie`, { logoVar })
     }
   }
   
@@ -227,15 +238,19 @@ function replaceVariables(html: string, variables: DocumentVariables): string {
   const unreplacedVars = result.match(/\{[a-zA-Z_][a-zA-Z0-9_]*\}/g)
   if (unreplacedVars && unreplacedVars.length > 0) {
     const uniqueVars = [...new Set(unreplacedVars)]
-    console.log('[AutoDocx] ⚠️ Variables non remplacées:', uniqueVars.slice(0, 10).join(', '), 
-      uniqueVars.length > 10 ? `... et ${uniqueVars.length - 10} autres` : '')
+    logger.warn('AutoDocx - Variables non remplacées', {
+      count: uniqueVars.length,
+      variables: uniqueVars.slice(0, 10),
+    })
     
     // Remplacer les variables non trouvées par une chaîne vide (comme le PDF)
     // Cela évite que les balises {variable} apparaissent dans le document final
     for (const varName of uniqueVars) {
       result = result.replace(new RegExp(varName.replace(/[{}]/g, '\\$&'), 'g'), '')
     }
-    console.log('[AutoDocx] 🧹 Variables non remplacées supprimées du document')
+    logger.debug('AutoDocx - Variables non remplacées supprimées', {
+      removedCount: uniqueVars.length,
+    })
   }
   
   return result
@@ -288,13 +303,13 @@ async function htmlToDocxElements(
     }
     
     // Convertir la table
-    console.log('[AutoDocx] 🔍 Table trouvée, longueur:', tableHtml.length)
+    logger.debug('AutoDocx - Table trouvée', { tableHtmlLength: tableHtml.length })
     const table = await parseHtmlTable(tableHtml, variables, defaultFontSize)
     if (table) {
       elements.push(table)
-      console.log('[AutoDocx] ✅ Table convertie avec succès')
+      logger.debug('AutoDocx - Table convertie avec succès')
     } else {
-      console.log('[AutoDocx] ⚠️ Table non convertie, conversion en texte')
+      logger.warn('AutoDocx - Table non convertie, conversion en texte')
       // Si la table n'a pas pu être convertie, extraire le texte
       const tableTextElements = parseHtmlToTextElements(tableHtml, defaultFontSize, context)
       elements.push(...tableTextElements)
@@ -381,7 +396,9 @@ async function extractAndProcessStandaloneImages(
             if (!isNaN(parsedHeight)) imgHeight = parsedHeight
           }
           
-          console.log('[AutoDocx] 🖼️ Image standalone:', imgSrc.substring(0, 40) + '...')
+          logger.debug('AutoDocx - Image standalone détectée', {
+            imageSrcPreview: imgSrc.substring(0, 40),
+          })
           
           paragraphs.push(new Paragraph({
             children: [
@@ -394,7 +411,7 @@ async function extractAndProcessStandaloneImages(
           }))
         }
       } catch (error) {
-        console.warn('[AutoDocx] ⚠️ Erreur image standalone:', error)
+        logger.warn('AutoDocx - Erreur image standalone', { error: sanitizeError(error) })
       }
     }
   }
@@ -558,7 +575,7 @@ async function parseHtmlTable(
   defaultFontSize: number
 ): Promise<Table | null> {
   try {
-    console.log('[AutoDocx] 📊 Parsing table HTML...')
+    logger.debug('AutoDocx - Parsing table HTML')
     
     // Vérifier si la table a border-collapse: collapse ou des bordures explicites
     const tableStyleMatch = tableHtml.match(/<table[^>]*style="([^"]*)"/i)
@@ -577,10 +594,13 @@ async function parseHtmlTable(
     const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
     const rowMatches = [...tableHtml.matchAll(rowRegex)]
     
-    console.log('[AutoDocx] 📊 Lignes trouvées:', rowMatches.length, '| border-collapse:', hasBorderCollapse)
+    logger.debug('AutoDocx - Lignes trouvées dans table', {
+      rowCount: rowMatches.length,
+      hasBorderCollapse,
+    })
     
     if (rowMatches.length === 0) {
-      console.log('[AutoDocx] ⚠️ Aucune ligne trouvée dans la table')
+      logger.warn('AutoDocx - Aucune ligne trouvée dans la table')
       return null
     }
     
@@ -600,7 +620,10 @@ async function parseHtmlTable(
       const cellRegex = /<(td|th)[^>]*>([\s\S]*?)<\/\1>/gi
       const cellMatches = [...rowContent.matchAll(cellRegex)]
       
-      console.log('[AutoDocx] 📊 Ligne', rowIndex + 1, '- Cellules trouvées:', cellMatches.length)
+      logger.debug('AutoDocx - Ligne analysée', {
+        rowIndex: rowIndex + 1,
+        cellCount: cellMatches.length,
+      })
       
       if (cellMatches.length === 0) continue
       
@@ -675,7 +698,11 @@ async function parseHtmlTable(
                   if (!isNaN(parsedHeight)) imgHeight = parsedHeight
                 }
                 
-                console.log('[AutoDocx] 🖼️ Image détectée:', imgSrc.substring(0, 50) + '...', 'Dimensions:', imgWidth, 'x', imgHeight)
+                logger.debug('AutoDocx - Image détectée dans cellule', {
+                  imageSrcPreview: imgSrc.substring(0, 50),
+                  width: imgWidth,
+                  height: imgHeight,
+                })
                 
                 cellChildren.push(new Paragraph({
                   children: [
@@ -691,7 +718,7 @@ async function parseHtmlTable(
                 }))
               }
             } catch (error) {
-              console.warn('[AutoDocx] ⚠️ Impossible de charger l\'image:', error)
+              logger.warn('AutoDocx - Impossible de charger l\'image', { error: sanitizeError(error) })
             }
           }
         }
@@ -822,7 +849,7 @@ async function parseHtmlTable(
           const gradientColors = bgColor.match(/#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})/gi)
           if (gradientColors && gradientColors.length > 0) {
             bgColor = gradientColors[0] // Utiliser la première couleur du gradient
-            console.log('[AutoDocx] 🎨 Gradient converti en couleur solide:', bgColor)
+            logger.debug('AutoDocx - Gradient converti en couleur solide', { bgColor })
           }
         }
         
@@ -874,10 +901,10 @@ async function parseHtmlTable(
       }
     }
     
-    console.log('[AutoDocx] 📊 Lignes créées:', tableRows.length)
+    logger.debug('AutoDocx - Lignes créées pour table', { rowCount: tableRows.length })
     
     if (tableRows.length === 0) {
-      console.log('[AutoDocx] ⚠️ Aucune ligne créée pour la table')
+      logger.warn('AutoDocx - Aucune ligne créée pour la table')
       return null
     }
     
@@ -927,11 +954,11 @@ async function parseHtmlTable(
     }
     
     // Log pour debug
-    console.log('[AutoDocx] 📊 Table styles:', {
+    logger.debug('AutoDocx - Table styles', {
       isLayoutTable,
       borderCollapse: hasBorderCollapse,
       hasTableBorder: hasTableBorder,
-      borderColor: tableBorderColor
+      borderColor: tableBorderColor,
     })
     
     // Créer la table
@@ -952,11 +979,14 @@ async function parseHtmlTable(
       },
     }
     
-    console.log('[AutoDocx] ✅ Table créée avec', tableRows.length, 'lignes, largeur:', tableWidth + '%')
+    logger.info('AutoDocx - Table créée avec succès', {
+      rowCount: tableRows.length,
+      width: tableWidth + '%',
+    })
     return new Table(tableOptions)
     
   } catch (error) {
-    console.error('[AutoDocx] ❌ Erreur lors du parsing de la table:', error)
+    logger.error('AutoDocx - Erreur lors du parsing de la table', error, { error: sanitizeError(error) })
     return null
   }
 }
@@ -1025,7 +1055,7 @@ function cssColorToHex(color: string | undefined): string | undefined {
   }
   
   // Si rien ne correspond, retourner undefined
-  console.warn('[AutoDocx] ⚠️ Couleur non reconnue:', color)
+  logger.warn('AutoDocx - Couleur non reconnue', { color })
   return undefined
 }
 
@@ -1080,21 +1110,25 @@ function stripHtmlTags(html: string): string {
 async function downloadImage(url: string): Promise<Buffer | null> {
   try {
     if (!url || url.startsWith('{')) {
-      console.log('[AutoDocx] ⚠️ URL image invalide ou variable non remplacée:', url?.substring(0, 30))
+      logger.warn('AutoDocx - URL image invalide ou variable non remplacée', {
+        urlPreview: url?.substring(0, 30),
+      })
       return null
     }
     
     // Si c'est une data URL, la décoder
     if (url.startsWith('data:')) {
-      console.log('[AutoDocx] 📥 Décodage image base64...')
+      logger.debug('AutoDocx - Décodage image base64')
       const base64 = url.split(',')[1]
       const buffer = Buffer.from(base64, 'base64')
-      console.log('[AutoDocx] ✅ Image base64 décodée, taille:', buffer.length, 'bytes')
+      logger.debug('AutoDocx - Image base64 décodée', { bufferSize: buffer.length })
       return buffer
     }
     
     // Télécharger l'image
-    console.log('[AutoDocx] 📥 Téléchargement image depuis:', url.substring(0, 60) + '...')
+    logger.debug('AutoDocx - Téléchargement image', {
+      urlPreview: url.substring(0, 60),
+    })
     const response = await fetch(url)
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
@@ -1102,10 +1136,10 @@ async function downloadImage(url: string): Promise<Buffer | null> {
     
     const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-    console.log('[AutoDocx] ✅ Image téléchargée, taille:', buffer.length, 'bytes')
+    logger.debug('AutoDocx - Image téléchargée', { bufferSize: buffer.length })
     return buffer
   } catch (error) {
-    console.error('[AutoDocx] ❌ Erreur téléchargement image:', error)
+    logger.error('AutoDocx - Erreur téléchargement image', error, { error: sanitizeError(error) })
     return null
   }
 }
@@ -1120,12 +1154,12 @@ export async function generateWordDocument(
 ): Promise<Buffer> {
   // Si un template DOCX natif existe, l'utiliser avec docxtemplater
   if (template.docx_template_url) {
-    console.log('[AutoDocx] 📄 Template DOCX natif trouvé, utilisation de docxtemplater')
+    logger.info('AutoDocx - Template DOCX natif trouvé, utilisation de docxtemplater')
     const { generateDocxFromTemplate } = await import('./docx-generator.service')
     return generateDocxFromTemplate(template.docx_template_url, variables)
   }
   
   // Sinon, générer automatiquement depuis le HTML
-  console.log('[AutoDocx] 🔄 Génération automatique depuis le template HTML')
+  logger.info('AutoDocx - Génération automatique depuis le template HTML')
   return generateDocxFromHtmlTemplate(template, variables)
 }

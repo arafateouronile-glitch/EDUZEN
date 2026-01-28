@@ -3,7 +3,8 @@
  * Utilise la bibliothèque bwip-js
  */
 
-// @ts-expect-error - Module bwip-js peut ne pas avoir de types
+import { logger, sanitizeError } from '@/lib/utils/logger'
+// @ts-ignore - Module bwip-js peut ne pas avoir de types
 import bwipjs from 'bwip-js'
 
 export type BarcodeType = 'CODE128' | 'CODE39' | 'EAN13' | 'UPC' | 'EAN8' | 'ITF14' | 'MSI' | 'PHARMACODE'
@@ -63,7 +64,7 @@ export async function generateBarcodeBase64(
 
     return canvas.toDataURL('image/png')
   } catch (error) {
-    console.error('Erreur lors de la génération du code-barres:', error)
+    logger.error('Erreur lors de la génération du code-barres:', error)
     throw new Error(`Impossible de générer le code-barres: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
   }
 }
@@ -107,7 +108,7 @@ export async function generateBarcodeSVG(
 
     return svg
   } catch (error) {
-    console.error('Erreur lors de la génération du code-barres SVG:', error)
+    logger.error('Erreur lors de la génération du code-barres SVG:', error)
     throw new Error(`Impossible de générer le code-barres SVG: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
   }
 }

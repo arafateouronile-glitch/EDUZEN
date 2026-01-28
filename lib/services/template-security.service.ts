@@ -6,6 +6,8 @@
 import type { Database } from '@/types/database.types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import * as CryptoJS from 'crypto-js'
+import { logger } from '@/lib/utils/logger'
+import { SECURITY_CONFIG } from '@/lib/config/app-config'
 
 type TemplatePermission = Database['public']['Tables']['template_permissions']['Row']
 type TemplatePermissionInsert = Database['public']['Tables']['template_permissions']['Insert']
@@ -43,8 +45,8 @@ export class TemplateSecurityService {
 
   constructor(supabaseClient: SupabaseClient<Database>) {
     this.supabase = supabaseClient
-    // En production, récupérer depuis process.env.TEMPLATE_ENCRYPTION_KEY
-    this.encryptionKey = process.env.TEMPLATE_ENCRYPTION_KEY || 'default-key-change-in-production'
+    // Utiliser la configuration centralisée pour la clé de chiffrement
+    this.encryptionKey = SECURITY_CONFIG.getEncryptionKey()
   }
 
   // ========== PERMISSIONS GRANULAIRES ==========
@@ -71,7 +73,7 @@ export class TemplateSecurityService {
 
       // Si la table n'existe pas, on considère que l'utilisateur a les permissions par défaut
       if (permError && (permError.code === 'PGRST205' || permError.code === '42P01')) {
-        console.warn('Table template_permissions n\'existe pas encore. Migration requise. Permissions par défaut accordées.')
+        logger.warn('TemplateSecurityService - Table template_permissions n\'existe pas encore. Migration requise. Permissions par défaut accordées.')
         // Vérifier si l'utilisateur est propriétaire du template (via organization_id)
         const { data: user } = await this.supabase
           .from('users')
@@ -133,7 +135,7 @@ export class TemplateSecurityService {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST205' || errorObj?.code === '42P01' || errorObj?.message?.includes('does not exist')) {
-        console.warn('Table template_permissions n\'existe pas encore. Migration requise. Permissions par défaut accordées.')
+        logger.warn('TemplateSecurityService - Table template_permissions n\'existe pas encore. Migration requise. Permissions par défaut accordées.')
         // En cas d'erreur, on vérifie si l'utilisateur est propriétaire du template
         try {
           const { data: user } = await this.supabase
@@ -362,7 +364,7 @@ export class TemplateSecurityService {
       if (error) {
         // Si la table n'existe pas, on retourne false
         if (error.code === 'PGRST205' || error.code === '42P01') {
-          console.warn('Table template_encryption n\'existe pas encore. Migration requise.')
+          logger.warn('TemplateSecurityService - Table template_encryption n\'existe pas encore. Migration requise.')
           return false
         }
         throw error
@@ -373,7 +375,7 @@ export class TemplateSecurityService {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST205' || errorObj?.code === '42P01' || errorObj?.message?.includes('does not exist')) {
-        console.warn('Table template_encryption n\'existe pas encore. Migration requise.')
+        logger.warn('TemplateSecurityService - Table template_encryption n\'existe pas encore. Migration requise.')
         return false
       }
       throw error
@@ -420,7 +422,7 @@ export class TemplateSecurityService {
       if (error) {
         // Si la table n'existe pas, on ignore silencieusement
         if (error.code === 'PGRST205' || error.code === '42P01') {
-          console.warn('Table template_audit_log n\'existe pas encore. Migration requise.')
+          logger.warn('TemplateSecurityService - Table template_audit_log n\'existe pas encore. Migration requise.')
           return null
         }
         throw error
@@ -430,7 +432,7 @@ export class TemplateSecurityService {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST205' || errorObj?.code === '42P01' || errorObj?.message?.includes('does not exist')) {
-        console.warn('Table template_audit_log n\'existe pas encore. Migration requise.')
+        logger.warn('TemplateSecurityService - Table template_audit_log n\'existe pas encore. Migration requise.')
         return null
       }
       throw error

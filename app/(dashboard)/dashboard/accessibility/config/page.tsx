@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/toast'
 import { Settings, Save, ArrowLeft, User, FileText, Link as LinkIcon, Plus, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function AccessibilityConfigPage() {
   const { user } = useAuth()
@@ -103,8 +104,8 @@ export default function AccessibilityConfigPage() {
       router.push('/dashboard/accessibility')
     },
     onError: (error: any) => {
-      console.error('[AccessibilityConfig] Erreur complète:', error)
-      console.error('[AccessibilityConfig] Détails:', {
+      logger.error('[AccessibilityConfig] Erreur complète:', error)
+      logger.error('[AccessibilityConfig] Détails:', {
         code: error?.code,
         message: error?.message,
         details: error?.details,

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type EvaluationTemplate = TableRow<'evaluation_templates'>
 type EvaluationTemplateQuestion = TableRow<'evaluation_template_questions'>
@@ -65,7 +66,7 @@ class EvaluationTemplateService {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Erreur récupération modèles:', error)
+      logger.error('EvaluationTemplateService - Erreur récupération modèles', error, { error: sanitizeError(error) })
       return []
     }
     return (data || []) as EvaluationTemplateWithQuestions[]
@@ -85,7 +86,7 @@ class EvaluationTemplateService {
       .single()
 
     if (error) {
-      console.error('Erreur récupération modèle:', error)
+      logger.error('EvaluationTemplateService - Erreur récupération modèle', error, { error: sanitizeError(error) })
       return null
     }
     return data as EvaluationTemplateWithQuestions
@@ -268,7 +269,7 @@ class EvaluationTemplateService {
     const { data, error } = await query.order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Erreur récupération réponses:', error)
+      logger.error('EvaluationTemplateService - Erreur récupération réponses', error, { error: sanitizeError(error) })
       return []
     }
     return data || []
@@ -329,7 +330,7 @@ class EvaluationTemplateService {
       .rpc('calculate_evaluation_score', { p_instance_id: instanceId })
 
     if (error) {
-      console.error('Erreur calcul score:', error)
+      logger.error('EvaluationTemplateService - Erreur calcul score', error, { error: sanitizeError(error) })
       return null
     }
 

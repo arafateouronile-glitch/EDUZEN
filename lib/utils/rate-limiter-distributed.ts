@@ -12,6 +12,7 @@
  * vers le rate limiter en mémoire (dev uniquement).
  */
 
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import {
@@ -213,7 +214,7 @@ export function isDistributedRateLimitingEnabled(): boolean {
  */
 export function warnIfNotConfigured(): void {
   if (!isUpstashConfigured && process.env.NODE_ENV === 'production') {
-    console.warn(
+    logger.warn(
       '[SECURITY WARNING] Upstash Redis is not configured. ' +
       'Rate limiting is running in memory-only mode, which does not work ' +
       'correctly in serverless environments. Please configure UPSTASH_REDIS_REST_URL ' +

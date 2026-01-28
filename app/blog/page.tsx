@@ -11,6 +11,7 @@ import { Navbar } from '@/components/landing/Navbar'
 import { Footer } from '@/components/landing/Footer'
 import { BlogSearch } from '@/components/blog/blog-search'
 import { BlogSidebar } from '@/components/blog/blog-sidebar'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export const metadata = {
   title: 'Blog | EDUZEN',
@@ -43,8 +44,8 @@ async function getBlogPosts(categoryId?: string, search?: string, page: number =
   const { data: posts, error, count } = await query
 
   if (error) {
-    console.error('[Blog] Error fetching blog posts:', error)
-    console.error('[Blog] Error details:', {
+    logger.error('[Blog] Error fetching blog posts:', error)
+    logger.error('[Blog] Error details:', {
       message: error.message,
       code: error.code,
       details: error.details,
@@ -53,7 +54,7 @@ async function getBlogPosts(categoryId?: string, search?: string, page: number =
     return { posts: [], total: 0 }
   }
 
-  console.log(`[Blog] Found ${posts?.length || 0} published posts (total: ${count || 0})`)
+  logger.debug(`[Blog] Found ${posts?.length || 0} published posts (total: ${count || 0})`)
 
   // Enrichir avec les catégories et tags
   const postsWithRelations = await Promise.all(
@@ -118,7 +119,7 @@ async function getFeaturedPosts() {
     .limit(3)
 
   if (error) {
-    console.error('[Blog] Error fetching featured posts:', error)
+    logger.error('[Blog] Error fetching featured posts:', error)
     return []
   }
 
@@ -155,7 +156,7 @@ async function getCategories() {
     .order('display_order', { ascending: true })
 
   if (error) {
-    console.error('Error fetching categories:', error)
+    logger.error('Error fetching categories:', error)
     return []
   }
 

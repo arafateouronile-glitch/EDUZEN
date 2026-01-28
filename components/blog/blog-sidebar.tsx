@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Calendar, TrendingUp, BookOpen, Tag as TagIcon } from 'lucide-react'
 import { formatDate } from '@/lib/utils/format'
 import type { BlogCategory, BlogPost } from '@/types/super-admin.types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 async function getRecentPosts(limit: number = 5) {
   const supabase = await createClient()
@@ -19,7 +20,7 @@ async function getRecentPosts(limit: number = 5) {
     .limit(limit)
 
   if (error) {
-    console.error('[Blog] Error fetching recent posts:', error)
+    logger.error('[Blog] Error fetching recent posts:', error)
     return []
   }
 
@@ -36,7 +37,7 @@ async function getPopularTags(limit: number = 10) {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error fetching tags:', error)
+    logger.error('Error fetching tags:', error)
     return []
   }
 

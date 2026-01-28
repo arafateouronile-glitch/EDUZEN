@@ -52,6 +52,10 @@ export interface PublicCatalogSettingsFormData {
   meta_description?: string
   meta_image_url?: string
   custom_domain?: string
+  // Statistiques du catalogue
+  stats_trained_students?: number
+  stats_satisfaction_rate?: number
+  stats_success_rate?: number
 }
 
 export class PublicCatalogSettingsService {

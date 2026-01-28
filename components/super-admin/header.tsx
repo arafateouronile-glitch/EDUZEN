@@ -256,28 +256,22 @@ export function SuperAdminHeader({ sidebarCollapsed = false }: SuperAdminHeaderP
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
-              {resolvedTheme === 'dark' ? (
-                <Moon className="h-5 w-5" />
-              ) : (
-                <Sun className="h-5 w-5" />
-              )}
+              <Sun className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setTheme('light')}>
+            <DropdownMenuItem onClick={() => {}}>
               <Sun className="mr-2 h-4 w-4" />
               Clair
-              {theme === 'light' && <span className="ml-auto">✓</span>}
+              <span className="ml-auto">✓</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme('dark')}>
+            <DropdownMenuItem disabled>
               <Moon className="mr-2 h-4 w-4" />
               Sombre
-              {theme === 'dark' && <span className="ml-auto">✓</span>}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme('system')}>
+            <DropdownMenuItem disabled>
               <Monitor className="mr-2 h-4 w-4" />
               Système
-              {theme === 'system' && <span className="ml-auto">✓</span>}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

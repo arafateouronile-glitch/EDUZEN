@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { DEFAULT_PERMISSIONS_BY_ROLE } from '@/types/super-admin.types'
 import type { InviteAdminInput, PlatformAdminRole } from '@/types/super-admin.types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // GET - Liste des administrateurs
 export async function GET(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('[GET /api/super-admin/admins] Error:', error)
+      logger.error('[GET /api/super-admin/admins] Error:', error)
       return NextResponse.json({ error: 'Erreur lors de la récupération' }, { status: 500 })
     }
 
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ admins: enrichedAdmins })
   } catch (error) {
-    console.error('[GET /api/super-admin/admins] Unexpected error:', error)
+    logger.error('[GET /api/super-admin/admins] Unexpected error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
       )
 
       if (createUserError || !newUser.user) {
-        console.error('[POST /api/super-admin/admins] Create user error:', createUserError)
+        logger.error('[POST /api/super-admin/admins] Create user error:', createUserError)
         return NextResponse.json(
           { error: 'Erreur lors de la création de l\'utilisateur' },
           { status: 500 }
@@ -195,11 +196,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (insertError) {
-      console.error('[POST /api/super-admin/admins] Insert error:', insertError)
+      logger.error('[POST /api/super-admin/admins] Insert error:', insertError)
       return NextResponse.json({ error: 'Erreur lors de la création' }, { status: 500 })
     }
 
-    // TODO: Envoyer un email d'invitation avec les instructions
+    // NOTE: Fonctionnalité prévue - Envoyer un email d'invitation
+    // Utiliser l'API route /api/email/send avec un template d'invitation admin
     // En production, utiliser un service d'email (Resend, SendGrid, etc.)
 
     return NextResponse.json(
@@ -212,7 +214,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('[POST /api/super-admin/admins] Unexpected error:', error)
+    logger.error('[POST /api/super-admin/admins] Unexpected error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

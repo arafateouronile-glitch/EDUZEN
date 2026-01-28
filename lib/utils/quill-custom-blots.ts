@@ -1,7 +1,13 @@
 /**
  * Custom Blots pour Quill permettant d'insérer des tableaux et cadres comme blocs éditables
  * Cette approche évite les problèmes avec le MutationObserver de Quill
+ *
+ * @deprecated Ce fichier est obsolète car react-quill a été supprimé.
+ * Le projet utilise maintenant Tiptap pour l'édition de documents.
+ * Ce fichier est conservé pour référence mais ne devrait plus être utilisé.
  */
+
+import { logger } from '@/lib/utils/logger'
 
 let Quill: any = null
 let BlockEmbed: any = null
@@ -12,11 +18,12 @@ const loadQuill = async () => {
   if (Quill && BlockEmbed) return
 
   try {
+    // @ts-expect-error - quill n'est plus installé, ce fichier est obsolète
     const quillModule = await import('quill')
     Quill = quillModule.default
     BlockEmbed = Quill.import('blots/block/embed')
   } catch (e) {
-    console.error('Error loading Quill:', e)
+    logger.error('[Quill] Error loading Quill:', e)
   }
 }
 
@@ -123,7 +130,7 @@ export class TableBlot {
           data: JSON.parse(dataAttr)
         }
       } catch (e) {
-        console.error('Error parsing table data:', e)
+        logger.error('[Quill] Error parsing table data:', e)
       }
     }
     return {
@@ -201,7 +208,7 @@ export class FrameBlot {
           data: JSON.parse(dataAttr)
         }
       } catch (e) {
-        console.error('Error parsing frame data:', e)
+        logger.error('[Quill] Error parsing frame data:', e)
       }
     }
     return {
@@ -230,7 +237,7 @@ export async function registerCustomBlots() {
   await loadQuill()
   
   if (!Quill || !BlockEmbed) {
-    console.warn('Quill not loaded, custom blots will be registered when Quill is available')
+    logger.warn('[Quill] Quill not loaded, custom blots will be registered when Quill is available')
     return
   }
 
@@ -281,15 +288,15 @@ export async function registerCustomBlots() {
     
     if (registeredTableBlot && registeredFrameBlot) {
       blotsRegistered = true
-      console.log('Custom blots registered successfully:', {
+      logger.debug('[Quill] Custom blots registered successfully:', {
         table: TableBlot.blotName,
         frame: FrameBlot.blotName
       })
     } else {
-      console.error('Custom blots registration failed - blots not found after registration')
+      logger.error('[Quill] Custom blots registration failed - blots not found after registration')
     }
   } catch (e) {
-    console.error('Error registering custom blots:', e)
+    logger.error('[Quill] Error registering custom blots:', e)
     // Ne pas marquer comme enregistré en cas d'erreur
   }
 }

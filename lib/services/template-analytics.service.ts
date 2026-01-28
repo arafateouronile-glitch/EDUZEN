@@ -1,15 +1,20 @@
 /**
  * Service pour gérer les analytics des templates de documents
- * TODO: Implémenter le service d'analytics
+ * Service d'analytics pour templates de documents
+ * 
+ * NOTE: Service non implémenté - Fonctionnalité prévue pour une future version
+ * Ce service permettra de tracker l'utilisation des templates (vues, générations, etc.)
  */
+
+import { logger } from '@/lib/utils/logger'
 
 export const templateAnalyticsService = {
   /**
    * Enregistre un événement d'analytics pour un template
    */
   async logEvent(templateId: string, eventType: string, metadata?: any) {
-    // TODO: Implémenter le logging d'événements
-    console.warn('templateAnalyticsService.logEvent not implemented')
+    // NOTE: Fonctionnalité prévue - Logger les événements dans une table template_analytics
+    logger.warn('TemplateAnalyticsService - logEvent not implemented')
     return null
   },
 }

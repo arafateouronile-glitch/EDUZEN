@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function LMSSettingsPage() {
   const { user } = useAuth()
@@ -57,7 +58,7 @@ export default function LMSSettingsPage() {
         if (error?.code === 'PGRST200' || error?.message?.includes('does not exist') || error?.message?.includes('schema cache')) {
           return null
         }
-        console.error('Error fetching LMS configuration:', error.message)
+        logger.error('Error fetching LMS configuration:', error.message)
         return null
       }
     },

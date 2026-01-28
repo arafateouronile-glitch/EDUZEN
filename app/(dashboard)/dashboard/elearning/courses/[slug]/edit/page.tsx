@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const courseSchema = z.object({
   title: z.string().min(3, 'Le titre doit contenir au moins 3 caractères'),
@@ -198,7 +199,7 @@ export default function EditCoursePage() {
         }
 
         if (lastError) {
-          console.error('Erreur upload miniature (storage):', lastError)
+          logger.error('Erreur upload miniature (storage):', lastError)
           throw new Error(
             lastError?.message ||
               "Erreur lors de l'upload de la miniature (bucket course-thumbnails/elearning-media/course-media)."

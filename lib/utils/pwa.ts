@@ -3,6 +3,8 @@
  * Gestion de l'installation, du service worker, et du mode offline
  */
 
+import { logger } from '@/lib/utils/logger'
+
 /**
  * Vérifie si l'application peut être installée
  */
@@ -47,7 +49,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       scope: '/',
     })
 
-    console.log('Service Worker registered:', registration.scope)
+    logger.debug('Service Worker registered', { scope: registration.scope })
 
     // Écouter les mises à jour
     registration.addEventListener('updatefound', () => {
@@ -56,7 +58,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
             // Nouvelle version disponible
-            console.log('New service worker available')
+            logger.debug('New service worker available')
           }
         })
       }
@@ -64,7 +66,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
     return registration
   } catch (error) {
-    console.error('Service Worker registration failed:', error)
+    logger.error('Service Worker registration failed:', error)
     return null
   }
 }
@@ -85,7 +87,7 @@ export async function unregisterServiceWorker(): Promise<boolean> {
     }
     return false
   } catch (error) {
-    console.error('Service Worker unregistration failed:', error)
+    logger.error('Service Worker unregistration failed:', error)
     return false
   }
 }

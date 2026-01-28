@@ -8,9 +8,18 @@ import { useParallax } from '@/lib/hooks/useParallax'
 import { useEffect, useState } from 'react'
 
 export function Hero() {
-  const { ref: blobRef1, y: blob1Y } = useParallax(100)
-  const { ref: blobRef2, y: blob2Y } = useParallax(150)
-  const { ref: blobRef3, y: blob3Y } = useParallax(80)
+  // Désactiver les animations parallaxes au chargement initial pour améliorer LCP
+  const [animationsEnabled, setAnimationsEnabled] = useState(false)
+  
+  useEffect(() => {
+    // Activer les animations après le chargement initial (améliore LCP)
+    const timer = setTimeout(() => setAnimationsEnabled(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const { ref: blobRef1, y: blob1Y } = useParallax(animationsEnabled ? 100 : 0)
+  const { ref: blobRef2, y: blob2Y } = useParallax(animationsEnabled ? 150 : 0)
+  const { ref: blobRef3, y: blob3Y } = useParallax(animationsEnabled ? 80 : 0)
 
   // Mouse tracking for magnetic effect
   const [isHovered, setIsHovered] = useState(false)
@@ -69,7 +78,7 @@ export function Hero() {
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="relative inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-white/80 to-white/60 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(39,68,114,0.12)] mb-12 md:mb-16 overflow-hidden group"
           >
             {/* Shimmer effect */}
@@ -87,11 +96,11 @@ export function Hero() {
             </div>
           </motion.div>
 
-          {/* Headline with 3D effect */}
+          {/* Headline with 3D effect - animations réduites pour LCP */}
           <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            initial={false}
+            animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+            transition={animationsEnabled ? { duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } : { duration: 0 }}
             className="relative mb-12 md:mb-16"
           >
             {/* Glow effect behind text */}
@@ -100,25 +109,25 @@ export function Hero() {
             <h1 className="relative text-5xl md:text-7xl lg:text-8xl font-black tracking-tightest leading-tightest font-display">
               <motion.span
                 className="block text-gray-900 drop-shadow-sm font-extralight tracking-luxe"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.3 }}
+                initial={false}
+                animate={animationsEnabled ? { opacity: 1, x: 0 } : { opacity: 1, x: 0 }}
+                transition={animationsEnabled ? { duration: 0.8, delay: 0.3 } : { duration: 0 }}
               >
                 Gérez votre organisme
               </motion.span>
               <motion.span
                 className="block text-gray-900 drop-shadow-sm italic font-medium tracking-tight"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.5 }}
+                initial={false}
+                animate={animationsEnabled ? { opacity: 1, x: 0 } : { opacity: 1, x: 0 }}
+                transition={animationsEnabled ? { duration: 0.8, delay: 0.5 } : { duration: 0 }}
               >
                 de formation avec
               </motion.span>
               <motion.span
                 className="block relative mt-4"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.7 }}
+                initial={false}
+                animate={animationsEnabled ? { opacity: 1, scale: 1 } : { opacity: 1, scale: 1 }}
+                transition={animationsEnabled ? { duration: 0.8, delay: 0.7 } : { duration: 0 }}
               >
                 <span className="relative inline-block">
                   <span className="absolute inset-0 blur-3xl bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue opacity-60 animate-gradient-xy" />
@@ -130,11 +139,11 @@ export function Hero() {
             </h1>
           </motion.div>
 
-          {/* Enhanced Subtitle */}
+          {/* Enhanced Subtitle - visible immédiatement pour LCP */}
           <motion.p
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            initial={false}
+            animate={animationsEnabled ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+            transition={animationsEnabled ? { duration: 1, delay: 0.9, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } : { duration: 0 }}
             className="text-lg md:text-xl lg:text-2xl text-gray-700 mb-16 md:mb-20 max-w-4xl leading-relaxed font-light tracking-tight"
           >
             Une plateforme{' '}
@@ -149,11 +158,11 @@ export function Hero() {
             <span className="italic text-brand-blue font-semibold">conformité Qualiopi</span>.
           </motion.p>
 
-          {/* Premium CTAs with magnetic effect */}
+          {/* Premium CTAs with magnetic effect - visible immédiatement */}
           <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 1, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            initial={false}
+            animate={animationsEnabled ? { opacity: 1, y: 0, scale: 1 } : { opacity: 1, y: 0, scale: 1 }}
+            transition={animationsEnabled ? { duration: 1, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } : { duration: 0 }}
             className="flex flex-col sm:flex-row gap-6 w-full sm:w-auto mb-20 md:mb-24"
             onMouseMove={handleMouseMove}
             onMouseEnter={() => setIsHovered(true)}
@@ -205,11 +214,11 @@ export function Hero() {
             </motion.div>
           </motion.div>
 
-          {/* Premium trust badges */}
+          {/* Premium trust badges - visible immédiatement */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            initial={false}
+            animate={animationsEnabled ? { opacity: 1 } : { opacity: 1 }}
+            transition={animationsEnabled ? { duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } : { duration: 0 }}
             className="flex flex-wrap items-center justify-center gap-8 md:gap-12"
           >
             {[
@@ -221,7 +230,7 @@ export function Hero() {
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.9 + index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.6, delay: 0.9 + index * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 whileHover={{ scale: 1.05, y: -2 }}
                 className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/60 backdrop-blur-md border border-white/40 shadow-lg"
               >
@@ -231,16 +240,16 @@ export function Hero() {
             ))}
           </motion.div>
 
-          {/* Dashboard Preview with enhanced 3D effect */}
+          {/* Dashboard Preview - lazy load pour améliorer LCP */}
           <motion.div
-            initial={{ opacity: 0, y: 80, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 1.2, delay: 1, ease: [0.16, 1, 0.3, 1] }}
+            initial={false}
+            animate={animationsEnabled ? { opacity: 1, y: 0, scale: 1 } : { opacity: 1, y: 0, scale: 1 }}
+            transition={animationsEnabled ? { duration: 1.2, delay: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } : { duration: 0 }}
             className="mt-32 md:mt-40 lg:mt-48 relative w-full max-w-7xl"
           >
             <motion.div
               whileHover={{ y: -16, rotateX: 2, scale: 1.02 }}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="relative rounded-[2rem] md:rounded-[3rem] border-4 border-white/50 bg-white/40 backdrop-blur-xl p-4 md:p-6 shadow-[0_60px_120px_rgba(39,68,114,0.25)] hover:shadow-[0_80px_160px_rgba(39,68,114,0.3)] transition-all duration-800"
               style={{
                 transformStyle: 'preserve-3d',

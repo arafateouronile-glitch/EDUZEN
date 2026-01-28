@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateWordDocument } from '@/lib/services/auto-docx-generator.service'
 import type { DocumentVariables, DocumentTemplate } from '@/lib/types/document-templates'
 import { createClient } from '@/lib/supabase/server'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Configuration de la route API
 export const runtime = 'nodejs'
@@ -24,7 +25,7 @@ export const maxDuration = 60 // 60 secondes maximum
  * }
  */
 export async function POST(request: NextRequest) {
-  console.log('[Generate DOCX] 🚀 Début de la requête - Génération automatique')
+  logger.info('[Generate DOCX] 🚀 Début de la requête - Génération automatique')
   
   try {
     const body = await request.json()
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer le template depuis la base de données
-    console.log('[Generate DOCX] 📋 Récupération du template:', templateId)
+    logger.info('[Generate DOCX] 📋 Récupération du template', { templateId })
     const supabase = await createClient()
     
     const { data: template, error: templateError } = await supabase
@@ -59,16 +60,16 @@ export async function POST(request: NextRequest) {
       .single()
     
     if (templateError || !template) {
-      console.error('[Generate DOCX] ❌ Template non trouvé:', templateError)
+      logger.error('[Generate DOCX] ❌ Template non trouvé', sanitizeError(templateError))
       return NextResponse.json(
         { error: `Template non trouvé: ${templateId}` },
         { status: 404 }
       )
     }
 
-    console.log('[Generate DOCX] ✅ Template trouvé:', template.name)
-    console.log('[Generate DOCX] 📝 Type:', template.type)
-    console.log('[Generate DOCX] 🔗 DOCX natif URL:', template.docx_template_url || 'Non défini (génération auto)')
+    logger.info('[Generate DOCX] ✅ Template trouvé', { templateName: template.name })
+    logger.info('[Generate DOCX] 📝 Type', { type: template.type })
+    logger.info('[Generate DOCX] 🔗 DOCX natif URL', { docxUrl: template.docx_template_url || 'Non défini (génération auto)' })
 
     // Générer le document Word
     // La fonction generateWordDocument choisit automatiquement :
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       variables
     )
 
-    console.log('[Generate DOCX] ✅ Document généré avec succès, taille:', outputBuffer.length, 'bytes')
+    logger.info('[Generate DOCX] ✅ Document généré avec succès', { size: outputBuffer.length, unit: 'bytes' })
 
     // Retourner le document
     return new NextResponse(outputBuffer as any, {
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Generate DOCX] ❌ Erreur globale:', error)
+    logger.error('[Generate DOCX] ❌ Erreur globale:', error)
     return NextResponse.json(
       { 
         error: 'Erreur lors de la génération du document Word',

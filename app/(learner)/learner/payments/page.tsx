@@ -42,9 +42,8 @@ export default function LearnerPaymentsPage() {
 
         return data || []
       } catch (error: any) {
-        logger.error('Unexpected error fetching invoices', error, {
+        logger.error('Unexpected error fetching invoices', sanitizeError(error), {
           studentId: maskId(studentId),
-          error: sanitizeError(error),
         })
         return []
       }
@@ -96,9 +95,8 @@ export default function LearnerPaymentsPage() {
 
         return data || []
       } catch (error: any) {
-        logger.error('Unexpected error fetching payments', error, {
+        logger.error('Unexpected error fetching payments', sanitizeError(error), {
           studentId: maskId(studentId),
-          error: sanitizeError(error),
         })
         return []
       }

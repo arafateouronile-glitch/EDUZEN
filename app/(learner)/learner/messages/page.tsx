@@ -68,7 +68,7 @@ export default function LearnerMessagesPage() {
         .order('last_message_at', { ascending: false, nullsFirst: false })
 
       if (conversationsError) {
-        logger.error('Error fetching conversations', conversationsError, {
+        logger.error('Error fetching conversations', sanitizeError(conversationsError), {
           studentId: maskId(studentId),
           organizationId: maskId(organizationId),
           error: sanitizeError(conversationsError),

@@ -1,6 +1,10 @@
 /**
  * Nouvelle version des helpers pour insérer des tableaux et cadres
  * Utilise les Custom Blots au lieu de l'insertion HTML directe
+ * 
+ * @deprecated Ce fichier est obsolète car react-quill a été supprimé. 
+ * Le projet utilise maintenant Tiptap pour l'édition de documents.
+ * Ce fichier est conservé pour référence mais ne devrait plus être utilisé.
  */
 
 import { registerCustomBlots, TableBlot, FrameBlot } from './quill-custom-blots'
@@ -15,6 +19,7 @@ async function ensureBlotsRegistered() {
     await registerCustomBlots()
     
     // Vérifier que Quill est chargé et que les blots sont disponibles
+    // @ts-expect-error - quill n'est plus installé, ce fichier est obsolète
     const quillModule = await import('quill')
     const Quill = quillModule.default
     

@@ -13,6 +13,7 @@ import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { mapDataToVariables } from '@/lib/utils/document-generation/variable-mapper'
 import { EmailService } from '@/lib/services/email.service'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // POST /api/documents/scheduled/execute - Exécute les générations programmées
 export async function POST(request: NextRequest) {
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
                 format: generation.format,
                 related_entity_type: 'student',
                 related_entity_id: studentId,
-                metadata: variables,
+                metadata: variables as any,
               })
 
             // Envoyer par email si demandé
@@ -186,19 +187,21 @@ export async function POST(request: NextRequest) {
               }
             }
           } catch (studentError) {
-            console.error(`Erreur lors de la génération pour l'étudiant ${studentId}:`, studentError)
+            logger.error(`Erreur lors de la génération pour l'étudiant ${studentId}:`, studentError)
             // Continuer avec les autres étudiants
           }
         }
 
         // Enregistrer le succès
-        // TODO: Implement recordExecution method
+        // NOTE: Fonctionnalité prévue - Implémenter recordExecution pour logger les exécutions
+        // Créer une table document_execution_logs pour tracer les exécutions de documents planifiés
         // await scheduledGenerationService.recordExecution(generation.id, true)
         results.push({ generationId: generation.id, success: true })
 
       } catch (error) {
-        console.error(`Erreur lors de l'exécution de la génération ${generation.id}:`, error)
-        // TODO: Implement recordExecution method
+        logger.error(`Erreur lors de l'exécution de la génération ${generation.id}:`, error)
+        // NOTE: Fonctionnalité prévue - Implémenter recordExecution pour logger les exécutions
+        // Créer une table document_execution_logs pour tracer les exécutions de documents planifiés
         // await scheduledGenerationService.recordExecution(
         //   generation.id,
         //   false,
@@ -217,7 +220,7 @@ export async function POST(request: NextRequest) {
       results,
     })
   } catch (error) {
-    console.error('Erreur lors de l\'exécution des générations programmées:', error)
+    logger.error('Erreur lors de l\'exécution des générations programmées:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

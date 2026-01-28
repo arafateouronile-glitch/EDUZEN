@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from './use-auth'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import type {
   PlatformAdmin,
   PlatformAdminRole,
@@ -73,22 +74,22 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
 
       if (adminError) {
         // Log error for debugging
-        console.error('[usePlatformAdmin] Error fetching platform admin:', adminError)
+        logger.error('[usePlatformAdmin] Error fetching platform admin:', adminError)
         // If table doesn't exist yet, return null silently
         if (adminError.code === '42P01') return null
         // If RLS policy blocks access, log it
         if (adminError.code === '42501' || adminError.message?.includes('permission denied')) {
-          console.error('[usePlatformAdmin] RLS policy blocked access. Check policies.')
+          logger.error('[usePlatformAdmin] RLS policy blocked access. Check policies.')
         }
         throw adminError
       }
 
       if (!adminData) {
-        console.log('[usePlatformAdmin] No platform admin found for user:', user.id)
+        logger.debug('[usePlatformAdmin] No platform admin found for user', { userId: user.id })
         return null
       }
 
-      console.log('[usePlatformAdmin] Platform admin found:', adminData)
+      logger.debug('[usePlatformAdmin] Platform admin found:', adminData)
 
       // Try to get user info from auth.users (via RPC or direct query if possible)
       // For now, we'll just return the admin data without the user relation

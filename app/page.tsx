@@ -9,9 +9,19 @@ const ParallaxProvider = dynamic(() => import('@/components/providers/ParallaxPr
   ssr: false, // Désactiver SSR pour ParallaxProvider (nécessite window)
 })
 
-// Lazy load Hero component pour améliorer LCP (framer-motion ~50KB)
+// Hero avec SSR pour LCP optimal - animations réduites au chargement initial
 const Hero = dynamic(() => import('@/components/landing/Hero').then(mod => ({ default: mod.Hero })), {
-  loading: () => <div className="min-h-screen" />,
+  loading: () => (
+    <section className="relative pt-40 pb-32 md:pt-56 md:pb-48 lg:pt-72 lg:pb-72 overflow-hidden bg-gradient-to-b from-white via-gray-50/30 to-white">
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 relative z-10">
+        <div className="flex flex-col items-center text-center max-w-7xl mx-auto">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tightest leading-tightest font-display text-gray-900 mb-12">
+            Gérez votre organisme de formation avec simplicité
+          </h1>
+        </div>
+      </div>
+    </section>
+  ),
   ssr: true, // Garder SSR pour Hero (contenu critique)
 })
 

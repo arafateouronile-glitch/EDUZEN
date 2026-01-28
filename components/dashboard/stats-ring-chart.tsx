@@ -50,7 +50,7 @@ export function StatsRingChart({ value, max, label, color, size = 120 }: StatsRi
             strokeDashoffset={offset}
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             style={{
               filter: `drop-shadow(0 0 8px ${color}40)`,
             }}
@@ -62,7 +62,7 @@ export function StatsRingChart({ value, max, label, color, size = 120 }: StatsRi
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.5, duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="text-2xl font-bold text-gray-900"
           >
             {value}

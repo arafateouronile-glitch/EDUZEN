@@ -8,6 +8,7 @@ import {
   formatCurrency,
   formatNumber,
   formatRelativeTime,
+  formatFileSize,
 } from '@/lib/utils/format'
 
 describe('formatDate', () => {
@@ -115,5 +116,40 @@ describe('formatRelativeTime', () => {
   })
 })
 
+describe('formatFileSize', () => {
+  it('devrait formater les bytes en B', () => {
+    expect(formatFileSize(0)).toBe('0 B')
+    expect(formatFileSize(500)).toBe('500 B')
+  })
 
+  it('devrait formater en KB', () => {
+    expect(formatFileSize(1024)).toBe('1 KB')
+    expect(formatFileSize(2048)).toBe('2 KB')
+    expect(formatFileSize(1536)).toBe('1.5 KB')
+  })
+
+  it('devrait formater en MB', () => {
+    expect(formatFileSize(1024 * 1024)).toBe('1 MB')
+    expect(formatFileSize(2.5 * 1024 * 1024)).toBe('2.5 MB')
+  })
+
+  it('devrait formater en GB', () => {
+    expect(formatFileSize(1024 * 1024 * 1024)).toBe('1 GB')
+    expect(formatFileSize(2.5 * 1024 * 1024 * 1024)).toBe('2.5 GB')
+  })
+
+  it('devrait formater en TB', () => {
+    expect(formatFileSize(1024 * 1024 * 1024 * 1024)).toBe('1 TB')
+  })
+
+  it('devrait retourner "0 B" pour null ou undefined', () => {
+    expect(formatFileSize(null)).toBe('0 B')
+    expect(formatFileSize(undefined)).toBe('0 B')
+  })
+
+  it('devrait arrondir correctement', () => {
+    expect(formatFileSize(1024 + 512)).toBe('1.5 KB')
+    expect(formatFileSize(1024 * 1024 + 512 * 1024)).toBe('1.5 MB')
+  })
+})
 

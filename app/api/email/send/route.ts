@@ -155,7 +155,9 @@ export async function POST(request: NextRequest) {
         phone?: string;
       };
 
-      // TODO: Intégrer avec un service d'email réel (Resend, SendGrid, etc.)
+      // NOTE: Fonctionnalité prévue - Intégrer avec un service d'email réel
+      // Options: Resend (recommandé), SendGrid, ou AWS SES
+      // Configurer les variables d'environnement: RESEND_API_KEY ou SENDGRID_API_KEY
       // Pour l'instant, on simule l'envoi et on log
 
       const recipients = Array.isArray(to) ? to : [String(to)];

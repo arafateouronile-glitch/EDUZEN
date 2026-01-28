@@ -3,6 +3,7 @@
  */
 
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 import { evaluateConditionalContent } from './conditional-processor'
 import { processLoops } from './loop-processor'
 import { processCalculatedVariables } from './calculated-variables'
@@ -109,16 +110,16 @@ async function convertImageUrlToBase64(imageUrl: string): Promise<string | null>
   try {
     // Si c'est déjà une data URL, la retourner telle quelle
     if (imageUrl.startsWith('data:')) {
-      console.log(`[convertImageUrlToBase64] URL déjà en base64`)
+      logger.debug(`[convertImageUrlToBase64] URL déjà en base64`)
       return imageUrl
     }
     
     if (!imageUrl || !imageUrl.trim()) {
-      console.warn(`[convertImageUrlToBase64] URL vide`)
+      logger.warn(`[convertImageUrlToBase64] URL vide`)
       return null
     }
     
-    console.log(`[convertImageUrlToBase64] Téléchargement de l'image depuis: ${imageUrl.substring(0, 80)}...`)
+    logger.debug(`[convertImageUrlToBase64] Téléchargement de l'image`, { url: `${imageUrl.substring(0, 80)}...` })
     
     // Télécharger l'image avec timeout
     const controller = new AbortController()
@@ -135,7 +136,7 @@ async function convertImageUrlToBase64(imageUrl: string): Promise<string | null>
       clearTimeout(timeoutId)
       
       if (!response.ok) {
-        console.warn(`[convertImageUrlToBase64] Échec du téléchargement: ${response.status} ${response.statusText}`)
+        logger.warn(`[convertImageUrlToBase64] Échec du téléchargement: ${response.status} ${response.statusText}`)
         return null
       }
       
@@ -148,19 +149,19 @@ async function convertImageUrlToBase64(imageUrl: string): Promise<string | null>
       const contentType = response.headers.get('content-type') || 'image/png'
       
       const dataUrl = `data:${contentType};base64,${base64}`
-      console.log(`[convertImageUrlToBase64] ✅ Image convertie en base64 (${dataUrl.substring(0, 50)}..., taille: ${base64.length} caractères)`)
+      logger.debug(`[convertImageUrlToBase64] ✅ Image convertie en base64`, { preview: `${dataUrl.substring(0, 50)}...`, size: base64.length })
       return dataUrl
     } catch (fetchError) {
       clearTimeout(timeoutId)
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        console.error(`[convertImageUrlToBase64] Timeout lors du téléchargement`)
+        logger.error(`[convertImageUrlToBase64] Timeout lors du téléchargement`)
       } else {
-        console.error(`[convertImageUrlToBase64] Erreur fetch:`, fetchError)
+        logger.error(`[convertImageUrlToBase64] Erreur fetch:`, fetchError)
       }
       return null
     }
   } catch (error) {
-    console.error(`[convertImageUrlToBase64] Erreur lors de la conversion:`, error)
+    logger.error(`[convertImageUrlToBase64] Erreur lors de la conversion:`, error)
     return null
   }
 }
@@ -175,8 +176,8 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
   let result = html
   const logoKeys = ['ecole_logo', 'organization_logo']
   
-  console.log('[processLogos] Début du traitement, longueur HTML:', html.length)
-  console.log('[processLogos] Variables disponibles:', Object.keys(variables).filter(k => logoKeys.includes(k)))
+  logger.debug('[processLogos] Début du traitement', { htmlLength: html.length })
+  logger.debug('[processLogos] Variables disponibles', { keys: Object.keys(variables).filter(k => logoKeys.includes(k)) })
   
   // ÉTAPE 1: Si le header contient déjà l'URL comme texte (au lieu de data-logo-var),
   // la remplacer par une balise img avec data-logo-var AVANT de traiter les balises existantes
@@ -217,7 +218,7 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
             continue
           } else {
             // L'URL est comme texte pur, la remplacer par une balise img
-            console.log(`[processLogos] 🔄 Remplacement URL texte par balise img à l'offset ${offset}`)
+            logger.debug(`[processLogos] 🔄 Remplacement URL texte par balise img à l'offset ${offset}`)
             foundTextUrl = true
             result = result.substring(0, offset) + 
                      `<img alt="Logo" style="max-height: 55px; max-width: 140px; object-fit: contain;" data-logo-var="{${key}}" />` + 
@@ -227,7 +228,7 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
       }
       
       if (foundTextUrl) {
-        console.log(`[processLogos] ✅ URLs textuelles remplacées par des balises img avec data-logo-var`)
+        logger.debug(`[processLogos] ✅ URLs textuelles remplacées par des balises img avec data-logo-var`)
       }
     }
   })
@@ -238,7 +239,7 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
   
   for (const key of allLogoKeys) {
     const logoValue = variables[key] && String(variables[key]).trim() ? String(variables[key]) : null
-    console.log(`[processLogos] Traitement de ${key}, logoValue:`, logoValue ? `${logoValue.substring(0, 50)}...` : 'null')
+    logger.debug(`[processLogos] Traitement de ${key}`, { logoValue: logoValue ? `${logoValue.substring(0, 50)}...` : 'null' })
     
     if (logoValue) {
       // Remplacer le src des images avec data-logo-var="{ecole_logo}" ou data-logo-var="{organization_logo}"
@@ -261,23 +262,22 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
         const regex = new RegExp(pattern, 'gi')
         const testMatches = result.match(regex)
         if (testMatches && testMatches.length > 0) {
-          console.log(`[processLogos] ✅ Pattern trouvé: ${pattern.substring(0, 80)}...`)
-          console.log(`[processLogos] Nombre de correspondances: ${testMatches.length}`)
-          console.log(`[processLogos] Exemples:`, testMatches.slice(0, 2).map(m => m.substring(0, 150)))
+          logger.debug(`[processLogos] ✅ Pattern trouvé`, { pattern: `${pattern.substring(0, 80)}...`, matchCount: testMatches.length })
+          logger.debug(`[processLogos] Exemples`, { examples: testMatches.slice(0, 2).map(m => m.substring(0, 150)) })
           found = true
           break
         }
       }
       
       if (!found) {
-        console.warn(`[processLogos] ⚠️ Aucune balise logo trouvée avec ${key}`)
+        logger.warn(`[processLogos] ⚠️ Aucune balise logo trouvée avec ${key}`)
         // Chercher si data-logo-var existe dans le HTML
         if (result.includes('data-logo-var')) {
-          console.warn(`[processLogos] ⚠️ data-logo-var trouvé dans le HTML mais pattern ne correspond pas`)
+          logger.warn(`[processLogos] ⚠️ data-logo-var trouvé dans le HTML mais pattern ne correspond pas`)
           // Afficher un extrait du HTML contenant data-logo-var
           const dataLogoVarIndex = result.indexOf('data-logo-var')
           const excerpt = result.substring(Math.max(0, dataLogoVarIndex - 50), Math.min(result.length, dataLogoVarIndex + 200))
-          console.warn(`[processLogos] Extrait HTML:`, excerpt)
+          logger.warn(`[processLogos] Extrait HTML`, { excerpt })
         }
       }
       
@@ -288,28 +288,28 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
       // Convertir l'URL en base64 pour éviter les problèmes CORS avec Puppeteer
       let logoSrc = logoValue
       if (logoValue && (logoValue.includes('supabase.co') || logoValue.startsWith('http'))) {
-        console.log(`[processLogos] Conversion de l'URL en base64 pour ${key}...`)
+        logger.debug(`[processLogos] Conversion de l'URL en base64 pour ${key}...`)
         try {
           const base64Image = await convertImageUrlToBase64(logoValue)
           if (base64Image) {
             logoSrc = base64Image
-            console.log(`[processLogos] ✅ Image convertie en base64 avec succès`)
+            logger.debug(`[processLogos] ✅ Image convertie en base64 avec succès`)
           } else {
-            console.warn(`[processLogos] ⚠️ Échec de la conversion en base64, utilisation de l'URL originale`)
+            logger.warn(`[processLogos] ⚠️ Échec de la conversion en base64, utilisation de l'URL originale`)
             // Essayer quand même avec l'URL originale, Puppeteer pourra peut-être la charger
           }
         } catch (error) {
-          console.error(`[processLogos] ❌ Erreur lors de la conversion en base64:`, error)
+          logger.error(`[processLogos] ❌ Erreur lors de la conversion en base64:`, error)
           // En cas d'erreur, utiliser l'URL originale
         }
       } else {
-        console.log(`[processLogos] URL ne nécessite pas de conversion (pas une URL HTTP/Supabase)`)
+        logger.debug(`[processLogos] URL ne nécessite pas de conversion (pas une URL HTTP/Supabase)`)
       }
       
       result = result.replace(
         regex,
         (match, before, after) => {
-          console.log(`[processLogos] ✅ Correspondance trouvée:`, match.substring(0, 150))
+          logger.debug(`[processLogos] ✅ Correspondance trouvée`, { match: match.substring(0, 150) })
           
           // Extraire tous les attributs existants sauf src et data-logo-var
           const allAttrs = (before + ' ' + after).trim()
@@ -330,12 +330,12 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
           
           // Construire la nouvelle balise img avec le src du logo (base64 ou URL)
           const newImg = `<img src="${logoSrc}" alt="${altValue}"${cleanedAttrs ? ' ' + cleanedAttrs : ''} style="${existingStyle}">`
-          console.log(`[processLogos] ✅ Remplacement effectué:`, newImg.substring(0, 150))
+          logger.debug(`[processLogos] ✅ Remplacement effectué`, { newImg: newImg.substring(0, 150) })
           return newImg
         }
       )
     } else {
-      console.log(`[processLogos] Pas de logo pour ${key}, masquage de l'image`)
+      logger.debug(`[processLogos] Pas de logo pour ${key}, masquage de l'image`)
       // Si pas de logo, masquer l'image
       const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       result = result.replace(
@@ -374,12 +374,12 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
           return match
         }
         
-        console.log(`[processLogos] 🗑️ Suppression de l'URL texte du logo: ${match.substring(0, 80)}...`)
+        logger.debug(`[processLogos] 🗑️ Suppression de l'URL texte du logo: ${match.substring(0, 80)}...`)
         return ''
       })
       
       if (beforeRemoval !== result) {
-        console.log(`[processLogos] ✅ URLs textuelles supprimées pour ${key}`)
+        logger.debug(`[processLogos] ✅ URLs textuelles supprimées pour ${key}`)
       }
     }
   })
@@ -499,8 +499,8 @@ export async function generateHTML(
   organizationId?: string
 ): Promise<HTMLGenerationResult> {
   try {
-    console.log('[HTML Generator] Début de la génération HTML')
-    console.log('[HTML Generator] Template:', {
+    logger.debug('[HTML Generator] Début de la génération HTML')
+    logger.debug('[HTML Generator] Template:', {
       id: template.id,
       type: template.type,
       name: template.name,
@@ -509,38 +509,67 @@ export async function generateHTML(
     })
     
     // Récupérer le contenu HTML du template
-  // Le contenu peut être dans content.html ou content.elements[0].content
+  // Le contenu peut être dans content.html ou content.elements[0].content ou content.elements[0].html
+  // Ou le template.content peut être directement une chaîne
   let content = ''
   if (template.content) {
-    const contentData = template.content as any
-    console.log('[HTML Generator] Template content structure:', {
-      hasHtml: !!contentData.html,
-      htmlLength: contentData.html?.length || 0,
-      hasElements: !!contentData.elements,
-      elementsCount: contentData.elements?.length || 0,
-    })
-    
-    if (contentData.html) {
-      content = contentData.html
-      console.log('[HTML Generator] Using content.html, length:', content.length)
-    } else if (contentData.elements && Array.isArray(contentData.elements) && contentData.elements.length > 0) {
-      // Si le contenu est dans les éléments, extraire le HTML de chaque élément
-      content = contentData.elements
-        .map((el: any) => el.content || '')
-        .filter((c: string) => c && c.trim())
-        .join('\n')
-      console.log('[HTML Generator] Using content.elements, length:', content.length)
+    // Si template.content est directement une chaîne
+    if (typeof template.content === 'string') {
+      content = template.content
+      logger.debug('[HTML Generator] Using template.content as string', { length: content.length })
+    } else {
+      const contentData = template.content as any
+      logger.debug('[HTML Generator] Template content structure:', {
+        hasHtml: !!contentData.html,
+        htmlLength: contentData.html?.length || 0,
+        hasElements: !!contentData.elements,
+        elementsCount: contentData.elements?.length || 0,
+      })
+      
+      if (contentData.html) {
+        content = contentData.html
+        logger.debug('[HTML Generator] Using content.html', { length: content.length })
+      } else if (contentData.elements && Array.isArray(contentData.elements) && contentData.elements.length > 0) {
+        // Si le contenu est dans les éléments, extraire le HTML de chaque élément
+        // Le contenu peut être dans el.content ou el.html selon la structure du template
+        logger.debug('[HTML Generator] Elements structure:', {
+          elementsCount: contentData.elements.length,
+          firstElement: {
+            type: contentData.elements[0]?.type,
+            hasContent: !!contentData.elements[0]?.content,
+            hasHtml: !!contentData.elements[0]?.html,
+            contentLength: contentData.elements[0]?.content?.length || 0,
+            htmlLength: contentData.elements[0]?.html?.length || 0,
+            keys: Object.keys(contentData.elements[0] || {}),
+          }
+        })
+        content = contentData.elements
+          .map((el: any) => {
+            // Essayer plusieurs propriétés possibles
+            return el.content || el.html || el.text || el.value || ''
+          })
+          .filter((c: string) => c && c.trim())
+          .join('\n')
+        logger.debug('[HTML Generator] Using content.elements', { extractedLength: content.length })
+        
+        // Si toujours vide après extraction, logger la structure complète pour déboguer
+        if (!content || content.trim().length === 0) {
+          logger.warn('[HTML Generator] Content still empty after extraction', { fullElements: JSON.stringify(contentData.elements, null, 2) })
+        }
+      }
     }
   } else {
-    console.warn('[HTML Generator] Template content is null or undefined')
+    logger.warn('[HTML Generator] Template content is null or undefined')
   }
   
   // Si le contenu est toujours vide, utiliser une chaîne vide par défaut
   if (!content || content.trim().length === 0) {
-    console.warn('[HTML Generator] Template content is empty after extraction, template:', {
-      id: template.id,
-      type: template.type,
-      name: template.name,
+    logger.warn('[HTML Generator] Template content is empty after extraction', {
+      template: {
+        id: template.id,
+        type: template.type,
+        name: template.name,
+      },
     })
     content = ''
   }
@@ -575,7 +604,7 @@ export async function generateHTML(
   let footerRepeatOnAllPages = true
   
   // Log pour déboguer
-  console.log('[HTML Generator] Header/Footer config:', {
+  logger.debug('[HTML Generator] Header/Footer config:', {
     headerEnabled,
     headerContentLength: headerContent.length,
     headerContent: headerContent.substring(0, 100),
@@ -607,20 +636,20 @@ export async function generateHTML(
   //       }
   //     }
   //   } catch (error) {
-  //     console.warn('Erreur lors de la récupération du layout global:', error)
+  //     logger.warn('Erreur lors de la récupération du layout global:', error)
   //   }
   // }
 
   // Si l'en-tête est vide ou désactivé mais qu'on veut un en-tête par défaut, générer un en-tête professionnel
   if (headerEnabled && (!headerContent || headerContent.trim().length === 0)) {
     headerContent = generateProfessionalHeader(flattenedVariablesForHeaderFooter)
-    console.log('[HTML Generator] Génération automatique de l\'en-tête professionnel')
+    logger.debug('[HTML Generator] Génération automatique de l\'en-tête professionnel')
   }
   
   // DEBUG: Logger le header avant traitement pour voir s'il y a un problème
-  console.log('[HTML Generator] Header avant traitement (premiers 500 chars):', headerContent.substring(0, 500))
-  console.log('[HTML Generator] Header contient tableau?', headerContent.includes('<table'))
-  console.log('[HTML Generator] Header contient {ecole_logo}?', headerContent.includes('{ecole_logo}'))
+  logger.debug('[HTML Generator] Header avant traitement (premiers 500 chars):', headerContent.substring(0, 500))
+  logger.debug('[HTML Generator] Header contient tableau?', headerContent.includes('<table'))
+  logger.debug('[HTML Generator] Header contient {ecole_logo}?', headerContent.includes('{ecole_logo}'))
 
   // Le footer est déjà défini proprement ci-dessus avec uniquement les 3 lignes essentielles
   // Pas besoin de générer un footer par défaut
@@ -635,9 +664,9 @@ export async function generateHTML(
 
   // 0. NETTOYAGE PRÉLIMINAIRE : Remplacer {ecole_logo} et autres variables de logo par des balises img AVANT le traitement
   // Cela gère le cas où le header sauvegardé contient {ecole_logo} comme texte au lieu d'une balise img avec data-logo-var
-  console.log('[HTML Generator] Header initial (premiers 800 chars):', headerContent.substring(0, 800))
-  console.log('[HTML Generator] Header contient {ecole_logo}?', processedHeader.includes('{ecole_logo}'))
-  console.log('[HTML Generator] Header contient URL supabase comme texte?', headerContent.includes('supabase.co') && !headerContent.includes('src="'))
+  logger.debug('[HTML Generator] Header initial (premiers 800 chars):', headerContent.substring(0, 800))
+  logger.debug('[HTML Generator] Header contient {ecole_logo}?', processedHeader.includes('{ecole_logo}'))
+  logger.debug('[HTML Generator] Header contient URL supabase comme texte?', headerContent.includes('supabase.co') && !headerContent.includes('src="'))
   
   // Remplacer {ecole_logo}, {organization_logo}, {organisation_logo} par des balises img avec data-logo-var
   // Seulement si la variable existe et n'est pas vide
@@ -648,22 +677,22 @@ export async function generateHTML(
       const logoValue = flattenedVariables[key]
       // Si le logo existe et n'est pas vide, créer la balise img
       if (logoValue && String(logoValue).trim()) {
-        console.log(`[HTML Generator] 🔄 Remplacement de {${key}} par balise img avec data-logo-var`)
+        logger.debug(`[HTML Generator] 🔄 Remplacement de {${key}} par balise img avec data-logo-var`)
         processedHeader = processedHeader.replace(
           pattern,
           `<img alt="Logo" style="max-height: 55px; max-width: 140px; object-fit: contain;" data-logo-var="{${key}}" />`
         )
-        console.log(`[HTML Generator] ✅ {${key}} remplacé par balise img`)
+        logger.debug(`[HTML Generator] ✅ {${key}} remplacé par balise img`)
       } else {
         // Si le logo n'existe pas ou est vide, supprimer la balise {ecole_logo}
-        console.log(`[HTML Generator] ⚠️ {${key}} est vide ou undefined, suppression de la balise`)
+        logger.debug(`[HTML Generator] ⚠️ {${key}} est vide ou undefined, suppression de la balise`)
         processedHeader = processedHeader.replace(pattern, '')
       }
     }
   })
   
   // Ensuite, remplacer les URLs Supabase qui apparaissent comme texte (si elles existent)
-  console.log('[HTML Generator] Variables disponibles pour logos:', {
+  logger.debug('[HTML Generator] Variables disponibles pour logos:', {
     ecole_logo: flattenedVariables['ecole_logo'] ? `${String(flattenedVariables['ecole_logo']).substring(0, 50)}...` : 'undefined',
     organization_logo: flattenedVariables['organization_logo'] ? `${String(flattenedVariables['organization_logo']).substring(0, 50)}...` : 'undefined',
     organisation_logo: flattenedVariables['organisation_logo'] ? `${String(flattenedVariables['organisation_logo']).substring(0, 50)}...` : 'undefined',
@@ -674,7 +703,7 @@ export async function generateHTML(
     return logoValue && typeof logoValue === 'string' && logoValue.includes('supabase.co') ? { key, url: logoValue } : null
   }).filter(Boolean) as Array<{key: string, url: string}>
   
-  console.log('[HTML Generator] URLs de logo trouvées:', logoUrlPatterns.length)
+  logger.debug('[HTML Generator] URLs de logo trouvées', { count: logoUrlPatterns.length })
   
   logoUrlPatterns.forEach(({ key, url }) => {
     // Chercher toutes les occurrences de l'URL dans le header (pas dans un attribut src)
@@ -693,7 +722,7 @@ export async function generateHTML(
       // Si l'URL n'est PAS dans un attribut src/href, la remplacer par une balise img avec data-logo-var
       if (!isInSrc && !isInHref) {
         replacements.push({ start: searchIndex, end: searchIndex + urlLength, key })
-        console.log(`[HTML Generator] 🔄 URL texte détectée à l'offset ${searchIndex}, sera remplacée par balise img`)
+        logger.debug(`[HTML Generator] 🔄 URL texte détectée à l'offset ${searchIndex}, sera remplacée par balise img`)
       }
       
       searchIndex += urlLength
@@ -705,40 +734,40 @@ export async function generateHTML(
       // Remplacer l'URL par une balise img avec data-logo-var
       const imgTag = `<img alt="Logo" style="max-height: 55px; max-width: 140px; object-fit: contain;" data-logo-var="{${logoKey}}" />`
       processedHeader = processedHeader.substring(0, start) + imgTag + processedHeader.substring(end)
-      console.log(`[HTML Generator] ✅ URL texte remplacée par balise img avec data-logo-var="{${logoKey}}"`)
+      logger.debug(`[HTML Generator] ✅ URL texte remplacée par balise img avec data-logo-var="{${logoKey}}"`)
     }
     
     if (replacements.length > 0) {
-      console.log(`[HTML Generator] ✅ ${replacements.length} URL(s) texte remplacée(s) par des balises img`)
+      logger.debug(`[HTML Generator] ✅ ${replacements.length} URL(s) texte remplacée(s) par des balises img`)
     }
   })
   
   // 0.5. Traiter les logos (remplacer data-logo-var par le src de l'image en base64)
-  console.log('[HTML Generator] Traitement des logos - Header avant (premiers 500 chars):', processedHeader.substring(0, 500))
-  console.log('[HTML Generator] Header contient data-logo-var?', processedHeader.includes('data-logo-var'))
-  console.log('[HTML Generator] Header contient URL supabase?', processedHeader.includes('supabase.co'))
+  logger.debug('[HTML Generator] Traitement des logos - Header avant (premiers 500 chars):', processedHeader.substring(0, 500))
+  logger.debug('[HTML Generator] Header contient data-logo-var?', processedHeader.includes('data-logo-var'))
+  logger.debug('[HTML Generator] Header contient URL supabase?', processedHeader.includes('supabase.co'))
   try {
     processedHeader = await processLogos(processedHeader, flattenedVariables)
-    console.log('[HTML Generator] Traitement des logos - Header après (premiers 500 chars):', processedHeader.substring(0, 500))
-    console.log('[HTML Generator] Header après contient data:image?', processedHeader.includes('data:image'))
-    console.log('[HTML Generator] Header après contient URL supabase?', processedHeader.includes('supabase.co'))
+    logger.debug('[HTML Generator] Traitement des logos - Header après (premiers 500 chars):', processedHeader.substring(0, 500))
+    logger.debug('[HTML Generator] Header après contient data:image?', processedHeader.includes('data:image'))
+    logger.debug('[HTML Generator] Header après contient URL supabase?', processedHeader.includes('supabase.co'))
   } catch (logoError) {
-    console.error('[HTML Generator] Erreur lors du traitement des logos dans le header:', logoError)
+    logger.error('[HTML Generator] Erreur lors du traitement des logos dans le header:', logoError)
     // Continuer même si le traitement du logo échoue
     if (logoError instanceof Error) {
-      console.error('[HTML Generator] Message:', logoError.message)
-      console.error('[HTML Generator] Stack:', logoError.stack)
+      logger.error('[HTML Generator] Message:', logoError.message)
+      logger.error('[HTML Generator] Stack:', logoError.stack)
     }
   }
   try {
     processedContent = await processLogos(processedContent, flattenedVariables)
   } catch (logoError) {
-    console.error('[HTML Generator] Erreur lors du traitement des logos dans le content:', logoError)
+    logger.error('[HTML Generator] Erreur lors du traitement des logos dans le content:', logoError)
   }
   try {
     processedFooter = await processLogos(processedFooter, flattenedVariables)
   } catch (logoError) {
-    console.error('[HTML Generator] Erreur lors du traitement des logos dans le footer:', logoError)
+    logger.error('[HTML Generator] Erreur lors du traitement des logos dans le footer:', logoError)
   }
 
   // 1. Traiter les tableaux dynamiques (doit être avant les boucles pour éviter les conflits)
@@ -868,7 +897,7 @@ export async function generateHTML(
   const contentHeightPx = pageHeightPx - contentTopPxFirstPage - contentBottomPx
   
   // Log pour déboguer
-  console.log('[HTML Generator] Building full HTML:', {
+  logger.debug('[HTML Generator] Building full HTML:', {
     hasHeader: headerEnabled && processedHeader.length > 0,
     headerLength: processedHeader.length,
     headerHeight,
@@ -1133,27 +1162,27 @@ export async function generateHTML(
     // Estimer le nombre de pages (approximatif)
     const pageCount = Math.max(1, Math.ceil(processedContent.length / 3000))
 
-    console.log('[HTML Generator] ✅ Génération HTML réussie, longueur:', fullHTML.length, 'pages estimées:', pageCount)
+    logger.debug('[HTML Generator] ✅ Génération HTML réussie', { length: fullHTML.length, estimatedPages: pageCount })
 
     return {
       html: fullHTML,
       pageCount,
     }
   } catch (error) {
-    console.error('[HTML Generator] ❌ ERREUR lors de la génération HTML:', error)
+    logger.error('[HTML Generator] ❌ ERREUR lors de la génération HTML:', error)
     if (error instanceof Error) {
-      console.error('[HTML Generator] Message:', error.message)
-      console.error('[HTML Generator] Stack:', error.stack)
-      console.error('[HTML Generator] Name:', error.name)
+      logger.error('[HTML Generator] Message:', error.message)
+      logger.error('[HTML Generator] Stack:', error.stack)
+      logger.error('[HTML Generator] Name:', error.name)
     }
     // Logger aussi le template et les variables pour déboguer
-    console.error('[HTML Generator] Template info:', {
+    logger.error('[HTML Generator] Template info:', {
       id: template?.id,
       type: template?.type,
       name: template?.name,
       headerLength: template?.header ? (typeof (template.header as any) === 'string' ? (template.header as any).length : JSON.stringify(template.header as any).length) : 0,
     })
-    console.error('[HTML Generator] Variables keys:', Object.keys(variables || {}).slice(0, 20))
+    logger.error('[HTML Generator] Variables keys:', Object.keys(variables || {}).slice(0, 20))
     throw error
   }
 }

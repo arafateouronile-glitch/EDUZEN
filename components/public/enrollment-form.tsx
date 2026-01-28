@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast'
 import { publicCatalogService } from '@/lib/services/public-catalog.service'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { Loader2 } from 'lucide-react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type PublicFormation = TableRow<'public_formations'>
 
@@ -81,7 +82,7 @@ export function EnrollmentForm({ formation, onSuccess, onCancel }: EnrollmentFor
       reset()
       onSuccess?.()
     } catch (error: any) {
-      console.error('Erreur lors de l\'inscription:', error)
+      logger.error('Erreur lors de l\'inscription:', error)
       addToast({
         title: 'Erreur',
         description: error.message || 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.',

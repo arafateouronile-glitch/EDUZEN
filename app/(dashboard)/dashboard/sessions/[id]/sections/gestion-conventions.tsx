@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { FileText, Download, Mail, AlertCircle, UserPlus, CheckCircle2, Clock, FileCheck, Sparkles, Send, Eye } from 'lucide-react'
+import { FileText, Download, Mail, AlertCircle, UserPlus, CheckCircle2, Clock, FileCheck, Sparkles, Send, Eye, PenTool } from 'lucide-react'
 import { formatDate, cn } from '@/lib/utils'
 import { useDocumentGeneration } from '../hooks/use-document-generation'
+import { useToast } from '@/components/ui/toast'
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,8 @@ import type {
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
+import { logger, sanitizeError } from '@/lib/utils/logger'
+import Image from 'next/image'
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
@@ -51,6 +54,7 @@ export function GestionConventions({
   onShowEnrollmentForm,
   onSwitchTab,
 }: GestionConventionsProps) {
+  const { addToast } = useToast()
   const {
     isGeneratingZip,
     zipGenerationProgress,
@@ -86,6 +90,20 @@ export function GestionConventions({
     body: string
   } | null>(null)
 
+  const [signatureRequestDialog, setSignatureRequestDialog] = useState<{
+    enrollment: EnrollmentWithRelations
+    type: 'contract' | 'convention'
+  } | null>(null)
+
+  const [signatureRequestForm, setSignatureRequestForm] = useState<{
+    recipientEmail: string
+    recipientName: string
+    subject: string
+    message: string
+  } | null>(null)
+
+  const [isSendingSignatureRequest, setIsSendingSignatureRequest] = useState(false)
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -99,7 +117,7 @@ export function GestionConventions({
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 
@@ -257,9 +275,14 @@ export function GestionConventions({
                         className="group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-brand-blue/30 hover:shadow-md transition-all duration-300"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="relative">
+                          <div className="relative w-10 h-10">
                             {student.photo_url ? (
-                              <img src={student.photo_url} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm" />
+                              <Image
+                                src={student.photo_url}
+                                alt={`${student.first_name} ${student.last_name}`}
+                                fill
+                                className="rounded-full object-cover ring-2 ring-white shadow-sm"
+                              />
                             ) : (
                               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center ring-2 ring-white shadow-sm">
                                 <span className="text-sm font-bold text-gray-600">
@@ -310,6 +333,27 @@ export function GestionConventions({
                             title="Envoyer par email"
                           >
                             <Mail className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSignatureRequestDialog({
+                                enrollment,
+                                type: 'contract',
+                              })
+                              setSignatureRequestForm({
+                                recipientEmail: student.email || '',
+                                recipientName: `${student.first_name} ${student.last_name}`,
+                                subject: `Demande de signature : Contrat de formation - ${student.first_name} ${student.last_name}`,
+                                message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre contrat de formation pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir le signer en ligne.\n\nCordialement,\n${organization?.name || ''}`,
+                              })
+                            }}
+                            disabled={!student.email}
+                            className="h-9 w-9 p-0 rounded-full hover:bg-purple-100 hover:text-purple-600 transition-colors"
+                            title="Envoyer en demande de signature"
+                          >
+                            <PenTool className="h-4 w-4" />
                           </Button>
                         </div>
                       </motion.div>
@@ -547,6 +591,279 @@ export function GestionConventions({
             >
               <Send className="h-4 w-4 mr-2" />
               Envoyer maintenant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de demande de signature */}
+      <Dialog open={!!signatureRequestDialog} onOpenChange={(open) => {
+        if (!open) {
+          setSignatureRequestDialog(null)
+          setSignatureRequestForm(null)
+        }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white/95 backdrop-blur-xl border-white/20 shadow-2xl">
+          <div className="p-6 border-b border-gray-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                <PenTool className="h-5 w-5 text-purple-600" />
+                Envoyer en demande de signature
+              </DialogTitle>
+              <DialogDescription className="text-gray-500">
+                Le document sera généré et envoyé au destinataire pour signature en ligne.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="p-6 space-y-6">
+            {signatureRequestForm && (
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="sig-recipient-email" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Email du destinataire</Label>
+                  <div className="relative">
+                    <Input
+                      id="sig-recipient-email"
+                      type="email"
+                      value={signatureRequestForm.recipientEmail}
+                      onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, recipientEmail: e.target.value })}
+                      className="pl-10 bg-gray-50/50 border-gray-200 focus:ring-purple-600/20 focus:border-purple-600 transition-all"
+                      placeholder="email@example.com"
+                    />
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="sig-recipient-name" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Nom du destinataire</Label>
+                  <Input
+                    id="sig-recipient-name"
+                    type="text"
+                    value={signatureRequestForm.recipientName}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, recipientName: e.target.value })}
+                    className="bg-gray-50/50 border-gray-200 focus:ring-purple-600/20 focus:border-purple-600 transition-all font-medium"
+                    placeholder="Nom complet"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="sig-subject" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sujet</Label>
+                  <Input
+                    id="sig-subject"
+                    type="text"
+                    value={signatureRequestForm.subject}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, subject: e.target.value })}
+                    className="bg-gray-50/50 border-gray-200 focus:ring-purple-600/20 focus:border-purple-600 transition-all font-medium"
+                    placeholder="Sujet de l'email"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="sig-message" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Message</Label>
+                  <Textarea
+                    id="sig-message"
+                    value={signatureRequestForm.message}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, message: e.target.value })}
+                    className="min-h-[200px] font-mono text-sm bg-gray-50/50 border-gray-200 focus:ring-purple-600/20 focus:border-purple-600 transition-all"
+                    placeholder="Message personnalisé"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-700">
+                  <div className="p-2 bg-white rounded-lg shadow-sm">
+                    <PenTool className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <p className="font-medium">
+                    Le destinataire recevra un email avec un lien sécurisé pour signer le document en ligne.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="p-6 bg-gray-50/50 border-t border-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSignatureRequestDialog(null)
+                setSignatureRequestForm(null)
+              }}
+              className="border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!signatureRequestDialog || !signatureRequestForm || !sessionData) return
+                
+                setIsSendingSignatureRequest(true)
+                try {
+                  // Générer le PDF côté client
+                  const { generatePDFBlobFromHTML } = await import('@/lib/utils/pdf-generator')
+                  const { generateContractHTML, generateConventionHTML } = await import('@/lib/utils/document-templates')
+                  
+                  const student = signatureRequestDialog.enrollment.students
+                  if (!student) throw new Error('Étudiant non trouvé')
+                  
+                  let html: string
+                  let documentTitle: string
+                  
+                  if (signatureRequestDialog.type === 'contract') {
+                    html = await generateContractHTML({
+                      student: {
+                        first_name: student.first_name || '',
+                        last_name: student.last_name || '',
+                        student_number: student.student_number || '',
+                        date_of_birth: student.date_of_birth || undefined,
+                        address: [student.address, (student as any).city, (student as any).postal_code].filter(Boolean).join(', ') || undefined,
+                        phone: student.phone || undefined,
+                        email: student.email || undefined,
+                      },
+                      session: {
+                        name: sessionData.name || '',
+                        start_date: sessionData.start_date || '',
+                        end_date: sessionData.end_date || '',
+                        location: sessionData.location || undefined,
+                      },
+                      formation: formation ? {
+                        name: formation.name,
+                        code: formation.code || undefined,
+                        price: (formation as any).price || undefined,
+                        duration_hours: (formation as any).duration_hours || undefined,
+                      } : { name: 'Formation' },
+                      program: program ? { name: program.name } : undefined,
+                      organization: organization ? {
+                        name: organization.name,
+                        address: organization.address || undefined,
+                        phone: organization.phone || undefined,
+                        email: organization.email || undefined,
+                        logo_url: organization.logo_url || undefined,
+                      } : { name: 'Organisation' },
+                      enrollment: {
+                        enrollment_date: signatureRequestDialog.enrollment.enrollment_date || new Date().toISOString(),
+                        total_amount: (signatureRequestDialog.enrollment as any).total_amount || 0,
+                        paid_amount: (signatureRequestDialog.enrollment as any).paid_amount || 0,
+                        payment_method: (signatureRequestDialog.enrollment as any).payment_method || undefined,
+                      },
+                      issueDate: new Date().toISOString(),
+                      language: 'fr',
+                    })
+                    documentTitle = `Contrat de formation - ${student.first_name} ${student.last_name}`
+                  } else {
+                    html = await generateConventionHTML({
+                      session: {
+                        name: sessionData.name || '',
+                        start_date: sessionData.start_date || '',
+                        end_date: sessionData.end_date || '',
+                        location: sessionData.location || undefined,
+                      },
+                      formation: formation ? {
+                        name: formation.name,
+                        code: formation.code || undefined,
+                        price: (formation as any).price || undefined,
+                        duration_hours: (formation as any).duration_hours || undefined,
+                      } : { name: 'Formation' },
+                      program: program ? { name: program.name } : undefined,
+                      organization: organization ? {
+                        name: organization.name,
+                        address: organization.address || undefined,
+                        phone: organization.phone || undefined,
+                        email: organization.email || undefined,
+                        logo_url: organization.logo_url || undefined,
+                      } : { name: 'Organisation' },
+                      issueDate: new Date().toISOString(),
+                      language: 'fr',
+                    })
+                    documentTitle = `Convention de formation - ${sessionData.name || ''}`
+                  }
+                  
+                  // Créer un élément temporaire pour générer le PDF
+                  const tempDiv = document.createElement('div')
+                  tempDiv.innerHTML = html
+                  tempDiv.style.position = 'absolute'
+                  tempDiv.style.left = '-9999px'
+                  document.body.appendChild(tempDiv)
+                  
+                  const element = tempDiv.querySelector('[id$="-document"]')
+                  if (!element) throw new Error('Élément document non trouvé')
+                  
+                  element.id = `temp-${signatureRequestDialog.type}-${Date.now()}`
+                  await new Promise((resolve) => setTimeout(resolve, 500))
+                  
+                  const pdfBlob = await generatePDFBlobFromHTML(html)
+                  
+                  // Nettoyer l'élément temporaire
+                  document.body.removeChild(tempDiv)
+                  
+                  // Convertir le Blob en base64
+                  const pdfBase64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      const base64 = (reader.result as string).split(',')[1]
+                      resolve(base64)
+                    }
+                    reader.onerror = reject
+                    reader.readAsDataURL(pdfBlob)
+                  })
+                  
+                  const response = await fetch('/api/signature-requests/send-from-contract', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      pdfBase64,
+                      documentTitle,
+                      type: signatureRequestDialog.type,
+                      enrollmentId: signatureRequestDialog.enrollment.id,
+                      sessionId: sessionData.id,
+                      recipientEmail: signatureRequestForm.recipientEmail,
+                      recipientName: signatureRequestForm.recipientName,
+                      recipientId: signatureRequestDialog.enrollment.students?.id,
+                      subject: signatureRequestForm.subject,
+                      message: signatureRequestForm.message,
+                      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                    }),
+                  })
+
+                  if (!response.ok) {
+                    const error = await response.json()
+                    throw new Error(error.error || 'Erreur lors de l\'envoi')
+                  }
+
+                  setSignatureRequestDialog(null)
+                  setSignatureRequestForm(null)
+                  
+                  addToast({
+                    type: 'success',
+                    title: 'Demande de signature envoyée',
+                    description: 'Le document a été généré et envoyé au destinataire pour signature en ligne.',
+                  })
+                } catch (error) {
+                  logger.error('Erreur:', error)
+                  addToast({
+                    type: 'error',
+                    title: 'Erreur',
+                    description: error instanceof Error ? error.message : 'Erreur lors de l\'envoi de la demande de signature',
+                  })
+                } finally {
+                  setIsSendingSignatureRequest(false)
+                }
+              }}
+              disabled={!signatureRequestForm?.recipientEmail || !signatureRequestForm?.recipientName || !signatureRequestForm?.subject || isSendingSignatureRequest}
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200"
+            >
+              {isSendingSignatureRequest ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer la demande
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

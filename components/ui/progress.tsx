@@ -7,11 +7,14 @@ interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   value?: number
   max?: number
   indicatorClassName?: string
+  'aria-label'?: string
 }
 
 const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
-  ({ className, value = 0, max = 100, indicatorClassName, ...props }, ref) => {
+  ({ className, value = 0, max = 100, indicatorClassName, 'aria-label': ariaLabel, ...props }, ref) => {
     const percentage = Math.min(Math.max((value / max) * 100, 0), 100)
+    // Générer un label par défaut si aucun n'est fourni
+    const defaultLabel = ariaLabel || `Progression: ${Math.round(percentage)}%`
 
     return (
       <div
@@ -20,6 +23,7 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={value}
+        aria-label={defaultLabel}
         className={cn(
           'relative h-2 w-full overflow-hidden rounded-full bg-gray-100',
           className

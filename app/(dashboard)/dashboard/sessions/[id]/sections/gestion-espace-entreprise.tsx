@@ -79,7 +79,7 @@ export function GestionEspaceEntreprise({
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 
@@ -204,7 +204,8 @@ export function GestionEspaceEntreprise({
               className="group p-5 bg-white border border-gray-100 rounded-xl hover:border-brand-blue/30 hover:shadow-lg transition-all duration-300 cursor-pointer"
               whileHover={{ y: -4 }}
               onClick={() => {
-                // TODO: Implémenter la génération groupée de certificats
+                // NOTE: Fonctionnalité prévue - Génération groupée de certificats
+                // Permettra de générer plusieurs certificats en une seule opération pour tous les stagiaires
                 alert('Fonctionnalité à venir : Génération des attestations')
               }}
             >

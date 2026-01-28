@@ -55,8 +55,8 @@ describe('Workflow: Création d\'étudiant', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetMockSupabase(mockSupabase)
-    studentService = new StudentService()
-    notificationService = new NotificationService()
+    studentService = new StudentService(mockSupabase as any)
+    notificationService = new NotificationService(mockSupabase as any)
   })
 
   it('devrait créer un étudiant avec tuteur et inscription complète', async () => {

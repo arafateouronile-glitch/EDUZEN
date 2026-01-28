@@ -7,6 +7,7 @@
 import { useLocale } from 'next-intl'
 import { format as dateFnsFormat, formatRelative } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Mapping des locales next-intl vers date-fns
 const dateFnsLocales: Record<string, typeof fr> = {
@@ -40,7 +41,7 @@ export function useFormatting() {
       
       return dateFnsFormat(dateObj, format, { locale: dateFnsLocale })
     } catch (error) {
-      console.error('Error formatting date:', error)
+      logger.error('Error formatting date:', error)
       return ''
     }
   }
@@ -57,7 +58,7 @@ export function useFormatting() {
       
       return formatRelative(dateObj, new Date(), { locale: dateFnsLocale })
     } catch (error) {
-      console.error('Error formatting relative time:', error)
+      logger.error('Error formatting relative time:', error)
       return ''
     }
   }
@@ -72,7 +73,7 @@ export function useFormatting() {
         currency: currency,
       }).format(amount)
     } catch (error) {
-      console.error('Error formatting currency:', error)
+      logger.error('Error formatting currency:', error)
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: currency,
@@ -90,7 +91,7 @@ export function useFormatting() {
         maximumFractionDigits: decimals,
       }).format(value)
     } catch (error) {
-      console.error('Error formatting number:', error)
+      logger.error('Error formatting number:', error)
       return new Intl.NumberFormat('fr-FR', {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,

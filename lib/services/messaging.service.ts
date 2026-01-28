@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Conversation = TableRow<'conversations'>
 type Message = TableRow<'messages'>
@@ -276,7 +277,7 @@ export class MessagingService {
       .maybeSingle()
 
     if (convError) {
-      console.error('[MESSAGING] Erreur récupération conversation:', convError)
+      logger.error('MessagingService - Erreur récupération conversation', convError, { error: sanitizeError(convError) })
       throw convError
     }
 

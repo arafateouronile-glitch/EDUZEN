@@ -7,6 +7,7 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
+import { logger } from '@/lib/utils/logger'
 
 type TemplateShare = Database['public']['Tables']['template_shares']['Row']
 type TemplateShareInsert = Database['public']['Tables']['template_shares']['Insert']
@@ -414,7 +415,7 @@ export class TemplateCollaborationService {
       if (error) {
         // Si la table n'existe pas, on ignore silencieusement
         if (error.code === 'PGRST205' || error.code === '42P01') {
-          console.warn('Table template_activity_log n\'existe pas encore. Migration requise.')
+          logger.warn('TemplateCollaborationService - Table template_activity_log n\'existe pas encore. Migration requise.')
           return null
         }
         throw error
@@ -424,7 +425,7 @@ export class TemplateCollaborationService {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST205' || errorObj?.code === '42P01' || errorObj?.message?.includes('does not exist')) {
-        console.warn('Table template_activity_log n\'existe pas encore. Migration requise.')
+        logger.warn('TemplateCollaborationService - Table template_activity_log n\'existe pas encore. Migration requise.')
         return null
       }
       throw error
@@ -446,7 +447,7 @@ export class TemplateCollaborationService {
       if (error) {
         // Si la table n'existe pas, on retourne un tableau vide
         if (error.code === 'PGRST205' || error.code === '42P01') {
-          console.warn('Table template_activity_log n\'existe pas encore. Migration requise.')
+          logger.warn('TemplateCollaborationService - Table template_activity_log n\'existe pas encore. Migration requise.')
           return []
         }
         throw error
@@ -456,7 +457,7 @@ export class TemplateCollaborationService {
       // Gérer les erreurs de table manquante
       const errorObj = error as { code?: string; message?: string }
       if (errorObj?.code === 'PGRST205' || errorObj?.code === '42P01' || errorObj?.message?.includes('does not exist')) {
-        console.warn('Table template_activity_log n\'existe pas encore. Migration requise.')
+        logger.warn('TemplateCollaborationService - Table template_activity_log n\'existe pas encore. Migration requise.')
         return []
       }
       throw error

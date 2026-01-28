@@ -73,10 +73,9 @@ export class SignatureRequestService {
       // Générer un token unique pour la signature
       const signatureToken = this.generateSignatureToken()
 
-      // Calculer la date d'expiration (par défaut 30 jours)
       const expiresAt = params.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
 
-      // Créer la demande de signature
       const requestData: FlexibleInsert<'signature_requests'> = {
         document_id: params.documentId,
         organization_id: params.organizationId,
@@ -90,6 +89,8 @@ export class SignatureRequestService {
         status: 'pending',
         signature_token: signatureToken,
         expires_at: expiresAt,
+        // Note: token_expires_at n'existe pas dans les types Insert de signature_requests
+        // Utiliser expires_at pour l'expiration du token si nécessaire
         requires_notarization: params.requiresNotarization || false,
         reminder_frequency: params.reminderFrequency || 'none',
       }
@@ -106,8 +107,7 @@ export class SignatureRequestService {
 
       if (error) throw error
 
-      // Générer l'URL de signature
-      const signatureUrl = this.generateSignatureUrl(signatureToken)
+      const signatureUrl = this.generateSignatureUrl((data as any).access_token ?? signatureToken)
 
       // Envoyer l'email de demande de signature
       await this.sendSignatureRequestEmail({
@@ -414,14 +414,15 @@ export class SignatureRequestService {
   }
 
   /**
-   * Génère l'URL de signature à partir du token
+   * Génère l'URL de signature (portail unifié /sign/[token])
+   * Préfère access_token (UUID v4) pour les liens email.
    */
   private generateSignatureUrl(token: string): string {
     const baseUrl = typeof window !== 'undefined'
       ? window.location.origin
       : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-    return `${baseUrl}/signature/${token}`
+    return `${baseUrl}/sign/${token}`
   }
 
   /**

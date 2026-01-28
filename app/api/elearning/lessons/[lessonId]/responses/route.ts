@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { withRateLimit } from '@/app/api/_middleware/rate-limit'
 import { mutationRateLimiter } from '@/lib/utils/rate-limiter'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export async function POST(
   req: NextRequest,
@@ -113,7 +114,7 @@ export async function POST(
 
     return NextResponse.json({ error: 'Type invalide' }, { status: 400 })
   } catch (error: unknown) {
-    console.error('Erreur lors de la sauvegarde de la réponse:', error)
+    logger.error('Erreur lors de la sauvegarde de la réponse:', error)
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
     return NextResponse.json(
       { error: errorMessage },

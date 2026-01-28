@@ -6,10 +6,13 @@ import { Button } from '@/components/ui/button'
 import { FileText, Code, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function ApiDocsPage() {
   const [copied, setCopied] = useState<string | null>(null)
   const [openApiSpec, setOpenApiSpec] = useState<any>(null)
+  // Utiliser l'URL dynamique au lieu de localhost hardcodé
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001'
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
@@ -18,19 +21,19 @@ export default function ApiDocsPage() {
   }
 
   useEffect(() => {
-    // Charger le fichier OpenAPI
-    fetch('/openapi.json')
+    // Charger le fichier OpenAPI depuis la route API
+    fetch('/api/v1/docs')
       .then(res => res.json())
       .then(data => setOpenApiSpec(data))
-      .catch(err => console.error('Failed to load OpenAPI spec:', err))
+      .catch(err => logger.error('Failed to load OpenAPI spec:', err))
   }, [])
 
   const examples = {
-    listTemplates: `curl -X GET "http://localhost:3001/api/v1/document-templates?type=attestation&page=1&limit=20" \\
+    listTemplates: `curl -X GET "${baseUrl}/api/v1/document-templates?type=attestation&page=1&limit=20" \\
   -H "Authorization: Bearer YOUR_JWT_TOKEN"`,
-    getTemplate: `curl -X GET "http://localhost:3001/api/v1/document-templates/{id}" \\
+    getTemplate: `curl -X GET "${baseUrl}/api/v1/document-templates/{id}" \\
   -H "Authorization: Bearer YOUR_JWT_TOKEN"`,
-    createTemplate: `curl -X POST "http://localhost:3001/api/v1/document-templates" \\
+    createTemplate: `curl -X POST "${baseUrl}/api/v1/document-templates" \\
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -44,7 +47,7 @@ export default function ApiDocsPage() {
       "eleve_prenom": "string"
     }
   }'`,
-    generateDocument: `curl -X POST "http://localhost:3001/api/v1/documents/generate" \\
+    generateDocument: `curl -X POST "${baseUrl}/api/v1/documents/generate" \\
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -88,7 +91,7 @@ export default function ApiDocsPage() {
           })
         }
       }).catch((err) => {
-        console.error('Erreur lors du chargement de Swagger UI:', err)
+        logger.error('Erreur lors du chargement de Swagger UI:', err)
       })
     }
   }, [])
@@ -124,7 +127,7 @@ export default function ApiDocsPage() {
             <div>
               <h3 className="font-semibold mb-2">Base URL</h3>
               <div className="bg-gray-100 p-2 rounded text-xs font-mono">
-                http://localhost:3001/api/v1
+                {baseUrl}/api/v1
               </div>
             </div>
           </CardContent>
@@ -247,10 +250,10 @@ export default function ApiDocsPage() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={() => window.open('/openapi.json', '_blank')}
+                onClick={() => window.open('/api/v1/docs', '_blank')}
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Ouvrir openapi.json
+                Ouvrir spécification OpenAPI
               </Button>
               <Button
                 variant="outline"

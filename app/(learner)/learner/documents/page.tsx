@@ -75,17 +75,15 @@ export default function LearnerDocumentsPage() {
             .update({ downloaded_at: new Date().toISOString() })
             .eq('id', doc.id)
         } catch (error) {
-          logger.error('Error marking as downloaded', error, {
+          logger.error('Error marking as downloaded', sanitizeError(error), {
             documentId: doc.id ? maskId(doc.id) : undefined,
-            error: sanitizeError(error),
           })
           // Ne pas bloquer le téléchargement si la mise à jour échoue
         }
       }
     } catch (error) {
-      logger.error('Erreur lors du téléchargement', error, {
+      logger.error('Erreur lors du téléchargement', sanitizeError(error), {
         documentId: doc.id ? maskId(doc.id) : undefined,
-        error: sanitizeError(error),
       })
       alert('Erreur lors du téléchargement du document')
     }
@@ -106,9 +104,8 @@ export default function LearnerDocumentsPage() {
         .update({ viewed_at: new Date().toISOString() })
         .eq('id', doc.id)
         .then(({ error }) => {
-          if (error) logger.error('Error marking as viewed', error, {
+          if (error) logger.error('Error marking as viewed', sanitizeError(error), {
             documentId: maskId(doc.id),
-            error: sanitizeError(error),
           })
         })
     }
@@ -250,7 +247,7 @@ export default function LearnerDocumentsPage() {
         
         // Log des erreurs si nécessaire
         if (learnerError) {
-          console.error('[Documents] Error fetching learner_documents:', {
+          logger.error('[Documents] Error fetching learner_documents:', {
             code: learnerError.code,
             message: learnerError.message,
             details: learnerError.details,
@@ -258,7 +255,7 @@ export default function LearnerDocumentsPage() {
           })
         }
         if (generatedError) {
-          console.error('[Documents] Error fetching generated_documents:', {
+          logger.error('[Documents] Error fetching generated_documents:', {
             code: generatedError.code,
             message: generatedError.message,
             details: generatedError.details,
@@ -266,7 +263,7 @@ export default function LearnerDocumentsPage() {
           })
         }
         if (regularError) {
-          console.error('[Documents] Error fetching documents:', {
+          logger.error('[Documents] Error fetching documents:', {
             code: regularError.code,
             message: regularError.message,
             details: regularError.details,
@@ -274,12 +271,12 @@ export default function LearnerDocumentsPage() {
           })
         }
         
-        console.log('[Documents] Total documents found:', allDocs.length)
-        console.log('[Documents] Final documents:', allDocs)
+        logger.debug('[Documents] Total documents found', { count: allDocs.length })
+        logger.debug('[Documents] Final documents', { documents: allDocs })
         
         return allDocs
       } catch (error: any) {
-        console.error('Unexpected error fetching documents:', error)
+        logger.error('Unexpected error fetching documents:', error)
         return []
       }
     },
@@ -313,10 +310,10 @@ export default function LearnerDocumentsPage() {
             simpleError.message?.includes('permission denied') ||
             simpleError.message?.includes('does not exist')
           ) {
-            console.warn('Certificates may not be accessible (RLS or missing):', simpleError.message)
+            logger.warn('Certificates may not be accessible (RLS or missing)', { message: simpleError.message })
             return []
           }
-          console.warn('Error fetching certificates:', simpleError)
+          logger.warn('Error fetching certificates', sanitizeError(simpleError))
           return []
         }
         
@@ -342,7 +339,7 @@ export default function LearnerDocumentsPage() {
         
         return simpleData || []
       } catch (error: any) {
-        console.error('Unexpected error fetching certificates:', error)
+        logger.error('Unexpected error fetching certificates:', error)
         return []
       }
     },

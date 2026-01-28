@@ -157,7 +157,7 @@ export default function OPCOPage() {
 
   if (isLoadingConventions || isLoadingDeclarations || isLoadingRequests) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full p-4">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-8 w-8 animate-spin text-brand-blue" />
         </div>
@@ -166,9 +166,9 @@ export default function OPCOPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="w-full p-4">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <Building2 className="h-8 w-8 text-brand-blue" />
           OPCO (Opérateurs de Compétences)
@@ -179,9 +179,9 @@ export default function OPCOPage() {
       </div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Conventions actives</p>
@@ -237,7 +237,7 @@ export default function OPCOPage() {
         {/* Déclarations */}
         <TabsContent value="declarations">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Déclarations OPCO</CardTitle>
@@ -253,7 +253,7 @@ export default function OPCOPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 pb-4">
               {declarations.length === 0 ? (
                 <div className="text-center py-12">
                   <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -268,10 +268,10 @@ export default function OPCOPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {declarations.map((declaration) => (
                     <Card key={declaration.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="pt-6">
+                      <CardContent className="pt-4 pb-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
@@ -356,9 +356,9 @@ export default function OPCOPage() {
             </CardHeader>
             <CardContent>
               {conventions.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-3">
                     Aucune convention OPCO enregistrée
                   </p>
                   <Button asChild>
@@ -385,7 +385,7 @@ export default function OPCOPage() {
                               Type: {convention.convention_type.replace(/_/g, ' ')} | 
                               Période: {formatDate(convention.start_date)} - {convention.end_date ? formatDate(convention.end_date) : 'En cours'}
                             </p>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                               <div>
                                 <p className="text-muted-foreground">Taux de financement</p>
                                 <p className="font-medium">{convention.funding_rate}%</p>
@@ -422,7 +422,7 @@ export default function OPCOPage() {
         {/* Demandes de financement */}
         <TabsContent value="funding">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Demandes de financement</CardTitle>
@@ -438,11 +438,11 @@ export default function OPCOPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 pb-4">
               {fundingRequests.length === 0 ? (
-                <div className="text-center py-12">
-                  <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
+                <div className="text-center py-8">
+                  <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-3">
                     Aucune demande de financement enregistrée
                   </p>
                   <Button asChild>
@@ -468,7 +468,7 @@ export default function OPCOPage() {
                             <p className="text-sm text-muted-foreground mb-3">
                               {request.description}
                             </p>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                               <div>
                                 <p className="text-muted-foreground">Montant demandé</p>
                                 <p className="font-medium">{formatCurrency(request.requested_amount)}</p>
@@ -505,7 +505,7 @@ export default function OPCOPage() {
       </Tabs>
 
       {/* Actions rapides */}
-      <div className="mt-8 flex gap-4">
+      <div className="mt-4 flex gap-3">
         <Button variant="outline" asChild>
           <Link href="/dashboard/opco/configuration">
             <Building2 className="h-4 w-4 mr-2" />

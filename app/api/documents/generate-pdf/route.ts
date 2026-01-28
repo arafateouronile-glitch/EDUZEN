@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Configuration de la route API
 export const runtime = 'nodejs'
 export const maxDuration = 60 // 60 secondes maximum
 
 export async function POST(request: NextRequest) {
-  console.log('[PDF API] Début de la requête')
+  logger.info('[PDF API] Début de la requête')
   try {
     let body
     try {
       body = await request.json()
-      console.log('[PDF API] Body parsé avec succès')
+      logger.info('[PDF API] Body parsé avec succès')
     } catch (error) {
-      console.error('[PDF API] Erreur lors du parsing du body:', error)
+      logger.error('[PDF API] Erreur lors du parsing du body:', error)
       return NextResponse.json(
         { error: 'Body JSON invalide', details: error instanceof Error ? error.message : String(error) },
         { status: 400 }
@@ -27,11 +28,11 @@ export async function POST(request: NextRequest) {
       organizationId?: string
     }
 
-    console.log('[PDF API] Template:', template?.name || 'N/A', 'Type:', template?.type || 'N/A')
-    console.log('[PDF API] Variables count:', variables ? Object.keys(variables).length : 0)
+    logger.info('[PDF API] Template', { templateName: template?.name || 'N/A', type: template?.type || 'N/A' })
+    logger.info('[PDF API] Variables count', { count: variables ? Object.keys(variables).length : 0 })
 
     if (!template) {
-      console.error('[PDF API] Template manquant')
+      logger.error('[PDF API] Template manquant')
       return NextResponse.json(
         { error: 'Template manquant' },
         { status: 400 }
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!variables) {
-      console.error('[PDF API] Variables manquantes')
+      logger.error('[PDF API] Variables manquantes')
       return NextResponse.json(
         { error: 'Variables manquantes' },
         { status: 400 }
@@ -47,38 +48,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Générer le HTML avec Paged.js
-    console.log('[PDF API] Génération du HTML...')
-    console.log('[PDF API] Template header type:', typeof template.header)
-    console.log('[PDF API] Template header content (premiers 200 chars):', 
-      template.header 
+    logger.info('[PDF API] Génération du HTML...')
+    logger.info('[PDF API] Template header type', { headerType: typeof template.header })
+    logger.info('[PDF API] Template header content (premiers 200 chars)', {
+      headerPreview: template.header 
         ? (typeof template.header === 'string' 
           ? (template.header as string).substring(0, 200) 
           : JSON.stringify(template.header as any).substring(0, 200))
         : 'null/undefined'
-    )
+    })
     let htmlResult
     let html: string
     try {
       // Import dynamique pour éviter les problèmes de compilation
       const { generateHTML } = await import('@/lib/utils/document-generation/html-generator')
-      console.log('[PDF API] Appel de generateHTML...')
+      logger.info('[PDF API] Appel de generateHTML...')
       htmlResult = await generateHTML(template, variables, documentId, organizationId)
-      console.log('[PDF API] HTML généré, longueur:', htmlResult.html?.length || 0)
+      logger.info('[PDF API] HTML généré', { length: htmlResult.html?.length || 0 })
       html = htmlResult.html
     } catch (error) {
-      console.error('[PDF API] Erreur lors de la génération du HTML:', error)
+      logger.error('[PDF API] Erreur lors de la génération du HTML:', error)
       if (error instanceof Error) {
-        console.error('[PDF API] Message:', error.message)
-        console.error('[PDF API] Stack:', error.stack)
-        console.error('[PDF API] Name:', error.name)
+        logger.error('[PDF API] Message:', error.message)
+        logger.error('[PDF API] Stack:', error.stack)
+        logger.error('[PDF API] Name:', error.name)
         // Afficher aussi les 500 premiers caractères du template pour déboguer
         if (template?.header) {
           const headerStr = typeof template.header === 'string' ? template.header : JSON.stringify(template.header)
-          console.error('[PDF API] Header template (premiers 500 chars):', headerStr.substring(0, 500))
+          logger.error('[PDF API] Header template (premiers 500 chars):', headerStr.substring(0, 500))
         }
       } else {
-        console.error('[PDF API] Error type:', typeof error)
-        console.error('[PDF API] Error value:', error)
+        logger.error('[PDF API] Error type:', typeof error)
+        logger.error('[PDF API] Error value:', error)
       }
       // Extraire plus de détails pour le débogage
       const errorDetails: any = {
@@ -106,13 +107,13 @@ export async function POST(request: NextRequest) {
           : null,
       }
       
-      console.error('[PDF API] Détails complets de l\'erreur:', JSON.stringify(errorDetails, null, 2))
+      logger.error('[PDF API] Détails complets de l\'erreur', undefined, { errorDetails: JSON.stringify(errorDetails, null, 2) })
       
       return NextResponse.json(errorDetails, { status: 500 })
     }
     
     if (!html || html.trim().length === 0) {
-      console.error('[PDF API] HTML généré est vide')
+      logger.error('[PDF API] HTML généré est vide')
       return NextResponse.json(
         { error: 'HTML généré est vide' },
         { status: 500 }
@@ -120,12 +121,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Lancer Puppeteer
-    console.log('[PDF API] Lancement de Puppeteer...')
+    logger.info('[PDF API] Lancement de Puppeteer...')
     let browser
     try {
       // Import dynamique de Puppeteer
       const puppeteer = (await import('puppeteer')).default
-      browser = await puppeteer.launch({
+      
+      // Configuration Puppeteer avec fallback pour différents environnements
+      const launchOptions: any = {
         headless: true,
         args: [
           '--no-sandbox',
@@ -135,87 +138,131 @@ export async function POST(request: NextRequest) {
           '--no-first-run',
           '--no-zygote',
           '--disable-gpu',
+          '--disable-web-security', // Nécessaire pour certains contenus
+          '--disable-features=IsolateOrigins,site-per-process',
         ],
         timeout: 30000, // 30 secondes de timeout
-      })
-      console.log('[PDF API] Puppeteer lancé avec succès')
-    } catch (error) {
-      console.error('[PDF API] Erreur lors du lancement de Puppeteer:', error)
-      if (error instanceof Error) {
-        console.error('[PDF API] Stack:', error.stack)
+        protocolTimeout: 180000, // 3 minutes pour les opérations longues (Paged.js)
       }
+
+      // En développement local, essayer d'utiliser le Chrome système si disponible
+      if (process.env.NODE_ENV === 'development') {
+        const possiblePaths = [
+          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', // macOS
+          '/usr/bin/google-chrome', // Linux
+          '/usr/bin/chromium-browser', // Linux
+          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', // Windows
+        ]
+        for (const path of possiblePaths) {
+          try {
+            const fs = await import('fs')
+            if (fs.existsSync(path)) {
+              launchOptions.executablePath = path
+              logger.info('[PDF API] Utilisation de Chrome système', { path })
+              break
+            }
+          } catch {
+            // Ignorer les erreurs de vérification
+          }
+        }
+      }
+
+      browser = await puppeteer.launch(launchOptions)
+      logger.info('[PDF API] Puppeteer lancé avec succès')
+    } catch (error) {
+      logger.error('[PDF API] Erreur lors du lancement de Puppeteer:', error)
+      if (error instanceof Error) {
+        logger.error('[PDF API] Message:', error.message)
+        logger.error('[PDF API] Stack:', error.stack)
+      }
+      
+      // Message d'erreur plus détaillé
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('Timeout')
+      const isExecutable = errorMessage.includes('executable') || errorMessage.includes('Chrome')
+      
       return NextResponse.json(
         { 
           error: 'Impossible de lancer Puppeteer', 
-          details: error instanceof Error ? error.message : String(error),
-          hint: 'Vérifiez que Chrome/Chromium est installé et que Puppeteer peut y accéder'
+          details: errorMessage,
+          type: isTimeout ? 'timeout' : isExecutable ? 'executable' : 'unknown',
+          hint: isExecutable 
+            ? 'Chrome/Chromium n\'est pas trouvé. Installez-le ou configurez PUPPETEER_EXECUTABLE_PATH.'
+            : isTimeout
+            ? 'Le lancement de Chrome a pris trop de temps. Vérifiez les ressources système.'
+            : 'Vérifiez les logs serveur pour plus de détails.',
+          environment: {
+            nodeEnv: process.env.NODE_ENV,
+            platform: process.platform,
+          }
         },
         { status: 500 }
       )
     }
 
     const page = await browser.newPage()
+    
+    // Augmenter le timeout de la page pour les opérations longues
+    page.setDefaultTimeout(180000) // 3 minutes
+    page.setDefaultNavigationTimeout(180000)
 
-    // Charger le HTML
+    // Charger le HTML - utiliser 'load' au lieu de 'networkidle0' (beaucoup plus rapide)
+    // 'networkidle0' attend que le réseau soit inactif pendant 500ms, ce qui est très lent
     await page.setContent(html, {
-      waitUntil: 'networkidle0',
+      waitUntil: 'load', // Plus rapide : attend juste que le DOM et les ressources soient chargés
     })
 
-    // Attendre que Paged.js ait fini le calcul du rendu
+    // Attendre que Paged.js ait fini le calcul du rendu (optimisé pour la vitesse)
     try {
       await page.evaluate(() => {
         return new Promise<void>((resolve) => {
-          // Vérifier si Paged.js est déjà chargé
-          if ((window as any).PagedPolyfill) {
-            // Attendre l'événement pagedjsReady
-            const onReady = () => {
-              (window as any).pagedjs_finished = true
+          let resolved = false
+          const doResolve = () => {
+            if (!resolved) {
+              resolved = true
               resolve()
             }
-            window.addEventListener('pagedjsReady', onReady, { once: true })
-            // Timeout de sécurité après 5 secondes
-            setTimeout(() => {
-              if (!(window as any).pagedjs_finished) {
-                console.warn('Paged.js timeout, continuer quand même')
-                resolve()
-              }
-            }, 5000)
+          }
+          
+          // Vérifier si Paged.js est déjà chargé et prêt
+          if ((window as any).PagedPolyfill) {
+            // Si déjà chargé, vérifier si l'événement est déjà passé
+            if ((window as any).pagedjsReady) {
+              doResolve()
+              return
+            }
+            // Sinon attendre l'événement
+            window.addEventListener('pagedjsReady', doResolve, { once: true })
+            // Timeout réduit à 3 secondes (au lieu de 5)
+            setTimeout(doResolve, 3000)
           } else {
-            // Attendre que le script se charge
+            // Attendre que le script se charge avec vérification plus fréquente
+            let checkCount = 0
+            const maxChecks = 50 // 50 * 50ms = 2.5 secondes max
             const checkPaged = setInterval(() => {
+              checkCount++
               if ((window as any).PagedPolyfill) {
                 clearInterval(checkPaged)
-                const onReady = () => {
-                  (window as any).pagedjs_finished = true
-                  resolve()
+                if ((window as any).pagedjsReady) {
+                  doResolve()
+                } else {
+                  window.addEventListener('pagedjsReady', doResolve, { once: true })
+                  setTimeout(doResolve, 2000) // 2 secondes pour le rendu
                 }
-                window.addEventListener('pagedjsReady', onReady, { once: true })
-                // Timeout de sécurité
-                setTimeout(() => {
-                  if (!(window as any).pagedjs_finished) {
-                    console.warn('Paged.js timeout, continuer quand même')
-                    resolve()
-                  }
-                }, 5000)
+              } else if (checkCount >= maxChecks) {
+                clearInterval(checkPaged)
+                logger.warn('Paged.js n\'a pas pu se charger dans les temps, continuer quand même')
+                doResolve()
               }
-            }, 100)
-            
-            // Timeout global après 10 secondes
-            setTimeout(() => {
-              clearInterval(checkPaged)
-              if (!(window as any).pagedjs_finished) {
-                console.warn('Paged.js n\'a pas pu se charger, continuer quand même')
-                resolve()
-              }
-            }, 10000)
+            }, 50) // Vérification toutes les 50ms (au lieu de 100ms)
           }
         })
       })
       
-      // Attendre un peu plus pour que le rendu soit complètement terminé
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Attendre un peu pour que le rendu soit stabilisé (réduit à 500ms au lieu de 2000ms)
+      await new Promise(resolve => setTimeout(resolve, 500))
     } catch (error) {
-      console.warn('Erreur lors de l\'attente de Paged.js, continuer quand même:', error)
+      logger.warn('Erreur lors de l\'attente de Paged.js, continuer quand même', { error: sanitizeError(error) })
     }
 
     // Générer le PDF
@@ -232,7 +279,7 @@ export async function POST(request: NextRequest) {
         },
       })
     } catch (error) {
-      console.error('Erreur lors de la génération du PDF avec Puppeteer:', error)
+      logger.error('Erreur lors de la génération du PDF avec Puppeteer:', error)
       await browser.close()
       throw error
     }
@@ -240,7 +287,7 @@ export async function POST(request: NextRequest) {
     await browser.close()
     
     if (!pdf || pdf.length === 0) {
-      console.error('PDF généré est vide')
+      logger.error('PDF généré est vide')
       return NextResponse.json(
         { error: 'PDF généré est vide' },
         { status: 500 }
@@ -255,9 +302,9 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[PDF API] Erreur globale lors de la génération du PDF:', error)
+    logger.error('[PDF API] Erreur globale lors de la génération du PDF:', error)
     if (error instanceof Error) {
-      console.error('[PDF API] Stack:', error.stack)
+      logger.error('[PDF API] Stack:', error.stack)
     }
     return NextResponse.json(
       { 

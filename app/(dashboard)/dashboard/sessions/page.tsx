@@ -286,7 +286,7 @@ function SessionsPageContent() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 
@@ -403,7 +403,7 @@ function SessionsPageContent() {
               transition={{
                 duration: 0.5,
                 delay: index * 0.05,
-                ease: [0.16, 1, 0.3, 1]
+                ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
               }}
               whileHover={{ y: -6, scale: 1.02 }}
               className="group relative"
@@ -460,7 +460,7 @@ function SessionsPageContent() {
                     }}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
-                    transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   />
                 </div>
 
@@ -606,13 +606,13 @@ function SessionsPageContent() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
           >
             <GlassCard variant="premium" className="p-16 text-center border-2 border-dashed border-gray-200">
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: 0.2, duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 className="w-20 h-20 bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
               >
                 <Calendar className="h-10 w-10 text-brand-blue" />
@@ -668,7 +668,7 @@ function SessionsPageContent() {
                     transition={{
                       delay: index * 0.05,
                       duration: 0.5,
-                      ease: [0.16, 1, 0.3, 1]
+                      ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
                     }}
                     whileHover={{ y: -8, scale: 1.02 }}
                   >

@@ -24,6 +24,7 @@ import { GlassCard } from '@/components/ui/glass-card'
 import { Badge } from '@/components/ui/badge'
 import { cn, formatDate } from '@/lib/utils'
 import type { CalendarEvent } from '@/lib/services/calendar.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type ViewType = 'month' | 'week' | 'day' | 'agenda'
 
@@ -353,7 +354,7 @@ export function CalendarView({
           
           // Debug: log si on trouve des événements pour cette date
           // if (dayEvents.length > 0) {
-          //   console.log(`[CalendarView] Événements trouvés pour ${dateKey}:`, dayEvents)
+          //   logger.debug(`[CalendarView] Événements trouvés pour ${dateKey}:`, dayEvents)
           // }
 
           return (

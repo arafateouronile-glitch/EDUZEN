@@ -3,11 +3,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
-import { errorHandler, ErrorCode, AppError } from '@/lib/errors'
+import { errorHandler, ErrorCode, ErrorSeverity, AppError } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
 import { getAllByOrganization, getById } from '@/lib/utils/supabase-helpers'
 import { generateUniqueNumber } from '@/lib/utils/number-generator'
 import { validateRequired } from '@/lib/utils/validators'
+import { QuotaService } from './quota.service'
 
 type Student = TableRow<'students'>
 type StudentInsert = TableInsert<'students'>
@@ -52,48 +53,22 @@ export class StudentService {
       const limit = filters?.limit || 50
       const offset = (page - 1) * limit
 
-      // Pour la recherche, on doit utiliser une requête personnalisée car elle utilise `or`
-      if (filters?.search) {
-        let query = this.supabase
-          .from('students')
-          .select('*, classes(id, name, level)', { count: 'exact' })
-          .eq('organization_id', organizationId)
-          .or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,student_number.ilike.%${filters.search}%`)
-
-        if (filters?.classId) query = query.eq('class_id', filters.classId)
-        if (filters?.status) query = query.eq('status', filters.status)
-
-        const { data, error, count } = await query
-          .order('last_name', { ascending: true })
-          .range(offset, offset + limit - 1)
-
-        if (error) {
-          throw errorHandler.handleError(error, {
-            organizationId,
-            operation: 'getAll',
-            filters,
-          })
-        }
-
-        return {
-          data: data || [],
-          total: count || 0,
-          page,
-          limit,
-          totalPages: Math.ceil((count || 0) / limit),
-        }
-      }
-
-      // Sinon, utiliser une requête avec pagination
+      // Récupérer d'abord les étudiants sans relations pour éviter les erreurs
+      // Enrichir ensuite avec les données des classes si nécessaire
       let query = this.supabase
         .from('students')
-        .select('*, classes(id, name, level)', { count: 'exact' })
+        .select('*', { count: 'exact' })
         .eq('organization_id', organizationId)
 
       if (filters?.classId) query = query.eq('class_id', filters.classId)
       if (filters?.status) query = query.eq('status', filters.status)
+      
+      // Ajouter la recherche si nécessaire
+      if (filters?.search) {
+        query = query.or(`first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,student_number.ilike.%${filters.search}%`)
+      }
 
-      const { data, error, count } = await query
+      const { data: studentsData, error, count } = await query
         .order('last_name', { ascending: true })
         .range(offset, offset + limit - 1)
 
@@ -105,8 +80,35 @@ export class StudentService {
         })
       }
 
+      // Enrichir avec les données des classes si nécessaire
+      const students = studentsData || []
+      const classIds = [...new Set(students.map((s: any) => s.class_id).filter(Boolean))]
+      
+      let classesMap = new Map()
+      if (classIds.length > 0) {
+        try {
+          const { data: classesData } = await this.supabase
+            .from('classes')
+            .select('id, name, level')
+            .in('id', classIds)
+          
+          if (classesData) {
+            classesMap = new Map(classesData.map((c: any) => [c.id, c]))
+          }
+        } catch (classError) {
+          // Ignorer les erreurs de récupération des classes (table peut ne pas exister)
+          logger.warn('Erreur récupération classes pour enrichissement', { error: classError })
+        }
+      }
+
+      // Enrichir les étudiants avec les données des classes
+      const enrichedStudents = students.map((student: any) => ({
+        ...student,
+        classes: student.class_id ? classesMap.get(student.class_id) || null : null
+      }))
+
       return {
-        data: data || [],
+        data: enrichedStudents,
         total: count || 0,
         page,
         limit,
@@ -128,13 +130,61 @@ export class StudentService {
    */
   async getById(id: string) {
     try {
-      // Utiliser le helper pour réduire la duplication
-      return getById<Student>(
-        this.supabase,
-        'students',
-        id,
-        '*, classes(id, name, level)'
-      )
+      // Récupérer l'étudiant sans relations pour éviter les erreurs
+      const { data: student, error } = await this.supabase
+        .from('students')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116' || error.code === '42P01') {
+          throw errorHandler.handleError(error, {
+            code: ErrorCode.DB_NOT_FOUND,
+            operation: 'getById',
+            id,
+          })
+        }
+        throw errorHandler.handleError(error, {
+          operation: 'getById',
+          id,
+        })
+      }
+
+      if (!student) {
+        throw errorHandler.createDatabaseError(
+          `Étudiant avec l'ID ${id} introuvable`,
+          { id }
+        )
+      }
+
+      // Enrichir avec les données de la classe si nécessaire
+      if (student.class_id) {
+        try {
+          const { data: classData } = await this.supabase
+            .from('classes')
+            .select('id, name, level')
+            .eq('id', student.class_id)
+            .maybeSingle()
+          
+          return {
+            ...student,
+            classes: classData || null
+          } as Student & { classes: any }
+        } catch (classError) {
+          // Ignorer les erreurs de récupération des classes
+          logger.warn('Erreur récupération classe pour enrichissement', { error: classError })
+          return {
+            ...student,
+            classes: null
+          } as Student & { classes: any }
+        }
+      }
+
+      return {
+        ...student,
+        classes: null
+      } as Student & { classes: any }
     } catch (error) {
       if (error instanceof AppError) {
         throw error
@@ -194,6 +244,20 @@ export class StudentService {
     try {
       // Validation avec helper
       validateRequired(student, ['first_name', 'last_name', 'organization_id'])
+
+      // Vérifier les quotas avant de créer
+      if (student.organization_id) {
+        const quotaService = new QuotaService(this.supabase)
+        const quotaCheck = await quotaService.canAddStudent(student.organization_id)
+        if (!quotaCheck.allowed) {
+          throw new AppError(
+            quotaCheck.reason || 'Limite d\'étudiants atteinte pour votre plan',
+            ErrorCode.QUOTA_EXCEEDED,
+            ErrorSeverity.MEDIUM,
+            { usage: quotaCheck.usage }
+          )
+        }
+      }
 
       // Générer un numéro d'étudiant si non fourni
       let studentNumber = student.student_number

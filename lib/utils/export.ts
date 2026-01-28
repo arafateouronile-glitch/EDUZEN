@@ -6,6 +6,7 @@ import { exportToExcel as excelJSExport, exportToCSV as csvExport } from './exce
 import { formatDate } from './format'
 import { analytics } from './analytics'
 import { exportHistoryService } from '@/lib/services/export-history.service'
+import { logger } from '@/lib/utils/logger'
 
 export type ExportFormat = 'xlsx' | 'csv'
 
@@ -85,7 +86,7 @@ export async function exportData<T extends Record<string, any>>(
       }
       // Pour les autres erreurs, logger en mode debug uniquement
       if (process.env.NODE_ENV === 'development') {
-        console.debug('Erreur lors de l\'enregistrement de l\'historique d\'export:', error)
+        logger.debug('Erreur lors de l\'enregistrement de l\'historique d\'export:', error)
       }
     }
   }

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface DeleteDialogProps {
   template: DocumentTemplate
@@ -35,7 +36,7 @@ export function DeleteDialog({ template, open, onOpenChange }: DeleteDialogProps
       onOpenChange(false)
     },
     onError: (error) => {
-      console.error('Erreur lors de la suppression:', error)
+      logger.error('Erreur lors de la suppression:', error)
       alert('Erreur lors de la suppression du modèle')
     },
   })

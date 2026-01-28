@@ -19,7 +19,7 @@ export default function FAQCategoryPage() {
   const { data: category } = useQuery({
     queryKey: ['faq-category', slug, user?.organization_id],
     queryFn: async () => {
-      const categories = await knowledgeBaseService.getFAQCategories(user?.organization_id || '')
+      const categories = await knowledgeBaseService.getCategories()
       return categories.find((cat: any) => cat.slug === slug)
     },
     enabled: !!slug && !!user?.organization_id,

@@ -195,7 +195,8 @@ function renderElement(
       if (!element.tableData) return null
       return new Paragraph({
         children: [
-          // TODO: Créer une vraie table avec Table, TableRow, TableCell
+          // NOTE: Amélioration prévue - Créer une vraie table avec Table, TableRow, TableCell
+          // Pour l'instant, on affiche un placeholder textuel
           new TextRun({
             text: `[Tableau: ${element.tableData.headers.join(', ')}]`,
           }),
@@ -249,7 +250,8 @@ function calculatePages(
   }
 
   // Pour l'instant, on met tous les éléments sur une page
-  // TODO: Implémenter la vraie pagination basée sur la hauteur
+  // NOTE: Amélioration prévue - Implémenter la vraie pagination basée sur la hauteur des éléments
+  // Pour l'instant, tous les éléments sont placés sur une seule page
   return [elements]
 }
 

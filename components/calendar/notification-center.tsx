@@ -20,6 +20,7 @@ import { calendarService, type CalendarNotification } from '@/lib/services/calen
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { cn, formatDate } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface NotificationCenterProps {
   isOpen: boolean
@@ -295,7 +296,7 @@ export function useCalendarNotifications() {
   // Demander la permission pour les notifications push
   const requestPermission = useCallback(async () => {
     if (!('Notification' in window)) {
-      console.warn('Ce navigateur ne supporte pas les notifications')
+      logger.warn('Ce navigateur ne supporte pas les notifications')
       return false
     }
 
@@ -304,7 +305,7 @@ export function useCalendarNotifications() {
       setIsPermissionGranted(permission === 'granted')
       return permission === 'granted'
     } catch (error) {
-      console.error('Erreur lors de la demande de permission:', error)
+      logger.error('Erreur lors de la demande de permission:', error)
       return false
     }
   }, [])
@@ -313,7 +314,7 @@ export function useCalendarNotifications() {
   const sendPushNotification = useCallback(
     (title: string, options?: NotificationOptions) => {
       if (!isPermissionGranted) {
-        console.warn('Permission de notification non accordée')
+        logger.warn('Permission de notification non accordée')
         return
       }
 
@@ -329,7 +330,7 @@ export function useCalendarNotifications() {
           notification.close()
         }
       } catch (error) {
-        console.error('Erreur lors de l\'envoi de la notification:', error)
+        logger.error('Erreur lors de l\'envoi de la notification:', error)
       }
     },
     [isPermissionGranted]
@@ -353,7 +354,7 @@ export function useCalendarNotifications() {
         })
       }
     } catch (error) {
-      console.error('Erreur lors de la vérification des notifications:', error)
+      logger.error('Erreur lors de la vérification des notifications:', error)
     }
   }, [user?.organization_id, isPermissionGranted, sendPushNotification])
 

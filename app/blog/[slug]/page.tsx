@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { formatDate } from '@/lib/utils/format'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +9,8 @@ import type { BlogPost } from '@/types/super-admin.types'
 import { Navbar } from '@/components/landing/Navbar'
 import { Footer } from '@/components/landing/Footer'
 import { ShareButton } from '@/components/blog/share-button'
+import { logger, sanitizeError } from '@/lib/utils/logger'
+import { sanitizeBlogContent } from '@/lib/utils/sanitize-html'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -50,7 +53,7 @@ async function getBlogPost(slug: string) {
     .maybeSingle()
 
   if (error) {
-    console.error('[Blog] Error fetching blog post:', error)
+    logger.error('[Blog] Error fetching blog post:', error)
     return null
   }
 
@@ -111,19 +114,22 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
           {post.featured_image_url && (
             <div className="relative w-full h-64 md:h-96 lg:h-[500px] rounded-2xl overflow-hidden mb-8">
-              <img
+              <Image
                 src={post.featured_image_url}
                 alt={post.title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                priority
               />
             </div>
           )}
         </header>
 
-        {/* Content */}
-        <div 
+        {/* Content - Sanitized to prevent XSS */}
+        <div
           className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-700 prose-p:leading-relaxed prose-a:text-brand-blue prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-li:text-gray-700 prose-blockquote:border-l-brand-blue prose-blockquote:bg-gray-50 prose-blockquote:py-2 prose-blockquote:px-4 prose-img:rounded-lg prose-img:shadow-lg"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeBlogContent(post.content) }}
         />
 
         {/* Share Section */}

@@ -4,6 +4,8 @@
  * Pour le client, on peut utiliser les bibliothèques locales
  */
 
+import { logger } from '@/lib/utils/logger'
+
 /**
  * Génère un QR code en base64 à partir de données (côté serveur)
  * Utilise un service en ligne pour la génération
@@ -21,7 +23,7 @@ export async function generateQRCodeBase64(
     // Pour l'instant, on retourne l'URL qui sera utilisée directement
     return qrCodeUrl
   } catch (error) {
-    console.error('Erreur lors de la génération du QR code:', error)
+    logger.error('Erreur lors de la génération du QR code:', error)
     throw new Error('Impossible de générer le QR code')
   }
 }
@@ -41,7 +43,7 @@ export async function generateBarcodeBase64(
     const barcodeUrl = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(data)}&code=${type}&dpi=96&dataseparator=&width=${width}&height=${height}`
     return barcodeUrl
   } catch (error) {
-    console.error('Erreur lors de la génération du code-barres:', error)
+    logger.error('Erreur lors de la génération du code-barres:', error)
     throw new Error('Impossible de générer le code-barres')
   }
 }

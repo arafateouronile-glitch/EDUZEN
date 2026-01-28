@@ -144,7 +144,8 @@ export class SEPAAdapter {
       return false
     }
 
-    // TODO: Implémenter la validation complète de l'IBAN (modulo 97)
+    // NOTE: Validation complète de l'IBAN requise (algorithme modulo 97)
+    // Utiliser une bibliothèque comme iban.js ou implémenter l'algorithme de validation IBAN
     // Pour l'instant, on retourne true si le format est correct
     return true
   }

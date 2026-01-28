@@ -21,6 +21,7 @@ import {
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Texte court', icon: Type },
@@ -78,7 +79,7 @@ export default function EditTemplatePage() {
         if (templateError) {
           // Si la table n'existe pas, retourner null
           if (templateError.code === 'PGRST116' || templateError.code === '42P01' || templateError.message?.includes('does not exist')) {
-            console.warn('Table learning_portfolio_templates non disponible')
+            logger.warn('Table learning_portfolio_templates non disponible')
             return null
           }
           throw templateError
@@ -100,7 +101,7 @@ export default function EditTemplatePage() {
             return { ...typedTemplateData, formation: formationData || null }
           } catch (formationError: any) {
             // Si la table formations n'existe pas ou erreur, continuer sans formation
-            console.warn('Impossible de récupérer la formation:', formationError)
+            logger.warn('Impossible de récupérer la formation:', formationError)
             return { ...typedTemplateData, formation: null }
           }
         }
@@ -109,7 +110,7 @@ export default function EditTemplatePage() {
       } catch (error: any) {
         // Si la table n'existe pas, retourner null
         if (error?.code === 'PGRST116' || error?.code === '42P01' || error?.message?.includes('does not exist')) {
-          console.warn('Table learning_portfolio_templates non disponible')
+          logger.warn('Table learning_portfolio_templates non disponible')
           return null
         }
         throw error

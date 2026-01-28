@@ -45,7 +45,9 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { formatDate, cn } from '@/lib/utils'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { EnrollmentWithRelations, StudentWithRelations } from '@/lib/types/query-types'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface SessionElearningSectionProps {
   sessionId: string
@@ -141,7 +143,7 @@ export function SessionElearningSection({
         return (data || []) as SessionCourse[]
       } catch (error: any) {
         if (isMissingTableError(error)) return []
-        console.warn('Error fetching session courses:', error)
+        logger.warn('Error fetching session courses:', error)
         return []
       }
     },
@@ -168,7 +170,7 @@ export function SessionElearningSection({
         }
         return data || []
       } catch (error: any) {
-        console.warn('Error fetching available courses:', error)
+        logger.warn('Error fetching available courses:', error)
         return []
       }
     },
@@ -194,7 +196,7 @@ export function SessionElearningSection({
 
         if (enrollError) {
           if (isMissingTableError(enrollError)) return []
-          console.warn('Error fetching course enrollments:', enrollError)
+          logger.warn('Error fetching course enrollments', sanitizeError(enrollError))
           return []
         }
 
@@ -205,7 +207,7 @@ export function SessionElearningSection({
           .in('student_id', studentIds)
 
         if (progressError) {
-          if (!isMissingTableError(progressError)) console.warn('Error fetching lesson progress:', progressError)
+          if (!isMissingTableError(progressError)) logger.warn('Error fetching lesson progress', sanitizeError(progressError))
         }
 
         // Récupérer le nombre total de leçons par cours
@@ -215,7 +217,7 @@ export function SessionElearningSection({
           .in('course_id', courseIds)
 
         if (lessonsError) {
-          if (!isMissingTableError(lessonsError)) console.warn('Error fetching lessons:', lessonsError)
+          if (!isMissingTableError(lessonsError)) logger.warn('Error fetching lessons', sanitizeError(lessonsError))
         }
 
         // Récupérer les scores des quiz
@@ -227,7 +229,7 @@ export function SessionElearningSection({
           .not('completed_at', 'is', null)
 
         if (quizError) {
-          if (!isMissingTableError(quizError)) console.warn('Error fetching quiz attempts:', quizError)
+          if (!isMissingTableError(quizError)) logger.warn('Error fetching quiz attempts', sanitizeError(quizError))
         }
 
         // Calculer la progression pour chaque apprenant et chaque cours
@@ -287,7 +289,7 @@ export function SessionElearningSection({
         return progressMap
       } catch (error: any) {
         if (isMissingTableError(error)) return []
-        console.warn('Error calculating progress:', error)
+        logger.warn('Error calculating progress:', error)
         return []
       }
     },
@@ -671,9 +673,16 @@ export function SessionElearningSection({
                       <div className="p-4 flex items-center justify-between">
                         <div className="flex items-center space-x-4 flex-1">
                           {course.thumbnail_url ? (
-                            <img src={course.thumbnail_url} alt={course.title} className="w-16 h-16 rounded-lg object-cover" />
+                            <div className="relative w-16 h-16 flex-shrink-0">
+                              <Image
+                                src={course.thumbnail_url}
+                                alt={course.title}
+                                fill
+                                className="rounded-lg object-cover"
+                              />
+                            </div>
                           ) : (
-                            <div className="w-16 h-16 rounded-lg bg-purple-100 flex items-center justify-center">
+                            <div className="w-16 h-16 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
                               <BookOpen className="h-8 w-8 text-purple-600" />
                             </div>
                           )}

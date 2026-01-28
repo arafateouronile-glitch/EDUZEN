@@ -56,7 +56,7 @@ export function FAQ() {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={isInView ? { opacity: 1, scale: 1 } : {}}
-              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-blue-ghost border border-brand-blue-pale mb-8"
             >
               <HelpCircle className="w-4 h-4 text-brand-blue" />
@@ -66,7 +66,7 @@ export function FAQ() {
             <motion.h2
               initial={{ opacity: 0, y: 40 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter text-gray-900 mb-8 leading-tighter font-display"
             >
               <span className="font-extralight italic tracking-luxe">Questions</span>{' '}
@@ -78,7 +78,7 @@ export function FAQ() {
             <motion.p
               initial={{ opacity: 0, y: 40 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed font-light tracking-tight"
             >
               Vous ne trouvez pas la réponse que vous cherchez ?{' '}
@@ -89,7 +89,7 @@ export function FAQ() {
             <motion.button
               initial={{ opacity: 0, y: 40 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               whileHover={{ scale: 1.05, x: 5 }}
               whileTap={{ scale: 0.98 }}
               className="group inline-flex items-center gap-3 text-lg font-semibold text-brand-blue hover:text-brand-blue-dark transition-all duration-600"
@@ -106,7 +106,7 @@ export function FAQ() {
                 key={index}
                 initial={{ opacity: 0, y: 60, scale: 0.95 }}
                 animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-                transition={{ duration: 0.8, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.8, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 className={`border-2 rounded-3xl overflow-hidden bg-white shadow-lg transition-all duration-600 ${
                   openIndex === index
                     ? 'border-brand-blue shadow-2xl shadow-brand-blue/10'
@@ -122,7 +122,7 @@ export function FAQ() {
                   </span>
                   <motion.span
                     animate={{ rotate: openIndex === index ? 180 : 0 }}
-                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-colors duration-600 ${
                       openIndex === index
                         ? 'bg-brand-blue text-white'
@@ -143,7 +143,7 @@ export function FAQ() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     >
                       <div className="px-8 md:px-10 pb-8 md:pb-10">
                         <div className="pt-6 border-t-2 border-gray-100">

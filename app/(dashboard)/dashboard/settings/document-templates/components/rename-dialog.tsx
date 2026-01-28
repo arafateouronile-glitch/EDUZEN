@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Edit } from 'lucide-react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface RenameDialogProps {
   template: DocumentTemplate
@@ -50,7 +51,7 @@ export function RenameDialog({ template, open, onOpenChange }: RenameDialogProps
       onOpenChange(false)
     },
     onError: (error) => {
-      console.error('Erreur lors du renommage:', error)
+      logger.error('Erreur lors du renommage:', error)
       alert('Erreur lors du renommage du modèle')
     },
   })

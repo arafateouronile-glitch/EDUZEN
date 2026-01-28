@@ -56,7 +56,7 @@ export function Testimonials() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-blue-ghost border border-brand-blue-pale mb-8"
           >
             <Star className="w-4 h-4 fill-brand-blue text-brand-blue" />
@@ -66,7 +66,7 @@ export function Testimonials() {
           <motion.h2
             initial={{ opacity: 0, y: 40 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter text-gray-900 mb-8 leading-[0.95] font-display"
           >
             Ce que disent nos{' '}
@@ -82,7 +82,7 @@ export function Testimonials() {
               key={index}
               initial={{ opacity: 0, y: 60, scale: 0.95 }}
               animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-              transition={{ duration: 0.8, delay: index * 0.15, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, delay: index * 0.15, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               whileHover={{ y: -12, scale: 1.02 }}
               className="group bg-white rounded-3xl p-10 md:p-12 border-2 border-gray-100 hover:border-brand-blue-pale relative shadow-xl hover:shadow-2xl hover:shadow-brand-blue/10 transition-all duration-600"
             >
@@ -94,7 +94,7 @@ export function Testimonials() {
                     key={i}
                     initial={{ opacity: 0, scale: 0 }}
                     animate={isInView ? { opacity: 1, scale: 1 } : {}}
-                    transition={{ duration: 0.4, delay: 0.6 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.4, delay: 0.6 + i * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   >
                     <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                   </motion.div>
@@ -109,7 +109,7 @@ export function Testimonials() {
                 <motion.div
                   className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center text-white font-bold text-xl shadow-lg"
                   whileHover={{ rotate: 360, scale: 1.1 }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 >
                   {testimonial.author.charAt(0)}
                 </motion.div>

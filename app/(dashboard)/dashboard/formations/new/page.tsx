@@ -39,6 +39,7 @@ import type { TableRow } from '@/lib/types/supabase-helpers'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Formation = TableRow<'formations'>
 
@@ -188,7 +189,7 @@ export default function NewFormationPage() {
             user.organization_id
           )
         } catch (error) {
-          console.error('Erreur lors de l\'ajout des sessions:', error)
+          logger.error('Erreur lors de l\'ajout des sessions:', error)
         }
       }
       if (formation?.id) {
@@ -243,7 +244,7 @@ export default function NewFormationPage() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 

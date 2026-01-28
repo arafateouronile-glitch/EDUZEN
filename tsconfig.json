@@ -62,6 +62,7 @@
     "scripts/**/*",
     "supabase/functions/**/*",
     "vitest.config.ts",
-    "lib/services/_example-standardized.service.ts"
+    "lib/services/_example-standardized.service.ts",
+    "remotion/**/*"
   ]
 }

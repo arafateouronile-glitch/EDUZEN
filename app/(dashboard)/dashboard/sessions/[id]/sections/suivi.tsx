@@ -8,7 +8,22 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Activity, CheckCircle, Star, DollarSign, Download, User, TrendingUp, Sparkles, ClipboardList, GitBranch, AlertCircle, Calendar, GraduationCap } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+// Lazy load recharts pour réduire le bundle initial
+import {
+  RechartsBarChart,
+  RechartsBar,
+  RechartsLineChart,
+  RechartsLine,
+  RechartsPieChart,
+  RechartsPie,
+  RechartsCell,
+  RechartsXAxis,
+  RechartsYAxis,
+  RechartsCartesianGrid,
+  RechartsTooltip,
+  RechartsLegend,
+  RechartsResponsiveContainer,
+} from '@/components/charts/recharts-wrapper'
 import { useDocumentGeneration } from '../hooks/use-document-generation'
 import { motion } from '@/components/ui/motion'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -16,11 +31,20 @@ import { useQuery } from '@tanstack/react-query'
 import { signatureService } from '@/lib/services/signature.service.client'
 import { ElectronicAttendanceManager } from '@/components/attendance'
 import dynamic from 'next/dynamic'
+import type {
+  SessionWithRelations,
+  EnrollmentWithRelations,
+  FormationWithRelations,
+  GradeWithRelations,
+  StudentWithRelations
+} from '@/lib/types/query-types'
+import type { TableRow } from '@/lib/types/supabase-helpers'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Lazy load SessionTimeline avec gestion d'erreur
 const SessionTimeline = dynamic(
   () => import('../components/session-timeline').then(mod => ({ default: mod.SessionTimeline })).catch((error) => {
-    console.error('Erreur lors du chargement de SessionTimeline:', error)
+    logger.error('Erreur lors du chargement de SessionTimeline', sanitizeError(error))
     // Retourner un composant de fallback en cas d'erreur
     return { default: () => <div className="p-8 text-center text-red-500">Erreur lors du chargement de la timeline</div> }
   }),
@@ -33,14 +57,6 @@ const SessionTimeline = dynamic(
     ),
   }
 )
-import type {
-  SessionWithRelations,
-  EnrollmentWithRelations,
-  FormationWithRelations,
-  GradeWithRelations,
-  StudentWithRelations
-} from '@/lib/types/query-types'
-import type { TableRow } from '@/lib/types/supabase-helpers'
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
@@ -248,7 +264,7 @@ export function Suivi({
                 status: sessionData.status || 'planned',
                 enrollmentsCount: enrollments.length,
                 hasConventions: enrollments.some(e => e.status === 'confirmed'),
-                hasConvocations: false, // TODO: Vérifier si les convocations ont été envoyées
+                hasConvocations: false, // NOTE: À implémenter - Vérifier depuis la table convocations ou emails envoyés
                 attendanceRate,
                 invoicesGenerated: enrollments.some(e => e.payment_status !== 'pending'),
                 evaluationsCompleted: !!(gradesStats && gradesStats.total > 0),
@@ -313,7 +329,7 @@ export function Suivi({
             transition={{
               duration: 0.5,
               delay: index * 0.05,
-              ease: [0.16, 1, 0.3, 1]
+              ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
             }}
             whileHover={{ y: -6, scale: 1.02 }}
             className="group relative"
@@ -363,7 +379,7 @@ export function Suivi({
                   }}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 />
               </div>
 
@@ -390,9 +406,9 @@ export function Suivi({
           </div>
           <div className="flex-1 min-h-[250px] w-full">
             {attendanceStats && attendanceStats.total > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
+              <RechartsResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <RechartsPie
                     data={attendanceStats ? [
                       { name: 'Présent', value: attendanceStats.present, color: '#335ACF' },
                       { name: 'Absent', value: attendanceStats.absent, color: '#ef4444' },
@@ -405,19 +421,21 @@ export function Suivi({
                     outerRadius={80}
                     paddingAngle={5}
                     dataKey="value"
+                    {...({} as any)}
                   >
                     {attendanceDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                      <RechartsCell key={`cell-${index}`} fill={entry.color} strokeWidth={0} {...({} as any)} />
                     ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend 
+                  </RechartsPie>
+                  <RechartsTooltip content={<CustomTooltip />} {...({} as any)} />
+                  <RechartsLegend 
                     verticalAlign="bottom" 
                     height={36}
-                    formatter={(value) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
+                    formatter={(value: any) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
+                    {...({} as any)}
                   />
-                </PieChart>
-              </ResponsiveContainer>
+                </RechartsPieChart>
+              </RechartsResponsiveContainer>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-sm text-gray-500 gap-2">
                 <div className="p-3 bg-gray-100 rounded-full">
@@ -439,33 +457,35 @@ export function Suivi({
           </div>
           <div className="flex-1 min-h-[250px] w-full">
             {enrollments.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={paymentStatusData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                  <XAxis 
+              <RechartsResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart data={paymentStatusData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} {...({} as any)}>
+                  <RechartsCartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" {...({} as any)} />
+                  <RechartsXAxis 
                     dataKey="status" 
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fill: '#6B7280', fontSize: 10 }}
                     dy={10}
+                    {...({} as any)}
                   />
-                  <YAxis 
+                  <RechartsYAxis 
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fill: '#6B7280', fontSize: 10 }} 
+                    {...({} as any)}
                   />
-                  <Tooltip cursor={{ fill: '#F3F4F6' }} content={<CustomTooltip />} />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  <RechartsTooltip cursor={{ fill: '#F3F4F6' }} content={<CustomTooltip />} {...({} as any)} />
+                  <RechartsBar dataKey="count" radius={[4, 4, 0, 0]} {...({} as any)}>
                     {paymentStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={
+                      <RechartsCell key={`cell-${index}`} fill={
                         entry.status === 'Payé' ? '#10B981' :
                         entry.status === 'En retard' ? '#EF4444' :
                         entry.status === 'Partiel' ? '#34B9EE' : '#9CA3AF'
-                      } />
+                      } {...({} as any)} />
                     ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                  </RechartsBar>
+                </RechartsBarChart>
+              </RechartsResponsiveContainer>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-sm text-gray-500 gap-2">
                 <div className="p-3 bg-gray-100 rounded-full">
@@ -487,8 +507,8 @@ export function Suivi({
           </div>
           <div className="flex-1 min-h-[250px] w-full">
             {gradesStats && gradesStats.total > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
+              <RechartsResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart
                   data={[
                     { range: '0-5', count: grades.filter((g) => {
                       const score = Number(g.score) || 0
@@ -512,30 +532,33 @@ export function Suivi({
                     }).length, color: '#10B981' },
                   ]}
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  {...({} as any)}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                  <XAxis 
+                  <RechartsCartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" {...({} as any)} />
+                  <RechartsXAxis 
                     dataKey="range" 
                     axisLine={false} 
                     tickLine={false}
                     tick={{ fill: '#6B7280', fontSize: 12 }}
                     dy={10}
+                    {...({} as any)}
                   />
-                  <YAxis 
+                  <RechartsYAxis 
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fill: '#6B7280', fontSize: 12 }} 
+                    {...({} as any)}
                   />
-                  <Tooltip cursor={{ fill: '#F3F4F6' }} content={<CustomTooltip />} />
-                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  <RechartsTooltip cursor={{ fill: '#F3F4F6' }} content={<CustomTooltip />} {...({} as any)} />
+                  <RechartsBar dataKey="count" radius={[6, 6, 0, 0]} {...({} as any)}>
                     {
                       [0,1,2,3].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#EF4444', '#F59E0B', '#34B9EE', '#10B981'][index]} />
+                        <RechartsCell key={`cell-${index}`} fill={['#EF4444', '#F59E0B', '#34B9EE', '#10B981'][index]} {...({} as any)} />
                       ))
                     }
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                  </RechartsBar>
+                </RechartsBarChart>
+              </RechartsResponsiveContainer>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-sm text-gray-500 gap-2">
                 <div className="p-3 bg-gray-100 rounded-full">

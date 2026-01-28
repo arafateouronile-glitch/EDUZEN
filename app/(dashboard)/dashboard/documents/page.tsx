@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { documentService } from '@/lib/services/document.service'
+import { DocumentService } from '@/lib/services/document.service'
 import { signatureService } from '@/lib/services/signature.service.client'
 import { createClient } from '@/lib/supabase/client'
-import { studentService } from '@/lib/services/student.service'
+import { studentService } from '@/lib/services/student.service.client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
@@ -23,6 +23,7 @@ import type { DocumentWithRelations, StudentWithRelations } from '@/lib/types/qu
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { SkeletonList } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Document = TableRow<'documents'>
 
@@ -30,6 +31,9 @@ export default function DocumentsPage() {
   const { user } = useAuth()
   const supabase = createClient()
   const queryClient = useQueryClient()
+  
+  // Créer une instance du service avec le client côté client
+  const documentService = useMemo(() => new DocumentService(supabase), [supabase])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
@@ -143,7 +147,7 @@ export default function DocumentsPage() {
         .order('end_date', { ascending: false })
       
       if (sessionsError) {
-        console.error('Erreur lors de la récupération des sessions:', sessionsError)
+        logger.error('Erreur lors de la récupération des sessions:', sessionsError)
         return []
       }
       
@@ -180,7 +184,7 @@ export default function DocumentsPage() {
         const enrollmentsError = enrollmentsResult.error
         
         if (enrollmentsError) {
-          console.error('Erreur lors de la récupération des inscriptions:', enrollmentsError)
+          logger.error('Erreur lors de la récupération des inscriptions:', enrollmentsError)
           continue
         }
         
@@ -342,7 +346,7 @@ export default function DocumentsPage() {
       // Rafraîchir la liste
       queryClient.invalidateQueries({ queryKey: ['documents', user?.organization_id] })
     } catch (error) {
-      console.error('Erreur lors de l\'upload:', error)
+      logger.error('Erreur lors de l\'upload:', error)
       alert('Erreur lors de l\'upload du document')
     } finally {
       setUploading(false)
@@ -380,7 +384,8 @@ export default function DocumentsPage() {
 
     setSendingEmail(true)
     try {
-      // TODO: Intégrer avec votre service d'envoi d'emails (ex: SendGrid, Resend, etc.)
+      // NOTE: Fonctionnalité prévue - Intégrer avec un service d'envoi d'emails
+      // Options: SendGrid, Resend, ou utiliser l'API route /api/email/send
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -400,7 +405,7 @@ export default function DocumentsPage() {
       setSelectedDocument(null)
       setEmailForm({ to: '', subject: '', message: '' })
     } catch (error) {
-      console.error('Erreur lors de l\'envoi de l\'email:', error)
+      logger.error('Erreur lors de l\'envoi de l\'email:', error)
       alert('Erreur lors de l\'envoi de l\'email')
     } finally {
       setSendingEmail(false)
@@ -433,7 +438,7 @@ export default function DocumentsPage() {
       alert('Document envoyé dans l\'espace apprenant avec succès !')
     },
     onError: (error: any) => {
-      console.error('Erreur lors de l\'envoi vers l\'espace apprenant:', error)
+      logger.error('Erreur lors de l\'envoi vers l\'espace apprenant:', error)
       alert(error.message || 'Erreur lors de l\'envoi vers l\'espace apprenant')
     },
   })
@@ -468,7 +473,7 @@ export default function DocumentsPage() {
       y: 0, 
       transition: { 
         duration: 0.5, 
-        ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
+        ease: [0.16, 1, 0.3, 1] as [number, number, number, number] as [number, number, number, number]
       } 
     }
   }

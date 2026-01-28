@@ -79,13 +79,13 @@ export default function LearnerProfilePage() {
       
       if (!supabase) return { enrollments: 0, courses: 0, certificates: 0 }
       const [enrollments, courses, certificates] = await Promise.all([
-        supabase
+        supabase!
           .from('enrollments')
           .select('id, status')
           .eq('student_id', studentData.id),
         // Table course_enrollments n'existe peut-être pas
         Promise.resolve({ data: [], error: null }),
-        supabase
+        supabase!
           .from('course_certificates')
           .select('id')
           .eq('student_id', studentData.id),
@@ -108,7 +108,7 @@ export default function LearnerProfilePage() {
       if (!studentData?.id) throw new Error('Student not found')
       if (!supabase) throw new Error('Supabase client not available')
       
-      const { error } = await supabase
+      const { error } = await supabase!
         .from('students')
         .update({
           first_name: data.first_name,

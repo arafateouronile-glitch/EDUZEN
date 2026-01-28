@@ -199,10 +199,9 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
           primaryColor={primaryColor}
           stats={{
             courses: programsWithActiveContent.length,
-            // Ces chiffres pourraient venir de la base de données à l'avenir
-            learners: 1200,
-            certifications: 98,
-            successRate: 95
+            learners: catalogSettings?.stats_trained_students ?? 1200,
+            certifications: catalogSettings?.stats_satisfaction_rate ?? 98,
+            successRate: catalogSettings?.stats_success_rate ?? 95
           }}
         />
 

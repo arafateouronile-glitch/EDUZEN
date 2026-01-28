@@ -20,6 +20,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrateur' },
@@ -55,7 +56,7 @@ export default function NewUserPage() {
           email: data.email,
           password: data.password,
           full_name: data.full_name,
-          phone: data.phone || null,
+          phone: data.phone && data.phone.trim() !== '' ? data.phone.trim() : null,
           role: data.role,
           is_active: data.is_active,
           organization_id: user?.organization_id,
@@ -65,19 +66,31 @@ export default function NewUserPage() {
       if (!response.ok) {
         let errorMessage = 'Erreur lors de la création de l\'utilisateur'
         let errorDetails = null
+        let validationErrors: Record<string, string[]> | null = null
         try {
           const error = await response.json()
           errorMessage = error.error || errorMessage
           errorDetails = error.details || error.code || null
-          console.error('❌ [CREATE USER] Erreur API:', error)
+          validationErrors = error.errors || null
+          
+          logger.error('❌ [CREATE USER] Erreur API:', error)
+          
+          // Si ce sont des erreurs de validation, construire un message détaillé
+          if (validationErrors && Object.keys(validationErrors).length > 0) {
+            const validationMessages = Object.entries(validationErrors)
+              .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+              .join('; ')
+            errorMessage = `Erreur de validation: ${validationMessages}`
+          }
+          
           if (errorDetails) {
-            console.error('❌ [CREATE USER] Détails:', errorDetails)
+            logger.error('❌ [CREATE USER] Détails:', errorDetails)
           }
         } catch (e) {
-          console.error('❌ [CREATE USER] Erreur lors de la lecture de la réponse:', e)
+          logger.error('❌ [CREATE USER] Erreur lors de la lecture de la réponse:', e)
           errorMessage = `Erreur ${response.status}: ${response.statusText}`
         }
-        const fullErrorMessage = errorDetails 
+        const fullErrorMessage = errorDetails && !validationErrors
           ? `${errorMessage} (${errorDetails})` 
           : errorMessage
         throw new Error(fullErrorMessage)
@@ -86,9 +99,18 @@ export default function NewUserPage() {
       return response.json()
     },
     onSuccess: () => {
-      // Invalider les queries pour forcer le rechargement de la liste
-      queryClient.invalidateQueries({ queryKey: ['organization-users'] })
-      queryClient.refetchQueries({ queryKey: ['organization-users'] })
+      // Invalider toutes les queries liées aux utilisateurs de l'organisation
+      // Utiliser queryKey avec prefixMatch pour invalider toutes les variantes
+      queryClient.invalidateQueries({ 
+        queryKey: ['organization-users'],
+        exact: false, // Invalider toutes les queries qui commencent par cette clé
+      })
+      
+      // Forcer le refetch immédiat
+      queryClient.refetchQueries({ 
+        queryKey: ['organization-users'],
+        exact: false,
+      })
       
       addToast({
         type: 'success',
@@ -96,13 +118,13 @@ export default function NewUserPage() {
         description: 'L\'utilisateur a été créé avec succès',
       })
       
-      // Attendre un peu avant de rediriger pour laisser le temps à l'invalidation
+      // Attendre un peu avant de rediriger pour laisser le temps au refetch
       setTimeout(() => {
         router.push('/dashboard/settings/users')
-      }, 300)
+      }, 500)
     },
     onError: (error: Error) => {
-      console.error('❌ [CREATE USER] Erreur:', error)
+      logger.error('❌ [CREATE USER] Erreur:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -129,6 +151,20 @@ export default function NewUserPage() {
         type: 'error',
         title: 'Erreur',
         description: 'Le mot de passe doit contenir au moins 8 caractères',
+      })
+      return
+    }
+
+    // Validation du format du mot de passe (majuscule, minuscule, chiffre)
+    const hasUpperCase = /[A-Z]/.test(formData.password)
+    const hasLowerCase = /[a-z]/.test(formData.password)
+    const hasNumbers = /\d/.test(formData.password)
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: 'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre',
       })
       return
     }
@@ -262,7 +298,7 @@ export default function NewUserPage() {
                 className="mt-2"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Le mot de passe doit contenir au moins 8 caractères
+                Le mot de passe doit contenir au moins 8 caractères, avec une majuscule, une minuscule et un chiffre. L'utilisateur recevra un email de confirmation avec un lien pour se connecter.
               </p>
             </div>
 
@@ -295,6 +331,23 @@ export default function NewUserPage() {
                 Activer l'utilisateur immédiatement
               </Label>
             </div>
+
+            {/* Information sur l'email de confirmation */}
+            {formData.role !== 'student' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <Mail className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">
+                      Email de confirmation automatique
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      L'utilisateur recevra automatiquement un email de confirmation avec un lien pour accéder à la page d'authentification. Il pourra se connecter avec le mot de passe assigné ou utiliser "Mot de passe oublié" pour le changer.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex justify-end gap-4 pt-4">

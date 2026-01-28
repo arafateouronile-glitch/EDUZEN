@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SignatureRequestService } from '@/lib/services/signature-request.service'
 import { SignatureService } from '@/lib/services/signature.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * POST /api/signature-requests/sign
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, signature })
   } catch (error) {
-    console.error('Erreur lors de la signature:', error)
+    logger.error('Erreur lors de la signature:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

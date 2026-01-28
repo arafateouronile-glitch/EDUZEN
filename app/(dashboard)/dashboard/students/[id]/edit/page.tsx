@@ -5,12 +5,13 @@ import { useRouter, useParams } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
-import { studentService } from '@/lib/services/student.service'
+import { studentService } from '@/lib/services/student.service.client'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function EditStudentPage() {
   const router = useRouter()
@@ -88,7 +89,7 @@ export default function EditStudentPage() {
     mutationFn: async () => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
-      console.log('Mise à jour de l\'élève:', studentId, formData)
+      logger.debug('Mise à jour de l\'élève', { studentId, formData })
       const result = await studentService.update(studentId, {
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -102,18 +103,18 @@ export default function EditStudentPage() {
         enrollment_date: formData.enrollment_date || new Date().toISOString().split('T')[0],
         status: formData.status,
       })
-      console.log('Élève mis à jour avec succès:', result)
+      logger.debug('Élève mis à jour avec succès:', result)
       return result
     },
     onSuccess: (updatedStudent) => {
-      console.log('onSuccess appelé avec:', updatedStudent)
+      logger.debug('onSuccess appelé avec:', updatedStudent)
       // Invalider les queries pour forcer le rafraîchissement
       queryClient.invalidateQueries({ queryKey: ['student', studentId] })
       queryClient.invalidateQueries({ queryKey: ['students'] })
       router.push(`/dashboard/students/${updatedStudent.id}`)
     },
     onError: (error) => {
-      console.error('Erreur lors de la mise à jour de l\'élève:', error)
+      logger.error('Erreur lors de la mise à jour de l\'élève:', error)
     },
   })
 

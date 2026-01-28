@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SignatureRequestService } from '@/lib/services/signature-request.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * GET /api/signature-requests/public/[token]
@@ -18,7 +19,7 @@ export async function GET(
 
     return NextResponse.json(signatureRequest)
   } catch (error) {
-    console.error('Erreur lors de la récupération de la demande de signature:', error)
+    logger.error('Erreur lors de la récupération de la demande de signature:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }

@@ -248,6 +248,7 @@ export default function CompliancePage() {
           <TabsTrigger value="incidents">Incidents</TabsTrigger>
           <TabsTrigger value="audits">Audits</TabsTrigger>
           <TabsTrigger value="policies">Politiques</TabsTrigger>
+          <TabsTrigger value="teacher-documents">Documents formateurs</TabsTrigger>
         </TabsList>
 
         {/* Vue d'ensemble */}
@@ -412,6 +413,23 @@ export default function CompliancePage() {
             <CardContent>
               <Link href="/dashboard/compliance/policies">
                 <Button>Gérer les politiques</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Documents des formateurs */}
+        <TabsContent value="teacher-documents">
+          <Card>
+            <CardHeader>
+              <CardTitle>Documents des formateurs</CardTitle>
+              <CardDescription>
+                Consultez les documents administratifs et diplômes de tous les formateurs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/dashboard/compliance/teacher-documents">
+                <Button>Voir les documents</Button>
               </Link>
             </CardContent>
           </Card>

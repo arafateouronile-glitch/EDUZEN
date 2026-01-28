@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import JSZip from 'jszip'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export interface DocumentTemplate {
   title: string
@@ -36,7 +37,7 @@ export async function generatePDFFromHTML(
     // Vérifier que l'élément est visible et a des dimensions
     let rect = element.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) {
-      console.warn('Élément sans dimensions, tentative de correction...')
+      logger.warn('Élément sans dimensions, tentative de correction...')
       // Forcer des dimensions minimales
       if (element instanceof HTMLElement) {
         element.style.width = element.style.width || '210mm'
@@ -121,7 +122,7 @@ export async function generatePDFFromHTML(
     }
     
     if (canvas.width === 0 || canvas.height === 0) {
-      console.error('Canvas invalide:', { width: canvas.width, height: canvas.height })
+      logger.error('Canvas invalide:', { width: canvas.width, height: canvas.height })
       throw new Error(`Le canvas généré est invalide (${canvas.width}x${canvas.height})`)
     }
 
@@ -133,7 +134,7 @@ export async function generatePDFFromHTML(
         throw new Error('Data URL invalide')
       }
     } catch (error) {
-      console.error('Erreur lors de la conversion du canvas en data URL:', error)
+      logger.error('Erreur lors de la conversion du canvas en data URL', error)
       // Essayer avec JPEG comme fallback
       imgData = canvas.toDataURL('image/jpeg', 0.95)
     }
@@ -155,7 +156,7 @@ export async function generatePDFFromHTML(
     try {
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST')
     } catch (error) {
-      console.error('Erreur lors de l\'ajout de l\'image au PDF:', error)
+      logger.error('Erreur lors de l\'ajout de l\'image au PDF:', error)
       // Essayer avec JPEG si PNG échoue
       if (imgData.startsWith('data:image/png')) {
         const jpegData = canvas.toDataURL('image/jpeg', 0.95)
@@ -186,7 +187,7 @@ export async function generatePDFFromHTML(
     pdf.save(filename)
     return pdf.output('blob')
   } catch (error) {
-    console.error('Erreur lors de la génération du PDF:', error)
+    logger.error('Erreur lors de la génération du PDF', error)
     throw new Error(`Erreur lors de la génération du PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
   }
 }
@@ -270,7 +271,7 @@ export async function generatePDFBlobFromHTML(
   // Vérifier que l'élément est visible et a des dimensions
   const rect = element.getBoundingClientRect()
   if (rect.width === 0 || rect.height === 0) {
-    console.warn('Élément sans dimensions, tentative de correction...')
+    logger.warn('Élément sans dimensions, tentative de correction...')
     if (element instanceof HTMLElement) {
       element.style.width = element.style.width || '794px'
       element.style.minHeight = element.style.minHeight || '1123px'
@@ -326,17 +327,17 @@ export async function generatePDFBlobFromHTML(
         width: elementWidth - originalPaddingLeft - originalPaddingRight,
         height: footerHeight,
       })
-      console.log('[PDF Generator] Footer capturé séparément:', {
+      logger.debug('[PDF Generator] Footer capturé séparément:', {
         width: footerCanvas.width,
         height: footerCanvas.height,
         footerHeight,
       })
     } catch (error) {
-      console.warn('[PDF Generator] Erreur lors de la capture du footer:', error)
+      logger.warn('[PDF Generator] Erreur lors de la capture du footer', { error })
     }
   }
   
-  console.log('[PDF Generator] Capturing element:', {
+  logger.debug('[PDF Generator] Capturing element:', {
     elementId,
     width: elementWidth,
     height: elementHeight,
@@ -392,7 +393,7 @@ export async function generatePDFBlobFromHTML(
         clonedElement.style.display = 'flex'
         clonedElement.style.flexDirection = 'column'
         
-        console.log('[PDF Generator] Clone styles applied:', {
+        logger.debug('[PDF Generator] Clone styles applied:', {
           padding: clonedElement.style.padding,
           width: clonedElement.style.width,
           minHeight: clonedElement.style.minHeight,
@@ -415,20 +416,20 @@ export async function generatePDFBlobFromHTML(
           clonedHeader.style.flexShrink = '0'
           clonedHeader.style.position = 'relative'
           clonedHeader.style.zIndex = '1'
-          console.log('[PDF Generator] Header cloné activé:', {
+          logger.debug('[PDF Generator] Header cloné activé:', {
             display: clonedHeader.style.display,
             visibility: clonedHeader.style.visibility,
             innerHTML: clonedHeader.innerHTML.substring(0, 100),
             offsetHeight: clonedHeader.offsetHeight,
           })
         } else {
-          console.warn('[PDF Generator] Header non trouvé dans le clone')
+          logger.warn('[PDF Generator] Header non trouvé dans le clone')
         }
         
         // Masquer le footer dans le clone principal car on l'ajoutera séparément sur chaque page
         if (clonedFooter) {
           clonedFooter.style.display = 'none'
-          console.log('[PDF Generator] Footer masqué dans le clone principal (sera ajouté séparément)')
+          logger.debug('[PDF Generator] Footer masqué dans le clone principal (sera ajouté séparément)')
         }
         
         if (clonedContent) {
@@ -453,7 +454,7 @@ export async function generatePDFBlobFromHTML(
       throw new Error('Data URL invalide')
     }
   } catch (error) {
-    console.error('Erreur lors de la conversion du canvas en data URL:', error)
+    logger.error('Erreur lors de la conversion du canvas en data URL:', error)
     imgDataFirstPage = canvas.toDataURL('image/jpeg', 0.95)
   }
 
@@ -496,9 +497,9 @@ export async function generatePDFBlobFromHTML(
       })
       
       imgDataOtherPages = canvasWithoutHeader.toDataURL('image/png', 0.95)
-      console.log('[PDF Generator] Canvas sans header créé pour les pages suivantes')
+      logger.debug('[PDF Generator] Canvas sans header créé pour les pages suivantes')
     } catch (error) {
-      console.warn('[PDF Generator] Erreur lors de la création du canvas sans header:', error)
+      logger.warn('[PDF Generator] Erreur lors de la création du canvas sans header', { error })
       // Utiliser la même image si l'erreur survient
       imgDataOtherPages = imgDataFirstPage
     } finally {
@@ -541,9 +542,9 @@ export async function generatePDFBlobFromHTML(
         // (cela nécessiterait de recapturer le footer avec les bonnes valeurs, mais pour l'instant on garde simple)
         
         page.addImage(footerImgData, 'PNG', 0, footerY, footerImgWidth, footerImgHeight, undefined, 'FAST')
-        console.log(`[PDF Generator] Footer ajouté sur la page ${pageNum}/${totalPages} à ${footerY}mm du bas`)
+        logger.debug(`[PDF Generator] Footer ajouté sur la page ${pageNum}/${totalPages} à ${footerY}mm du bas`)
       } catch (error) {
-        console.warn('[PDF Generator] Erreur lors de l\'ajout du footer:', error)
+        logger.warn('[PDF Generator] Erreur lors de l\'ajout du footer', { error })
       }
     }
   }
@@ -554,7 +555,7 @@ export async function generatePDFBlobFromHTML(
     pdf.addImage(imgDataToUseFirst, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST')
     addFooterToPage(pdf, pageNumber, totalPages)
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de l\'image au PDF:', error)
+    logger.error('Erreur lors de l\'ajout de l\'image au PDF:', error)
     if (imgDataToUseFirst.startsWith('data:image/png')) {
       const jpegData = canvas.toDataURL('image/jpeg', 0.95)
       pdf.addImage(jpegData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST')

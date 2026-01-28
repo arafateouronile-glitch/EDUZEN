@@ -1,6 +1,11 @@
 'use client'
 
-// TODO: Implémenter ImageResizer
+/**
+ * Composant ImageResizer - Redimensionneur d'images
+ * 
+ * NOTE: Composant non implémenté - Fonctionnalité prévue pour une future version
+ * Ce composant permettra de redimensionner et configurer les images dans les documents.
+ */
 
 export interface ImageConfig {
   width?: number

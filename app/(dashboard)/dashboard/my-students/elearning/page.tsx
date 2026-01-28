@@ -35,6 +35,7 @@ import {
 import Link from 'next/link'
 import { motion } from '@/components/ui/motion'
 import { formatDate, cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface StudentCourseProgress {
   student_id: string
@@ -97,7 +98,7 @@ export default function TeacherElearningProgressPage() {
         }
         return data || []
       } catch (error: any) {
-        console.warn('Error fetching teacher sessions:', error)
+        logger.warn('Error fetching teacher sessions:', error)
         return []
       }
     },
@@ -110,27 +111,47 @@ export default function TeacherElearningProgressPage() {
     queryFn: async () => {
       if (!teacherSessions?.length) return []
 
-      const sessionIds = teacherSessions.map((s: any) => s.id)
+      // Valider les UUIDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      const sessionIds = teacherSessions
+        .map((s: any) => s.id || s.session_id)
+        .filter((id: any) => id && typeof id === 'string' && uuidRegex.test(id))
+
+      if (sessionIds.length === 0) return []
 
       try {
-        const { data, error } = await supabase
-          .from('session_courses')
-          .select(`
-            *,
-            course:courses(id, title, slug, difficulty_level),
-            session:sessions(id, name)
-          `)
-          .in('session_id', sessionIds)
+        // Diviser en lots si nécessaire
+        const BATCH_SIZE = 50
+        const allCourses: any[] = []
 
-        if (error) {
-          if (error.code === 'PGRST116' || error.code === '42P01' || error.message?.includes('does not exist')) {
-            return []
+        for (let i = 0; i < sessionIds.length; i += BATCH_SIZE) {
+          const batch = sessionIds.slice(i, i + BATCH_SIZE)
+
+          const { data, error } = await supabase
+            .from('session_courses')
+            .select(`
+              *,
+              course:courses(id, title, slug, difficulty_level),
+              session:sessions(id, name)
+            `)
+            .in('session_id', batch)
+
+          if (error) {
+            if (error.code === 'PGRST116' || error.code === '42P01' || error.message?.includes('does not exist')) {
+              continue
+            }
+            logger.warn('Error fetching session courses (batch):', { error: sanitizeError(error), batch })
+            continue
           }
-          throw error
+
+          if (data) {
+            allCourses.push(...data)
+          }
         }
-        return data || []
+
+        return allCourses
       } catch (error: any) {
-        console.warn('Error fetching session courses:', error)
+        logger.warn('Error fetching session courses:', error)
         return []
       }
     },
@@ -143,46 +164,95 @@ export default function TeacherElearningProgressPage() {
     queryFn: async () => {
       if (!sessionCourses?.length || !teacherSessions?.length) return []
 
-      const sessionIds = teacherSessions.map((s: any) => s.id)
-      const courseIds = [...new Set((sessionCourses || []).map((sc: any) => sc.course_id))]
+      // Valider les UUIDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      const sessionIds = teacherSessions
+        .map((s: any) => s.id || s.session_id)
+        .filter((id: any) => id && typeof id === 'string' && uuidRegex.test(id))
+      
+      const courseIds = [...new Set((sessionCourses || [])
+        .map((sc: any) => sc.course_id)
+        .filter((id: any) => id && typeof id === 'string' && uuidRegex.test(id)))]
+
+      if (sessionIds.length === 0) return []
 
       try {
-        // Récupérer les inscriptions des étudiants aux sessions
-        const { data: enrollments, error: enrollError } = await supabase
-          .from('enrollments')
-          .select(`
-            student_id, session_id,
-            students(id, first_name, last_name, email)
-          `)
-          .in('session_id', sessionIds)
+        // Récupérer les inscriptions des étudiants aux sessions (par lots)
+        const BATCH_SIZE = 50
+        const allEnrollments: any[] = []
 
-        if (enrollError) throw enrollError
+        for (let i = 0; i < sessionIds.length; i += BATCH_SIZE) {
+          const batch = sessionIds.slice(i, i + BATCH_SIZE)
 
-        // Récupérer les leçons
-        const { data: lessons } = await supabase
-          .from('lessons')
-          .select('id, course_id')
-          .in('course_id', courseIds)
+          const { data: enrollments, error: enrollError } = await supabase
+            .from('enrollments')
+            .select(`
+              student_id, session_id,
+              students(id, first_name, last_name, email)
+            `)
+            .in('session_id', batch)
+
+          if (enrollError) {
+            logger.warn('Error fetching enrollments (batch):', { error: sanitizeError(enrollError), batch })
+            continue
+          }
+
+          if (enrollments) {
+            allEnrollments.push(...enrollments)
+          }
+        }
+
+        // Récupérer les leçons (par lots si nécessaire)
+        const allLessons: any[] = []
+        for (let i = 0; i < courseIds.length; i += BATCH_SIZE) {
+          const batch = courseIds.slice(i, i + BATCH_SIZE)
+          const { data: lessons } = await supabase
+            .from('lessons')
+            .select('id, course_id')
+            .in('course_id', batch)
+          
+          if (lessons) {
+            allLessons.push(...lessons)
+          }
+        }
 
         // Récupérer la progression des leçons pour tous les étudiants
-        const studentIds = [...new Set((enrollments || []).map((e: any) => e.student_id))]
+        const studentIds = [...new Set(allEnrollments
+          .map((e: any) => e.student_id)
+          .filter((id: any) => id && typeof id === 'string' && uuidRegex.test(id)))]
         
-        const { data: lessonProgress } = await supabase
-          .from('lesson_progress')
-          .select('*, lessons(course_id)')
-          .in('student_id', studentIds)
+        const allLessonProgress: any[] = []
+        for (let i = 0; i < studentIds.length; i += BATCH_SIZE) {
+          const batch = studentIds.slice(i, i + BATCH_SIZE)
+          const { data: lessonProgress } = await supabase
+            .from('lesson_progress')
+            .select('*, lessons(course_id)')
+            .in('student_id', batch)
+          
+          if (lessonProgress) {
+            allLessonProgress.push(...lessonProgress)
+          }
+        }
 
         // Récupérer les scores des quiz
-        const { data: quizAttempts } = await supabase
-          .from('quiz_attempts')
-          .select('*, quizzes(lesson_id, lessons(course_id))')
-          .in('student_id', studentIds)
-          .eq('is_completed', true)
+        const allQuizAttempts: any[] = []
+        for (let i = 0; i < studentIds.length; i += BATCH_SIZE) {
+          const batch = studentIds.slice(i, i + BATCH_SIZE)
+          const { data: quizAttempts } = await supabase
+            .from('quiz_attempts')
+            .select('*, quizzes(lesson_id, lessons(course_id))')
+            .in('student_id', batch)
+            .eq('is_completed', true)
+          
+          if (quizAttempts) {
+            allQuizAttempts.push(...quizAttempts)
+          }
+        }
 
         // Construire les données de progression
         const progressData: StudentCourseProgress[] = []
 
-        for (const enrollment of (enrollments || []) as any[]) {
+        for (const enrollment of allEnrollments as any[]) {
           const student = enrollment.students as any
           if (!student) continue
 
@@ -193,10 +263,10 @@ export default function TeacherElearningProgressPage() {
 
           for (const sessionCourse of sessionCoursesForStudent as any[]) {
             const courseId = sessionCourse.course_id
-            const courseLessons = (lessons || []).filter((l: any) => l.course_id === courseId)
+            const courseLessons = allLessons.filter((l: any) => l.course_id === courseId)
             const totalLessons = courseLessons.length
 
-            const studentLessonProgress = (lessonProgress || []).filter(
+            const studentLessonProgress = allLessonProgress.filter(
               (lp: any) => lp.student_id === enrollment.student_id && lp.lessons?.course_id === courseId
             )
             const completedLessons = studentLessonProgress.filter((lp: any) => lp.is_completed).length
@@ -204,7 +274,7 @@ export default function TeacherElearningProgressPage() {
             const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
             // Score moyen des quiz
-            const courseQuizAttempts = (quizAttempts || []).filter(
+            const courseQuizAttempts = allQuizAttempts.filter(
               (qa: any) => qa.student_id === enrollment.student_id && qa.quizzes?.lessons?.course_id === courseId
             )
             const quizScore = courseQuizAttempts.length > 0
@@ -245,7 +315,7 @@ export default function TeacherElearningProgressPage() {
 
         return progressData
       } catch (error: any) {
-        console.warn('Error fetching student progress:', error)
+        logger.warn('Error fetching student progress:', error)
         return []
       }
     },

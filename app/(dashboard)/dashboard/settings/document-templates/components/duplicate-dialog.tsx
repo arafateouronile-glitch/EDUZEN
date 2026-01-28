@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Copy } from 'lucide-react'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface DuplicateDialogProps {
   template: DocumentTemplate
@@ -42,7 +43,7 @@ export function DuplicateDialog({ template, open, onOpenChange }: DuplicateDialo
       setNewName(`${template.name} (copie)`)
     },
     onError: (error) => {
-      console.error('Erreur lors de la duplication:', error)
+      logger.error('Erreur lors de la duplication:', error)
       alert('Erreur lors de la duplication du modèle')
     },
   })

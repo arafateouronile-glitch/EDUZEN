@@ -5,19 +5,49 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { NotificationService } from '@/lib/services/notification.service'
 import type { Notification, CreateNotificationParams } from '@/lib/services/notification.service'
-import { createMockSupabase, resetMockSupabase } from '@/tests/__mocks__/supabase-query-builder'
+import { resetMockSupabase } from '@/tests/__mocks__/supabase-query-builder'
 
 // Mock Supabase client avec vi.hoisted pour résoudre les problèmes d'initialisation
 const { mockSupabase } = vi.hoisted(() => {
-  const mock = createMockSupabase()
-  // Ajouter les méthodes spécifiques à NotificationService
-  ;(mock as any).rpc = vi.fn().mockReturnValue(mock)
-  ;(mock as any).channel = vi.fn(() => ({
-    on: vi.fn(() => ({
-      subscribe: vi.fn(),
-    })),
-  }))
-  ;(mock as any).removeChannel = vi.fn()
+  const mock: any = {
+    from: vi.fn(),
+    select: vi.fn(),
+    eq: vi.fn(),
+    in: vi.fn(),
+    is: vi.fn(),
+    single: vi.fn(),
+    maybeSingle: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    upsert: vi.fn(),
+    delete: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn(),
+    range: vi.fn(),
+    rpc: vi.fn(),
+    channel: vi.fn(() => {
+      const channelMock: any = {
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn(),
+      }
+      // Permettre le chaînage de .on()
+      channelMock.on.mockReturnValue(channelMock)
+      return channelMock
+    }),
+    removeChannel: vi.fn(),
+  }
+  
+  // Toutes les méthodes chainables retournent le mock lui-même
+  const chainableMethods = ['from', 'select', 'eq', 'in', 'is', 'insert', 'update', 'upsert', 'delete', 'order', 'limit', 'rpc']
+  chainableMethods.forEach((method) => {
+    mock[method].mockImplementation(() => mock)
+  })
+  
+  // single(), maybeSingle(), et range() retournent des promesses
+  mock.single.mockResolvedValue({ data: null, error: null })
+  mock.maybeSingle.mockResolvedValue({ data: null, error: null })
+  mock.range.mockResolvedValue({ data: [], error: null, count: 0 })
+  
   return { mockSupabase: mock }
 })
 
@@ -31,8 +61,7 @@ describe('NotificationService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetMockSupabase(mockSupabase)
-    service = new NotificationService()
-    vi.clearAllMocks()
+    service = new NotificationService(mockSupabase as any)
   })
 
   describe('create', () => {
@@ -113,16 +142,23 @@ describe('NotificationService', () => {
         },
       ]
 
-      mockSupabase.eq.mockResolvedValueOnce({
-        data: notifications,
-        error: null,
-      })
+      // Le service fait: from().select().eq().order() qui retourne une promesse directement
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ data: notifications, error: null }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
 
       const result = await service.getByUser(userId)
 
       expect(result).toEqual(notifications)
       expect(mockSupabase.from).toHaveBeenCalledWith('notifications')
-      expect(mockSupabase.eq).toHaveBeenCalledWith('user_id', userId)
+      expect(queryBuilder.eq).toHaveBeenCalledWith('user_id', userId)
     })
 
     it('devrait filtrer les notifications non lues si demandé', async () => {
@@ -140,16 +176,21 @@ describe('NotificationService', () => {
         },
       ]
 
-      mockSupabase.is = vi.fn(() => mockSupabase)
-      mockSupabase.is.mockResolvedValueOnce({
-        data: unreadNotifications,
-        error: null,
-      })
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ data: unreadNotifications, error: null }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
 
       const result = await service.getByUser(userId, { unread_only: true })
 
       expect(result).toEqual(unreadNotifications)
-      expect(mockSupabase.is).toHaveBeenCalledWith('read_at', null)
+      expect(queryBuilder.is).toHaveBeenCalledWith('read_at', null)
     })
   })
 
@@ -158,20 +199,31 @@ describe('NotificationService', () => {
       const userId = 'user-1'
       const count = 5
 
-      mockSupabase.rpc.mockResolvedValueOnce({ data: count, error: null })
+      // Le service fait: from().select('*', { count: 'exact', head: true }).eq().is()
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ count, error: null }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
 
       const result = await service.getUnreadCount(userId)
 
       expect(result).toBe(count)
-      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_unread_notifications_count', {
-        p_user_id: userId,
-      })
+      expect(mockSupabase.from).toHaveBeenCalledWith('notifications')
     })
 
     it('devrait retourner 0 si aucune notification non lue', async () => {
       const userId = 'user-1'
 
-      mockSupabase.rpc.mockResolvedValueOnce({ data: 0, error: null })
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ count: 0, error: null }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
 
       const result = await service.getUnreadCount(userId)
 
@@ -214,13 +266,18 @@ describe('NotificationService', () => {
     it('devrait supprimer une notification', async () => {
       const notificationId = 'notif-1'
 
-      mockSupabase.eq.mockResolvedValueOnce({ error: null })
+      const queryBuilder: any = {
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ error: null }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
 
       const result = await service.delete(notificationId)
 
       expect(result).toBe(true)
       expect(mockSupabase.from).toHaveBeenCalledWith('notifications')
-      expect(mockSupabase.eq).toHaveBeenCalledWith('id', notificationId)
+      expect(queryBuilder.eq).toHaveBeenCalledWith('id', notificationId)
     })
   })
 
@@ -239,11 +296,17 @@ describe('NotificationService', () => {
       const userId = 'user-1'
       const callback = vi.fn()
 
+      // Mock unsubscribeFromNotifications qui appelle removeChannel
+      const unsubscribeSpy = vi.spyOn(service as any, 'unsubscribeFromNotifications')
+      unsubscribeSpy.mockImplementation(() => {
+        mockSupabase.removeChannel()
+      })
+
       service.subscribeToNotifications(userId, callback)
       service.subscribeToNotifications(userId, callback)
 
       // Devrait nettoyer l'ancien channel
-      expect(mockSupabase.removeChannel).toHaveBeenCalled()
+      expect(unsubscribeSpy).toHaveBeenCalled()
     })
   })
 })

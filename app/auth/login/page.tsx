@@ -229,7 +229,7 @@ export default function LoginPage() {
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
               <GlassCard variant="premium" className="p-8 border-2 border-white/60 shadow-2xl backdrop-blur-2xl bg-white/40">
                 <div className="text-center mb-8">
@@ -372,7 +372,7 @@ export default function LoginPage() {
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
               <GlassCard variant="premium" className="p-8 border-2 border-white/60 shadow-2xl backdrop-blur-2xl bg-white/40">
                 <div className="text-center mb-8">

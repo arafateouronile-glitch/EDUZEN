@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withCronSecurity } from '@/lib/utils/cron-security'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const CRON_SECRET = process.env.CRON_SECRET
 const ALLOWED_IPS = process.env.CRON_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
@@ -53,8 +54,8 @@ export async function GET(request: NextRequest) {
           supabaseAdmin,
           scheduledSend.organization_id,
           scheduledSend.recipient_type,
-          (scheduledSend.recipient_ids || []) as string[],
-          scheduledSend.session_id || undefined
+          (scheduledSend.recipient_ids || []).filter((id): id is string => id !== null),
+          scheduledSend.session_id ? String(scheduledSend.session_id) : undefined
         )
 
         if (!recipients.length) {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
         for (const recipient of recipients) {
           if (scheduledSend.send_via && scheduledSend.send_via.includes('email') && recipient.email) {
             const result = await sendDocumentByEmail(
-              recipient.email!,
+              recipient.email,
               recipient.name,
               scheduledSend.subject || 'Document partagé',
               scheduledSend.message || '',
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest) {
           errors: errors.slice(0, 10),
         })
       } catch (error) {
-        console.error('CRON send-scheduled-documents error:', error)
+        logger.error('CRON send-scheduled-documents error:', error)
         return NextResponse.json(
           { 
             success: false, 

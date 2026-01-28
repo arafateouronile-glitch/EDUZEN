@@ -64,7 +64,8 @@ class PerformanceMonitor {
 
     // En production, envoyer vers un service externe
     if (process.env.NODE_ENV === 'production') {
-      // TODO: Envoyer vers un service de monitoring (Sentry, Datadog, etc.)
+      // NOTE: Fonctionnalité prévue - Envoyer vers un service de monitoring
+      // Options: Sentry, Datadog, ou service de monitoring personnalisé
       // this.sendToMonitoring(metric)
     }
   }

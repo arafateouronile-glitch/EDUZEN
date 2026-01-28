@@ -2,14 +2,15 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+// Lazy load recharts pour réduire le bundle initial
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Legend,
-  Tooltip,
-} from 'recharts'
+  RechartsPieChart,
+  RechartsPie,
+  RechartsCell,
+  RechartsResponsiveContainer,
+  RechartsLegend,
+  RechartsTooltip,
+} from '@/components/charts/recharts-wrapper'
 
 interface SubscriptionsChartProps {
   data?: {
@@ -110,9 +111,10 @@ export function SubscriptionsChart({
       </CardHeader>
       <CardContent>
         <div className="h-[280px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
+          <RechartsResponsiveContainer width="100%" height="100%">
+            <RechartsPieChart>
+              <RechartsPie
+                {...({} as any)}
                 data={data}
                 cx="50%"
                 cy="45%"
@@ -122,13 +124,13 @@ export function SubscriptionsChart({
                 dataKey="value"
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <RechartsCell {...({} as any)} key={`cell-${index}`} fill={entry.color} />
                 ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend content={renderCustomLegend} />
-            </PieChart>
-          </ResponsiveContainer>
+              </RechartsPie>
+              <RechartsTooltip {...({} as any)} content={<CustomTooltip />} />
+              <RechartsLegend {...({} as any)} content={renderCustomLegend} />
+            </RechartsPieChart>
+          </RechartsResponsiveContainer>
         </div>
         <div className="text-center mt-2">
           <p className="text-3xl font-bold">{total}</p>

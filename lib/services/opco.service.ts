@@ -5,6 +5,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger } from '@/lib/utils/logger'
 
 export interface OPCOConfiguration {
   id: string
@@ -144,7 +145,7 @@ export class OPCOService {
         error.message?.includes('does not exist') ||
         error.message?.includes('schema cache')
       ) {
-        console.warn('Table opco_configurations does not exist yet or invalid query:', error?.message)
+        logger.warn('OPCOService - Table opco_configurations does not exist yet or invalid query', { errorMessage: error?.message })
         return []
       }
       throw error
@@ -202,7 +203,7 @@ export class OPCOService {
         error.message?.includes('does not exist') ||
         error.message?.includes('schema cache')
       ) {
-        console.warn('Table opco_conventions does not exist yet or invalid query:', error?.message)
+        logger.warn('OPCOService - Table opco_conventions does not exist yet or invalid query', { errorMessage: error?.message })
         return []
       }
       throw error
@@ -280,7 +281,7 @@ export class OPCOService {
         error.message?.includes('does not exist') ||
         error.message?.includes('schema cache')
       ) {
-        console.warn('Table opco_declarations does not exist yet or invalid query:', error?.message)
+        logger.warn('OPCOService - Table opco_declarations does not exist yet or invalid query', { errorMessage: error?.message })
         return []
       }
       throw error
@@ -304,10 +305,15 @@ export class OPCOService {
 
   /**
    * Soumettre une déclaration OPCO
+   * 
+   * NOTE: L'intégration avec l'API OPCO réelle nécessite:
+   * - Configuration des credentials API OPCO
+   * - Implémentation du protocole d'authentification OPCO
+   * - Gestion des erreurs et retry logic
+   * 
+   * Pour l'instant, on met juste à jour le statut en base de données
    */
   async submitDeclaration(declarationId: string): Promise<void> {
-    // TODO: Implémenter l'appel réel à l'API OPCO
-    // Pour l'instant, on met juste à jour le statut
 
     const { error } = await this.supabase
       .from('opco_declarations')
@@ -417,7 +423,7 @@ export class OPCOService {
         error.message?.includes('does not exist') ||
         error.message?.includes('schema cache')
       ) {
-        console.warn('Table opco_funding_requests does not exist yet or invalid query:', error?.message)
+        logger.warn('OPCOService - Table opco_funding_requests does not exist yet or invalid query', { errorMessage: error?.message })
         return []
       }
       throw error
@@ -454,7 +460,8 @@ export class OPCOService {
     periodEnd: string
   ): Promise<OPCODeclaration> {
     // Récupérer les formations et stagiaires de la période
-    // TODO: Implémenter la récupération réelle depuis les tables de formations
+    // NOTE: À implémenter - Récupération depuis les tables sessions/formations/students
+    // pour remplir automatiquement la déclaration avec les données réelles
     // Pour l'instant, on crée une déclaration vide
 
     const declaration: Partial<OPCODeclaration> = {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { invoiceService } from '@/lib/services/invoice.service.client'
@@ -13,12 +13,28 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Plus, Search, FileText, AlertCircle, CheckCircle, TrendingUp, X, DollarSign, Receipt, CreditCard, ArrowUpRight, SlidersHorizontal, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import Link from 'next/link'
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-// Note: BarChart et Bar sont utilisés dans le graphique d'évolution des charges
+import { BRAND_COLORS } from '@/lib/config/app-config'
+// Lazy load recharts pour réduire le bundle initial
+import {
+  RechartsLineChart,
+  RechartsLine,
+  RechartsBarChart,
+  RechartsBar,
+  RechartsPieChart,
+  RechartsPie,
+  RechartsCell,
+  RechartsXAxis,
+  RechartsYAxis,
+  RechartsCartesianGrid,
+  RechartsTooltip,
+  RechartsLegend,
+  RechartsResponsiveContainer,
+} from '@/components/charts/recharts-wrapper'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { InvoiceWithRelations } from '@/lib/types/query-types'
 import { RoleGuard, FINANCE_ROLES } from '@/components/auth/role-guard'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Payment = TableRow<'payments'>
 type Invoice = TableRow<'invoices'>
@@ -57,7 +73,7 @@ function PaymentsPageContent() {
         .order('start_date', { ascending: false })
         .limit(100)
       if (error) {
-        console.error('Erreur récupération sessions:', error)
+        logger.error('Erreur récupération sessions:', error)
         return []
       }
       return data || []
@@ -261,7 +277,7 @@ function PaymentsPageContent() {
           error.message?.includes('column') ||
           error.message?.includes('permission')
         ) {
-          console.warn('Erreur lors de la récupération des paiements:', error.message)
+          logger.warn('Erreur lors de la récupération des paiements', sanitizeError(error))
           return { totalAmount: 0, count: 0, byMethod: [], monthlyData: [] }
         }
         throw error
@@ -302,9 +318,9 @@ function PaymentsPageContent() {
               method === 'bank_transfer' ? 'Virement' : method,
         value: Math.round(amount),
         color: method === 'cash' ? '#335ACF' :
-               method === 'mobile_money' ? '#34B9EE' :
+               method === 'mobile_money' ? BRAND_COLORS.secondary :
                method === 'card' ? '#3B82F6' :
-               method === 'bank_transfer' ? '#8B5CF6' : '#6B7280',
+               method === 'bank_transfer' ? BRAND_COLORS.accent : '#6B7280',
       }))
 
       return {
@@ -370,7 +386,7 @@ function PaymentsPageContent() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 
@@ -473,7 +489,7 @@ function PaymentsPageContent() {
             <BentoCard key={stat.title} span={1}>
               <motion.div
                 whileHover={{ y: -8, scale: 1.02 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
                 <GlassCard
                   variant="premium"
@@ -543,7 +559,7 @@ function PaymentsPageContent() {
                     <motion.div
                       layoutId="activeTabBg"
                       className="absolute inset-0 bg-gradient-to-r from-brand-blue to-brand-cyan rounded-xl shadow-lg"
-                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     />
                   )}
                   <span className="relative z-10">
@@ -590,7 +606,7 @@ function PaymentsPageContent() {
                 initial={{ height: 0, opacity: 0, y: -20 }}
                 animate={{ height: 'auto', opacity: 1, y: 0 }}
                 exit={{ height: 0, opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 className="overflow-hidden"
               >
                 <div className="pt-6 mt-6 grid grid-cols-1 md:grid-cols-3 gap-5 border-t border-gray-200">
@@ -674,7 +690,7 @@ function PaymentsPageContent() {
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
               <GlassCard variant="premium" className="p-8 h-full border-2 border-gray-100 shadow-xl hover:shadow-2xl transition-all duration-500">
                 <div className="mb-8 flex items-center justify-between">
@@ -695,38 +711,38 @@ function PaymentsPageContent() {
                 </div>
                 <div className="h-[340px] relative">
                   <div className="absolute inset-0 bg-gradient-mesh opacity-20 rounded-2xl" />
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={paymentStats.byMethod}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={100}
-                        paddingAngle={6}
-                        dataKey="value"
-                      >
-                        {paymentStats.byMethod.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value) => formatCurrency(Number(value), 'EUR')}
-                        contentStyle={{
+                  {React.createElement(RechartsResponsiveContainer as any, { width: "100%", height: "100%" },
+                    React.createElement(RechartsPieChart as any, {},
+                      React.createElement(RechartsPie as any, {
+                        data: paymentStats.byMethod,
+                        cx: "50%",
+                        cy: "50%",
+                        innerRadius: 70,
+                        outerRadius: 100,
+                        paddingAngle: 6,
+                        dataKey: "value",
+                      },
+                        paymentStats.byMethod.map((entry, index) => (
+                          React.createElement(RechartsCell as any, { key: `cell-${index}`, fill: entry.color })
+                        ))
+                      ),
+                      React.createElement(RechartsTooltip as any, {
+                        formatter: (value: any) => formatCurrency(Number(value), 'EUR'),
+                        contentStyle: {
                           borderRadius: '16px',
                           border: 'none',
                           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                           padding: '12px 16px',
                           fontWeight: '600',
-                        }}
-                      />
-                      <Legend
-                        verticalAlign="bottom"
-                        height={48}
-                        wrapperStyle={{ fontSize: '14px', fontWeight: '600' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                        },
+                      }),
+                      React.createElement(RechartsLegend as any, {
+                        verticalAlign: "bottom",
+                        height: 48,
+                        wrapperStyle: { fontSize: '14px', fontWeight: '600' },
+                      })
+                    )
+                  )}
                 </div>
               </GlassCard>
             </motion.div>
@@ -736,7 +752,7 @@ function PaymentsPageContent() {
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
               <GlassCard variant="premium" className="p-8 h-full border-2 border-gray-100 shadow-xl hover:shadow-2xl transition-all duration-500">
                 <div className="mb-8 flex items-center justify-between">
@@ -757,48 +773,48 @@ function PaymentsPageContent() {
                 </div>
                 <div className="h-[340px] relative">
                   <div className="absolute inset-0 bg-gradient-aurora opacity-20 rounded-2xl" />
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={paymentStats.monthlyData}>
-                      <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#E5E7EB" />
-                      <XAxis
-                        dataKey="month"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#6B7280', fontSize: 12, fontWeight: '600' }}
-                        dy={12}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: '#6B7280', fontSize: 12, fontWeight: '600' }}
-                        dx={-10}
-                      />
-                      <Tooltip
-                        formatter={(value) => formatCurrency(Number(value), 'EUR')}
-                        contentStyle={{
+                  {React.createElement(RechartsResponsiveContainer as any, { width: "100%", height: "100%" },
+                    React.createElement(RechartsLineChart as any, { data: paymentStats.monthlyData },
+                      React.createElement(RechartsCartesianGrid as any, { strokeDasharray: "5 5", vertical: false, stroke: "#E5E7EB" }),
+                      React.createElement(RechartsXAxis as any, {
+                        dataKey: "month",
+                        axisLine: false,
+                        tickLine: false,
+                        tick: { fill: '#6B7280', fontSize: 12, fontWeight: '600' },
+                        dy: 12,
+                      }),
+                      React.createElement(RechartsYAxis as any, {
+                        axisLine: false,
+                        tickLine: false,
+                        tick: { fill: '#6B7280', fontSize: 12, fontWeight: '600' },
+                        dx: -10,
+                      }),
+                      React.createElement(RechartsTooltip as any, {
+                        formatter: (value: any) => formatCurrency(Number(value), 'EUR'),
+                        contentStyle: {
                           borderRadius: '16px',
                           border: 'none',
                           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                           padding: '12px 16px',
                           fontWeight: '600',
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="amount"
-                        stroke="url(#colorGradient)"
-                        strokeWidth={4}
-                        dot={{ fill: '#34B9EE', r: 5, strokeWidth: 3, stroke: '#fff' }}
-                        activeDot={{ r: 7, strokeWidth: 0, fill: '#274472' }}
-                      />
-                      <defs>
-                        <linearGradient id="colorGradient" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#274472" />
-                          <stop offset="100%" stopColor="#34B9EE" />
-                        </linearGradient>
-                      </defs>
-                    </LineChart>
-                  </ResponsiveContainer>
+                        },
+                      }),
+                      React.createElement(RechartsLine as any, {
+                        type: "monotone",
+                        dataKey: "amount",
+                        stroke: "url(#colorGradient)",
+                        strokeWidth: 4,
+                        dot: { fill: BRAND_COLORS.secondary, r: 5, strokeWidth: 3, stroke: '#fff' },
+                        activeDot: { r: 7, strokeWidth: 0, fill: BRAND_COLORS.primary },
+                      }),
+                      React.createElement('defs' as any, {},
+                        React.createElement('linearGradient' as any, { id: "colorGradient", x1: "0", y1: "0", x2: "1", y2: "0" },
+                          React.createElement('stop' as any, { offset: "0%", stopColor: BRAND_COLORS.primary }),
+                          React.createElement('stop' as any, { offset: "100%", stopColor: BRAND_COLORS.secondary })
+                        )
+                      )
+                    )
+                  )}
                 </div>
               </GlassCard>
             </motion.div>
@@ -906,7 +922,7 @@ function PaymentsPageContent() {
                                     initial={{ opacity: 0, scale: 0.95, y: 12 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: -12 }}
-                                    transition={{ delay: index * 0.02, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                                    transition={{ delay: index * 0.02, duration: 0.35, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                                   >
                                     <Link href={`/dashboard/payments/${invoice.id}`}>
                                       <motion.div whileHover={{ y: -8, scale: 1.02 }} transition={{ duration: 0.3 }}>
@@ -1195,38 +1211,38 @@ function PaymentsPageContent() {
                           </div>
                         </div>
                         <div className="h-[280px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={categoryData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={90}
-                                paddingAngle={4}
-                                dataKey="value"
-                              >
-                                {categoryData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                              <Tooltip
-                                formatter={(value) => formatCurrency(Number(value), 'EUR')}
-                                contentStyle={{
+                          {React.createElement(RechartsResponsiveContainer as any, { width: "100%", height: "100%" },
+                            React.createElement(RechartsPieChart as any, {},
+                              React.createElement(RechartsPie as any, {
+                                data: categoryData,
+                                cx: "50%",
+                                cy: "50%",
+                                innerRadius: 60,
+                                outerRadius: 90,
+                                paddingAngle: 4,
+                                dataKey: "value",
+                              },
+                                categoryData.map((entry, index) => (
+                                  React.createElement(RechartsCell as any, { key: `cell-${index}`, fill: entry.color })
+                                ))
+                              ),
+                              React.createElement(RechartsTooltip as any, {
+                                formatter: (value: any) => formatCurrency(Number(value), 'EUR'),
+                                contentStyle: {
                                   borderRadius: '12px',
                                   border: 'none',
                                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                                   padding: '10px 14px',
                                   fontWeight: '600',
-                                }}
-                              />
-                              <Legend
-                                verticalAlign="bottom"
-                                height={36}
-                                wrapperStyle={{ fontSize: '12px', fontWeight: '500' }}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
+                                },
+                              }),
+                              React.createElement(RechartsLegend as any, {
+                                verticalAlign: "bottom",
+                                height: 36,
+                                wrapperStyle: { fontSize: '12px', fontWeight: '500' },
+                              })
+                            )
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -1249,45 +1265,45 @@ function PaymentsPageContent() {
                           </div>
                         </div>
                         <div className="h-[280px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={monthlyChargesData}>
-                              <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#E5E7EB" />
-                              <XAxis
-                                dataKey="month"
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#6B7280', fontSize: 11, fontWeight: '500' }}
-                                dy={8}
-                              />
-                              <YAxis
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: '#6B7280', fontSize: 11, fontWeight: '500' }}
-                                dx={-8}
-                              />
-                              <Tooltip
-                                formatter={(value) => formatCurrency(Number(value), 'EUR')}
-                                contentStyle={{
+                          {React.createElement(RechartsResponsiveContainer as any, { width: "100%", height: "100%" },
+                            React.createElement(RechartsBarChart as any, { data: monthlyChargesData },
+                              React.createElement(RechartsCartesianGrid as any, { strokeDasharray: "5 5", vertical: false, stroke: "#E5E7EB" }),
+                              React.createElement(RechartsXAxis as any, {
+                                dataKey: "month",
+                                axisLine: false,
+                                tickLine: false,
+                                tick: { fill: '#6B7280', fontSize: 11, fontWeight: '500' },
+                                dy: 8,
+                              }),
+                              React.createElement(RechartsYAxis as any, {
+                                axisLine: false,
+                                tickLine: false,
+                                tick: { fill: '#6B7280', fontSize: 11, fontWeight: '500' },
+                                dx: -8,
+                              }),
+                              React.createElement(RechartsTooltip as any, {
+                                formatter: (value: any) => formatCurrency(Number(value), 'EUR'),
+                                contentStyle: {
                                   borderRadius: '12px',
                                   border: 'none',
                                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                                   padding: '10px 14px',
                                   fontWeight: '600',
-                                }}
-                              />
-                              <Bar
-                                dataKey="amount"
-                                fill="url(#chargeGradient)"
-                                radius={[6, 6, 0, 0]}
-                              />
-                              <defs>
-                                <linearGradient id="chargeGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#EF4444" />
-                                  <stop offset="100%" stopColor="#F97316" />
-                                </linearGradient>
-                              </defs>
-                            </BarChart>
-                          </ResponsiveContainer>
+                                },
+                              }),
+                              React.createElement(RechartsBar as any, {
+                                dataKey: "amount",
+                                fill: "url(#chargeGradient)",
+                                radius: [6, 6, 0, 0],
+                              }),
+                              React.createElement('defs' as any, {},
+                                React.createElement('linearGradient' as any, { id: "chargeGradient", x1: "0", y1: "0", x2: "0", y2: "1" },
+                                  React.createElement('stop' as any, { offset: "0%", stopColor: "#EF4444" }),
+                                  React.createElement('stop' as any, { offset: "100%", stopColor: "#F97316" })
+                                )
+                              )
+                            )
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -1304,7 +1320,7 @@ function PaymentsPageContent() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 className="overflow-hidden"
               >
                 <div className="pt-6 border-t border-gray-200 space-y-4">

@@ -4,6 +4,7 @@
  */
 
 import QRCode from 'qrcode'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export interface QRCodeOptions {
   size?: number
@@ -39,7 +40,7 @@ export async function generateQRCodeBase64(
 
     return qrCodeDataUrl
   } catch (error) {
-    console.error('Erreur lors de la génération du QR code:', error)
+    logger.error('Erreur lors de la génération du QR code:', error)
     throw new Error('Impossible de générer le QR code')
   }
 }
@@ -69,7 +70,7 @@ export async function generateQRCodeSVG(
 
     return qrCodeSVG
   } catch (error) {
-    console.error('Erreur lors de la génération du QR code SVG:', error)
+    logger.error('Erreur lors de la génération du QR code SVG', sanitizeError(error))
     throw new Error('Impossible de générer le QR code SVG')
   }
 }

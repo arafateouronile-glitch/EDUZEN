@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { User, Calendar, ClipboardList, CreditCard, FileText, TrendingUp, AlertCircle } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { StudentWithRelations } from '@/lib/types/query-types'
 
 export default function PortalDashboardPage() {
@@ -249,9 +250,11 @@ export default function PortalDashboardPage() {
                 >
                   <div className="flex items-center space-x-4">
                     {child.photo_url ? (
-                      <img
+                      <Image
                         src={child.photo_url}
                         alt={`${child.first_name} ${child.last_name}`}
+                        width={64}
+                        height={64}
                         className="h-16 w-16 rounded-full object-cover"
                       />
                     ) : (

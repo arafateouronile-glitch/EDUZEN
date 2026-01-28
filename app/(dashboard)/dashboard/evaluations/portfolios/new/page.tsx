@@ -15,8 +15,10 @@ import {
   CheckCircle2, User, BookOpen
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function NewPortfolioPage() {
   const router = useRouter()
@@ -46,7 +48,7 @@ export default function NewPortfolioPage() {
         .order('name')
       
       if (error) {
-        console.log('Table non trouvée:', error)
+        logger.debug('Table non trouvée', sanitizeError(error))
         return []
       }
       return data || []
@@ -54,21 +56,53 @@ export default function NewPortfolioPage() {
     enabled: !!user?.organization_id,
   })
 
+  const isTeacher = user?.role === 'teacher'
+
+  // Récupérer les sessions assignées à l'enseignant (pour les enseignants)
+  const { data: teacherSessionIds } = useQuery({
+    queryKey: ['teacher-session-ids-portfolio-new', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const { data, error } = await supabase
+        .from('session_teachers')
+        .select('session_id')
+        .eq('teacher_id', user.id)
+      if (error) {
+        logger.error('Erreur récupération sessions enseignant', sanitizeError(error))
+        return []
+      }
+      return data?.map((st: any) => st.session_id) || []
+    },
+    enabled: !!user?.id && isTeacher,
+  })
+
   // Récupérer les sessions
+  // Pour les enseignants, filtrer uniquement par leurs sessions assignées
   const { data: sessions } = useQuery({
-    queryKey: ['sessions-for-portfolio', user?.organization_id],
+    queryKey: ['sessions-for-portfolio', user?.organization_id, isTeacher, teacherSessionIds],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('sessions')
         .select('id, name, start_date, end_date, formations!inner(id, name, organization_id)')
         .eq('formations.organization_id', user.organization_id)
         .in('status', ['planned', 'ongoing', 'active', 'in_progress'])
         .order('start_date', { ascending: false })
+      
+      // Filtrer par les sessions de l'enseignant si applicable
+      if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
+        query = query.in('id', teacherSessionIds)
+      } else if (isTeacher) {
+        // Si l'enseignant n'a pas de sessions, retourner un tableau vide
+        return []
+      }
+      
+      const { data, error } = await query
       if (error) return []
       return data || []
     },
-    enabled: !!user?.organization_id,
+    enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
   })
 
   // Récupérer les apprenants de la session sélectionnée
@@ -85,7 +119,7 @@ export default function NewPortfolioPage() {
         .not('status', 'in', '("cancelled","rejected","dropped")')
       
       if (error) {
-        console.error('Erreur récupération apprenants:', error)
+        logger.error('Erreur récupération apprenants:', error)
         return []
       }
       
@@ -447,9 +481,14 @@ export default function NewPortfolioPage() {
                           : 'border-gray-200 hover:border-gray-300'
                       )}
                     >
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
+                      <div className="relative w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
                         {student.photo_url ? (
-                          <img src={student.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                          <Image
+                            src={student.photo_url}
+                            alt={`${student.first_name} ${student.last_name}`}
+                            fill
+                            className="rounded-full object-cover"
+                          />
                         ) : (
                           `${student.first_name?.[0]}${student.last_name?.[0]}`
                         )}

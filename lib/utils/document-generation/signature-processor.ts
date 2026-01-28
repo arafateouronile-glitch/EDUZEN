@@ -44,7 +44,7 @@ async function getSignatureService() {
       }
     } catch (error) {
       // Si l'import échoue (par exemple côté client), retourner un service vide
-      console.warn('Impossible d\'importer createClient côté serveur:', error)
+      logger.warn('Impossible d\'importer createClient côté serveur', { error })
       return {
         getSignaturesByDocument: async () => [],
       }

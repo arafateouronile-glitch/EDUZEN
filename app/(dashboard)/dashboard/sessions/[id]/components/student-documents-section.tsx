@@ -1,11 +1,13 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FileText, Download, Plus, Mail, Award } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { documentService } from '@/lib/services/document.service'
+import { DocumentService } from '@/lib/services/document.service'
+import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 import type { DocumentWithRelations } from '@/lib/types/query-types'
 
@@ -19,6 +21,13 @@ export function StudentDocumentsSection({
   organizationId,
 }: StudentDocumentsSectionProps) {
   const { addToast } = useToast()
+  
+  // Créer une instance du service avec le client côté client
+  const documentService = useMemo(() => {
+    const supabase = createClient()
+    return new DocumentService(supabase)
+  }, [])
+  
   const { data: documents, isLoading } = useQuery<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>({
     queryKey: ['student-documents', studentId, organizationId],
     queryFn: async () => {

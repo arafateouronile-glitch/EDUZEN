@@ -255,22 +255,23 @@ SelectValue.displayName = 'SelectValue'
 
 interface SelectContentProps {
   children: React.ReactNode
+  className?: string
 }
 
 export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ children }, ref) => {
+  ({ children, className }, ref) => {
     const context = React.useContext(SelectContext)
     const open = context?.open ?? false
-    
+
     if (!open) return null
-    
+
     // S'assurer que children est toujours défini et peut être rendu
     if (!children) return null
-    
+
     return (
-      <div 
-        ref={ref} 
-        className="absolute top-full left-0 z-50 mt-1 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+      <div
+        ref={ref}
+        className={cn("absolute top-full left-0 z-50 mt-1 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md", className)}
       >
         <div className="p-1">{children}</div>
       </div>

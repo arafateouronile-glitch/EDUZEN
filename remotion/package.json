@@ -1,0 +1,25 @@
+{
+  "name": "eduzen-remotion",
+  "version": "1.0.0",
+  "description": "Vidéo de présentation motion design EduZen",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render EduZenVideo out/eduzen-video-16x9.mp4",
+    "build:square": "remotion render EduZenVideoSquare out/eduzen-video-square.mp4",
+    "build:vertical": "remotion render EduZenVideoVertical out/eduzen-video-vertical.mp4",
+    "build:all": "npm run build && npm run build:square && npm run build:vertical",
+    "build:gif": "remotion render EduZenVideoVertical --codec=gif out/eduzen-preview.gif",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.0"
+  }
+}

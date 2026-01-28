@@ -6,7 +6,8 @@ export async function GET(
 ) {
   const { id } = await params
   
-  // TODO: Récupérer un template de document spécifique via l'API v1
+  // NOTE: API v1 non implémentée - Fonctionnalité prévue pour une future version
+  // Utiliser DocumentTemplateService.getById() une fois l'API v1 complètement implémentée
   
   return NextResponse.json(
     { error: `Document template '${id}' not found or API v1 not implemented` },
@@ -20,7 +21,7 @@ export async function PUT(
 ) {
   const { id } = await params
   
-  // TODO: Mettre à jour un template de document via l'API v1
+  // NOTE: API v1 non implémentée - Fonctionnalité prévue pour une future version
   
   return NextResponse.json(
     { error: 'Document template update via API v1 not yet implemented' },
@@ -34,7 +35,7 @@ export async function DELETE(
 ) {
   const { id } = await params
   
-  // TODO: Supprimer un template de document via l'API v1
+  // NOTE: API v1 non implémentée - Fonctionnalité prévue pour une future version
   
   return NextResponse.json(
     { error: 'Document template deletion via API v1 not yet implemented' },

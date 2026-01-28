@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/avatar'
 import { MobileSidebar } from './mobile-sidebar'
-import { ThemeToggle } from './theme-toggle'
 import { GlobalSearch } from '@/components/search/global-search'
 import { FeedbackButton } from '@/components/feedback/feedback-button'
 import { NotificationBadge } from '@/components/notifications/notification-badge'
@@ -56,110 +55,120 @@ export function Header({ onMenuClick }: HeaderProps) {
       >
         <div className="flex items-center justify-between gap-4">
           {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMobileSidebarOpen(true)}
-            className="md:hidden h-10 w-10 rounded-xl"
+          <button
+            onClick={() => {
+              setIsMobileSidebarOpen(true)
+            }}
+            className="md:hidden h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center hover:bg-gray-100 transition-colors"
+            type="button"
+            aria-label="Ouvrir le menu"
           >
             <Menu className="h-5 w-5" />
-          </Button>
+          </button>
 
           {/* Search Premium - Recherche globale */}
           <GlobalSearch />
 
-                   {/* Right Section */}
-                   <div className="flex items-center space-x-2 md:space-x-4">
-                     {/* Feedback Button */}
-                     <FeedbackButton variant="ghost" size="icon" className="hidden md:flex" />
+          {/* Right Section */}
+          <div className="flex items-center space-x-2 md:space-x-4">
+            {/* Feedback Button */}
+            <FeedbackButton variant="ghost" size="icon" className="hidden md:flex" />
 
-                     {/* Language Switcher */}
-                     <LanguageSwitcher />
+            {/* Language Switcher */}
+            <LanguageSwitcher />
 
-                     {/* Theme Toggle */}
-                     <ThemeToggle />
+            {/* Notifications - Nouveau système de notifications */}
+            <NotificationBadge onClick={() => setIsNotificationCenterOpen(true)} />
 
-                     {/* Notifications - Nouveau système de notifications */}
-                     <NotificationBadge onClick={() => setIsNotificationCenterOpen(true)} />
-
-          {/* User Menu Premium */}
-          <div className="relative" ref={userMenuRef}>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center space-x-3 px-3 py-2 rounded-xl hover:bg-bg-gray-100 transition-colors duration-200 min-touch-target touch-manipulation group"
-            >
-              <div className="flex items-center space-x-3">
-                <Avatar
-                  fallback={user?.full_name || 'Utilisateur'}
-                  userId={user?.id || 'default'}
-                  size="md"
-                  variant="auto"
-                  className="shadow-lg group-hover:shadow-xl transition-shadow duration-300 rounded-xl border-2 border-bg-gray-200"
-                />
-                <div className="text-right hidden md:block">
-                  <p className="text-sm font-medium text-text-primary">{user?.full_name || 'Utilisateur'}</p>
-                  <p className="text-xs text-text-tertiary">{user?.role || 'Rôle'}</p>
+            {/* User Menu Premium */}
+            <div className="relative" ref={userMenuRef}>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center space-x-3 px-3 py-2 rounded-xl hover:bg-bg-gray-100 transition-colors duration-200 min-touch-target touch-manipulation group"
+                type="button"
+              >
+                <div className="flex items-center space-x-3">
+                  <Avatar
+                    fallback={user?.full_name || 'Utilisateur'}
+                    userId={user?.id || 'default'}
+                    size="md"
+                    variant="auto"
+                    className="shadow-lg group-hover:shadow-xl transition-shadow duration-300 rounded-xl border-2 border-bg-gray-200"
+                  />
+                  <div className="text-right hidden md:block">
+                    <p className="text-sm font-medium text-text-primary">{user?.full_name || 'Utilisateur'}</p>
+                    <p className="text-xs text-text-tertiary">{user?.role || 'Rôle'}</p>
+                  </div>
                 </div>
-              </div>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-text-tertiary transition-transform duration-200 hidden md:block",
-                  isUserMenuOpen && "rotate-180"
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-text-tertiary transition-transform duration-200 hidden md:block",
+                    isUserMenuOpen && "rotate-180"
+                  )}
+                />
+              </motion.button>
+
+              {/* Dropdown Menu */}
+              <AnimatePresence>
+                {isUserMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-bg-gray-200 backdrop-blur-md overflow-hidden z-50"
+                  >
+                    {/* User Info */}
+                    <div className="px-4 py-3 bg-gradient-to-r from-brand-blue-ghost to-transparent border-b border-bg-gray-200">
+                      <p className="text-sm font-semibold text-text-primary">{user?.full_name || 'Utilisateur'}</p>
+                      <p className="text-xs text-text-tertiary mt-0.5">{user?.email || ''}</p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-2">
+                      <motion.button
+                        whileHover={{ x: 4 }}
+                        className="w-full flex items-center px-4 py-2.5 text-sm text-text-secondary hover:bg-bg-gray-100 transition-colors duration-200"
+                        type="button"
+                      >
+                        <User className="h-4 w-4 mr-3 text-text-tertiary" />
+                        Mon profil
+                      </motion.button>
+                      {/* Masquer les paramètres pour les enseignants */}
+                      {user?.role !== 'teacher' && (
+                        <motion.button
+                          whileHover={{ x: 4 }}
+                          onClick={() => {
+                            window.location.href = '/dashboard/settings'
+                            setIsUserMenuOpen(false)
+                          }}
+                          className="w-full flex items-center px-4 py-2.5 text-sm text-text-secondary hover:bg-bg-gray-100 transition-colors duration-200"
+                          type="button"
+                        >
+                          <Settings className="h-4 w-4 mr-3 text-text-tertiary" />
+                          Paramètres
+                        </motion.button>
+                      )}
+                      <div className="border-t border-bg-gray-200 my-2" />
+                      <motion.button
+                        whileHover={{ x: 4 }}
+                        onClick={() => logout()}
+                        className="w-full flex items-center px-4 py-2.5 text-sm text-danger-primary hover:bg-danger-bg transition-colors duration-200"
+                        type="button"
+                      >
+                        <LogOut className="h-4 w-4 mr-3" />
+                        Déconnexion
+                      </motion.button>
+                    </div>
+                  </motion.div>
                 )}
-              />
-            </motion.button>
-
-            {/* Dropdown Menu */}
-            <AnimatePresence>
-              {isUserMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-bg-gray-200 backdrop-blur-md overflow-hidden z-50"
-                >
-                  {/* User Info */}
-                  <div className="px-4 py-3 bg-gradient-to-r from-brand-blue-ghost to-transparent border-b border-bg-gray-200">
-                    <p className="text-sm font-semibold text-text-primary">{user?.full_name || 'Utilisateur'}</p>
-                    <p className="text-xs text-text-tertiary mt-0.5">{user?.email || ''}</p>
-                  </div>
-
-                  {/* Menu Items */}
-                  <div className="py-2">
-                    <motion.button
-                      whileHover={{ x: 4 }}
-                      className="w-full flex items-center px-4 py-2.5 text-sm text-text-secondary hover:bg-bg-gray-100 transition-colors duration-200"
-                    >
-                      <User className="h-4 w-4 mr-3 text-text-tertiary" />
-                      Mon profil
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ x: 4 }}
-                      className="w-full flex items-center px-4 py-2.5 text-sm text-text-secondary hover:bg-bg-gray-100 transition-colors duration-200"
-                    >
-                      <Settings className="h-4 w-4 mr-3 text-text-tertiary" />
-                      Paramètres
-                    </motion.button>
-                    <div className="border-t border-bg-gray-200 my-2" />
-                    <motion.button
-                      whileHover={{ x: 4 }}
-                      onClick={() => logout()}
-                      className="w-full flex items-center px-4 py-2.5 text-sm text-danger-primary hover:bg-danger-bg transition-colors duration-200"
-                    >
-                      <LogOut className="h-4 w-4 mr-3" />
-                      Déconnexion
-                    </motion.button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              </AnimatePresence>
+            </div>
           </div>
         </div>
-      </div>
-    </motion.header>
+      </motion.header>
     </React.Fragment>
   )
 }

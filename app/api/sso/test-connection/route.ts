@@ -4,7 +4,8 @@ export async function POST(request: Request) {
   try {
     const config = await request.json()
     
-    // TODO: Tester la connexion SSO avec la configuration fournie
+    // NOTE: Fonctionnalité prévue - Tester la connexion SSO
+    // Nécessite: Implémentation du flow OAuth2 pour chaque provider (Google, Microsoft, etc.)
     
     return NextResponse.json({
       success: false,

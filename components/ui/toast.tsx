@@ -5,6 +5,7 @@ import { createContext, useContext, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { X, CheckCircle2, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -140,7 +141,7 @@ const ToastItem = React.forwardRef<
 
   // Protection contre les toasts invalides - vérification très tôt
   if (!toast || typeof toast !== 'object') {
-    console.error('Toast is undefined or invalid!', toast)
+    logger.error('Toast is undefined or invalid!', toast)
     return null
   }
 
@@ -185,7 +186,7 @@ const ToastItem = React.forwardRef<
   
   // Vérification finale - si même ça échoue, retourner null
   if (!finalColor || typeof finalColor !== 'object' || !('bg' in finalColor)) {
-    console.error('CRITICAL: Toast color system completely broken!', { finalType, toast })
+    logger.error('CRITICAL: Toast color system completely broken!', { finalType, toast })
     return null
   }
 

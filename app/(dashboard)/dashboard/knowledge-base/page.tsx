@@ -28,9 +28,9 @@ export default function KnowledgeBasePage() {
 
   // Récupérer les catégories FAQ
   const { data: faqCategories } = useQuery({
-    queryKey: ['faq-categories', user?.organization_id],
-    queryFn: () => knowledgeBaseService.getFAQCategories(user?.organization_id || ''),
-    enabled: !!user?.organization_id,
+    queryKey: ['faq-categories'],
+    queryFn: () => knowledgeBaseService.getCategories(),
+    enabled: true,
   })
 
   // Récupérer les FAQ
@@ -100,8 +100,8 @@ export default function KnowledgeBasePage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="mb-8">
+    <div className="w-full p-4">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold mb-2">Base de connaissances</h1>
         <p className="text-muted-foreground">
           Trouvez des réponses rapides et des guides détaillés
@@ -125,7 +125,7 @@ export default function KnowledgeBasePage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
+        <TabsList className="mb-4">
           <TabsTrigger value="faq">
             <HelpCircle className="h-4 w-4 mr-2" />
             FAQ
@@ -149,10 +149,10 @@ export default function KnowledgeBasePage() {
                 {featuredFAQs.map((faq: any) => (
                   <Card key={faq.id} className="hover:shadow-lg transition-shadow">
                     <Link href={`/dashboard/knowledge-base/faq/${faq.id}`}>
-                      <CardHeader>
+                      <CardHeader className="pb-3 pt-4">
                         <CardTitle className="text-lg">{faq.question}</CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="pt-0 pb-4">
                         <div className="text-sm text-muted-foreground line-clamp-2">
                           <ReactMarkdown>{faq.answer}</ReactMarkdown>
                         </div>
@@ -185,7 +185,7 @@ export default function KnowledgeBasePage() {
                   return (
                     <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                       <Link href={`/dashboard/knowledge-base/faq/category/${category.slug}`}>
-                        <CardHeader>
+                        <CardHeader className="pb-3 pt-4">
                           <CardTitle className="flex items-center gap-2">
                             {category.icon && <span className="text-2xl">{category.icon}</span>}
                             {category.name}
@@ -194,7 +194,7 @@ export default function KnowledgeBasePage() {
                             <p className="text-sm text-muted-foreground">{category.description}</p>
                           )}
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-0 pb-4">
                           <p className="text-sm text-muted-foreground">
                             {categoryFAQs.length} question{categoryFAQs.length > 1 ? 's' : ''}
                           </p>
@@ -247,12 +247,12 @@ export default function KnowledgeBasePage() {
         <TabsContent value="guides">
           {/* Guides en vedette */}
           {featuredGuides && featuredGuides.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <div className="mb-4">
+              <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
                 <Star className="h-6 w-6 text-yellow-500" />
                 Guides en vedette
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {featuredGuides.map((guide: any) => (
                   <Card key={guide.id} className="hover:shadow-lg transition-shadow">
                     <Link href={`/dashboard/knowledge-base/guides/${guide.slug}`}>
@@ -287,18 +287,18 @@ export default function KnowledgeBasePage() {
           {/* Tous les guides */}
           {guides && guides.length > 0 ? (
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Tous les guides</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <h2 className="text-2xl font-semibold mb-3">Tous les guides</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {guides.map((guide: any) => (
                   <Card key={guide.id} className="hover:shadow-lg transition-shadow">
                     <Link href={`/dashboard/knowledge-base/guides/${guide.slug}`}>
-                      <CardHeader>
+                      <CardHeader className="pb-3 pt-4">
                         <CardTitle>{guide.title}</CardTitle>
                         {guide.description && (
                           <p className="text-sm text-muted-foreground">{guide.description}</p>
                         )}
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="pt-0 pb-4">
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <span
@@ -326,7 +326,7 @@ export default function KnowledgeBasePage() {
             </div>
           ) : (
             <Card>
-              <CardContent className="pt-6 text-center text-muted-foreground">
+              <CardContent className="pt-4 pb-4 text-center text-muted-foreground">
                 Aucun guide disponible
               </CardContent>
             </Card>

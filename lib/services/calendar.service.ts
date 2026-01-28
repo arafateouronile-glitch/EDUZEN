@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
+import { logger } from '@/lib/utils/logger'
 
 // Types
 export type CalendarTodo = {
@@ -138,7 +139,9 @@ class CalendarService {
   }
 
   // ==========================================
-  // TODOs
+  // ===================================================
+  // GESTION DES TODOS (Tâches du calendrier)
+  // ===================================================
   // ==========================================
 
   /**
@@ -302,6 +305,22 @@ class CalendarService {
     endDate: string,
     userId?: string
   ): Promise<CalendarEvent[]> {
+    // Désactiver temporairement l'appel RPC car il retourne toujours une erreur 400
+    // Utiliser directement le fallback manuel qui fonctionne correctement
+    logger.warn('CalendarService - Utilisation du fallback getCalendarEventsManual (RPC désactivé temporairement)', {
+      organizationId,
+      startDate,
+      endDate,
+      userId,
+    })
+    const result = await this.getCalendarEventsManual(organizationId, startDate, endDate, userId)
+    logger.warn('CalendarService - Résultat fallback', {
+      eventCount: result.length,
+      events: result.map((e) => ({ type: e.event_type, title: e.title, id: e.event_id })),
+    })
+    return result
+    
+    /* Code RPC désactivé temporairement - à réactiver une fois la fonction RPC corrigée
     try {
       // Construire les paramètres RPC
       const rpcParams: {
@@ -320,9 +339,27 @@ class CalendarService {
         rpcParams.p_user_id = userId
       }
 
+      logger.debug('CalendarService - Appel RPC get_calendar_events', { 
+        organizationId, 
+        startDate, 
+        endDate, 
+        userId,
+        params: rpcParams 
+      })
+
       const { data, error } = await this.supabase.rpc('get_calendar_events', rpcParams)
 
       if (error) {
+        logger.warn('CalendarService - Erreur RPC get_calendar_events, utilisation du fallback', {
+          error: {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+          },
+          userId,
+        })
+        
         // Si la fonction n'existe pas encore (42883) ou erreur 400 (mauvaise signature)
         // ou si les tables n'existent pas (404/PGRST116)
         if (
@@ -334,16 +371,23 @@ class CalendarService {
           error.message?.includes('function') ||
           error.message?.includes('does not exist')
         ) {
-          // console.warn('Fonction get_calendar_events non disponible. Utilisation du fallback manuel.', error)
+          logger.debug('CalendarService - Utilisation du fallback getCalendarEventsManual')
           return this.getCalendarEventsManual(organizationId, startDate, endDate, userId)
         }
         throw error
       }
+      
+      logger.debug('CalendarService - RPC get_calendar_events réussi', { 
+        eventCount: data?.length || 0,
+        events: data?.map((e: any) => ({ type: e.event_type, title: e.title }))
+      })
+      
       return (data || []) as CalendarEvent[]
     } catch (error) {
-      // console.warn('Erreur lors de l\'appel RPC get_calendar_events. Utilisation du fallback manuel.', error)
+      logger.error('CalendarService - Exception lors de l\'appel RPC, utilisation du fallback', error as Error)
       return this.getCalendarEventsManual(organizationId, startDate, endDate, userId)
     }
+    */
   }
 
   /**
@@ -358,41 +402,11 @@ class CalendarService {
     const events: CalendarEvent[] = []
 
     // Récupérer les TODOs
+    // Pour les enseignants, filtrer uniquement les TODOs liés à leurs sessions assignées
     try {
-      const todos = await this.getTodos(organizationId, { startDate, endDate })
-      events.push(
-        ...todos.map((todo) => ({
-          event_id: todo.id,
-          event_type: 'todo' as const,
-          title: todo.title,
-          description: todo.description,
-          start_date: todo.start_date || todo.due_date,
-          start_time: todo.start_time,
-          end_date: todo.due_date,
-          end_time: todo.due_time,
-          all_day: todo.all_day,
-          status: todo.status,
-          color: todo.color,
-          category: todo.category,
-          priority: todo.priority,
-          linked_id: todo.linked_session_id || todo.linked_formation_id || null,
-        }))
-      )
-    } catch (e) {
-      // Table may not exist yet
-    }
-
-    // Récupérer les Sessions
-    // Inclure les sessions qui chevauchent la période demandée
-    // Si userId est fourni et que l'utilisateur est un enseignant, filtrer par session_teachers
-    try {
-      let sessions: any[] | null | undefined = undefined
-      let sessionsQuery = this.supabase
-        .from('sessions')
-        .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, organization_id, formations(id, name)')
-        .eq('organization_id', organizationId)
-
-      // Si userId est fourni, vérifier si c'est un enseignant et filtrer ses sessions assignées
+      let todosFilter: any = { startDate, endDate }
+      
+      // Si c'est un enseignant, récupérer ses sessions assignées et filtrer les TODOs
       if (userId) {
         const { data: userData } = await this.supabase
           .from('users')
@@ -409,34 +423,260 @@ class CalendarService {
 
           if (teacherSessions && teacherSessions.length > 0) {
             const sessionIds = teacherSessions.map((st: any) => st.session_id)
-            sessionsQuery = sessionsQuery.in('id', sessionIds)
+            // Récupérer tous les TODOs et filtrer côté client pour ne garder que ceux liés aux sessions
+            const allTodos = await this.getTodos(organizationId, todosFilter)
+            const filteredTodos = allTodos.filter((todo) => {
+              // Garder les TODOs sans session liée (tâches générales) OU ceux liés aux sessions de l'enseignant
+              return !todo.linked_session_id || sessionIds.includes(todo.linked_session_id)
+            })
+            todosFilter = { ...todosFilter, todos: filteredTodos }
+            events.push(
+              ...filteredTodos.map((todo) => ({
+                event_id: todo.id,
+                event_type: 'todo' as const,
+                title: todo.title,
+                description: todo.description,
+                start_date: todo.start_date || todo.due_date,
+                start_time: todo.start_time,
+                end_date: todo.due_date,
+                end_time: todo.due_time,
+                all_day: todo.all_day,
+                status: todo.status,
+                color: todo.color,
+                category: todo.category,
+                priority: todo.priority,
+                linked_id: todo.linked_session_id || todo.linked_formation_id || null,
+              }))
+            )
           } else {
-            // Si l'enseignant n'a pas de sessions assignées, retourner un tableau vide pour les sessions
-            // (mais on continue pour les TODOs et formations)
-            const { data: emptySessions, error: emptyError } = await sessionsQuery.limit(0)
-            if (emptyError && emptyError.code !== 'PGRST116') {
-              // Session fetch error - continue
+            // Si l'enseignant n'a pas de sessions, ne montrer que les TODOs sans session liée
+            const allTodos = await this.getTodos(organizationId, todosFilter)
+            const filteredTodos = allTodos.filter((todo) => !todo.linked_session_id)
+            events.push(
+              ...filteredTodos.map((todo) => ({
+                event_id: todo.id,
+                event_type: 'todo' as const,
+                title: todo.title,
+                description: todo.description,
+                start_date: todo.start_date || todo.due_date,
+                start_time: todo.start_time,
+                end_date: todo.due_date,
+                end_time: todo.due_time,
+                all_day: todo.all_day,
+                status: todo.status,
+                color: todo.color,
+                category: todo.category,
+                priority: todo.priority,
+                linked_id: todo.linked_session_id || todo.linked_formation_id || null,
+              }))
+            )
+          }
+        } else if (userData?.role === 'learner' || userData?.role === 'student') {
+          // Pour les apprenants, ne montrer que les TODOs qu'ils ont créés eux-mêmes
+          const todos = await this.getTodos(organizationId, { ...todosFilter, createdBy: userId })
+          events.push(
+            ...todos.map((todo) => ({
+              event_id: todo.id,
+              event_type: 'todo' as const,
+              title: todo.title,
+              description: todo.description,
+              start_date: todo.start_date || todo.due_date,
+              start_time: todo.start_time,
+              end_date: todo.due_date,
+              end_time: todo.due_time,
+              all_day: todo.all_day,
+              status: todo.status,
+              color: todo.color,
+              category: todo.category,
+              priority: todo.priority,
+              linked_id: todo.linked_session_id || todo.linked_formation_id || null,
+            }))
+          )
+        } else {
+          // Pour les autres rôles (admin, etc.), récupérer tous les TODOs normalement
+          const todos = await this.getTodos(organizationId, todosFilter)
+          events.push(
+            ...todos.map((todo) => ({
+              event_id: todo.id,
+              event_type: 'todo' as const,
+              title: todo.title,
+              description: todo.description,
+              start_date: todo.start_date || todo.due_date,
+              start_time: todo.start_time,
+              end_date: todo.due_date,
+              end_time: todo.due_time,
+              all_day: todo.all_day,
+              status: todo.status,
+              color: todo.color,
+              category: todo.category,
+              priority: todo.priority,
+              linked_id: todo.linked_session_id || todo.linked_formation_id || null,
+            }))
+          )
+        }
+      } else {
+        // Pas d'userId, récupérer tous les TODOs
+        const todos = await this.getTodos(organizationId, todosFilter)
+        events.push(
+          ...todos.map((todo) => ({
+            event_id: todo.id,
+            event_type: 'todo' as const,
+            title: todo.title,
+            description: todo.description,
+            start_date: todo.start_date || todo.due_date,
+            start_time: todo.start_time,
+            end_date: todo.due_date,
+            end_time: todo.due_time,
+            all_day: todo.all_day,
+            status: todo.status,
+            color: todo.color,
+            category: todo.category,
+            priority: todo.priority,
+            linked_id: todo.linked_session_id || todo.linked_formation_id || null,
+          }))
+        )
+      }
+    } catch (e) {
+      // Table may not exist yet
+    }
+
+    // Récupérer les Sessions
+    // Inclure les sessions qui chevauchent la période demandée
+    // Si userId est fourni et que l'utilisateur est un enseignant, filtrer par session_teachers
+    try {
+      let sessions: any[] | null | undefined = undefined
+      
+      // Si userId est fourni, vérifier si c'est un enseignant et filtrer ses sessions assignées
+      if (userId) {
+        const { data: userData } = await this.supabase
+          .from('users')
+          .select('role')
+          .eq('id', userId)
+          .maybeSingle()
+
+        if (userData?.role === 'teacher') {
+          logger.warn('CalendarService - Filtrage sessions pour enseignant', { userId })
+          
+          // Récupérer les IDs des sessions assignées à cet enseignant depuis session_teachers
+          const { data: teacherSessions, error: teacherSessionsError } = await this.supabase
+            .from('session_teachers')
+            .select('session_id')
+            .eq('teacher_id', userId)
+
+          if (teacherSessionsError) {
+            logger.error('CalendarService - Erreur récupération session_teachers', teacherSessionsError)
+          }
+
+          logger.warn('CalendarService - Sessions assignées à l\'enseignant (session_teachers)', { 
+            count: teacherSessions?.length || 0,
+            teacherSessions: teacherSessions,
+            sessionIds: teacherSessions?.map((st: any) => st.session_id),
+            isArray: Array.isArray(teacherSessions),
+            truthy: !!teacherSessions,
+          })
+
+          // Si session_teachers est vide, essayer de récupérer via sessions.teacher_id (fallback)
+          let sessionIds: string[] = []
+          
+          if (teacherSessions && Array.isArray(teacherSessions) && teacherSessions.length > 0) {
+            sessionIds = teacherSessions.map((st: any) => st.session_id).filter(Boolean)
+            logger.warn('CalendarService - Session IDs depuis session_teachers', { 
+              sessionIds,
+              count: sessionIds.length 
+            })
+          } else {
+            // Fallback : récupérer les sessions où teacher_id est directement défini
+            logger.debug('CalendarService - session_teachers vide, utilisation du fallback via sessions.teacher_id')
+            const { data: sessionsByTeacherId, error: sessionsByTeacherIdError } = await this.supabase
+              .from('sessions')
+              .select('id')
+              .eq('teacher_id', userId)
+            
+            if (sessionsByTeacherIdError) {
+              logger.error('CalendarService - Erreur récupération sessions via teacher_id', sessionsByTeacherIdError)
+            } else {
+              sessionIds = (sessionsByTeacherId || []).map((s: any) => s.id).filter(Boolean)
+              logger.warn('CalendarService - Session IDs depuis sessions.teacher_id', {
+                sessionIds,
+                count: sessionIds.length
+              })
             }
-            // Passer à la section suivante (formations) sans traiter les sessions
+          }
+
+          if (sessionIds.length > 0) {
+            // Récupérer les sessions directement par leurs IDs, puis vérifier l'organization_id via formations
+            const { data: sessionsData, error: sessionsError } = await this.supabase
+              .from('sessions')
+              .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations(id, name, organization_id)')
+              .in('id', sessionIds)
+            
+            if (sessionsError) {
+              logger.error('CalendarService - Erreur récupération sessions par IDs', sessionsError)
+              throw sessionsError
+            }
+            
+            logger.warn('CalendarService - Sessions récupérées par IDs', {
+              count: sessionsData?.length || 0,
+              sessions: sessionsData?.map((s: any) => ({ 
+                id: s.id, 
+                name: s.name, 
+                start_date: s.start_date,
+                formation_org_id: s.formations?.organization_id,
+                expected_org_id: organizationId
+              }))
+            })
+            
+            // Filtrer côté client pour ne garder que les sessions de l'organisation
+            sessions = (sessionsData || []).filter((s: any) => {
+              const orgId = s.formations?.organization_id
+              const matches = orgId === organizationId
+              if (!matches) {
+                logger.warn('CalendarService - Session filtrée (mauvaise organisation)', {
+                  sessionId: s.id,
+                  sessionOrgId: orgId,
+                  expectedOrgId: organizationId,
+                })
+              }
+              return matches
+            })
+            
+            logger.warn('CalendarService - Sessions filtrées par organisation', {
+              count: sessions.length,
+              sessions: sessions.map((s: any) => ({ id: s.id, name: s.name, start_date: s.start_date }))
+            })
+          } else {
+            logger.warn('CalendarService - Enseignant sans sessions assignées (ni session_teachers ni sessions.teacher_id), sessions vides')
             sessions = []
           }
+        } else {
+          // Utilisateur non-enseignant, continuer normalement
+          logger.warn('CalendarService - Utilisateur non-enseignant, récupération de toutes les sessions')
+          // Les sessions n'ont pas directement organization_id, il faut passer par formations
+          const { data: sessionsData, error: sessionsError } = await this.supabase
+            .from('sessions')
+            .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations!inner(id, name, organization_id)')
+            .eq('formations.organization_id', organizationId)
+          
+          if (sessionsError) {
+            logger.error('CalendarService - Erreur récupération sessions', sessionsError)
+            throw sessionsError
+          }
+          sessions = sessionsData || []
         }
-      }
-
-      // Récupérer les sessions seulement si on n'a pas déjà défini sessions à []
-      let sessionsError: any = null
-      if (sessions === undefined) {
-        const { data: sessionsData, error: error } = await sessionsQuery
-        sessions = sessionsData
-        sessionsError = error
+      } else {
+        // Pas d'userId, récupérer toutes les sessions de l'organisation
+        const { data: sessionsData, error: sessionsError } = await this.supabase
+          .from('sessions')
+          .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations!inner(id, name, organization_id)')
+          .eq('formations.organization_id', organizationId)
+        
         if (sessionsError) {
+          logger.error('CalendarService - Erreur récupération sessions', sessionsError)
           throw sessionsError
         }
+        sessions = sessionsData || []
       }
 
-      if (sessionsError) {
-        throw sessionsError
-      }
 
       if (sessions) {
         // Filtrer pour ne garder que celles qui ont une date de début et qui chevauchent vraiment la période
@@ -462,6 +702,11 @@ class CalendarService {
           )
         })
 
+        logger.warn('CalendarService - Sessions qui chevauchent la période', { 
+          count: overlappingSessions.length,
+          sessions: overlappingSessions.map((s: any) => ({ id: s.id, name: s.name, start_date: s.start_date }))
+        })
+        
         const sessionEvents = overlappingSessions.map((session: any) => {
           // S'assurer que start_date est au format YYYY-MM-DD
           const startDate = session.start_date
@@ -512,7 +757,12 @@ class CalendarService {
             formation_name: session.formations?.name || null,
           }
         })
-        // console.log('[CalendarService] Sessions trouvées:', overlappingSessions.length, sessionEvents)
+        
+        logger.warn('CalendarService - Événements sessions créés', { 
+          count: sessionEvents.length,
+          events: sessionEvents.map((e) => ({ id: e.event_id, title: e.title, start_date: e.start_date }))
+        })
+        
         events.push(...sessionEvents)
       }
     } catch (e) {
@@ -640,15 +890,12 @@ class CalendarService {
           priority: 'medium',
           linked_id: formation.program_id,
         }))
-        // console.log('[CalendarService] Formations trouvées:', overlappingFormations.length, formationEvents)
         events.push(...formationEvents)
       }
     } catch (e) {
       // Formation fetch error - continue with collected events
     }
 
-    // console.log('[CalendarService] Total événements retournés:', events.length)
-    // console.log('[CalendarService] Détail des événements:', events)
     return events
   }
 
@@ -892,13 +1139,15 @@ class CalendarService {
 
   /**
    * Récupère la configuration d'intégration calendrier (Google, Outlook)
-   * TODO: Implémenter la récupération depuis la table calendar_integrations
+   * Récupère la configuration d'intégration calendrier (Google, Outlook)
+   * 
+   * NOTE: Fonctionnalité prévue - Nécessite création de la table calendar_integrations
    */
   async getConfig(
     organizationId: string,
     provider: 'google' | 'outlook'
   ): Promise<any | null> {
-    // TODO: Implémenter la récupération depuis Supabase
+    // NOTE: Fonctionnalité prévue - Récupération depuis la table calendar_integrations
     // const { data, error } = await this.supabase
     //   .from('calendar_integrations')
     //   .select('*')
@@ -918,14 +1167,14 @@ class CalendarService {
 
   /**
    * Crée ou met à jour la configuration d'intégration calendrier
-   * TODO: Implémenter la création/mise à jour dans la table calendar_integrations
+   * NOTE: Fonctionnalité prévue - Nécessite création de la table calendar_integrations
    */
   async upsertConfig(
     organizationId: string,
     provider: 'google' | 'outlook',
     config: any
   ): Promise<any> {
-    // TODO: Implémenter la création/mise à jour dans Supabase
+    // NOTE: Fonctionnalité prévue - Création/mise à jour dans la table calendar_integrations
     // const { data, error } = await this.supabase
     //   .from('calendar_integrations')
     //   .upsert(

@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { useToast } from '@/components/ui/toast'
-import { Plus, Globe, Eye, Edit, Trash2, CheckCircle, XCircle, Mail, ExternalLink, BookOpen, FileText, Users, Sparkles } from 'lucide-react'
+import { Plus, Globe, Eye, Edit, Trash2, CheckCircle, XCircle, Mail, ExternalLink, BookOpen, FileText, Users, Sparkles, Settings } from 'lucide-react'
 import { RoleGuard, FORMATION_MANAGEMENT_ROLES } from '@/components/auth/role-guard'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -129,6 +129,12 @@ function CatalogPageContent() {
               </Button>
             </Link>
           )}
+          <Link href="/dashboard/catalog/settings">
+            <Button variant="outline" className="border-brand-blue/20 hover:bg-brand-blue/5">
+              <Settings className="w-4 h-4 mr-2" />
+              Paramètres
+            </Button>
+          </Link>
           <Button className="bg-brand-blue hover:bg-brand-blue-dark shadow-lg shadow-brand-blue/20">
             <Plus className="w-4 h-4 mr-2" />
             Nouvelle formation

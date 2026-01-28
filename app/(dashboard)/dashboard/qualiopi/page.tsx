@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { qualiopiService, type QualiopiIndicator } from '@/lib/services/qualiopi.service'
@@ -19,9 +19,19 @@ import {
   TrendingUp,
   Plus,
   RefreshCw,
-  Accessibility
+  Accessibility,
+  Link as LinkIcon,
+  Sparkles,
 } from 'lucide-react'
 import Link from 'next/link'
+import { logger, sanitizeError } from '@/lib/utils/logger'
+import dynamic from 'next/dynamic'
+
+// Charger ContextualFAQ de manière lazy pour améliorer les performances
+const ContextualFAQ = dynamic(
+  () => import('@/components/knowledge-base/contextual-faq').then(mod => ({ default: mod.ContextualFAQ })),
+  { ssr: false }
+)
 
 const STATUS_COLORS = {
   not_started: 'bg-gray-100 text-gray-800',
@@ -64,7 +74,7 @@ export default function QualiopiPage() {
           error?.message?.includes('does not exist') ||
           error?.message?.includes('schema cache')
         ) {
-          console.warn('Error fetching qualiopi indicators:', error?.message)
+          logger.warn('Error fetching qualiopi indicators:', error?.message)
           return []
         }
         throw error
@@ -72,6 +82,8 @@ export default function QualiopiPage() {
     },
     enabled: !!user?.organization_id,
     retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes - données considérées fraîches
+    gcTime: 30 * 60 * 1000, // 30 minutes - cache
   })
 
   // Calculer le taux de conformité
@@ -105,6 +117,8 @@ export default function QualiopiPage() {
     },
     enabled: !!user?.organization_id,
     retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes - données considérées fraîches
+    gcTime: 30 * 60 * 1000, // 30 minutes - cache
   })
 
   // Initialiser les indicateurs si nécessaire
@@ -119,7 +133,7 @@ export default function QualiopiPage() {
       })
     },
     onError: (error: any) => {
-      console.error('Error initializing indicators:', error)
+      logger.error('Error initializing indicators:', error)
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -144,7 +158,7 @@ export default function QualiopiPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full p-4">
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-8 w-8 animate-spin text-brand-blue" />
         </div>
@@ -155,9 +169,9 @@ export default function QualiopiPage() {
   // Si aucun indicateur, proposer l'initialisation
   if (indicators.length === 0) {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <div className="w-full p-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3 pt-4">
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-6 w-6" />
               Module Qualiopi
@@ -166,9 +180,9 @@ export default function QualiopiPage() {
               Initialisez les indicateurs Qualiopi pour commencer la gestion de votre certification qualité
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 pb-4">
             <div className="text-center py-8">
-              <p className="text-muted-foreground mb-6">
+              <p className="text-muted-foreground mb-4">
                 Aucun indicateur Qualiopi n'a été configuré pour votre organisation.
               </p>
               <Button onClick={() => initializeIndicators.mutate()} disabled={initializeIndicators.isPending}>
@@ -192,9 +206,9 @@ export default function QualiopiPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <main className="w-full p-4">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <Shield className="h-8 w-8 text-brand-blue" />
           Certification Qualiopi
@@ -204,57 +218,57 @@ export default function QualiopiPage() {
         </p>
       </div>
 
-      {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      {/* Statistiques - Optimisé pour le chargement initial */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4" role="region" aria-label="Statistiques de conformité Qualiopi">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Taux de conformité</p>
-                <p className="text-2xl font-bold">{complianceRate.toFixed(1)}%</p>
+                <p className="text-2xl font-bold" aria-live="polite">{complianceRate.toFixed(1)}%</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
+              <TrendingUp className="h-8 w-8 text-green-500" aria-hidden="true" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Conformes</p>
-                <p className="text-2xl font-bold">{stats.compliant}</p>
+                <p className="text-2xl font-bold" aria-live="polite">{stats.compliant}</p>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
+              <CheckCircle2 className="h-8 w-8 text-green-500" aria-hidden="true" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">En cours</p>
-                <p className="text-2xl font-bold">{stats.inProgress}</p>
+                <p className="text-2xl font-bold" aria-live="polite">{stats.inProgress}</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-500" />
+              <Clock className="h-8 w-8 text-blue-500" aria-hidden="true" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Non conformes</p>
-                <p className="text-2xl font-bold">{stats.nonCompliant}</p>
+                <p className="text-2xl font-bold" aria-live="polite">{stats.nonCompliant}</p>
               </div>
-              <XCircle className="h-8 w-8 text-red-500" />
+              <XCircle className="h-8 w-8 text-red-500" aria-hidden="true" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Section Accessibilité (Critère 8) */}
-      <Card className="mb-8 border-blue-200 bg-blue-50/50">
-        <CardHeader>
+      <Card className="mb-4 border-blue-200 bg-blue-50/50">
+        <CardHeader className="pb-3 pt-4">
           <CardTitle className="flex items-center gap-2">
             <Accessibility className="h-5 w-5 text-blue-600" />
             Critère 8 - Accessibilité Handicap
@@ -263,7 +277,7 @@ export default function QualiopiPage() {
             Gestion de l'accessibilité conforme aux exigences Qualiopi (indicateurs 8.1 et 8.2)
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <p className="text-sm text-muted-foreground mb-2">
@@ -289,7 +303,7 @@ export default function QualiopiPage() {
       </Card>
 
       {/* Navigation par catégories */}
-      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
+      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-4">
         <TabsList>
           <TabsTrigger value="all">
             Tous ({indicators.length})
@@ -306,12 +320,12 @@ export default function QualiopiPage() {
       </Tabs>
 
       {/* Liste des indicateurs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredIndicators.map((indicator) => {
           const StatusIcon = STATUS_ICONS[indicator.status]
           return (
             <Card key={indicator.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
+              <CardHeader className="pb-3 pt-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-lg">{indicator.indicator_code}</CardTitle>
@@ -350,7 +364,19 @@ export default function QualiopiPage() {
       </div>
 
       {/* Actions rapides */}
-      <div className="mt-8 flex gap-4">
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Button asChild className="bg-gradient-to-r from-[#274472] to-[#1a2f4a] hover:from-[#1a2f4a] hover:to-[#0f1a2a] text-white shadow-lg">
+          <Link href="/dashboard/qualiopi/premium">
+            <Sparkles className="h-4 w-4 mr-2" />
+            Dashboard Premium
+          </Link>
+        </Button>
+        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <Link href="/dashboard/qualiopi/auditor-links">
+            <LinkIcon className="h-4 w-4 mr-2" />
+            Liens Auditeur
+          </Link>
+        </Button>
         <Button asChild>
           <Link href="/dashboard/qualiopi/audits">
             <FileText className="h-4 w-4 mr-2" />
@@ -370,6 +396,11 @@ export default function QualiopiPage() {
           </Link>
         </Button>
       </div>
-    </div>
+
+      {/* FAQ Contextuelle */}
+      <Suspense fallback={null}>
+        <ContextualFAQ />
+      </Suspense>
+    </main>
   )
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { syncAllComplianceControls } from '@/lib/integrations/compliance-integrations'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * POST /api/compliance/sync-controls
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       results,
     })
   } catch (error: unknown) {
-    console.error('Error syncing compliance controls:', error)
+    logger.error('Error syncing compliance controls:', error)
     const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }

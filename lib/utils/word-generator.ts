@@ -11,6 +11,7 @@ import { Document, Packer, Paragraph, HeadingLevel, Header, Footer, TextRun, Ali
 // @ts-ignore - html-to-text n'a pas de types TypeScript
 import { convert } from 'html-to-text'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
  * Parse les styles CSS depuis un élément HTML et retourne les propriétés pour TextRun
@@ -272,13 +273,13 @@ async function downloadImage(url: string): Promise<Buffer | null> {
     // Sinon, télécharger depuis l'URL
     const response = await fetch(url)
     if (!response.ok) {
-      console.warn(`Impossible de télécharger l'image depuis ${url}: ${response.statusText}`)
+      logger.warn(`Impossible de télécharger l'image depuis ${url}: ${response.statusText}`)
       return null
     }
     const arrayBuffer = await response.arrayBuffer()
     return Buffer.from(arrayBuffer)
   } catch (error) {
-    console.error(`Erreur lors du téléchargement de l'image ${url}:`, error)
+    logger.error(`Erreur lors du téléchargement de l'image ${url}:`, error)
     return null
   }
 }
@@ -288,11 +289,11 @@ async function downloadImage(url: string): Promise<Buffer | null> {
  */
 async function htmlToParagraphs(html: string, doc?: Document, context?: 'header' | 'content' | 'footer', defaultFontSize?: number): Promise<Paragraph[]> {
   if (!html || html.trim().length === 0) {
-    console.warn('[Word Generator] htmlToParagraphs: HTML vide')
+    logger.warn('[Word Generator] htmlToParagraphs: HTML vide')
     return []
   }
 
-  console.log('[Word Generator] htmlToParagraphs appelé:', {
+  logger.debug('[Word Generator] htmlToParagraphs appelé:', {
     htmlLength: html.length,
     htmlPreview: html.substring(0, 300),
     hasDoc: !!doc,
@@ -341,20 +342,20 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             }
             
             if (!isInTable) {
-              console.log(`[Word Generator] ⏭️ Image ignorée dans header (pas dans un tableau): ${element.getAttribute('src')?.substring(0, 100)}`)
+              logger.debug(`[Word Generator] ⏭️ Image ignorée dans header (pas dans un tableau): ${element.getAttribute('src')?.substring(0, 100)}`)
               return
             }
           }
           
           // Traiter les images
           const src = element.getAttribute('src') || ''
-          console.log(`[Word Generator] Image trouvée: src=${src.substring(0, 100)}, doc=${!!doc}`)
+          logger.debug(`[Word Generator] Image trouvée`, { src: src.substring(0, 100), hasDoc: !!doc })
           if (src && doc) {
             try {
-              console.log(`[Word Generator] Téléchargement de l'image: ${src.substring(0, 100)}`)
+              logger.debug(`[Word Generator] Téléchargement de l'image`, { src: src.substring(0, 100) })
               const imageBuffer = await downloadImage(src)
               if (imageBuffer) {
-                console.log(`[Word Generator] Image téléchargée, taille: ${imageBuffer.length} bytes`)
+                logger.debug(`[Word Generator] Image téléchargée, taille: ${imageBuffer.length} bytes`)
                 // Obtenir les dimensions de l'image depuis les attributs HTML
                 const widthAttr = element.getAttribute('width') || element.getAttribute('style')?.match(/width:\s*(\d+)(px|pt)/i)?.[1]
                 const heightAttr = element.getAttribute('height') || element.getAttribute('style')?.match(/height:\s*(\d+)(px|pt)/i)?.[1]
@@ -408,15 +409,15 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                     spacing: { after: 200 },
                   })
                 )
-                console.log(`[Word Generator] ✅ Image ajoutée avec succès (${imageWidth}x${imageHeight}, align: ${alignment})`)
+                logger.debug(`[Word Generator] ✅ Image ajoutée avec succès (${imageWidth}x${imageHeight}, align: ${alignment})`)
               } else {
-                console.warn(`[Word Generator] Impossible de télécharger l'image: ${src.substring(0, 100)}`)
+                logger.warn(`[Word Generator] Impossible de télécharger l'image`, { src: src.substring(0, 100) })
               }
             } catch (error) {
-              console.error('Erreur lors de l\'ajout de l\'image:', error)
+              logger.error('Erreur lors de l\'ajout de l\'image:', error)
             }
           } else {
-            console.warn(`[Word Generator] Image sans src ou doc manquant: src=${!!src}, doc=${!!doc}`)
+            logger.warn(`[Word Generator] Image sans src ou doc manquant: src=${!!src}, doc=${!!doc}`)
           }
         } else if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3') {
           const text = element.textContent?.trim() || ''
@@ -509,7 +510,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           // Si le div est un encadrement, créer un tableau Word avec une seule cellule
           if (isEncadrement) {
             try {
-              console.log('[Word Generator] 📦 Encadrement détecté:', {
+              logger.debug('[Word Generator] 📦 Encadrement détecté:', {
                 hasBorder: !!hasBorder,
                 hasBackground: !!hasBackground,
                 hasPadding: !!hasPadding,
@@ -530,7 +531,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 // Récupérer aussi les tableaux du div (ils seront ajoutés séparément)
                 const divTables = (tempDivParagraphs as any).__tables || []
                 if (divTables.length > 0) {
-                  console.log(`[Word Generator] 📊 ${divTables.length} tableau(x) trouvé(s) dans l'encadrement`)
+                  logger.debug(`[Word Generator] 📊 ${divTables.length} tableau(x) trouvé(s) dans l'encadrement`)
                   if (!(paragraphs as any).__tables) {
                     (paragraphs as any).__tables = []
                   }
@@ -637,9 +638,9 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 })
               )
               
-              console.log('[Word Generator] ✅ Encadrement créé avec succès,', divContentParagraphs.length, 'paragraphe(s)')
+              logger.debug('[Word Generator] ✅ Encadrement créé avec succès', { paragraphCount: divContentParagraphs.length })
             } catch (error) {
-              console.error('[Word Generator] Erreur lors de la création de l\'encadrement:', error)
+              logger.error('[Word Generator] Erreur lors de la création de l\'encadrement:', error)
               // Fallback : traiter les enfants normalement
               Array.from(element.childNodes).forEach(child => processNode(child))
             }
@@ -652,10 +653,10 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           Array.from(element.childNodes).forEach(child => processNode(child))
         } else if (tagName === 'table') {
           // Pour les tableaux, créer un vrai tableau Word
-          console.log('[Word Generator] 📊 Tableau HTML détecté')
+          logger.debug('[Word Generator] 📊 Tableau HTML détecté')
           try {
             const rows = element.querySelectorAll('tr')
-            console.log('[Word Generator] Nombre de lignes trouvées dans le tableau:', rows.length)
+            logger.debug('[Word Generator] Nombre de lignes trouvées dans le tableau', { rowCount: rows.length })
             const tableRows: TableRow[] = []
             
             // Traiter les lignes de manière asynchrone pour gérer les images
@@ -670,14 +671,14 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               const shouldReverse = isHeaderRow && cellsArray.length === 2
               
               if (shouldReverse) {
-                console.log('[Word Generator] 🔄 Inversion des cellules du header (logo à gauche, infos à droite)')
-                console.log('[Word Generator] Cellules avant inversion:', cellsArray.map(c => c.textContent?.substring(0, 50) || 'vide'))
+                logger.debug('[Word Generator] 🔄 Inversion des cellules du header (logo à gauche, infos à droite)')
+                logger.debug('[Word Generator] Cellules avant inversion', { cells: cellsArray.map(c => c.textContent?.substring(0, 50) || 'vide') })
               }
               
               const processedCells = shouldReverse ? [...cellsArray].reverse() : cellsArray
               
               if (shouldReverse) {
-                console.log('[Word Generator] Cellules après inversion:', processedCells.map(c => c.textContent?.substring(0, 50) || 'vide'))
+                logger.debug('[Word Generator] Cellules après inversion', { cells: processedCells.map(c => c.textContent?.substring(0, 50) || 'vide') })
               }
               
               // Traiter chaque cellule de manière asynchrone
@@ -724,7 +725,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                       const src = el.getAttribute('src') || ''
                       if (src) {
                         try {
-                          console.log(`[Word Generator] 🖼️ Image trouvée dans cellule du header, src: ${src.substring(0, 100)}`)
+                          logger.debug(`[Word Generator] 🖼️ Image trouvée dans cellule du header, src: ${src.substring(0, 100)}`)
                           const imageBuffer = await downloadImage(src)
                           if (imageBuffer) {
                             const widthAttr = el.getAttribute('width') || el.getAttribute('style')?.match(/width:\s*(\d+)(px|pt)/i)?.[1]
@@ -760,7 +761,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                             // Si on est dans le header et que c'est la première cellule après inversion (logo), aligner à gauche
                             if (context === 'header' && currentCellIndex === 0 && shouldReverse) {
                               imageAlignment = AlignmentType.LEFT
-                              console.log('[Word Generator] 📍 Logo aligné à gauche (cellule 0 après inversion)')
+                              logger.debug('[Word Generator] 📍 Logo aligné à gauche (cellule 0 après inversion)')
                             } else if (cellStyle.includes('text-align: left')) {
                               imageAlignment = AlignmentType.LEFT
                             } else if (cellStyle.includes('text-align: right')) {
@@ -775,10 +776,10 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                                 alignment: imageAlignment,
                               })
                             )
-                            console.log(`[Word Generator] ✅ Image ajoutée dans cellule ${currentCellIndex} (${imageWidth}x${imageHeight}, align: ${imageAlignment})`)
+                            logger.debug(`[Word Generator] ✅ Image ajoutée dans cellule ${currentCellIndex} (${imageWidth}x${imageHeight}, align: ${imageAlignment})`)
                           }
                         } catch (imgError) {
-                          console.error('[Word Generator] Erreur lors de l\'ajout de l\'image dans cellule:', imgError)
+                          logger.error('[Word Generator] Erreur lors de l\'ajout de l\'image dans cellule:', imgError)
                         }
                       }
                       return
@@ -957,12 +958,12 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               )
               
               const firstRowChildren = ((tableRows[0] as any)?.children as any)?.length || 0
-              console.log(`[Word Generator] ✅ Tableau créé avec ${tableRows.length} lignes et ${firstRowChildren} colonnes`)
+              logger.debug(`[Word Generator] ✅ Tableau créé avec ${tableRows.length} lignes et ${firstRowChildren} colonnes`)
             } else {
-              console.warn('[Word Generator] ⚠️ Aucune ligne trouvée dans le tableau HTML')
+              logger.warn('[Word Generator] ⚠️ Aucune ligne trouvée dans le tableau HTML')
             }
           } catch (error) {
-            console.error('[Word Generator] ❌ Erreur lors de la création du tableau:', error)
+            logger.error('[Word Generator] ❌ Erreur lors de la création du tableau:', error)
             // Fallback : extraire le texte
             const cells = element.querySelectorAll('td, th')
             cells.forEach(cell => {
@@ -1008,8 +1009,8 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
     await processNode(body)
   } else {
     // Côté serveur : utiliser html-to-text mais améliorer pour les images et tableaux
-    console.log('[Word Generator] htmlToParagraphs côté serveur, HTML length:', html.length, 'Preview:', html.substring(0, 200))
-    console.log('[Word Generator] Images dans HTML:', (html.match(/<img/gi) || []).length)
+    logger.debug('[Word Generator] htmlToParagraphs côté serveur', { htmlLength: html.length, preview: html.substring(0, 200) })
+    logger.debug('[Word Generator] Images dans HTML', { imageCount: (html.match(/<img/gi) || []).length })
     
     // Set pour marquer les images déjà traitées dans les tableaux (accessible dans toute la fonction)
     const imagesInTables: Set<string> = new Set()
@@ -1031,7 +1032,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
       const tableIndex = tableMatch.index
       
       try {
-        console.log('[Word Generator] 📊 Tableau HTML détecté côté serveur à l\'index', tableIndex)
+        logger.debug('[Word Generator] 📊 Tableau HTML détecté côté serveur', { index: tableIndex })
         
         // Extraire les lignes (tr)
         const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
@@ -1126,7 +1127,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 const imageSrc = cellImageMatch[1]
                 // Marquer cette image comme traitée dans un tableau pour éviter de la traiter à nouveau
                 imagesInTables.add(imageSrc)
-                console.log(`[Word Generator] 🖼️ Image trouvée dans cellule côté serveur, src: ${imageSrc.substring(0, 100)}`)
+                logger.debug(`[Word Generator] 🖼️ Image trouvée dans cellule côté serveur, src: ${imageSrc.substring(0, 100)}`)
                 const imageBuffer = await downloadImage(imageSrc)
                 if (imageBuffer) {
                   // Parser les dimensions de l'image
@@ -1166,10 +1167,10 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                       alignment: imageAlignment,
                     })
                   )
-                  console.log(`[Word Generator] ✅ Image ajoutée dans cellule côté serveur (${imageWidth}x${imageHeight}, align: ${imageAlignment})`)
+                  logger.debug(`[Word Generator] ✅ Image ajoutée dans cellule côté serveur (${imageWidth}x${imageHeight}, align: ${imageAlignment})`)
                 }
               } catch (imgError) {
-                console.error('[Word Generator] Erreur lors de l\'ajout de l\'image dans cellule côté serveur:', imgError)
+                logger.error('[Word Generator] Erreur lors de l\'ajout de l\'image dans cellule côté serveur:', imgError)
               }
             }
             
@@ -1325,7 +1326,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             })
             
             if (!hasContent) {
-              console.warn('[Word Generator] ⚠️ Cellule sans contenu, ajout d\'un paragraphe vide')
+              logger.warn('[Word Generator] ⚠️ Cellule sans contenu, ajout d\'un paragraphe vide')
             }
             
             const cell = new TableCell(cellConfig)
@@ -1338,13 +1339,13 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 return children.some((c: any) => c.type === 'imageRun' || c.constructor?.name === 'ImageRun')
               }).length
               if (imageCount > 0) {
-                console.log('[Word Generator] ✅ Cellule créée avec ' + imageCount + ' image(s) dans ' + cellParagraphs.length + ' paragraphe(s)')
+                logger.debug('[Word Generator] ✅ Cellule créée avec ' + imageCount + ' image(s) dans ' + cellParagraphs.length + ' paragraphe(s)')
               }
             } catch (e) {
               // Ignorer les erreurs de log
             }
             try {
-              console.log('[Word Generator] Cellule ' + tableCells.length + ' ajoutée:', {
+              logger.debug('[Word Generator] Cellule ' + tableCells.length + ' ajoutée:', {
                 cellChildrenCount: (cellConfig as any).children?.length || 0,
                 cellHasImage: (cellConfig as any).children?.some((p: any) => 
                   (p as any).children?.some((c: any) => c.type === 'imageRun' || c.constructor?.name === 'ImageRun')
@@ -1362,13 +1363,13 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             const row = new TableRow({ children: tableCells })
             tableRows.push(row)
             try {
-              console.log('[Word Generator] Ligne ' + tableRows.length + ' ajoutée avec ' + tableCells.length + ' cellules')
+              logger.debug('[Word Generator] Ligne ' + tableRows.length + ' ajoutée avec ' + tableCells.length + ' cellules')
             } catch (e) {
               // Ignorer les erreurs de log
             }
           } else {
             try {
-              console.warn('[Word Generator] ⚠️ Aucune cellule à ajouter à la ligne ' + (tableRows.length + 1))
+              logger.warn('[Word Generator] ⚠️ Aucune cellule à ajouter à la ligne ' + (tableRows.length + 1))
             } catch (e) {
               // Ignorer les erreurs de log
             }
@@ -1418,7 +1419,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           // Les cellules sont passées au constructeur et seront rendues correctement même si on ne peut pas les lire après
           // On fait confiance que si tableRows.length > 0, les lignes ont été créées avec des cellules valides
           if (tableRows.length === 0) {
-            console.warn('[Word Generator] ⚠️ Aucune ligne à ajouter au tableau, ignoré')
+            logger.warn('[Word Generator] ⚠️ Aucune ligne à ajouter au tableau, ignoré')
             continue
           }
           
@@ -1448,8 +1449,8 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           // Dans docx v9.5.1, les lignes sont passées au constructeur mais ne sont pas accessibles via table.rows
           // Le tableau sera rendu correctement si les lignes ont été créées avec des cellules valides
           try {
-            console.log('[Word Generator] ✅ Tableau créé côté serveur avec ' + tableRows.length + ' lignes')
-            console.log('[Word Generator] Détail du tableau:', {
+            logger.debug('[Word Generator] ✅ Tableau créé côté serveur avec ' + tableRows.length + ' lignes')
+            logger.debug('[Word Generator] Détail du tableau:', {
               tableRowsLength: tableRows.length,
               firstRowExists: !!tableRows[0],
               tableConfigRows: finalTableConfig.rows?.length,
@@ -1467,7 +1468,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           processedHTML = processedHTML.replace(tableHTML, placeholder)
         }
       } catch (error) {
-        console.error('[Word Generator] ❌ Erreur lors de la création du tableau côté serveur:', error)
+        logger.error('[Word Generator] ❌ Erreur lors de la création du tableau côté serveur:', error)
       }
     }
     
@@ -1503,7 +1504,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
         const isEncadrement = hasBorder || (hasBackground && (hasPadding || hasMargin))
         
         if (isEncadrement) {
-          console.log('[Word Generator] 📦 Encadrement détecté côté serveur:', {
+          logger.debug('[Word Generator] 📦 Encadrement détecté côté serveur:', {
             hasBorder: !!hasBorder,
             hasBackground: !!hasBackground,
             hasPadding: !!hasPadding,
@@ -1635,10 +1636,10 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           const placeholder = `__ENCADREMENT_PLACEHOLDER_${encadrements.length - 1}__`
           processedHTML = processedHTML.replace(divHTML, placeholder)
           
-          console.log('[Word Generator] ✅ Encadrement créé côté serveur avec', divParagraphs.length, 'paragraphe(s)')
+          logger.debug('[Word Generator] ✅ Encadrement créé côté serveur', { paragraphCount: divParagraphs.length })
         }
       } catch (error) {
-        console.error('[Word Generator] ❌ Erreur lors de la création de l\'encadrement côté serveur:', error)
+        logger.error('[Word Generator] ❌ Erreur lors de la création de l\'encadrement côté serveur:', error)
       }
     }
     
@@ -1660,14 +1661,16 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
         return t instanceof Table
       })
       
-      console.log(`[Word Generator] 📊 ${allTables.length} tableau(x) et encadrement(s) stocké(s) dans paragraphs`)
-      console.log(`[Word Generator] 📊 ${tablesWithRows.length} tableau(x) valide(s) avec lignes`)
-      console.log(`[Word Generator] 📊 Détail des tableaux stockés:`, allTables.map((t, i) => ({
-        index: i,
-        isTableInstance: t instanceof Table,
-        tableType: t.constructor?.name,
-        // Note: t.rows n'est pas accessible dans docx v9.5.1, mais les lignes sont dans la config
-      })))
+      logger.debug(`[Word Generator] 📊 ${allTables.length} tableau(x) et encadrement(s) stocké(s) dans paragraphs`)
+      logger.debug(`[Word Generator] 📊 ${tablesWithRows.length} tableau(x) valide(s) avec lignes`)
+      logger.debug(`[Word Generator] 📊 Détail des tableaux stockés`, { 
+        details: allTables.map((t, i) => ({
+          index: i,
+          isTableInstance: t instanceof Table,
+          tableType: t.constructor?.name,
+          // Note: t.rows n'est pas accessible dans docx v9.5.1, mais les lignes sont dans la config
+        }))
+      })
     }
     
     // D'ABORD : Extraire et ajouter les images AVANT de convertir le texte
@@ -1685,7 +1688,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
         
         // Ignorer les images qui ont déjà été traitées dans les tableaux
         if (imageUrl && imagesInTables.has(imageUrl)) {
-          console.log(`[Word Generator] ⏭️ Image ignorée (déjà traitée dans un tableau): ${imageUrl.substring(0, 100)}`)
+          logger.debug(`[Word Generator] ⏭️ Image ignorée (déjà traitée dans un tableau): ${imageUrl.substring(0, 100)}`)
           continue
         }
         
@@ -1700,7 +1703,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           const isInTable = lastTableOpen > lastTableClose
           
           if (!isInTable) {
-            console.log(`[Word Generator] ⏭️ Image ignorée dans header (pas dans un tableau): ${imageUrl.substring(0, 100)}`)
+            logger.debug(`[Word Generator] ⏭️ Image ignorée dans header (pas dans un tableau): ${imageUrl.substring(0, 100)}`)
             continue
           }
         }
@@ -1710,16 +1713,16 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
         }
       }
       
-      console.log('[Word Generator] Images trouvées:', imagePositions.length)
+      logger.debug('[Word Generator] Images trouvées', { count: imagePositions.length })
       
       // Télécharger et ajouter toutes les images
       for (const { url } of imagePositions) {
         try {
-          console.log(`[Word Generator] Téléchargement de l'image: ${url.substring(0, 100)}`)
+          logger.debug(`[Word Generator] Téléchargement de l'image`, { url: url.substring(0, 100) })
           const imageBuffer = await downloadImage(url)
           if (imageBuffer && doc) {
             try {
-              console.log(`[Word Generator] Image téléchargée, taille: ${imageBuffer.length} bytes`)
+              logger.debug(`[Word Generator] Image téléchargée, taille: ${imageBuffer.length} bytes`)
               // Utiliser ImageRun directement (Media.addImage n'existe pas dans docx)
               const imageRun = new ImageRun({
                 data: imageBuffer as any,
@@ -1735,15 +1738,15 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                   spacing: { after: 200 },
                 })
               )
-              console.log(`[Word Generator] ✅ Image ajoutée avec succès`)
+              logger.debug(`[Word Generator] ✅ Image ajoutée avec succès`)
             } catch (imgError) {
-              console.error('[Word Generator] Erreur lors de l\'ajout de l\'image:', imgError)
+              logger.error('[Word Generator] Erreur lors de l\'ajout de l\'image:', imgError)
             }
           } else {
-            console.warn(`[Word Generator] ⚠️ Impossible de télécharger l'image: ${url.substring(0, 100)}`)
+            logger.warn(`[Word Generator] ⚠️ Impossible de télécharger l'image`, { url: url.substring(0, 100) })
           }
         } catch (error) {
-          console.error('[Word Generator] Erreur lors du téléchargement de l\'image:', error)
+          logger.error('[Word Generator] Erreur lors du téléchargement de l\'image:', error)
         }
       }
     }
@@ -1766,18 +1769,18 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
       },
     })
 
-    console.log('[Word Generator] Texte converti depuis HTML:', {
+    logger.debug('[Word Generator] Texte converti depuis HTML:', {
       textLength: text.length,
       textPreview: text.substring(0, 300),
     })
 
     const lines = text.split('\n').filter((line: string) => line.trim())
     
-    console.log('[Word Generator] Lignes extraites:', lines.length)
+    logger.debug('[Word Generator] Lignes extraites:', lines.length)
     
     if (lines.length === 0 && text.trim().length > 0) {
       // Si pas de lignes mais du texte, créer un paragraphe avec tout le texte
-      console.log('[Word Generator] Pas de lignes, création d\'un paragraphe avec tout le texte')
+      logger.debug('[Word Generator] Pas de lignes, création d\'un paragraphe avec tout le texte')
       // Appliquer les styles par défaut selon le contexte
       const defaultStyles: Partial<any> = {}
       if (defaultFontSize) {
@@ -1837,11 +1840,14 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
       })
     }
     
-    console.log('[Word Generator] Paragraphes créés côté serveur:', paragraphs.length, '(images:', (paragraphs.filter(p => ((p as any).children as any)?.some((c: any) => c.type === 'imageRun')).length), ')')
+    logger.debug('[Word Generator] Paragraphes créés côté serveur', { 
+      paragraphCount: paragraphs.length, 
+      imageCount: paragraphs.filter(p => ((p as any).children as any)?.some((c: any) => c.type === 'imageRun')).length 
+    })
   }
 
   if (paragraphs.length === 0) {
-    console.warn('[Word Generator] ⚠️ Aucun paragraphe généré depuis HTML:', {
+    logger.warn('[Word Generator] ⚠️ Aucun paragraphe généré depuis HTML:', {
       htmlLength: html.length,
       htmlPreview: html.substring(0, 500),
       hasParser: !!parser,
@@ -1851,7 +1857,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
     // Essayer de créer au moins un paragraphe avec le texte brut
     const plainText = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
     if (plainText && plainText.length > 0) {
-      console.log('[Word Generator] Création d\'un paragraphe depuis le texte brut:', {
+      logger.debug('[Word Generator] Création d\'un paragraphe depuis le texte brut:', {
         textLength: plainText.length,
         textPreview: plainText.substring(0, 300),
       })
@@ -1863,28 +1869,30 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
       }))
     }
     
-    console.error('[Word Generator] ❌ Impossible de générer des paragraphes, HTML vide ou invalide')
+    logger.error('[Word Generator] ❌ Impossible de générer des paragraphes, HTML vide ou invalide')
     return [new Paragraph({ children: [new TextRun({ text: 'Document généré' })] })]
   }
   
-  console.log('[Word Generator] ✅ Paragraphes générés:', paragraphs.length)
-  console.log('[Word Generator] ✅ Paragraphes.__tables AVANT retour:', (paragraphs as any).__tables?.length || 0, 'tableaux')
+  logger.debug('[Word Generator] ✅ Paragraphes générés', { count: paragraphs.length })
+  logger.debug('[Word Generator] ✅ Paragraphes.__tables AVANT retour', { tableCount: (paragraphs as any).__tables?.length || 0 })
   
   // S'assurer que la propriété __tables est bien attachée au tableau avant le retour
   if ((paragraphs as any).__tables && (paragraphs as any).__tables.length > 0) {
-    console.log('[Word Generator] ✅ Détail des tableaux AVANT retour:', (paragraphs as any).__tables.map((t: any, i: number) => ({
-      index: i,
-      tableType: t.constructor?.name,
-      rowsCount: (t as any).rows?.length || (t as any)._rows?.length || 0,
-      hasRows: !!(t as any).rows || !!(t as any)._rows,
-      firstRowCells: ((t as any).rows?.[0]?.children as any)?.length || ((t as any)._rows?.[0]?.children as any)?.length || 0,
-    })))
+    logger.debug('[Word Generator] ✅ Détail des tableaux AVANT retour', { 
+      details: (paragraphs as any).__tables.map((t: any, i: number) => ({
+        index: i,
+        tableType: t.constructor?.name,
+        rowsCount: (t as any).rows?.length || (t as any)._rows?.length || 0,
+        hasRows: !!(t as any).rows || !!(t as any)._rows,
+        firstRowCells: ((t as any).rows?.[0]?.children as any)?.length || ((t as any)._rows?.[0]?.children as any)?.length || 0,
+      }))
+    })
     
     // Vérifier que les tableaux ont bien des lignes
     try {
       (paragraphs as any).__tables.forEach((table: any, index: number) => {
         const rows = table.rows || table._rows || []
-        console.log('[Word Generator] Tableau ' + index + ':', {
+        logger.debug('[Word Generator] Tableau ' + index + ':', {
           rowsCount: rows.length,
           firstRowExists: !!rows[0],
           firstRowChildren: ((rows[0] as any)?.children as any)?.length || 0,
@@ -1902,20 +1910,20 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
   // Attacher explicitement la propriété __tables au nouveau tableau
   if ((paragraphs as any).__tables && (paragraphs as any).__tables.length > 0) {
     result.__tables = [...(paragraphs as any).__tables] // Créer une copie du tableau
-    console.log('[Word Generator] ✅ Paragraphes.__tables APRÈS préparation:', result.__tables.length, 'tableaux')
+    logger.debug('[Word Generator] ✅ Paragraphes.__tables APRÈS préparation', { tableCount: result.__tables.length })
     
     // Vérifier que les tableaux sont bien des instances de Table
     const validTables = result.__tables.filter((t: any) => t instanceof Table)
-    console.log('[Word Generator] ✅ Tableaux valides (instances de Table):', validTables.length)
+    logger.debug('[Word Generator] ✅ Tableaux valides (instances de Table):', validTables.length)
     
     if (validTables.length < result.__tables.length) {
-      console.warn('[Word Generator] ⚠️ Certains tableaux ne sont pas des instances valides de Table')
+      logger.warn('[Word Generator] ⚠️ Certains tableaux ne sont pas des instances valides de Table')
       // Garder uniquement les tableaux valides
       result.__tables = validTables
     }
   } else {
     result.__tables = []
-    console.log('[Word Generator] ⚠️ Aucun tableau dans paragraphs.__tables')
+    logger.debug('[Word Generator] ⚠️ Aucun tableau dans paragraphs.__tables')
   }
   
   return result
@@ -1952,7 +1960,7 @@ export async function generateWordFromHTML(
     const blob = await Packer.toBlob(doc)
     return blob
   } catch (error) {
-    console.error('Erreur lors de la génération du document Word:', error)
+    logger.error('Erreur lors de la génération du document Word:', error)
     throw error
   }
 }
@@ -1986,14 +1994,14 @@ export async function generateWordFromTemplate(
         const signatureModule = await import('@/lib/utils/document-generation/signature-processor')
         processSignatures = signatureModule.processSignatures
       } catch (error) {
-        console.warn('Impossible d\'importer processSignatures:', error)
+        logger.warn('Impossible d\'importer processSignatures', sanitizeError(error))
       }
       
       try {
         const attachmentModule = await import('@/lib/utils/document-generation/attachment-processor')
         processAttachments = attachmentModule.processAttachments
       } catch (error) {
-        console.warn('Impossible d\'importer processAttachments:', error)
+        logger.warn('Impossible d\'importer processAttachments', sanitizeError(error))
       }
     }
     const { processFormFields } = await import('@/lib/utils/document-generation/form-field-processor')
@@ -2121,7 +2129,7 @@ export async function generateWordFromTemplate(
         processedContent = await processSignatures(processedContent, documentId)
         processedFooter = await processSignatures(processedFooter, documentId)
       } catch (sigError) {
-        console.error('Erreur lors du traitement des signatures:', sigError)
+        logger.error('Erreur lors du traitement des signatures:', sigError)
       }
     }
 
@@ -2132,7 +2140,7 @@ export async function generateWordFromTemplate(
         processedContent = await processAttachments(processedContent, documentId)
         processedFooter = await processAttachments(processedFooter, documentId)
       } catch (attError) {
-        console.error('Erreur lors du traitement des pièces jointes:', attError)
+        logger.error('Erreur lors du traitement des pièces jointes:', attError)
       }
     }
 
@@ -2182,13 +2190,13 @@ export async function generateWordFromTemplate(
     })
     
     // Convertir en paragraphes (avec support des images)
-    console.log('[Word Generator] Conversion en paragraphes:', {
+    logger.debug('[Word Generator] Conversion en paragraphes:', {
       headerLength: processedHeader.length,
       contentLength: processedContent.length,
       footerLength: processedFooter.length,
     })
     
-    console.log('[Word Generator] Avant conversion en paragraphes:', {
+    logger.debug('[Word Generator] Avant conversion en paragraphes:', {
       headerLength: processedHeader.length,
       contentLength: processedContent.length,
       footerLength: processedFooter.length,
@@ -2205,8 +2213,8 @@ export async function generateWordFromTemplate(
     
     // Convertir en paragraphes SÉQUENTIELLEMENT pour garantir que le document est partagé correctement
     // Le document tempDoc doit être le même pour toutes les images
-    console.log('[Word Generator] Conversion du header en paragraphes...')
-    console.log('[Word Generator] Header HTML avant conversion:', {
+    logger.debug('[Word Generator] Conversion du header en paragraphes...')
+    logger.debug('[Word Generator] Header HTML avant conversion:', {
       length: processedHeader.length,
       preview: processedHeader.substring(0, 500),
       hasImages: processedHeader.includes('<img'),
@@ -2217,13 +2225,15 @@ export async function generateWordFromTemplate(
     const headerFooterFontSize = Math.round(defaultFontSize * 0.85)
     
     const headerParagraphs = await htmlToParagraphs(processedHeader, tempDoc, 'header', headerFooterFontSize)
-    console.log('[Word Generator] Header paragraphes créés:', headerParagraphs.length)
-    console.log('[Word Generator] Header paragraphs.__tables:', (headerParagraphs as any).__tables?.length || 0)
-    console.log('[Word Generator] Header paragraphs.__tables détails:', (headerParagraphs as any).__tables ? (headerParagraphs as any).__tables.map((t: any, i: number) => ({
-      index: i,
-      rowsCount: t.rows?.length || 0,
-      hasRows: !!t.rows,
-    })) : 'aucun')
+    logger.debug('[Word Generator] Header paragraphes créés', { count: headerParagraphs.length })
+    logger.debug('[Word Generator] Header paragraphs.__tables', { count: (headerParagraphs as any).__tables?.length || 0 })
+    logger.debug('[Word Generator] Header paragraphs.__tables détails', { 
+      details: (headerParagraphs as any).__tables ? (headerParagraphs as any).__tables.map((t: any, i: number) => ({
+        index: i,
+        rowsCount: t.rows?.length || 0,
+        hasRows: !!t.rows,
+      })) : 'aucun'
+    })
     
     // Extraire les tableaux du header (comme pour le body)
     const headerTablesRaw = (headerParagraphs as any).__tables || []
@@ -2231,16 +2241,22 @@ export async function generateWordFromTemplate(
     const headerTables: Table[] = headerTablesRaw.filter((t: any) => t instanceof Table)
     const cleanHeaderParagraphs = headerParagraphs.filter(p => !(p as any).__isTableMarker)
     
-    console.log('[Word Generator] Header - Paragraphes:', cleanHeaderParagraphs.length, 'Tableaux:', headerTables.length, '(bruts:', headerTablesRaw.length, ')')
+    logger.debug('[Word Generator] Header - Paragraphes et tableaux', { 
+      paragraphs: cleanHeaderParagraphs.length, 
+      tables: headerTables.length, 
+      rawTables: headerTablesRaw.length 
+    })
     if (headerTablesRaw.length > headerTables.length) {
-      console.warn('[Word Generator] ⚠️ Certains tableaux du header ne sont pas des instances valides de Table')
+      logger.warn('[Word Generator] ⚠️ Certains tableaux du header ne sont pas des instances valides de Table')
     }
-    console.log('[Word Generator] Header - headerTables détails:', headerTables.map((t, i) => ({
-      index: i,
-      isTableInstance: t instanceof Table,
-      tableType: t.constructor?.name,
-      // Note: t.rows n'est pas accessible dans docx v9.5.1, mais les lignes sont dans la config passée au constructeur
-    })))
+    logger.debug('[Word Generator] Header - headerTables détails', { 
+      details: headerTables.map((t, i) => ({
+        index: i,
+        isTableInstance: t instanceof Table,
+        tableType: t.constructor?.name,
+        // Note: t.rows n'est pas accessible dans docx v9.5.1, mais les lignes sont dans la config passée au constructeur
+      }))
+    })
     
     // Vérifier si des images sont dans les paragraphes ou les tableaux
     const headerHasImages = cleanHeaderParagraphs.some(p => {
@@ -2260,17 +2276,17 @@ export async function generateWordFromTemplate(
         })
       })
     })
-    console.log('[Word Generator] Header contient des images:', headerHasImages)
+    logger.debug('[Word Generator] Header contient des images', { hasImages: headerHasImages })
     
-    console.log('[Word Generator] Conversion du content en paragraphes...')
+    logger.debug('[Word Generator] Conversion du content en paragraphes...')
     const bodyParagraphs = await htmlToParagraphs(processedContent, tempDoc, 'content', defaultFontSize)
-    console.log('[Word Generator] Content paragraphes:', bodyParagraphs.length)
+    logger.debug('[Word Generator] Content paragraphes', { count: bodyParagraphs.length })
     
-    console.log('[Word Generator] Conversion du footer en paragraphes...')
+    logger.debug('[Word Generator] Conversion du footer en paragraphes...')
     const footerParagraphs = await htmlToParagraphs(processedFooter, tempDoc, 'footer', headerFooterFontSize)
-    console.log('[Word Generator] Footer paragraphes:', footerParagraphs.length)
+    logger.debug('[Word Generator] Footer paragraphes', { count: footerParagraphs.length })
     
-    console.log('[Word Generator] Paragraphes créés:', {
+    logger.debug('[Word Generator] Paragraphes créés:', {
       headerCount: headerParagraphs.length,
       bodyCount: bodyParagraphs.length,
       footerCount: footerParagraphs.length,
@@ -2286,7 +2302,7 @@ export async function generateWordFromTemplate(
     const cleanBodyParagraphs = bodyParagraphs.filter(p => !(p as any).__isTableMarker)
     
     if (bodyTablesRaw.length > bodyTables.length) {
-      console.warn('[Word Generator] ⚠️ Certains tableaux du body ne sont pas des instances valides de Table')
+      logger.warn('[Word Generator] ⚠️ Certains tableaux du body ne sont pas des instances valides de Table')
     }
     
     // Combiner les paragraphes et les tableaux dans le bon ordre
@@ -2295,7 +2311,7 @@ export async function generateWordFromTemplate(
     const finalBodyChildren: (Paragraph | Table)[] = []
     
     // Pour le body, on ajoute d'abord les paragraphes, puis les tableaux
-    // TODO: Préserver l'ordre exact en utilisant les placeholders dans le texte converti
+    // NOTE: Amélioration prévue - Préserver l'ordre exact en utilisant les placeholders dans le texte converti
     finalBodyChildren.push(...cleanBodyParagraphs)
     
     // Ajouter les tableaux à la fin
@@ -2307,7 +2323,7 @@ export async function generateWordFromTemplate(
     
     // Si pas de contenu, utiliser le fallback
     if (finalBodyChildren.length === 0) {
-      console.warn('[Word Generator] ⚠️ Aucun contenu dans le body, utilisation du content original')
+      logger.warn('[Word Generator] ⚠️ Aucun contenu dans le body, utilisation du content original')
       const fallbackParagraphs = await htmlToParagraphs(content, tempDoc)
       const fallbackTables = (fallbackParagraphs as any).__tables || []
       const cleanFallbackParagraphs = fallbackParagraphs.filter(p => !(p as any).__isTableMarker)
@@ -2322,7 +2338,7 @@ export async function generateWordFromTemplate(
       }
     }
     
-    console.log('[Word Generator] Contenu final:', {
+    logger.debug('[Word Generator] Contenu final:', {
       headerCount: headerParagraphs.length,
       bodyParagraphsCount: cleanBodyParagraphs.length,
       bodyTablesCount: bodyTables.length,
@@ -2343,13 +2359,16 @@ export async function generateWordFromTemplate(
     // Puis les paragraphes
     headerChildren.push(...cleanHeaderParagraphs)
     
-    console.log('[Word Generator] Création du Header Word avec', cleanHeaderParagraphs.length, 'paragraphes et', headerTables.length, 'tableaux')
+    logger.debug('[Word Generator] Création du Header Word', { 
+      paragraphCount: cleanHeaderParagraphs.length, 
+      tableCount: headerTables.length 
+    })
     if (cleanHeaderParagraphs.length > 0 || headerTables.length > 0) {
       // Vérifier le contenu des paragraphes du header
       cleanHeaderParagraphs.forEach((p, i) => {
         const children = (p as any).children as any || []
         const hasImage = children.some((c: any) => c.type === 'imageRun' || c.type === 'drawing')
-        console.log(`[Word Generator] Header paragraphe ${i}:`, {
+        logger.debug(`[Word Generator] Header paragraphe ${i}`, {
           hasImage,
           childrenCount: children.length,
           childrenTypes: children.map((c: any) => c.type || typeof c),
@@ -2360,7 +2379,7 @@ export async function generateWordFromTemplate(
       headerTables.forEach((t, i) => {
         // Dans docx v9.5.1, t.rows n'est pas accessible directement
         // Les lignes sont stockées dans la configuration passée au constructeur
-        console.log(`[Word Generator] Header tableau ${i}:`, {
+        logger.debug(`[Word Generator] Header tableau ${i}`, {
           isTableInstance: t instanceof Table,
           tableType: t.constructor?.name,
           // Note: Les lignes sont dans la config du constructeur, pas dans t.rows
@@ -2370,7 +2389,7 @@ export async function generateWordFromTemplate(
     }
     
     // Vérifier que le header contient du contenu
-    console.log('[Word Generator] Vérification du header avant création:', {
+    logger.debug('[Word Generator] Vérification du header avant création:', {
       headerChildrenLength: headerChildren.length,
       cleanHeaderParagraphsLength: cleanHeaderParagraphs.length,
       headerTablesLength: headerTables.length,
@@ -2381,12 +2400,12 @@ export async function generateWordFromTemplate(
       children: headerChildren,
     }) : undefined
 
-    console.log('[Word Generator] Header Word créé:', !!header, 'avec', headerChildren.length, 'éléments')
+    logger.debug('[Word Generator] Header Word créé', { created: !!header, elementCount: headerChildren.length })
     
     if (!header) {
-      console.warn('[Word Generator] ⚠️ Header non créé car headerChildren est vide')
+      logger.warn('[Word Generator] ⚠️ Header non créé car headerChildren est vide')
     } else {
-      console.log('[Word Generator] ✅ Header créé avec succès')
+      logger.debug('[Word Generator] ✅ Header créé avec succès')
     }
 
     // Créer le footer avec les paragraphes convertis
@@ -2394,7 +2413,7 @@ export async function generateWordFromTemplate(
       children: footerParagraphs,
     }) : undefined
 
-    console.log('[Word Generator] Footer Word créé:', !!footer, 'avec', footerParagraphs.length, 'paragraphes')
+    logger.debug('[Word Generator] Footer Word créé', { created: !!footer, paragraphCount: footerParagraphs.length })
 
     // Récupérer les paramètres du template (mêmes que le générateur PDF)
     const pageSize = (template.content as any)?.pageSize || template.page_size || 'A4'
@@ -2458,14 +2477,15 @@ export async function generateWordFromTemplate(
       
       // titlePage est déjà défini dans les properties ci-dessus
       
-      console.log('[Word Generator] ✅ Header configuré avec first (première page) et default (vide pour autres pages)')
-      console.log('[Word Generator] Header contient', headerChildren.length, 'éléments')
-      console.log('[Word Generator] Types des éléments du header:', headerChildren.map(c => c.constructor.name))
+      logger.debug('[Word Generator] ✅ Header configuré avec first (première page) et default (vide pour autres pages)')
+      logger.debug('[Word Generator] Header contient', { elementCount: headerChildren.length })
+      logger.debug('[Word Generator] Types des éléments du header', { types: headerChildren.map(c => c.constructor.name) })
     } else {
-      console.warn('[Word Generator] ⚠️ Pas de header à ajouter - headerChildren est vide')
-      console.warn('[Word Generator] headerChildren.length:', headerChildren.length)
-      console.warn('[Word Generator] cleanHeaderParagraphs.length:', cleanHeaderParagraphs.length)
-      console.warn('[Word Generator] headerTables.length:', headerTables.length)
+      logger.warn('[Word Generator] ⚠️ Pas de header à ajouter - headerChildren est vide', {
+        headerChildrenLength: headerChildren.length,
+        cleanHeaderParagraphsLength: cleanHeaderParagraphs.length,
+        headerTablesLength: headerTables.length
+      })
     }
     
     // Ajouter le footer sur toutes les pages
@@ -2473,14 +2493,14 @@ export async function generateWordFromTemplate(
       sectionConfig.footers = {
         default: footer, // Footer sur toutes les pages
       }
-      console.log('[Word Generator] Footer configuré avec default')
+      logger.debug('[Word Generator] Footer configuré avec default')
     }
     
     const finalDoc = new Document({
       sections: [sectionConfig],
     })
     
-    console.log('[Word Generator] Document créé avec:', {
+    logger.debug('[Word Generator] Document créé avec:', {
       hasHeader: !!header,
       hasFooter: !!footer,
       headerChildrenCount: headerChildren.length,
@@ -2492,7 +2512,7 @@ export async function generateWordFromTemplate(
     const blob = await Packer.toBlob(finalDoc)
     return blob
   } catch (error) {
-    console.error('Erreur lors de la génération du document Word depuis template:', error)
+    logger.error('Erreur lors de la génération du document Word depuis template:', error)
     throw error
   }
 }

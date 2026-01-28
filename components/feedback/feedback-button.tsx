@@ -27,6 +27,7 @@ import {
 import { MessageSquare, X, Upload, Image as ImageIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { FeedbackType } from '@/lib/services/feedback.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface FeedbackButtonProps {
   variant?: 'default' | 'outline' | 'ghost'
@@ -68,7 +69,7 @@ export function FeedbackButton({ variant = 'outline', size = 'default', classNam
           })
 
         if (uploadError) {
-          console.error('Erreur upload screenshot:', uploadError)
+          logger.error('Erreur upload screenshot:', uploadError)
         } else {
           const { data: urlData } = supabase.storage
             .from('documents')

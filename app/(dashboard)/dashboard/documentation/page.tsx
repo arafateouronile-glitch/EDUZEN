@@ -52,8 +52,8 @@ export default function DocumentationPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="mb-8">
+    <div className="w-full p-4">
+      <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Documentation</h1>
@@ -73,8 +73,8 @@ export default function DocumentationPage() {
       </div>
 
       {/* Barre de recherche */}
-      <Card className="mb-8">
-        <CardContent className="pt-6">
+      <Card className="mb-4">
+        <CardContent className="pt-4 pb-4">
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -93,12 +93,12 @@ export default function DocumentationPage() {
 
       {/* Articles en vedette */}
       {featuredArticles && featuredArticles.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+        <div className="mb-4">
+          <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
             <Star className="h-6 w-6 text-yellow-500" />
             Articles en vedette
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {featuredArticles.map((article: any) => (
               <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                 <Link href={`/dashboard/documentation/${article.category.slug}/${article.slug}`}>
@@ -119,15 +119,15 @@ export default function DocumentationPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Catégories */}
         <div className="lg:col-span-2">
-          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-semibold mb-3 flex items-center gap-2">
             <BookOpen className="h-6 w-6" />
             Catégories
           </h2>
           {categories && categories.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {categories.map((category: any) => (
                 <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                   <Link href={`/dashboard/documentation/category/${category.slug}`}>
@@ -154,17 +154,17 @@ export default function DocumentationPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Articles populaires */}
           {popularArticles && popularArticles.length > 0 && (
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3 pt-4">
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5" />
                   Articles populaires
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0 pb-4">
                 <div className="space-y-3">
                   {popularArticles.slice(0, 5).map((article: any) => (
                     <Link
@@ -213,13 +213,13 @@ export default function DocumentationPage() {
 
           {/* Liens rapides */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3 pt-4">
               <CardTitle className="flex items-center gap-2">
                 <HelpCircle className="h-5 w-5" />
                 Aide rapide
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0 pb-4">
               <div className="space-y-2">
                 <Link
                   href="/dashboard/documentation/search?q=débuter"

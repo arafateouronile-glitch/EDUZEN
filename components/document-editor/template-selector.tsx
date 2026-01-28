@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FileText, Copy, Plus, Check } from 'lucide-react'
 import type { DocumentType } from '@/lib/types/document-templates'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface TemplateSelectorProps {
   documentType: DocumentType | string
@@ -40,7 +41,7 @@ export function TemplateSelector({
           user.organization_id
         )
       } catch (error) {
-        console.error('Erreur lors de la récupération des templates:', error)
+        logger.error('Erreur lors de la récupération des templates:', error)
         return []
       }
     },
