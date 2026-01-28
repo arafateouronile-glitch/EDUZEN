@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { Download, Mail, UserPlus, X, FileText, CheckCircle, AlertCircle, Trash2, Clock, Send, Eye } from 'lucide-react'
+import { Download, Mail, UserPlus, X, FileText, CheckCircle, AlertCircle, Trash2, Clock, Send, Eye, FileCheck } from 'lucide-react'
 import { formatDate, formatCurrency, cn } from '@/lib/utils'
 import { useDocumentGeneration } from '../hooks/use-document-generation'
 import {
@@ -18,6 +20,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { 
   SessionWithRelations, 
   EnrollmentWithRelations,
@@ -28,6 +37,10 @@ import type { TableRow } from '@/lib/types/supabase-helpers'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
+import { documentTemplateService } from '@/lib/services/document-template.service.client'
+import { emailTemplateService } from '@/lib/services/email-template.service.client'
+import type { DocumentTemplate } from '@/lib/types/document-templates'
+import type { EmailTemplate } from '@/lib/services/email-template.service'
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
@@ -116,6 +129,40 @@ export function GestionConvocations({
     subject: string
     body: string
   } | null>(null)
+
+  const { user } = useAuth()
+  
+  // État pour le dialogue d'envoi en masse
+  const [showBulkSendDialog, setShowBulkSendDialog] = useState(false)
+  const [selectedDocumentTemplateId, setSelectedDocumentTemplateId] = useState<string>('')
+  const [selectedEmailTemplateId, setSelectedEmailTemplateId] = useState<string>('')
+  const [bulkEmailContent, setBulkEmailContent] = useState<{
+    subject: string
+    body: string
+  }>({
+    subject: '',
+    body: '',
+  })
+
+  // Récupérer les templates de documents (convocations)
+  const { data: documentTemplates } = useQuery<DocumentTemplate[]>({
+    queryKey: ['document-templates', 'convocation', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return documentTemplateService.getTemplatesByType('convocation', user.organization_id)
+    },
+    enabled: !!user?.organization_id && showBulkSendDialog,
+  })
+
+  // Récupérer les templates d'email pour les convocations
+  const { data: emailTemplates } = useQuery<EmailTemplate[]>({
+    queryKey: ['email-templates', 'session_reminder', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return emailTemplateService.getByType(user.organization_id, 'session_reminder')
+    },
+    enabled: !!user?.organization_id && showBulkSendDialog,
+  })
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -380,7 +427,7 @@ export function GestionConvocations({
                   </Button>
                   <Button
                     className="bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-200 hover:shadow-cyan-300 transition-all duration-300"
-                    onClick={() => handleSendAllConvocationsByEmail(enrollments)}
+                    onClick={() => setShowBulkSendDialog(true)}
                     disabled={enrollments.length === 0}
                   >
                     <div className="flex items-center gap-2">
@@ -700,6 +747,189 @@ export function GestionConvocations({
             >
               <Send className="h-4 w-4 mr-2" />
               Envoyer maintenant
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal d'envoi en masse */}
+      <Dialog open={showBulkSendDialog} onOpenChange={setShowBulkSendDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white/95 backdrop-blur-xl border-white/20 shadow-2xl">
+          <div className="p-6 border-b border-gray-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                <Send className="h-5 w-5 text-cyan-600" />
+                Envoi en masse des convocations
+              </DialogTitle>
+              <DialogDescription className="text-gray-500">
+                Configurez les modèles et le contenu de l'email avant d'envoyer les convocations à tous les apprenants.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          
+          <div className="p-6 space-y-6">
+            {/* Sélection du template de document */}
+            <div className="space-y-3">
+              <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <FileCheck className="h-4 w-4 text-cyan-600" />
+                Modèle de document (convocation)
+              </Label>
+              <Select
+                value={selectedDocumentTemplateId}
+                onValueChange={(value) => {
+                  setSelectedDocumentTemplateId(value)
+                  // Charger le template par défaut si disponible
+                  const template = documentTemplates?.find(t => t.id === value)
+                  if (template && template.is_default) {
+                    // Le template par défaut sera utilisé automatiquement
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner un modèle de document" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Modèle par défaut (système)</SelectItem>
+                  {documentTemplates?.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name} {template.is_default && '(Par défaut)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Le modèle sélectionné sera utilisé pour générer les PDF des convocations.
+              </p>
+            </div>
+
+            {/* Sélection du template d'email */}
+            <div className="space-y-3">
+              <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <Mail className="h-4 w-4 text-cyan-600" />
+                Modèle d'email
+              </Label>
+              <Select
+                value={selectedEmailTemplateId}
+                onValueChange={(value) => {
+                  setSelectedEmailTemplateId(value)
+                  // Charger le contenu du template d'email
+                  const template = emailTemplates?.find(t => t.id === value)
+                  if (template) {
+                    setBulkEmailContent({
+                      subject: template.subject || '',
+                      body: template.body_html || '',
+                    })
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner un modèle d'email" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Modèle par défaut (système)</SelectItem>
+                  {emailTemplates?.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name} {template.is_default && '(Par défaut)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Le modèle sélectionné sera utilisé comme base pour le contenu de l'email.
+              </p>
+            </div>
+
+            {/* Édition du sujet */}
+            <div className="space-y-2">
+              <Label htmlFor="bulk-email-subject" className="text-sm font-bold text-gray-700">
+                Sujet de l'email
+              </Label>
+              <Input
+                id="bulk-email-subject"
+                value={bulkEmailContent.subject}
+                onChange={(e) => setBulkEmailContent({ ...bulkEmailContent, subject: e.target.value })}
+                placeholder="Ex: Convocation - Session de formation"
+                className="bg-gray-50/50 border-gray-200 focus:ring-cyan-600/20 focus:border-cyan-600"
+              />
+            </div>
+
+            {/* Édition du contenu */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="bulk-email-body" className="text-sm font-bold text-gray-700">
+                  Contenu de l'email
+                </Label>
+                <span className="text-xs text-cyan-600 font-medium flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  HTML activé
+                </span>
+              </div>
+              <Textarea
+                id="bulk-email-body"
+                value={bulkEmailContent.body.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()}
+                onChange={(e) => setBulkEmailContent({ ...bulkEmailContent, body: e.target.value })}
+                className="min-h-[250px] font-mono text-sm bg-gray-50/50 border-gray-200 focus:ring-cyan-600/20 focus:border-cyan-600"
+                placeholder="Contenu de l'email..."
+              />
+              <p className="text-xs text-gray-500">
+                Variables disponibles : {'{student_first_name}'}, {'{student_last_name}'}, {'{session_name}'}, {'{formation_name}'}, {'{session_start_date}'}, {'{session_end_date}'}, {'{session_location}'}
+              </p>
+            </div>
+
+            {/* Informations */}
+            <div className="flex items-center gap-3 p-3 bg-cyan-50 border border-cyan-100 rounded-xl text-sm text-cyan-700">
+              <div className="p-2 bg-white rounded-lg shadow-sm">
+                <FileText className="h-4 w-4 text-cyan-600" />
+              </div>
+              <div>
+                <p className="font-medium">
+                  {enrollments.filter(e => e.students?.email && e.status !== 'cancelled').length} convocation(s) seront envoyée(s)
+                </p>
+                <p className="text-xs mt-1">
+                  Les PDF seront générés automatiquement et joints aux emails.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="p-6 bg-gray-50/50 border-t border-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowBulkSendDialog(false)
+                setSelectedDocumentTemplateId('')
+                setSelectedEmailTemplateId('')
+                setBulkEmailContent({ subject: '', body: '' })
+              }}
+              className="border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!bulkEmailContent.subject || !bulkEmailContent.body) {
+                  return
+                }
+                
+                // Appeler la fonction d'envoi en masse avec les paramètres
+                await handleSendAllConvocationsByEmail(
+                  enrollments,
+                  selectedDocumentTemplateId === 'default' ? undefined : selectedDocumentTemplateId,
+                  selectedEmailTemplateId === 'default' ? undefined : selectedEmailTemplateId,
+                  bulkEmailContent.subject,
+                  bulkEmailContent.body
+                )
+                
+                setShowBulkSendDialog(false)
+                setSelectedDocumentTemplateId('')
+                setSelectedEmailTemplateId('')
+                setBulkEmailContent({ subject: '', body: '' })
+              }}
+              disabled={!bulkEmailContent.subject || !bulkEmailContent.body}
+              className="bg-cyan-600 hover:bg-cyan-700 text-white shadow-lg shadow-cyan-200"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Envoyer à tous ({enrollments.filter(e => e.students?.email && e.status !== 'cancelled').length})
             </Button>
           </DialogFooter>
         </DialogContent>

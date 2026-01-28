@@ -1063,7 +1063,13 @@ export function useDocumentGeneration({
   /**
    * Envoie toutes les convocations par email (groupé)
    */
-  const handleSendAllConvocationsByEmail = async (enrollments: EnrollmentWithRelations[]) => {
+  const handleSendAllConvocationsByEmail = async (
+    enrollments: EnrollmentWithRelations[],
+    documentTemplateId?: string,
+    emailTemplateId?: string,
+    customSubject?: string,
+    customBody?: string
+  ) => {
     if (!sessionData || !formation || !organization) return
 
     const validEnrollments = enrollments.filter(
@@ -1088,7 +1094,39 @@ export function useDocumentGeneration({
 
       for (const enrollment of validEnrollments) {
         try {
-          await handleSendConvocationByEmail(enrollment)
+          const student = enrollment.students
+          if (!student) continue
+
+          // Si un contenu personnalisé est fourni, l'utiliser
+          if (customSubject && customBody) {
+            // Remplacer les variables dans le sujet et le corps
+            let subject = customSubject
+            let body = customBody
+
+            // Remplacer les variables
+            subject = subject
+              .replace(/{student_first_name}/g, student.first_name || '')
+              .replace(/{student_last_name}/g, student.last_name || '')
+              .replace(/{session_name}/g, sessionData.name || '')
+              .replace(/{formation_name}/g, formation.name || '')
+              .replace(/{session_start_date}/g, sessionData.start_date ? formatDate(sessionData.start_date) : '')
+              .replace(/{session_end_date}/g, sessionData.end_date ? formatDate(sessionData.end_date) : '')
+              .replace(/{session_location}/g, sessionData.location || '')
+
+            body = body
+              .replace(/{student_first_name}/g, student.first_name || '')
+              .replace(/{student_last_name}/g, student.last_name || '')
+              .replace(/{session_name}/g, sessionData.name || '')
+              .replace(/{formation_name}/g, formation.name || '')
+              .replace(/{session_start_date}/g, sessionData.start_date ? formatDate(sessionData.start_date) : '')
+              .replace(/{session_end_date}/g, sessionData.end_date ? formatDate(sessionData.end_date) : '')
+              .replace(/{session_location}/g, sessionData.location || '')
+
+            await handleSendConvocationByEmailWithCustomContent(enrollment, subject, body)
+          } else {
+            // Utiliser le comportement par défaut
+            await handleSendConvocationByEmail(enrollment)
+          }
           successCount++
         } catch (error) {
           errorCount++
