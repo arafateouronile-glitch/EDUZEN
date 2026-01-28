@@ -2,6 +2,8 @@ import { formatDateForDocument } from './pdf-generator'
 import { formatCurrency } from '../utils'
 import { generateHTML } from './document-generation/html-generator'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
+import { DocumentTemplateService } from '@/lib/services/document-template.service'
+import { createClient } from '@/lib/supabase/client'
 
 /**
  * Génère le template avec balises {variable} pour une attestation de scolarité
@@ -1083,9 +1085,6 @@ export async function generateConventionHTML(data: {
 
   const t = texts[lang]
   
-  // Générer le template avec balises
-  const template = generateConventionTemplate(data)
-  
   // Préparer les variables pour le système de balises
   const variables: any = {
     organisation_logo: data.organization.logo_url || '',
@@ -1152,7 +1151,26 @@ export async function generateConventionHTML(data: {
     in_duplicate: t.inDuplicate,
   }
   
-  // Traiter le template avec le système de génération HTML
+  // Essayer d'utiliser le template par défaut de la base de données
+  if (data.organizationId) {
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'convention')
+      
+      if (defaultTemplate) {
+        // Utiliser le template de la base de données
+        const result = await generateHTML(defaultTemplate, variables, data.documentId, data.organizationId)
+        return result.html
+      }
+    } catch (error) {
+      // En cas d'erreur, continuer avec le template codé en dur
+      const { logger } = await import('@/lib/utils/logger')
+      logger.warn('Erreur lors de la récupération du template par défaut, utilisation du template codé en dur', { error })
+    }
+  }
+  
+  // Fallback : utiliser le template codé en dur
+  const template = generateConventionTemplate(data)
   return await processTemplateWithTags(template, variables, data.documentId, data.organizationId)
 }
 
@@ -2207,14 +2225,6 @@ export async function generateContractHTML(data: {
   
   const remaining = data.enrollment.total_amount - data.enrollment.paid_amount
   
-  // Générer le template avec balises
-  const template = generateContractTemplate(data)
-  
-  // Vérifier que le template n'est pas vide
-  if (!template || !template.trim()) {
-    throw new Error('Le template généré est vide')
-  }
-  
   // Préparer les variables pour le système de balises
   const variables: any = {
     organisation_logo: data.organization.logo_url || '',
@@ -2298,7 +2308,32 @@ export async function generateContractHTML(data: {
     in_duplicate: t.inDuplicate,
   }
   
-  // Traiter le template avec le système de génération HTML
+  // Essayer d'utiliser le template par défaut de la base de données
+  if (data.organizationId) {
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'contract')
+      
+      if (defaultTemplate) {
+        // Utiliser le template de la base de données
+        const result = await generateHTML(defaultTemplate, variables, data.documentId, data.organizationId)
+        return result.html
+      }
+    } catch (error) {
+      // En cas d'erreur, continuer avec le template codé en dur
+      const { logger } = await import('@/lib/utils/logger')
+      logger.warn('Erreur lors de la récupération du template par défaut, utilisation du template codé en dur', { error })
+    }
+  }
+  
+  // Fallback : utiliser le template codé en dur
+  const template = generateContractTemplate(data)
+  
+  // Vérifier que le template n'est pas vide
+  if (!template || !template.trim()) {
+    throw new Error('Le template généré est vide')
+  }
+  
   return await processTemplateWithTags(template, variables, data.documentId, data.organizationId)
 }
 

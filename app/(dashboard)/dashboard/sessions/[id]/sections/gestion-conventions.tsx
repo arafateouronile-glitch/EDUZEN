@@ -748,6 +748,7 @@ export function GestionConventions({
                       },
                       issueDate: new Date().toISOString(),
                       language: 'fr',
+                      organizationId: organization?.id,
                     })
                     documentTitle = `Contrat de formation - ${student.first_name} ${student.last_name}`
                   } else {
@@ -774,6 +775,7 @@ export function GestionConventions({
                       } : { name: 'Organisation' },
                       issueDate: new Date().toISOString(),
                       language: 'fr',
+                      organizationId: organization?.id,
                     })
                     documentTitle = `Convention de formation - ${sessionData.name || ''}`
                   }
