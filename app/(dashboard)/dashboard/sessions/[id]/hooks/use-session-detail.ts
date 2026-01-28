@@ -104,14 +104,53 @@ export function useSessionDetail(sessionId: string) {
     }
     return 'configuration'
   })
-  const [activeTab, setActiveTab] = useState<ConfigTab>('initialisation')
-  const [activeGestionTab, setActiveGestionTab] = useState<GestionTab>('conventions')
+  const [activeTab, setActiveTab] = useState<ConfigTab>(() => {
+    // Initialiser depuis l'URL si disponible
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tabFromUrl = params.get('tab') as ConfigTab | null
+      if (tabFromUrl && ['initialisation', 'dates_prix', 'apprenants', 'programme', 'intervenants'].includes(tabFromUrl)) {
+        return tabFromUrl
+      }
+    }
+    return 'initialisation'
+  })
+  const [activeGestionTab, setActiveGestionTab] = useState<GestionTab>(() => {
+    // Initialiser depuis l'URL si disponible
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const gestionTabFromUrl = params.get('gestionTab') as GestionTab | null
+      // Support aussi du paramètre "tab" pour compatibilité avec "finances"
+      const tabFromUrl = params.get('tab') as GestionTab | null
+      const finalTab = gestionTabFromUrl || tabFromUrl
+      if (finalTab && ['conventions', 'convocations', 'evaluations', 'finances', 'espace_entreprise', 'automatisation'].includes(finalTab)) {
+        return finalTab
+      }
+    }
+    return 'conventions'
+  })
 
   // Synchroniser l'état avec l'URL quand le paramètre change
   useEffect(() => {
     const stepFromUrl = searchParams.get('step') as WorkflowStep | null
+    const tabFromUrl = searchParams.get('tab') as ConfigTab | null
+    const gestionTabFromUrl = searchParams.get('gestionTab') as GestionTab | null
+    
     if (stepFromUrl && validSteps.includes(stepFromUrl) && stepFromUrl !== activeStep) {
       setActiveStepInternal(stepFromUrl)
+    }
+    
+    if (tabFromUrl && ['initialisation', 'dates_prix', 'apprenants', 'programme', 'intervenants'].includes(tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl)
+    }
+    
+    if (gestionTabFromUrl && ['conventions', 'convocations', 'evaluations', 'finances', 'espace_entreprise', 'automatisation'].includes(gestionTabFromUrl) && gestionTabFromUrl !== activeGestionTab) {
+      setActiveGestionTab(gestionTabFromUrl)
+    }
+    
+    // Si on a un gestionTab dans l'URL, s'assurer que activeStep est 'gestion'
+    if (gestionTabFromUrl && activeStep !== 'gestion') {
+      setActiveStepInternal('gestion')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
@@ -121,6 +160,29 @@ export function useSessionDetail(sessionId: string) {
     setActiveStepInternal(step)
     const params = new URLSearchParams(searchParams.toString())
     params.set('step', step)
+    // Réinitialiser les tabs si on change d'étape
+    if (step === 'configuration') {
+      params.delete('gestionTab')
+      params.delete('tab')
+      params.set('tab', 'initialisation')
+    } else if (step === 'gestion') {
+      params.delete('tab')
+      params.delete('gestionTab')
+      params.set('gestionTab', 'conventions')
+    } else {
+      params.delete('tab')
+      params.delete('gestionTab')
+    }
+    router.push(`/dashboard/sessions/${sessionId}?${params.toString()}`, { scroll: false })
+  }
+  
+  // Fonction pour changer de tab de gestion et mettre à jour l'URL
+  const handleGestionTabChange = (tab: GestionTab) => {
+    setActiveGestionTab(tab)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('step', 'gestion')
+    params.set('gestionTab', tab)
+    params.delete('tab') // Nettoyer le paramètre tab pour éviter les conflits
     router.push(`/dashboard/sessions/${sessionId}?${params.toString()}`, { scroll: false })
   }
 
@@ -965,7 +1027,7 @@ export function useSessionDetail(sessionId: string) {
     activeTab,
     setActiveTab,
     activeGestionTab,
-    setActiveGestionTab,
+    setActiveGestionTab: handleGestionTabChange,
 
     // Formulaires
     formData,
