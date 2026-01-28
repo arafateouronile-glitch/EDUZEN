@@ -232,6 +232,7 @@ export function useDocumentGeneration({
         },
         issueDate: new Date().toISOString(),
         language: 'fr',
+        organizationId: organization.id,
       })
 
       const tempDiv = document.createElement('div')
@@ -285,6 +286,7 @@ export function useDocumentGeneration({
         },
         issueDate: new Date().toISOString(),
         language: 'fr',
+        organizationId: organization.id,
       })
 
       const tempDiv = document.createElement('div')
@@ -330,6 +332,7 @@ export function useDocumentGeneration({
         },
         issueDate: new Date().toISOString(),
         language: 'fr',
+        organizationId: organization.id,
       })
 
       const tempDiv = document.createElement('div')
@@ -375,6 +378,7 @@ export function useDocumentGeneration({
         },
         issueDate: new Date().toISOString(),
         language: 'fr',
+        organizationId: organization.id,
       })
 
       const tempDiv = document.createElement('div')
@@ -743,6 +747,7 @@ export function useDocumentGeneration({
         students,
         issueDate: new Date().toISOString(),
         language: 'fr',
+        organizationId: organization.id,
       })
 
       // Créer un élément temporaire pour générer le PDF
@@ -897,6 +902,7 @@ export function useDocumentGeneration({
         },
         issueDate: new Date().toISOString(),
         language: 'fr',
+        organizationId: organization.id,
       })
 
       // Créer un élément temporaire pour générer le PDF
@@ -995,6 +1001,7 @@ export function useDocumentGeneration({
         },
         issueDate: new Date().toISOString(),
         language: 'fr',
+        organizationId: organization.id,
       })
 
       // Créer un élément temporaire pour générer le PDF

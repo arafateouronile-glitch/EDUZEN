@@ -2553,9 +2553,6 @@ export async function generateConvocationHTML(data: {
     },
   }[lang]
   
-  // Générer le template avec balises
-  const template = generateConvocationTemplate(data)
-  
   // Préparer les variables pour le système de balises
   const variables: any = {
     organisation_logo: data.organization.logo_url || '',
@@ -2594,7 +2591,26 @@ export async function generateConvocationHTML(data: {
     issue_date: formatDateForDocument(data.issueDate),
   }
   
-  // Traiter le template avec le système de génération HTML
+  // Essayer d'utiliser le template par défaut de la base de données
+  if (data.organizationId) {
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'convocation')
+      
+      if (defaultTemplate) {
+        // Utiliser le template de la base de données
+        const result = await generateHTML(defaultTemplate, variables, data.documentId, data.organizationId)
+        return result.html
+      }
+    } catch (error) {
+      // En cas d'erreur, continuer avec le template codé en dur
+      const { logger } = await import('@/lib/utils/logger')
+      logger.warn('Erreur lors de la récupération du template par défaut, utilisation du template codé en dur', { error })
+    }
+  }
+  
+  // Fallback : utiliser le template codé en dur
+  const template = generateConvocationTemplate(data)
   return await processTemplateWithTags(template, variables, data.documentId, data.organizationId)
 }
 
