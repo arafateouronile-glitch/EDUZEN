@@ -2799,9 +2799,6 @@ export async function generateProgramHTML(data: {
     },
   }[lang]
   
-  // Générer le template avec balises
-  const template = generateProgramTemplate(data)
-  
   // Préparer les variables pour le système de balises
   const variables: any = {
     organisation_logo: data.organization.logo_url || '',
@@ -2833,7 +2830,26 @@ export async function generateProgramHTML(data: {
     issue_date: formatDateForDocument(data.issueDate),
   }
   
-  // Traiter le template avec le système de génération HTML
+  // Essayer d'utiliser le template par défaut de la base de données
+  if (data.organizationId) {
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'programme')
+      
+      if (defaultTemplate) {
+        // Utiliser le template de la base de données
+        const result = await generateHTML(defaultTemplate, variables, data.documentId, data.organizationId)
+        return result.html
+      }
+    } catch (error) {
+      // En cas d'erreur, continuer avec le template codé en dur
+      const { logger } = await import('@/lib/utils/logger')
+      logger.warn('Erreur lors de la récupération du template par défaut, utilisation du template codé en dur', { error })
+    }
+  }
+  
+  // Fallback : utiliser le template codé en dur
+  const template = generateProgramTemplate(data)
   return await processTemplateWithTags(template, variables, data.documentId, data.organizationId)
 }
 
@@ -2941,9 +2957,6 @@ export async function generateTermsHTML(data: {
     },
   }[lang]
   
-  // Générer le template avec balises
-  const template = generateTermsTemplate(data)
-  
   // Préparer les variables pour le système de balises
   const variables: any = {
     organisation_logo: data.organization.logo_url || '',
@@ -2960,7 +2973,26 @@ export async function generateTermsHTML(data: {
     issue_date: formatDateForDocument(data.issueDate),
   }
   
-  // Traiter le template avec le système de génération HTML
+  // Essayer d'utiliser le template par défaut de la base de données
+  if (data.organizationId) {
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'cgv')
+      
+      if (defaultTemplate) {
+        // Utiliser le template de la base de données
+        const result = await generateHTML(defaultTemplate, variables, data.documentId, data.organizationId)
+        return result.html
+      }
+    } catch (error) {
+      // En cas d'erreur, continuer avec le template codé en dur
+      const { logger } = await import('@/lib/utils/logger')
+      logger.warn('Erreur lors de la récupération du template par défaut, utilisation du template codé en dur', { error })
+    }
+  }
+  
+  // Fallback : utiliser le template codé en dur
+  const template = generateTermsTemplate(data)
   return await processTemplateWithTags(template, variables, data.documentId, data.organizationId)
 }
 
@@ -3068,9 +3100,6 @@ export async function generatePrivacyPolicyHTML(data: {
     },
   }[lang]
   
-  // Générer le template avec balises
-  const template = generatePrivacyPolicyTemplate(data)
-  
   // Préparer les variables pour le système de balises
   const variables: any = {
     organisation_logo: data.organization.logo_url || '',
@@ -3087,7 +3116,34 @@ export async function generatePrivacyPolicyHTML(data: {
     issue_date: formatDateForDocument(data.issueDate),
   }
   
-  // Traiter le template avec le système de génération HTML
+  // Essayer d'utiliser le template par défaut de la base de données
+  // Note: Il n'y a pas de type spécifique pour la politique de confidentialité dans DocumentType
+  // On cherche dans tous les templates de type 'attestation' ou on récupère tous les templates
+  if (data.organizationId) {
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      // Récupérer tous les templates et chercher celui qui correspond à la politique de confidentialité
+      const allTemplates = await templateService.getAllTemplates(data.organizationId, { type: 'attestation' })
+      const privacyTemplate = allTemplates.find(t => 
+        t.name?.toLowerCase().includes('confidentialité') || 
+        t.name?.toLowerCase().includes('privacy') ||
+        t.name?.toLowerCase().includes('rgpd')
+      )
+      
+      if (privacyTemplate) {
+        // Utiliser le template de la base de données
+        const result = await generateHTML(privacyTemplate, variables, data.documentId, data.organizationId)
+        return result.html
+      }
+    } catch (error) {
+      // En cas d'erreur, continuer avec le template codé en dur
+      const { logger } = await import('@/lib/utils/logger')
+      logger.warn('Erreur lors de la récupération du template par défaut, utilisation du template codé en dur', { error })
+    }
+  }
+  
+  // Fallback : utiliser le template codé en dur
+  const template = generatePrivacyPolicyTemplate(data)
   return await processTemplateWithTags(template, variables, data.documentId, data.organizationId)
 }
 
