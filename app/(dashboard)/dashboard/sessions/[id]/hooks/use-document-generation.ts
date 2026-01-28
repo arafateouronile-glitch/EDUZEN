@@ -94,9 +94,10 @@ export function useDocumentGeneration({
 
       const element = tempDiv.querySelector('[id$="-document"]')
       if (element) {
-        element.id = `temp-convention-${Date.now()}`
+        const elementId = `temp-convention-${Date.now()}`
+        element.id = elementId
         await new Promise((resolve) => setTimeout(resolve, 500))
-        const pdfBlob = await generatePDFBlobFromHTML(html)
+        const pdfBlob = await generatePDFBlobFromHTML(elementId)
         const url = URL.createObjectURL(pdfBlob)
         const a = document.createElement('a')
         a.href = url
@@ -180,9 +181,10 @@ export function useDocumentGeneration({
 
       const element = tempDiv.querySelector('[id$="-document"]')
       if (element) {
-        element.id = `temp-contract-${Date.now()}`
+        const elementId = `temp-contract-${Date.now()}`
+        element.id = elementId
         await new Promise((resolve) => setTimeout(resolve, 500))
-        const pdfBlob = await generatePDFBlobFromHTML(html)
+        const pdfBlob = await generatePDFBlobFromHTML(elementId)
         const url = URL.createObjectURL(pdfBlob)
         const a = document.createElement('a')
         a.href = url
