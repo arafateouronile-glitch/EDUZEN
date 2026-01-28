@@ -46,9 +46,9 @@ export function ConfigInitialisation({
     >
       {/* Section 1: Identité de la session */}
       <motion.div variants={itemVariants}>
-        <Card className="relative border-0 shadow-lg shadow-slate-200/50 bg-white overflow-hidden rounded-2xl">
+        <Card className="relative border-0 shadow-lg shadow-slate-200/50 bg-white overflow-visible rounded-2xl">
           {/* Decorative gradient bar */}
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-blue via-brand-blue to-brand-cyan rounded-l-2xl" />
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-blue via-brand-blue to-brand-cyan rounded-l-2xl pointer-events-none" />
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-brand-blue/[0.03] to-transparent rounded-full blur-3xl -mr-36 -mt-36 pointer-events-none" />
 
@@ -67,7 +67,7 @@ export function ConfigInitialisation({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-5 pt-2 px-7 pb-6">
+          <CardContent className="space-y-5 pt-2 px-7 pb-6 relative z-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-2.5">
               <Label htmlFor="session-name" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
@@ -96,7 +96,7 @@ export function ConfigInitialisation({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 relative z-10">
               <Label htmlFor="session-type" className="text-sm font-semibold text-gray-700">
                 Type de session
               </Label>
@@ -107,7 +107,7 @@ export function ConfigInitialisation({
                 <SelectTrigger id="session-type" className="h-12 bg-slate-50/50 border-slate-200 rounded-xl hover:bg-slate-100/50 transition-colors">
                   <SelectValue placeholder="Sélectionner un type" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-xl z-[100]">
                   <SelectItem value="formation_professionnelle">Formation professionnelle</SelectItem>
                   <SelectItem value="stage">Stage</SelectItem>
                   <SelectItem value="cours">Cours</SelectItem>
@@ -115,7 +115,7 @@ export function ConfigInitialisation({
               </Select>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 relative z-10">
               <Label htmlFor="timezone" className="text-sm font-semibold text-gray-700">
                 Fuseau horaire
               </Label>
@@ -129,7 +129,7 @@ export function ConfigInitialisation({
                     <SelectValue placeholder="Sélectionner un fuseau" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl">
+                <SelectContent className="rounded-xl z-[100]">
                   <SelectItem value="Europe/Paris">Europe/Paris (UTC+1)</SelectItem>
                   <SelectItem value="Africa/Dakar">Africa/Dakar (UTC+0)</SelectItem>
                   <SelectItem value="Africa/Abidjan">Africa/Abidjan (UTC+0)</SelectItem>
@@ -162,9 +162,9 @@ export function ConfigInitialisation({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-5 pt-2 px-7 pb-6">
+          <CardContent className="space-y-5 pt-2 px-7 pb-6 relative z-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 relative z-10">
                 <Label htmlFor="manager1" className="text-sm font-semibold text-gray-700">
                   Gestionnaire principal
                 </Label>
@@ -180,7 +180,7 @@ export function ConfigInitialisation({
                       <SelectValue placeholder="Sélectionner un gestionnaire" />
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-xl z-[100]">
                     {users
                       .filter((u) => u.role === 'admin' || u.role === 'secretary')
                       .map((u) => (
@@ -191,7 +191,7 @@ export function ConfigInitialisation({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 relative z-10">
                 <Label htmlFor="manager2" className="text-sm font-semibold text-gray-700">
                   Gestionnaire secondaire
                 </Label>
@@ -207,7 +207,7 @@ export function ConfigInitialisation({
                       <SelectValue placeholder="Optionnel" />
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-xl z-[100]">
                     {users
                       .filter((u) => u.role === 'admin' || u.role === 'secretary')
                       .map((u) => (
