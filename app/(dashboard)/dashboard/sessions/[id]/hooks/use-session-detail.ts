@@ -165,14 +165,26 @@ export function useSessionDetail(sessionId: string) {
       params.delete('gestionTab')
       params.delete('tab')
       params.set('tab', 'initialisation')
+      setActiveTab('initialisation')
     } else if (step === 'gestion') {
       params.delete('tab')
       params.delete('gestionTab')
       params.set('gestionTab', 'conventions')
+      setActiveGestionTab('conventions')
     } else {
       params.delete('tab')
       params.delete('gestionTab')
     }
+    router.push(`/dashboard/sessions/${sessionId}?${params.toString()}`, { scroll: false })
+  }
+  
+  // Fonction pour changer de tab de configuration et mettre à jour l'URL
+  const handleConfigTabChange = (tab: ConfigTab) => {
+    setActiveTab(tab)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('step', 'configuration')
+    params.set('tab', tab)
+    params.delete('gestionTab') // Nettoyer le paramètre gestionTab pour éviter les conflits
     router.push(`/dashboard/sessions/${sessionId}?${params.toString()}`, { scroll: false })
   }
   
@@ -1025,7 +1037,7 @@ export function useSessionDetail(sessionId: string) {
     activeStep,
     setActiveStep: handleStepChange,
     activeTab,
-    setActiveTab,
+    setActiveTab: handleConfigTabChange,
     activeGestionTab,
     setActiveGestionTab: handleGestionTabChange,
 

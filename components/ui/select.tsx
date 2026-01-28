@@ -271,7 +271,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
     return (
       <div
         ref={ref}
-        className={cn("absolute top-full left-0 z-50 mt-1 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md", className)}
+        className={cn("absolute top-full left-0 z-[100] mt-1 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md", className)}
       >
         <div className="p-1">{children}</div>
       </div>

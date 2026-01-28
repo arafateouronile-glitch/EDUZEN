@@ -143,8 +143,8 @@ export function ConfigInitialisation({
 
       {/* Section 2: Gestion et Responsabilité */}
       <motion.div variants={itemVariants}>
-        <Card className="relative border-0 shadow-lg shadow-slate-200/50 bg-white overflow-hidden rounded-2xl">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-cyan via-brand-cyan to-emerald-400 rounded-l-2xl" />
+        <Card className="relative border-0 shadow-lg shadow-slate-200/50 bg-white overflow-visible rounded-2xl">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand-cyan via-brand-cyan to-emerald-400 rounded-l-2xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-brand-cyan/[0.03] to-transparent rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none" />
 
           <CardHeader className="pb-2 pt-6 px-7">
@@ -225,8 +225,8 @@ export function ConfigInitialisation({
 
       {/* Section 3: Modalités */}
       <motion.div variants={itemVariants}>
-        <Card className="relative border-0 shadow-lg shadow-slate-200/50 bg-white overflow-hidden rounded-2xl">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-violet-500 via-purple-500 to-fuchsia-500 rounded-l-2xl" />
+        <Card className="relative border-0 shadow-lg shadow-slate-200/50 bg-white overflow-visible rounded-2xl">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-violet-500 via-purple-500 to-fuchsia-500 rounded-l-2xl pointer-events-none" />
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-violet-500/[0.03] to-transparent rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
 
           <CardHeader className="pb-2 pt-6 px-7">
