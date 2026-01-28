@@ -965,13 +965,23 @@ export function useDocumentGeneration({
       // Attendre que le DOM soit mis à jour
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Générer le PDF
-      await generatePDFFromHTML(elementId, `rapport_session_${sessionData.name.replace(/\s+/g, '_')}.pdf`)
+      // Générer le PDF en Blob
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
 
       // Nettoyer
       if (tempDiv.parentNode === document.body) {
         document.body.removeChild(tempDiv)
       }
+
+      // Télécharger le PDF
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `rapport_session_${sessionData.name.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
 
       addToast({
         type: 'success',
