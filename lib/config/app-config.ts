@@ -78,19 +78,28 @@ export const SECURITY_CONFIG = {
   // Clé de chiffrement par défaut (DOIT être remplacée en production)
   // En production, utiliser TEMPLATE_ENCRYPTION_KEY depuis les variables d'environnement
   getEncryptionKey: (): string => {
+    // Vérifier si on est côté serveur
+    const isServer = typeof window === 'undefined'
+    
     const key = process.env.TEMPLATE_ENCRYPTION_KEY
     if (!key || key === 'default-key-change-in-production') {
-      if (process.env.NODE_ENV === 'production') {
+      // Côté serveur en production : lancer une erreur
+      if (isServer && process.env.NODE_ENV === 'production') {
         throw new Error(
           'TEMPLATE_ENCRYPTION_KEY doit être configurée en production. ' +
           'Générez une clé sécurisée et ajoutez-la aux variables d\'environnement.'
         )
       }
-      // En développement, utiliser une clé par défaut (mais afficher un avertissement)
-      console.warn(
-        '⚠️  ATTENTION: Utilisation d\'une clé de chiffrement par défaut. ' +
-        'Configurez TEMPLATE_ENCRYPTION_KEY pour la production.'
-      )
+      
+      // Côté client : utiliser une clé par défaut (le chiffrement se fera côté serveur via API)
+      // Côté serveur en développement : utiliser une clé par défaut avec avertissement
+      if (isServer) {
+        console.warn(
+          '⚠️  ATTENTION: Utilisation d\'une clé de chiffrement par défaut. ' +
+          'Configurez TEMPLATE_ENCRYPTION_KEY pour la production.'
+        )
+      }
+      
       return 'default-key-change-in-production'
     }
     return key

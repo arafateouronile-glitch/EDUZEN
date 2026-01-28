@@ -154,7 +154,9 @@ export async function middleware(req: NextRequest) {
     }
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/auth/login'
-    redirectUrl.searchParams.set('redirect', req.nextUrl.pathname)
+    // Préserver le pathname complet avec les query params pour la redirection après connexion
+    const fullPath = req.nextUrl.pathname + (req.nextUrl.search ? req.nextUrl.search : '')
+    redirectUrl.searchParams.set('redirect', fullPath)
     return NextResponse.redirect(redirectUrl)
   }
 
