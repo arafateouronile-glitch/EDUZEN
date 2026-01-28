@@ -3,7 +3,7 @@
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { Plus, X, ClipboardList, Award, TrendingUp, Users, CheckCircle2, Calendar, FileText, AlertCircle, Sparkles } from 'lucide-react'
+import { Plus, X, ClipboardList, Award, TrendingUp, Users, CheckCircle2, Calendar, FileText, AlertCircle, Sparkles, FileText as FileTextIcon } from 'lucide-react'
 import { formatDate, cn } from '@/lib/utils'
 import type { 
   GradeWithRelations,
@@ -11,6 +11,13 @@ import type {
 } from '@/lib/types/query-types'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface GestionEvaluationsProps {
   grades?: GradeWithRelations[]
@@ -22,6 +29,7 @@ interface GestionEvaluationsProps {
   students?: StudentWithRelations[]
   showEvaluationForm: boolean
   evaluationForm: {
+    template_id?: string
     subject: string
     assessment_type: string
     student_id: string | undefined
@@ -39,6 +47,16 @@ interface GestionEvaluationsProps {
   }
   onCloseEvaluationForm: () => void
   onShowEvaluationForm: (type?: string, subject?: string) => void
+  evaluationTemplates?: Array<{
+    id: string
+    name: string
+    subject?: string | null
+    assessment_type?: string | null
+    max_score?: number | null
+    description?: string | null
+    [key: string]: any
+  }>
+  onTemplateChange?: (templateId: string | undefined) => void
 }
 
 const evaluationTypes = [
@@ -95,6 +113,8 @@ export function GestionEvaluations({
   createEvaluationMutation,
   onCloseEvaluationForm,
   onShowEvaluationForm,
+  evaluationTemplates = [],
+  onTemplateChange,
 }: GestionEvaluationsProps) {
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -154,6 +174,47 @@ export function GestionEvaluations({
                 }}
                 className="space-y-6"
               >
+                {/* Sélecteur de modèle */}
+                {evaluationTemplates.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">Modèle d'évaluation (optionnel)</label>
+                    <Select
+                      value={evaluationForm.template_id || ''}
+                      onValueChange={(value) => {
+                        if (onTemplateChange) {
+                          onTemplateChange(value || undefined)
+                        } else {
+                          onEvaluationFormChange({
+                            ...evaluationForm,
+                            template_id: value || undefined,
+                          })
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+                        <SelectValue placeholder="Sélectionner un modèle d'évaluation" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl z-[100]">
+                        <SelectItem value="">Aucun modèle (création manuelle)</SelectItem>
+                        {evaluationTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            <div className="flex items-center gap-2">
+                              <FileTextIcon className="h-4 w-4 text-gray-400" />
+                              <span>{template.name}</span>
+                              {template.subject && (
+                                <span className="text-xs text-gray-500">({template.subject})</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      Sélectionnez un modèle pour pré-remplir automatiquement les champs
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700">Sujet *</label>

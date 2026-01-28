@@ -9,6 +9,7 @@ import { formationService } from '@/lib/services/formation.service'
 import { sessionSlotService } from '@/lib/services/session-slot.service'
 import { evaluationService } from '@/lib/services/evaluation.service'
 import { emailService } from '@/lib/services/email.service'
+import { evaluationTemplateService } from '@/lib/services/evaluation-template.service'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/components/ui/toast'
@@ -67,6 +68,7 @@ export interface EnrollmentFormData {
 }
 
 export interface EvaluationFormData {
+  template_id?: string
   subject: string
   assessment_type: string
   student_id: string | undefined
@@ -235,6 +237,7 @@ export function useSessionDetail(sessionId: string) {
 
   const [showEvaluationForm, setShowEvaluationForm] = useState(false)
   const [evaluationForm, setEvaluationForm] = useState<EvaluationFormData>({
+    template_id: undefined,
     subject: '',
     assessment_type: 'evaluation_generale',
     student_id: undefined,
@@ -480,6 +483,16 @@ export function useSessionDetail(sessionId: string) {
         .single()
       if (error) throw error
       return data
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Charger les modèles d'évaluations
+  const { data: evaluationTemplates } = useQuery({
+    queryKey: ['evaluation-templates', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return evaluationTemplateService.getTemplates(user.organization_id)
     },
     enabled: !!user?.organization_id,
   })
@@ -925,6 +938,7 @@ export function useSessionDetail(sessionId: string) {
       queryClient.invalidateQueries({ queryKey: ['session-grades', sessionId] })
       setShowEvaluationForm(false)
       setEvaluationForm({
+        template_id: undefined,
         subject: '',
         assessment_type: 'evaluation_generale',
         student_id: undefined,
@@ -1098,6 +1112,29 @@ export function useSessionDetail(sessionId: string) {
     }
   }
 
+  // Fonction pour gérer le changement de modèle d'évaluation
+  const handleTemplateChange = (templateId: string | undefined) => {
+    if (!templateId) {
+      setEvaluationForm({
+        ...evaluationForm,
+        template_id: undefined,
+      })
+      return
+    }
+
+    const template = evaluationTemplates?.find(t => t.id === templateId)
+    if (template) {
+      setEvaluationForm({
+        ...evaluationForm,
+        template_id: templateId,
+        subject: template.subject || evaluationForm.subject,
+        assessment_type: template.assessment_type || evaluationForm.assessment_type,
+        max_score: template.max_score?.toString() || evaluationForm.max_score,
+        notes: template.description || evaluationForm.notes,
+      })
+    }
+  }
+
   // Calcul des statistiques des notes
   const gradesStats = grades && (grades as GradeWithRelations[]).length > 0
     ? {
@@ -1163,6 +1200,7 @@ export function useSessionDetail(sessionId: string) {
     grades: grades as GradeWithRelations[] | undefined,
     gradesStats,
     organization: organization as Organization | undefined,
+    evaluationTemplates: evaluationTemplates || [],
 
     // États de chargement
     isLoading: isGlobalLoading,
@@ -1180,6 +1218,7 @@ export function useSessionDetail(sessionId: string) {
     // Actions
     handleSave,
     refetchSlots,
+    handleTemplateChange,
 
     // Utilitaires
     user,

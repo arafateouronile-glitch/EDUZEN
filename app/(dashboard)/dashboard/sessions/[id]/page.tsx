@@ -89,6 +89,8 @@ export default function SessionDetailPage() {
     isGeneratingZip,
     zipGenerationProgress,
     lastZipGeneration,
+    evaluationTemplates,
+    handleTemplateChange,
 
     // Mutations
     updateMutation,
@@ -692,6 +694,8 @@ export default function SessionDetailPage() {
                     })
                     setShowEvaluationForm(true)
                   }}
+                  evaluationTemplates={evaluationTemplates}
+                  onTemplateChange={handleTemplateChange}
                   />
                 </Suspense>
               )}
