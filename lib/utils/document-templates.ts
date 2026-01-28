@@ -2312,7 +2312,7 @@ export async function generateContractHTML(data: {
   if (data.organizationId) {
     try {
       const templateService = new DocumentTemplateService(createClient())
-      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'contract')
+      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'contrat')
       
       if (defaultTemplate) {
         // Utiliser le template de la base de données
