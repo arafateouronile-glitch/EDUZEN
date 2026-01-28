@@ -1266,22 +1266,41 @@ export function useDocumentGeneration({
         organizationId: organization.id,
       })
 
+      // Créer un élément temporaire pour générer le PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm'
+      tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Chercher l'élément de document
+      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      if (!element) {
+        // Essayer de chercher directement par ID
+        element = tempDiv.querySelector('#contract-document') as HTMLElement
+      }
+      if (!element) {
+        // Si toujours pas trouvé, utiliser le premier div
+        element = tempDiv.querySelector('div') as HTMLElement
+      }
       if (!element) {
         document.body.removeChild(tempDiv)
-        throw new Error('Élément de document non trouvé')
+        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
 
-      element.id = `temp-contract-email-${Date.now()}`
+      const elementId = `temp-contract-email-${Date.now()}`
+      element.id = elementId
+      
+      // Attendre que l'ID soit appliqué
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      const pdfBlob = await generatePDFBlobFromHTML(element.id)
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
       document.body.removeChild(tempDiv)
 
       // Convertir le texte en HTML si nécessaire
@@ -1461,22 +1480,41 @@ export function useDocumentGeneration({
         organizationId: organization.id,
       })
 
+      // Créer un élément temporaire pour générer le PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm'
+      tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Chercher l'élément de document
+      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      if (!element) {
+        // Essayer de chercher directement par ID
+        element = tempDiv.querySelector('#contract-document') as HTMLElement
+      }
+      if (!element) {
+        // Si toujours pas trouvé, utiliser le premier div
+        element = tempDiv.querySelector('div') as HTMLElement
+      }
       if (!element) {
         document.body.removeChild(tempDiv)
-        throw new Error('Élément de document non trouvé')
+        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
 
-      element.id = `temp-contract-email-${Date.now()}`
+      const elementId = `temp-contract-email-${Date.now()}`
+      element.id = elementId
+      
+      // Attendre que l'ID soit appliqué
       await new Promise((resolve) => setTimeout(resolve, 500))
 
-      const pdfBlob = await generatePDFBlobFromHTML(element.id)
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
       document.body.removeChild(tempDiv)
 
       const emailSubject = `Contrat de formation - ${formation.name}`
