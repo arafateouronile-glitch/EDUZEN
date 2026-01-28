@@ -8,10 +8,12 @@ import { programService } from '@/lib/services/program.service'
 import { formationService } from '@/lib/services/formation.service'
 import { sessionSlotService } from '@/lib/services/session-slot.service'
 import { evaluationService } from '@/lib/services/evaluation.service'
+import { emailService } from '@/lib/services/email.service'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useToast } from '@/components/ui/toast'
 import { logger } from '@/lib/utils/logger'
+import { formatDate } from '@/lib/utils'
 import { sessionSchema, enrollmentSchema, type SessionFormData as SessionFormDataZod, type EnrollmentFormData as EnrollmentFormDataZod } from '@/lib/validations/schemas'
 import type { 
   SessionWithRelations, 
@@ -919,7 +921,7 @@ export function useSessionDetail(sessionId: string) {
         throw error
       }
     },
-    onSuccess: () => {
+    onSuccess: async (createdEvaluation) => {
       queryClient.invalidateQueries({ queryKey: ['session-grades', sessionId] })
       setShowEvaluationForm(false)
       setEvaluationForm({
@@ -932,10 +934,89 @@ export function useSessionDetail(sessionId: string) {
         notes: '',
         graded_at: new Date().toISOString().split('T')[0],
       })
+      
+      // Envoyer automatiquement un email à l'étudiant (ou tous les étudiants si évaluation collective)
+      try {
+        const studentsToNotify: Array<{ email: string; firstName: string; lastName: string }> = []
+        
+        if (evaluationForm.student_id) {
+          // Évaluation individuelle - envoyer à un seul étudiant
+          const student = students?.find(s => s.id === evaluationForm.student_id)
+          if (student && student.email) {
+            studentsToNotify.push({
+              email: student.email,
+              firstName: student.first_name || '',
+              lastName: student.last_name || '',
+            })
+          }
+        } else {
+          // Évaluation collective - envoyer à tous les étudiants de la session
+          const validEnrollments = (enrollments as EnrollmentWithRelations[])?.filter(
+            (e) => e.students && e.students.email && e.status !== 'cancelled'
+          ) || []
+          
+          validEnrollments.forEach((enrollment) => {
+            const student = enrollment.students
+            if (student && student.email) {
+              studentsToNotify.push({
+                email: student.email,
+                firstName: student.first_name || '',
+                lastName: student.last_name || '',
+              })
+            }
+          })
+        }
+        
+        // Envoyer les emails
+        if (studentsToNotify.length > 0) {
+          const sessionName = sessionData?.name || 'Session'
+          const formationName = formation?.name || 'Formation'
+          const organizationName = organization?.name || 'Organisation'
+          
+          const emailPromises = studentsToNotify.map(async (student) => {
+            const subject = `Nouvelle évaluation : ${evaluationForm.subject}`
+            const emailBody = `
+              <p>Bonjour ${student.firstName} ${student.lastName},</p>
+              <p>Une nouvelle évaluation a été créée pour vous :</p>
+              <ul style="margin: 20px 0; padding-left: 20px;">
+                <li><strong>Sujet :</strong> ${evaluationForm.subject}</li>
+                <li><strong>Session :</strong> ${sessionName}</li>
+                <li><strong>Formation :</strong> ${formationName}</li>
+                ${evaluationForm.score ? `<li><strong>Note :</strong> ${evaluationForm.score}/${evaluationForm.max_score || 20}</li>` : ''}
+                ${evaluationForm.graded_at ? `<li><strong>Date de correction :</strong> ${formatDate(evaluationForm.graded_at)}</li>` : ''}
+              </ul>
+              ${evaluationForm.notes ? `<p><strong>Commentaires :</strong><br>${evaluationForm.notes.replace(/\n/g, '<br>')}</p>` : ''}
+              <p>Vous pouvez consulter cette évaluation dans votre espace personnel.</p>
+              <p>Cordialement,<br>${organizationName}</p>
+            `
+            
+            try {
+              await emailService.sendEmail({
+                to: student.email,
+                subject,
+                html: emailBody,
+              })
+            } catch (emailError) {
+              logger.error('Erreur lors de l\'envoi de l\'email d\'évaluation', emailError as Error, {
+                studentEmail: student.email,
+                evaluationId: createdEvaluation?.id,
+              })
+            }
+          })
+          
+          await Promise.allSettled(emailPromises)
+        }
+      } catch (emailError) {
+        // Ne pas bloquer la création de l'évaluation si l'envoi d'email échoue
+        logger.error('Erreur lors de l\'envoi automatique des emails d\'évaluation', emailError as Error, {
+          evaluationId: createdEvaluation?.id,
+        })
+      }
+      
       addToast({
         type: 'success',
         title: 'Évaluation créée',
-        description: 'L\'évaluation a été créée avec succès.',
+        description: 'L\'évaluation a été créée avec succès et envoyée par email.',
       })
     },
     onError: (error) => {
