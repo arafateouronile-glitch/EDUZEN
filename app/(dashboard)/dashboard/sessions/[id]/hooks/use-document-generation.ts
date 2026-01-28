@@ -86,29 +86,50 @@ export function useDocumentGeneration({
         organizationId: organization.id,
       })
 
+      // Créer un élément temporaire pour générer le PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm'
+      tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
-      if (element) {
-        const elementId = `temp-convention-${Date.now()}`
-        element.id = elementId
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        const pdfBlob = await generatePDFBlobFromHTML(elementId)
-        const url = URL.createObjectURL(pdfBlob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `convention_${sessionData.name.replace(/\s+/g, '_')}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Chercher l'élément de document avec plusieurs méthodes
+      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      if (!element) {
+        element = tempDiv.querySelector('#convention-document') as HTMLElement
+      }
+      if (!element) {
+        element = tempDiv.querySelector('div') as HTMLElement
+      }
+      if (!element) {
+        document.body.removeChild(tempDiv)
+        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
 
+      const elementId = `temp-convention-${Date.now()}`
+      element.id = elementId
+      
+      // Attendre que l'ID soit appliqué
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
       document.body.removeChild(tempDiv)
+
+      // Télécharger le PDF
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `convention_${sessionData.name.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       addToast({
         type: 'success',
         title: 'Convention générée',
@@ -173,29 +194,50 @@ export function useDocumentGeneration({
         organizationId: organization.id,
       })
 
+      // Créer un élément temporaire pour générer le PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm'
+      tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
-      if (element) {
-        const elementId = `temp-contract-${Date.now()}`
-        element.id = elementId
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        const pdfBlob = await generatePDFBlobFromHTML(elementId)
-        const url = URL.createObjectURL(pdfBlob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `contrat_${student.last_name}_${student.first_name}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Chercher l'élément de document avec plusieurs méthodes
+      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      if (!element) {
+        element = tempDiv.querySelector('#contract-document') as HTMLElement
+      }
+      if (!element) {
+        element = tempDiv.querySelector('div') as HTMLElement
+      }
+      if (!element) {
+        document.body.removeChild(tempDiv)
+        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
 
+      const elementId = `temp-contract-${Date.now()}`
+      element.id = elementId
+      
+      // Attendre que l'ID soit appliqué
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
       document.body.removeChild(tempDiv)
+
+      // Télécharger le PDF
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `contrat_${student.last_name}_${student.first_name}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       addToast({
         type: 'success',
         title: 'Contrat généré',
@@ -253,20 +295,50 @@ export function useDocumentGeneration({
         organizationId: organization.id,
       })
 
+      // Créer un élément temporaire pour générer le PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm'
+      tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
-      if (element) {
-        element.id = `temp-convocation-${Date.now()}`
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        await generatePDFFromHTML(element.id, `convocation_${student.last_name}_${student.first_name}.pdf`)
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Chercher l'élément de document avec plusieurs méthodes
+      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      if (!element) {
+        element = tempDiv.querySelector('#convocation-document') as HTMLElement
+      }
+      if (!element) {
+        element = tempDiv.querySelector('div') as HTMLElement
+      }
+      if (!element) {
+        document.body.removeChild(tempDiv)
+        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
 
+      const elementId = `temp-convocation-${Date.now()}`
+      element.id = elementId
+      
+      // Attendre que l'ID soit appliqué
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
       document.body.removeChild(tempDiv)
+
+      // Télécharger le PDF
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `convocation_${student.last_name}_${student.first_name}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       addToast({
         type: 'success',
         title: 'Convocation générée',
@@ -307,20 +379,50 @@ export function useDocumentGeneration({
         organizationId: organization.id,
       })
 
+      // Créer un élément temporaire pour générer le PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm'
+      tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
-      if (element) {
-        element.id = `temp-program-${Date.now()}`
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        await generatePDFFromHTML(element.id, `programme_${program.name.replace(/\s+/g, '_')}.pdf`)
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Chercher l'élément de document avec plusieurs méthodes
+      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      if (!element) {
+        element = tempDiv.querySelector('#program-document') as HTMLElement
+      }
+      if (!element) {
+        element = tempDiv.querySelector('div') as HTMLElement
+      }
+      if (!element) {
+        document.body.removeChild(tempDiv)
+        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
 
+      const elementId = `temp-program-${Date.now()}`
+      element.id = elementId
+      
+      // Attendre que l'ID soit appliqué
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
       document.body.removeChild(tempDiv)
+
+      // Télécharger le PDF
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `programme_${program.name.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       addToast({
         type: 'success',
         title: 'Programme généré',
@@ -353,20 +455,50 @@ export function useDocumentGeneration({
         organizationId: organization.id,
       })
 
+      // Créer un élément temporaire pour générer le PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm'
+      tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
-      if (element) {
-        element.id = `temp-terms-${Date.now()}`
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        await generatePDFFromHTML(element.id, `cgv_${organization.name.replace(/\s+/g, '_')}.pdf`)
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Chercher l'élément de document avec plusieurs méthodes
+      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      if (!element) {
+        element = tempDiv.querySelector('#terms-document') as HTMLElement
+      }
+      if (!element) {
+        element = tempDiv.querySelector('div') as HTMLElement
+      }
+      if (!element) {
+        document.body.removeChild(tempDiv)
+        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
 
+      const elementId = `temp-terms-${Date.now()}`
+      element.id = elementId
+      
+      // Attendre que l'ID soit appliqué
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
       document.body.removeChild(tempDiv)
+
+      // Télécharger le PDF
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `cgv_${organization.name.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       addToast({
         type: 'success',
         title: 'CGV générée',
@@ -399,20 +531,53 @@ export function useDocumentGeneration({
         organizationId: organization.id,
       })
 
+      // Créer un élément temporaire pour générer le PDF
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '-9999px'
+      tempDiv.style.width = '210mm'
+      tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
-      if (element) {
-        element.id = `temp-privacy-${Date.now()}`
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        await generatePDFFromHTML(element.id, `politique_confidentialite_${organization.name.replace(/\s+/g, '_')}.pdf`)
+      // Attendre que le DOM soit mis à jour
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Chercher l'élément de document avec plusieurs méthodes
+      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      if (!element) {
+        // Chercher par différents IDs possibles
+        element = tempDiv.querySelector('#terms-document') as HTMLElement || 
+                  tempDiv.querySelector('#privacy-document') as HTMLElement ||
+                  tempDiv.querySelector('#attestation-document') as HTMLElement
+      }
+      if (!element) {
+        element = tempDiv.querySelector('div') as HTMLElement
+      }
+      if (!element) {
+        document.body.removeChild(tempDiv)
+        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
 
+      const elementId = `temp-privacy-${Date.now()}`
+      element.id = elementId
+      
+      // Attendre que l'ID soit appliqué
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      
+      const pdfBlob = await generatePDFBlobFromHTML(elementId)
       document.body.removeChild(tempDiv)
+
+      // Télécharger le PDF
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `politique_confidentialite_${organization.name.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       addToast({
         type: 'success',
         title: 'Politique générée',
