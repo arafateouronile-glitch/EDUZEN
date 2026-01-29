@@ -60,7 +60,7 @@ export async function sealPdf(
       : `data:image/png;base64,${signatureDataUrl}`
   const img = await pdfDoc.embedPng(pngInput)
   // Utiliser la police standard Helvetica de pdf-lib
-  const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica)
+  const font = await pdfDoc.embedStandardFont('Helvetica' as any)
 
   const zone = resolveZone(options.zones ?? [], options.signZoneId)
 

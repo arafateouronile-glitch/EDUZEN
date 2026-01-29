@@ -4,31 +4,30 @@
 
 'use client'
 
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { programService } from '@/lib/services/program.service'
 import { publicCatalogService } from '@/lib/services/public-catalog.service'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { useToast } from '@/components/ui/toast'
-import { Plus, Globe, Eye, Edit, Trash2, CheckCircle, XCircle, Mail, ExternalLink, BookOpen, FileText, Users, Sparkles, Settings } from 'lucide-react'
+import { Plus, Globe, Eye, Edit, CheckCircle, XCircle, ExternalLink, BookOpen, FileText, Users, Sparkles, Settings } from 'lucide-react'
 import { RoleGuard, FORMATION_MANAGEMENT_ROLES } from '@/components/auth/role-guard'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
-import type { TableRow } from '@/lib/types/supabase-helpers'
 
-// Type pour les formations publiques (catalogue)
-type PublicFormation = {
+// Type pour un programme (aligné sur ce qui est affiché sur le catalogue public)
+type ProgramCatalog = {
   id: string
-  formation_id?: string
-  is_published?: boolean
+  name: string
+  code: string
   is_public?: boolean
-  published_at?: string
-  public_title?: string
-  is_featured?: boolean
+  is_active?: boolean
+  description?: string | null
+  public_description?: string | null
   [key: string]: any
 }
 
@@ -62,12 +61,13 @@ function CatalogPageContent() {
     enabled: !!user?.organization_id,
   })
 
-  const { data: formations, isLoading } = useQuery<PublicFormation[]>({
-    queryKey: ['public-formations', user?.organization_id],
+  // Programmes (ce qui est affiché sur le catalogue public /cataloguepublic et /programmes)
+  const { data: programs, isLoading } = useQuery<ProgramCatalog[]>({
+    queryKey: ['programs-catalog', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const result = await publicCatalogService.getAll(user.organization_id)
-      return result as unknown as PublicFormation[]
+      const result = await programService.getAllPrograms(user.organization_id, { isActive: undefined })
+      return (result || []) as ProgramCatalog[]
     },
     enabled: !!user?.organization_id,
   })
@@ -81,15 +81,15 @@ function CatalogPageContent() {
     enabled: !!user?.organization_id,
   })
 
-  const publishMutation = useMutation({
+  const updateProgramPublicMutation = useMutation({
     mutationFn: async ({ id, isPublic }: { id: string; isPublic: boolean }) => {
-      return publicCatalogService.update(id, { is_public: isPublic })
+      return programService.updateProgram(id, { is_public: isPublic })
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['public-formations'] })
+      queryClient.invalidateQueries({ queryKey: ['programs-catalog'] })
       addToast({
         title: 'Succès',
-        description: 'Formation mise à jour avec succès',
+        description: 'Visibilité du programme mise à jour',
         type: 'success',
       })
     },
@@ -103,8 +103,7 @@ function CatalogPageContent() {
     )
   }
 
-  const publicFormations = formations?.filter((f) => f.is_public) || []
-  const draftFormations = formations?.filter((f) => !f.is_public) || []
+  const publicPrograms = programs?.filter((p) => p.is_public && p.is_active !== false) || []
 
   return (
     <div className="p-6 space-y-6">
@@ -118,7 +117,7 @@ function CatalogPageContent() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">
             Catalogue Public
           </h1>
-          <p className="text-gray-600 mt-2">Gérez vos formations publiques et inscriptions en ligne</p>
+          <p className="text-gray-600 mt-2">Gérez la visibilité de vos programmes sur le catalogue public</p>
         </div>
         <div className="flex gap-3">
           {organization && (
@@ -135,21 +134,23 @@ function CatalogPageContent() {
               Paramètres
             </Button>
           </Link>
-          <Button className="bg-brand-blue hover:bg-brand-blue-dark shadow-lg shadow-brand-blue/20">
-            <Plus className="w-4 h-4 mr-2" />
-            Nouvelle formation
-          </Button>
+          <Link href="/dashboard/programs/new">
+            <Button className="bg-brand-blue hover:bg-brand-blue-dark shadow-lg shadow-brand-blue/20">
+              <Plus className="w-4 h-4 mr-2" />
+              Nouveau programme
+            </Button>
+          </Link>
         </div>
       </motion.div>
 
-      {/* Statistiques */}
+      {/* Statistiques (alignées sur le catalogue public : programmes) */}
       <BentoGrid columns={4} gap="md">
         <BentoCard span={1}>
           <GlassCard variant="premium" className="p-6 h-full border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold text-brand-blue">{formations?.length || 0}</div>
-                <div className="text-sm text-gray-600 mt-1">Total formations</div>
+                <div className="text-3xl font-bold text-brand-blue">{programs?.length ?? 0}</div>
+                <div className="text-sm text-gray-600 mt-1">Total programmes</div>
               </div>
               <BookOpen className="w-8 h-8 text-brand-blue/30" />
             </div>
@@ -159,8 +160,8 @@ function CatalogPageContent() {
           <GlassCard variant="premium" className="p-6 h-full border-2 border-transparent hover:border-green-500/10 transition-all duration-500">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold text-green-600">{publicFormations.length}</div>
-                <div className="text-sm text-gray-600 mt-1">Publiées</div>
+                <div className="text-3xl font-bold text-green-600">{publicPrograms.length}</div>
+                <div className="text-sm text-gray-600 mt-1">Sur le catalogue public</div>
               </div>
               <CheckCircle className="w-8 h-8 text-green-500/30" />
             </div>
@@ -170,8 +171,8 @@ function CatalogPageContent() {
           <GlassCard variant="premium" className="p-6 h-full border-2 border-transparent hover:border-gray-400/10 transition-all duration-500">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold text-gray-600">{draftFormations.length}</div>
-                <div className="text-sm text-gray-600 mt-1">Brouillons</div>
+                <div className="text-3xl font-bold text-gray-600">{programs?.filter((p) => !p.is_public).length ?? 0}</div>
+                <div className="text-sm text-gray-600 mt-1">Non visibles (brouillons)</div>
               </div>
               <FileText className="w-8 h-8 text-gray-400/30" />
             </div>
@@ -181,7 +182,7 @@ function CatalogPageContent() {
           <GlassCard variant="premium" className="p-6 h-full border-2 border-transparent hover:border-brand-cyan/10 transition-all duration-500">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-bold text-brand-cyan">{enrollments?.length || 0}</div>
+                <div className="text-3xl font-bold text-brand-cyan">{enrollments?.length ?? 0}</div>
                 <div className="text-sm text-gray-600 mt-1">Inscriptions en attente</div>
               </div>
               <Users className="w-8 h-8 text-brand-cyan/30" />
@@ -190,8 +191,8 @@ function CatalogPageContent() {
         </BentoCard>
       </BentoGrid>
 
-      {/* Formations publiées */}
-      {publicFormations.length > 0 && (
+      {/* Programmes visibles sur le catalogue public */}
+      {publicPrograms.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -199,15 +200,15 @@ function CatalogPageContent() {
         >
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-brand-blue" />
-            <h2 className="text-xl font-bold">Formations publiées</h2>
+            <h2 className="text-xl font-bold">Programmes sur le catalogue public</h2>
           </div>
           <BentoGrid columns={3} gap="md">
-            {publicFormations.map((formation) => (
-              <BentoCard key={formation.id} span={1}>
-                <FormationCard
-                  formation={formation}
-                  onTogglePublish={(isPublic) =>
-                    publishMutation.mutate({ id: formation.id, isPublic })
+            {publicPrograms.map((program) => (
+              <BentoCard key={program.id} span={1}>
+                <ProgramCard
+                  program={program}
+                  onTogglePublic={(isPublic) =>
+                    updateProgramPublicMutation.mutate({ id: program.id, isPublic })
                   }
                 />
               </BentoCard>
@@ -216,8 +217,8 @@ function CatalogPageContent() {
         </motion.div>
       )}
 
-      {/* Brouillons */}
-      {draftFormations.length > 0 && (
+      {/* Programmes non visibles (brouillons) */}
+      {programs && programs.filter((p) => !p.is_public).length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -225,15 +226,15 @@ function CatalogPageContent() {
         >
           <div className="flex items-center gap-2 mb-4 mt-8">
             <FileText className="w-5 h-5 text-gray-500" />
-            <h2 className="text-xl font-bold">Brouillons</h2>
+            <h2 className="text-xl font-bold">Programmes non visibles sur le catalogue</h2>
           </div>
           <BentoGrid columns={3} gap="md">
-            {draftFormations.map((formation) => (
-              <BentoCard key={formation.id} span={1}>
-                <FormationCard
-                  formation={formation}
-                  onTogglePublish={(isPublic) =>
-                    publishMutation.mutate({ id: formation.id, isPublic })
+            {programs.filter((p) => !p.is_public).map((program) => (
+              <BentoCard key={program.id} span={1}>
+                <ProgramCard
+                  program={program}
+                  onTogglePublic={(isPublic) =>
+                    updateProgramPublicMutation.mutate({ id: program.id, isPublic })
                   }
                 />
               </BentoCard>
@@ -246,26 +247,28 @@ function CatalogPageContent() {
         <GlassCard variant="default" className="p-12 text-center border-2 border-brand-blue/20 bg-gradient-to-br from-brand-blue-ghost/30 to-brand-cyan-ghost/30">
           <div className="animate-pulse">Chargement...</div>
         </GlassCard>
-      ) : formations && formations.length === 0 ? (
+      ) : programs && programs.length === 0 ? (
         <GlassCard variant="default" className="p-12 text-center border-2 border-brand-blue/20 bg-gradient-to-br from-brand-blue-ghost/30 to-brand-cyan-ghost/30">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 mb-6 text-lg">Aucune formation dans le catalogue</p>
-          <Button className="bg-brand-blue hover:bg-brand-blue-dark shadow-lg shadow-brand-blue/20">
-            <Plus className="w-4 h-4 mr-2" />
-            Créer la première formation
-          </Button>
+          <p className="text-gray-600 mb-6 text-lg">Aucun programme. Créez des programmes dans la Bibliothèque puis affichez-les ici sur le catalogue public.</p>
+          <Link href="/dashboard/programs">
+            <Button className="bg-brand-blue hover:bg-brand-blue-dark shadow-lg shadow-brand-blue/20">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Voir la Bibliothèque des programmes
+            </Button>
+          </Link>
         </GlassCard>
       ) : null}
     </div>
   )
 }
 
-interface FormationCardProps {
-  formation: PublicFormation
-  onTogglePublish: (isPublic: boolean) => void
+interface ProgramCardProps {
+  program: ProgramCatalog
+  onTogglePublic: (isPublic: boolean) => void
 }
 
-function FormationCard({ formation, onTogglePublish }: FormationCardProps) {
+function ProgramCard({ program, onTogglePublic }: ProgramCardProps) {
   return (
     <GlassCard 
       variant="premium" 
@@ -274,58 +277,53 @@ function FormationCard({ formation, onTogglePublish }: FormationCardProps) {
       <div className="flex-1">
         <div className="flex justify-between items-start mb-3">
           <h3 className="font-bold text-lg line-clamp-2 flex-1 pr-2">
-            {formation.public_title}
+            {program.name}
           </h3>
         </div>
-        
-        {formation.is_featured && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gradient-to-r from-yellow-100 to-yellow-50 text-yellow-800 rounded-full mb-3 border border-yellow-200">
-            <Sparkles className="w-3 h-3" />
-            Mise en avant
-          </span>
+
+        {program.code && (
+          <div className="text-xs text-gray-500 mb-2 font-mono bg-gray-50 px-2 py-1 rounded inline-block">
+            {program.code}
+          </div>
         )}
 
         <div className="flex items-center gap-2 mb-3">
-          {formation.is_public ? (
+          {program.is_public ? (
             <>
               <CheckCircle className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-green-600 font-medium">Publiée</span>
+              <span className="text-sm text-green-600 font-medium">Visible sur le catalogue</span>
             </>
           ) : (
             <>
               <XCircle className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-400">Brouillon</span>
+              <span className="text-sm text-gray-400">Non visible</span>
             </>
           )}
         </div>
-
-        {formation.slug && (
-          <div className="text-xs text-gray-500 mb-4 font-mono bg-gray-50 px-2 py-1 rounded">
-            /formations/{formation.slug}
-          </div>
-        )}
       </div>
 
       <div className="flex gap-2 pt-4 border-t border-gray-200">
-        <Link href={`/formations/${formation.slug || formation.id}`} target="_blank" className="flex-1">
+        <Link href={`/programmes/${program.id}`} target="_blank" className="flex-1">
           <Button variant="outline" size="sm" className="w-full border-brand-blue/20 hover:bg-brand-blue/5">
             <Eye className="w-3 h-3 mr-1" />
-            Voir
+            Voir sur le catalogue
           </Button>
         </Link>
-        <Button variant="outline" size="sm" className="border-brand-blue/20 hover:bg-brand-blue/5">
-          <Edit className="w-3 h-3" />
-        </Button>
+        <Link href={`/dashboard/programs/${program.id}`}>
+          <Button variant="outline" size="sm" className="border-brand-blue/20 hover:bg-brand-blue/5">
+            <Edit className="w-3 h-3" />
+          </Button>
+        </Link>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onTogglePublish(!formation.is_public)}
+          onClick={() => onTogglePublic(!program.is_public)}
           className={cn(
             "border-brand-blue/20 hover:bg-brand-blue/5",
-            formation.is_public ? "hover:border-red-300" : "hover:border-green-300"
+            program.is_public ? "hover:border-red-300" : "hover:border-green-300"
           )}
         >
-          {formation.is_public ? (
+          {program.is_public ? (
             <XCircle className="w-3 h-3 text-red-600" />
           ) : (
             <CheckCircle className="w-3 h-3 text-green-600" />

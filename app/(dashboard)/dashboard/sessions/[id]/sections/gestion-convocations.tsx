@@ -144,7 +144,24 @@ export function GestionConvocations({
     body: '',
   })
 
-  // Récupérer les templates de documents (convocations)
+  // Charger tous les modèles (actifs et inactifs) comme dans la page des modèles de documents
+  const { data: allTemplates } = useQuery<DocumentTemplate[]>({
+    queryKey: ['document-templates', 'all', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      // Récupérer tous les templates sans filtre isActive pour avoir tous les modèles comme dans /dashboard/settings/document-templates
+      return documentTemplateService.getAllTemplates(user.organization_id)
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Filtrer les modèles de convocations (tous les modèles, pas seulement les actifs)
+  const convocationTemplates = allTemplates?.filter(template => template.type === 'convocation') || []
+
+  // État pour le modèle sélectionné pour les convocations
+  const [selectedConvocationTemplateId, setSelectedConvocationTemplateId] = useState<string | undefined>()
+
+  // Récupérer les templates de documents (convocations) pour le dialog d'envoi en masse
   const { data: documentTemplates } = useQuery<DocumentTemplate[]>({
     queryKey: ['document-templates', 'convocation', user?.organization_id],
     queryFn: async () => {
@@ -403,6 +420,52 @@ export function GestionConvocations({
           </div>
 
           <div className="space-y-6">
+            {/* Sélection du modèle pour toutes les convocations */}
+            <motion.div 
+              className="relative rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/80 p-6 shadow-sm"
+              whileHover={{ scale: 1.01 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white rounded-xl shadow-sm text-cyan-600">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-cyan-900 text-lg">Modèle de convocation</h4>
+                    <p className="text-sm text-cyan-700 font-medium mt-1">
+                      Sélectionnez le modèle à appliquer à toutes les convocations
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2 relative z-50">
+                  <Label className="text-xs font-semibold text-gray-700">Modèle (s'applique à toutes les convocations)</Label>
+                  <Select
+                    value={selectedConvocationTemplateId || ''}
+                    onValueChange={(value) => setSelectedConvocationTemplateId(value || undefined)}
+                  >
+                    <SelectTrigger className="w-full bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+                      <SelectValue placeholder="Modèle par défaut" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl z-[9999]">
+                      <SelectItem value="">Modèle par défaut</SelectItem>
+                      {convocationTemplates && convocationTemplates.length > 0 ? (
+                        convocationTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" {...({ disabled: true } as Record<string, unknown>)}>
+                          Aucun modèle disponible
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </motion.div>
+
             {/* Génération globale */}
             <motion.div 
               className="relative overflow-hidden rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/80 p-6 shadow-sm"
@@ -431,7 +494,7 @@ export function GestionConvocations({
                   <Button
                     variant="outline"
                     className="bg-white border-cyan-200 text-cyan-700 hover:bg-cyan-50 hover:text-cyan-800"
-                    onClick={() => handleGenerateAllConvocationsZip(enrollments)}
+                    onClick={() => handleGenerateAllConvocationsZip(enrollments, selectedConvocationTemplateId)}
                     disabled={isGeneratingZip || enrollments.length === 0}
                   >
                     {isGeneratingZip ? (
@@ -598,7 +661,7 @@ export function GestionConvocations({
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                onClick={() => handleGenerateConvocation(enrollment)}
+                                onClick={() => handleGenerateConvocation(enrollment, selectedConvocationTemplateId)}
                                 className="h-9 w-9 p-0 rounded-full hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
                                 title="Télécharger la convocation"
                               >

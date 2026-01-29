@@ -300,12 +300,12 @@ export default function SignPage() {
                   <Calendar className="h-5 w-5 text-[#34B9EE] shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs text-white/50 uppercase tracking-wider">Date</p>
-                    <p className="text-white font-medium">{formattedDate}</p>
+                    <p className="text-white font-medium">{formattedDate != null ? String(formattedDate) : ''}</p>
                     {sessionStartTime && (
                       <p className="text-white/70 text-sm flex items-center gap-1 mt-0.5">
                         <Clock className="h-4 w-4" />
-                        <span>{String(sessionStartTime)}</span>
-                        {sessionEndTime && <span> – {String(sessionEndTime)}</span>}
+                        <span>{sessionStartTime != null ? String(sessionStartTime) : ''}</span>
+                        {sessionEndTime != null && <span> – {String(sessionEndTime)}</span>}
                       </p>
                     )}
                   </div>
@@ -316,7 +316,7 @@ export default function SignPage() {
                   <MapPin className="h-5 w-5 text-[#34B9EE] shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs text-white/50 uppercase tracking-wider">Lieu</p>
-                    <p className="text-white font-medium">{String(sessionLocationName)}</p>
+                    <p className="text-white font-medium">{sessionLocationName != null ? String(sessionLocationName) : ''}</p>
                   </div>
                 </div>
               )}

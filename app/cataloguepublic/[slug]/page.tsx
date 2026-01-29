@@ -5,6 +5,8 @@
  */
 
 import { Metadata } from 'next'
+// Revalider régulièrement pour afficher les mises à jour des programmes (image, description, etc.)
+export const revalidate = 60
 import { notFound } from 'next/navigation'
 import { PublicProgramsList } from '@/components/public/programs-list'
 import { createClient } from '@/lib/supabase/server'
@@ -199,9 +201,9 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
           primaryColor={primaryColor}
           stats={{
             courses: programsWithActiveContent.length,
-            learners: catalogSettings?.stats_trained_students ?? 1200,
-            certifications: catalogSettings?.stats_satisfaction_rate ?? 98,
-            successRate: catalogSettings?.stats_success_rate ?? 95
+            learners: (catalogSettings as any)?.stats_trained_students ?? 1200,
+            certifications: (catalogSettings as any)?.stats_satisfaction_rate ?? 98,
+            successRate: (catalogSettings as any)?.stats_success_rate ?? 95
           }}
         />
 

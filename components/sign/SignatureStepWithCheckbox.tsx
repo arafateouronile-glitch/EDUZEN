@@ -50,9 +50,10 @@ export function SignatureStepWithCheckbox({
   }, [])
 
   const onEnd = useCallback(() => {
-    if (sigRef.current && !sigRef.current.isEmpty()) {
+    const ref = sigRef.current
+    if (ref && !ref.isEmpty()) {
       setHasDrawn(true)
-      const data = sigRef.current.toDataURL('image/png') || ''
+      const data = ref.toDataURL('image/png') || ''
       setSignatureData(data)
     }
   }, [])

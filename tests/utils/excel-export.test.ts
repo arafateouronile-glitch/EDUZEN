@@ -5,29 +5,37 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { exportToExcel, exportToCSV } from '@/lib/utils/excel-export'
 
-// Mock ExcelJS
+// Mock ExcelJS (use function/class for vi.fn per Vitest requirements)
 vi.mock('exceljs', () => {
-  const mockWorkbook = {
-    addWorksheet: vi.fn(() => ({
-      columns: [],
-      addRows: vi.fn(),
-      getRow: vi.fn(() => ({
+  const mockWorksheet = {
+    columns: [],
+    addRows: vi.fn(),
+    getRow: vi.fn(function () {
+      return {
         font: {},
         fill: {},
         alignment: {},
         height: 0,
         eachCell: vi.fn(),
-      })),
-      eachRow: vi.fn(),
-    })),
+      }
+    }),
+    eachRow: vi.fn(),
+  }
+  const mockWorkbook = {
+    addWorksheet: vi.fn(function () {
+      return mockWorksheet
+    }),
     xlsx: {
-      writeBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
+      writeBuffer: vi.fn(function () {
+        return Promise.resolve(new ArrayBuffer(8))
+      }),
     },
   }
-
   return {
     default: {
-      Workbook: vi.fn(() => mockWorkbook),
+      Workbook: vi.fn(function () {
+        return mockWorkbook
+      }),
     },
   }
 })

@@ -1,9 +1,13 @@
 'use client'
 
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { Download, FileText, Mail, Building2, Users, Phone, MapPin, Briefcase, FileCheck, Info } from 'lucide-react'
+import { Download, FileText, Mail, Building2, Users, Phone, MapPin, Briefcase, FileCheck, Info, ExternalLink } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useDocumentGeneration } from '../hooks/use-document-generation'
 import type { 
@@ -44,6 +48,7 @@ export function GestionEspaceEntreprise({
   grades = [],
   attendanceStats = null,
 }: GestionEspaceEntrepriseProps) {
+  const supabase = createClient()
   const {
     handleGenerateSessionReport,
     handleGenerateCertificate,
@@ -57,14 +62,51 @@ export function GestionEspaceEntreprise({
     attendanceStats,
   })
 
-  // Extraire les entreprises uniques des inscriptions
-  const companies = new Set<string>()
-  enrollments.forEach((enrollment) => {
-    const student = enrollment.students
-    if (student && (student as any).company) {
-      companies.add((student as any).company)
-    }
+  const enrolledStudentIds = useMemo(
+    () => enrollments.map((e) => e.student_id).filter((id): id is string => !!id),
+    [enrollments]
+  )
+
+  // Entités (entreprises) des apprenants inscrits (student_entities + external_entities)
+  const { data: studentEntitiesWithEntity } = useQuery({
+    queryKey: ['session-entity-students', enrolledStudentIds],
+    queryFn: async () => {
+      if (enrolledStudentIds.length === 0) return []
+      const { data, error } = await supabase
+        .from('student_entities')
+        .select('student_id, entity_id, external_entities(id, name)')
+        .in('student_id', enrolledStudentIds)
+        .eq('is_current', true)
+      if (error) throw error
+      return (data || []) as Array<{
+        student_id: string
+        entity_id: string
+        external_entities: { id: string; name: string } | null
+      }>
+    },
+    enabled: enrolledStudentIds.length > 0,
   })
+
+  // Grouper par entité : entityId -> { id, name, enrollments }
+  const entitiesWithEnrollments = useMemo(() => {
+    const byEntityId = new Map<string, { id: string; name: string; enrollments: EnrollmentWithRelations[] }>()
+    const studentToEntity = new Map<string | null, { id: string; name: string }>()
+    studentEntitiesWithEntity?.forEach((se) => {
+      const ent = se.external_entities
+      if (ent) studentToEntity.set(se.student_id, { id: se.entity_id, name: ent.name })
+    })
+    enrollments.forEach((enrollment) => {
+      const studentId = enrollment.student_id
+      const entity = studentId ? studentToEntity.get(studentId) : null
+      const displayName = entity?.name ?? (enrollment.students as any)?.company ?? 'Non rattaché'
+      const entityId = entity?.id ?? `name:${displayName}`
+      if (!byEntityId.has(entityId)) {
+        byEntityId.set(entityId, { id: entity?.id ?? '', name: displayName, enrollments: [] })
+      }
+      byEntityId.get(entityId)!.enrollments.push(enrollment)
+    })
+    return Array.from(byEntityId.values())
+  }, [enrollments, studentEntitiesWithEntity])
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -105,7 +147,7 @@ export function GestionEspaceEntreprise({
             </div>
           </div>
 
-          {companies.size === 0 ? (
+          {entitiesWithEnrollments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
               <div className="p-4 bg-white rounded-full shadow-sm mb-4">
                 <Building2 className="h-8 w-8 text-gray-400" />
@@ -117,51 +159,61 @@ export function GestionEspaceEntreprise({
             </div>
           ) : (
             <div className="grid gap-4">
-              {Array.from(companies).map((company, index) => {
-                const companyEnrollments = enrollments.filter((e) => (e.students as any)?.company === company)
-                return (
-                  <motion.div 
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="group flex items-center justify-between p-5 bg-white border border-gray-100 rounded-xl hover:border-brand-blue/30 hover:shadow-md transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 group-hover:bg-brand-blue/5 group-hover:border-brand-blue/20 transition-colors">
-                        <Briefcase className="h-6 w-6 text-gray-400 group-hover:text-brand-blue transition-colors" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900 text-lg">{company}</p>
-                        <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-                          <Users className="h-4 w-4" />
-                          <span>
-                            {companyEnrollments.length} apprenant{companyEnrollments.length > 1 ? 's' : ''}
-                          </span>
-                        </div>
+              {entitiesWithEnrollments.map((entity, index) => (
+                <motion.div 
+                  key={entity.id || entity.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="group flex items-center justify-between p-5 bg-white border border-gray-100 rounded-xl hover:border-brand-blue/30 hover:shadow-md transition-all duration-300"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 group-hover:bg-brand-blue/5 group-hover:border-brand-blue/20 transition-colors">
+                      <Briefcase className="h-6 w-6 text-gray-400 group-hover:text-brand-blue transition-colors" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-lg">{entity.name}</p>
+                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                        <Users className="h-4 w-4" />
+                        <span>
+                          {entity.enrollments.length} apprenant{entity.enrollments.length > 1 ? 's' : ''}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue"
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Documents
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue"
-                      >
-                        <Mail className="mr-2 h-4 w-4" />
-                        Contacter
-                      </Button>
-                    </div>
-                  </motion.div>
-                )
-              })}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {entity.id ? (
+                      <Link href={`/dashboard/entities/${entity.id}/students`}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue gap-2"
+                        >
+                          <Building2 className="h-4 w-4" />
+                          Voir l&apos;entité
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                    ) : null}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Documents
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="rounded-lg border-gray-200 hover:bg-gray-50 hover:text-brand-blue opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      Contacter
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           )}
         </GlassCard>

@@ -139,9 +139,14 @@ export default function NewPortfolioPage() {
   // Mutation pour créer les livrets
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Validation finale avant insertion
+      if (!selectedTemplateId || selectedTemplateId.trim() === '') {
+        throw new Error('Aucun modèle de livret sélectionné')
+      }
+
       const portfoliosToCreate = selectedStudentIds.map(studentId => ({
         organization_id: user?.organization_id,
-        template_id: selectedTemplateId,
+        template_id: selectedTemplateId, // UUID valide vérifié dans handleCreate
         student_id: studentId,
         session_id: selectedSessionId || null,
         status: 'draft',
@@ -150,12 +155,32 @@ export default function NewPortfolioPage() {
         content: {},
       }))
 
+      logger.debug('Création de portfolios:', { 
+        count: portfoliosToCreate.length, 
+        template_id: selectedTemplateId,
+        session_id: selectedSessionId 
+      })
+
       const { data, error } = await (supabase
         .from('learning_portfolios') as any)
         .insert(portfoliosToCreate)
-        .select()
+        .select('id, template_id, student_id, session_id, status')
 
-      if (error) throw error
+      if (error) {
+        logger.error('Erreur création portfolios:', sanitizeError(error))
+        throw error
+      }
+
+      // Vérifier que le template_id a bien été sauvegardé
+      if (data && data.length > 0) {
+        const missingTemplate = data.find((p: any) => !p.template_id)
+        if (missingTemplate) {
+          logger.error('Portfolio créé sans template_id:', missingTemplate)
+          throw new Error('Erreur : le modèle n\'a pas été correctement associé au livret. Veuillez réessayer.')
+        }
+        logger.debug('Portfolios créés avec succès:', data.map((p: any) => ({ id: p.id, template_id: p.template_id })))
+      }
+
       return data
     },
     onSuccess: (data) => {
@@ -181,8 +206,16 @@ export default function NewPortfolioPage() {
   })
 
   const handleCreate = () => {
-    if (!selectedTemplateId) {
+    // Validation stricte du template_id
+    if (!selectedTemplateId || selectedTemplateId.trim() === '') {
       addToast({ type: 'error', title: 'Erreur', description: 'Sélectionnez un modèle de livret.' })
+      return
+    }
+    // Vérifier que c'est un UUID valide
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(selectedTemplateId)) {
+      addToast({ type: 'error', title: 'Erreur', description: 'Le modèle sélectionné n\'est pas valide. Veuillez retourner à l\'étape 1 et sélectionner un modèle.' })
+      logger.error('Template ID invalide:', selectedTemplateId)
       return
     }
     if (selectedStudentIds.length === 0) {
@@ -300,7 +333,10 @@ export default function NewPortfolioPage() {
                   {templates?.map((template: any) => (
                     <div
                       key={template.id}
-                      onClick={() => setSelectedTemplateId(template.id)}
+                      onClick={() => {
+                        logger.debug('Modèle sélectionné', { id: template.id, name: template.name })
+                        setSelectedTemplateId(template.id)
+                      }}
                       className={cn(
                         'p-4 border-2 rounded-lg cursor-pointer transition-all',
                         selectedTemplateId === template.id
@@ -335,8 +371,14 @@ export default function NewPortfolioPage() {
 
               <div className="flex justify-end mt-6">
                 <Button 
-                  onClick={() => setStep(2)} 
-                  disabled={!selectedTemplateId}
+                  onClick={() => {
+                    if (!selectedTemplateId || selectedTemplateId.trim() === '') {
+                      addToast({ type: 'error', title: 'Erreur', description: 'Veuillez sélectionner un modèle de livret.' })
+                      return
+                    }
+                    setStep(2)
+                  }}
+                  disabled={!selectedTemplateId || selectedTemplateId.trim() === ''}
                 >
                   Continuer
                 </Button>
@@ -352,6 +394,20 @@ export default function NewPortfolioPage() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
         >
+          {/* Afficher le modèle sélectionné */}
+          {selectedTemplateId && templates && (
+            <Card className="mb-4 bg-brand-blue/5 border-brand-blue/20">
+              <CardContent className="py-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <FileText className="h-4 w-4 text-brand-blue" />
+                  <span className="text-gray-600">Modèle sélectionné :</span>
+                  <span className="font-medium text-brand-blue">
+                    {templates.find((t: any) => t.id === selectedTemplateId)?.name || 'Modèle inconnu'}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -423,6 +479,35 @@ export default function NewPortfolioPage() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
         >
+          {/* Afficher le modèle et la session sélectionnés */}
+          <div className="mb-4 space-y-2">
+            {selectedTemplateId && templates && (
+              <Card className="bg-brand-blue/5 border-brand-blue/20">
+                <CardContent className="py-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-brand-blue" />
+                    <span className="text-gray-600">Modèle :</span>
+                    <span className="font-medium text-brand-blue">
+                      {templates.find((t: any) => t.id === selectedTemplateId)?.name || 'Modèle inconnu'}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {selectedSessionId && sessions && (
+              <Card className="bg-gray-50">
+                <CardContent className="py-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-gray-600" />
+                    <span className="text-gray-600">Session :</span>
+                    <span className="font-medium text-gray-900">
+                      {sessions.find((s: any) => s.id === selectedSessionId)?.name || 'Session inconnue'}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

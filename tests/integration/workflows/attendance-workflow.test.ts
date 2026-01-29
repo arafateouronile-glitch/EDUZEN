@@ -61,8 +61,8 @@ describe('Workflow: Présence', () => {
     ;(mockSupabase as any).single.mockImplementation(() => Promise.resolve({ data: null, error: null }))
     ;(mockSupabase as any).maybeSingle.mockImplementation(() => Promise.resolve({ data: null, error: null }))
     ;(mockSupabase as any).range.mockImplementation(() => Promise.resolve({ data: [], error: null, count: 0 }))
-    attendanceService = new AttendanceService()
-    notificationService = new NotificationService()
+    attendanceService = new AttendanceService(mockSupabase as any)
+    notificationService = new NotificationService(mockSupabase as any)
   })
 
   it('devrait enregistrer la présence pour plusieurs étudiants', async () => {

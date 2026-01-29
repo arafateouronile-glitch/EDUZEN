@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   },
 }
 
+// Revalider régulièrement pour afficher les mises à jour des programmes
+export const revalidate = 60
+
 export default async function ProgrammesPage({
   searchParams,
 }: {

@@ -39,13 +39,14 @@ export default function NewSigningProcessPage() {
   const { data: docs } = useQuery({
     queryKey: ['documents-conventions', user?.organization_id],
     queryFn: async () => {
-      if (!user?.organization_id) {
+      const orgId = user?.organization_id
+      if (!orgId) {
         throw new Error('Organization ID manquant')
       }
       const { data, error } = await supabase
         .from('documents')
         .select('id, title, type')
-        .eq('organization_id', user.organization_id)
+        .eq('organization_id', orgId)
         .in('type', ['convention', 'contract'] as string[])
         .order('created_at', { ascending: false })
         .limit(100)

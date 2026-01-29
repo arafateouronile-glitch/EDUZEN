@@ -222,10 +222,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Image ou stats card */}
             <div className="hidden lg:block">
-              {program.public_image_url ? (
+              {((program as any).public_image_url || (program as any).photo_url) ? (
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
                   <Image
-                    src={program.public_image_url}
+                    src={((program as any).public_image_url || (program as any).photo_url) as string}
                     alt={program.name}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -622,21 +622,30 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
             <Card className="shadow-xl border-0 sticky top-8 overflow-hidden">
               <div className="h-2" style={{ backgroundColor: primaryColor }} />
               <CardContent className="p-6 space-y-6">
-                {/* Prix si disponible */}
-                {program.formations && program.formations[0] && (
-                  <div className="text-center pb-4 border-b">
-                    <div className="text-sm text-gray-500 mb-1">À partir de</div>
-                    <div className="text-4xl font-bold" style={{ color: primaryColor }}>
-                      {program.formations[0].price?.toLocaleString('fr-FR') || 'Sur devis'}
-                      {program.formations[0].price && (
-                        <span className="text-lg font-normal text-gray-500"> €</span>
-                      )}
+                {/* Prix si disponible (programme ou première formation) */}
+                {(() => {
+                  const programPrice = (program as any).price ?? (program as any).price_enterprise ?? (program as any).price_individual
+                  const formationPrice = program.formations?.[0]?.price
+                  const price = programPrice ?? formationPrice
+                  const currency = (program as any).currency || 'EUR'
+                  const currencySymbol = currency === 'EUR' ? '€' : currency === 'XOF' ? 'FCFA' : currency
+                  if (price == null || Number(price) <= 0) return (
+                    <div className="text-center pb-4 border-b">
+                      <div className="text-sm text-gray-500 mb-1">Tarif</div>
+                      <div className="text-xl font-semibold text-gray-600">Sur devis</div>
                     </div>
-                    {program.formations[0].price && (
+                  )
+                  return (
+                    <div className="text-center pb-4 border-b">
+                      <div className="text-sm text-gray-500 mb-1">À partir de</div>
+                      <div className="text-4xl font-bold" style={{ color: primaryColor }}>
+                        {Number(price).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        <span className="text-lg font-normal text-gray-500"> {currencySymbol}</span>
+                      </div>
                       <div className="text-sm text-gray-500">HT / participant</div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )
+                })()}
 
                 {/* Prochaine session */}
                 {upcomingSessions.length > 0 && (

@@ -6,25 +6,32 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useOffline } from '@/lib/hooks/use-offline'
 
-// Mock localStorage
+// Mock localStorage : les clés doivent être des propriétés énumérables pour Object.keys(localStorage)
+// car useOffline utilise Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX))
 const localStorageMock = (() => {
-  let store: Record<string, string> = {}
-  return {
+  const store: Record<string, string> = {}
+  const mock: Record<string, unknown> = {
     getItem: vi.fn((key: string) => store[key] || null),
     setItem: vi.fn((key: string, value: string) => {
       store[key] = value.toString()
+      mock[key] = value.toString()
     }),
     removeItem: vi.fn((key: string) => {
       delete store[key]
+      delete mock[key]
     }),
     clear: vi.fn(() => {
-      store = {}
+      for (const k of Object.keys(store)) {
+        delete store[k]
+        delete mock[k]
+      }
     }),
     get length() {
       return Object.keys(store).length
     },
     key: vi.fn((index: number) => Object.keys(store)[index] || null),
   }
+  return mock
 })()
 
 describe('useOffline', () => {
@@ -80,6 +87,7 @@ describe('useOffline', () => {
   })
 
   it('devrait retourner null pour des données expirées', () => {
+    vi.useFakeTimers()
     const { result } = renderHook(() => useOffline())
 
     // Mettre en cache avec une durée très courte (1ms)
@@ -87,13 +95,14 @@ describe('useOffline', () => {
       result.current.cacheData('test-key', { data: 'test' }, 1)
     })
 
-    // Attendre que ça expire
+    // Avancer le temps pour que ça expire (Date.now() avance avec fake timers)
     act(() => {
       vi.advanceTimersByTime(10)
     })
 
     const cached = result.current.getCachedData('test-key')
     expect(cached).toBeNull()
+    vi.useRealTimers()
   })
 
   it('devrait supprimer des données du cache', () => {
@@ -108,7 +117,7 @@ describe('useOffline', () => {
     expect(cached).toBeNull()
   })
 
-  it('devrait vider tout le cache', () => {
+  it('devrait vider tout le cache', async () => {
     const { result } = renderHook(() => useOffline())
 
     act(() => {
@@ -119,7 +128,9 @@ describe('useOffline', () => {
 
     expect(result.current.getCachedData('key1')).toBeNull()
     expect(result.current.getCachedData('key2')).toBeNull()
-    expect(result.current.isOfflineReady).toBe(false)
+    await waitFor(() => {
+      expect(result.current.isOfflineReady).toBe(false)
+    })
   })
 
   it('devrait mettre en file d\'attente des actions pour sync', () => {
@@ -137,13 +148,15 @@ describe('useOffline', () => {
     expect(result.current.pendingSyncs).toBeGreaterThan(0)
   })
 
-  it('devrait détecter si offline est prêt', () => {
+  it('devrait détecter si offline est prêt', async () => {
     const { result } = renderHook(() => useOffline())
 
     act(() => {
       result.current.cacheData('test-key', { data: 'test' })
     })
 
-    expect(result.current.isOfflineReady).toBe(true)
+    await waitFor(() => {
+      expect(result.current.isOfflineReady).toBe(true)
+    })
   })
 })

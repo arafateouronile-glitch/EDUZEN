@@ -98,7 +98,7 @@ export function ShapeEditor({ onInsert, onClose }: ShapeEditorProps) {
         alert('Erreur lors de l\'insertion de la forme. Veuillez réessayer.')
       }
     } else {
-      logger.error('Aucun HTML généré pour la forme')
+      logger.error('Aucun HTML généré pour la forme', undefined, { shapeType })
       alert('Impossible de générer la forme. Veuillez vérifier les paramètres.')
     }
   }

@@ -520,7 +520,7 @@ export async function generateHTML(
       logger.debug('[HTML Generator] Using template.content as string', { length: content.length })
     } else {
       const contentData = template.content as any
-      logger.debug('[HTML Generator] Template content structure:', {
+      logger.info('[HTML Generator] Template content structure:', {
         hasHtml: !!contentData.html,
         htmlLength: contentData.html?.length || 0,
         hasElements: !!contentData.elements,
@@ -529,7 +529,7 @@ export async function generateHTML(
       
       if (contentData.html) {
         content = contentData.html
-        logger.debug('[HTML Generator] Using content.html', { length: content.length })
+        logger.info('[HTML Generator] Using content.html', { length: content.length })
       } else if (contentData.elements && Array.isArray(contentData.elements) && contentData.elements.length > 0) {
         // Si le contenu est dans les éléments, extraire le HTML de chaque élément
         // Le contenu peut être dans el.content ou el.html selon la structure du template
@@ -817,9 +817,25 @@ export async function generateHTML(
   processedFooter = await processAttachments(processedFooter, flattenedVariables, documentId)
 
   // 10. Remplacer les variables simples
+  // Logger le contenu avant traitement des variables pour déboguer
+  logger.info('[HTML Generator] Contenu avant traitement des variables', {
+    contentLength: processedContent.length,
+    contentPreview: processedContent.substring(0, 500),
+    hasVariables: processedContent.includes('{'),
+    variableCount: (processedContent.match(/\{[a-zA-Z_][a-zA-Z0-9_]*\}/g) || []).length
+  })
+  
   processedHeader = replaceVariablesInHTML(processedHeader, flattenedVariables)
   processedContent = replaceVariablesInHTML(processedContent, flattenedVariables)
   processedFooter = replaceVariablesInHTML(processedFooter, flattenedVariables)
+  
+  // Logger le contenu après traitement des variables pour déboguer
+  logger.info('[HTML Generator] Contenu après traitement des variables', {
+    contentLength: processedContent.length,
+    contentPreview: processedContent.substring(0, 500),
+    hasVariables: processedContent.includes('{'),
+    remainingVariables: (processedContent.match(/\{[a-zA-Z_][a-zA-Z0-9_]*\}/g) || []).slice(0, 10)
+  })
   
   // 10.5. Nettoyage final : supprimer toutes les balises {variable} restantes qui n'ont pas été remplacées
   // Cela garantit qu'aucune balise ne reste dans le document final
@@ -863,16 +879,16 @@ export async function generateHTML(
 
   // Construire le HTML complet avec styles optimisés pour PDF
   const pageSize = (template.content as any)?.pageSize || template.page_size || 'A4'
-  // Marges par défaut en mm (15mm = ~0.6 pouces, plus compact pour documents professionnels)
-  const defaultMargins = { top: 15, right: 15, bottom: 15, left: 15 }
+  // Marges fixes strictes : 20mm de chaque côté pour un rendu professionnel et symétrique
+  const defaultMargins = { top: 20, right: 20, bottom: 20, left: 20 }
   const margins = template.margins || defaultMargins
   
-  // S'assurer que toutes les marges sont définies
+  // S'assurer que toutes les marges sont définies (forcer à 20mm pour la symétrie)
   const finalMargins = {
     top: margins.top ?? defaultMargins.top,
-    right: margins.right ?? defaultMargins.right,
+    right: 20, // Force 20mm à droite pour symétrie
     bottom: margins.bottom ?? defaultMargins.bottom,
-    left: margins.left ?? defaultMargins.left,
+    left: 20, // Force 20mm à gauche pour symétrie
   }
   
   // Convertir les marges en pixels (1mm ≈ 3.78px à 96 DPI)
@@ -888,12 +904,16 @@ export async function generateHTML(
   // Dimensions A4 en pixels (210mm x 297mm à 96 DPI)
   const pageWidthPx = 794 // 210mm
   const pageHeightPx = 1123 // 297mm
-  const contentWidthPx = pageWidthPx - marginLeftPx - marginRightPx
+  
+  // Largeur du conteneur central : A4 (210mm) - marges gauche (20mm) - marges droite (20mm) = 170mm
+  // En pixels : 170mm * 3.78 = 642.6px (arrondi à 643px pour précision)
+  // Cette largeur fixe garantit un centrage parfait avec margin: 0 auto
+  const contentWidthPx = Math.round(170 * 3.78) // 643px exactement
   
   // Calculer la hauteur disponible pour le contenu
   // Si le header ne se répète pas sur toutes les pages, il n'occupe de l'espace que sur la première page
-  // Le contenu doit commencer après le header + marge du haut
-  const contentTopPxFirstPage = headerEnabled ? (marginTopPx + headerHeightPx + 5) : marginTopPx
+  // Le header est dans la marge via @top-center, donc le contenu commence juste après (sans marge supplémentaire)
+  const contentTopPxFirstPage = headerEnabled ? headerHeightPx : marginTopPx
   const contentBottomPx = footerEnabled ? (marginBottomPx + footerHeightPx + 5) : marginBottomPx
   const contentHeightPx = pageHeightPx - contentTopPxFirstPage - contentBottomPx
   
@@ -931,7 +951,7 @@ export async function generateHTML(
   <title>${template.name || 'Document'}</title>
   <script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
   <style>
-    /* Paged.js - Définition de la page physique A4 */
+    /* Paged.js - Définition de la page physique A4 avec marges fixes strictes */
     @page {
       size: A4;
       margin-top: ${finalMargins.top}mm;
@@ -945,7 +965,10 @@ export async function generateHTML(
       }` : ''}
     }
     @page:first {
-      margin-top: ${headerEnabled ? headerHeight + 5 : finalMargins.top}mm;
+      margin-top: ${headerEnabled ? headerHeight : finalMargins.top}mm;
+      margin-bottom: ${footerEnabled ? footerHeight + 5 : finalMargins.bottom}mm;
+      margin-left: ${finalMargins.left}mm;
+      margin-right: ${finalMargins.right}mm;
       
       /* Header uniquement sur la première page */
       ${headerEnabled ? `@top-center {
@@ -963,6 +986,7 @@ export async function generateHTML(
       background: #ffffff;
       padding: 0;
       margin: 0;
+      box-sizing: border-box;
       font-size: ${(template.font_size || 10) * 0.85}pt;
       line-height: 1.2;
     }` : ''}
@@ -974,18 +998,22 @@ export async function generateHTML(
       background: #ffffff;
       padding: 5px 0;
       margin: 0;
+      box-sizing: border-box;
       font-size: ${(template.font_size || 10) * 0.85}pt;
       line-height: 1.2;
       text-align: center;
       border-top: 1px solid #E5E7EB;
     }` : ''}
     
-    /* Le contenu principal - Plus besoin de marges bizarres */
+    /* Le contenu principal */
     .document-content {
       font-family: 'Arial', sans-serif;
       line-height: 1.5;
       padding: 0;
       margin: 0;
+      width: 100%;
+      box-sizing: border-box;
+      ${headerEnabled ? `margin-top: 0 !important;` : ''}
     }
     
     /* Styles existants */
@@ -996,10 +1024,11 @@ export async function generateHTML(
       color-adjust: exact;
     }
     html, body {
-      margin: 0;
-      padding: 0;
-      width: ${pageWidthPx}px;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
       height: auto;
+      box-sizing: border-box;
     }
     body {
       font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
@@ -1008,17 +1037,22 @@ export async function generateHTML(
       color: #000;
       background: #ffffff;
       min-height: ${pageHeightPx}px;
-    }
-    .document-container {
-      width: ${pageWidthPx}px !important;
-      min-height: ${pageHeightPx}px !important;
-      height: auto !important;
-      background: #ffffff !important;
-      position: relative !important;
-      box-sizing: border-box !important;
       margin: 0 !important;
       padding: 0 !important;
-      overflow: visible !important;
+      box-sizing: border-box;
+    }
+    /* Conteneur principal : occupe toute la largeur disponible (les marges sont gérées par @page) */
+    .document-container {
+      width: 100%;
+      max-width: 100%;
+      min-height: ${pageHeightPx}px;
+      height: auto;
+      background: #ffffff;
+      position: relative;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      overflow: visible;
     }
     .header * {
       max-height: ${headerHeightPx - 10}px !important;
@@ -1031,19 +1065,22 @@ export async function generateHTML(
     /* Note: Le header sera visible uniquement sur la première page lors de la génération PDF
        si repeatOnAllPages est false, car html2canvas capture le document en une seule fois */
     .content {
-      position: relative !important;
-      top: auto !important;
-      bottom: auto !important;
-      left: ${marginLeftPx}px !important;
-      right: ${marginRightPx}px !important;
-      width: calc(100% - ${marginLeftPx + marginRightPx}px) !important;
-      min-height: ${contentHeightPx}px !important;
-      max-height: none !important;
-      background: #ffffff !important;
-      overflow: visible !important;
-      padding: 10px 0 ${footerEnabled ? (footerHeightPx + marginBottomPx + 20) : 20}px 0 !important;
-      margin: ${headerEnabled ? (headerHeightPx + marginTopPx + 5) : marginTopPx}px 0 0 0 !important;
-      z-index: 1 !important;
+      position: relative;
+      top: auto;
+      bottom: auto;
+      width: 100%;
+      max-width: 100%;
+      min-height: ${contentHeightPx}px;
+      max-height: none;
+      background: #ffffff;
+      overflow: visible;
+      padding: 0 0 ${footerEnabled ? (footerHeightPx + marginBottomPx + 20) : 20}px 0;
+      margin-top: ${headerEnabled ? 0 : marginTopPx}px;
+      margin-left: 0;
+      margin-right: 0;
+      margin-bottom: 0;
+      box-sizing: border-box;
+      z-index: 1;
     }
     .footer * {
       max-height: ${footerHeightPx - 10}px !important;
@@ -1143,11 +1180,15 @@ export async function generateHTML(
   </style>
 </head>
 <body>
-  ${headerEnabled ? `<header class="document-header">${processedHeader}</header>` : ''}
-  ${footerEnabled && processedFooter ? `<footer class="document-footer">${processedFooter}</footer>` : ''}
-  <main class="document-content">
-    ${processedContent}
-  </main>
+  <div class="document-container" id="${documentId || `${template.type}-document`}">
+    ${headerEnabled ? `<header class="document-header">${processedHeader}</header>` : ''}
+    ${footerEnabled && processedFooter ? `<footer class="document-footer">${processedFooter}</footer>` : ''}
+    <main class="document-content">
+      <div class="content">
+        ${processedContent}
+      </div>
+    </main>
+  </div>
   <script>
     // Attendre que Paged.js ait fini le calcul du rendu
     if (typeof window !== 'undefined' && window.PagedPolyfill) {

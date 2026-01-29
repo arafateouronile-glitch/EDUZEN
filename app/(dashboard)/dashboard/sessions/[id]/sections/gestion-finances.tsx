@@ -7,10 +7,12 @@ import { createClient } from '@/lib/supabase/client'
 import { invoiceService } from '@/lib/services/invoice.service.client'
 import { paymentService } from '@/lib/services/payment.service.client'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
+import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import { sessionChargesService, type SessionChargeWithCategory } from '@/lib/services/session-charges.service'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
 import { generatePDFFromHTML, generatePDFBlobFromHTML } from '@/lib/utils/pdf-generator'
+import type { DocumentTemplate } from '@/lib/types/document-templates'
 import { emailService } from '@/lib/services/email.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GlassCard } from '@/components/ui/glass-card'
@@ -27,6 +29,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import Link from 'next/link'
@@ -128,6 +137,26 @@ export function GestionFinances({
 
   const [isSendingSignatureRequest, setIsSendingSignatureRequest] = useState(false)
 
+  // États pour les templates sélectionnés
+  const [selectedInvoiceTemplateId, setSelectedInvoiceTemplateId] = useState<string | undefined>()
+  const [selectedQuoteTemplateId, setSelectedQuoteTemplateId] = useState<string | undefined>()
+
+  // Récupérer tous les templates disponibles
+  const { data: allTemplates } = useQuery({
+    queryKey: ['document-templates', 'all', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return documentTemplateService.getAllTemplates(user.organization_id)
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Filtrer les modèles de factures
+  const invoiceTemplates = allTemplates?.filter(template => template.type === 'facture') || []
+
+  // Filtrer les modèles de devis
+  const quoteTemplates = allTemplates?.filter(template => template.type === 'devis') || []
+
   // Récupérer les factures et devis pour tous les étudiants de la session (1 requête au lieu de N)
   const studentIds = enrollments.map((e) => e.student_id).filter(Boolean) as string[]
   const { data: invoices, isLoading: isInvoicesLoading } = useQuery({
@@ -187,9 +216,9 @@ export function GestionFinances({
     staleTime: 5 * 60 * 1000, // 5 min
   })
 
-  // Récupérer les templates
-  const { data: invoiceTemplate } = useQuery({
-    queryKey: ['invoice-template', user?.organization_id],
+  // Récupérer le template par défaut pour factures (fallback)
+  const { data: defaultInvoiceTemplate } = useQuery({
+    queryKey: ['invoice-template-default', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
       const templates = await documentTemplateService.getTemplatesByType('facture', user.organization_id)
@@ -198,8 +227,9 @@ export function GestionFinances({
     enabled: !!user?.organization_id,
   })
 
-  const { data: quoteTemplate } = useQuery({
-    queryKey: ['quote-template', user?.organization_id],
+  // Récupérer le template par défaut pour devis (fallback)
+  const { data: defaultQuoteTemplate } = useQuery({
+    queryKey: ['quote-template-default', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
       const templates = await documentTemplateService.getTemplatesByType('devis', user.organization_id)
@@ -280,9 +310,16 @@ export function GestionFinances({
     due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     notes: '',
   })
+
+  // États pour les modèles sélectionnés lors de la création
+  const [invoiceFormTemplateId, setInvoiceFormTemplateId] = useState<string | undefined>()
+  const [quoteFormTemplateId, setQuoteFormTemplateId] = useState<string | undefined>()
+  
+  // Map pour stocker le templateId associé à chaque facture/devis (clé: invoice.id, valeur: templateId)
+  const [invoiceTemplateMap, setInvoiceTemplateMap] = useState<Map<string, string>>(new Map())
   // Fonction pour télécharger une facture ou un devis
-  const handleDownloadDocument = async (invoice: any, type: 'invoice' | 'quote') => {
-    if (!org || !invoice) {
+  const handleDownloadDocument = async (invoice: any, type: 'invoice' | 'quote', templateId?: string) => {
+    if (!org || !invoice || !user?.organization_id) {
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -291,19 +328,40 @@ export function GestionFinances({
       return
     }
 
-    const template = type === 'invoice' ? invoiceTemplate : quoteTemplate
-    if (!template) {
-      addToast({
-        type: 'error',
-        title: 'Erreur',
-        description: `Aucun modèle de ${type === 'invoice' ? 'facture' : 'devis'} trouvé.`,
-      })
-      return
-    }
-
     setIsDownloading(invoice.id)
 
     try {
+      // Récupérer le template depuis la base de données
+      const templateService = new DocumentTemplateService(createClient())
+      let template: DocumentTemplate | null = null
+      
+      const templateType = type === 'invoice' ? 'facture' : 'devis'
+      
+      // Priorité : templateId passé en paramètre > templateId stocké dans la map > template par défaut global > template par défaut de la base
+      let finalTemplateId = templateId
+      if (!finalTemplateId && invoice.id) {
+        finalTemplateId = invoiceTemplateMap.get(invoice.id)
+      }
+      if (!finalTemplateId) {
+        finalTemplateId = type === 'invoice' ? selectedInvoiceTemplateId : selectedQuoteTemplateId
+      }
+      
+      if (finalTemplateId && typeof finalTemplateId === 'string') {
+        template = await templateService.getTemplateById(finalTemplateId)
+      } else {
+        // Utiliser le template par défaut
+        template = await templateService.getDefaultTemplate(user.organization_id, templateType)
+      }
+
+      if (!template) {
+        addToast({
+          type: 'error',
+          title: 'Erreur',
+          description: `Aucun modèle de ${type === 'invoice' ? 'facture' : 'devis'} trouvé.`,
+        })
+        return
+      }
+
       const student = invoice.students as StudentWithRelations | undefined
       const invoiceData = invoice as InvoiceWithRelations
 
@@ -324,53 +382,36 @@ export function GestionFinances({
         issueDate: invoice.issue_date,
       })
 
-      const result = await generateHTML(template, variables, undefined, user?.organization_id || undefined)
+      // Utiliser l'API pour générer le PDF
+      const response = await fetch('/api/documents/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          template,
+          variables,
+          documentId: undefined,
+          organizationId: user.organization_id,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+      }
+
+      // Télécharger le PDF
+      const pdfBlob = await response.blob()
+      const url = URL.createObjectURL(pdfBlob)
       const filename = `${type === 'invoice' ? 'facture' : 'devis'}_${invoice.invoice_number}.pdf`
-
-      const tempDiv = document.createElement('div')
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
-      tempDiv.style.top = '0'
-      tempDiv.style.width = '794px'
-      tempDiv.style.minHeight = '1123px'
-      tempDiv.style.backgroundColor = '#ffffff'
-      tempDiv.style.overflow = 'visible'
-      tempDiv.style.fontFamily = 'Arial, sans-serif'
-      document.body.appendChild(tempDiv)
-
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(result.html, 'text/html')
-      const bodyContent = doc.body.innerHTML
-      tempDiv.innerHTML = bodyContent
-
-      // IMPORTANT: le HTML généré place souvent <header>, <footer>, <main> au niveau racine.
-      // Si on prend firstElementChild, on capture uniquement le header => PDF "vide".
-      let element = tempDiv.querySelector('.document-container') || tempDiv.querySelector('[id$="-document"]') || tempDiv
-      if (!element || !(element instanceof HTMLElement)) {
-        element = tempDiv
-      }
-
-      const elementId = `temp-pdf-${type}-${invoice.id}-${Date.now()}`
-      if (element instanceof HTMLElement) {
-        element.id = elementId
-        if (!element.style.width) element.style.width = '794px'
-        if (!element.style.minHeight) element.style.minHeight = '1123px'
-        element.style.backgroundColor = '#ffffff'
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      if (element instanceof HTMLElement) {
-        const rect = element.getBoundingClientRect()
-        if (rect.width === 0 || rect.height === 0) {
-          element = tempDiv
-          tempDiv.id = elementId
-          tempDiv.style.width = '794px'
-          tempDiv.style.minHeight = '1123px'
-        }
-      }
-
-      await generatePDFFromHTML(elementId, filename)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
 
       addToast({
         type: 'success',
@@ -386,26 +427,40 @@ export function GestionFinances({
       })
     } finally {
       setIsDownloading(null)
-      const tempDivs = document.querySelectorAll(`[id^="temp-pdf-${type}-"]`)
-      tempDivs.forEach((div) => {
-        if (div.parentNode === document.body) {
-          document.body.removeChild(div)
-        }
-      })
     }
   }
 
   // Génère un PDF Blob (sans téléchargement) pour prévisualisation / envoi email
-  const generatePdfBlobForEmail = async (invoice: any, type: 'invoice' | 'quote'): Promise<Blob> => {
-    if (!org || !invoice) throw new Error('Données manquantes pour la génération du document.')
+  const generatePdfBlobForEmail = async (invoice: any, type: 'invoice' | 'quote', templateId?: string): Promise<Blob> => {
+    if (!org || !invoice || !user?.organization_id) throw new Error('Données manquantes pour la génération du document.')
 
     const student = invoice.students as (StudentWithRelations & { email?: string | null }) | undefined
-    const template = type === 'invoice' ? invoiceTemplate : quoteTemplate
-    if (!template) throw new Error(`Aucun modèle de ${type === 'invoice' ? 'facture' : 'devis'} trouvé.`)
-
-    let tempContainer: HTMLDivElement | null = null
 
     try {
+      // Récupérer le template depuis la base de données
+      const templateService = new DocumentTemplateService(createClient())
+      let template: DocumentTemplate | null = null
+      
+      const templateType = type === 'invoice' ? 'facture' : 'devis'
+      
+      // Priorité : templateId passé en paramètre > templateId stocké dans la map > template par défaut global > template par défaut de la base
+      let finalTemplateId = templateId
+      if (!finalTemplateId && invoice.id) {
+        finalTemplateId = invoiceTemplateMap.get(invoice.id)
+      }
+      if (!finalTemplateId) {
+        finalTemplateId = type === 'invoice' ? selectedInvoiceTemplateId : selectedQuoteTemplateId
+      }
+      
+      if (finalTemplateId && typeof finalTemplateId === 'string') {
+        template = await templateService.getTemplateById(finalTemplateId)
+      } else {
+        // Utiliser le template par défaut
+        template = await templateService.getDefaultTemplate(user.organization_id, templateType)
+      }
+
+      if (!template) throw new Error(`Aucun modèle de ${type === 'invoice' ? 'facture' : 'devis'} trouvé.`)
+
       const invoiceData = invoice as InvoiceWithRelations
 
       let sessionModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
@@ -429,43 +484,29 @@ export function GestionFinances({
         issueDate: invoice.issue_date,
       })
 
-      const result = await generateHTML(template, variables, undefined, user?.organization_id || undefined)
+      // Utiliser l'API pour générer le PDF
+      const response = await fetch('/api/documents/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          template,
+          variables,
+          documentId: undefined,
+          organizationId: user.organization_id,
+        }),
+      })
 
-      const tempDiv = document.createElement('div')
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
-      tempDiv.style.top = '0'
-      tempDiv.style.width = '794px'
-      tempDiv.style.minHeight = '1123px'
-      tempDiv.style.backgroundColor = '#ffffff'
-      tempDiv.style.overflow = 'visible'
-      tempDiv.style.fontFamily = 'Arial, sans-serif'
-      document.body.appendChild(tempDiv)
-      tempContainer = tempDiv
-
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(result.html, 'text/html')
-      tempDiv.innerHTML = doc.body.innerHTML
-
-      let element = tempDiv.querySelector('.document-container') || tempDiv.querySelector('[id$="-document"]') || tempDiv
-      if (!element || !(element instanceof HTMLElement)) {
-        element = tempDiv
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
-      const elementId = `temp-email-preview-${type}-${invoice.id}-${Date.now()}`
-      if (element instanceof HTMLElement) {
-        element.id = elementId
-        if (!element.style.width) element.style.width = '794px'
-        if (!element.style.minHeight) element.style.minHeight = '1123px'
-        element.style.backgroundColor = '#ffffff'
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 700))
-      return await generatePDFBlobFromHTML(elementId)
-    } finally {
-      if (tempContainer && tempContainer.parentNode === document.body) {
-        document.body.removeChild(tempContainer)
-      }
+      return await response.blob()
+    } catch (error) {
+      logger.error('Erreur lors de la génération du PDF pour email:', error)
+      throw error
     }
   }
 
@@ -483,15 +524,6 @@ export function GestionFinances({
       return
     }
 
-    const template = type === 'invoice' ? invoiceTemplate : quoteTemplate
-    if (!template) {
-      addToast({
-        type: 'error',
-        title: 'Erreur',
-        description: `Aucun modèle de ${type === 'invoice' ? 'facture' : 'devis'} trouvé.`,
-      })
-      return
-    }
 
     const docLabel: 'Facture' | 'Devis' = type === 'invoice' ? 'Facture' : 'Devis'
     const invoiceNumber = invoice.invoice_number || 'Brouillon'
@@ -524,7 +556,8 @@ export function GestionFinances({
 
     setIsEmailSending(emailPreview.invoice.id)
     try {
-      const pdfBlob = await generatePdfBlobForEmail(emailPreview.invoice, emailPreview.type)
+      const templateId = emailPreview.type === 'invoice' ? selectedInvoiceTemplateId : selectedQuoteTemplateId
+      const pdfBlob = await generatePdfBlobForEmail(emailPreview.invoice, emailPreview.type, templateId)
 
       const escapeHtml = (value: string) =>
         value
@@ -614,7 +647,11 @@ export function GestionFinances({
       queryClient.setQueryData(key, [optimistic, ...(Array.isArray(prev) ? prev : [])])
       return { previous: prev }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Stocker le templateId sélectionné pour cette facture
+      if (data?.id && invoiceFormTemplateId) {
+        setInvoiceTemplateMap(prev => new Map(prev).set(data.id, invoiceFormTemplateId))
+      }
       addToast({
         type: 'success',
         title: 'Facture créée',
@@ -629,6 +666,7 @@ export function GestionFinances({
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: '',
       })
+      setInvoiceFormTemplateId(undefined)
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
     onError: (error: any, _vars, ctx) => {
@@ -690,7 +728,11 @@ export function GestionFinances({
       queryClient.setQueryData(key, [optimistic, ...(Array.isArray(prev) ? prev : [])])
       return { previous: prev }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Stocker le templateId sélectionné pour ce devis
+      if (data?.id && quoteFormTemplateId) {
+        setInvoiceTemplateMap(prev => new Map(prev).set(data.id, quoteFormTemplateId))
+      }
       addToast({
         type: 'success',
         title: 'Devis créé',
@@ -705,6 +747,7 @@ export function GestionFinances({
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: '',
       })
+      setQuoteFormTemplateId(undefined)
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
     onError: (error: any, _vars, ctx) => {
@@ -1256,6 +1299,66 @@ export function GestionFinances({
                   </Button>
                 </div>
               </div>
+
+              {/* Sélecteurs de modèles pour factures et devis */}
+              <div className="px-6 pb-4 border-b border-gray-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-gray-700">Modèle de facture (s'applique à toutes les factures)</Label>
+                    <div className="relative z-50">
+                      <Select
+                        value={selectedInvoiceTemplateId || ''}
+                        onValueChange={(value) => setSelectedInvoiceTemplateId(value || undefined)}
+                      >
+                        <SelectTrigger className="w-full bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+                          <SelectValue placeholder="Modèle par défaut" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl z-[9999] max-h-[400px] overflow-y-auto w-full">
+                          <SelectItem value="">Modèle par défaut</SelectItem>
+                          {invoiceTemplates && invoiceTemplates.length > 0 ? (
+                            invoiceTemplates.map((template) => (
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" {...({ disabled: true } as Record<string, unknown>)}>
+                              Aucun modèle disponible
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-gray-700">Modèle de devis (s'applique à tous les devis)</Label>
+                    <div className="relative z-50">
+                      <Select
+                        value={selectedQuoteTemplateId || ''}
+                        onValueChange={(value) => setSelectedQuoteTemplateId(value || undefined)}
+                      >
+                        <SelectTrigger className="w-full bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+                          <SelectValue placeholder="Modèle par défaut" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl z-[9999] max-h-[400px] overflow-y-auto w-full">
+                          <SelectItem value="">Modèle par défaut</SelectItem>
+                          {quoteTemplates && quoteTemplates.length > 0 ? (
+                            quoteTemplates.map((template) => (
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" {...({ disabled: true } as Record<string, unknown>)}>
+                              Aucun modèle disponible
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </div>
             
             <div className="p-0">
               {isInvoicesLoading && enrollments.length > 0 && (
@@ -1336,7 +1439,7 @@ export function GestionFinances({
                                 <span className="text-xs font-medium text-gray-700 mr-2">{quote.invoice_number || 'Brouillon'}</span>
                                 <div className="flex gap-1 border-l border-gray-200 pl-2">
                                   <button 
-                                    onClick={() => handleDownloadDocument(quote, 'quote')}
+                                    onClick={() => handleDownloadDocument(quote, 'quote', selectedQuoteTemplateId)}
                                     disabled={isDownloading === quote.id}
                                     className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Télécharger PDF"
@@ -1402,7 +1505,7 @@ export function GestionFinances({
                                 <span className="text-xs font-medium text-blue-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
                                 <div className="flex gap-1 border-l border-blue-200 pl-2">
                                   <button 
-                                    onClick={() => handleDownloadDocument(invoice, 'invoice')}
+                                    onClick={() => handleDownloadDocument(invoice, 'invoice', selectedInvoiceTemplateId)}
                                     disabled={isDownloading === invoice.id}
                                     className="text-blue-400 hover:text-blue-700 transition-colors"
                                     title="Télécharger PDF"
@@ -1998,7 +2101,8 @@ export function GestionFinances({
                 setIsSendingSignatureRequest(true)
                 try {
                   // Générer le PDF côté client
-                  const pdfBlob = await generatePdfBlobForEmail(signatureRequestDialog.invoice, signatureRequestDialog.type)
+                  const templateId = signatureRequestDialog.type === 'invoice' ? selectedInvoiceTemplateId : selectedQuoteTemplateId
+                  const pdfBlob = await generatePdfBlobForEmail(signatureRequestDialog.invoice, signatureRequestDialog.type, templateId)
                   
                   // Convertir le Blob en base64
                   const pdfBase64 = await new Promise<string>((resolve, reject) => {
@@ -2340,13 +2444,42 @@ export function GestionFinances({
                   placeholder="Notes supplémentaires..."
                 />
               </div>
+
+              <div>
+                <Label className="block text-sm font-medium mb-2">Modèle de document</Label>
+                <div className="relative z-50">
+                  <Select
+                    value={invoiceFormTemplateId || ''}
+                    onValueChange={(value) => setInvoiceFormTemplateId(value || undefined)}
+                  >
+                    <SelectTrigger className="w-full bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+                      <SelectValue placeholder="Modèle par défaut" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl z-[9999] max-h-[400px] overflow-y-auto w-full">
+                      <SelectItem value="">Modèle par défaut</SelectItem>
+                      {invoiceTemplates && invoiceTemplates.length > 0 ? (
+                        invoiceTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                            <SelectItem value="" {...({ disabled: true } as Record<string, unknown>)}>
+                              Aucun modèle disponible
+                            </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Ce modèle sera utilisé lors de la génération du PDF</p>
+              </div>
             </fieldset>
 
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => { setShowInvoiceForm(false); setSelectedEnrollmentId(null) }}
+                onClick={() => { setShowInvoiceForm(false); setSelectedEnrollmentId(null); setInvoiceFormTemplateId(undefined) }}
               >
                 Annuler
               </Button>
@@ -2455,13 +2588,42 @@ export function GestionFinances({
                   placeholder="Notes supplémentaires..."
                 />
               </div>
+
+              <div>
+                <Label className="block text-sm font-medium mb-2">Modèle de document</Label>
+                <div className="relative z-50">
+                  <Select
+                    value={quoteFormTemplateId || ''}
+                    onValueChange={(value) => setQuoteFormTemplateId(value || undefined)}
+                  >
+                    <SelectTrigger className="w-full bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+                      <SelectValue placeholder="Modèle par défaut" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl z-[9999] max-h-[400px] overflow-y-auto w-full">
+                      <SelectItem value="">Modèle par défaut</SelectItem>
+                      {quoteTemplates && quoteTemplates.length > 0 ? (
+                        quoteTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                            <SelectItem value="" {...({ disabled: true } as Record<string, unknown>)}>
+                              Aucun modèle disponible
+                            </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Ce modèle sera utilisé lors de la génération du PDF</p>
+              </div>
             </fieldset>
 
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => { setShowQuoteForm(false); setSelectedEnrollmentId(null) }}
+                onClick={() => { setShowQuoteForm(false); setSelectedEnrollmentId(null); setQuoteFormTemplateId(undefined) }}
               >
                 Annuler
               </Button>

@@ -77,7 +77,7 @@ function EditorLoadingFallback() {
  * Bundle impact: ~200KB+ (TipTap + extensions + Yjs)
  */
 export const LazyDocumentEditor = dynamic(
-  () => import('@/components/document-editor/DocumentEditor').then(mod => mod.default || mod),
+  () => import('@/components/document-editor/DocumentEditor').then(mod => (mod as { default?: ComponentType<unknown> }).default ?? mod),
   {
     loading: () => <EditorLoadingFallback />,
     ssr: false, // Editor requires browser APIs

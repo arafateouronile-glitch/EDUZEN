@@ -293,9 +293,18 @@ export async function generatePDFBlobFromHTML(
   )
 
   // Extraire le header et le footer pour traitement séparé
-  const headerElement = element.querySelector('.header') as HTMLElement
-  const footerElement = element.querySelector('.footer') as HTMLElement
-  const contentElement = element.querySelector('.content') as HTMLElement
+  // Chercher les éléments avec les classes utilisées par generateHTML
+  // Le HTML généré utilise document-header, document-footer, document-content
+  // Mais on cherche aussi les anciennes classes pour compatibilité
+  const headerElement = element.querySelector('.document-header') as HTMLElement || 
+                        element.querySelector('.header') as HTMLElement ||
+                        element.querySelector('header') as HTMLElement
+  const footerElement = element.querySelector('.document-footer') as HTMLElement || 
+                        element.querySelector('.footer') as HTMLElement ||
+                        element.querySelector('footer') as HTMLElement
+  const contentElement = element.querySelector('.document-content') as HTMLElement || 
+                         element.querySelector('.content') as HTMLElement ||
+                         element.querySelector('main') as HTMLElement
   
   // Vérifier si le header doit être répété sur toutes les pages
   const headerRepeatOnAllPages = headerElement?.getAttribute('data-repeat-on-all-pages') === 'true' || false
@@ -401,9 +410,16 @@ export async function generatePDFBlobFromHTML(
         })
         
         // S'assurer que header et footer sont visibles et correctement positionnés
-        const clonedHeader = clonedElement.querySelector('.header') as HTMLElement
-        const clonedFooter = clonedElement.querySelector('.footer') as HTMLElement
-        const clonedContent = clonedElement.querySelector('.content') as HTMLElement
+        // Chercher les éléments avec les classes utilisées par generateHTML
+        const clonedHeader = clonedElement.querySelector('.document-header') as HTMLElement || 
+                             clonedElement.querySelector('.header') as HTMLElement ||
+                             clonedElement.querySelector('header') as HTMLElement
+        const clonedFooter = clonedElement.querySelector('.document-footer') as HTMLElement || 
+                              clonedElement.querySelector('.footer') as HTMLElement ||
+                              clonedElement.querySelector('footer') as HTMLElement
+        const clonedContent = clonedElement.querySelector('.document-content') as HTMLElement || 
+                              clonedElement.querySelector('.content') as HTMLElement ||
+                              clonedElement.querySelector('main') as HTMLElement
         
         if (clonedHeader) {
           // Le header ne doit être visible que sur la première page si repeatOnAllPages est false
@@ -486,11 +502,16 @@ export async function generatePDFBlobFromHTML(
         scrollY: 0,
         onclone: (clonedDoc, clonedElement) => {
           // Masquer le header dans le clone aussi
-          const clonedHeader = clonedElement.querySelector('.header') as HTMLElement
+          // Chercher les éléments avec les classes utilisées par generateHTML
+          const clonedHeader = clonedElement.querySelector('.document-header') as HTMLElement || 
+                               clonedElement.querySelector('.header') as HTMLElement ||
+                               clonedElement.querySelector('header') as HTMLElement
           if (clonedHeader) {
             clonedHeader.style.display = 'none'
           }
-          const clonedFooter = clonedElement.querySelector('.footer') as HTMLElement
+          const clonedFooter = clonedElement.querySelector('.document-footer') as HTMLElement || 
+                               clonedElement.querySelector('.footer') as HTMLElement ||
+                               clonedElement.querySelector('footer') as HTMLElement
           if (clonedFooter) {
             clonedFooter.style.display = 'none'
           }

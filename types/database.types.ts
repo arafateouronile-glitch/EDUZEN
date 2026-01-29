@@ -8660,6 +8660,7 @@ export type Database = {
           original_grade_id: string | null
           percentage: number | null
           rank_in_class: number | null
+          rating: number | null
           score: number | null
           session_id: string | null
           student_id: string | null
@@ -8684,6 +8685,7 @@ export type Database = {
           original_grade_id?: string | null
           percentage?: number | null
           rank_in_class?: number | null
+          rating?: number | null
           score?: number | null
           session_id?: string | null
           student_id?: string | null
@@ -8708,6 +8710,7 @@ export type Database = {
           original_grade_id?: string | null
           percentage?: number | null
           rank_in_class?: number | null
+          rating?: number | null
           score?: number | null
           session_id?: string | null
           student_id?: string | null

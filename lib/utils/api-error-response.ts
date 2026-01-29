@@ -121,7 +121,7 @@ export function createSecureErrorResponse(
   }
 
   // Log l'erreur côté serveur (avec tous les détails)
-  logger.error(`[${correlationId}] API Error:`, {
+  logger.error(`[${correlationId}] API Error:`, error, {
     status,
     error: error instanceof Error ? {
       name: error.name,

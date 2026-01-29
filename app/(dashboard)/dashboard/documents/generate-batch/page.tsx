@@ -33,10 +33,9 @@ export default function GenerateBatchDocumentPage() {
   
   // Créer une instance du service avec le client côté client
   const documentService = useMemo(() => new DocumentService(supabase), [supabase])
-
-  const [documentType, setDocumentType] = useState<string>('attestation')
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('')
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [documentType, setDocumentType] = useState<string | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([])
   const [language, setLanguage] = useState<'fr' | 'en'>('fr')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -362,7 +361,7 @@ export default function GenerateBatchDocumentPage() {
               {/* Sélecteur de template */}
               <TemplateSelector
                 documentType={mapDocumentTypeToTemplateType(documentType)}
-                selectedTemplateId={selectedTemplateId}
+                selectedTemplateId={selectedTemplateId ?? undefined}
                 onTemplateSelect={setSelectedTemplateId}
                 onCreateNew={() => {
                   router.push(`/dashboard/settings/document-templates/${mapDocumentTypeToTemplateType(documentType)}/edit`)
@@ -394,7 +393,7 @@ export default function GenerateBatchDocumentPage() {
                 </CardHeader>
                 <CardContent>
                   <select
-                    value={selectedSessionId}
+                    value={selectedSessionId ?? ''}
                     onChange={(e) => {
                       setSelectedSessionId(e.target.value)
                       setSelectedStudentIds([])

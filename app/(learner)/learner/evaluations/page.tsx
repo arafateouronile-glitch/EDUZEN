@@ -54,10 +54,19 @@ export default function LearnerEvaluationsPage() {
   const { data: grades, isLoading: loadingGrades } = useQuery({
     queryKey: ['learner-grades', studentData?.id],
     queryFn: async () => {
-      if (!studentData?.id) return []
-      if (!supabase) return []
+      if (!studentData?.id) {
+        console.log('[Learner Evaluations] Pas de studentData.id')
+        return []
+      }
+      if (!supabase) {
+        console.log('[Learner Evaluations] Pas de supabase client')
+        return []
+      }
       
-      const { data } = await supabase
+      console.log('[Learner Evaluations] Récupération des évaluations pour student_id:', studentData.id)
+      
+      // Essayer d'abord avec la requête normale
+      let { data, error } = await supabase
         .from('grades')
         .select(`
           *,
@@ -66,15 +75,72 @@ export default function LearnerEvaluationsPage() {
         .eq('student_id', studentData.id)
         .order('graded_at', { ascending: false })
       
+      if (error) {
+        console.error('[Learner Evaluations] Erreur lors de la récupération des évaluations:', error)
+        // Essayer une requête plus simple sans les relations
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('grades')
+          .select('*')
+          .eq('student_id', studentData.id)
+          .order('graded_at', { ascending: false })
+        
+        if (simpleError) {
+          console.error('[Learner Evaluations] Erreur avec requête simple:', simpleError)
+          return []
+        }
+        
+        console.log('[Learner Evaluations] Évaluations récupérées (requête simple):', simpleData?.length || 0, simpleData)
+        return simpleData || []
+      }
+      
+      console.log('[Learner Evaluations] Évaluations récupérées:', data?.length || 0, data)
+      
+      // Si aucune évaluation n'est trouvée, vérifier s'il y en a dans la base sans filtre student_id
+      if (!data || data.length === 0) {
+        console.log('[Learner Evaluations] Aucune évaluation trouvée, vérification dans la base...')
+        const { data: allGrades, error: allError } = await supabase
+          .from('grades')
+          .select('id, student_id, subject, organization_id')
+          .limit(10)
+        
+        if (!allError && allGrades) {
+          console.log('[Learner Evaluations] Exemples d\'évaluations dans la base:', allGrades)
+          const matchingGrades = allGrades.filter(g => g.student_id === studentData.id)
+          console.log('[Learner Evaluations] Évaluations correspondant au student_id:', matchingGrades.length, matchingGrades)
+        }
+      }
+      
       return data || []
     },
     enabled: !!studentData?.id && !!supabase,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    staleTime: 30 * 1000, // Considérer les données comme périmées après 30 secondes
   })
 
+  // Séparer les évaluations en "à faire" et "terminées"
+  // À faire : celles sans note (score null) ou sans date de correction (graded_at null)
+  const SATISFACTION_TYPES = ['hot', 'cold', 'manager', 'instructor', 'funder']
+  const isSatisfaction = (g: any) => SATISFACTION_TYPES.includes(g.assessment_type || '')
+  // Satisfaction : terminée seulement si rating est renseigné (apprenant a fait le quiz ou formateur a corrigé)
+  // On ne se base pas sur graded_at seul pour éviter d'afficher en "terminées" les évals pas encore faites par l'apprenant
+  const isCompleted = (g: any) =>
+    isSatisfaction(g)
+      ? g.rating !== null && g.rating !== undefined
+      : g.score != null && g.graded_at != null
+  const pendingEvaluations = grades?.filter((g: any) => !isCompleted(g)) || []
+  const completedEvaluations = grades?.filter((g: any) => isCompleted(g)) || []
+
   // Calcul des stats
-  const totalEvaluations = (quizResponses?.length || 0) + (grades?.length || 0)
-  const avgScore = grades?.length 
-    ? Math.round(grades.reduce((acc: number, g: any) => acc + (g.percentage || 0), 0) / grades.length)
+  // Seules les évaluations terminées (avec note) comptent pour les stats
+  const totalEvaluations = (quizResponses?.length || 0) + completedEvaluations.length
+  const avgScore = completedEvaluations.length
+    ? Math.round(
+        completedEvaluations.reduce((acc: number, g: any) => {
+          if (isSatisfaction(g)) return acc + ((g.rating ?? 0) * 20)
+          return acc + (g.percentage || 0)
+        }, 0) / completedEvaluations.length
+      )
     : 0
 
   const getScoreBadge = (score: number) => {
@@ -178,7 +244,7 @@ export default function LearnerEvaluationsPage() {
               <Clock className="h-6 w-6 text-amber-600" />
             </div>
             <div className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-500 bg-clip-text text-transparent">
-              {pendingQuizzes?.length || 0}
+              {(pendingQuizzes?.length || 0) + pendingEvaluations.length}
             </div>
             <p className="text-sm text-gray-500 mt-1">En attente</p>
           </motion.div>
@@ -212,7 +278,7 @@ export default function LearnerEvaluationsPage() {
               <Award className="h-6 w-6 text-purple-600" />
             </div>
             <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
-              {grades?.filter((g: any) => (g.percentage || 0) >= 80).length || 0}
+              {completedEvaluations.filter((g: any) => isSatisfaction(g) ? (g.rating ?? 0) >= 4 : (g.percentage || 0) >= 80).length || 0}
             </div>
             <p className="text-sm text-gray-500 mt-1">Excellents</p>
           </motion.div>
@@ -225,7 +291,7 @@ export default function LearnerEvaluationsPage() {
           <TabsList className="bg-white/50 backdrop-blur-sm border border-gray-200/50 p-1 rounded-xl">
             <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-brand-blue data-[state=active]:text-white">
               <Clock className="h-4 w-4 mr-2" />
-              À faire ({pendingQuizzes?.length || 0})
+              À faire ({(pendingQuizzes?.length || 0) + pendingEvaluations.length})
             </TabsTrigger>
             <TabsTrigger value="completed" className="rounded-lg data-[state=active]:bg-brand-blue data-[state=active]:text-white">
               <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -234,15 +300,16 @@ export default function LearnerEvaluationsPage() {
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">
-            {loadingQuizzes ? (
+            {loadingQuizzes || loadingGrades ? (
               <div className="space-y-4">
                 {[1, 2].map((i) => (
                   <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
                 ))}
               </div>
-            ) : pendingQuizzes && pendingQuizzes.length > 0 ? (
+            ) : ((pendingQuizzes && pendingQuizzes.length > 0) || pendingEvaluations.length > 0) ? (
               <div className="space-y-4">
-                {pendingQuizzes.map((quiz: any) => (
+                {/* Quiz à faire */}
+                {pendingQuizzes?.map((quiz: any) => (
                   <GlassCard key={quiz.id} className="p-6 hover:shadow-lg transition-all duration-300">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-amber-50 rounded-xl">
@@ -270,6 +337,41 @@ export default function LearnerEvaluationsPage() {
                     </div>
                   </GlassCard>
                 ))}
+                
+                {/* Évaluations à faire (sans note) */}
+                {pendingEvaluations.map((evaluation: any) => (
+                  <Link key={evaluation.id} href={`/learner/evaluations/${evaluation.id}`}>
+                    <GlassCard className="p-6 hover:shadow-lg transition-all duration-300 cursor-pointer">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-amber-50 rounded-xl">
+                          <ClipboardCheck className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">{evaluation.subject}</h3>
+                          <p className="text-sm text-gray-500">
+                            {evaluation.sessions?.formations?.name || evaluation.sessions?.name}
+                          </p>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {evaluation.created_at && formatDate(evaluation.created_at)}
+                            </span>
+                            <span>{evaluation.assessment_type || 'Évaluation'}</span>
+                          </div>
+                          {evaluation.notes && (
+                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">{evaluation.notes}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge className="bg-amber-100 text-amber-700">En attente de correction</Badge>
+                          <Button variant="outline" size="sm" onClick={(e) => e.preventDefault()}>
+                            Voir les détails
+                          </Button>
+                        </div>
+                      </div>
+                    </GlassCard>
+                  </Link>
+                ))}
               </div>
             ) : (
               <GlassCard className="p-12 text-center">
@@ -293,51 +395,76 @@ export default function LearnerEvaluationsPage() {
               </div>
             ) : totalEvaluations > 0 ? (
               <div className="space-y-4">
-                {/* Notes/Grades */}
-                {grades?.map((grade: any) => (
-                  <GlassCard key={grade.id} className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-xl ${
-                        (grade.percentage || 0) >= 80 ? 'bg-green-50' :
-                        (grade.percentage || 0) >= 60 ? 'bg-blue-50' :
-                        'bg-amber-50'
-                      }`}>
-                        <ClipboardCheck className={`h-6 w-6 ${
-                          (grade.percentage || 0) >= 80 ? 'text-green-600' :
-                          (grade.percentage || 0) >= 60 ? 'text-blue-600' :
-                          'text-amber-600'
-                        }`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-900">{grade.subject}</h3>
-                          {getScoreBadge(grade.percentage || 0)}
+                {/* Notes/Grades - Seulement les évaluations terminées (avec note) */}
+                {completedEvaluations.map((grade: any) => {
+                  const satisfaction = isSatisfaction(grade)
+                  return (
+                  <Link key={grade.id} href={`/learner/evaluations/${grade.id}`}>
+                    <GlassCard className="p-6 hover:shadow-lg transition-all duration-300 cursor-pointer">
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-xl ${
+                          satisfaction ? 'bg-amber-50' :
+                          (grade.percentage || 0) >= 80 ? 'bg-green-50' :
+                          (grade.percentage || 0) >= 60 ? 'bg-blue-50' :
+                          'bg-amber-50'
+                        }`}>
+                          <ClipboardCheck className={`h-6 w-6 ${
+                            satisfaction ? 'text-amber-600' :
+                            (grade.percentage || 0) >= 80 ? 'text-green-600' :
+                            (grade.percentage || 0) >= 60 ? 'text-blue-600' :
+                            'text-amber-600'
+                          }`} />
                         </div>
-                        <p className="text-sm text-gray-500">
-                          {grade.sessions?.formations?.name || grade.sessions?.name}
-                        </p>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {grade.graded_at && formatDate(grade.graded_at)}
-                          </span>
-                          <span>{grade.assessment_type || 'Évaluation'}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-900">{grade.subject}</h3>
+                            {satisfaction ? (
+                              <Badge className="bg-amber-100 text-amber-700">{grade.rating ?? '—'}/5</Badge>
+                            ) : (
+                              getScoreBadge(grade.percentage || 0)
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {grade.sessions?.formations?.name || grade.sessions?.name}
+                          </p>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {grade.graded_at && formatDate(grade.graded_at)}
+                            </span>
+                            <span>{grade.assessment_type || 'Évaluation'}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {satisfaction ? (
+                            <>
+                              <div className="text-2xl font-bold text-amber-600">
+                                {grade.rating ?? '—'} / 5
+                              </div>
+                              <p className="text-sm text-gray-500">Satisfaction</p>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-2xl font-bold text-gray-900">
+                                {grade.score}/{grade.max_score || 20}
+                              </div>
+                              <p className="text-sm text-gray-500">{grade.percentage}%</p>
+                            </>
+                          )}
+                          <Button variant="outline" size="sm" className="mt-2" onClick={(e) => e.preventDefault()}>
+                            Voir les détails
+                          </Button>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {grade.score}/{grade.max_score || 20}
+                      {(grade.feedback || (satisfaction && grade.notes)) && (
+                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-600">{grade.feedback || grade.notes}</p>
                         </div>
-                        <p className="text-sm text-gray-500">{grade.percentage}%</p>
-                      </div>
-                    </div>
-                    {grade.feedback && (
-                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                        <p className="text-sm text-gray-600">{grade.feedback}</p>
-                      </div>
-                    )}
-                  </GlassCard>
-                ))}
+                      )}
+                    </GlassCard>
+                  </Link>
+                  )
+                })}
 
                 {/* Quiz Responses */}
                 {quizResponses?.map((response: any) => (

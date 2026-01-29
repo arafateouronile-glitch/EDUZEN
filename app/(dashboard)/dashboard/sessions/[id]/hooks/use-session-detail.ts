@@ -67,6 +67,9 @@ export interface EnrollmentFormData {
   funding_type_id: string
 }
 
+/** Types d'évaluation "satisfaction" en base : avis + étoiles 0-5, pas de score */
+const SATISFACTION_ASSESSMENT_TYPES_DB = ['hot', 'cold', 'manager', 'instructor', 'funder']
+
 export interface EvaluationFormData {
   template_id?: string
   subject: string
@@ -77,6 +80,10 @@ export interface EvaluationFormData {
   percentage: string
   notes: string
   graded_at: string
+  /** Note satisfaction 0-5 (étoiles) pour types à chaud / à froid / apprenants / financeurs */
+  rating?: string
+  sendByEmail?: boolean
+  addToPersonalSpace?: boolean
 }
 
 export interface SlotConfig {
@@ -245,7 +252,10 @@ export function useSessionDetail(sessionId: string) {
     max_score: '20',
     percentage: '',
     notes: '',
-    graded_at: new Date().toISOString().split('T')[0],
+    graded_at: '',
+    rating: undefined,
+    sendByEmail: true,
+    addToPersonalSpace: true,
   })
 
   const [slotConfig, setSlotConfig] = useState<SlotConfig>({
@@ -470,6 +480,52 @@ export function useSessionDetail(sessionId: string) {
     enabled: !!sessionId,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
+  })
+
+  // Map grade_id -> template_id pour savoir quelles évaluations ont un quiz côté apprenant
+  const { data: gradeInstanceMap = {} } = useQuery({
+    queryKey: ['session-grade-instances', (grades ?? []).map((g: any) => g.id).filter(Boolean)],
+    queryFn: async () => {
+      const gradeIds = (grades ?? []).map((g: any) => g.id).filter(Boolean)
+      if (gradeIds.length === 0) return {} as Record<string, string>
+      const { data, error } = await supabase
+        .from('evaluation_template_instances')
+        .select('grade_id, template_id')
+        .in('grade_id', gradeIds)
+      if (error) {
+        logger.debug('Récupération instances évaluation', { error: error.message })
+        return {} as Record<string, string>
+      }
+      const map: Record<string, string> = {}
+      ;(data || []).forEach((row: any) => {
+        if (row.grade_id && row.template_id) map[row.grade_id] = row.template_id
+      })
+      return map
+    },
+    enabled: !!sessionId && (grades ?? []).length > 0,
+  })
+
+  const attachTemplateToGradeMutation = useMutation({
+    mutationFn: async ({ gradeId, templateId }: { gradeId: string; templateId: string }) => {
+      await evaluationTemplateService.createInstance(gradeId, templateId)
+    },
+    onSuccess: (_data, { gradeId, templateId }) => {
+      queryClient.invalidateQueries({ queryKey: ['session-grades', sessionId] })
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string) === 'session-grade-instances' })
+      addToast({
+        type: 'success',
+        title: 'Modèle associé',
+        description: "L'apprenant pourra maintenant passer le quiz pour cette évaluation.",
+      })
+      logger.info('Instance de modèle créée pour un grade existant', { gradeId, templateId })
+    },
+    onError: (error: any) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error?.message || 'Impossible d\'associer le modèle.',
+      })
+    },
   })
 
   const { data: organization } = useQuery({
@@ -887,27 +943,45 @@ export function useSessionDetail(sessionId: string) {
         throw new Error('Organisation non trouvée')
       }
 
-      // Les notes sont optionnelles - peuvent être ajoutées plus tard
-      const maxScore = evaluationForm.max_score ? parseFloat(evaluationForm.max_score) : null
-      const score = evaluationForm.score ? parseFloat(evaluationForm.score) : null
-
-      // Mapper le type d'évaluation
       const mappedAssessmentType = mapAssessmentType(evaluationForm.assessment_type)
-      
-      // Préparer les données d'évaluation
-      // NOTE: percentage est une colonne générée, on ne l'inclut pas dans l'insertion
-      // NOTE: score et max_score sont optionnels - peuvent être null si la note sera calculée plus tard
+      const isSatisfactionType = SATISFACTION_ASSESSMENT_TYPES_DB.includes(mappedAssessmentType)
+
+      // Pour les types satisfaction (à chaud, à froid, apprenants, financeurs) : à la création on ne met
+      // jamais graded_at ni rating, pour que l'évaluation reste dans "À faire" côté apprenant jusqu'à
+      // ce qu'il remplisse le quiz (ou qu'un formateur corrige manuellement plus tard).
+      const ratingValue =
+        isSatisfactionType && evaluationForm.rating !== undefined && evaluationForm.rating !== ''
+          ? parseInt(evaluationForm.rating, 10)
+          : null
+      const score =
+        isSatisfactionType ? null : evaluationForm.score ? parseFloat(evaluationForm.score) : null
+      const maxScore =
+        isSatisfactionType ? null : evaluationForm.max_score ? parseFloat(evaluationForm.max_score) : null
+      const hasResult = isSatisfactionType ? false : (score !== null && score !== undefined)
+      const gradedAt =
+        !isSatisfactionType &&
+        hasResult &&
+        evaluationForm.graded_at &&
+        evaluationForm.graded_at.trim() !== ''
+          ? evaluationForm.graded_at
+          : !isSatisfactionType && hasResult
+            ? new Date().toISOString()
+            : null
+
       const evaluationData: any = {
         subject: evaluationForm.subject,
-        assessment_type: mappedAssessmentType, // Toujours une valeur valide, jamais null
+        assessment_type: mappedAssessmentType,
         student_id: evaluationForm.student_id || null,
         session_id: sessionId,
-        score: score, // Peut être null si la note sera calculée plus tard
-        max_score: maxScore, // Peut être null si la note sera calculée plus tard
-        // Ne pas inclure percentage - c'est une colonne générée calculée automatiquement
+        score: score,
+        max_score: maxScore,
         notes: evaluationForm.notes || null,
-        graded_at: evaluationForm.graded_at || new Date().toISOString(),
+        graded_at: gradedAt,
         teacher_id: user.id || null,
+      }
+      // Ne pas renseigner rating à la création pour les types satisfaction (sera rempli par l'apprenant ou en correction manuelle)
+      if (isSatisfactionType) {
+        evaluationData.rating = null
       }
       
       // Nettoyer les valeurs undefined
@@ -918,8 +992,252 @@ export function useSessionDetail(sessionId: string) {
       })
 
       try {
-        // Utiliser le service d'évaluation qui gère mieux les erreurs
-        return await evaluationService.create(user.organization_id, evaluationData)
+        // Si addToPersonalSpace est activé, s'assurer que l'évaluation a un student_id
+        if (evaluationForm.addToPersonalSpace) {
+          if (evaluationForm.student_id) {
+            // Évaluation individuelle - créer avec le student_id du formulaire
+            // evaluationData contient déjà le student_id, donc on peut créer directement
+            logger.info('Création évaluation individuelle avec addToPersonalSpace', {
+              studentId: evaluationForm.student_id,
+              subject: evaluationForm.subject,
+            })
+            const created = await evaluationService.create(user.organization_id, evaluationData)
+            logger.info('Évaluation créée avec succès', {
+              evaluationId: created?.id,
+              studentId: created?.student_id,
+            })
+            // Lier le modèle d'évaluation au grade pour que l'apprenant voie le quiz
+            if (created?.id && evaluationForm.template_id) {
+              try {
+                await evaluationTemplateService.createInstance(created.id, evaluationForm.template_id)
+                logger.info('Instance de modèle d\'évaluation créée pour le grade', {
+                  gradeId: created.id,
+                  templateId: evaluationForm.template_id,
+                })
+              } catch (instanceErr: any) {
+                logger.warn('Impossible de lier le modèle au grade (l\'apprenant ne verra pas le quiz)', {
+                  gradeId: created.id,
+                  templateId: evaluationForm.template_id,
+                  error: instanceErr?.message,
+                })
+              }
+            }
+            return created
+          } else if (enrollments) {
+            // Évaluation collective - créer une évaluation pour chaque étudiant de la session
+            const validEnrollments = (enrollments as EnrollmentWithRelations[]).filter(
+              (e) => e.students && e.status !== 'cancelled'
+            )
+            
+            logger.info('Création évaluations collectives avec addToPersonalSpace', {
+              enrollmentsCount: validEnrollments.length,
+              subject: evaluationForm.subject,
+            })
+            
+            if (validEnrollments.length > 0) {
+              // Créer une évaluation pour chaque étudiant
+              const evaluationPromises = validEnrollments.map(async (enrollment) => {
+                const studentEvaluationData = {
+                  ...evaluationData,
+                  student_id: enrollment.student_id,
+                }
+                logger.info('Création évaluation pour étudiant', {
+                  studentId: enrollment.student_id,
+                  studentName: enrollment.students?.first_name + ' ' + enrollment.students?.last_name,
+                  organizationId: user.organization_id ?? undefined,
+                  evaluationData: {
+                    subject: studentEvaluationData.subject,
+                    student_id: studentEvaluationData.student_id,
+                    session_id: studentEvaluationData.session_id,
+                  },
+                })
+                const created = await evaluationService.create(user.organization_id ?? '', studentEvaluationData)
+                logger.info('Évaluation créée pour étudiant', {
+                  evaluationId: created?.id,
+                  studentId: created?.student_id,
+                  organizationId: created?.organization_id ?? undefined,
+                  subject: created?.subject,
+                  sessionId: created?.session_id ?? undefined,
+                })
+                // Lier le modèle d'évaluation au grade pour que l'apprenant voie le quiz
+                if (created?.id && evaluationForm.template_id) {
+                  try {
+                    await evaluationTemplateService.createInstance(created.id, evaluationForm.template_id as string)
+                    logger.info('Instance de modèle d\'évaluation créée pour le grade', {
+                      gradeId: created.id,
+                      templateId: evaluationForm.template_id,
+                    })
+                  } catch (instanceErr: any) {
+                    logger.warn('Impossible de lier le modèle au grade (l\'apprenant ne verra pas le quiz)', {
+                      gradeId: created.id,
+                      templateId: evaluationForm.template_id,
+                      error: instanceErr?.message,
+                    })
+                  }
+                }
+                
+                // Vérifier immédiatement que l'évaluation peut être récupérée avec le client dashboard
+                try {
+                  const { data: verifyData, error: verifyError } = await supabase
+                    .from('grades')
+                    .select('id, student_id, subject, organization_id, session_id')
+                    .eq('id', created.id)
+                    .maybeSingle()
+                  
+                  if (verifyError) {
+                    logger.warn('Impossible de vérifier l\'évaluation créée', { 
+                      error: verifyError,
+                      evaluationId: created.id,
+                    })
+                  } else if (!verifyData) {
+                    logger.error('❌ Évaluation créée mais non trouvée lors de la vérification', {
+                      evaluationId: created.id,
+                      studentId: enrollment.student_id,
+                      createdData: created,
+                    })
+                  } else {
+                    logger.info('✅ Évaluation vérifiée avec succès (dashboard client)', {
+                      evaluationId: verifyData.id,
+                      studentId: verifyData.student_id,
+                      organizationId: verifyData.organization_id ?? undefined,
+                      sessionId: verifyData.session_id ?? undefined,
+                    })
+                    
+                    // Vérifier aussi avec un client learner simulé
+                    try {
+                      const learnerClient = createClient()
+                      // Note: Le client learner utilise un header spécial, mais on peut quand même tester
+                      const { data: learnerVerifyData, error: learnerVerifyError } = await learnerClient
+                        .from('grades')
+                        .select('id, student_id, subject')
+                        .eq('student_id', enrollment.student_id ?? '')
+                        .eq('id', created.id)
+                        .maybeSingle()
+                      
+                      if (learnerVerifyError) {
+                        logger.warn('⚠️ Client learner ne peut pas accéder à l\'évaluation (RLS?)', {
+                          error: learnerVerifyError,
+                          evaluationId: created.id,
+                          studentId: enrollment.student_id,
+                        })
+                      } else if (!learnerVerifyData) {
+                        logger.warn('⚠️ Client learner ne trouve pas l\'évaluation (RLS?)', {
+                          evaluationId: created.id,
+                          studentId: enrollment.student_id,
+                        })
+                      } else {
+                        logger.info('✅ Client learner peut accéder à l\'évaluation', {
+                          evaluationId: learnerVerifyData.id,
+                          studentId: learnerVerifyData.student_id,
+                        })
+                      }
+                    } catch (learnerErr) {
+                      logger.warn('Erreur lors de la vérification avec client learner', { error: learnerErr })
+                    }
+                  }
+                } catch (verifyErr) {
+                  logger.warn('Erreur lors de la vérification de l\'évaluation', { error: verifyErr })
+                }
+                
+                return created
+              })
+              
+              const createdEvaluations = await Promise.allSettled(evaluationPromises)
+              
+              // Logger les résultats détaillés
+              const successful = createdEvaluations.filter(r => r.status === 'fulfilled')
+              const failed = createdEvaluations.filter(r => r.status === 'rejected')
+              
+              logger.info('Résultats création évaluations collectives', {
+                successful: successful.length,
+                failed: failed.length,
+                total: createdEvaluations.length,
+                successfulIds: successful.map(r => r.status === 'fulfilled' ? r.value?.id : null).filter(Boolean),
+                failedErrors: failed.map(r => r.status === 'rejected' ? r.reason : null).filter(Boolean),
+              })
+              
+              // Logger les erreurs en détail
+              failed.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                  logger.error(`Erreur création évaluation ${index + 1}`, result.reason as Error, {
+                    enrollmentIndex: index,
+                    studentId: validEnrollments[index]?.student_id,
+                  })
+                }
+              })
+              
+              // Vérifier que les évaluations créées sont bien dans la base
+              if (successful.length > 0) {
+                const firstSuccess = successful[0]
+                if (firstSuccess.status === 'fulfilled' && firstSuccess.value?.id) {
+                  // Vérifier immédiatement dans la base
+                  const { data: dbCheck, error: dbError } = await supabase
+                    .from('grades')
+                    .select('id, student_id, organization_id, subject')
+                    .in('id', successful
+                      .filter(r => r.status === 'fulfilled' && r.value?.id)
+                      .map(r => (r as any).value.id)
+                      .slice(0, 5) // Vérifier les 5 premières
+                    )
+                  
+                  if (dbError) {
+                    logger.error('Erreur lors de la vérification en base', dbError, {
+                      evaluationIds: successful
+                        .filter(r => r.status === 'fulfilled' && r.value?.id)
+                        .map(r => (r as any).value.id),
+                    })
+                  } else {
+                    logger.info('Vérification en base réussie', {
+                      found: dbCheck?.length || 0,
+                      expected: successful.length,
+                      evaluations: dbCheck,
+                    })
+                  }
+                }
+              }
+              
+              // Retourner la première évaluation créée avec succès
+              const firstSuccess = createdEvaluations.find((result) => result.status === 'fulfilled')
+              if (firstSuccess && firstSuccess.status === 'fulfilled') {
+                logger.info('Première évaluation créée avec succès', {
+                  evaluationId: firstSuccess.value?.id,
+                  studentId: firstSuccess.value?.student_id,
+                  organizationId: firstSuccess.value?.organization_id ?? undefined,
+                })
+                return firstSuccess.value
+              }
+              throw new Error('Erreur lors de la création des évaluations pour les étudiants')
+            }
+          }
+        }
+        
+        // Si addToPersonalSpace n'est pas activé, créer l'évaluation normalement (peut être collective ou individuelle)
+        logger.info('Création évaluation sans addToPersonalSpace', {
+          studentId: evaluationForm.student_id || null,
+          subject: evaluationForm.subject,
+        })
+        const created = await evaluationService.create(user.organization_id ?? '', evaluationData)
+        logger.info('Évaluation créée', {
+          evaluationId: created?.id,
+          studentId: created?.student_id,
+        })
+        // Lier le modèle d'évaluation au grade pour que l'apprenant voie le quiz
+        if (created?.id && evaluationForm.template_id) {
+          try {
+            await evaluationTemplateService.createInstance(created.id, evaluationForm.template_id as string)
+            logger.info('Instance de modèle d\'évaluation créée pour le grade', {
+              gradeId: created.id,
+              templateId: evaluationForm.template_id,
+            })
+          } catch (instanceErr: any) {
+            logger.warn('Impossible de lier le modèle au grade (l\'apprenant ne verra pas le quiz)', {
+              gradeId: created.id,
+              templateId: evaluationForm.template_id,
+              error: instanceErr?.message,
+            })
+          }
+        }
+        return created
       } catch (error: any) {
         // Logger l'erreur complète pour le débogage
         logger.error('Erreur détaillée création évaluation:', {
@@ -935,8 +1253,85 @@ export function useSessionDetail(sessionId: string) {
       }
     },
     onSuccess: async (createdEvaluation) => {
+      // Invalider les caches pour que les évaluations apparaissent immédiatement
       queryClient.invalidateQueries({ queryKey: ['session-grades', sessionId] })
+      
+      // Invalider aussi le cache de l'espace personnel de l'apprenant
+      // Note: L'invalidation du cache côté dashboard ne peut pas directement invalider le cache côté learner
+      // car ils utilisent des QueryClients différents. Les évaluations apparaîtront au prochain rafraîchissement
+      // ou lors de la prochaine visite de la page /learner/evaluations
+      
+      // Pour forcer le rafraîchissement, on peut aussi invalider avec un pattern plus large
+      if (evaluationForm.student_id) {
+        queryClient.invalidateQueries({ queryKey: ['learner-grades', evaluationForm.student_id] })
+        logger.info('Cache invalidé pour étudiant', { studentId: evaluationForm.student_id })
+      } else if (evaluationForm.addToPersonalSpace && enrollments) {
+        // Invalider pour tous les étudiants de la session si évaluation collective
+        const validEnrollments = (enrollments as EnrollmentWithRelations[]).filter(
+          (e) => e.students && e.status !== 'cancelled'
+        )
+        logger.info('Invalidation cache pour évaluations collectives', {
+          studentsCount: validEnrollments.length,
+        })
+        validEnrollments.forEach((enrollment) => {
+          if (enrollment.student_id) {
+            queryClient.invalidateQueries({ queryKey: ['learner-grades', enrollment.student_id] })
+          }
+        })
+      }
+      
       setShowEvaluationForm(false)
+      
+      // Déterminer les étudiants à notifier
+      const studentsToNotify: Array<{ email: string; firstName: string; lastName: string; studentId: string }> = []
+      
+      if (evaluationForm.student_id) {
+        // Évaluation individuelle - envoyer à un seul étudiant
+        const student = students?.find(s => s.id === evaluationForm.student_id)
+        if (student && student.email) {
+          studentsToNotify.push({
+            email: student.email,
+            firstName: student.first_name || '',
+            lastName: student.last_name || '',
+            studentId: student.id,
+          })
+        }
+      } else if (evaluationForm.addToPersonalSpace) {
+        // Évaluation collective avec addToPersonalSpace - utiliser les étudiants pour lesquels on a créé des évaluations
+        const validEnrollments = (enrollments as EnrollmentWithRelations[])?.filter(
+          (e) => e.students && e.students.email && e.status !== 'cancelled'
+        ) || []
+        
+        validEnrollments.forEach((enrollment) => {
+          const student = enrollment.students
+          if (student && student.email) {
+            studentsToNotify.push({
+              email: student.email,
+              firstName: student.first_name || '',
+              lastName: student.last_name || '',
+              studentId: student.id,
+            })
+          }
+        })
+      } else {
+        // Évaluation collective sans addToPersonalSpace - envoyer à tous les étudiants de la session
+        const validEnrollments = (enrollments as EnrollmentWithRelations[])?.filter(
+          (e) => e.students && e.students.email && e.status !== 'cancelled'
+        ) || []
+        
+        validEnrollments.forEach((enrollment) => {
+          const student = enrollment.students
+          if (student && student.email) {
+            studentsToNotify.push({
+              email: student.email,
+              firstName: student.first_name || '',
+              lastName: student.last_name || '',
+              studentId: student.id,
+            })
+          }
+        })
+      }
+      
       setEvaluationForm({
         template_id: undefined,
         subject: '',
@@ -946,48 +1341,25 @@ export function useSessionDetail(sessionId: string) {
         max_score: '20',
         percentage: '',
         notes: '',
-        graded_at: new Date().toISOString().split('T')[0],
+        graded_at: '',
+        rating: undefined,
+        sendByEmail: true,
+        addToPersonalSpace: true,
       })
       
-      // Envoyer automatiquement un email à l'étudiant (ou tous les étudiants si évaluation collective)
-      try {
-        const studentsToNotify: Array<{ email: string; firstName: string; lastName: string }> = []
-        
-        if (evaluationForm.student_id) {
-          // Évaluation individuelle - envoyer à un seul étudiant
-          const student = students?.find(s => s.id === evaluationForm.student_id)
-          if (student && student.email) {
-            studentsToNotify.push({
-              email: student.email,
-              firstName: student.first_name || '',
-              lastName: student.last_name || '',
-            })
-          }
-        } else {
-          // Évaluation collective - envoyer à tous les étudiants de la session
-          const validEnrollments = (enrollments as EnrollmentWithRelations[])?.filter(
-            (e) => e.students && e.students.email && e.status !== 'cancelled'
-          ) || []
-          
-          validEnrollments.forEach((enrollment) => {
-            const student = enrollment.students
-            if (student && student.email) {
-              studentsToNotify.push({
-                email: student.email,
-                firstName: student.first_name || '',
-                lastName: student.last_name || '',
-              })
-            }
-          })
-        }
-        
-        // Envoyer les emails
-        if (studentsToNotify.length > 0) {
+      // Envoyer automatiquement un email à l'étudiant (ou tous les étudiants si évaluation collective) si l'option est activée
+      if (evaluationForm.sendByEmail && studentsToNotify.length > 0) {
+        try {
+          // Envoyer les emails
           const sessionName = sessionData?.name || 'Session'
           const formationName = formation?.name || 'Formation'
           const organizationName = organization?.name || 'Organisation'
           
           const emailPromises = studentsToNotify.map(async (student) => {
+            // Générer le lien vers l'évaluation dans l'espace personnel
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+            const evaluationLink = `${baseUrl}/learner/evaluations`
+            
             const subject = `Nouvelle évaluation : ${evaluationForm.subject}`
             const emailBody = `
               <p>Bonjour ${student.firstName} ${student.lastName},</p>
@@ -996,11 +1368,19 @@ export function useSessionDetail(sessionId: string) {
                 <li><strong>Sujet :</strong> ${evaluationForm.subject}</li>
                 <li><strong>Session :</strong> ${sessionName}</li>
                 <li><strong>Formation :</strong> ${formationName}</li>
-                ${evaluationForm.score ? `<li><strong>Note :</strong> ${evaluationForm.score}/${evaluationForm.max_score || 20}</li>` : ''}
+                ${evaluationForm.rating !== undefined && evaluationForm.rating !== '' ? `<li><strong>Satisfaction :</strong> ${evaluationForm.rating}/5 étoiles</li>` : evaluationForm.score ? `<li><strong>Note :</strong> ${evaluationForm.score}/${evaluationForm.max_score || 20}</li>` : ''}
                 ${evaluationForm.graded_at ? `<li><strong>Date de correction :</strong> ${formatDate(evaluationForm.graded_at)}</li>` : ''}
               </ul>
               ${evaluationForm.notes ? `<p><strong>Commentaires :</strong><br>${evaluationForm.notes.replace(/\n/g, '<br>')}</p>` : ''}
-              <p>Vous pouvez consulter cette évaluation dans votre espace personnel.</p>
+              <p style="margin: 20px 0;">
+                <a href="${evaluationLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                  Consulter l'évaluation dans mon espace personnel
+                </a>
+              </p>
+              <p style="margin-top: 20px; color: #666; font-size: 14px;">
+                Ou copiez ce lien dans votre navigateur :<br>
+                <a href="${evaluationLink}" style="color: #2563eb; word-break: break-all;">${evaluationLink}</a>
+              </p>
               <p>Cordialement,<br>${organizationName}</p>
             `
             
@@ -1019,18 +1399,34 @@ export function useSessionDetail(sessionId: string) {
           })
           
           await Promise.allSettled(emailPromises)
+        } catch (emailError) {
+          // Ne pas bloquer la création de l'évaluation si l'envoi d'email échoue
+          logger.error('Erreur lors de l\'envoi automatique des emails d\'évaluation', emailError as Error, {
+            evaluationId: createdEvaluation?.id,
+          })
         }
-      } catch (emailError) {
-        // Ne pas bloquer la création de l'évaluation si l'envoi d'email échoue
-        logger.error('Erreur lors de l\'envoi automatique des emails d\'évaluation', emailError as Error, {
-          evaluationId: createdEvaluation?.id,
-        })
+      }
+      
+      // L'évaluation est automatiquement ajoutée à l'espace personnel si student_id est défini
+      // ou si addToPersonalSpace est activé (dans ce cas, on crée une évaluation pour chaque étudiant)
+      
+      const successMessages = []
+      if (evaluationForm.sendByEmail && studentsToNotify.length > 0) {
+        successMessages.push(`envoyée par email à ${studentsToNotify.length} apprenant${studentsToNotify.length > 1 ? 's' : ''}`)
+      }
+      if (evaluationForm.addToPersonalSpace) {
+        if (evaluationForm.student_id) {
+          successMessages.push('ajoutée à l\'espace personnel')
+        } else {
+          // Évaluation collective - on a créé une évaluation pour chaque étudiant
+          successMessages.push(`ajoutée aux espaces personnels de ${studentsToNotify.length} apprenant${studentsToNotify.length > 1 ? 's' : ''}`)
+        }
       }
       
       addToast({
         type: 'success',
         title: 'Évaluation créée',
-        description: 'L\'évaluation a été créée avec succès et envoyée par email.',
+        description: `L'évaluation a été créée avec succès${successMessages.length > 0 ? ` et ${successMessages.join(' et ')}` : ''}.`,
       })
     },
     onError: (error) => {
@@ -1214,6 +1610,10 @@ export function useSessionDetail(sessionId: string) {
     createEnrollmentMutation,
     cancelEnrollmentMutation,
     createEvaluationMutation,
+    attachTemplateToGradeMutation,
+
+    // Données dérivées
+    gradeInstanceMap,
 
     // Actions
     handleSave,

@@ -91,6 +91,8 @@ export default function SessionDetailPage() {
     lastZipGeneration,
     evaluationTemplates,
     handleTemplateChange,
+    gradeInstanceMap,
+    attachTemplateToGradeMutation,
 
     // Mutations
     updateMutation,
@@ -687,15 +689,22 @@ export default function SessionDetailPage() {
                   createEvaluationMutation={createEvaluationMutation}
                   onCloseEvaluationForm={() => setShowEvaluationForm(false)}
                   onShowEvaluationForm={(type, subject) => {
+                    const isSatisfaction = ['a_chaud', 'a_froid', 'managers'].includes(type || '')
                     setEvaluationForm({
                       ...evaluationForm,
                       assessment_type: type || 'evaluation_generale',
                       subject: subject || 'Évaluation générale',
+                      ...(isSatisfaction
+                        ? { score: '', max_score: '', percentage: '', rating: undefined }
+                        : {}),
                     })
                     setShowEvaluationForm(true)
                   }}
                   evaluationTemplates={evaluationTemplates}
                   onTemplateChange={handleTemplateChange}
+                  gradeInstanceMap={gradeInstanceMap}
+                  onAttachTemplate={(gradeId, templateId) => attachTemplateToGradeMutation.mutate({ gradeId, templateId })}
+                  attachTemplateMutation={attachTemplateToGradeMutation}
                   />
                 </Suspense>
               )}

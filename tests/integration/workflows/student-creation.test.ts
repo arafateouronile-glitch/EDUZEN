@@ -55,6 +55,18 @@ describe('Workflow: Création d\'étudiant', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetMockSupabase(mockSupabase)
+    // QuotaService: rpc() doit supporter await direct (can_add_student) et .single() (get_organization_usage)
+    ;(mockSupabase as any).rpc.mockImplementation(function (this: any) {
+      const builder = {
+        single: vi.fn().mockResolvedValue({
+          data: { max_students: 100, current_student_count: 0, plan_name: null },
+          error: null,
+        }),
+        then: (resolve: (v: { data: boolean; error: null }) => void) =>
+          resolve({ data: true, error: null }),
+      }
+      return builder
+    })
     studentService = new StudentService(mockSupabase as any)
     notificationService = new NotificationService(mockSupabase as any)
   })

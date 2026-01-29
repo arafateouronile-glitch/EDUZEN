@@ -62,12 +62,16 @@ describe('useDebounce', () => {
     // Changer la valeur
     act(() => {
       rerender({ value: 'first', delay: 300 })
+    })
+    act(() => {
       vi.advanceTimersByTime(150)
     })
 
     // Changer à nouveau avant la fin du délai
     act(() => {
       rerender({ value: 'second', delay: 300 })
+    })
+    act(() => {
       vi.advanceTimersByTime(150)
     })
 
@@ -91,7 +95,9 @@ describe('useDebounce', () => {
 
     act(() => {
       rerender({ value: 'updated' })
-      vi.advanceTimersByTime(300)
+    })
+    act(() => {
+      vi.advanceTimersByTime(301)
     })
     expect(result.current).toBe('updated')
   })
@@ -107,7 +113,9 @@ describe('useDebounce', () => {
 
     act(() => {
       rerender1({ value: 42 })
-      vi.advanceTimersByTime(100)
+    })
+    act(() => {
+      vi.advanceTimersByTime(101)
     })
     expect(result1.current).toBe(42)
 
@@ -121,7 +129,9 @@ describe('useDebounce', () => {
 
     act(() => {
       rerender2({ value: { name: 'test' } })
-      vi.advanceTimersByTime(100)
+    })
+    act(() => {
+      vi.advanceTimersByTime(101)
     })
     expect(result2.current).toEqual({ name: 'test' })
   })

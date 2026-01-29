@@ -71,6 +71,7 @@ describe('StudentService', () => {
           first_name: 'John',
           last_name: 'Doe',
           student_number: 'STU001',
+          classes: null,
         },
         {
           id: 'student-2',
@@ -78,6 +79,7 @@ describe('StudentService', () => {
           first_name: 'Jane',
           last_name: 'Smith',
           student_number: 'STU002',
+          classes: null,
         },
       ]
 
@@ -117,6 +119,7 @@ describe('StudentService', () => {
         first_name: 'John',
         last_name: 'Doe',
         student_number: 'STU001',
+        classes: null,
       }
 
       mockSupabase.single.mockResolvedValueOnce({

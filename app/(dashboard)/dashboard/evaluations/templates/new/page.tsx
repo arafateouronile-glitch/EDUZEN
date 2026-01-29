@@ -15,7 +15,10 @@ import { ArrowLeft, Plus, Trash2, GripVertical } from 'lucide-react'
 import Link from 'next/link'
 import { motion, Reorder } from '@/components/ui/motion'
 
-type QuestionType = 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'numeric'
+type QuestionType = 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'numeric' | 'rating'
+
+/** Types d'évaluation satisfaction : uniquement étoiles + expression libre */
+const SATISFACTION_ASSESSMENT_TYPES = ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder']
 
 interface Question {
   id: string
@@ -100,16 +103,29 @@ export default function NewEvaluationTemplatePage() {
     },
   })
 
+  const isSatisfactionTemplate = SATISFACTION_ASSESSMENT_TYPES.includes(formData.assessment_type)
+
   const addQuestion = () => {
     const newQuestion: Question = {
       id: `temp-${Date.now()}`,
       question_text: '',
-      question_type: 'multiple_choice',
-      options: [
+      question_type: isSatisfactionTemplate ? 'rating' : 'multiple_choice',
+      options: isSatisfactionTemplate ? undefined : [
         { text: '', is_correct: false },
         { text: '', is_correct: false },
       ],
       points: 1,
+      order_index: questions.length + 1,
+    }
+    setQuestions([...questions, newQuestion])
+  }
+
+  const addExpressionLibreQuestion = () => {
+    const newQuestion: Question = {
+      id: `temp-${Date.now()}`,
+      question_text: 'Dites-nous en quelques mots ce que vous avez pensé de la formation.',
+      question_type: 'essay',
+      points: 0,
       order_index: questions.length + 1,
     }
     setQuestions([...questions, newQuestion])
@@ -124,7 +140,6 @@ export default function NewEvaluationTemplatePage() {
       questions.map((q) => {
         if (q.id === id) {
           const updated = { ...q, ...updates }
-          // Réinitialiser les options si on change de type
           if (updates.question_type && updates.question_type !== q.question_type) {
             if (updates.question_type === 'multiple_choice') {
               updated.options = [
@@ -331,18 +346,33 @@ export default function NewEvaluationTemplatePage() {
         {/* Questions */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>Questions</CardTitle>
-              <Button type="button" onClick={addQuestion} variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter une question
-              </Button>
+              <div className="flex gap-2">
+                {isSatisfactionTemplate && (
+                  <Button type="button" onClick={addExpressionLibreQuestion} variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Question expression libre
+                  </Button>
+                )}
+                <Button type="button" onClick={addQuestion} variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  {isSatisfactionTemplate ? 'Ajouter une question (étoiles)' : 'Ajouter une question'}
+                </Button>
+              </div>
             </div>
+            {isSatisfactionTemplate && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Évaluations satisfaction : uniquement notation par étoiles (0–5) et une dernière question en expression libre (ex. Dites-nous en quelques mots ce que vous avez pensé de la formation).
+              </p>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
             {questions.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Aucune question. Cliquez sur "Ajouter une question" pour commencer.
+                {isSatisfactionTemplate
+                  ? 'Aucune question. Cliquez sur "Ajouter une question (étoiles)" ou "Question expression libre" pour commencer.'
+                  : 'Aucune question. Cliquez sur "Ajouter une question" pour commencer.'}
               </div>
             ) : (
               questions.map((question, index) => (
@@ -383,11 +413,21 @@ export default function NewEvaluationTemplatePage() {
                           onChange={(e) => updateQuestion(question.id, { question_type: e.target.value as QuestionType })}
                           className="w-full px-4 py-2 border rounded-lg"
                         >
-                          <option value="multiple_choice">Choix multiples</option>
-                          <option value="true_false">Vrai/Faux</option>
-                          <option value="short_answer">Réponse courte</option>
-                          <option value="numeric">Numérique</option>
-                          <option value="essay">Dissertation (correction manuelle)</option>
+                          {isSatisfactionTemplate ? (
+                            <>
+                              <option value="rating">Étoiles 0–5 (satisfaction)</option>
+                              <option value="essay">Expression libre</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="multiple_choice">Choix multiples</option>
+                              <option value="true_false">Vrai/Faux</option>
+                              <option value="short_answer">Réponse courte</option>
+                              <option value="numeric">Numérique</option>
+                              <option value="rating">Étoiles 0-5 (satisfaction)</option>
+                              <option value="essay">Expression libre</option>
+                            </>
+                          )}
                         </select>
                       </div>
 
@@ -404,23 +444,45 @@ export default function NewEvaluationTemplatePage() {
                       </div>
                     </div>
 
-                    {/* Options pour choix multiples */}
-                    {question.question_type === 'multiple_choice' && question.options && (
+                    {/* Options pour choix multiples (masqué pour modèles satisfaction) */}
+                    {!isSatisfactionTemplate && question.question_type === 'multiple_choice' && question.options && (
                       <div className="space-y-2">
                         <Label>Options de réponse *</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Pour les évaluations satisfaction : renseignez « Valeur étoiles » (0–5) pour chaque option (ex. Excellent=5, Moyen=1, Insuffisant=0). La moyenne sera calculée automatiquement.
+                        </p>
                         {question.options.map((option, optIndex) => (
-                          <div key={optIndex} className="flex items-center gap-2">
+                          <div key={optIndex} className="flex flex-wrap items-center gap-2">
                             <input
                               type="checkbox"
-                              checked={option.is_correct}
+                              checked={option.is_correct ?? false}
                               onChange={(e) => updateOption(question.id, optIndex, { is_correct: e.target.checked })}
+                              title="Bonne réponse (quiz noté)"
                             />
                             <Input
                               value={option.text}
                               onChange={(e) => updateOption(question.id, optIndex, { text: e.target.value })}
                               placeholder={`Option ${optIndex + 1}`}
-                              className="flex-1"
+                              className="flex-1 min-w-[120px]"
                             />
+                            <div className="flex items-center gap-1">
+                              <Label htmlFor={`star-${question.id}-${optIndex}`} className="text-xs whitespace-nowrap">Étoiles</Label>
+                              <Input
+                                id={`star-${question.id}-${optIndex}`}
+                                type="number"
+                                min={0}
+                                max={5}
+                                step={1}
+                                value={option.star_value ?? ''}
+                                onChange={(e) => {
+                                  const v = e.target.value === '' ? undefined : parseInt(e.target.value, 10)
+                                  updateOption(question.id, optIndex, { star_value: v === undefined || Number.isNaN(v) ? undefined : Math.min(5, Math.max(0, v)) })
+                                }}
+                                placeholder="0–5"
+                                className="w-16"
+                                title="Valeur étoiles pour satisfaction (0–5)"
+                              />
+                            </div>
                             {question.options && question.options.length > 2 && (
                               <Button
                                 type="button"
@@ -445,8 +507,8 @@ export default function NewEvaluationTemplatePage() {
                       </div>
                     )}
 
-                    {/* Réponse pour Vrai/Faux */}
-                    {question.question_type === 'true_false' && (
+                    {/* Réponse pour Vrai/Faux (masqué pour satisfaction) */}
+                    {!isSatisfactionTemplate && question.question_type === 'true_false' && (
                       <div>
                         <Label>Bonne réponse *</Label>
                         <select
@@ -461,8 +523,8 @@ export default function NewEvaluationTemplatePage() {
                       </div>
                     )}
 
-                    {/* Réponse pour réponse courte */}
-                    {question.question_type === 'short_answer' && (
+                    {/* Réponse pour réponse courte (masqué pour satisfaction) */}
+                    {!isSatisfactionTemplate && question.question_type === 'short_answer' && (
                       <div className="space-y-2">
                         <div>
                           <Label>Bonne réponse *</Label>
@@ -486,8 +548,8 @@ export default function NewEvaluationTemplatePage() {
                       </div>
                     )}
 
-                    {/* Réponse pour numérique */}
-                    {question.question_type === 'numeric' && (
+                    {/* Réponse pour numérique (masqué pour satisfaction) */}
+                    {!isSatisfactionTemplate && question.question_type === 'numeric' && (
                       <div>
                         <Label>Bonne réponse (nombre) *</Label>
                         <Input
@@ -500,12 +562,20 @@ export default function NewEvaluationTemplatePage() {
                       </div>
                     )}
 
+                    {/* Étoiles 0-5 (satisfaction) */}
+                    {question.question_type === 'rating' && (
+                      <p className="text-sm text-muted-foreground">
+                        L&apos;apprenant verra des étoiles de 0 à 5. Aucune bonne réponse à définir.
+                      </p>
+                    )}
+
                     {/* Note pour dissertation */}
                     {question.question_type === 'essay' && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                        <strong>Note :</strong> Les questions de type "Dissertation" nécessitent une correction manuelle.
-                        La note sera attribuée par l'enseignant après correction.
-                      </div>
+                      <p className="text-sm text-gray-500">
+                        {isSatisfactionTemplate
+                          ? "L'apprenant pourra saisir un texte libre (ex. Dites-nous en quelques mots ce que vous avez pensé de la formation)."
+                          : 'Les questions de type "Expression libre" nécessitent une correction manuelle. La note sera attribuée par l\'enseignant après correction.'}
+                      </p>
                     )}
 
                     {/* Explication */}

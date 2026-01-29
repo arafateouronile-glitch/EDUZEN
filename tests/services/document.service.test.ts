@@ -120,56 +120,44 @@ vi.mock('@/lib/supabase/client', () => ({
 
 describe('DocumentService - ErrorHandler Standardization', () => {
   let service: DocumentService
+  let selectChain: any
+  let insertChain: any
+  let deleteChain: any
 
   beforeEach(() => {
-    service = new DocumentService()
+    service = new DocumentService(mockSupabase as any)
     vi.clearAllMocks()
-    
-    // Recréer les chaînes après clearAllMocks
-    const createSelectChain = () => {
-      const chain: any = {
-        eq: vi.fn(),
-        single: vi.fn(),
-        maybeSingle: vi.fn(),
-        order: vi.fn(),
-        limit: vi.fn(),
-        range: vi.fn(),
-      }
-      chain.eq.mockReturnValue(chain)
-      chain.order.mockReturnValue(chain)
-      chain.limit.mockReturnValue(chain)
-      chain.single.mockResolvedValue({ data: null, error: null })
-      chain.maybeSingle.mockResolvedValue({ data: null, error: null })
-      chain.range.mockResolvedValue({ data: [], error: null, count: 0 })
-      return chain
-    }
 
-    const createInsertChain = () => {
-      const chain: any = {
-        select: vi.fn(),
-        single: vi.fn(),
-      }
-      // select() returns an object with single()
-      const selectResult = {
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      }
-      chain.select.mockReturnValue(selectResult)
-      chain.single.mockResolvedValue({ data: null, error: null })
-      return chain
+    // Une seule chaîne partagée pour que les mocks des tests s'appliquent au service
+    selectChain = {
+      eq: vi.fn(),
+      single: vi.fn(),
+      maybeSingle: vi.fn(),
+      order: vi.fn(),
+      limit: vi.fn(),
+      range: vi.fn(),
     }
+    selectChain.eq.mockReturnValue(selectChain)
+    selectChain.order.mockReturnValue(selectChain)
+    selectChain.limit.mockReturnValue(selectChain)
+    selectChain.single.mockResolvedValue({ data: null, error: null })
+    selectChain.maybeSingle.mockResolvedValue({ data: null, error: null })
+    selectChain.range.mockResolvedValue({ data: [], error: null, count: 0 })
 
-    const createDeleteChain = () => {
-      const chain: any = {
-        eq: vi.fn(),
-      }
-      chain.eq.mockResolvedValue({ data: null, error: null })
-      return chain
+    insertChain = {
+      select: vi.fn(),
+      single: vi.fn(),
     }
+    insertChain.select.mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) })
+    insertChain.single.mockResolvedValue({ data: null, error: null })
+
+    deleteChain = { eq: vi.fn() }
+    deleteChain.eq.mockResolvedValue({ data: null, error: null })
 
     mockSupabase.from.mockReturnValue(mockSupabase)
-    mockSupabase.select.mockReturnValue(createSelectChain())
-    mockSupabase.insert.mockReturnValue(createInsertChain())
-    mockSupabase.delete.mockReturnValue(createDeleteChain())
+    mockSupabase.select.mockReturnValue(selectChain)
+    mockSupabase.insert.mockReturnValue(insertChain)
+    mockSupabase.delete.mockReturnValue(deleteChain)
     mockSupabase.update.mockReturnValue(mockSupabase)
     mockSupabase.eq.mockReturnValue(mockSupabase)
     mockSupabase.order.mockReturnValue(mockSupabase)
@@ -201,9 +189,6 @@ describe('DocumentService - ErrorHandler Standardization', () => {
       ]
 
       // Mock the full chain: from -> select -> eq -> order -> range
-      // select() returns a chain with eq(), order(), range()
-      const selectChain = mockSupabase.select()
-      // After eq() and order(), we get range()
       selectChain.range.mockResolvedValueOnce({
         data: mockDocuments,
         error: null,
@@ -227,7 +212,6 @@ describe('DocumentService - ErrorHandler Standardization', () => {
 
     it('devrait gérer les erreurs de base de données avec errorHandler', async () => {
       const dbError = { message: 'Database connection failed', code: '08000' }
-      const selectChain = mockSupabase.select()
       selectChain.range.mockResolvedValueOnce({
         data: null,
         error: dbError,
@@ -249,7 +233,6 @@ describe('DocumentService - ErrorHandler Standardization', () => {
       }
 
       // Mock the chain: from -> select -> eq -> single
-      const selectChain = mockSupabase.select()
       selectChain.single.mockResolvedValueOnce({
         data: mockDocument,
         error: null,
@@ -263,9 +246,6 @@ describe('DocumentService - ErrorHandler Standardization', () => {
     })
 
     it('devrait lever une erreur NOT_FOUND si le document n\'existe pas', async () => {
-      // Mock the chain: from -> select -> eq -> single
-      // select() returns a chain with single()
-      const selectChain = mockSupabase.select()
       selectChain.single.mockResolvedValueOnce({
         data: null,
         error: { code: 'PGRST116', message: 'No rows found' },

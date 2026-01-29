@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
 import { 
   ArrowLeft, Users, Search, Plus, X, Check, Loader2, UserPlus, 
-  Calendar, Briefcase, Mail, Phone, MapPin
+  Calendar, Briefcase, Mail, Phone, MapPin, Building2, ExternalLink
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -114,6 +114,32 @@ function EntityStudentsPageContent() {
     enabled: !!entityId,
   })
 
+  // Sessions où cette entité a des apprenants inscrits (pour les liens "Espace entreprise")
+  const { data: entitySessions } = useQuery({
+    queryKey: ['entity-sessions', entityId],
+    queryFn: async () => {
+      const studentIds =
+        studentEntities?.filter((se) => se.is_current).map((se) => se.student_id) || []
+      if (studentIds.length === 0) return []
+      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+        .from('enrollments')
+        .select('session_id')
+        .in('student_id', studentIds)
+        .in('status', ['pending', 'confirmed', 'in_progress', 'completed'])
+      if (enrollmentsError) throw enrollmentsError
+      const sessionIds = [...new Set((enrollmentsData || []).map((e: { session_id: string | null }) => e.session_id).filter((id): id is string => id != null))]
+      if (sessionIds.length === 0) return []
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('sessions')
+        .select('id, name, code')
+        .in('id', sessionIds)
+        .order('start_date', { ascending: false })
+      if (sessionsError) throw sessionsError
+      return ((sessionsData || []) as unknown) as { id: string; name: string; code: string | null }[]
+    },
+    enabled: !!entityId && studentEntities !== undefined,
+  })
+
   // Récupérer tous les apprenants de l'organisation (pour la sélection)
   const { data: allStudents, isLoading: isLoadingStudents } = useQuery({
     queryKey: ['students-for-entity', user?.organization_id, search],
@@ -172,6 +198,7 @@ function EntityStudentsPageContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-entities', entityId] })
       queryClient.invalidateQueries({ queryKey: ['student-entity-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['entity-sessions', entityId] })
       setIsAddDialogOpen(false)
       setSelectedStudents([])
       resetForm()
@@ -202,6 +229,7 @@ function EntityStudentsPageContent() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-entities', entityId] })
       queryClient.invalidateQueries({ queryKey: ['student-entity-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['entity-sessions', entityId] })
       addToast({
         title: 'Succès',
         description: 'Apprenant détaché avec succès',
@@ -277,25 +305,85 @@ function EntityStudentsPageContent() {
     )
   }
 
+  const isCompany = (entity as { type?: string }).type === 'company'
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Link href="/dashboard/entities">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-bold text-gray-900">{entity.name}</h1>
           <p className="mt-2 text-sm text-gray-600">
             Gestion des apprenants rattachés
           </p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Rattacher des apprenants
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {isCompany && (
+            <Link href="/enterprise" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                Espace entreprise (portail)
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          )}
+          {entitySessions && entitySessions.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {entitySessions.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/dashboard/sessions/${s.id}?step=gestion&gestionTab=espace_entreprise`}
+                >
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Espace entreprise – {s.name || s.code || s.id.slice(0, 8)}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              ))}
+            </div>
+          )}
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Rattacher des apprenants
+          </Button>
+        </div>
       </div>
+
+      {/* Espaces entreprise par session */}
+      {entitySessions && entitySessions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-brand-blue" />
+              Espaces entreprise
+            </CardTitle>
+            <CardDescription>
+              Accéder à l&apos;espace entreprise de chaque session où cette entité a des apprenants inscrits
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {entitySessions.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/dashboard/sessions/${s.id}?step=gestion&gestionTab=espace_entreprise`}
+                >
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {s.name || s.code || s.id.slice(0, 8)}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

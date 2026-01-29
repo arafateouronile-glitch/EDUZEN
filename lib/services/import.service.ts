@@ -60,8 +60,8 @@ export class ImportService {
     const mappings: ImportMapping[] = []
     
     // Dictionnaire de correspondances possibles
-    // Note: Utilisation de `as any` pour permettre les mappings flexibles
-    const fieldMappings: Record<string, string[]> = {
+    // Note: Utilisation de `as any` pour permettre les mappings flexibles (alias de colonnes)
+    const fieldMappings = {
       first_name: ['first_name', 'prenom', 'prénom', 'nom', 'name', 'firstname'],
       last_name: ['last_name', 'nom', 'name', 'lastname', 'surname'],
       email: ['email', 'mail', 'e-mail', 'courriel', 'email_address'],

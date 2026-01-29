@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createAdminClient()
-    const supabaseUrl = globalThis.process?.env?.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+    const supabaseUrl = (typeof process !== 'undefined' && process.env ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined) ?? ''
 
     const { data: sig, error: sigErr } = await (supabase
       .from('signatories' as any)

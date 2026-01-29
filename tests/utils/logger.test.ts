@@ -3,7 +3,16 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { logger, sanitizeError } from '@/lib/utils/logger'
+import {
+  logger,
+  sanitizeError,
+  maskEmail,
+  maskId,
+  maskToken,
+  maskPhone,
+  sanitizeUser,
+  sanitizeStudent,
+} from '@/lib/utils/logger'
 
 describe('logger', () => {
   let originalConsole: {
@@ -204,5 +213,132 @@ describe('logger', () => {
     const sanitized = sanitizeError(error)
 
     expect(sanitized).not.toHaveProperty('stack')
+  })
+})
+
+describe('logger helpers (apiError, mutationError, queryError)', () => {
+  let originalConsole: { error: typeof console.error }
+  let originalEnv: string | undefined
+
+  beforeEach(() => {
+    originalEnv = process.env.NODE_ENV
+    process.env.NODE_ENV = 'development'
+    originalConsole = { error: console.error }
+    console.error = vi.fn()
+  })
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalEnv
+    console.error = originalConsole.error
+    vi.clearAllMocks()
+  })
+
+  it('apiError devrait appeler error avec le bon message', () => {
+    logger.apiError('/api/users', new Error('Failed'))
+    expect(console.error).toHaveBeenCalledWith(
+      '❌ [ERROR]',
+      expect.stringContaining('API Error'),
+      expect.objectContaining({ context: expect.objectContaining({ endpoint: '/api/users' }) })
+    )
+  })
+
+  it('mutationError devrait appeler error avec le bon message', () => {
+    logger.mutationError('createUser', new Error('Failed'))
+    expect(console.error).toHaveBeenCalledWith(
+      '❌ [ERROR]',
+      expect.stringContaining('Mutation Error'),
+      expect.objectContaining({ context: expect.objectContaining({ mutationName: 'createUser' }) })
+    )
+  })
+
+  it('queryError devrait appeler error avec le bon message', () => {
+    logger.queryError('users', new Error('Failed'))
+    expect(console.error).toHaveBeenCalledWith(
+      '❌ [ERROR]',
+      expect.stringContaining('Query Error'),
+      expect.objectContaining({ context: expect.objectContaining({ queryKey: 'users' }) })
+    )
+  })
+})
+
+describe('maskEmail', () => {
+  it('devrait masquer un email valide', () => {
+    expect(maskEmail('john.doe@example.com')).toBe('jo***@example.com')
+  })
+  it('devrait retourner [NO_EMAIL] si null/undefined', () => {
+    expect(maskEmail(null)).toBe('[NO_EMAIL]')
+    expect(maskEmail(undefined)).toBe('[NO_EMAIL]')
+  })
+  it('devrait retourner [INVALID_EMAIL] sans domaine', () => {
+    expect(maskEmail('invalid')).toBe('[INVALID_EMAIL]')
+  })
+})
+
+describe('maskId', () => {
+  it('devrait garder les 8 premiers caractères', () => {
+    expect(maskId('abc12345xyz')).toBe('abc12345...')
+  })
+  it('devrait retourner [NO_ID] si null/undefined', () => {
+    expect(maskId(null)).toBe('[NO_ID]')
+    expect(maskId(undefined)).toBe('[NO_ID]')
+  })
+})
+
+describe('maskToken', () => {
+  it('devrait retourner [REDACTED]', () => {
+    expect(maskToken('secret-token')).toBe('[REDACTED]')
+  })
+  it('devrait retourner [NO_TOKEN] si null/undefined', () => {
+    expect(maskToken(null)).toBe('[NO_TOKEN]')
+    expect(maskToken(undefined)).toBe('[NO_TOKEN]')
+  })
+})
+
+describe('maskPhone', () => {
+  it('devrait masquer en gardant les 4 derniers chiffres', () => {
+    expect(maskPhone('+33612345678')).toBe('***5678')
+  })
+  it('devrait retourner [NO_PHONE] si null/undefined', () => {
+    expect(maskPhone(null)).toBe('[NO_PHONE]')
+    expect(maskPhone(undefined)).toBe('[NO_PHONE]')
+  })
+  it('devrait retourner *** si moins de 4 caractères', () => {
+    expect(maskPhone('12')).toBe('***')
+  })
+})
+
+describe('sanitizeUser', () => {
+  it('devrait masquer id et email', () => {
+    const user = { id: 'user-123-long', email: 'a@b.com', role: 'admin', organization_id: 'org-1' }
+    const out = sanitizeUser(user)
+    expect(out.id).toBe('user-123...')
+    expect(out.email).toBe('a***@b.com')
+    expect(out.role).toBe('admin')
+    expect(out.organizationId).toBe('org-1...')
+  })
+  it('devrait retourner {} si null/undefined', () => {
+    expect(sanitizeUser(null)).toEqual({})
+    expect(sanitizeUser(undefined)).toEqual({})
+  })
+})
+
+describe('sanitizeStudent', () => {
+  it('devrait masquer id, email et noms', () => {
+    const student = { id: 'stu-1', email: 'x@y.com', first_name: 'John', last_name: 'Doe' }
+    const out = sanitizeStudent(student)
+    expect(out.id).toBe('stu-1...')
+    expect(out.email).toBe('x***@y.com')
+    expect(out.firstName).toBe('J***')
+    expect(out.lastName).toBe('D***')
+  })
+  it('devrait retourner {} si null/undefined', () => {
+    expect(sanitizeStudent(null)).toEqual({})
+    expect(sanitizeStudent(undefined)).toEqual({})
+  })
+  it('devrait gérer [NO_NAME] si pas de first_name/last_name', () => {
+    const student = { id: '1', email: null, first_name: null, last_name: null }
+    const out = sanitizeStudent(student)
+    expect(out.firstName).toBe('[NO_NAME]')
+    expect(out.lastName).toBe('[NO_NAME]')
   })
 })

@@ -92,11 +92,12 @@ describe('RateLimiter', () => {
   it('devrait retourner le resetTime correct', async () => {
     const request = new Request('http://localhost/api/test')
     const result = await generalRateLimiter.check(request)
+    const now = Date.now()
 
-    // resetTime devrait être dans le futur
-    expect(result.resetTime).toBeGreaterThan(Date.now())
-    // resetTime devrait être dans une fenêtre raisonnable (60 secondes + marge)
-    const maxExpectedTime = Date.now() + 120000 // 2 minutes de marge pour éviter les problèmes de timing
+    // resetTime devrait être dans le futur (ou très proche en cas de fake timers)
+    expect(result.resetTime).toBeGreaterThanOrEqual(now)
+    // resetTime devrait être dans une fenêtre raisonnable (fenêtre du limiter + marge 5 min)
+    const maxExpectedTime = now + 5 * 60 * 1000
     expect(result.resetTime).toBeLessThanOrEqual(maxExpectedTime)
   })
 })

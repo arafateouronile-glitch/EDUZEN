@@ -16,7 +16,9 @@ type EvaluationResponseInsert = TableInsert<'evaluation_responses'>
 
 export interface QuestionOption {
   text: string
-  is_correct: boolean
+  is_correct?: boolean
+  /** Valeur étoiles 0-5 pour satisfaction (ex: Excellent=5, Moyen=1, Insuffisant=0) */
+  star_value?: number
 }
 
 export interface EvaluationTemplateWithQuestions extends EvaluationTemplate {

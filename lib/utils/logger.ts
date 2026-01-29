@@ -36,10 +36,15 @@ function isValidSentryDsn(dsn: string | undefined): boolean {
 }
 
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development'
-  private isProduction = process.env.NODE_ENV === 'production'
-  private sentryEnabled =
-    this.isProduction && isValidSentryDsn(process.env.NEXT_PUBLIC_SENTRY_DSN)
+  private get isDevelopment() {
+    return process.env.NODE_ENV === 'development'
+  }
+  private get isProduction() {
+    return process.env.NODE_ENV === 'production'
+  }
+  private get sentryEnabled() {
+    return this.isProduction && isValidSentryDsn(process.env.NEXT_PUBLIC_SENTRY_DSN)
+  }
 
   /**
    * Initialise Sentry si disponible

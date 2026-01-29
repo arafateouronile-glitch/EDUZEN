@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { ChevronDown, Check, AlertCircle } from 'lucide-react'
@@ -183,6 +184,7 @@ interface SelectContextValue {
   onValueChange?: (value: string) => void
   open?: boolean
   setOpen?: (open: boolean) => void
+  triggerRef?: React.RefObject<HTMLButtonElement | null>
 }
 
 const SelectContext = React.createContext<SelectContextValue>({})
@@ -199,6 +201,7 @@ export const SelectRoot = React.forwardRef<HTMLDivElement, SelectRootProps>(
   ({ value, defaultValue, onValueChange, children }, ref) => {
     const [open, setOpen] = React.useState(false)
     const [internalValue, setInternalValue] = React.useState<string | undefined>(value || defaultValue)
+    const triggerRef = React.useRef<HTMLButtonElement | null>(null)
     
     const handleValueChange = (newValue: string) => {
       setInternalValue(newValue)
@@ -206,7 +209,7 @@ export const SelectRoot = React.forwardRef<HTMLDivElement, SelectRootProps>(
     }
     
     return (
-      <SelectContext.Provider value={{ value: value || internalValue, onValueChange: handleValueChange, open, setOpen }}>
+      <SelectContext.Provider value={{ value: value || internalValue, onValueChange: handleValueChange, open, setOpen, triggerRef }}>
         <div className="relative" ref={ref}>{children}</div>
       </SelectContext.Provider>
     )
@@ -220,11 +223,15 @@ interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
   ({ children, className, ...props }, ref) => {
-    const { open, setOpen } = React.useContext(SelectContext)
-    
+    const { open, setOpen, triggerRef } = React.useContext(SelectContext)
+    const setRef = (el: HTMLButtonElement | null) => {
+      (triggerRef as React.MutableRefObject<HTMLButtonElement | null>).current = el
+      if (typeof ref === 'function') ref(el)
+      else if (ref) (ref as React.MutableRefObject<HTMLButtonElement | null>).current = el
+    }
     return (
       <button
-        ref={ref}
+        ref={setRef}
         type="button"
         className={cn(
           'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
@@ -262,20 +269,50 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
   ({ children, className }, ref) => {
     const context = React.useContext(SelectContext)
     const open = context?.open ?? false
+    const triggerRef = context?.triggerRef
+    const [position, setPosition] = React.useState<{ top: number; left: number; width: number } | null>(null)
+
+    React.useLayoutEffect(() => {
+      if (!open || !triggerRef?.current || typeof document === 'undefined') {
+        setPosition(null)
+        return
+      }
+      const el = triggerRef.current
+      const rect = el.getBoundingClientRect()
+      setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    }, [open, triggerRef])
 
     if (!open) return null
-
-    // S'assurer que children est toujours défini et peut être rendu
     if (!children) return null
 
-    return (
+    const content = (
       <div
         ref={ref}
-        className={cn("absolute top-full left-0 z-[100] mt-1 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md", className)}
+        className={cn(
+          'min-w-[8rem] w-full rounded-md border bg-popover text-popover-foreground shadow-md',
+          !position && 'absolute top-full left-0 z-[9999] mt-1',
+          className
+        )}
+        style={
+          position
+            ? {
+                position: 'fixed' as const,
+                top: position.top,
+                left: position.left,
+                width: Math.max(position.width, 128),
+                zIndex: 9999,
+              }
+            : undefined
+        }
       >
-        <div className="p-1">{children}</div>
+        <div className="p-1 max-h-[min(400px,70vh)] overflow-y-auto overflow-x-hidden">{children}</div>
       </div>
     )
+
+    if (position && typeof document !== 'undefined') {
+      return createPortal(content, document.body)
+    }
+    return content
   }
 )
 SelectContent.displayName = 'SelectContent'

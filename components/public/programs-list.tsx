@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from '@/components/ui/motion'
-import { Calendar, ArrowRight, BookOpen } from 'lucide-react'
+import { Calendar, ArrowRight, BookOpen, Euro } from 'lucide-react'
 import { GlassCard } from '@/components/ui/glass-card'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { BRAND_COLORS } from '@/lib/config/app-config'
@@ -36,6 +36,10 @@ export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.prima
           (acc, formation) => acc + (formation.sessions?.length || 0),
           0
         ) || 0
+        const price = (program as any).price ?? (program as any).price_enterprise ?? program.formations?.[0]?.price
+        const currency = (program as any).currency || 'EUR'
+        const formatPrice = (value: number) => value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+        const currencySymbol = currency === 'EUR' ? '€' : currency === 'XOF' ? 'FCFA' : currency
 
         return (
           <motion.div
@@ -58,9 +62,9 @@ export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.prima
               >
               {/* Image de couverture avec effet de zoom au survol */}
               <div className="relative h-56 w-full overflow-hidden">
-                {program.public_image_url ? (
+                {(program.public_image_url || (program as any).photo_url) ? (
                   <Image
-                    src={program.public_image_url}
+                    src={(program.public_image_url || (program as any).photo_url) as string}
                     alt={program.name}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -100,6 +104,12 @@ export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.prima
                 <div className="mt-auto space-y-4">
                   {/* Infos clés */}
                   <div className="flex flex-wrap gap-4 text-sm text-gray-600 pb-4 border-b border-gray-100">
+                    {price != null && Number(price) > 0 && (
+                      <div className="flex items-center gap-1.5 font-semibold" style={{ color: primaryColor }}>
+                        <Euro className="w-4 h-4" />
+                        <span>À partir de {formatPrice(Number(price))} {currencySymbol}</span>
+                      </div>
+                    )}
                     {program.formations && program.formations.length > 0 && (
                       <div className="flex items-center gap-1.5">
                         <BookOpen className="w-4 h-4 text-gray-400" />

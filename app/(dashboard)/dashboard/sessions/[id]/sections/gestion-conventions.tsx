@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/lib/hooks/use-auth'
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
@@ -19,6 +21,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { 
   SessionWithRelations, 
   EnrollmentWithRelations,
@@ -29,6 +38,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import Image from 'next/image'
+import { documentTemplateService } from '@/lib/services/document-template.service.client'
+import { emailTemplateService } from '@/lib/services/email-template.service.client'
+import type { DocumentTemplate } from '@/lib/types/document-templates'
+import type { EmailTemplate } from '@/lib/services/email-template.service'
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
@@ -55,6 +68,26 @@ export function GestionConventions({
   onSwitchTab,
 }: GestionConventionsProps) {
   const { addToast } = useToast()
+  const { user } = useAuth()
+  
+  // Charger tous les modèles actifs (comme dans la page des modèles de documents)
+  const { data: allTemplates } = useQuery<DocumentTemplate[]>({
+    queryKey: ['document-templates', 'all', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return documentTemplateService.getAllTemplates(user.organization_id, { isActive: true })
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Filtrer les modèles de conventions
+  const conventionTemplates = allTemplates?.filter(template => template.type === 'convention') || []
+
+  // Filtrer les modèles de contrats
+  const contractTemplates = allTemplates?.filter(template => template.type === 'contrat') || []
+
+  const [selectedConventionTemplateId, setSelectedConventionTemplateId] = useState<string | undefined>()
+
   const {
     isGeneratingZip,
     zipGenerationProgress,
@@ -104,6 +137,48 @@ export function GestionConventions({
   } | null>(null)
 
   const [isSendingSignatureRequest, setIsSendingSignatureRequest] = useState(false)
+
+  // État pour le dialogue d'envoi en masse
+  const [showBulkSendDialog, setShowBulkSendDialog] = useState(false)
+  const [selectedEmailTemplateId, setSelectedEmailTemplateId] = useState<string>('')
+  const [bulkEmailContent, setBulkEmailContent] = useState<{
+    subject: string
+    body: string
+  }>({
+    subject: '',
+    body: '',
+  })
+
+  // Récupérer les templates d'email pour les contrats/conventions
+  const { data: emailTemplates } = useQuery<EmailTemplate[]>({
+    queryKey: ['email-templates', 'document_generated', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return emailTemplateService.getByType(user.organization_id, 'document_generated')
+    },
+    enabled: !!user?.organization_id && showBulkSendDialog,
+  })
+
+  // Récupérer le template d'email par défaut
+  const { data: defaultEmailTemplate } = useQuery<EmailTemplate | null>({
+    queryKey: ['email-template-default', 'document_generated', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return null
+      return emailTemplateService.getDefault(user.organization_id, 'document_generated')
+    },
+    enabled: !!user?.organization_id && showBulkSendDialog,
+  })
+
+  // Charger le template par défaut quand le dialogue s'ouvre
+  useEffect(() => {
+    if (showBulkSendDialog && defaultEmailTemplate && !selectedEmailTemplateId && !bulkEmailContent.subject) {
+      setSelectedEmailTemplateId('default')
+      setBulkEmailContent({
+        subject: defaultEmailTemplate.subject || '',
+        body: defaultEmailTemplate.body_html || '',
+      })
+    }
+  }, [showBulkSendDialog, defaultEmailTemplate, selectedEmailTemplateId, bulkEmailContent.subject])
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -173,7 +248,7 @@ export function GestionConventions({
                   <div className="flex items-center gap-3">
                     <Button
                       className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 hover:shadow-blue-300 transition-all duration-300"
-                      onClick={() => handleGenerateAllConventionsZip(enrollments)}
+                      onClick={() => handleGenerateAllConventionsZip(enrollments, selectedConventionTemplateId)}
                       disabled={isGeneratingZip}
                     >
                       {isGeneratingZip ? (
@@ -190,20 +265,13 @@ export function GestionConventions({
                     </Button>
                     <Button
                       className="bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200 hover:shadow-green-300 transition-all duration-300"
-                      onClick={() => handleSendAllContractsByEmail(enrollments)}
+                      onClick={() => setShowBulkSendDialog(true)}
                       disabled={isGeneratingZip}
                     >
-                      {isGeneratingZip ? (
-                        <div className="flex items-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                          <span>Envoi...</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          <span>Envoyer par email</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        <span>Envoyer par email</span>
+                      </div>
                     </Button>
                   </div>
                 </div>
@@ -242,28 +310,55 @@ export function GestionConventions({
               
               {/* Convention générale */}
               <motion.div 
-                className="group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-brand-blue/30 hover:shadow-md transition-all duration-300"
+                className="group flex flex-col gap-3 p-4 bg-white border border-gray-100 rounded-xl hover:border-brand-blue/30 hover:shadow-md transition-all duration-300"
                 whileHover={{ x: 4 }}
               >
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gray-50 rounded-lg group-hover:bg-brand-blue/5 transition-colors">
-                    <FileText className="h-5 w-5 text-gray-400 group-hover:text-brand-blue transition-colors" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gray-50 rounded-lg group-hover:bg-brand-blue/5 transition-colors">
+                      <FileText className="h-5 w-5 text-gray-400 group-hover:text-brand-blue transition-colors" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">Convention de formation</p>
+                      <p className="text-sm text-gray-500">Modèle standard pour l'organisme</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900">Convention de formation</p>
-                    <p className="text-sm text-gray-500">Modèle standard pour l'organisme</p>
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleGenerateConvention(selectedConventionTemplateId)}
+                      className="hover:bg-brand-blue/10 hover:text-brand-blue"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleGenerateConvention}
-                    className="hover:bg-brand-blue/10 hover:text-brand-blue"
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-gray-700">Modèle (s'applique à la convention et aux contrats individuels)</Label>
+                  <Select
+                    value={selectedConventionTemplateId || ''}
+                    onValueChange={(value) => setSelectedConventionTemplateId(value || undefined)}
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    Télécharger
-                  </Button>
+                    <SelectTrigger className="w-full bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+                      <SelectValue placeholder="Modèle par défaut" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl z-[9999] max-h-[400px] overflow-y-auto w-full">
+                      <SelectItem value="">Modèle par défaut</SelectItem>
+                      {conventionTemplates && conventionTemplates.length > 0 ? (
+                        conventionTemplates.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" {...({ disabled: true } as Record<string, unknown>)}>
+                          Aucun modèle disponible
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </motion.div>
             </div>
@@ -329,7 +424,7 @@ export function GestionConventions({
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            onClick={() => handleGenerateContract(enrollment)}
+                            onClick={() => handleGenerateContract(enrollment, selectedConventionTemplateId)}
                             className="h-9 w-9 p-0 rounded-full hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
                             title="Télécharger le contrat"
                           >
@@ -887,6 +982,196 @@ export function GestionConventions({
                   Envoyer la demande
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogue d'envoi en masse avec prévisualisation */}
+      <Dialog open={showBulkSendDialog} onOpenChange={setShowBulkSendDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Mail className="h-5 w-5 text-green-600" />
+              Envoi en masse des contrats par email
+            </DialogTitle>
+            <DialogDescription>
+              Configurez le modèle d'email et prévisualisez le contenu avant l'envoi à tous les apprenants.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="p-6 space-y-6">
+            {/* Sélection du template d'email */}
+            <div className="space-y-3">
+              <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <Mail className="h-4 w-4 text-green-600" />
+                Modèle d'email
+              </Label>
+              <Select
+                value={selectedEmailTemplateId}
+                onValueChange={(value) => {
+                  setSelectedEmailTemplateId(value)
+                  // Charger le contenu du template d'email
+                  if (value === 'default' && defaultEmailTemplate) {
+                    setBulkEmailContent({
+                      subject: defaultEmailTemplate.subject || '',
+                      body: defaultEmailTemplate.body_html || '',
+                    })
+                  } else {
+                    const template = emailTemplates?.find(t => t.id === value)
+                    if (template) {
+                      setBulkEmailContent({
+                        subject: template.subject || '',
+                        body: template.body_html || '',
+                      })
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner un modèle d'email" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Modèle par défaut (système)</SelectItem>
+                  {emailTemplates?.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name} {template.is_default && '(Par défaut)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Le modèle sélectionné sera utilisé comme base pour le contenu de l'email.
+              </p>
+            </div>
+
+            {/* Édition du sujet */}
+            <div className="space-y-2">
+              <Label htmlFor="bulk-email-subject" className="text-sm font-bold text-gray-700">
+                Sujet de l'email
+              </Label>
+              <Input
+                id="bulk-email-subject"
+                value={bulkEmailContent.subject}
+                onChange={(e) => setBulkEmailContent({ ...bulkEmailContent, subject: e.target.value })}
+                placeholder="Ex: Contrat de formation - Session de formation"
+                className="bg-gray-50/50 border-gray-200 focus:ring-green-600/20 focus:border-green-600"
+              />
+            </div>
+
+            {/* Édition du contenu */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="bulk-email-body" className="text-sm font-bold text-gray-700">
+                  Contenu de l'email
+                </Label>
+                <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  HTML activé
+                </span>
+              </div>
+              <Textarea
+                id="bulk-email-body"
+                value={bulkEmailContent.body.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()}
+                onChange={(e) => setBulkEmailContent({ ...bulkEmailContent, body: e.target.value })}
+                className="min-h-[250px] font-mono text-sm bg-gray-50/50 border-gray-200 focus:ring-green-600/20 focus:border-green-600"
+                placeholder="Contenu de l'email..."
+              />
+              <p className="text-xs text-gray-500">
+                Variables disponibles : {'{student_first_name}'}, {'{student_last_name}'}, {'{session_name}'}, {'{formation_name}'}, {'{session_start_date}'}, {'{session_end_date}'}, {'{session_location}'}
+              </p>
+            </div>
+
+            {/* Prévisualisation */}
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <Eye className="h-4 w-4 text-green-600" />
+                Prévisualisation
+              </Label>
+              <div className="border border-gray-200 rounded-lg p-4 bg-white">
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">À :</p>
+                    <p className="text-sm text-gray-700">
+                      {enrollments.filter(e => e.students?.email && e.status !== 'cancelled').length} apprenant(s)
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Sujet :</p>
+                    <p className="text-sm font-medium text-gray-900">{bulkEmailContent.subject || '(Aucun sujet)'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Contenu :</p>
+                    <div 
+                      className="text-sm text-gray-700 whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ 
+                        __html: bulkEmailContent.body 
+                          ? bulkEmailContent.body
+                              .replace(/{student_first_name}/g, 'Jean')
+                              .replace(/{student_last_name}/g, 'Dupont')
+                              .replace(/{session_name}/g, sessionData?.name || 'Session de formation')
+                              .replace(/{formation_name}/g, formation?.name || 'Formation')
+                              .replace(/{session_start_date}/g, sessionData?.start_date ? formatDate(sessionData.start_date) : 'Date de début')
+                              .replace(/{session_end_date}/g, sessionData?.end_date ? formatDate(sessionData.end_date) : 'Date de fin')
+                              .replace(/{session_location}/g, sessionData?.location || 'Lieu')
+                          : '(Aucun contenu)'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Informations */}
+            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-100 rounded-xl text-sm text-green-700">
+              <div className="p-2 bg-white rounded-lg shadow-sm">
+                <FileText className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="font-medium">
+                  {enrollments.filter(e => e.students?.email && e.status !== 'cancelled').length} contrat(s) seront envoyé(s)
+                </p>
+                <p className="text-xs mt-1">
+                  Les PDF seront générés automatiquement avec le modèle sélectionné et joints aux emails.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="p-6 bg-gray-50/50 border-t border-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowBulkSendDialog(false)
+                setSelectedEmailTemplateId('')
+                setBulkEmailContent({ subject: '', body: '' })
+              }}
+              className="border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!bulkEmailContent.subject || !bulkEmailContent.body) {
+                  return
+                }
+                
+                // Appeler la fonction d'envoi en masse avec les paramètres
+                await handleSendAllContractsByEmail(
+                  enrollments,
+                  bulkEmailContent.subject,
+                  bulkEmailContent.body
+                )
+                
+                setShowBulkSendDialog(false)
+                setSelectedEmailTemplateId('')
+                setBulkEmailContent({ subject: '', body: '' })
+              }}
+              disabled={!bulkEmailContent.subject || !bulkEmailContent.body}
+              className="bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Envoyer à tous ({enrollments.filter(e => e.students?.email && e.status !== 'cancelled').length})
             </Button>
           </DialogFooter>
         </DialogContent>

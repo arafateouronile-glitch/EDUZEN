@@ -1002,6 +1002,7 @@ export async function generateConventionHTML(data: {
   language?: 'fr' | 'en'
   documentId?: string
   organizationId?: string
+  templateId?: string
 }): Promise<string> {
   const lang = data.language || 'fr'
   const texts = {
@@ -1151,21 +1152,114 @@ export async function generateConventionHTML(data: {
     in_duplicate: t.inDuplicate,
   }
   
-  // Essayer d'utiliser le template par défaut de la base de données
+  // Essayer d'utiliser le template de la base de données
   if (data.organizationId) {
     try {
-      const templateService = new DocumentTemplateService(createClient())
-      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'convention')
+      const { logger } = await import('@/lib/utils/logger')
+      logger.info('[generateConventionHTML] Tentative de récupération du template', {
+        organizationId: data.organizationId,
+        templateId: data.templateId || 'default'
+      })
       
-      if (defaultTemplate) {
-        // Utiliser le template de la base de données
-        const result = await generateHTML(defaultTemplate, variables, data.documentId, data.organizationId)
-        return result.html
+      const templateService = new DocumentTemplateService(createClient())
+      let template = null
+      
+      // Si un templateId est fourni, utiliser ce template spécifique
+      if (data.templateId) {
+        logger.debug('[generateConventionHTML] Récupération du template par ID', { templateId: data.templateId })
+        template = await templateService.getTemplateById(data.templateId)
+      } else {
+        // Sinon, utiliser le template par défaut
+        logger.debug('[generateConventionHTML] Récupération du template par défaut', { 
+          organizationId: data.organizationId,
+          type: 'convention'
+        })
+        template = await templateService.getDefaultTemplate(data.organizationId, 'convention')
+      }
+      
+      if (template) {
+        logger.info('[generateConventionHTML] Template récupéré', {
+          templateId: template.id,
+          templateName: template.name,
+          templateType: template.type,
+          hasHeader: !!template.header,
+          hasContent: !!template.content,
+          hasFooter: !!template.footer,
+          contentType: typeof template.content,
+          contentIsString: typeof template.content === 'string',
+          contentIsObject: typeof template.content === 'object',
+          contentHtmlExists: typeof template.content === 'object' ? !!template.content?.html : false,
+          contentHtmlLength: typeof template.content === 'object' && template.content?.html 
+            ? template.content.html.length 
+            : typeof template.content === 'string' 
+              ? template.content.length 
+              : 0
+        })
+        
+        // Vérifier que le template a du contenu valide
+        // Le contenu peut être dans content.html ou content.elements
+        let hasValidContent = false
+        if (typeof template.content === 'string') {
+          hasValidContent = template.content.trim().length > 0
+        } else if (typeof template.content === 'object' && template.content) {
+          // Vérifier content.html
+          if (template.content.html && typeof template.content.html === 'string' && template.content.html.trim().length > 0) {
+            hasValidContent = true
+          }
+          // Vérifier content.elements
+          else if (template.content.elements && Array.isArray(template.content.elements) && template.content.elements.length > 0) {
+            // Vérifier si au moins un élément a du contenu
+            hasValidContent = template.content.elements.some((el: any) => {
+              return (el.content && typeof el.content === 'string' && el.content.trim().length > 0) ||
+                     (el.html && typeof el.html === 'string' && el.html.trim().length > 0)
+            })
+          }
+        }
+        
+        logger.info('[generateConventionHTML] Validation du contenu', {
+          hasValidContent,
+          contentType: typeof template.content,
+          hasContentHtml: typeof template.content === 'object' ? !!template.content?.html : false,
+          contentHtmlLength: typeof template.content === 'object' && template.content?.html ? template.content.html.length : 0,
+          hasElements: typeof template.content === 'object' ? !!template.content?.elements : false,
+          elementsCount: typeof template.content === 'object' && Array.isArray(template.content?.elements) ? template.content.elements.length : 0
+        })
+        
+        if (!hasValidContent) {
+          logger.warn('[generateConventionHTML] Template récupéré mais sans contenu valide, utilisation du template codé en dur', { 
+            templateId: template.id,
+            templateName: template.name,
+            contentType: typeof template.content,
+            hasContent: !!template.content,
+            contentHtml: typeof template.content === 'object' ? !!template.content?.html : false,
+            hasElements: typeof template.content === 'object' ? !!template.content?.elements : false,
+            elementsCount: typeof template.content === 'object' && Array.isArray(template.content?.elements) ? template.content.elements.length : 0
+          })
+        } else {
+          // Utiliser le template de la base de données
+          logger.info('[generateConventionHTML] Utilisation du template de la base de données', {
+            templateId: template.id,
+            templateName: template.name,
+            hasHeader: !!template.header,
+            hasContent: !!template.content,
+            hasFooter: !!template.footer
+          })
+          const result = await generateHTML(template, variables, data.documentId, data.organizationId)
+          logger.info('[generateConventionHTML] HTML généré avec succès depuis le template de la base', {
+            htmlLength: result.html?.length || 0
+          })
+          return result.html
+        }
+      } else {
+        logger.debug('[generateConventionHTML] Aucun template trouvé, utilisation du template codé en dur')
       }
     } catch (error) {
       // En cas d'erreur, continuer avec le template codé en dur
       const { logger } = await import('@/lib/utils/logger')
-      logger.warn('Erreur lors de la récupération du template par défaut, utilisation du template codé en dur', { error })
+      logger.warn('[generateConventionHTML] Erreur lors de la récupération du template, utilisation du template codé en dur', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
     }
   }
   
@@ -2122,6 +2216,7 @@ export async function generateContractHTML(data: {
   language?: 'fr' | 'en'
   documentId?: string
   organizationId?: string
+  templateId?: string
 }): Promise<string> {
   const lang = data.language || 'fr'
   const t = {
@@ -2308,21 +2403,114 @@ export async function generateContractHTML(data: {
     in_duplicate: t.inDuplicate,
   }
   
-  // Essayer d'utiliser le template par défaut de la base de données
+  // Essayer d'utiliser le template de la base de données
   if (data.organizationId) {
     try {
-      const templateService = new DocumentTemplateService(createClient())
-      const defaultTemplate = await templateService.getDefaultTemplate(data.organizationId, 'contrat')
+      const { logger } = await import('@/lib/utils/logger')
+      logger.info('[generateContractHTML] Tentative de récupération du template', {
+        organizationId: data.organizationId,
+        templateId: data.templateId || 'default'
+      })
       
-      if (defaultTemplate) {
-        // Utiliser le template de la base de données
-        const result = await generateHTML(defaultTemplate, variables, data.documentId, data.organizationId)
-        return result.html
+      const templateService = new DocumentTemplateService(createClient())
+      let template = null
+      
+      // Si un templateId est fourni, utiliser ce template spécifique
+      if (data.templateId) {
+        logger.debug('[generateContractHTML] Récupération du template par ID', { templateId: data.templateId })
+        template = await templateService.getTemplateById(data.templateId)
+      } else {
+        // Sinon, utiliser le template par défaut
+        logger.debug('[generateContractHTML] Récupération du template par défaut', { 
+          organizationId: data.organizationId,
+          type: 'contrat'
+        })
+        template = await templateService.getDefaultTemplate(data.organizationId, 'contrat')
+      }
+      
+      if (template) {
+        logger.info('[generateContractHTML] Template récupéré', {
+          templateId: template.id,
+          templateName: template.name,
+          templateType: template.type,
+          hasHeader: !!template.header,
+          hasContent: !!template.content,
+          hasFooter: !!template.footer,
+          contentType: typeof template.content,
+          contentIsString: typeof template.content === 'string',
+          contentIsObject: typeof template.content === 'object',
+          contentHtmlExists: typeof template.content === 'object' ? !!template.content?.html : false,
+          contentHtmlLength: typeof template.content === 'object' && template.content?.html 
+            ? template.content.html.length 
+            : typeof template.content === 'string' 
+              ? template.content.length 
+              : 0
+        })
+        
+        // Vérifier que le template a du contenu valide
+        // Le contenu peut être dans content.html ou content.elements
+        let hasValidContent = false
+        if (typeof template.content === 'string') {
+          hasValidContent = template.content.trim().length > 0
+        } else if (typeof template.content === 'object' && template.content) {
+          // Vérifier content.html
+          if (template.content.html && typeof template.content.html === 'string' && template.content.html.trim().length > 0) {
+            hasValidContent = true
+          }
+          // Vérifier content.elements
+          else if (template.content.elements && Array.isArray(template.content.elements) && template.content.elements.length > 0) {
+            // Vérifier si au moins un élément a du contenu
+            hasValidContent = template.content.elements.some((el: any) => {
+              return (el.content && typeof el.content === 'string' && el.content.trim().length > 0) ||
+                     (el.html && typeof el.html === 'string' && el.html.trim().length > 0)
+            })
+          }
+        }
+        
+        logger.info('[generateContractHTML] Validation du contenu', {
+          hasValidContent,
+          contentType: typeof template.content,
+          hasContentHtml: typeof template.content === 'object' ? !!template.content?.html : false,
+          contentHtmlLength: typeof template.content === 'object' && template.content?.html ? template.content.html.length : 0,
+          hasElements: typeof template.content === 'object' ? !!template.content?.elements : false,
+          elementsCount: typeof template.content === 'object' && Array.isArray(template.content?.elements) ? template.content.elements.length : 0
+        })
+        
+        if (!hasValidContent) {
+          logger.warn('[generateContractHTML] Template récupéré mais sans contenu valide, utilisation du template codé en dur', { 
+            templateId: template.id,
+            templateName: template.name,
+            contentType: typeof template.content,
+            hasContent: !!template.content,
+            contentHtml: typeof template.content === 'object' ? !!template.content?.html : false,
+            hasElements: typeof template.content === 'object' ? !!template.content?.elements : false,
+            elementsCount: typeof template.content === 'object' && Array.isArray(template.content?.elements) ? template.content.elements.length : 0
+          })
+        } else {
+          // Utiliser le template de la base de données
+          logger.info('[generateContractHTML] Utilisation du template de la base de données', {
+            templateId: template.id,
+            templateName: template.name,
+            hasHeader: !!template.header,
+            hasContent: !!template.content,
+            hasFooter: !!template.footer
+          })
+          const result = await generateHTML(template, variables, data.documentId, data.organizationId)
+          logger.info('[generateContractHTML] HTML généré avec succès depuis le template de la base', {
+            htmlLength: result.html?.length || 0
+          })
+          return result.html
+        }
+      } else {
+        logger.debug('[generateContractHTML] Aucun template trouvé, utilisation du template codé en dur')
       }
     } catch (error) {
       // En cas d'erreur, continuer avec le template codé en dur
       const { logger } = await import('@/lib/utils/logger')
-      logger.warn('Erreur lors de la récupération du template par défaut, utilisation du template codé en dur', { error })
+      logger.warn('[generateContractHTML] Erreur lors de la récupération du template, utilisation du template codé en dur', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
     }
   }
   

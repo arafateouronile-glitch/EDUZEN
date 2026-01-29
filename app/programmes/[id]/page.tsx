@@ -4,6 +4,8 @@
  * Affiche les détails d'un programme avec ses formations et sessions
  * Personnalisée pour l'organisme de formation
  */
+// Revalider régulièrement pour afficher les mises à jour (image, description, durée, etc.)
+export const revalidate = 60
 
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -39,13 +41,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const organizationName = (program.organizations as any)?.name || 'Organisme de Formation'
 
+  const imageUrl = (program as any).public_image_url || (program as any).photo_url
   return {
     title: `${program.name} | ${organizationName}`,
     description: program.public_description || program.description || '',
     openGraph: {
       title: program.name,
       description: program.public_description || program.description || '',
-      images: program.public_image_url ? [program.public_image_url] : [],
+      images: imageUrl ? [imageUrl] : [],
       type: 'website',
     },
   }

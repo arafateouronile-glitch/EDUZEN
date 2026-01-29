@@ -158,7 +158,7 @@ export function ElementPalette({ onInsert, onClose, onChartEditorOpen, onSignatu
         alert('Erreur lors de l\'insertion de l\'élément. Veuillez réessayer.')
       }
     } else {
-      logger.error('Aucun HTML généré pour l\'élément', elementType)
+      logger.error('Aucun HTML généré pour l\'élément', undefined, { elementType })
       alert('Impossible de générer l\'élément. Veuillez remplir tous les champs requis.')
     }
   }

@@ -3,7 +3,7 @@
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { Plus, X, ClipboardList, Award, TrendingUp, Users, CheckCircle2, Calendar, FileText, AlertCircle, Sparkles, FileText as FileTextIcon } from 'lucide-react'
+import { Plus, X, ClipboardList, Award, TrendingUp, Users, CheckCircle2, Calendar, FileText, AlertCircle, Sparkles, FileText as FileTextIcon, Mail, User, Link2 } from 'lucide-react'
 import { formatDate, cn } from '@/lib/utils'
 import type { 
   GradeWithRelations,
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Star } from 'lucide-react'
 
 interface GestionEvaluationsProps {
   grades?: GradeWithRelations[]
@@ -38,6 +39,8 @@ interface GestionEvaluationsProps {
     percentage: string
     notes: string
     graded_at: string
+    /** Note satisfaction 0-5 (étoiles) pour types à chaud / à froid / apprenants / financeurs */
+    rating?: string
   }
   onEvaluationFormChange: (form: GestionEvaluationsProps['evaluationForm']) => void
   onCreateEvaluation: () => void
@@ -57,7 +60,17 @@ interface GestionEvaluationsProps {
     [key: string]: any
   }>
   onTemplateChange?: (templateId: string | undefined) => void
+  /** Map grade_id -> template_id pour savoir quelles évaluations ont déjà un quiz côté apprenant */
+  gradeInstanceMap?: Record<string, string>
+  /** Associer un modèle à un grade existant (pour que l'apprenant voie le quiz) */
+  onAttachTemplate?: (gradeId: string, templateId: string) => void
+  attachTemplateMutation?: { mutate: (args: { gradeId: string; templateId: string }) => void; isPending: boolean }
 }
+
+/** Types d'évaluation "satisfaction" (form) : avis client + étoiles 0-5, pas de score */
+const SATISFACTION_ASSESSMENT_TYPES = ['a_chaud', 'a_froid', 'managers']
+/** Types d'évaluation "satisfaction" en base (assessment_type) */
+const SATISFACTION_TYPES_DB = ['hot', 'cold', 'manager', 'instructor', 'funder']
 
 const evaluationTypes = [
   {
@@ -115,6 +128,9 @@ export function GestionEvaluations({
   onShowEvaluationForm,
   evaluationTemplates = [],
   onTemplateChange,
+  gradeInstanceMap = {},
+  onAttachTemplate,
+  attachTemplateMutation,
 }: GestionEvaluationsProps) {
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -174,10 +190,13 @@ export function GestionEvaluations({
                 }}
                 className="space-y-6"
               >
-                {/* Sélecteur de modèle */}
+                {/* Sélecteur de modèle — en premier pour associer le quiz apprenant dès la création */}
                 {evaluationTemplates.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Modèle d'évaluation (optionnel)</label>
+                  <div className="space-y-2 p-4 bg-brand-blue/5 border border-brand-blue/20 rounded-xl">
+                    <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                      <FileTextIcon className="h-4 w-4 text-brand-blue" />
+                      Modèle d'évaluation
+                    </label>
                     <Select
                       value={evaluationForm.template_id || ''}
                       onValueChange={(value) => {
@@ -192,10 +211,10 @@ export function GestionEvaluations({
                       }}
                     >
                       <SelectTrigger className="w-full bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
-                        <SelectValue placeholder="Sélectionner un modèle d'évaluation" />
+                        <SelectValue placeholder="Choisir un modèle (quiz apprenant)" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl z-[100]">
-                        <SelectItem value="">Aucun modèle (création manuelle)</SelectItem>
+                        <SelectItem value="">Aucun modèle (note manuelle uniquement)</SelectItem>
                         {evaluationTemplates.map((template) => (
                           <SelectItem key={template.id} value={template.id}>
                             <div className="flex items-center gap-2">
@@ -209,8 +228,10 @@ export function GestionEvaluations({
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-gray-500">
-                      Sélectionnez un modèle pour pré-remplir automatiquement les champs
+                    <p className="text-xs text-gray-600">
+                      {evaluationForm.template_id
+                        ? "L'apprenant pourra passer le quiz associé à ce modèle dans son espace."
+                        : "Choisir un modèle permet à l'apprenant de passer le quiz dans son espace personnel (recommandé si vous cochez « Ajouter à l'espace personnel »)."}
                     </p>
                   </div>
                 )}
@@ -251,69 +272,115 @@ export function GestionEvaluations({
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Note (optionnel)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={evaluationForm.score}
-                      onChange={(e) => {
-                        const score = e.target.value
-                        const maxScore = parseFloat(evaluationForm.max_score) || 20
-                        const percentage = score && maxScore ? Math.round((parseFloat(score) / maxScore) * 100).toString() : ''
-                        onEvaluationFormChange({
-                          ...evaluationForm,
-                          score,
-                          percentage: evaluationForm.percentage || percentage,
-                        })
-                      }}
-                      className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                      placeholder="Laisser vide si calculée plus tard"
-                    />
-                  </div>
+                  {SATISFACTION_ASSESSMENT_TYPES.includes(evaluationForm.assessment_type) ? (
+                    <>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-gray-700">Satisfaction (étoiles 0 à 5)</label>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {[0, 1, 2, 3, 4, 5].map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() =>
+                                onEvaluationFormChange({
+                                  ...evaluationForm,
+                                  rating: String(n),
+                                  score: '',
+                                  max_score: '',
+                                  percentage: '',
+                                })
+                              }
+                              className={cn(
+                                'flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium',
+                                Number(evaluationForm.rating) === n
+                                  ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-400'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              )}
+                              title={n === 0 ? 'Non renseigné' : `${n} étoile${n > 1 ? 's' : ''}`}
+                            >
+                              {n === 0 ? (
+                                <span>—</span>
+                              ) : (
+                                <>
+                                  {Array.from({ length: n }).map((_, i) => (
+                                    <Star key={i} className="h-5 w-5 fill-amber-500 text-amber-500" />
+                                  ))}
+                                </>
+                              )}
+                              <span className="ml-0.5">{n}/5</span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500">Avis client : pas de note chiffrée, uniquement satisfaction (étoiles) et commentaire.</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Note (optionnel)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={evaluationForm.score}
+                          onChange={(e) => {
+                            const score = e.target.value
+                            const maxScore = parseFloat(evaluationForm.max_score) || 20
+                            const percentage = score && maxScore ? Math.round((parseFloat(score) / maxScore) * 100).toString() : ''
+                            onEvaluationFormChange({
+                              ...evaluationForm,
+                              score,
+                              percentage: evaluationForm.percentage || percentage,
+                            })
+                          }}
+                          className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                          placeholder="Laisser vide si calculée plus tard"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Note maximale</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="1"
+                          value={evaluationForm.max_score}
+                          onChange={(e) => {
+                            const maxScore = parseFloat(e.target.value) || 20
+                            const score = parseFloat(evaluationForm.score) || 0
+                            const percentage = score && maxScore ? Math.round((score / maxScore) * 100).toString() : ''
+                            onEvaluationFormChange({
+                              ...evaluationForm,
+                              max_score: e.target.value,
+                              percentage: evaluationForm.percentage || percentage,
+                            })
+                          }}
+                          className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                          placeholder="20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-700">Pourcentage</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value={evaluationForm.percentage}
+                            onChange={(e) => onEvaluationFormChange({ ...evaluationForm, percentage: e.target.value })}
+                            className="w-full pl-4 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+                            placeholder="Calculé auto."
+                          />
+                          <span className="absolute right-3 top-2.5 text-gray-400 font-medium">%</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Note maximale</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="1"
-                      value={evaluationForm.max_score}
-                      onChange={(e) => {
-                        const maxScore = parseFloat(e.target.value) || 20
-                        const score = parseFloat(evaluationForm.score) || 0
-                        const percentage = score && maxScore ? Math.round((score / maxScore) * 100).toString() : ''
-                        onEvaluationFormChange({
-                          ...evaluationForm,
-                          max_score: e.target.value,
-                          percentage: evaluationForm.percentage || percentage,
-                        })
-                      }}
-                      className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                      placeholder="20"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Pourcentage</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={evaluationForm.percentage}
-                        onChange={(e) => onEvaluationFormChange({ ...evaluationForm, percentage: e.target.value })}
-                        className="w-full pl-4 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                        placeholder="Calculé auto."
-                      />
-                      <span className="absolute right-3 top-2.5 text-gray-400 font-medium">%</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Date de correction *</label>
+                    <label className="text-sm font-semibold text-gray-700">
+                      {SATISFACTION_ASSESSMENT_TYPES.includes(evaluationForm.assessment_type) ? 'Date de saisie' : 'Date de correction'} *
+                    </label>
                     <input
                       type="date"
                       value={evaluationForm.graded_at}
@@ -325,14 +392,59 @@ export function GestionEvaluations({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">Notes/Commentaires</label>
+                  <label className="text-sm font-semibold text-gray-700">
+                    {SATISFACTION_ASSESSMENT_TYPES.includes(evaluationForm.assessment_type)
+                      ? 'Avis / Commentaire client'
+                      : 'Notes/Commentaires'}
+                  </label>
                   <textarea
                     value={evaluationForm.notes}
                     onChange={(e) => onEvaluationFormChange({ ...evaluationForm, notes: e.target.value })}
                     className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
                     rows={3}
-                    placeholder="Ajoutez des commentaires, observations ou remarques..."
+                    placeholder={
+                      SATISFACTION_ASSESSMENT_TYPES.includes(evaluationForm.assessment_type)
+                        ? 'Saisissez l\'avis ou le commentaire du client / apprenant / financeur...'
+                        : 'Ajoutez des commentaires, observations ou remarques...'
+                    }
                   />
+                </div>
+
+                {/* Options d'envoi */}
+                <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <h4 className="text-sm font-bold text-gray-700 mb-3">Options d'envoi</h4>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={(evaluationForm as { sendByEmail?: boolean }).sendByEmail ?? true}
+                        onChange={(e) => onEvaluationFormChange({ ...evaluationForm, sendByEmail: e.target.checked } as Parameters<typeof onEvaluationFormChange>[0])}
+                        className="w-5 h-5 text-brand-blue border-gray-300 rounded focus:ring-brand-blue/20 focus:ring-2"
+                      />
+                      <div className="flex items-center gap-2 flex-1">
+                        <Mail className="h-4 w-4 text-gray-500 group-hover:text-brand-blue transition-colors" />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-900">Envoyer par email</span>
+                          <p className="text-xs text-gray-500">Un email avec un lien vers l'évaluation sera envoyé à l'apprenant</p>
+                        </div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={(evaluationForm as { addToPersonalSpace?: boolean }).addToPersonalSpace ?? true}
+                        onChange={(e) => onEvaluationFormChange({ ...evaluationForm, addToPersonalSpace: e.target.checked } as Parameters<typeof onEvaluationFormChange>[0])}
+                        className="w-5 h-5 text-brand-blue border-gray-300 rounded focus:ring-brand-blue/20 focus:ring-2"
+                      />
+                      <div className="flex items-center gap-2 flex-1">
+                        <User className="h-4 w-4 text-gray-500 group-hover:text-brand-blue transition-colors" />
+                        <div>
+                          <span className="text-sm font-semibold text-gray-900">Ajouter à l'espace personnel</span>
+                          <p className="text-xs text-gray-500">L'évaluation sera visible dans l'espace personnel de l'apprenant</p>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
                 </div>
 
                 {createEvaluationMutation.error && (
@@ -460,9 +572,16 @@ export function GestionEvaluations({
                     className="group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-brand-blue/30 hover:shadow-md transition-all duration-300"
                   >
                     <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 rounded-xl bg-brand-blue/5 flex items-center justify-center text-brand-blue font-bold text-lg group-hover:bg-brand-blue group-hover:text-white transition-colors duration-300">
-                        {grade.score}
-                      </div>
+                      {SATISFACTION_TYPES_DB.includes(grade.assessment_type || '') ? (
+                        <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center gap-0.5 text-amber-600 group-hover:bg-amber-100 transition-colors duration-300">
+                          <span className="font-bold text-lg">{grade.rating ?? '—'}</span>
+                          <Star className="h-4 w-4 fill-amber-500 shrink-0" />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-brand-blue/5 flex items-center justify-center text-brand-blue font-bold text-lg group-hover:bg-brand-blue group-hover:text-white transition-colors duration-300">
+                          {grade.score ?? '—'}
+                        </div>
+                      )}
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-gray-900 text-lg">{grade.subject}</p>
@@ -496,13 +615,55 @@ export function GestionEvaluations({
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-3">
+                      {!gradeInstanceMap[grade.id] && evaluationTemplates.length > 0 && onAttachTemplate && attachTemplateMutation && (
+                        <Select
+                          onValueChange={(templateId) => {
+                            if (templateId) onAttachTemplate(grade.id, templateId)
+                          }}
+                          {...(attachTemplateMutation.isPending ? { 'aria-disabled': true } : {})}
+                        >
+                          <SelectTrigger className="w-[200px] h-9 text-sm border-dashed border-amber-300 bg-amber-50/50 text-amber-800 hover:bg-amber-50">
+                            <Link2 className="h-4 w-4 mr-1.5 text-amber-600" />
+                            <SelectValue placeholder="Associer un modèle (quiz apprenant)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {evaluationTemplates.map((template) => (
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.name}
+                                {template.subject && (
+                                  <span className="text-xs text-gray-500 ml-1">({template.subject})</span>
+                                )}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {gradeInstanceMap[grade.id] && (
+                        <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          <CheckCircle2 className="h-3.5 w-3 mr-1" />
+                          Quiz apprenant
+                        </Badge>
+                      )}
                       <div className="flex flex-col items-end">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-0.5">Note</span>
-                        <span className="font-bold text-gray-900">
-                          <span className="text-xl">{grade.score}</span>
-                          <span className="text-gray-400 text-sm">/{grade.max_score || 20}</span>
-                        </span>
+                        {SATISFACTION_TYPES_DB.includes(grade.assessment_type || '') ? (
+                          <>
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-0.5">Satisfaction</span>
+                            <span className="font-bold text-amber-600 flex items-center gap-0.5">
+                              {grade.rating ?? '—'}
+                              <Star className="h-4 w-4 fill-amber-500" />
+                              <span className="text-gray-400 text-sm font-normal">/5</span>
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-0.5">Note</span>
+                            <span className="font-bold text-gray-900">
+                              <span className="text-xl">{grade.score ?? '—'}</span>
+                              <span className="text-gray-400 text-sm">/{grade.max_score ?? 20}</span>
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </motion.div>

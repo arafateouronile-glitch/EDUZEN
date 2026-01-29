@@ -90,19 +90,40 @@ export class DocumentTemplateService {
 
     // Vérifier si le template est chiffré et le déchiffrer si nécessaire
     const isEncrypted = await this.templateSecurityService.isTemplateEncrypted(id)
-    if (isEncrypted && userId) {
+    if (isEncrypted) {
       try {
+        // Le déchiffrement utilise auth.getUser() en interne, donc fonctionne même sans userId explicite
         const decrypted = await this.templateSecurityService.decryptTemplate(id)
         template.header = decrypted.header as any
         template.content = decrypted.content as any
         template.footer = decrypted.footer as any
+        logger.info('DocumentTemplate - Template déchiffré avec succès', {
+          templateId: id,
+          hasHeader: !!decrypted.header,
+          hasContent: !!decrypted.content,
+          hasFooter: !!decrypted.footer,
+          contentType: typeof decrypted.content,
+          contentHtmlLength: typeof decrypted.content === 'object' && (decrypted.content as { html?: string })?.html ? (decrypted.content as { html: string }).html.length : typeof decrypted.content === 'string' ? decrypted.content.length : 0
+        })
       } catch (decryptError) {
-        logger.error('DocumentTemplate - Erreur lors du déchiffrement', decryptError, { error: sanitizeError(decryptError) })
+        logger.error('DocumentTemplate - Erreur lors du déchiffrement', decryptError, { 
+          error: sanitizeError(decryptError), 
+          templateId: id, 
+          userId,
+          errorMessage: decryptError instanceof Error ? decryptError.message : String(decryptError)
+        })
         // Ne pas exposer le contenu chiffré
         template.header = null
         template.content = { html: '', elements: [], pageSize: 'A4', margins: { top: 20, right: 20, bottom: 20, left: 20 } } as any
         template.footer = null
       }
+    } else {
+      logger.debug('DocumentTemplate - Template non chiffré', {
+        templateId: id,
+        hasHeader: !!template.header,
+        hasContent: !!template.content,
+        hasFooter: !!template.footer
+      })
     }
 
     // Convertir les template literals ${variable} en balises {variable}
@@ -131,8 +152,9 @@ export class DocumentTemplateService {
 
   /**
    * Récupère le template par défaut d'un type pour une organisation
+   * Déchiffre automatiquement si nécessaire
    */
-  async getDefaultTemplate(organizationId: string, type: DocumentType) {
+  async getDefaultTemplate(organizationId: string, type: DocumentType, userId?: string) {
     const { data, error } = await this.supabase
       .from('document_templates')
       .select('*')
@@ -144,9 +166,61 @@ export class DocumentTemplateService {
 
     if (error) throw error
     
-    // Convertir les template literals ${variable} en balises {variable}
     if (!data) return null
-    return convertTemplateContent(data) as DocumentTemplate
+
+    const template = data as DocumentTemplate
+
+    // Vérifier si le template est chiffré et le déchiffrer si nécessaire
+    const isEncrypted = await this.templateSecurityService.isTemplateEncrypted(template.id)
+    if (isEncrypted) {
+      try {
+        // Le déchiffrement utilise auth.getUser() en interne, donc fonctionne même sans userId explicite
+        const decrypted = await this.templateSecurityService.decryptTemplate(template.id)
+        template.header = decrypted.header as any
+        template.content = decrypted.content as any
+        template.footer = decrypted.footer as any
+        logger.info('DocumentTemplate - Template par défaut déchiffré avec succès', {
+          templateId: template.id,
+          templateName: template.name,
+          hasHeader: !!decrypted.header,
+          hasContent: !!decrypted.content,
+          hasFooter: !!decrypted.footer,
+          contentType: typeof decrypted.content,
+          contentHtmlLength: typeof decrypted.content === 'object' && (decrypted.content as { html?: string })?.html ? (decrypted.content as { html: string }).html.length : typeof decrypted.content === 'string' ? decrypted.content.length : 0
+        })
+      } catch (decryptError) {
+        logger.error('DocumentTemplate - Erreur lors du déchiffrement du template par défaut', decryptError, { 
+          error: sanitizeError(decryptError), 
+          templateId: template.id, 
+          templateName: template.name,
+          organizationId, 
+          userId,
+          errorMessage: decryptError instanceof Error ? decryptError.message : String(decryptError)
+        })
+        // Ne pas exposer le contenu chiffré
+        template.header = null
+        template.content = { html: '', elements: [], pageSize: 'A4', margins: { top: 20, right: 20, bottom: 20, left: 20 } } as any
+        template.footer = null
+      }
+    } else {
+      logger.info('DocumentTemplate - Template par défaut non chiffré', {
+        templateId: template.id,
+        templateName: template.name,
+        hasHeader: !!template.header,
+        hasContent: !!template.content,
+        hasFooter: !!template.footer,
+        contentType: typeof template.content,
+        contentHtmlLength: (() => {
+          const c = template.content as string | { html?: string } | null | undefined
+          if (typeof c === 'string') return c.length
+          if (typeof c === 'object' && c != null && typeof (c as { html?: string }).html === 'string') return (c as { html: string }).html.length
+          return 0
+        })()
+      })
+    }
+    
+    // Convertir les template literals ${variable} en balises {variable}
+    return convertTemplateContent(template) as DocumentTemplate
   }
 
   /**

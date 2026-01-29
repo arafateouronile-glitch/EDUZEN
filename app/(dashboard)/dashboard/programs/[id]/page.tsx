@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { createClient } from '@/lib/supabase/client'
 import { programService } from '@/lib/services/program.service'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Save, Plus, Settings, Upload, Image as ImageIcon, Download, FileText, FileType, Check, ChevronRight, LayoutDashboard, BookOpen, GraduationCap, Clock, Calendar, Euro, Globe, Shield, FileCheck, ListChecks, Award, Sparkles } from 'lucide-react'
@@ -34,8 +35,10 @@ export default function ProgramDetailPage() {
   const { user, isLoading: userLoading } = useAuth()
   const { addToast } = useToast()
   const queryClient = useQueryClient()
+  const supabase = createClient()
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
 
   // Récupération des données du programme
   const { data: program, isLoading: programLoading } = useQuery({
@@ -70,11 +73,11 @@ export default function ProgramDetailPage() {
         version_date: program.version_date || new Date().toISOString().split('T')[0],
         duration_hours: (program as any).duration_hours ? String((program as any).duration_hours) : '',
         duration_days: program.duration_days ? String(program.duration_days) : '',
-        price: (program as any).price ? String((program as any).price) : '',
-        price_enterprise: (program as any).price ? String((program as any).price) : '',
-        price_individual: (program as any).price ? String((program as any).price) : '',
-        price_freelance: (program as any).price ? String((program as any).price) : '',
-        currency: (program as any).currency || 'XOF',
+        price: (program as any).price != null ? String((program as any).price) : '',
+        price_enterprise: (program as any).price_enterprise != null ? String((program as any).price_enterprise) : (program as any).price != null ? String((program as any).price) : '',
+        price_individual: (program as any).price_individual != null ? String((program as any).price_individual) : (program as any).price != null ? String((program as any).price) : '',
+        price_freelance: (program as any).price_freelance != null ? String((program as any).price_freelance) : (program as any).price != null ? String((program as any).price) : '',
+        currency: (program as any).currency || 'EUR',
         published_online: program.published_online || false,
         is_public: program.is_public || false,
         eligible_cpf: program.eligible_cpf || false,
@@ -105,6 +108,11 @@ export default function ProgramDetailPage() {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
       const duration_days = data.duration_days ? parseInt(data.duration_days, 10) : null
+      const duration_hours = data.duration_hours ? parseInt(data.duration_hours, 10) : null
+      const price = data.price ? parseFloat(data.price.replace(',', '.')) : null
+      const price_enterprise = data.price_enterprise ? parseFloat(data.price_enterprise.replace(',', '.')) : null
+      const price_individual = data.price_individual ? parseFloat(data.price_individual.replace(',', '.')) : null
+      const price_freelance = data.price_freelance ? parseFloat(data.price_freelance.replace(',', '.')) : null
 
       return programService.updateProgram(programId, {
         code: data.code,
@@ -115,6 +123,7 @@ export default function ProgramDetailPage() {
         program_version: data.program_version || null,
         version_date: data.version_date || null,
         duration_days: duration_days,
+        duration_hours: duration_hours,
         published_online: data.published_online,
         is_public: data.is_public || false,
         eligible_cpf: data.eligible_cpf,
@@ -129,9 +138,16 @@ export default function ProgramDetailPage() {
         quality: data.quality,
         accounting_product_config: data.accounting_product_config,
         competence_domains: data.competence_domains,
-        photo_url: data.photo_url,
+        photo_url: data.photo_url || null,
+        public_image_url: data.photo_url || null,
+        public_description: data.description || null,
+        price,
+        price_enterprise,
+        price_individual,
+        price_freelance,
+        currency: data.currency || null,
         is_active: true,
-      })
+      } as any)
     },
     onSuccess: (updatedProgram) => {
       addToast({
@@ -215,15 +231,35 @@ export default function ProgramDetailPage() {
     updateMutation.mutate(data)
   }
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setThumbnailPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+    const reader = new FileReader()
+    reader.onloadend = () => setThumbnailPreview(reader.result as string)
+    reader.readAsDataURL(file)
+
+    setIsUploadingPhoto(true)
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `${user?.organization_id || 'default'}/${programId}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('program-images')
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+      const { data: urlData } = supabase.storage.from('program-images').getPublicUrl(path)
+      setValue('photo_url', urlData.publicUrl, { shouldDirty: true })
+    } catch (err) {
+      logger.error('Upload photo programme', err)
+      addToast({ type: 'error', title: 'Erreur', description: 'Impossible de téléverser la photo. Vous pouvez saisir une URL manuellement.' })
+    } finally {
+      setIsUploadingPhoto(false)
+      e.target.value = ''
     }
+  }
+
+  const handleThumbnailClear = () => {
+    setThumbnailPreview(null)
+    setValue('photo_url', '', { shouldDirty: true })
   }
 
   const containerVariants = {
@@ -551,7 +587,7 @@ export default function ProgramDetailPage() {
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <button
                         type="button"
-                        onClick={() => setThumbnailPreview(null)}
+                        onClick={handleThumbnailClear}
                         className="p-2 bg-white/20 backdrop-blur-md text-white rounded-full hover:bg-white/40 transition-colors"
                       >
                         <div className="h-5 w-5 flex items-center justify-center">×</div>
@@ -559,17 +595,32 @@ export default function ProgramDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 hover:border-brand-blue/50 transition-all duration-300 group">
+                  <label className={cn(
+                    "flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl transition-all duration-300 group",
+                    isUploadingPhoto ? "cursor-wait opacity-70" : "cursor-pointer hover:bg-gray-50 hover:border-brand-blue/50"
+                  )}>
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <div className="p-3 bg-brand-blue/5 rounded-full mb-3 group-hover:scale-110 transition-transform duration-300">
                         <Upload className="w-6 h-6 text-brand-blue" />
                       </div>
-                      <p className="text-sm text-gray-500 font-medium group-hover:text-brand-blue transition-colors">Charger une image</p>
+                      <p className="text-sm text-gray-500 font-medium group-hover:text-brand-blue transition-colors">
+                        {isUploadingPhoto ? 'Téléversement...' : 'Charger une image'}
+                      </p>
                       <p className="text-xs text-gray-400 mt-1">JPG, PNG ≤ 500Ko</p>
                     </div>
-                    <input type="file" className="hidden" accept="image/*" onChange={handleThumbnailChange} />
+                    <input type="file" className="hidden" accept="image/*" onChange={handleThumbnailChange} disabled={isUploadingPhoto} />
                   </label>
                 )}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-500">Ou URL de l&apos;image</label>
+                  <input
+                    type="url"
+                    {...register('photo_url')}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 text-sm bg-white/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
+                    onBlur={(e) => { const v = e.target.value; if (v) setThumbnailPreview(v); }}
+                  />
+                </div>
               </GlassCard>
 
               {/* Settings Card */}
