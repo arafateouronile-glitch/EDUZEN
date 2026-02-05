@@ -101,6 +101,53 @@ describe('ELearningService', () => {
 
       expect(result).toEqual([])
     })
+
+    it('devrait retourner [] dans le catch si erreur a code PGRST116', async () => {
+      const organizationId = 'org-1'
+      const mockQueryChain = {
+        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        order: vi.fn().mockRejectedValue({ code: 'PGRST116', message: 'No rows' }),
+      }
+      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
+      const result = await service.getCourses(organizationId)
+      expect(result).toEqual([])
+    })
+
+    it('devrait propager l\'erreur si code inconnu dans le catch', async () => {
+      const organizationId = 'org-1'
+      const mockQueryChain = {
+        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        order: vi.fn().mockRejectedValue(new Error('Connection refused')),
+      }
+      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
+      await expect(service.getCourses(organizationId)).rejects.toThrow('Connection refused')
+    })
+
+    it('devrait appliquer le filtre instructorId quand fourni', async () => {
+      const organizationId = 'org-1'
+      const mockQueryChain = {
+        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
+      await service.getCourses(organizationId, { instructorId: 'instructor-1' })
+      expect(mockQueryChain.eq).toHaveBeenCalledWith('instructor_id', 'instructor-1')
+    })
+
+    it('devrait appliquer le filtre isPublished quand fourni', async () => {
+      const organizationId = 'org-1'
+      const mockQueryChain = {
+        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
+      await service.getCourses(organizationId, { isPublished: true })
+      expect(mockQueryChain.eq).toHaveBeenCalledWith('is_published', true)
+    })
   })
 
   describe('getCourseBySlug', () => {

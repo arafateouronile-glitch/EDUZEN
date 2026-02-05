@@ -2,12 +2,25 @@
  * Service d'envoi d'emails
  * 
  * Ce service permet d'envoyer des emails avec pièces jointes depuis l'application.
+ * Appelable depuis le client (navigateur) ou le serveur (API routes) ; en contexte serveur
+ * une URL absolue est utilisée pour fetch (NEXT_PUBLIC_APP_URL ou localhost).
  * 
  * Configuration requise :
  * - Installer Resend : npm install resend
  * - Ajouter RESEND_API_KEY dans .env.local
- * - Ou utiliser un autre service d'email (SendGrid, etc.)
+ * - En serveur : NEXT_PUBLIC_APP_URL (ex. http://localhost:3001) pour les appels à l'API email
  */
+
+function getEmailApiUrl(): string {
+  if (typeof window !== 'undefined') {
+    return '/api/email/send'
+  }
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    `http://localhost:${process.env.PORT || 3001}`
+  return `${base.replace(/\/$/, '')}/api/email/send`
+}
 
 interface EmailAttachment {
   filename: string
@@ -43,9 +56,14 @@ export class EmailService {
   }
 
   /**
-   * Envoie un email avec pièces jointes
+   * Envoie un email avec pièces jointes.
+   * @param options - Options de l'email
+   * @param serverContext - Contexte serveur : cookieHeader pour les appels depuis une API route (auth)
    */
-  async sendEmail(options: SendEmailOptions): Promise<{ success: boolean; message: string }> {
+  async sendEmail(
+    options: SendEmailOptions,
+    serverContext?: { cookieHeader?: string }
+  ): Promise<{ success: boolean; message: string }> {
     try {
       // Convertir les pièces jointes en base64 si nécessaire
       const attachments = options.attachments
@@ -70,12 +88,17 @@ export class EmailService {
           )
         : undefined
 
-      const response = await fetch('/api/email/send', {
+      const apiUrl = getEmailApiUrl()
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (serverContext?.cookieHeader) {
+        headers.Cookie = serverContext.cookieHeader
+      }
+      const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Inclure les cookies pour l'authentification
+        headers,
+        credentials: 'include',
         body: JSON.stringify({
           to: options.to,
           subject: options.subject,
@@ -89,8 +112,10 @@ export class EmailService {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email')
+        const err = await response.json().catch(() => ({}))
+        const message =
+          err?.message || err?.error || 'Erreur lors de l\'envoi de l\'email'
+        throw new Error(message)
       }
 
       const data = await response.json()

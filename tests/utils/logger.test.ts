@@ -85,6 +85,15 @@ describe('logger', () => {
 
       expect(console.error).toHaveBeenCalled()
     })
+
+    it('devrait logger une erreur avec un non-Error (string ou objet)', () => {
+      logger.error('Test message', 'string error')
+      expect(console.error).toHaveBeenCalled()
+
+      ;(console.error as ReturnType<typeof vi.fn>).mockClear()
+      logger.error('Test message', { code: 'ERR', message: 'obj error' })
+      expect(console.error).toHaveBeenCalled()
+    })
   })
 
   describe('warn', () => {

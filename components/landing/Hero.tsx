@@ -223,7 +223,7 @@ export function Hero() {
           >
             {[
               { icon: CheckCircle2, text: "14 jours d'essai gratuit" },
-              { icon: CheckCircle2, text: "Pas de carte requise" },
+              { icon: CheckCircle2, text: "Aucun prélèvement aujourd'hui" },
               { icon: CheckCircle2, text: "Support 24/7" }
             ].map((item, index) => (
               <motion.div

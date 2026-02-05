@@ -23,6 +23,12 @@ if (process.env.ANALYZE === 'true' || process.env.NODE_ENV === 'development') {
 
 const nextConfig = {
   reactStrictMode: true,
+  // Turbopack (dev Next.js 16+) : stub canvas pour pdfjs-dist côté client (chemin relatif au projet)
+  turbopack: {
+    resolveAlias: {
+      canvas: './lib/stubs/canvas.js',
+    },
+  },
   // Désactiver la vérification TypeScript pendant le build (optionnel pour accélérer)
   // TypeScript est quand même vérifié par votre IDE et CI/CD
   typescript: {
@@ -57,6 +63,16 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 jours
+  },
+  // Réécriture : en dev (Turbopack), les polices peuvent être demandées sous /assets/ ;
+  // les servir depuis _next/static pour éviter 404 (Inter_18pt-*.ttf).
+  async rewrites() {
+    return [
+      {
+        source: '/assets/:path*',
+        destination: '/_next/static/media/:path*',
+      },
+    ]
   },
   // Headers de sécurité Elite (complémentaires au middleware)
   async headers() {
@@ -131,12 +147,14 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               // Autoriser unsafe-inline et unsafe-eval pour html2canvas/jsPDF et le hot reload Next.js
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.sentry.io",
+              // https://js.stripe.com pour Stripe.js
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.sentry.io https://unpkg.com https://js.stripe.com",
+              "worker-src 'self' blob: https://unpkg.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://*.supabase.co https://*.sentry.io wss://*.supabase.co",
-              "frame-src 'self' https://*.supabase.co",
+              "connect-src 'self' blob: https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://*.stripe.network",
+              "frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

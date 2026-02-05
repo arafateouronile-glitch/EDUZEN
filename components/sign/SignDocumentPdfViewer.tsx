@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Loader2, FileWarning } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -28,8 +28,7 @@ export interface SignDocumentPdfViewerProps {
 
 /**
  * PDF Viewer intégré pour le portail de signature.
- * Charge le PDF via URL signée (document-pdf-url ou process-pdf-url).
- * Obligation légale : lecture du document avant signature.
+ * Récupère l’URL proxy puis le PDF en blob pour un affichage fiable (évite CORS / URL relative).
  */
 export function SignDocumentPdfViewer({
   token,
@@ -37,9 +36,10 @@ export function SignDocumentPdfViewer({
   className,
   onLoad,
 }: SignDocumentPdfViewerProps) {
-  const [signedUrl, setSignedUrl] = useState<string | null>(null)
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const blobUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!token?.trim()) {
@@ -52,14 +52,33 @@ export function SignDocumentPdfViewer({
 
     fetch(`/api/sign/${pdfUrlEndpoint}?token=${encodeURIComponent(token)}`)
       .then((r) => r.json())
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled) return
-        if (data?.url) {
-          setSignedUrl(data.url)
-          setError(null)
-        } else {
+        if (!data?.url) {
           setError(data?.error ?? 'Impossible de charger le document')
+          return
         }
+        const pdfUrl =
+          typeof data.url === 'string' && data.url.startsWith('http')
+            ? data.url
+            : `${typeof window !== 'undefined' ? window.location.origin : ''}${String(data.url).startsWith('/') ? '' : '/'}${data.url}`
+        const res = await fetch(pdfUrl)
+        if (cancelled) return
+        if (!res.ok) {
+          setError(res.status === 404 ? 'Document non disponible' : 'Erreur lors du chargement du PDF')
+          return
+        }
+        const blob = await res.blob()
+        if (cancelled) return
+        if (blob.type !== 'application/pdf' && !blob.type.includes('pdf')) {
+          setError('Réponse invalide (pas un PDF)')
+          return
+        }
+        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current)
+        const blobUrl = URL.createObjectURL(blob)
+        blobUrlRef.current = blobUrl
+        setPdfBlobUrl(blobUrl)
+        setError(null)
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Erreur réseau')
@@ -70,12 +89,16 @@ export function SignDocumentPdfViewer({
 
     return () => {
       cancelled = true
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
     }
   }, [token, pdfUrlEndpoint])
 
   useEffect(() => {
-    if (signedUrl && onLoad) onLoad()
-  }, [signedUrl, onLoad])
+    if (pdfBlobUrl && onLoad) onLoad()
+  }, [pdfBlobUrl, onLoad])
 
   if (loading) {
     return (
@@ -91,7 +114,7 @@ export function SignDocumentPdfViewer({
     )
   }
 
-  if (error || !signedUrl) {
+  if (error || !pdfBlobUrl) {
     return (
       <div
         className={cn(
@@ -113,14 +136,26 @@ export function SignDocumentPdfViewer({
   return (
     <div
       className={cn(
-        'rounded-xl overflow-hidden border border-white/20 bg-white/5',
-        'min-h-[320px] [&_.rpv-core__viewer]:!bg-white/5',
+        'sign-pdf-viewer rounded-xl overflow-hidden border border-white/20 bg-white/5',
+        'min-h-[320px] [&_.rpv-core__viewer]:!bg-white/5 [&_.rpv-core__inner-pages]:!bg-white',
+        // Réduire le flou : canvas en taille réelle + rendu net (évite l’upscale flou du navigateur)
+        '[&_.rpv-core__canvas-layer_canvas]:!max-w-none [&_.rpv-core__canvas-layer_canvas]:!h-auto',
         className
       )}
     >
+      <style
+        dangerouslySetInnerHTML={{
+          __html:
+            '.sign-pdf-viewer .rpv-core__canvas-layer canvas { image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }',
+        }}
+      />
       <Worker workerUrl={PDF_VIEWER_WORKER}>
-        <div className="h-[min(70vh,520px)] overflow-auto">
-          <Viewer fileUrl={signedUrl} onDocumentLoad={() => onLoad?.()} />
+        <div className="w-full min-w-0 h-[min(85vh,720px)] overflow-auto bg-white/10" style={{ minHeight: 560 }}>
+          <Viewer
+            fileUrl={pdfBlobUrl}
+            defaultScale={0.75}
+            onDocumentLoad={() => onLoad?.()}
+          />
         </div>
       </Worker>
     </div>

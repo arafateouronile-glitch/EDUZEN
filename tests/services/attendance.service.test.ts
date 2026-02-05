@@ -196,6 +196,72 @@ describe('AttendanceService', () => {
         })
       )
     })
+
+    it('devrait relancer via le catch quand getAllByOrganization lance une erreur non-AppError', async () => {
+      const organizationId = 'org-1'
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+
+      vi.mocked(getAllByOrganization).mockRejectedValueOnce(new Error('DB connection failed'))
+
+      await expect(service.getAll(organizationId)).rejects.toThrow()
+    })
+  })
+
+  describe('getByClassAndDate', () => {
+    it('devrait récupérer les présences pour une classe et une date', async () => {
+      const classId = 'class-1'
+      const date = '2024-01-15'
+      const mockAttendances = [
+        {
+          id: 'attendance-1',
+          student_id: 'student-1',
+          class_id: classId,
+          date,
+          status: 'present',
+        },
+      ]
+
+      const mockQueryChain = {
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockImplementation(() =>
+          Promise.resolve({ data: mockAttendances, error: null })
+        ),
+      }
+
+      ;(mockSupabase as any).select.mockReturnValueOnce(mockQueryChain)
+
+      const result = await service.getByClassAndDate(classId, date)
+
+      expect(result).toEqual(mockAttendances)
+      expect(mockSupabase.from).toHaveBeenCalledWith('attendance')
+      expect(mockQueryChain.eq).toHaveBeenCalledWith('class_id', classId)
+      expect(mockQueryChain.eq).toHaveBeenCalledWith('date', date)
+    })
+
+    it('devrait propager l\'erreur via errorHandler quand la requête échoue', async () => {
+      const classId = 'class-1'
+      const date = '2024-01-15'
+      const { errorHandler } = await import('@/lib/errors')
+      const dbError = new Error('Postgres error')
+
+      const mockQueryChain = {
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockImplementation(() =>
+          Promise.resolve({ data: null, error: dbError })
+        ),
+      }
+
+      ;(mockSupabase as any).select.mockReturnValueOnce(mockQueryChain)
+      vi.mocked(errorHandler.handleError).mockImplementationOnce(() => {
+        throw new Error('Handled')
+      })
+
+      await expect(service.getByClassAndDate(classId, date)).rejects.toThrow('Handled')
+      expect(errorHandler.handleError).toHaveBeenCalledWith(
+        dbError,
+        expect.objectContaining({ operation: 'getByClassAndDate', classId, date })
+      )
+    })
   })
 
   describe('getBySessionAndDate', () => {
@@ -228,6 +294,29 @@ describe('AttendanceService', () => {
       expect(mockSupabase.from).toHaveBeenCalledWith('attendance')
       expect(mockQueryChain.eq).toHaveBeenCalledWith('session_id', sessionId)
       expect(mockQueryChain.eq).toHaveBeenCalledWith('date', date)
+    })
+
+    it('devrait propager l\'erreur via errorHandler quand la requête getBySessionAndDate échoue', async () => {
+      const sessionId = 'session-1'
+      const date = '2024-01-15'
+      const { errorHandler } = await import('@/lib/errors')
+      const dbError = new Error('Session query failed')
+
+      const mockQueryChain = {
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: null, error: dbError }),
+      }
+
+      ;(mockSupabase as any).select.mockReturnValueOnce(mockQueryChain)
+      vi.mocked(errorHandler.handleError).mockImplementationOnce(() => {
+        throw new Error('Handled')
+      })
+
+      await expect(service.getBySessionAndDate(sessionId, date)).rejects.toThrow('Handled')
+      expect(errorHandler.handleError).toHaveBeenCalledWith(
+        dbError,
+        expect.objectContaining({ operation: 'getBySessionAndDate', sessionId, date })
+      )
     })
   })
 

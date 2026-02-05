@@ -54,17 +54,9 @@ export default function LearnerEvaluationsPage() {
   const { data: grades, isLoading: loadingGrades } = useQuery({
     queryKey: ['learner-grades', studentData?.id],
     queryFn: async () => {
-      if (!studentData?.id) {
-        console.log('[Learner Evaluations] Pas de studentData.id')
-        return []
-      }
-      if (!supabase) {
-        console.log('[Learner Evaluations] Pas de supabase client')
-        return []
-      }
-      
-      console.log('[Learner Evaluations] Récupération des évaluations pour student_id:', studentData.id)
-      
+      if (!studentData?.id) return []
+      if (!supabase) return []
+
       // Essayer d'abord avec la requête normale
       let { data, error } = await supabase
         .from('grades')
@@ -84,30 +76,8 @@ export default function LearnerEvaluationsPage() {
           .eq('student_id', studentData.id)
           .order('graded_at', { ascending: false })
         
-        if (simpleError) {
-          console.error('[Learner Evaluations] Erreur avec requête simple:', simpleError)
-          return []
-        }
-        
-        console.log('[Learner Evaluations] Évaluations récupérées (requête simple):', simpleData?.length || 0, simpleData)
+        if (simpleError) return []
         return simpleData || []
-      }
-      
-      console.log('[Learner Evaluations] Évaluations récupérées:', data?.length || 0, data)
-      
-      // Si aucune évaluation n'est trouvée, vérifier s'il y en a dans la base sans filtre student_id
-      if (!data || data.length === 0) {
-        console.log('[Learner Evaluations] Aucune évaluation trouvée, vérification dans la base...')
-        const { data: allGrades, error: allError } = await supabase
-          .from('grades')
-          .select('id, student_id, subject, organization_id')
-          .limit(10)
-        
-        if (!allError && allGrades) {
-          console.log('[Learner Evaluations] Exemples d\'évaluations dans la base:', allGrades)
-          const matchingGrades = allGrades.filter(g => g.student_id === studentData.id)
-          console.log('[Learner Evaluations] Évaluations correspondant au student_id:', matchingGrades.length, matchingGrades)
-        }
       }
       
       return data || []

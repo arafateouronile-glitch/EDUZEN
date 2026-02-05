@@ -188,7 +188,22 @@ export class QualiopiService {
       .eq('indicator_id', indicatorId)
       .order('upload_date', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      if (
+        error.code === 'PGRST116' ||
+        error.code === '42P01' ||
+        error.code === 'PGRST301' ||
+        (error as any).status === 404 ||
+        error.code === '404' ||
+        error.message?.includes('relation') ||
+        error.message?.includes('does not exist') ||
+        error.message?.includes('schema cache')
+      ) {
+        logger.warn('QualiopiService - Table qualiopi_evidence does not exist yet', { errorMessage: error?.message })
+        return []
+      }
+      throw error
+    }
     return data || []
   }
 
@@ -202,7 +217,21 @@ export class QualiopiService {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      if (
+        error.code === '42P01' ||
+        (error as any).status === 404 ||
+        error.code === '404' ||
+        error.message?.includes('relation') ||
+        error.message?.includes('does not exist')
+      ) {
+        logger.warn('QualiopiService - Table qualiopi_evidence does not exist yet', { errorMessage: error?.message })
+        throw new Error(
+          'La table des preuves Qualiopi n’existe pas encore. Exécutez les migrations Supabase (ex. supabase db push) pour créer les tables du module Qualiopi.'
+        )
+      }
+      throw error
+    }
     return data
   }
 

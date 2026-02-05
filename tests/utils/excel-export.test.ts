@@ -19,7 +19,16 @@ vi.mock('exceljs', () => {
         eachCell: vi.fn(),
       }
     }),
-    eachRow: vi.fn(),
+    eachRow: vi.fn(function (callback: (row: { eachCell: (cb: (c: { border?: object }) => void) => void }, rowNumber: number) => void) {
+      const mockRow = {
+        eachCell: vi.fn(function (cb: (c: { border?: object }) => void) {
+          cb({})
+          cb({})
+        }),
+      }
+      callback(mockRow, 1)
+      callback(mockRow, 2)
+    }),
   }
   const mockWorkbook = {
     addWorksheet: vi.fn(function () {
@@ -153,5 +162,11 @@ describe('exportToCSV', () => {
 
   it('devrait lancer une erreur si aucune donnée', () => {
     expect(() => exportToCSV('test.csv', [])).toThrow('Aucune donnée à exporter')
+  })
+
+  it('devrait échapper les retours à la ligne dans les valeurs', () => {
+    const data = [{ name: 'John\nDoe', age: 30 }]
+    exportToCSV('test.csv', data)
+    expect(global.document.createElement).toHaveBeenCalled()
   })
 })

@@ -31,6 +31,8 @@ interface CriterionCardProps {
   name: string
   indicatorCount: number
   compliantCount: number
+  inProgressCount?: number
+  coveredCount?: number
   completionRate: number
   isSelected?: boolean
   onClick?: () => void
@@ -42,12 +44,15 @@ export function CriterionCard({
   name,
   indicatorCount,
   compliantCount,
+  inProgressCount = 0,
+  coveredCount: coveredCountProp,
   completionRate,
   isSelected = false,
   onClick,
   delay = 0,
 }: CriterionCardProps) {
   const Icon = CRITERION_ICONS[number as keyof typeof CRITERION_ICONS] || Target
+  const coveredCount = coveredCountProp ?? compliantCount + inProgressCount
 
   // Couleur de progression
   const getProgressColor = (rate: number) => {
@@ -108,13 +113,19 @@ export function CriterionCard({
             />
           </div>
 
-          {/* Barre de progression */}
+          {/* Barre de progression (conformes + en cours = avancement) */}
           <div className="mt-3">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 text-xs text-slate-500">
                 <CheckCircle2 className="h-3 w-3 text-green-500" />
                 <span>
-                  {compliantCount}/{indicatorCount} indicateurs
+                  {coveredCount}/{indicatorCount} indicateurs
+                  {inProgressCount > 0 && compliantCount > 0 && (
+                    <span className="text-slate-400"> ({compliantCount} conforme{compliantCount > 1 ? 's' : ''}, {inProgressCount} en cours)</span>
+                  )}
+                  {inProgressCount > 0 && compliantCount === 0 && (
+                    <span className="text-slate-400"> ({inProgressCount} en cours)</span>
+                  )}
                 </span>
               </div>
               <span className="text-xs font-semibold text-slate-700">
@@ -160,6 +171,8 @@ interface CriteriaNavigationProps {
     name: string
     indicatorCount: number
     compliantCount: number
+    inProgressCount?: number
+    coveredCount?: number
     completionRate: number
   }[]
   selectedCriterion: number | null

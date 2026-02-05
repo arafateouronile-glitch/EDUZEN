@@ -89,6 +89,25 @@ describe('PaymentService', () => {
       )
     })
 
+    it('devrait filtrer par invoiceId et studentId', async () => {
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getAllByOrganization).mockResolvedValue([])
+
+      await paymentService.getAll('org-1', { invoiceId: 'inv-1', studentId: 'stu-1' })
+
+      expect(getAllByOrganization).toHaveBeenCalledWith(
+        expect.anything(),
+        'payments',
+        'org-1',
+        expect.objectContaining({
+          filters: expect.objectContaining({
+            invoice_id: 'inv-1',
+            student_id: 'stu-1',
+          }),
+        })
+      )
+    })
+
     it('devrait retourner un tableau vide si la table n\'existe pas', async () => {
       const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
       
@@ -120,6 +139,25 @@ describe('PaymentService', () => {
 
       // PaymentService retourne un tableau vide pour les erreurs de table inexistante
       expect(result).toEqual([])
+    })
+
+    it('devrait retourner un tableau vide si erreur brute (code PGRST116 / message relation)', async () => {
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+      // Rejeter avec un objet brut (pas AppError) pour couvrir le premier if (l.62-82)
+      vi.mocked(getAllByOrganization).mockRejectedValueOnce(
+        Object.assign(new Error('relation "payments" does not exist'), { code: 'PGRST116' })
+      )
+
+      const result = await paymentService.getAll('org-1')
+
+      expect(result).toEqual([])
+    })
+
+    it('devrait relancer via le catch externe si erreur non gérée (l.121-129)', async () => {
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getAllByOrganization).mockRejectedValueOnce(new Error('Connection refused'))
+
+      await expect(paymentService.getAll('org-1')).rejects.toThrow()
     })
   })
 
@@ -246,6 +284,703 @@ describe('PaymentService', () => {
       expect(result).toEqual(createdPayment)
       expect(mockFrom).toHaveBeenCalledWith('payments')
       expect(mockInsert).toHaveBeenCalled()
+    })
+
+    it('devrait rejeter si montant invalide ou manquant', async () => {
+      await expect(
+        paymentService.create({
+          organization_id: 'org-1',
+          amount: '0',
+          currency: 'EUR',
+        } as any)
+      ).rejects.toThrow()
+
+      await expect(
+        paymentService.create({
+          organization_id: 'org-1',
+          amount: '',
+          currency: 'EUR',
+        } as any)
+      ).rejects.toThrow()
+
+      await expect(
+        paymentService.create({
+          organization_id: 'org-1',
+          amount: -100,
+          currency: 'EUR',
+        } as any)
+      ).rejects.toThrow()
+    })
+
+    it('devrait rejeter si organization_id manquant', async () => {
+      await expect(
+        paymentService.create({
+          amount: '1000',
+          currency: 'EUR',
+        } as any)
+      ).rejects.toThrow()
+    })
+
+    it('devrait créer un paiement sans invoice_id (pas de mise à jour facture)', async () => {
+      const newPayment = {
+        organization_id: 'org-1',
+        amount: '500',
+        currency: 'EUR',
+        status: 'pending' as const,
+      }
+      const createdPayment = { id: '2', ...newPayment }
+      const mockSingle = vi.fn().mockResolvedValue({ data: createdPayment, error: null })
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect })
+      mockSupabase.from = vi.fn().mockReturnValue({
+        insert: mockInsert,
+      })
+
+      const result = await paymentService.create(newPayment as any)
+
+      expect(result).toEqual(createdPayment)
+      expect(mockSupabase.from).toHaveBeenCalledWith('payments')
+      expect(mockInsert).toHaveBeenCalled()
+    })
+
+    it('devrait propager updateError lors de updateInvoicePaymentStatus (create avec invoice_id)', async () => {
+      const newPayment = {
+        organization_id: 'org-1',
+        invoice_id: 'invoice-1',
+        amount: '1000',
+        currency: 'EUR',
+        status: 'pending' as const,
+      }
+      const createdPayment = { id: '1', ...newPayment }
+      const mockSingle = vi.fn().mockResolvedValue({ data: createdPayment, error: null })
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect })
+      const mockPaymentsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: [{ amount: '1000' }], error: null }),
+        }),
+      })
+      const mockInvoiceSelect1 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'invoice-1', total_amount: 1000 },
+            error: null,
+          }),
+        }),
+      })
+      const mockInvoiceSelect2 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { due_date: new Date().toISOString() },
+            error: null,
+          }),
+        }),
+      })
+      const mockInvoiceUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({
+          error: { message: 'update invoice failed', code: 'PGRST_ERROR' },
+        }),
+      })
+      let selectCallCount = 0
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return {
+            insert: mockInsert,
+            select: mockPaymentsSelect,
+          }
+        }
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => {
+              selectCallCount++
+              if (selectCallCount === 1) return mockInvoiceSelect1()
+              return mockInvoiceSelect2()
+            }),
+            update: mockInvoiceUpdate,
+          }
+        }
+        return { insert: mockInsert }
+      })
+      mockSupabase.from = mockFrom
+
+      await expect(paymentService.create(newPayment as any)).rejects.toThrow()
+      expect(mockInvoiceUpdate).toHaveBeenCalled()
+    })
+
+    it('devrait propager erreur non-AppError (catch l.382) si fetch payments rejette dans updateInvoicePaymentStatus', async () => {
+      const newPayment = {
+        organization_id: 'org-1',
+        invoice_id: 'invoice-1',
+        amount: '1000',
+        currency: 'EUR',
+        status: 'pending' as const,
+      }
+      const createdPayment = { id: '1', ...newPayment }
+      const mockSingle = vi.fn().mockResolvedValue({ data: createdPayment, error: null })
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect })
+      const mockPaymentsSelectReject = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockRejectedValue(new Error('fetch payments failed')),
+        }),
+      })
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return {
+            insert: mockInsert,
+            select: mockPaymentsSelectReject,
+          }
+        }
+        return {}
+      })
+      mockSupabase.from = mockFrom
+
+      await expect(paymentService.create(newPayment as any)).rejects.toThrow()
+    })
+
+    it('devrait propager paymentsError lors du fetch payments (updateInvoicePaymentStatus)', async () => {
+      const newPayment = {
+        organization_id: 'org-1',
+        invoice_id: 'invoice-1',
+        amount: '1000',
+        currency: 'EUR',
+        status: 'pending' as const,
+      }
+      const createdPayment = { id: '1', ...newPayment }
+      const mockSingle = vi.fn().mockResolvedValue({ data: createdPayment, error: null })
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect })
+      const mockPaymentsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'fetch payments failed', code: 'PGRST_ERROR' },
+          }),
+        }),
+      })
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return { insert: mockInsert, select: mockPaymentsSelect }
+        }
+        return {}
+      })
+      mockSupabase.from = mockFrom
+
+      await expect(paymentService.create(newPayment as any)).rejects.toThrow()
+    })
+
+    it('devrait propager invoiceError lors du fetch invoice (updateInvoicePaymentStatus)', async () => {
+      const newPayment = {
+        organization_id: 'org-1',
+        invoice_id: 'invoice-1',
+        amount: '1000',
+        currency: 'EUR',
+        status: 'pending' as const,
+      }
+      const createdPayment = { id: '1', ...newPayment }
+      const mockSingle = vi.fn().mockResolvedValue({ data: createdPayment, error: null })
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect })
+      const mockPaymentsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: [{ amount: '1000' }], error: null }),
+        }),
+      })
+      const mockInvoiceSelect1 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'fetch invoice failed', code: 'PGRST_ERROR' },
+          }),
+        }),
+      })
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return { insert: mockInsert, select: mockPaymentsSelect }
+        }
+        if (table === 'invoices') {
+          return { select: mockInvoiceSelect1 }
+        }
+        return {}
+      })
+      mockSupabase.from = mockFrom
+
+      await expect(paymentService.create(newPayment as any)).rejects.toThrow()
+    })
+
+    it('devrait propager createDatabaseError si facture introuvable (data null, error null)', async () => {
+      const newPayment = {
+        organization_id: 'org-1',
+        invoice_id: 'invoice-1',
+        amount: '1000',
+        currency: 'EUR',
+        status: 'pending' as const,
+      }
+      const createdPayment = { id: '1', ...newPayment }
+      const mockSingle = vi.fn().mockResolvedValue({ data: createdPayment, error: null })
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect })
+      const mockPaymentsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: [{ amount: '1000' }], error: null }),
+        }),
+      })
+      const mockInvoiceSelect1 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }),
+      })
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return { insert: mockInsert, select: mockPaymentsSelect }
+        }
+        if (table === 'invoices') {
+          return { select: mockInvoiceSelect1 }
+        }
+        return {}
+      })
+      mockSupabase.from = mockFrom
+
+      await expect(paymentService.create(newPayment as any)).rejects.toThrow()
+    })
+
+    it('devrait calculer statut partial puis mettre à jour la facture', async () => {
+      const newPayment = {
+        organization_id: 'org-1',
+        invoice_id: 'invoice-1',
+        amount: '500',
+        currency: 'EUR',
+        status: 'pending' as const,
+      }
+      const createdPayment = { id: '1', ...newPayment }
+      const mockSingle = vi.fn().mockResolvedValue({ data: createdPayment, error: null })
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect })
+      const mockPaymentsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: [{ amount: '500' }], error: null }),
+        }),
+      })
+      const mockInvoiceSelect1 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'invoice-1', total_amount: 1000 },
+            error: null,
+          }),
+        }),
+      })
+      const mockInvoiceSelect2 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { due_date: new Date(Date.now() + 86400000).toISOString() },
+            error: null,
+          }),
+        }),
+      })
+      const mockInvoiceUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      })
+      let selectCallCount = 0
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return { insert: mockInsert, select: mockPaymentsSelect }
+        }
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => {
+              selectCallCount++
+              if (selectCallCount === 1) return mockInvoiceSelect1()
+              return mockInvoiceSelect2()
+            }),
+            update: mockInvoiceUpdate,
+          }
+        }
+        return { insert: mockInsert }
+      })
+      mockSupabase.from = mockFrom
+
+      const result = await paymentService.create(newPayment as any)
+      expect(result).toEqual(createdPayment)
+      expect(mockInvoiceUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'partial' })
+      )
+    })
+
+    it('devrait calculer statut overdue (due_date passée, totalPayé 0)', async () => {
+      const newPayment = {
+        organization_id: 'org-1',
+        invoice_id: 'invoice-1',
+        amount: '1000',
+        currency: 'EUR',
+        status: 'pending' as const,
+      }
+      const createdPayment = { id: '1', ...newPayment }
+      const mockSingle = vi.fn().mockResolvedValue({ data: createdPayment, error: null })
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle })
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect })
+      const mockPaymentsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      })
+      const mockInvoiceSelect1 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'invoice-1', total_amount: 1000 },
+            error: null,
+          }),
+        }),
+      })
+      const pastDate = new Date(Date.now() - 86400000).toISOString()
+      const mockInvoiceSelect2 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: { due_date: pastDate }, error: null }),
+        }),
+      })
+      const mockInvoiceUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      })
+      let selectCallCount = 0
+      const mockFrom = vi.fn((table: string) => {
+        if (table === 'payments') {
+          return { insert: mockInsert, select: mockPaymentsSelect }
+        }
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => {
+              selectCallCount++
+              if (selectCallCount === 1) return mockInvoiceSelect1()
+              return mockInvoiceSelect2()
+            }),
+            update: mockInvoiceUpdate,
+          }
+        }
+        return { insert: mockInsert }
+      })
+      mockSupabase.from = mockFrom
+
+      const result = await paymentService.create(newPayment as any)
+      expect(result).toEqual(createdPayment)
+      expect(mockInvoiceUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'overdue' })
+      )
+    })
+  })
+
+  describe('update', () => {
+    it('devrait mettre à jour un paiement', async () => {
+      const updatedPayment = {
+        id: '1',
+        organization_id: 'org-1',
+        amount: '1500',
+        status: 'completed' as const,
+        invoice_id: null,
+      }
+      const mockSingle = vi.fn().mockResolvedValue({ data: updatedPayment, error: null })
+      const mockEq = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) })
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq })
+      mockSupabase.from = vi.fn().mockReturnValue({ update: mockUpdate })
+
+      const { getById } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getById).mockResolvedValue({ id: '1', invoice_id: null } as any)
+
+      const result = await paymentService.update('1', { status: 'completed', amount: '1500' } as any)
+
+      expect(result).toEqual(updatedPayment)
+      expect(mockSupabase.from).toHaveBeenCalledWith('payments')
+      expect(mockUpdate).toHaveBeenCalled()
+      expect(mockEq).toHaveBeenCalledWith('id', '1')
+    })
+
+    it('devrait rejeter si paiement non trouvé (PGRST116)', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116', message: 'No rows' },
+      })
+      const mockEq = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) })
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq })
+      mockSupabase.from = vi.fn().mockReturnValue({ update: mockUpdate })
+
+      await expect(paymentService.update('999', { status: 'completed' } as any)).rejects.toThrow()
+    })
+
+    it('devrait rejeter si update retourne data null et error null (!data)', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+      const mockEq = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) })
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq })
+      mockSupabase.from = vi.fn().mockReturnValue({ update: mockUpdate })
+
+      await expect(paymentService.update('1', { status: 'completed' } as any)).rejects.toThrow()
+    })
+
+    it('devrait appeler updateInvoicePaymentStatus quand status completed et payment.invoice_id présent', async () => {
+      const updatedPayment = {
+        id: '1',
+        organization_id: 'org-1',
+        amount: '1500',
+        status: 'completed' as const,
+        invoice_id: 'inv-1',
+      }
+      const mockSingleUpdate = vi.fn().mockResolvedValue({ data: updatedPayment, error: null })
+      const mockEqUpdate = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({ single: mockSingleUpdate }),
+      })
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEqUpdate })
+      const mockPaymentsSelect = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: [{ amount: '1500' }], error: null }),
+        }),
+      })
+      const mockInvoiceSelect1 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'inv-1', total_amount: 1500 },
+            error: null,
+          }),
+        }),
+      })
+      const mockInvoiceSelect2 = vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({
+            data: { due_date: new Date().toISOString() },
+            error: null,
+          }),
+        }),
+      })
+      const mockInvoiceUpdate = vi.fn().mockReturnValue({
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      })
+      let fromCallCount = 0
+      let invoiceSelectCount = 0
+      mockSupabase.from = vi.fn().mockImplementation((table: string) => {
+        fromCallCount++
+        if (table === 'payments') {
+          if (fromCallCount === 1) {
+            return { update: mockUpdate }
+          }
+          return { select: mockPaymentsSelect }
+        }
+        if (table === 'invoices') {
+          return {
+            select: vi.fn(() => {
+              invoiceSelectCount++
+              if (invoiceSelectCount === 1) return mockInvoiceSelect1()
+              return mockInvoiceSelect2()
+            }),
+            update: mockInvoiceUpdate,
+          }
+        }
+        return {}
+      })
+
+      const { getById } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getById).mockResolvedValue({ id: '1', invoice_id: 'inv-1' } as any)
+
+      const result = await paymentService.update('1', { status: 'completed', amount: '1500' } as any)
+
+      expect(result).toEqual(updatedPayment)
+      expect(mockInvoiceUpdate).toHaveBeenCalled()
+    })
+
+    it('devrait propager erreur non-AppError (catch update) si update chain rejette', async () => {
+      const mockSingle = vi.fn().mockRejectedValue(new Error('update failed'))
+      const mockEq = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: mockSingle }) })
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq })
+      mockSupabase.from = vi.fn().mockReturnValue({ update: mockUpdate })
+
+      await expect(paymentService.update('1', { status: 'completed' } as any)).rejects.toThrow()
+    })
+  })
+
+  describe('recordMobileMoneyPayment', () => {
+    it('devrait rejeter si transactionId manquant', async () => {
+      await expect(
+        paymentService.recordMobileMoneyPayment(
+          'inv-1',
+          1000,
+          'XOF',
+          'mtn',
+          '',
+          '+221771234567'
+        )
+      ).rejects.toThrow()
+    })
+
+    it('devrait rejeter si facture introuvable (PGRST116)', async () => {
+      const invoiceChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: null,
+          error: { code: 'PGRST116', message: 'No rows' },
+        }),
+      }
+      mockSupabase.from = vi.fn().mockReturnValue(invoiceChain)
+
+      await expect(
+        paymentService.recordMobileMoneyPayment(
+          'inv-missing',
+          1000,
+          'XOF',
+          'mtn',
+          'tx-1',
+          '+221771234567'
+        )
+      ).rejects.toThrow()
+    })
+
+    it('devrait rejeter si erreur autre que not found sur la facture', async () => {
+      const invoiceChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: null,
+          error: { code: '500', message: 'Server error' },
+        }),
+      }
+      mockSupabase.from = vi.fn().mockReturnValue(invoiceChain)
+
+      await expect(
+        paymentService.recordMobileMoneyPayment(
+          'inv-1',
+          1000,
+          'XOF',
+          'orange',
+          'tx-2',
+          '+221771234567'
+        )
+      ).rejects.toThrow()
+    })
+
+    it('devrait rejeter si facture null (data null, error null)', async () => {
+      const invoiceChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
+      mockSupabase.from = vi.fn().mockReturnValue(invoiceChain)
+
+      await expect(
+        paymentService.recordMobileMoneyPayment(
+          'inv-1',
+          1000,
+          'XOF',
+          'wave',
+          'tx-3',
+          '+221771234567'
+        )
+      ).rejects.toThrow()
+    })
+
+    it('devrait propager erreur non-AppError (catch avec provider) si fetch facture rejette', async () => {
+      const invoiceChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockRejectedValue(new Error('network failure')),
+        }),
+      }
+      mockSupabase.from = vi.fn().mockReturnValue(invoiceChain)
+
+      await expect(
+        paymentService.recordMobileMoneyPayment(
+          'inv-1',
+          1000,
+          'XOF',
+          'mtn',
+          'tx-err',
+          '+221771234567'
+        )
+      ).rejects.toThrow()
+    })
+
+    it('devrait créer un paiement mobile_money si facture trouvée', async () => {
+      const createdPayment = {
+        id: 'pm-1',
+        organization_id: 'org-1',
+        invoice_id: 'inv-1',
+        student_id: 'stu-1',
+        amount: 1000,
+        currency: 'XOF',
+        payment_method: 'mobile_money',
+        payment_provider: 'mtn',
+        transaction_id: 'tx-4',
+        status: 'pending',
+      }
+      const invoiceFetch = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: { organization_id: 'org-1', student_id: 'stu-1' },
+          error: null,
+        }),
+      }
+      const paymentsInsert = {
+        insert: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: createdPayment, error: null }),
+          }),
+        }),
+      }
+      const paymentsSelectInnerEq = vi.fn().mockResolvedValue({
+        data: [{ amount: 1000 }],
+        error: null,
+      })
+      const paymentsSelectOuterEq = vi.fn().mockReturnValue({ eq: paymentsSelectInnerEq })
+      const paymentsSelect = {
+        select: vi.fn().mockReturnThis(),
+        eq: paymentsSelectOuterEq,
+      }
+      const invoiceTotal = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { total_amount: 1000 }, error: null }),
+      }
+      const invoiceDue = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { due_date: new Date().toISOString() }, error: null }),
+      }
+      const invoiceUpdate = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ error: null }),
+      }
+      let fromCallCount = 0
+      mockSupabase.from = vi.fn().mockImplementation((table: string) => {
+        fromCallCount++
+        if (table === 'invoices') {
+          if (fromCallCount === 1) return invoiceFetch
+          if (fromCallCount === 4) return invoiceTotal
+          if (fromCallCount === 5) return invoiceDue
+          return invoiceUpdate
+        }
+        if (fromCallCount === 2) return paymentsInsert
+        return paymentsSelect
+      })
+
+      const result = await paymentService.recordMobileMoneyPayment(
+        'inv-1',
+        1000,
+        'XOF',
+        'mtn',
+        'tx-4',
+        '+221771234567'
+      )
+
+      expect(result).toEqual(createdPayment)
+      expect(paymentsInsert.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organization_id: 'org-1',
+          invoice_id: 'inv-1',
+          student_id: 'stu-1',
+          amount: 1000,
+          currency: 'XOF',
+          payment_method: 'mobile_money',
+          payment_provider: 'mtn',
+          transaction_id: 'tx-4',
+          status: 'pending',
+          metadata: { phone_number: '+221771234567' },
+        })
+      )
     })
   })
 })

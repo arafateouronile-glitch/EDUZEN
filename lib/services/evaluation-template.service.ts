@@ -39,7 +39,7 @@ export interface EvaluationScore {
   total_questions: number
 }
 
-class EvaluationTemplateService {
+export class EvaluationTemplateService {
   private supabase: SupabaseClient<Database>
 
 

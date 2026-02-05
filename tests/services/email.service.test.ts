@@ -59,6 +59,97 @@ describe('EmailService', () => {
       ).rejects.toThrow('Erreur serveur')
     })
 
+    it('devrait utiliser message par défaut si response.ok false et json sans message (l.92-93)', async () => {
+      const mockResponse = {
+        ok: false,
+        json: vi.fn().mockResolvedValue({}),
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      await expect(
+        emailService.sendEmail({
+          to: 'test@example.com',
+          subject: 'Test',
+        })
+      ).rejects.toThrow('Erreur lors de l\'envoi de l\'email')
+    })
+
+    it('devrait relancer avec message générique si catch reçoit une non-Error (l.99-101)', async () => {
+      ;(global.fetch as any).mockRejectedValue('network failure')
+
+      await expect(
+        emailService.sendEmail({
+          to: 'test@example.com',
+          subject: 'Test',
+        })
+      ).rejects.toThrow('Erreur lors de l\'envoi de l\'email')
+    })
+
+    it('devrait convertir un ArrayBuffer en base64 pour les pièces jointes', async () => {
+      const buf = new ArrayBuffer(8)
+      new Uint8Array(buf).set([1, 2, 3, 4, 5, 6, 7, 8])
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ message: 'Email envoyé' }),
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const mockFileReaderInstance = {
+        readAsDataURL: vi.fn(function (this: any) {
+          setTimeout(() => {
+            this.result = 'data:application/octet-stream;base64,AQIDBAUGBwg='
+            if (this.onloadend) this.onloadend()
+          }, 0)
+        }),
+        onloadend: null as any,
+        result: null as any,
+      }
+      global.FileReader = vi.fn(function (this: any) {
+        Object.assign(this, mockFileReaderInstance)
+        return this
+      }) as any
+
+      await emailService.sendEmail({
+        to: 'test@example.com',
+        subject: 'Test',
+        attachments: [
+          {
+            filename: 'data.bin',
+            content: buf,
+            contentType: 'application/octet-stream',
+          },
+        ],
+      })
+
+      await new Promise((r) => setTimeout(r, 100))
+      expect(global.fetch).toHaveBeenCalled()
+      const body = JSON.parse((global.fetch as any).mock.calls[0][1].body)
+      expect(body.attachments[0].filename).toBe('data.bin')
+    })
+
+    it('devrait accepter une pièce jointe avec contenu string (base64)', async () => {
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({ message: 'Email envoyé' }),
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      await emailService.sendEmail({
+        to: 'test@example.com',
+        subject: 'Test',
+        attachments: [
+          {
+            filename: 'inline.txt',
+            content: 'ZGF0YSBhbHJlYWR5IGJhc2U2NA==',
+            contentType: 'text/plain',
+          },
+        ],
+      })
+
+      const body = JSON.parse((global.fetch as any).mock.calls[0][1].body)
+      expect(body.attachments[0].content).toBe('ZGF0YSBhbHJlYWR5IGJhc2U2NA==')
+    })
+
     it('devrait convertir un Blob en base64 pour les pièces jointes', async () => {
       const mockBlob = new Blob(['test content'], { type: 'text/plain' })
       const mockResponse = {

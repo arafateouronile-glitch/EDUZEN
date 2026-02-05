@@ -2,7 +2,7 @@
  * Tests unitaires pour les fonctions de formatage
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   formatDate,
   formatCurrency,
@@ -10,8 +10,17 @@ import {
   formatRelativeTime,
   formatFileSize,
 } from '@/lib/utils/format'
+import { logger } from '@/lib/utils/logger'
+
+vi.mock('@/lib/utils/logger', () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+  sanitizeError: vi.fn((e: unknown) => ({ message: (e as Error)?.message ?? 'Error' })),
+}))
 
 describe('formatDate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
   it('devrait formater une date correctement', () => {
     const date = new Date('2024-01-15')
     const result = formatDate(date, 'dd/MM/yyyy')
@@ -27,6 +36,22 @@ describe('formatDate', () => {
     const dateString = '2024-01-15T10:30:00Z'
     const result = formatDate(dateString, 'dd/MM/yyyy')
     expect(result).toBe('15/01/2024')
+  })
+
+  it('devrait retourner une chaîne vide pour une chaîne de date invalide', () => {
+    const result = formatDate('not-a-date')
+    expect(result).toBe('')
+  })
+
+  it('devrait retourner une chaîne vide pour undefined', () => {
+    expect(formatDate(undefined)).toBe('')
+  })
+
+  it('devrait retourner une chaîne vide et logger si format(date-fns) lance (catch l.24-25)', () => {
+    const fakeDate = { getTime: () => 123 }
+    const result = formatDate(fakeDate as unknown as Date, 'dd/MM/yyyy')
+    expect(result).toBe('')
+    expect(logger.error).toHaveBeenCalledWith('Error formatting date', expect.anything(), expect.objectContaining({ date: fakeDate, format: 'dd/MM/yyyy' }))
   })
 })
 
@@ -110,8 +135,55 @@ describe('formatRelativeTime', () => {
     expect(result).toContain('mois')
   })
 
+  it('devrait formater "Il y a 1 an"', () => {
+    const date = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000) // ~13 mois
+    const result = formatRelativeTime(date)
+    expect(result).toBe('Il y a 1 an')
+  })
+
+  it('devrait formater "Il y a X ans"', () => {
+    const date = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000) // Il y a 2 ans
+    const result = formatRelativeTime(date)
+    expect(result).toBe('Il y a 2 ans')
+  })
+
   it('devrait retourner une chaîne vide pour une date invalide', () => {
     const result = formatRelativeTime(null as any)
+    expect(result).toBe('')
+  })
+
+  it('devrait accepter une date en chaîne ISO', () => {
+    const iso = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    const result = formatRelativeTime(iso)
+    expect(result).toBe('Il y a 2 heures')
+  })
+
+  it('devrait retourner une chaîne vide pour chaîne date invalide', () => {
+    expect(formatRelativeTime('not-a-date')).toBe('')
+  })
+
+  it('devrait formater "Il y a 1 minute" au singulier', () => {
+    const date = new Date(Date.now() - 1 * 60 * 1000)
+    const result = formatRelativeTime(date)
+    expect(result).toBe('Il y a 1 minute')
+  })
+
+  it('devrait formater "Il y a 1 heure" et "Il y a 1 jour" au singulier', () => {
+    const oneHour = new Date(Date.now() - 1 * 60 * 60 * 1000)
+    expect(formatRelativeTime(oneHour)).toBe('Il y a 1 heure')
+    const oneDay = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+    expect(formatRelativeTime(oneDay)).toBe('Il y a 1 jour')
+  })
+
+  it('devrait formater "Il y a 1 semaine" au singulier', () => {
+    const date = new Date(Date.now() - 1 * 7 * 24 * 60 * 60 * 1000)
+    const result = formatRelativeTime(date)
+    expect(result).toBe('Il y a 1 semaine')
+  })
+
+  it('devrait retourner une chaîne vide et logger si getTime lance', () => {
+    const fakeDate = { getTime: () => { throw new Error('getTime throw') } }
+    const result = formatRelativeTime(fakeDate as any)
     expect(result).toBe('')
   })
 })

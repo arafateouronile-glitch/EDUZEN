@@ -18,6 +18,7 @@ export function ConsoleErrorFilter() {
     // Liste des patterns à filtrer (erreurs d'extensions)
     const filteredPatterns = [
       /frame_ant\.js/i, // Extension d'accessibilité
+      /frame_start\.js/i, // Script iframe / extension (removeChild)
       /accessibility_configurations/i, // Table Supabase (erreurs d'extensions)
       /chrome-extension:/i,
       /moz-extension:/i,
@@ -25,6 +26,7 @@ export function ConsoleErrorFilter() {
       /extension:/i,
       /The message port closed/i, // Erreur commune des extensions
       /Script loaded: operationBanner\.js/i, // Extension de bannière
+      /removeChild.*not a child of this node/i, // Erreur DOM venant d'extensions/iframes
     ]
 
     // Fonction pour vérifier si une erreur doit être filtrée

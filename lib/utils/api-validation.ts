@@ -120,12 +120,18 @@ export async function validateQueryParams(
 }
 
 /**
- * Extrait et valide le corps de la requête (body)
+ * Extrait et valide le corps de la requête (body).
+ * Retourne rawBody pour permettre aux handlers d'accéder à des champs non validés (ex. pièces jointes).
  */
 export async function validateRequestBody(
   request: NextRequest,
   schema: ValidationSchema
-): Promise<{ isValid: boolean; data?: ValidatedData; errors?: ValidationError[] }> {
+): Promise<{
+  isValid: boolean
+  data?: ValidatedData
+  errors?: ValidationError[]
+  rawBody?: Record<string, unknown>
+}> {
   let body: Record<string, unknown>
 
   try {
@@ -137,7 +143,11 @@ export async function validateRequestBody(
     }
   }
 
-  return validateObject(body, schema, request.nextUrl.pathname)
+  const result = validateObject(body, schema, request.nextUrl.pathname)
+  if (result.isValid && result.data) {
+    return { ...result, rawBody: body }
+  }
+  return result
 }
 
 /**
@@ -415,12 +425,17 @@ export async function withQueryValidation(
 }
 
 /**
- * Middleware wrapper pour valider le body
+ * Middleware wrapper pour valider le body.
+ * Passe rawBody au handler pour accéder aux champs non validés (ex. attachments).
  */
 export async function withBodyValidation(
   request: NextRequest,
   schema: ValidationSchema,
-  handler: (req: NextRequest, data: ValidatedData) => Promise<NextResponse>
+  handler: (
+    req: NextRequest,
+    data: ValidatedData,
+    rawBody?: Record<string, unknown>
+  ) => Promise<NextResponse>
 ): Promise<NextResponse> {
   const validation = await validateRequestBody(request, schema)
 
@@ -428,7 +443,7 @@ export async function withBodyValidation(
     return createValidationErrorResponse(validation.errors!)
   }
 
-  return handler(request, validation.data!)
+  return handler(request, validation.data!, validation.rawBody)
 }
 
 // ============================================================================

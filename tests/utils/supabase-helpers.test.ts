@@ -99,6 +99,27 @@ describe('supabase-helpers', () => {
 
       expect(result).toEqual([])
     })
+
+    it('devrait ignorer les filtres null/undefined', async () => {
+      const mockSupabase = createMockSupabase()
+      mockSupabase.order.mockResolvedValueOnce({ data: [], error: null })
+
+      await getAllByOrganization(mockSupabase, 'items', 'org-1', {
+        filters: { status: 'active', optional: null, other: undefined } as any,
+      })
+
+      expect(mockSupabase.eq).toHaveBeenCalledWith('organization_id', 'org-1')
+      expect(mockSupabase.eq).toHaveBeenCalledWith('status', 'active')
+      expect(mockSupabase.eq).not.toHaveBeenCalledWith('optional', null)
+      expect(mockSupabase.eq).not.toHaveBeenCalledWith('other', undefined)
+    })
+
+    it('devrait propager via handleError si la requête rejette (exception)', async () => {
+      const mockSupabase = createMockSupabase()
+      mockSupabase.order.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(getAllByOrganization(mockSupabase, 'items', 'org-1')).rejects.toThrow()
+    })
   })
 
   describe('getById', () => {
@@ -135,11 +156,38 @@ describe('supabase-helpers', () => {
       await expect(getById(mockSupabase, 'items', 'missing')).rejects.toThrow(AppError)
     })
 
+    it('devrait lever AppError si 42P01 (table inexistante)', async () => {
+      const mockSupabase = createMockSupabase()
+      mockSupabase.single.mockResolvedValueOnce({
+        data: null,
+        error: { code: '42P01', message: 'relation "items" does not exist' },
+      })
+
+      await expect(getById(mockSupabase, 'items', 'id-1')).rejects.toThrow(AppError)
+    })
+
     it('devrait lever si data est null sans code not found', async () => {
       const mockSupabase = createMockSupabase()
       mockSupabase.single.mockResolvedValueOnce({
         data: null,
         error: null,
+      })
+
+      await expect(getById(mockSupabase, 'items', 'id-1')).rejects.toThrow()
+    })
+
+    it('devrait propager via handleError si la requête rejette (exception)', async () => {
+      const mockSupabase = createMockSupabase()
+      mockSupabase.single.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(getById(mockSupabase, 'items', 'id-1')).rejects.toThrow()
+    })
+
+    it('devrait lever pour erreur autre que PGRST116/42P01', async () => {
+      const mockSupabase = createMockSupabase()
+      mockSupabase.single.mockResolvedValueOnce({
+        data: null,
+        error: { code: '23505', message: 'Unique violation' },
       })
 
       await expect(getById(mockSupabase, 'items', 'id-1')).rejects.toThrow()

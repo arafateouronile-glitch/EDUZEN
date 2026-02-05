@@ -39,9 +39,8 @@ import {
   FileDown,
   Accessibility,
   Globe,
-  MapPin,
   Badge,
-  PenLine,
+  ClipboardCheck,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -88,10 +87,17 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
   {
     title: t('navigation.pedagogy'),
     items: [
-      { name: vocab.students, href: '/dashboard/students', icon: Users, allowedRoles: ADMIN_ROLES },
+      {
+        name: 'Répertoire',
+        icon: Users,
+        allowedRoles: ADMIN_ROLES,
+        children: [
+          { name: vocab.students, href: '/dashboard/students', icon: Users },
+          { name: 'Entreprises & Organismes', href: '/dashboard/entities', icon: Building2 },
+        ],
+      },
       { name: t('navigation.myStudents'), href: '/dashboard/my-students', icon: Users, allowedRoles: ['teacher'] },
       { name: 'Mes documents', href: '/dashboard/teacher/documents', icon: FileText, allowedRoles: ['teacher'] },
-      { name: 'Entreprises & Organismes', href: '/dashboard/entities', icon: Building2, allowedRoles: ADMIN_ROLES },
       {
         name: t('navigation.pedagogy'),
         icon: BookMarked,
@@ -132,8 +138,6 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
         ],
       },
       { name: t('navigation.documents'), href: '/dashboard/documents', icon: FileText },
-      { name: 'Tour de contrôle (signature en cascade)', href: '/dashboard/signing-processes', icon: PenLine },
-      { name: 'Sites et Antennes', href: '/dashboard/sites', icon: MapPin },
     ],
   },
   {
@@ -145,6 +149,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
         icon: Shield,
         children: [
           { name: t('navigation.qualiopi'), href: '/dashboard/qualiopi', icon: Award },
+          { name: 'Qualiopi Check', href: '/dashboard/qualiopi/check', icon: ClipboardCheck },
           { name: 'Accessibilité Handicap', href: '/dashboard/accessibility', icon: Accessibility },
           { name: t('navigation.cpf'), href: '/dashboard/cpf', icon: GraduationCap },
           { name: 'Certifications RNCP/RS', href: '/dashboard/certifications', icon: Badge },
@@ -228,12 +233,18 @@ export function Sidebar() {
     const expanded: string[] = []
     
     // Pédagogie
-    if (clientPathname.startsWith('/dashboard/programs') || 
+    if (clientPathname.startsWith('/dashboard/programs') ||
         clientPathname.startsWith('/dashboard/formations') ||
         clientPathname.startsWith('/dashboard/sessions') ||
         clientPathname.startsWith('/dashboard/elearning') ||
         clientPathname.startsWith('/dashboard/catalog')) {
       expanded.push(t('navigation.pedagogy'))
+    }
+    
+    // Répertoire (élèves + entreprises)
+    if (clientPathname.startsWith('/dashboard/students') ||
+        clientPathname.startsWith('/dashboard/entities')) {
+      expanded.push('Répertoire')
     }
     
     // Suivi

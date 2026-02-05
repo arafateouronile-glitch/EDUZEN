@@ -235,6 +235,11 @@ export default function ResourcesPage() {
                             <span>{formatFileSize(resource.file_size_bytes)}</span>
                           )}
                         </div>
+                        {(resource as any).visibility_scope && (resource as any).visibility_scope !== 'all' && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Visible : {(resource as any).visibility_scope === 'program' ? 'Programme' : (resource as any).visibility_scope === 'formation' ? 'Formation' : 'Session'}
+                          </p>
+                        )}
                         {resource.duration_minutes && (
                           <p className="text-xs text-muted-foreground mt-2">
                             Durée: {resource.duration_minutes} min

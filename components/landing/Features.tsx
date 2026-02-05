@@ -14,11 +14,37 @@ import {
   BookOpen,
   ClipboardCheck,
   MessageSquare,
-  Calculator
+  Calculator,
+  PenTool,
+  UserCheck,
+  Clock,
+  Scale,
+  Lock
 } from 'lucide-react'
 import { useParallax } from '@/lib/hooks/useParallax'
 
 const features = [
+  {
+    icon: PenTool,
+    title: "Signature Électronique eIDAS",
+    description: "Signez vos documents en ligne avec une valeur juridique équivalente à un acte notarié. Conformité eIDAS garantie, horodatage certifié et preuve de signature infalsifiable. Gagnez 3 jours par contrat et éliminez les allers-retours papier.",
+    color: "bg-green-100 text-green-700",
+    badges: ["Valeur légale", "Gain de temps", "Sécurisé"]
+  },
+  {
+    icon: UserCheck,
+    title: "Émargements Numériques",
+    description: "Fini les feuilles de présence papier ! Émargement par QR code, signature tactile ou géolocalisation. Vos stagiaires signent en 2 secondes, vous économisez 5h/semaine en gestion administrative. 100% conforme Qualiopi.",
+    color: "bg-brand-cyan-pale text-brand-cyan-dark",
+    badges: ["Conforme Qualiopi", "5h/semaine gagnées", "Zéro papier"]
+  },
+  {
+    icon: Lock,
+    title: "Sécurité Maximale",
+    description: "Vos données sont protégées par un cryptage AES-256, les mêmes standards que les banques. Hébergement certifié ISO 27001, sauvegardes automatiques et 992 tests de sécurité quotidiens. Conformité RGPD totale.",
+    color: "bg-blue-100 text-blue-700",
+    badges: ["Cryptage bancaire", "ISO 27001", "RGPD"]
+  },
   {
     icon: GraduationCap,
     title: "Gestion Complète des Formations",
@@ -26,33 +52,23 @@ const features = [
     color: "bg-brand-blue-pale text-brand-blue"
   },
   {
+    icon: Scale,
+    title: "Conformité Légale Garantie",
+    description: "Tous vos documents respectent les normes en vigueur : conventions, attestations, certificats. Génération automatique conforme au Code du Travail et aux exigences des financeurs (OPCO, CPF, Pôle Emploi).",
+    color: "bg-amber-100 text-amber-700",
+    badges: ["Code du Travail", "OPCO", "CPF"]
+  },
+  {
+    icon: Clock,
+    title: "Gain de Temps Massif",
+    description: "Réduisez de 80% le temps passé sur les tâches administratives. Documents générés en 1 clic, emails automatiques, relances programmées. Ce qui prenait des heures ne prend plus que quelques minutes.",
+    color: "bg-purple-100 text-purple-700",
+    badges: ["-80% admin", "1 clic", "Automatisé"]
+  },
+  {
     icon: BookOpen,
     title: "E-Learning Intégré",
-    description: "Augmentez vos revenus en proposant des formations en ligne 24/7 sans coûts supplémentaires. Multipliez vos sessions, diversifiez vos sources de revenus et atteignez plus de stagiaires grâce à notre plateforme intégrée.",
-    color: "bg-brand-cyan-pale text-brand-cyan-dark"
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Évaluations & Certifications",
-    description: "Garantissez la réussite de vos stagiaires en suivant leur progression en temps réel. Identifiez les difficultés rapidement, augmentez vos taux de réussite et générez automatiquement des certificats conformes.",
-    color: "bg-brand-blue-ghost text-brand-blue-darker"
-  },
-  {
-    icon: Calculator,
-    title: "Fonctions Financières Avancées",
-    description: "Maîtrisez votre trésorerie au quotidien. Plus jamais de factures en retard grâce aux relances automatiques. Suivez vos encaissements en temps réel et prévoyez votre trésorerie avec des rapports financiers précis.",
-    color: "bg-brand-cyan-ghost text-brand-cyan-darker"
-  },
-  {
-    icon: MessageSquare,
-    title: "Messagerie Intégrée",
-    description: "Améliorez la satisfaction de vos stagiaires en réduisant de 80% le temps de réponse aux demandes. Communication centralisée, notifications automatiques et historique complet pour une relation client exceptionnelle.",
-    color: "bg-brand-blue-pale text-brand-blue"
-  },
-  {
-    icon: CreditCard,
-    title: "Facturation & CPF",
-    description: "Réduisez les erreurs de facturation à zéro. Facturation CPF et subrogations de paiement gérées automatiquement. Fini les erreurs coûteuses et les litiges. Conformité garantie, tranquillité d'esprit assurée.",
+    description: "Augmentez vos revenus en proposant des formations en ligne 24/7 sans coûts supplémentaires. Multipliez vos sessions, diversifiez vos sources de revenus et atteignez plus de stagiaires.",
     color: "bg-brand-cyan-pale text-brand-cyan-dark"
   },
   {
@@ -62,16 +78,10 @@ const features = [
     color: "bg-brand-blue-ghost text-brand-blue-darker"
   },
   {
-    icon: ShieldCheck,
-    title: "Conformité RGPD & Sécurité",
-    description: "Protégez-vous contre les risques juridiques. Conformité RGPD garantie, données sécurisées et sauvegardées automatiquement. Évitez les amendes et les problèmes juridiques. Vos données sont entre de bonnes mains.",
+    icon: CreditCard,
+    title: "Facturation & CPF",
+    description: "Réduisez les erreurs de facturation à zéro. Facturation CPF et subrogations de paiement gérées automatiquement. Fini les erreurs coûteuses et les litiges. Conformité garantie, tranquillité d'esprit assurée.",
     color: "bg-brand-cyan-ghost text-brand-cyan-darker"
-  },
-  {
-    icon: BarChart3,
-    title: "Reporting & Statistiques",
-    description: "Prenez des décisions stratégiques éclairées. Identifiez vos formations les plus rentables, optimisez vos ressources et démontrez votre ROI aux financeurs avec des tableaux de bord en temps réel.",
-    color: "bg-brand-blue-pale text-brand-blue"
   }
 ]
 
@@ -129,8 +139,21 @@ export function Features() {
               animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
               transition={{ duration: 0.8, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               whileHover={{ y: -12, scale: 1.02 }}
-              className="group bg-white rounded-3xl p-10 md:p-12 shadow-xl border-2 border-gray-100 hover:border-brand-blue-pale hover:shadow-2xl hover:shadow-brand-blue/10 transition-all duration-600"
+              className={`relative group bg-white rounded-3xl p-10 md:p-12 shadow-xl border-2 transition-all duration-600 ${
+                index < 3
+                  ? 'border-brand-blue/20 hover:border-brand-blue hover:shadow-2xl hover:shadow-brand-blue/20 ring-1 ring-brand-blue/10'
+                  : 'border-gray-100 hover:border-brand-blue-pale hover:shadow-2xl hover:shadow-brand-blue/10'
+              }`}
             >
+              {/* Badge "Populaire" pour les 3 premières features */}
+              {index < 3 && (
+                <div className="absolute -top-3 right-6">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-brand-blue to-brand-cyan text-white shadow-lg">
+                    Essentiel
+                  </span>
+                </div>
+              )}
+
               <motion.div
                 className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 ${feature.color}`}
                 whileHover={{ rotate: 360, scale: 1.1 }}
@@ -139,9 +162,23 @@ export function Features() {
                 <feature.icon className="w-8 h-8" />
               </motion.div>
               <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 font-display leading-tight">{feature.title}</h3>
-              <p className="text-lg text-gray-600 leading-relaxed">
+              <p className="text-lg text-gray-600 leading-relaxed mb-4">
                 {feature.description}
               </p>
+
+              {/* Badges pour les features avec badges */}
+              {'badges' in feature && feature.badges && (
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                  {feature.badges.map((badge, badgeIndex) => (
+                    <span
+                      key={badgeIndex}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700"
+                    >
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+              )}
             </motion.div>
           ))}
         </div>

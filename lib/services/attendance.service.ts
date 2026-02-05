@@ -39,7 +39,7 @@ export class AttendanceService {
         'attendance',
         organizationId,
         {
-          select: '*, students(id, first_name, last_name, student_number), classes(id, name), sessions(id, title, start_time)',
+          select: '*, students(id, first_name, last_name, student_number), classes(id, name), sessions(id, name, start_time)',
           filters: filtersMap,
           orderBy: { column: 'date', ascending: false },
         }

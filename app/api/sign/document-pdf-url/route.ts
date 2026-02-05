@@ -85,20 +85,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data: signed, error } = await supabase.storage
-      .from('documents')
-      .createSignedUrl(path, EXPIRES_IN)
-
-    if (error || !signed?.signedUrl) {
-      logger.error('Erreur création signed URL document PDF:', error)
-      return NextResponse.json(
-        { error: 'Impossible de générer le lien de lecture' },
-        { status: 500 }
-      )
-    }
+    // Retourner l’URL du proxy (même origine) pour éviter le blocage CORS
+    // du viewer PDF avec les URLs signées Supabase.
+    const url = `/api/sign/document-pdf?token=${encodeURIComponent(token)}`
 
     return NextResponse.json({
-      url: signed.signedUrl,
+      url,
       expiresIn: EXPIRES_IN,
     })
   } catch (e) {

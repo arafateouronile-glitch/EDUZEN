@@ -217,14 +217,6 @@ export default function LearnerQuizPage() {
             descriptionLength: templateData.description?.length || 0,
             descriptionPreview: templateData.description?.substring(0, 100) || 'aucune'
           })
-          
-          // Log détaillé pour déboguer
-          console.log('[Learner Grade] Détails du modèle:', {
-            template: templateData,
-            questions: questionsData,
-            hasQuestions: !!questionsData && questionsData.length > 0,
-            templateId: templateData.id
-          })
         } else if (templateError) {
           logger.warn('[Learner Grade] Erreur lors de la récupération du modèle', { 
             error: sanitizeError(templateError),
@@ -875,15 +867,6 @@ export default function LearnerQuizPage() {
       hasResponses,
       isCompleted,
       canComplete
-    })
-    
-    // Log détaillé dans la console
-    console.log('[Learner Evaluation Display] Détails complets:', {
-      grade: grade,
-      evaluationTemplate: evaluationTemplate,
-      hasTemplate: !!evaluationTemplate,
-      templateQuestions: evaluationTemplate?.questions,
-      gradeTemplateId: (grade as any).template_id
     })
 
     return (

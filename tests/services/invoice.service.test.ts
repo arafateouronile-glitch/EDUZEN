@@ -102,6 +102,29 @@ describe('InvoiceService', () => {
 
       await expect(invoiceService.getAll('org-1')).rejects.toThrow()
     })
+
+    it('devrait utiliser handleError si getAllByOrganization rejette avec Error générique', async () => {
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getAllByOrganization).mockRejectedValue(new Error('Network failure'))
+
+      await expect(invoiceService.getAll('org-1')).rejects.toThrow()
+    })
+
+    it('devrait filtrer par studentId et documentType', async () => {
+      const { getAllByOrganization } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getAllByOrganization).mockResolvedValue([])
+
+      await invoiceService.getAll('org-1', { studentId: 'stu-1', documentType: 'quote' })
+
+      expect(getAllByOrganization).toHaveBeenCalledWith(
+        expect.anything(),
+        'invoices',
+        'org-1',
+        expect.objectContaining({
+          filters: expect.objectContaining({ student_id: 'stu-1', document_type: 'quote' }),
+        })
+      )
+    })
   })
 
   describe('getById', () => {
@@ -135,6 +158,13 @@ describe('InvoiceService', () => {
       )
 
       await expect(invoiceService.getById('999')).rejects.toThrow()
+    })
+
+    it('devrait utiliser handleError si getById rejette avec Error générique', async () => {
+      const { getById } = await import('@/lib/utils/supabase-helpers')
+      vi.mocked(getById).mockRejectedValue(new Error('Fetch failed'))
+
+      await expect(invoiceService.getById('1')).rejects.toThrow()
     })
   })
 
@@ -191,6 +221,44 @@ describe('InvoiceService', () => {
       }
 
       await expect(invoiceService.create(invalidInvoice as any)).rejects.toThrow()
+    })
+  })
+
+  describe('update', () => {
+    it('devrait mettre à jour une facture', async () => {
+      const updated = { id: '1', invoice_number: '2025-001', status: 'paid', organization_id: 'org-1' }
+      const single = vi.fn().mockResolvedValue({ data: updated, error: null })
+      const select = vi.fn().mockReturnValue({ single })
+      const eq = vi.fn().mockReturnValue({ select })
+      const update = vi.fn().mockReturnValue({ eq })
+      mockSupabase.from = vi.fn().mockReturnValue({ update, eq, select, single })
+
+      const result = await invoiceService.update('1', { status: 'paid' })
+
+      expect(result).toEqual(updated)
+      expect(mockSupabase.from).toHaveBeenCalledWith('invoices')
+      expect(update).toHaveBeenCalledWith({ status: 'paid' })
+      expect(eq).toHaveBeenCalledWith('id', '1')
+    })
+
+    it('devrait propager NotFound si error PGRST116 ou 42P01', async () => {
+      const single = vi.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows' } })
+      const select = vi.fn().mockReturnValue({ single })
+      const eq = vi.fn().mockReturnValue({ select })
+      const update = vi.fn().mockReturnValue({ eq })
+      mockSupabase.from = vi.fn().mockReturnValue({ update, eq, select, single })
+
+      await expect(invoiceService.update('missing', { status: 'paid' })).rejects.toThrow()
+    })
+
+    it('devrait utiliser handleError si update rejette (catch)', async () => {
+      const single = vi.fn().mockRejectedValue(new Error('DB error'))
+      const select = vi.fn().mockReturnValue({ single })
+      const eq = vi.fn().mockReturnValue({ select })
+      const update = vi.fn().mockReturnValue({ eq })
+      mockSupabase.from = vi.fn().mockReturnValue({ update, eq, select, single })
+
+      await expect(invoiceService.update('1', { status: 'paid' })).rejects.toThrow()
     })
   })
 })

@@ -95,8 +95,13 @@ export async function POST(request: NextRequest) {
     },
   };
 
-  return withBodyValidation(request, schema, async (req, validatedData) => {
+  return withBodyValidation(request, schema, async (req, validatedData, rawBody) => {
     try {
+      // Pièces jointes : non validées par le schéma (contenu base64 volumineux), lues depuis le body brut
+      const attachments = Array.isArray(rawBody?.attachments)
+        ? (rawBody.attachments as EmailAttachment[])
+        : undefined;
+
       // Créer le client Supabase avec les cookies de la requête
       const supabase = createServerClient<Database>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -131,9 +136,6 @@ export async function POST(request: NextRequest) {
 
       // Utiliser les données validées
       const { to, subject, html, text, cc, bcc, replyTo } = validatedData;
-      const attachments = (validatedData as any).attachments as
-        | EmailAttachment[]
-        | undefined;
 
       // Récupérer l'organisation de l'utilisateur
       const { data: userData } = await supabase
@@ -149,22 +151,21 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const organization = userData.organization as {
-        name: string;
+      const organization = (userData.organization as {
+        name?: string;
         email?: string;
         phone?: string;
-      };
-
-      // NOTE: Fonctionnalité prévue - Intégrer avec un service d'email réel
-      // Options: Resend (recommandé), SendGrid, ou AWS SES
-      // Configurer les variables d'environnement: RESEND_API_KEY ou SENDGRID_API_KEY
-      // Pour l'instant, on simule l'envoi et on log
+      } | null) ?? {};
+      // Reply-to = email de l'organisation pour que les réponses aillent au bon contact
+      const orgEmail =
+        organization.email ?? process.env.EMAIL_FROM ?? "noreply@eduzen.io";
 
       const recipients = Array.isArray(to) ? to : [String(to)];
+      // Domaine vérifié Resend : eduzen.io. Tous les envois partent de noreply@eduzen.io (ou EMAIL_FROM si défini), quel que soit l'organisation.
+      const fromAddress =
+        process.env.EMAIL_FROM || "noreply@eduzen.io";
       const emailData = {
-        from:
-          organization.email ||
-          `noreply@${organization.name.toLowerCase().replace(/\s+/g, "")}.com`,
+        from: fromAddress,
         to: recipients,
         subject: String(subject),
         html: html ? String(html) : text ? String(text) : undefined,
@@ -180,13 +181,12 @@ export async function POST(request: NextRequest) {
         })),
         cc: cc ? (Array.isArray(cc) ? cc : [cc]) : undefined,
         bcc: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined,
-        replyTo: replyTo || organization.email,
+        replyTo: replyTo || orgEmail,
       };
 
-      // Vérifier si Resend est configuré
+      // Vérifier si Resend est configuré : sans clé = mode test (aucun envoi réel)
       const resendApiKey = process.env.RESEND_API_KEY;
-      const isTestMode =
-        !resendApiKey || process.env.NODE_ENV === "development";
+      const isTestMode = !resendApiKey;
 
       if (isTestMode) {
         // Mode test : log l'email au lieu de l'envoyer
@@ -233,11 +233,27 @@ export async function POST(request: NextRequest) {
         } as any);
 
         if (error) {
+          const rawMessage =
+            typeof error === "object" && error !== null && "message" in error
+              ? String((error as { message: unknown }).message)
+              : "Erreur Resend";
+          const errMessage =
+            rawMessage.includes("only send testing emails to your own")
+              ? "Avec l'adresse de test Resend (onboarding@resend.dev), vous ne pouvez envoyer qu'à l'adresse de votre compte Resend. Pour envoyer à d'autres destinataires (ex. apprenants), vérifiez un domaine sur https://resend.com/domains et utilisez une adresse de ce domaine."
+              : rawMessage.includes("domain is not verified")
+                ? "Le domaine de l'adresse d'envoi n'est pas vérifié chez Resend. Ajoutez et vérifiez votre domaine sur https://resend.com/domains, ou en développement utilisez l'adresse de test (voir .env EMAIL_FROM)."
+                : rawMessage;
           logger.error("Email Send - Resend error", error as Error, {
             to: recipients,
             subject: String(subject),
           });
-          throw error;
+          return NextResponse.json(
+            {
+              error: "Erreur lors de l'envoi de l'email",
+              message: errMessage,
+            },
+            { status: 500 },
+          );
         }
 
         logger.info("Email Send - Success via Resend", {
@@ -255,19 +271,39 @@ export async function POST(request: NextRequest) {
           },
         });
       } catch (resendError) {
+        const errMessage =
+          resendError instanceof Error
+            ? resendError.message
+            : typeof resendError === "object" &&
+                resendError !== null &&
+                "message" in resendError
+              ? String((resendError as { message: unknown }).message)
+              : "Erreur lors de l'envoi (Resend)";
         logger.error("Email Send - Send failed", resendError as Error, {
           error: sanitizeError(resendError),
         });
-        throw resendError;
+        return NextResponse.json(
+          {
+            error: "Erreur lors de l'envoi de l'email",
+            message: errMessage,
+          },
+          { status: 500 },
+        );
       }
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error
+            ? String((error as { message: unknown }).message)
+            : "Erreur inconnue";
       logger.error("Email Send - Failed", error as Error, {
         error: sanitizeError(error),
       });
       return NextResponse.json(
         {
           error: "Erreur lors de l'envoi de l'email",
-          message: error instanceof Error ? error.message : "Erreur inconnue",
+          message,
         },
         { status: 500 },
       );

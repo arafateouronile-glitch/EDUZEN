@@ -189,6 +189,31 @@ describe('useDebouncedCallback', () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
+  it('devrait annuler l\'appel précédent si rappelé avant la fin du délai', () => {
+    const callback = vi.fn()
+    const { result } = renderHook(() => useDebouncedCallback(callback, 300))
+
+    act(() => {
+      result.current('first')
+    })
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    act(() => {
+      result.current('second')
+    })
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    expect(callback).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback).toHaveBeenCalledWith('second')
+  })
+
   // Note: Les tests de debounce avec plusieurs appels rapides sont complexes
   // car useDebouncedCallback utilise useState pour le timeoutId, ce qui peut
   // causer des problèmes de synchronisation avec les fake timers.

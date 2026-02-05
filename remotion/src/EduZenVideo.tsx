@@ -808,7 +808,7 @@ const Scene7CTA: React.FC = () => {
   
   const trustBadges = [
     '✓ 14 jours d\'essai gratuit',
-    '✓ Pas de carte requise',
+    '✓ Aucun prélèvement aujourd\'hui',
     '✓ Support 24/7',
   ];
   

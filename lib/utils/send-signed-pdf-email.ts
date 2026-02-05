@@ -7,12 +7,26 @@ import { logger } from '@/lib/utils/logger'
 import { EMAIL_CONFIG } from '@/lib/config/app-config'
 
 const APP_NAME = 'EDUZEN'
-const FROM_EMAIL = EMAIL_CONFIG.getFromEmail()
+const RESEND_SANDBOX_FROM = 'EDUZEN <onboarding@resend.dev>'
+
+function getFromEmail(): string {
+  const configured = EMAIL_CONFIG.getFromEmail()
+  if (process.env.NODE_ENV === 'development' && configured && !configured.includes('@resend.dev')) {
+    return RESEND_SANDBOX_FROM
+  }
+  return configured
+}
+
+function isDomainNotVerifiedError(err: { statusCode?: number; message?: string }): boolean {
+  return err?.statusCode === 403 && typeof err?.message === 'string' && err.message.toLowerCase().includes('domain') && err.message.toLowerCase().includes('not verified')
+}
 
 export interface SendSignedPdfParams {
+  /** Email du signataire (apprenant / client) — reçoit sa copie */
   recipientEmail: string
   recipientName: string
-  adminEmail: string
+  /** Email de l'OF (admin / secrétaire) — reçoit aussi une copie */
+  adminEmail?: string
   documentTitle: string
   signedPdfBuffer: Uint8Array
   signedFilename: string
@@ -47,23 +61,44 @@ export async function sendSignedPdfEmails(params: SendSignedPdfParams): Promise<
   const { Resend } = await import('resend')
   const resend = new Resend(RESEND_API_KEY)
 
-  const toSend = [
-    { to: params.recipientEmail, name: params.recipientName },
-    ...(params.adminEmail && params.adminEmail !== params.recipientEmail
-      ? [{ to: params.adminEmail, name: 'Administrateur' }]
-      : []),
-  ]
+  const seen = new Set<string>()
+  const toSend: Array<{ to: string; name: string }> = []
+  if (params.recipientEmail?.trim() && !seen.has(params.recipientEmail.trim().toLowerCase())) {
+    toSend.push({ to: params.recipientEmail.trim(), name: params.recipientName || 'Signataire' })
+    seen.add(params.recipientEmail.trim().toLowerCase())
+  }
+  if (params.adminEmail?.trim() && !seen.has(params.adminEmail.trim().toLowerCase())) {
+    toSend.push({ to: params.adminEmail.trim(), name: 'Administrateur' })
+    seen.add(params.adminEmail.trim().toLowerCase())
+  }
 
+  if (toSend.length === 0) {
+    logger.warn('Aucun destinataire valide pour l\'envoi du document signé (apprenant et OF)')
+    return
+  }
+
+  const fromEmail = getFromEmail()
   await Promise.allSettled(
-    toSend.map(async ({ to }) => {
-      const { error } = await resend.emails.send({
-        from: FROM_EMAIL,
+    toSend.map(async ({ to, name }) => {
+      let { error } = await resend.emails.send({
+        from: fromEmail,
         to,
         subject: `Votre document signé : ${params.documentTitle}`,
         html,
         attachments: [{ filename: params.signedFilename, content }],
       } as any)
-      if (error) logger.error('Envoi signé PDF:', { to, error })
+      if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as any)) {
+        logger.warn('Domaine From non vérifié chez Resend, nouvel essai avec onboarding@resend.dev')
+        const retry = await resend.emails.send({
+          from: RESEND_SANDBOX_FROM,
+          to,
+          subject: `Votre document signé : ${params.documentTitle}`,
+          html,
+          attachments: [{ filename: params.signedFilename, content }],
+        } as any)
+        error = retry.error ?? null
+      }
+      if (error) logger.error('Envoi signé PDF:', { to, name, error })
     })
   )
 }
@@ -114,15 +149,27 @@ export async function sendSignedPdfToRecipients(params: {
     return true
   })
 
+  const fromEmail = getFromEmail()
   await Promise.allSettled(
     toSend.map(async ({ to, name }) => {
-      const { error } = await resend.emails.send({
-        from: EMAIL_CONFIG.getFromEmail(),
+      let { error } = await resend.emails.send({
+        from: fromEmail,
         to,
         subject: `Convention signée : ${params.documentTitle}`,
         html,
         attachments: [{ filename: params.signedFilename, content }],
       } as any)
+      if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as any)) {
+        logger.warn('Domaine From non vérifié chez Resend, nouvel essai avec onboarding@resend.dev')
+        const retry = await resend.emails.send({
+          from: RESEND_SANDBOX_FROM,
+          to,
+          subject: `Convention signée : ${params.documentTitle}`,
+          html,
+          attachments: [{ filename: params.signedFilename, content }],
+        } as any)
+        error = retry.error ?? null
+      }
       if (error) logger.error('Envoi signé PDF (cascade):', { to, error })
     })
   )

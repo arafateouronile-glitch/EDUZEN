@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { emailTemplateService } from '@/lib/services/email-template.service.client'
@@ -29,6 +29,38 @@ import {
 import { useToast } from '@/components/ui/toast'
 import { Mail, Plus, Edit, Trash2, Copy, CheckCircle, XCircle } from 'lucide-react'
 import { motion, AnimatePresence } from '@/components/ui/motion'
+
+/** Retourne le contenu HTML en texte brut (pas de rendu HTML). Supprime style/script. */
+function htmlToPlainText(html: string): string {
+  if (!html || typeof html !== 'string') return ''
+  let cleaned = html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+  const div = typeof document !== 'undefined' ? document.createElement('div') : null
+  if (!div) {
+    return cleaned.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  }
+  div.innerHTML = cleaned
+  const raw = div.textContent || div.innerText || ''
+  return raw.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim()
+}
+
+/**
+ * Convertit le texte simple (format lisible) en HTML pour l'email.
+ * Règles : **gras** → <strong>, *italique* → <em>, double retour à la ligne = paragraphe.
+ */
+function simpleFormatToHtml(text: string): string {
+  if (!text || typeof text !== 'string') return ''
+  const paragraphs = text.split(/\n\s*\n/)
+  const wrapped = paragraphs.map((block) => {
+    const line = block
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br/>')
+    return line.trim() ? `<p>${line}</p>` : ''
+  }).filter(Boolean).join('\n')
+  return `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">${wrapped}</div>`
+}
 
 export default function EmailTemplatesPage() {
   const { user } = useAuth()
@@ -162,12 +194,15 @@ export default function EmailTemplatesPage() {
   }
 
   const handleEdit = (template: any) => {
+    const bodySource = template.body_text?.trim()
+      ? template.body_text
+      : htmlToPlainText(template.body_html || '')
     setFormData({
       email_type: template.email_type,
       name: template.name,
       subject: template.subject,
       body_html: template.body_html,
-      body_text: template.body_text || '',
+      body_text: bodySource,
       is_default: template.is_default,
       is_active: template.is_active,
       description: template.description || '',
@@ -177,10 +212,15 @@ export default function EmailTemplatesPage() {
   }
 
   const handleSubmit = () => {
+    const payload = {
+      ...formData,
+      body_text: formData.body_text,
+      body_html: simpleFormatToHtml(formData.body_text),
+    }
     if (editingTemplate) {
-      updateMutation.mutate({ id: editingTemplate.id, data: formData })
+      updateMutation.mutate({ id: editingTemplate.id, data: payload })
     } else {
-      createMutation.mutate(formData)
+      createMutation.mutate(payload)
     }
   }
 
@@ -299,8 +339,16 @@ export default function EmailTemplatesPage() {
                             <strong>Sujet :</strong> {template.subject}
                           </p>
                           {template.description && (
-                            <p className="text-sm text-gray-500">{template.description}</p>
+                            <p className="text-sm text-gray-500 mb-1">{template.description}</p>
                           )}
+                          {(template.body_html || template.body_text) && (() => {
+                            const plain = htmlToPlainText(template.body_html || template.body_text || '')
+                            return (
+                              <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">
+                                <strong>Aperçu :</strong> {plain.slice(0, 200)}{plain.length > 200 ? '…' : ''}
+                              </p>
+                            )
+                          })()}
                         </div>
                         <div className="flex items-center gap-2">
                           <Button
@@ -410,29 +458,25 @@ export default function EmailTemplatesPage() {
               )}
             </div>
 
-            {/* Corps HTML */}
+            {/* Corps de l'email en texte simple (balises lisibles) */}
             <div>
-              <Label htmlFor="body_html">Corps de l'email (HTML) *</Label>
-              <Textarea
-                id="body_html"
-                value={formData.body_html}
-                onChange={(e) => setFormData({ ...formData, body_html: e.target.value })}
-                placeholder="<p>Bonjour {student_name},</p><p>Votre document {document_title} est prêt.</p>"
-                rows={12}
-                className="font-mono text-sm"
-              />
-            </div>
-
-            {/* Corps texte */}
-            <div>
-              <Label htmlFor="body_text">Corps de l'email (texte brut - optionnel)</Label>
+              <Label htmlFor="body_text">Corps de l'email *</Label>
               <Textarea
                 id="body_text"
                 value={formData.body_text}
                 onChange={(e) => setFormData({ ...formData, body_text: e.target.value })}
-                placeholder="Version texte de l'email..."
-                rows={6}
+                placeholder={`Félicitations {student_name} !
+
+Votre certificat **{certificate_title}** a été délivré avec succès.
+
+Cordialement,
+L'équipe {organization_name}`}
+                rows={14}
+                className="font-sans text-sm whitespace-pre-wrap"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                <strong>Format simple :</strong> <code className="bg-muted px-1 rounded">**gras**</code> <code className="bg-muted px-1 rounded">*italique*</code> — Retour à la ligne = nouveau paragraphe. Utilisez les variables indiquées pour ce type d'email.
+              </p>
             </div>
 
             {/* Options */}
@@ -467,7 +511,7 @@ export default function EmailTemplatesPage() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!formData.name || !formData.subject || !formData.body_html || createMutation.isPending || updateMutation.isPending}
+              disabled={!formData.name || !formData.subject || !formData.body_text?.trim() || createMutation.isPending || updateMutation.isPending}
             >
               {editingTemplate ? 'Enregistrer' : 'Créer'}
             </Button>

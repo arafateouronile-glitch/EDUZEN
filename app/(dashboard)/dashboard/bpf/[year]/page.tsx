@@ -20,6 +20,7 @@ import {
   bpfService,
   BPFStats,
   BPFRevenueBreakdown,
+  BPFChargesBreakdown,
   BPFInconsistency,
   BPFStudentBreakdown,
   BPFCerfaData,
@@ -61,6 +62,11 @@ import {
   Building,
   GraduationCap,
   Target,
+  Receipt,
+  Briefcase,
+  Home,
+  Package,
+  Wrench,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -144,6 +150,15 @@ export default function BPFDetailPage() {
     enabled: !!user?.organization_id && !isNaN(year),
   })
 
+  const { data: charges, isLoading: chargesLoading, refetch: refetchCharges } = useQuery({
+    queryKey: ['bpf-charges', user?.organization_id, year],
+    queryFn: async () => {
+      if (!user?.organization_id) return null
+      return await bpfService.getChargesBreakdown(user.organization_id, year)
+    },
+    enabled: !!user?.organization_id && !isNaN(year),
+  })
+
   const { data: cerfaData, refetch: refetchCerfa } = useQuery({
     queryKey: ['bpf-cerfa', user?.organization_id, year],
     queryFn: async () => {
@@ -202,10 +217,11 @@ export default function BPFDetailPage() {
   const refetchAll = useCallback(() => {
     refetchStats()
     refetchRevenue()
+    refetchCharges()
     refetchStudents()
     refetchInconsistencies()
     refetchReport()
-  }, [refetchStats, refetchRevenue, refetchStudents, refetchInconsistencies, refetchReport])
+  }, [refetchStats, refetchRevenue, refetchCharges, refetchStudents, refetchInconsistencies, refetchReport])
 
   // Handlers
   const handleOneClick = async () => {
@@ -252,7 +268,7 @@ export default function BPFDetailPage() {
     return new Intl.NumberFormat('fr-FR').format(num)
   }
 
-  const isLoading = statsLoading || revenueLoading || studentsLoading || inconsistenciesLoading || reportLoading
+  const isLoading = statsLoading || revenueLoading || studentsLoading || chargesLoading || inconsistenciesLoading || reportLoading
 
   const criticalIssues = inconsistencies.filter((i) => i.severity === 'critical').length
   const warningIssues = inconsistencies.filter((i) => i.severity === 'warning').length
@@ -481,6 +497,26 @@ export default function BPFDetailPage() {
             <p className="text-[10px] text-gray-400 mt-1">Cliquez pour voir le détail</p>
           </CardContent>
         </Card>
+
+        {/* Charges totales (période = année) */}
+        <Card className="relative overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-300 border-0 bg-gradient-to-br from-amber-50 to-orange-50 lg:col-span-2 lg:col-start-1">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="p-2.5 bg-amber-100 rounded-lg">
+                <Receipt className="h-5 w-5 text-amber-600" />
+              </div>
+            </div>
+            {chargesLoading ? (
+              <Skeleton className="h-8 w-24 mb-2" />
+            ) : (
+              <p className="text-2xl lg:text-3xl font-bold text-gray-900 mb-1">
+                {formatCurrency(charges?.total_charges || 0)}
+              </p>
+            )}
+            <p className="text-xs text-gray-600">Charges (année {year})</p>
+            <p className="text-[10px] text-gray-400 mt-1">Filtrées par date de charge</p>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Main Content Grid */}
@@ -555,6 +591,81 @@ export default function BPFDetailPage() {
                     <p className="text-xs text-gray-500 uppercase mb-1">Situation de handicap</p>
                     <p className="text-2xl font-bold text-purple-700">
                       {formatNumber(studentBreakdown?.students_disabled || 0)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Charges par catégorie (période = année) */}
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50/50 to-orange-50/50">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-md">
+                  <Receipt className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-bold text-gray-900">
+                    Charges (année {year})
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Ventilation par catégorie BPF · Filtrées par date de charge
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {chargesLoading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+                    <p className="text-xs text-gray-500 uppercase mb-1">Total</p>
+                    <p className="text-xl font-bold text-amber-700">
+                      {formatCurrency(charges?.total_charges || 0)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs text-gray-500 uppercase mb-1 flex items-center gap-1">
+                      <Briefcase className="h-3 w-3" /> Sous-traitance
+                    </p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(charges?.subcontracting || 0)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs text-gray-500 uppercase mb-1 flex items-center gap-1">
+                      <Home className="h-3 w-3" /> Location
+                    </p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(charges?.location || 0)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs text-gray-500 uppercase mb-1 flex items-center gap-1">
+                      <Package className="h-3 w-3" /> Équipements
+                    </p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(charges?.equipment || 0)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs text-gray-500 uppercase mb-1 flex items-center gap-1">
+                      <Wrench className="h-3 w-3" /> Fournitures
+                    </p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(charges?.supplies || 0)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <p className="text-xs text-gray-500 uppercase mb-1">Autres</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(charges?.other || 0)}
                     </p>
                   </div>
                 </div>

@@ -105,15 +105,6 @@ export async function POST(request: NextRequest) {
         },
       );
 
-      // Vérifier d'abord la session
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-      logger.info("User Create - Session check", {
-        hasSession: !!session,
-      });
-
       const {
         data: { user },
         error: authError,

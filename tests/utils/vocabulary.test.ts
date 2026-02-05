@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { getVocabulary, type OrganizationType } from '@/lib/utils/vocabulary'
+import { getVocabulary, useVocabulary, type OrganizationType } from '@/lib/utils/vocabulary'
 
 describe('getVocabulary', () => {
   it('devrait retourner le vocabulaire pour "training_organization"', () => {
@@ -67,5 +67,23 @@ describe('getVocabulary', () => {
     expect(typeof vocab).toBe('object')
     expect(vocab).not.toBeNull()
     expect(Object.keys(vocab).length).toBeGreaterThan(0)
+  })
+
+  it('devrait utiliser training_organization par défaut si passé explicitement', () => {
+    const vocab = getVocabulary('training_organization')
+    expect(vocab.student).toBe('Stagiaire')
+  })
+})
+
+describe('useVocabulary', () => {
+  it('devrait retourner le vocabulaire school par défaut', () => {
+    const vocab = useVocabulary()
+    expect(vocab).toHaveProperty('student')
+    expect(vocab).toHaveProperty('teacher')
+  })
+
+  it('devrait retourner le vocabulaire selon le type passé', () => {
+    const vocab = useVocabulary('training_organization')
+    expect(vocab.student).toBe('Stagiaire')
   })
 })

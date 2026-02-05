@@ -28,9 +28,8 @@ const { mockSupabase } = vi.hoisted(() => {
     channel: vi.fn(() => {
       const channelMock: any = {
         on: vi.fn().mockReturnThis(),
-        subscribe: vi.fn(),
+        subscribe: vi.fn().mockImplementation(() => channelMock),
       }
-      // Permettre le chaînage de .on()
       channelMock.on.mockReturnValue(channelMock)
       return channelMock
     }),
@@ -114,6 +113,135 @@ describe('NotificationService', () => {
 
       await expect(service.create(params)).rejects.toThrow('Database error')
     })
+
+    it('devrait propager l\'erreur si le fetch après rpc échoue', async () => {
+      const params: CreateNotificationParams = {
+        user_id: 'user-1',
+        organization_id: 'org-1',
+        type: 'info',
+        title: 'Test',
+        message: 'Test',
+      }
+      const notificationId = 'notif-1'
+      const fetchError = new Error('Fetch failed')
+
+      mockSupabase.rpc.mockResolvedValueOnce({ data: notificationId, error: null })
+      mockSupabase.single.mockResolvedValueOnce({ data: null, error: fetchError })
+
+      await expect(service.create(params)).rejects.toThrow('Fetch failed')
+    })
+  })
+
+  describe('createForUsers', () => {
+    it('devrait retourner un tableau vide si user_ids est vide', async () => {
+      const result = await service.createForUsers(
+        [],
+        'org-1',
+        'info',
+        'Title',
+        'Message'
+      )
+      expect(result).toEqual([])
+      expect(mockSupabase.from).not.toHaveBeenCalled()
+    })
+
+    it('devrait créer des notifications sans data ni link (data: {}, link: null)', async () => {
+      const userIds = ['user-1']
+      const notifications: Notification[] = userIds.map((id, i) => ({
+        id: `notif-${i + 1}`,
+        user_id: id,
+        organization_id: 'org-1',
+        type: 'info' as const,
+        title: 'No data',
+        message: 'Message',
+        data: {},
+        created_at: new Date().toISOString(),
+      }))
+
+      const insertChain: any = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: notifications, error: null }),
+      }
+      mockSupabase.from.mockReturnValue(insertChain)
+
+      const result = await service.createForUsers(
+        userIds,
+        'org-1',
+        'info',
+        'No data',
+        'Message'
+      )
+
+      expect(result).toEqual(notifications)
+      expect(insertChain.insert).toHaveBeenCalledWith(
+        userIds.map((user_id) => ({
+          user_id,
+          organization_id: 'org-1',
+          type: 'info',
+          title: 'No data',
+          message: 'Message',
+          data: {},
+          link: null,
+        }))
+      )
+    })
+
+    it('devrait créer des notifications pour plusieurs utilisateurs', async () => {
+      const userIds = ['user-1', 'user-2']
+      const notifications: Notification[] = userIds.map((id, i) => ({
+        id: `notif-${i + 1}`,
+        user_id: id,
+        organization_id: 'org-1',
+        type: 'info' as const,
+        title: 'Batch',
+        message: 'Message',
+        data: { key: 'value' },
+        created_at: new Date().toISOString(),
+      }))
+
+      const insertChain: any = {
+        insert: vi.fn(),
+        select: vi.fn(),
+      }
+      insertChain.insert.mockReturnValue(insertChain)
+      insertChain.select.mockResolvedValue({ data: notifications, error: null })
+      mockSupabase.from.mockReturnValue(insertChain)
+
+      const result = await service.createForUsers(
+        userIds,
+        'org-1',
+        'info',
+        'Batch',
+        'Message',
+        { key: 'value' },
+        '/link'
+      )
+
+      expect(result).toEqual(notifications)
+      expect(insertChain.insert).toHaveBeenCalledWith(
+        userIds.map((user_id) => ({
+          user_id,
+          organization_id: 'org-1',
+          type: 'info',
+          title: 'Batch',
+          message: 'Message',
+          data: { key: 'value' },
+          link: '/link',
+        }))
+      )
+    })
+
+    it('devrait propager l\'erreur si batch insert échoue', async () => {
+      const insertChain: any = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: null, error: { message: 'Insert failed' } }),
+      }
+      mockSupabase.from.mockReturnValue(insertChain)
+
+      await expect(
+        service.createForUsers(['user-1'], 'org-1', 'info', 'T', 'M')
+      ).rejects.toThrow()
+    })
   })
 
   describe('getByUser', () => {
@@ -161,6 +289,25 @@ describe('NotificationService', () => {
       expect(queryBuilder.eq).toHaveBeenCalledWith('user_id', userId)
     })
 
+    it('devrait appliquer limit et offset', async () => {
+      const userId = 'user-1'
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ data: [], error: null }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
+
+      await service.getByUser(userId, { limit: 10, offset: 5 })
+
+      expect(queryBuilder.limit).toHaveBeenCalledWith(10)
+      expect(queryBuilder.range).toHaveBeenCalledWith(5, 14) // offset, offset + limit - 1
+    })
+
     it('devrait filtrer les notifications non lues si demandé', async () => {
       const userId = 'user-1'
       const unreadNotifications: Notification[] = [
@@ -191,6 +338,23 @@ describe('NotificationService', () => {
 
       expect(result).toEqual(unreadNotifications)
       expect(queryBuilder.is).toHaveBeenCalledWith('read_at', null)
+    })
+
+    it('devrait propager l\'erreur si la requête échoue', async () => {
+      const userId = 'user-1'
+      const queryError = new Error('Query failed')
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ data: null, error: queryError }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
+
+      await expect(service.getByUser(userId)).rejects.toThrow('Query failed')
     })
   })
 
@@ -229,6 +393,39 @@ describe('NotificationService', () => {
 
       expect(result).toBe(0)
     })
+
+    it('devrait retourner 0 si user_id est null ou undefined', async () => {
+      expect(await service.getUnreadCount(null)).toBe(0)
+      expect(await service.getUnreadCount(undefined)).toBe(0)
+      expect(mockSupabase.from).not.toHaveBeenCalled()
+    })
+
+    it('devrait retourner 0 en cas d\'erreur Supabase', async () => {
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ count: null, error: { message: 'DB error' } }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
+
+      const result = await service.getUnreadCount('user-1')
+
+      expect(result).toBe(0)
+    })
+
+    it('devrait retourner 0 si la requête lance (catch)', async () => {
+      const queryBuilder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockRejectedValue(new Error('Network error')),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
+
+      const result = await service.getUnreadCount('user-1')
+
+      expect(result).toBe(0)
+    })
   })
 
   describe('markAsRead', () => {
@@ -243,6 +440,20 @@ describe('NotificationService', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith('mark_notification_read', {
         p_notification_id: notificationId,
       })
+    })
+
+    it('devrait retourner false si rpc retourne data falsy', async () => {
+      mockSupabase.rpc.mockResolvedValueOnce({ data: false, error: null })
+
+      const result = await service.markAsRead('notif-1')
+
+      expect(result).toBe(false)
+    })
+
+    it('devrait propager l\'erreur si rpc échoue', async () => {
+      mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: new Error('RPC failed') })
+
+      await expect(service.markAsRead('notif-1')).rejects.toThrow('RPC failed')
     })
   })
 
@@ -259,6 +470,20 @@ describe('NotificationService', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith('mark_all_notifications_read', {
         p_user_id: userId,
       })
+    })
+
+    it('devrait retourner 0 si rpc retourne data falsy', async () => {
+      mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: null })
+
+      const result = await service.markAllAsRead('user-1')
+
+      expect(result).toBe(0)
+    })
+
+    it('devrait propager l\'erreur si rpc échoue', async () => {
+      mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: new Error('RPC failed') })
+
+      await expect(service.markAllAsRead('user-1')).rejects.toThrow('RPC failed')
     })
   })
 
@@ -279,6 +504,17 @@ describe('NotificationService', () => {
       expect(mockSupabase.from).toHaveBeenCalledWith('notifications')
       expect(queryBuilder.eq).toHaveBeenCalledWith('id', notificationId)
     })
+
+    it('devrait propager l\'erreur si la suppression échoue', async () => {
+      const queryBuilder: any = {
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: (resolve: any) => Promise.resolve({ error: new Error('Delete failed') }).then(resolve),
+      }
+      mockSupabase.from.mockReturnValue(queryBuilder)
+
+      await expect(service.delete('notif-1')).rejects.toThrow('Delete failed')
+    })
   })
 
   describe('subscribeToNotifications', () => {
@@ -296,7 +532,6 @@ describe('NotificationService', () => {
       const userId = 'user-1'
       const callback = vi.fn()
 
-      // Mock unsubscribeFromNotifications qui appelle removeChannel
       const unsubscribeSpy = vi.spyOn(service as any, 'unsubscribeFromNotifications')
       unsubscribeSpy.mockImplementation(() => {
         mockSupabase.removeChannel()
@@ -305,8 +540,50 @@ describe('NotificationService', () => {
       service.subscribeToNotifications(userId, callback)
       service.subscribeToNotifications(userId, callback)
 
-      // Devrait nettoyer l'ancien channel
       expect(unsubscribeSpy).toHaveBeenCalled()
+    })
+
+    it('devrait retourner une fonction unsubscribe qui ne lance pas', () => {
+      const userId = 'user-1'
+      const callback = vi.fn()
+      const unsubscribe = service.subscribeToNotifications(userId, callback)
+      expect(typeof unsubscribe).toBe('function')
+      expect(() => unsubscribe()).not.toThrow()
+    })
+  })
+
+  describe('unsubscribeFromNotifications', () => {
+    it('devrait ne rien faire si pas de channel pour l\'utilisateur', () => {
+      ;(service as any).unsubscribeFromNotifications('user-unknown')
+      expect(mockSupabase.removeChannel).not.toHaveBeenCalled()
+    })
+
+    it('devrait appeler removeChannel et retirer le channel de la map quand il existe (l.353-354)', () => {
+      const userId = 'user-1'
+      const callback = vi.fn()
+      service.subscribeToNotifications(userId, callback)
+      expect((service as any).channels.has(`notifications:${userId}`)).toBe(true)
+      ;(service as any).unsubscribeFromNotifications(userId)
+      expect(mockSupabase.removeChannel).toHaveBeenCalled()
+      expect((service as any).channels.has(`notifications:${userId}`)).toBe(false)
+    })
+  })
+
+  describe('cleanup', () => {
+    it('devrait retirer tous les channels et vider la map', () => {
+      const userId = 'user-1'
+      const callback = vi.fn()
+      service.subscribeToNotifications(userId, callback)
+      service.cleanup()
+      expect(mockSupabase.removeChannel).toHaveBeenCalled()
+    })
+  })
+
+  describe('constructor', () => {
+    it('devrait lever une erreur si supabaseClient est null', () => {
+      expect(() => new NotificationService(null as any)).toThrow(
+        'SupabaseClient is required for NotificationService'
+      )
     })
   })
 })

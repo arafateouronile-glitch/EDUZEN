@@ -39,6 +39,8 @@ import {
   Star,
   Pencil,
   Plus,
+  Wand2,
+  Loader2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
@@ -247,6 +249,32 @@ export default function DocumentTemplatesPage() {
     },
   })
 
+  // Mutation pour créer tous les templates par défaut
+  const seedDefaultsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/document-templates/seed-defaults', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la création des modèles')
+      }
+      return response.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['document-templates', user?.organization_id] })
+      queryClient.invalidateQueries({ queryKey: ['document-templates-by-type', user?.organization_id] })
+      alert(`${data.summary.created} modèle(s) créé(s) avec succès !${data.summary.skipped > 0 ? ` (${data.summary.skipped} déjà existant(s))` : ''}`)
+    },
+    onError: (error) => {
+      logger.error('Erreur lors de la création des modèles par défaut:', error)
+      alert(error instanceof Error ? error.message : 'Erreur lors de la création des modèles')
+    },
+  })
+
   // Filtrer les types selon la recherche et le statut
   const filteredTypes = DOCUMENT_TYPES.filter((docType) => {
     const matchesSearch =
@@ -316,6 +344,22 @@ export default function DocumentTemplatesPage() {
           </h1>
           <p className="text-text-tertiary mt-1">Gérez vos modèles de documents avec header et footer personnalisables</p>
         </div>
+        <Button
+          onClick={() => seedDefaultsMutation.mutate()}
+          disabled={seedDefaultsMutation.isPending}
+        >
+          {seedDefaultsMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Création en cours...
+            </>
+          ) : (
+            <>
+              <Wand2 className="h-4 w-4 mr-2" />
+              Créer tous les modèles par défaut
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Analytics Link */}

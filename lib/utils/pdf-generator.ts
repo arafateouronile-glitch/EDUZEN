@@ -83,6 +83,7 @@ export async function generatePDFFromHTML(
       onclone: (clonedDoc, element) => {
         // html2canvas peut planter avec certains background-image (url/svg/pattern) => canvas 0x0.
         // On neutralise les backgrounds en URL (pas les couleurs) pour fiabiliser la génération PDF.
+        // On force une police système pour éviter les 404 sur /assets/Inter_18pt-*.ttf (bundling fonts).
         try {
           const style = clonedDoc.createElement('style')
           style.textContent = `
@@ -90,6 +91,7 @@ export async function generatePDFFromHTML(
             [style*="background-image"] { background-image: none !important; }
             [style*="background: url"] { background-image: none !important; }
             [style*="background:url"] { background-image: none !important; }
+            * { font-family: Arial, Helvetica, sans-serif !important; }
           `
           clonedDoc.head.appendChild(style)
         } catch {

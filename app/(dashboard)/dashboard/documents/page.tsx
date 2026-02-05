@@ -14,7 +14,7 @@ import {
   Plus, Search, FileText, Download, Upload, X, Eye, Trash2,
   Image as ImageIcon, File as FileIcon, FileCheck, Users,
   FileSpreadsheet, FileOutput, FileInput, SlidersHorizontal,
-  Mail, Send, MoreVertical, PenTool
+  Mail, Send, MoreVertical, PenTool, CheckCircle2
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, cn } from '@/lib/utils'
@@ -543,6 +543,12 @@ export default function DocumentsPage() {
               Génération en masse
             </Button>
           </Link>
+          <Link href="/dashboard/signing-processes">
+            <Button variant="outline" className="hover:bg-brand-cyan-ghost hover:border-brand-cyan/30 hover:text-brand-cyan transition-all">
+              <PenTool className="mr-2 h-4 w-4" />
+              Tour de contrôle (signature en cascade)
+            </Button>
+          </Link>
         </div>
       </motion.div>
 
@@ -712,6 +718,12 @@ export default function DocumentsPage() {
                           <span className="px-2.5 py-0.5 text-xs bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost text-brand-blue rounded-lg font-semibold uppercase tracking-wide border border-brand-blue/20">
                             {getTypeLabel(document.type)}
                           </span>
+                          {(document as { status?: string }).status === 'signed' && (
+                            <span className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-lg border border-green-200 flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Signé
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-4 text-sm text-gray-500">

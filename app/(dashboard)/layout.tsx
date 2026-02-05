@@ -72,14 +72,19 @@ export default function DashboardLayout({
   // IMPORTANT: Tous les hooks doivent être appelés AVANT les retours conditionnels
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      // Ignorer les erreurs provenant de scripts externes (extensions de navigateur)
-      if (
-        event.filename?.includes('frame.js') ||
-        event.filename?.includes('operationBanner') ||
-        event.filename?.includes('chrome-extension://') ||
-        event.filename?.includes('moz-extension://') ||
-        event.filename?.includes('safari-extension://')
-      ) {
+      const msg = event.message ?? ''
+      const filename = event.filename ?? ''
+      // Ignorer les erreurs provenant de scripts externes (extensions de navigateur, iframes)
+      const isExternalScript =
+        filename.includes('frame.js') ||
+        filename.includes('frame_start') ||
+        filename.includes('operationBanner') ||
+        filename.includes('chrome-extension://') ||
+        filename.includes('moz-extension://') ||
+        filename.includes('safari-extension://')
+      const isKnownDomNoise =
+        /removeChild.*not a child of this node/i.test(msg) || /NotFoundError.*removeChild/i.test(msg)
+      if (isExternalScript || isKnownDomNoise) {
         // Ne pas afficher ces erreurs dans la console en production
         if (process.env.NODE_ENV === 'production') {
           event.preventDefault()

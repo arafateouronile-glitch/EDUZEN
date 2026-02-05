@@ -12,7 +12,10 @@ import {
   Upload,
   Zap,
   Eye,
+  Plus,
+  RefreshCw,
 } from 'lucide-react'
+import Link from 'next/link'
 import { GlassCardPremium } from './glass-card-premium'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -49,6 +52,7 @@ interface Evidence {
 interface EvidenceVaultProps {
   evidence: Evidence[]
   onViewEvidence?: (evidence: Evidence) => void
+  onRefreshEvidence?: () => void | Promise<void>
   className?: string
 }
 
@@ -220,7 +224,7 @@ function EvidenceRow({
   )
 }
 
-export function EvidenceVault({ evidence, onViewEvidence, className }: EvidenceVaultProps) {
+export function EvidenceVault({ evidence, onViewEvidence, onRefreshEvidence, className }: EvidenceVaultProps) {
   // Stats rapides
   const autoCount = evidence.filter(
     (e) => e.source === 'system' || e.source === 'automated_detection'
@@ -241,15 +245,37 @@ export function EvidenceVault({ evidence, onViewEvidence, className }: EvidenceV
               Coffre des Preuves
             </h3>
             <p className="text-xs text-slate-500">
-              Dernières preuves collectées
+              Dernières preuves collectées (auto + manuelles)
             </p>
           </div>
         </div>
 
-        <Button variant="ghost" size="sm" className="text-[#34B9EE] hover:bg-[#34B9EE]/10">
-          Voir tout
-          <ChevronRight className="h-4 w-4 ml-1" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {onRefreshEvidence && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRefreshEvidence()}
+              className="text-slate-600 hover:bg-slate-100"
+              title="Rafraîchir les preuves automatiques"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Rafraîchir
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" className="text-[#34B9EE] hover:bg-[#34B9EE]/10" asChild>
+            <Link href="/dashboard/qualiopi/evidence">
+              Voir tout
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
+          </Button>
+          <Button size="sm" className="bg-[#274472] hover:bg-[#1a2f4a] text-white" asChild>
+            <Link href="/dashboard/qualiopi/evidence/add">
+              <Plus className="h-4 w-4 mr-1" />
+              Ajouter une preuve
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats bar */}

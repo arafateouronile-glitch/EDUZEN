@@ -68,9 +68,7 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  const { data: { user: authUser } } = await supabase.auth.getUser()
 
   // Routes protégées (nécessitent une authentification)
   const protectedRoutes = ['/dashboard', '/students', '/programs', '/payments', '/attendance']
@@ -83,7 +81,7 @@ export async function middleware(req: NextRequest) {
   const isAuthRoute = authRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
 
   // Si la route est protégée et l'utilisateur n'est pas connecté
-  if (isProtectedRoute && !session) {
+  if (isProtectedRoute && !authUser) {
     // Pour les routes API, retourner une erreur au lieu de rediriger
     if (req.nextUrl.pathname.startsWith('/api')) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
@@ -95,7 +93,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Si l'utilisateur est connecté et essaie d'accéder aux routes d'authentification
-  if (isAuthRoute && session) {
+  if (isAuthRoute && authUser) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/dashboard'
     return NextResponse.redirect(redirectUrl)

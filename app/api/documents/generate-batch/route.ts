@@ -57,28 +57,12 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    // Authentification
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-    let user
-    if (session && session.user) {
-      user = session.user
-    } else {
-      const {
-        data: { user: userFromGetUser },
-        error: authError,
-      } = await supabase.auth.getUser()
-
-      if (authError || !userFromGetUser) {
-        return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-      }
-
-      user = userFromGetUser
-    }
-
-    if (!user) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 

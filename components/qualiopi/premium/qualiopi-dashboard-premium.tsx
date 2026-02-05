@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -10,6 +10,8 @@ import {
   QUALIOPI_REFERENTIAL,
 } from '@/lib/services/auditor-portal.service'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/toast'
+import { Plus, AlertCircle } from 'lucide-react'
 
 // Composants Premium
 import { GlassCardPremium } from './glass-card-premium'
@@ -48,7 +50,19 @@ import {
 import Link from 'next/link'
 import { format, subDays, eachDayOfInterval } from 'date-fns'
 
-// Progress Tracker pour les 32 indicateurs
+// Map indicator_code (ex: "1.1") vers numéro référentiel 1-32
+function indicatorCodeToReferentialNumber(code: string): number | null {
+  const parts = code.split('.')
+  const c = parseInt(parts[0], 10)
+  const i = parseInt(parts[1], 10)
+  if (Number.isNaN(c) || Number.isNaN(i)) return null
+  const criterion = QUALIOPI_REFERENTIAL.find((cr) => cr.number === c)
+  if (!criterion) return null
+  const indicator = criterion.indicators[i - 1]
+  return indicator?.number ?? null
+}
+
+// Progress Tracker pour les 32 indicateurs (utilise le statut effectif : preuves = en cours)
 function IndicatorProgressTracker({
   indicators,
 }: {
@@ -256,7 +270,7 @@ function IndicatorPanel({
         <AnimatePresence>
           {criterionIndicators.map((indicator, index) => {
             const dbIndicator = indicators.find(
-              (i) => i.indicator_code === String(indicator.number)
+              (i) => indicatorCodeToReferentialNumber(i.indicator_code) === indicator.number
             )
             const status = dbIndicator?.status || 'not_started'
             const isCompliant = status === 'compliant'
@@ -326,12 +340,15 @@ function IndicatorPanel({
 // Composant principal du Dashboard
 export function QualiopiDashboardPremium() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const { addToast } = useToast()
   const supabase = createClient()
   const [selectedCriterion, setSelectedCriterion] = useState<number | null>(null)
   const [isAuditMode, setIsAuditMode] = useState(false)
+  const [hasTriedInit, setHasTriedInit] = useState(false)
 
   // Récupérer les indicateurs
-  const { data: indicators = [], isLoading: loadingIndicators } = useQuery({
+  const { data: indicators = [], isLoading: loadingIndicators, refetch: refetchIndicators } = useQuery({
     queryKey: ['qualiopi-indicators-premium', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
@@ -340,6 +357,38 @@ export function QualiopiDashboardPremium() {
     enabled: !!user?.organization_id,
     staleTime: 5 * 60 * 1000,
   })
+
+  // Initialisation automatique des indicateurs quand aucun n'existe
+  const initMutation = useMutation({
+    mutationFn: () => qualiopiService.initializeIndicators(user!.organization_id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['qualiopi-indicators-premium'] })
+      queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate-premium'] })
+      refetchIndicators()
+      addToast({
+        type: 'success',
+        title: 'Indicateurs Qualiopi initialisés',
+        description: 'Les 32 indicateurs du référentiel ont été créés pour votre organisation.',
+      })
+    },
+    onError: (error: Error) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur d\'initialisation',
+        description: error?.message || 'Impossible d\'initialiser les indicateurs Qualiopi.',
+      })
+    },
+  })
+
+  // Initialisation automatique des indicateurs à la première visite si aucun n'existe
+  useEffect(() => {
+    if (!loadingIndicators || hasTriedInit) return
+    if (indicators.length > 0) return
+    if (!user?.organization_id) return
+    setHasTriedInit(true)
+    initMutation.mutate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- init une seule fois quand indicateurs vides
+  }, [loadingIndicators, indicators.length, user?.organization_id])
 
   // Récupérer le score de conformité
   const { data: complianceRate = 0 } = useQuery({
@@ -356,54 +405,181 @@ export function QualiopiDashboardPremium() {
     staleTime: 5 * 60 * 1000,
   })
 
-  // Récupérer les preuves automatisées
-  const { data: evidence = [] } = useQuery({
+  // Sync des preuves auto (catalogue, accessibilité, conventions, convocations) au chargement
+  const { refetch: refetchEvidence } = useQuery({
+    queryKey: ['qualiopi-sync-evidence', user?.organization_id],
+    queryFn: async () => {
+      const res = await fetch('/api/qualiopi/sync-evidence', { method: 'POST' })
+      if (!res.ok) return null
+      return res.json()
+    },
+    enabled: !!user?.organization_id,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+
+  // Récupérer les preuves automatisées + manuelles (qualiopi_evidence)
+  const { data: evidenceRaw = [], refetch: refetchEvidenceList } = useQuery({
     queryKey: ['compliance-evidence-premium', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
-        .from('compliance_evidence_automated' as any)
-        .select('*')
-        .eq('organization_id', user.organization_id)
-        .eq('status', 'valid')
-        .order('event_date', { ascending: false })
-        .limit(50)
-
-      if (error) return []
-      return data || []
+      const [autoRes, manualRes] = await Promise.all([
+        supabase
+          .from('compliance_evidence_automated' as any)
+          .select('*')
+          .eq('organization_id', user.organization_id)
+          .eq('status', 'valid')
+          .order('event_date', { ascending: false })
+          .limit(100),
+        supabase
+          .from('qualiopi_evidence' as any)
+          .select('*, qualiopi_indicators(indicator_code, indicator_name)')
+          .eq('organization_id', user.organization_id)
+          .in('status', ['pending', 'approved'])
+          .order('upload_date', { ascending: false })
+          .limit(100),
+      ])
+      const manualData = manualRes.error ? [] : (manualRes.data || [])
+      const auto = (autoRes.data || []).map((e: any) => ({
+        id: e.id,
+        title: e.title,
+        indicator_number: e.indicator_number,
+        evidence_type: e.evidence_type,
+        source: e.source,
+        entity_name: e.entity_name,
+        event_date: e.event_date,
+        created_at: e.created_at,
+        confidence_score: e.confidence_score ?? 100,
+        file_url: e.file_url,
+      }))
+      const manual = manualData.map((e: any) => {
+        const ind = e.qualiopi_indicators as any
+        const code = String(ind?.indicator_code ?? '1.1').trim()
+        let refNum = indicatorCodeToReferentialNumber(code)
+        if (refNum == null && /^[1-9]$|^[1-2][0-9]$|^3[0-2]$/.test(code)) {
+          refNum = parseInt(code, 10)
+        }
+        return {
+          id: e.id,
+          title: e.title,
+          indicator_number: refNum ?? 1,
+          evidence_type: (e.evidence_type === 'document' ? 'document' : e.evidence_type === 'certificate' ? 'certificate' : 'document') as any,
+          source: 'manual_upload' as const,
+          entity_name: ind?.indicator_name ?? e.title,
+          event_date: e.upload_date ?? e.created_at,
+          created_at: e.created_at,
+          confidence_score: 80,
+          file_url: e.file_url,
+        }
+      })
+      const merged = [...auto, ...manual].sort(
+        (a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime()
+      )
+      return merged.slice(0, 50)
     },
     enabled: !!user?.organization_id,
     staleTime: 60 * 1000,
   })
 
-  // Calculer les données pour les critères
-  const criteriaData = useMemo(() => {
-    return QUALIOPI_REFERENTIAL.map((criterion) => {
-      const criterionIndicators = indicators.filter((ind) => {
-        const indNumber = parseInt(ind.indicator_code, 10)
-        return criterion.indicators.some((ci) => ci.number === indNumber)
+  const evidence = evidenceRaw
+
+  const handleRefreshEvidence = useCallback(async () => {
+    await fetch('/api/qualiopi/sync-evidence', { method: 'POST' })
+    queryClient.invalidateQueries({ queryKey: ['compliance-evidence-premium'] })
+    queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate-premium'] })
+    await refetchEvidenceList()
+  }, [queryClient, refetchEvidenceList])
+
+  // Au premier chargement : lancer le sync des preuves auto puis mettre à jour le tableau de bord
+  useEffect(() => {
+    if (!user?.organization_id) return
+    let cancelled = false
+    fetch('/api/qualiopi/sync-evidence', { method: 'POST' })
+      .then(async () => {
+        if (cancelled) return
+        queryClient.invalidateQueries({ queryKey: ['compliance-evidence-premium'] })
+        queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate-premium'] })
+        await refetchEvidenceList()
       })
+      .catch(() => {})
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when org is set
+  }, [user?.organization_id])
+
+  // Indicateurs du référentiel ayant au moins une preuve (auto ou manuelle)
+  const evidenceIndicatorNumbers = useMemo(
+    () => new Set(evidence.map((e: { indicator_number: number }) => e.indicator_number)),
+    [evidence]
+  )
+
+  // Statut effectif : si un indicateur a des preuves et est encore "not_started", on l'affiche "in_progress"
+  const effectiveIndicators = useMemo(() => {
+    return indicators.map((ind) => {
+      const refNum = indicatorCodeToReferentialNumber(ind.indicator_code)
+      const hasEvidence = refNum != null && evidenceIndicatorNumbers.has(refNum)
+      const status =
+        ind.status === 'not_started' && hasEvidence ? 'in_progress' : ind.status
+      return { ...ind, status }
+    })
+  }, [indicators, evidenceIndicatorNumbers])
+
+  // Calculer les données pour les critères (indicateurs effectifs + preuves si pas d'indicateurs DB)
+  const criteriaData = useMemo(() => {
+    const refNumbersByCriterion = new Map(
+      QUALIOPI_REFERENTIAL.map((c) => [c.number, new Set(c.indicators.map((i) => i.number))])
+    )
+    return QUALIOPI_REFERENTIAL.map((criterion) => {
+      const criterionIndicators = effectiveIndicators.filter((ind) => {
+        const refNum = indicatorCodeToReferentialNumber(ind.indicator_code)
+        return refNum != null && criterion.indicators.some((ci) => ci.number === refNum)
+      })
+      const refNumbers = refNumbersByCriterion.get(criterion.number)!
 
       const compliantCount = criterionIndicators.filter(
         (i) => i.status === 'compliant'
       ).length
+      let inProgressCount = criterionIndicators.filter(
+        (i) => i.status === 'in_progress'
+      ).length
+      if (criterionIndicators.length === 0) {
+        inProgressCount = [...evidenceIndicatorNumbers].filter((num) => refNumbers.has(num)).length
+      }
+      const coveredCount = compliantCount + inProgressCount
+      const total = criterion.indicators.length
 
       return {
         number: criterion.number,
         name: criterion.name,
-        indicatorCount: criterion.indicators.length,
+        indicatorCount: total,
         compliantCount,
+        inProgressCount,
+        coveredCount,
         completionRate:
-          criterion.indicators.length > 0
-            ? Math.round((compliantCount / criterion.indicators.length) * 100)
-            : 0,
+          total > 0 ? Math.round((coveredCount / total) * 100) : 0,
       }
     })
-  }, [indicators])
+  }, [effectiveIndicators, evidenceIndicatorNumbers])
 
-  // Indicateurs à risque
+  // Score d'avancement pour le ring : (conformes + en cours) / 32, pour qu'il se mette à jour avec les preuves
+  const TOTAL_REFERENTIAL_INDICATORS = 32
+  const displayScore = useMemo(() => {
+    let covered = 0
+    for (let num = 1; num <= TOTAL_REFERENTIAL_INDICATORS; num++) {
+      const ind = effectiveIndicators.find(
+        (i) => indicatorCodeToReferentialNumber(i.indicator_code) === num
+      )
+      if (ind && (ind.status === 'compliant' || ind.status === 'in_progress')) {
+        covered++
+      } else if (!ind && evidenceIndicatorNumbers.has(num)) {
+        covered++
+      }
+    }
+    return Math.round((covered / TOTAL_REFERENTIAL_INDICATORS) * 100)
+  }, [effectiveIndicators, evidenceIndicatorNumbers])
+
+  // Indicateurs à risque (à partir des indicateurs effectifs)
   const riskIndicators = useMemo(() => {
-    return indicators
+    return effectiveIndicators
       .filter(
         (i) =>
           i.status === 'not_started' ||
@@ -429,7 +605,7 @@ export function QualiopiDashboardPremium() {
         }
       })
       .slice(0, 5) as any[]
-  }, [indicators])
+  }, [effectiveIndicators])
 
   // Données pour le heatmap (simulées pour la démo)
   const heatmapActivities = useMemo(() => {
@@ -476,18 +652,54 @@ export function QualiopiDashboardPremium() {
     )
   }
 
+  // Aucun indicateur : initialisation en cours ou échec avec retry
+  if (indicators.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-[#34B9EE]/5 p-6 flex items-center justify-center">
+        <GlassCardPremium variant="default" className="p-8 max-w-md text-center">
+          <Shield className="h-14 w-14 text-[#274472] mx-auto mb-4" />
+          <h2 className="font-space-grotesk text-xl font-bold text-[#274472] mb-2">
+            Module Qualiopi
+          </h2>
+          <p className="text-slate-600 text-sm mb-6">
+            {initMutation.isPending ? (
+              <>Création automatique des 32 indicateurs du référentiel Qualiopi…</>
+            ) : initMutation.isError ? (
+              <>Les indicateurs n&apos;ont pas pu être créés automatiquement. Vous pouvez réessayer.</>
+            ) : (
+              <>Aucun indicateur configuré. Initialisation en cours…</>
+            )}
+          </p>
+          {initMutation.isPending && (
+            <RefreshCw className="h-10 w-10 animate-spin text-[#34B9EE] mx-auto" />
+          )}
+          {initMutation.isError && (
+            <Button
+              onClick={() => initMutation.mutate()}
+              disabled={initMutation.isPending}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Initialiser les indicateurs Qualiopi
+            </Button>
+          )}
+        </GlassCardPremium>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-[#34B9EE]/5 p-6">
       <div className="max-w-[1600px] mx-auto space-y-6">
-        {/* Header avec Score */}
+        {/* Header avec Score (mis à jour par preuves + indicateurs conformes/en cours) */}
         <PremiumHeader
-          score={complianceRate}
+          score={displayScore}
           onSimulateAudit={handleSimulateAudit}
           onEnterAuditMode={handleEnterAuditMode}
         />
 
-        {/* Progress Tracker */}
-        <IndicatorProgressTracker indicators={indicators} />
+        {/* Progress Tracker (mis à jour par les preuves auto + manuelles) */}
+        <IndicatorProgressTracker indicators={effectiveIndicators} />
 
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -500,18 +712,21 @@ export function QualiopiDashboardPremium() {
             />
           </div>
 
-          {/* Colonne centrale - Panneau des indicateurs */}
+          {/* Colonne centrale - Panneau des indicateurs (statut effectif selon preuves) */}
           <div className="lg:col-span-5">
             <IndicatorPanel
               criterionNumber={selectedCriterion}
-              indicators={indicators}
+              indicators={effectiveIndicators}
             />
           </div>
 
           {/* Colonne droite - Alertes et Preuves */}
           <div className="lg:col-span-4 space-y-6">
             <CriticalAlerts indicators={riskIndicators} />
-            <EvidenceVault evidence={evidence as any} />
+            <EvidenceVault
+              evidence={evidence as any}
+              onRefreshEvidence={handleRefreshEvidence}
+            />
           </div>
         </div>
 

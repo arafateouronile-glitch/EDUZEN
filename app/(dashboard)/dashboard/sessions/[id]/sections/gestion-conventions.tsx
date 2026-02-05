@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { createClient } from '@/lib/supabase/client'
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
@@ -69,7 +70,8 @@ export function GestionConventions({
 }: GestionConventionsProps) {
   const { addToast } = useToast()
   const { user } = useAuth()
-  
+  const queryClient = useQueryClient()
+
   // Charger tous les modèles actifs (comme dans la page des modèles de documents)
   const { data: allTemplates } = useQuery<DocumentTemplate[]>({
     queryKey: ['document-templates', 'all', user?.organization_id],
@@ -102,6 +104,7 @@ export function GestionConventions({
     handleSendContractByEmailWithCustomContent,
     handleSendAllContractsByEmail,
     prepareContractEmail,
+    generatePdfBlobForSignatureRequest,
   } = useDocumentGeneration({
     sessionData,
     formation,
@@ -148,6 +151,54 @@ export function GestionConventions({
     subject: '',
     body: '',
   })
+
+  // Documents contrats de la session (pour afficher Signé / En attente / Non généré)
+  const { data: sessionContractDocs } = useQuery({
+    queryKey: ['session-contract-documents', sessionData?.id, user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id || !sessionData?.id) return []
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('documents')
+        .select('id, student_id, metadata, signed_at')
+        .eq('organization_id', user.organization_id)
+        .eq('type', 'contract')
+      const list = (data ?? []) as unknown as Array<{ id: string; student_id: string | null; metadata: Record<string, unknown> | null; status?: string; signed_at?: string | null }>
+      return list.filter((d) => (d.metadata as Record<string, unknown> | null)?.session_id === sessionData?.id)
+    },
+    enabled: !!sessionData?.id && !!user?.organization_id,
+  })
+
+  // Demandes de signature signées (fallback si documents.status absent)
+  const { data: signedRequestIds } = useQuery({
+    queryKey: ['signature-requests-signed', sessionContractDocs?.map((d) => d.id)],
+    queryFn: async () => {
+      if (!sessionContractDocs?.length) return new Set<string>()
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('signature_requests')
+        .select('document_id')
+        .in('document_id', sessionContractDocs.map((d) => d.id))
+        .eq('status', 'signed')
+      return new Set((data || []).map((r: { document_id: string }) => r.document_id))
+    },
+    enabled: !!sessionContractDocs?.length,
+  })
+
+  const getContractStatusForEnrollment = useMemo(() => {
+    const docs = sessionContractDocs || []
+    const signedIds = signedRequestIds || new Set<string>()
+    return (enrollment: EnrollmentWithRelations) => {
+      const doc = docs.find(
+        (d) =>
+          (d.metadata as Record<string, unknown> | null)?.enrollment_id === enrollment.id ||
+          d.student_id === enrollment.student_id
+      )
+      if (!doc) return null
+      const isSigned = (doc as { status?: string }).status === 'signed' || signedIds.has(doc.id)
+      return isSigned ? 'signed' : 'pending'
+    }
+  }, [sessionContractDocs, signedRequestIds])
 
   // Récupérer les templates d'email pour les contrats/conventions
   const { data: emailTemplates } = useQuery<EmailTemplate[]>({
@@ -415,7 +466,19 @@ export function GestionConventions({
                                 Contrat particulier
                               </Badge>
                               <span className="text-xs text-gray-400">•</span>
-                              <span className="text-xs text-gray-500">Non généré</span>
+                              {getContractStatusForEnrollment(enrollment) === 'signed' ? (
+                                <span className="text-xs font-medium text-green-600 flex items-center gap-1">
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Signé
+                                </span>
+                              ) : getContractStatusForEnrollment(enrollment) === 'pending' ? (
+                                <span className="text-xs text-amber-600 flex items-center gap-1">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  En attente de signature
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-500">Non généré</span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -814,114 +877,20 @@ export function GestionConventions({
                 
                 setIsSendingSignatureRequest(true)
                 try {
-                  // Générer le PDF côté client
-                  const { generatePDFBlobFromHTML } = await import('@/lib/utils/pdf-generator')
-                  const { generateContractHTML, generateConventionHTML } = await import('@/lib/utils/document-templates')
+                  const { blob, documentTitle } = await generatePdfBlobForSignatureRequest({
+                    type: signatureRequestDialog.type,
+                    enrollment: signatureRequestDialog.type === 'contract' ? signatureRequestDialog.enrollment : undefined,
+                    templateId: signatureRequestDialog.type === 'convention' ? selectedConventionTemplateId : undefined,
+                  })
                   
-                  const student = signatureRequestDialog.enrollment.students
-                  if (!student) throw new Error('Étudiant non trouvé')
-                  
-                  let html: string
-                  let documentTitle: string
-                  
-                  if (signatureRequestDialog.type === 'contract') {
-                    html = await generateContractHTML({
-                      student: {
-                        first_name: student.first_name || '',
-                        last_name: student.last_name || '',
-                        student_number: student.student_number || '',
-                        date_of_birth: student.date_of_birth || undefined,
-                        address: [student.address, (student as any).city, (student as any).postal_code].filter(Boolean).join(', ') || undefined,
-                        phone: student.phone || undefined,
-                        email: student.email || undefined,
-                      },
-                      session: {
-                        name: sessionData.name || '',
-                        start_date: sessionData.start_date || '',
-                        end_date: sessionData.end_date || '',
-                        location: sessionData.location || undefined,
-                      },
-                      formation: formation ? {
-                        name: formation.name,
-                        code: formation.code || undefined,
-                        price: (formation as any).price || undefined,
-                        duration_hours: (formation as any).duration_hours || undefined,
-                      } : { name: 'Formation' },
-                      program: program ? { name: program.name } : undefined,
-                      organization: organization ? {
-                        name: organization.name,
-                        address: organization.address || undefined,
-                        phone: organization.phone || undefined,
-                        email: organization.email || undefined,
-                        logo_url: organization.logo_url || undefined,
-                      } : { name: 'Organisation' },
-                      enrollment: {
-                        enrollment_date: signatureRequestDialog.enrollment.enrollment_date || new Date().toISOString(),
-                        total_amount: (signatureRequestDialog.enrollment as any).total_amount || 0,
-                        paid_amount: (signatureRequestDialog.enrollment as any).paid_amount || 0,
-                        payment_method: (signatureRequestDialog.enrollment as any).payment_method || undefined,
-                      },
-                      issueDate: new Date().toISOString(),
-                      language: 'fr',
-                      organizationId: organization?.id,
-                    })
-                    documentTitle = `Contrat de formation - ${student.first_name} ${student.last_name}`
-                  } else {
-                    html = await generateConventionHTML({
-                      session: {
-                        name: sessionData.name || '',
-                        start_date: sessionData.start_date || '',
-                        end_date: sessionData.end_date || '',
-                        location: sessionData.location || undefined,
-                      },
-                      formation: formation ? {
-                        name: formation.name,
-                        code: formation.code || undefined,
-                        price: (formation as any).price || undefined,
-                        duration_hours: (formation as any).duration_hours || undefined,
-                      } : { name: 'Formation' },
-                      program: program ? { name: program.name } : undefined,
-                      organization: organization ? {
-                        name: organization.name,
-                        address: organization.address || undefined,
-                        phone: organization.phone || undefined,
-                        email: organization.email || undefined,
-                        logo_url: organization.logo_url || undefined,
-                      } : { name: 'Organisation' },
-                      issueDate: new Date().toISOString(),
-                      language: 'fr',
-                      organizationId: organization?.id,
-                    })
-                    documentTitle = `Convention de formation - ${sessionData.name || ''}`
-                  }
-                  
-                  // Créer un élément temporaire pour générer le PDF
-                  const tempDiv = document.createElement('div')
-                  tempDiv.innerHTML = html
-                  tempDiv.style.position = 'absolute'
-                  tempDiv.style.left = '-9999px'
-                  document.body.appendChild(tempDiv)
-                  
-                  const element = tempDiv.querySelector('[id$="-document"]')
-                  if (!element) throw new Error('Élément document non trouvé')
-                  
-                  element.id = `temp-${signatureRequestDialog.type}-${Date.now()}`
-                  await new Promise((resolve) => setTimeout(resolve, 500))
-                  
-                  const pdfBlob = await generatePDFBlobFromHTML(html)
-                  
-                  // Nettoyer l'élément temporaire
-                  document.body.removeChild(tempDiv)
-                  
-                  // Convertir le Blob en base64
                   const pdfBase64 = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader()
                     reader.onloadend = () => {
                       const base64 = (reader.result as string).split(',')[1]
-                      resolve(base64)
+                      resolve(base64 ?? '')
                     }
                     reader.onerror = reject
-                    reader.readAsDataURL(pdfBlob)
+                    reader.readAsDataURL(blob)
                   })
                   
                   const response = await fetch('/api/signature-requests/send-from-contract', {
@@ -951,7 +920,9 @@ export function GestionConventions({
 
                   setSignatureRequestDialog(null)
                   setSignatureRequestForm(null)
-                  
+                  queryClient.invalidateQueries({ queryKey: ['session-contract-documents', sessionData?.id, user?.organization_id] })
+                  queryClient.invalidateQueries({ queryKey: ['signature-requests-signed'] })
+
                   addToast({
                     type: 'success',
                     title: 'Demande de signature envoyée',

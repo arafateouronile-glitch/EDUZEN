@@ -181,4 +181,59 @@ describe('useLocalStorage', () => {
 
     expect(result.current[0]).toBe('from-other-tab')
   })
+
+  it('devrait rester stable si StorageEvent.newValue est du JSON invalide', () => {
+    const { result } = renderHook(() =>
+      useLocalStorage('test-key', 'initial')
+    )
+
+    act(() => {
+      const event = new StorageEvent('storage', {
+        key: 'test-key',
+        newValue: 'invalid-json',
+      })
+      window.dispatchEvent(event)
+    })
+
+    expect(result.current[0]).toBe('initial')
+  })
+
+  it('devrait ne pas lever si setItem lance (catch setValue)', () => {
+    const orig = localStorage.setItem
+    localStorage.setItem = vi.fn(() => {
+      throw new Error('QuotaExceeded')
+    })
+
+    const { result } = renderHook(() =>
+      useLocalStorage('test-key', 'initial')
+    )
+
+    act(() => {
+      result.current[1]('updated')
+    })
+
+    expect(result.current[0]).toBe('updated')
+    localStorage.setItem = orig
+  })
+
+  it('devrait ne pas lever si removeItem lance (catch removeValue)', () => {
+    localStorage.setItem('test-key', JSON.stringify('stored'))
+
+    const orig = localStorage.removeItem
+    localStorage.removeItem = vi.fn(() => {
+      throw new Error('Remove failed')
+    })
+
+    const { result } = renderHook(() =>
+      useLocalStorage('test-key', 'initial')
+    )
+
+    act(() => {
+      result.current[2]()
+    })
+
+    expect(result.current[0]).toBe('initial')
+    localStorage.removeItem = orig
+  })
+
 })

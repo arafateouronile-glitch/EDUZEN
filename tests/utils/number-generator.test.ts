@@ -163,4 +163,89 @@ describe('generateUniqueNumber', () => {
 
     expect(result).toMatch(/^INV-ORG-\d{2}-\d{6}$/)
   })
+
+  it('devrait rejeter et propager l\'erreur si code erreur autre que PGRST116/42P01', async () => {
+    ;(mockSupabaseClient.from as any).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      like: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST_ERROR', message: 'Database error' },
+      }),
+    })
+
+    await expect(
+      generateUniqueNumber(mockSupabaseClient, 'invoices', 'org-1', {
+        prefix: 'INV',
+        orgCode: 'ORG',
+      })
+    ).rejects.toThrow()
+  })
+
+  it('devrait relancer via le catch si la requête rejette (exception)', async () => {
+    ;(mockSupabaseClient.from as any).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      like: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockRejectedValue(new Error('Network error')),
+    })
+
+    await expect(
+      generateUniqueNumber(mockSupabaseClient, 'invoices', 'org-1', {
+        prefix: 'INV',
+        orgCode: 'ORG',
+      })
+    ).rejects.toThrow()
+  })
+
+  it('devrait gérer lastRecord avec numéro malformé (parts vides) et repartir à 1', async () => {
+    ;(mockSupabaseClient.from as any).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      like: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { number: 'INV-ORG-24-' },
+        error: null,
+      }),
+    })
+
+    const result = await generateUniqueNumber(
+      mockSupabaseClient,
+      'invoices',
+      'org-1',
+      { prefix: 'INV', orgCode: 'ORG', year: '24' }
+    )
+
+    expect(result).toBe('INV-ORG-24-000001')
+  })
+
+  it('devrait incrémenter à partir du dernier numéro même avec plusieurs tirets', async () => {
+    ;(mockSupabaseClient.from as any).mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      like: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { number: 'INV-ORG-24-000099' },
+        error: null,
+      }),
+    })
+
+    const result = await generateUniqueNumber(
+      mockSupabaseClient,
+      'invoices',
+      'org-1',
+      { prefix: 'INV', orgCode: 'ORG', year: '24' }
+    )
+
+    expect(result).toBe('INV-ORG-24-000100')
+  })
 })

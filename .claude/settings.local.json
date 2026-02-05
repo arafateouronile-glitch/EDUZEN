@@ -67,7 +67,16 @@
       "Bash(npm run test:components:*)",
       "Bash(du -sh:*)",
       "Bash(node -e:*)",
-      "Bash(npm run test:integration:*)"
+      "Bash(npm run test:integration:*)",
+      "Bash(npx supabase db push --include-all)",
+      "Bash(supabase migration list:*)",
+      "Bash(npx supabase migration:*)",
+      "Bash(/opt/homebrew/bin/npx tsc --noEmit --skipLibCheck)",
+      "Bash(/usr/local/bin/npm install @stripe/react-stripe-js @stripe/stripe-js)",
+      "Bash(PATH=\"/usr/local/bin:$PATH\" npm install:*)",
+      "Bash(PATH=\"/usr/local/bin:$PATH\" npm run lint:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(/usr/bin/env npm run type-check)"
     ],
     "additionalDirectories": [
       "/Users/arafatetoure/Documents/EDUZEN/app/api/opco-access",

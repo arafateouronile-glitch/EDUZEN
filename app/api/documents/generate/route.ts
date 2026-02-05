@@ -45,31 +45,17 @@ export async function POST(request: NextRequest) {
     logger.debug('Cookies reçus dans l\'API', { cookieNames: cookies.map(c => c.name) })
     logger.debug('Cookies Supabase présents', { hasSupabaseCookies: cookies.some(c => c.name.includes('supabase') || c.name.includes('sb-')) })
 
-    // Essayer d'abord getSession() qui est plus permissif
     const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
-
-    let user
-    if (session && session.user) {
-      user = session.user
-    } else {
-      // Si getSession() échoue, essayer getUser()
-      const {
-        data: { user: userFromGetUser },
+      data: { user },
       error: authError,
     } = await supabase.auth.getUser()
 
-      if (authError || !userFromGetUser) {
-        logger.error('Erreur d\'authentification', sanitizeError(authError), {
-          hasUser: !!userFromGetUser,
-          cookieCount: nextReq.cookies.getAll().length,
-        } as any)
-        return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-      }
-
-      user = userFromGetUser
+    if (authError || !user) {
+      logger.error('Erreur d\'authentification', sanitizeError(authError), {
+        hasUser: !!user,
+        cookieCount: nextReq.cookies.getAll().length,
+      } as any)
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
     if (!user) {

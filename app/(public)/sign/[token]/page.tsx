@@ -39,6 +39,8 @@ export default function SignPage() {
   const [sign, setSign] = useState<SignData | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'retrying' | 'success' | 'error'>('idle')
+  const [attemptCount, setAttemptCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [location, setLocation] = useState<{
@@ -98,42 +100,90 @@ export default function SignPage() {
     }
   }, [sign])
 
-  const handleValidate = useCallback(
-    async (signatureData: string) => {
-      if (!token?.trim()) return
+  const MAX_ATTEMPTS = 3
+  const RETRY_DELAY_MS = 2000
+  const REQUEST_TIMEOUT_MS = 10000
+
+  const submitSignature = useCallback(
+    async (
+      data: { token: string; signatureData: string; attestation: boolean; geolocation?: { lat: number; lng: number; accuracy?: number } },
+      attempt = 1,
+      onAttempt?: (attempt: number) => void
+    ): Promise<{ success: boolean; alreadySigned?: boolean; error?: string }> => {
+      onAttempt?.(attempt)
       try {
-        setSubmitting(true)
-        setError(null)
-        const body: Record<string, unknown> = {
-          token,
-          signatureData,
-          attestation: true,
-        }
-        if (location) {
-          body.geolocation = {
-            lat: location.lat,
-            lng: location.lng,
-            accuracy: location.accuracy,
-          }
-        }
         const res = await fetch('/api/sign/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify(data),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         })
         const json = await res.json().catch(() => ({}))
         if (!res.ok) {
-          setError(json?.error ?? 'Erreur lors de l\'enregistrement')
-          return
+          const msg = json?.error ?? 'Erreur serveur'
+          if (attempt < MAX_ATTEMPTS) {
+            console.warn(`Tentative ${attempt} échouée, nouvelle tentative dans 2s...`)
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+            return submitSignature(data, attempt + 1, onAttempt)
+          }
+          return { success: false, error: msg }
         }
-        setSuccess(true)
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erreur inconnue')
+        return { success: true, alreadySigned: !!json?.alreadySigned }
+      } catch (err) {
+        if (attempt < MAX_ATTEMPTS) {
+          console.warn(`Tentative ${attempt} échouée, nouvelle tentative dans 2s...`)
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+          return submitSignature(data, attempt + 1, onAttempt)
+        }
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Impossible de transmettre la signature après 3 tentatives.',
+        }
+      }
+    },
+    []
+  )
+
+  const handleValidate = useCallback(
+    async (signatureData: string) => {
+      if (!token?.trim()) return
+      setSubmitting(true)
+      setError(null)
+      setStatus('submitting')
+      setAttemptCount(1)
+      const body = {
+        token,
+        signatureData,
+        attestation: true,
+        ...(location && {
+          geolocation: {
+            lat: location.lat,
+            lng: location.lng,
+            accuracy: location.accuracy,
+          },
+        }),
+      }
+      const onAttempt = (attempt: number) => {
+        setAttemptCount(attempt)
+        setStatus(attempt > 1 ? 'retrying' : 'submitting')
+      }
+      try {
+        const result = await submitSignature(body, 1, onAttempt)
+        if (result.success) {
+          setSuccess(true)
+          setStatus('success')
+        } else {
+          setError(result.error ?? 'Erreur lors de l\'enregistrement')
+          setStatus('error')
+        }
+      } catch {
+        setError('Impossible de transmettre la signature après 3 tentatives.')
+        setStatus('error')
       } finally {
         setSubmitting(false)
       }
     },
-    [token, location]
+    [token, location, submitSignature]
   )
 
   if (loading) {
@@ -359,9 +409,23 @@ export default function SignPage() {
               </div>
             )}
 
+            {(status === 'submitting' || status === 'retrying') && (
+              <div className="flex flex-col items-center gap-2 rounded-xl bg-white/5 border border-white/10 p-4">
+                <Loader2 className="h-8 w-8 animate-spin text-[#34B9EE]" />
+                <p className="text-sm font-medium text-white">
+                  Sécurisation et envoi du contrat…
+                </p>
+                {attemptCount > 1 && (
+                  <span className="text-xs text-amber-400 animate-pulse">
+                    Connexion instable, tentative de reconnexion ({attemptCount}/{MAX_ATTEMPTS})…
+                  </span>
+                )}
+              </div>
+            )}
+
             <SignatureStepWithCheckbox
               onValidate={handleValidate}
-              disabled={false}
+              disabled={submitting}
               isLoading={submitting}
               isAttendance={isAttendance}
               isDocument={isDocument}

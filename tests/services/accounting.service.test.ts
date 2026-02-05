@@ -574,4 +574,115 @@ describe('AccountingService - Batch Invoice Sync Optimization', () => {
       expect(result.records_failed).toBe(1)
     })
   })
+
+  describe('getConfig', () => {
+    function createGetConfigChain(singleResult: { data: any; error: any }) {
+      const chain: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue(singleResult),
+      }
+      return chain
+    }
+
+    it('devrait retourner null quand aucun enregistrement (PGRST116)', async () => {
+      const chain = createGetConfigChain({ data: null, error: { code: 'PGRST116' } })
+      ;(mockSupabase as any).from.mockReturnValueOnce(chain)
+
+      const result = await service.getConfig('org-1', 'xero')
+
+      expect(result).toBeNull()
+      expect(mockSupabase.from).toHaveBeenCalledWith('accounting_integrations')
+    })
+
+    it('devrait propager l\'erreur quand code différent de PGRST116', async () => {
+      const dbError = new Error('Connection refused')
+      const chain = createGetConfigChain({ data: null, error: dbError })
+      ;(mockSupabase as any).from.mockReturnValueOnce(chain)
+
+      await expect(service.getConfig('org-1', 'xero')).rejects.toThrow()
+    })
+
+    it('devrait retourner la config quand succès', async () => {
+      const mockConfig = {
+        id: 'cfg-1',
+        organization_id: 'org-1',
+        provider: 'xero',
+        is_active: true,
+      }
+      const chain = createGetConfigChain({ data: mockConfig, error: null })
+      ;(mockSupabase as any).from.mockReturnValueOnce(chain)
+
+      const result = await service.getConfig('org-1', 'xero')
+
+      expect(result).toEqual(mockConfig)
+    })
+  })
+
+  describe('upsertConfig', () => {
+    function createGetConfigChain(singleResult: { data: any; error: any }) {
+      const chain: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue(singleResult),
+      }
+      return chain
+    }
+
+    it('devrait mettre à jour la config quand elle existe déjà', async () => {
+      const existingConfig = {
+        id: 'cfg-1',
+        organization_id: 'org-1',
+        provider: 'xero',
+        is_active: false,
+      }
+      const updatedConfig = { ...existingConfig, is_active: true }
+
+      const getConfigChain = createGetConfigChain({ data: existingConfig, error: null })
+      const updateChain: any = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: updatedConfig, error: null }),
+      }
+      ;(mockSupabase as any).from
+        .mockReturnValueOnce(getConfigChain)
+        .mockReturnValueOnce(updateChain)
+
+      const result = await service.upsertConfig('org-1', 'xero', { is_active: true })
+
+      expect(result).toEqual(updatedConfig)
+      expect(updateChain.update).toHaveBeenCalledWith({ is_active: true })
+    })
+
+    it('devrait insérer une nouvelle config quand elle n\'existe pas', async () => {
+      const newConfig = {
+        id: 'cfg-new',
+        organization_id: 'org-1',
+        provider: 'xero',
+        is_active: true,
+      }
+
+      const getConfigChain = createGetConfigChain({ data: null, error: { code: 'PGRST116' } })
+      const insertChain: any = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: newConfig, error: null }),
+      }
+      ;(mockSupabase as any).from
+        .mockReturnValueOnce(getConfigChain)
+        .mockReturnValueOnce(insertChain)
+
+      const result = await service.upsertConfig('org-1', 'xero', { is_active: true })
+
+      expect(result).toEqual(newConfig)
+      expect(insertChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organization_id: 'org-1',
+          provider: 'xero',
+          is_active: true,
+        })
+      )
+    })
+  })
 })

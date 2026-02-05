@@ -2,7 +2,7 @@
 
 import { motion, useInView } from '@/components/ui/motion'
 import { useRef, useState, useEffect } from 'react'
-import { TrendingUp, Users, BookOpen, Award } from 'lucide-react'
+import { TrendingUp, Users, BookOpen, Award, PenTool, Shield, Clock } from 'lucide-react'
 import { useParallax } from '@/lib/hooks/useParallax'
 
 // Counter component with count-up animation
@@ -187,8 +187,8 @@ export function BentoShowcase() {
               <div className="space-y-6">
                 {[
                   { label: 'Inscription', delay: 0.3 },
-                  { label: 'Formation', delay: 0.4 },
-                  { label: 'Évaluation', delay: 0.5 },
+                  { label: 'Signature contrat', delay: 0.4, highlight: true },
+                  { label: 'Émargement', delay: 0.5, highlight: true },
                   { label: 'Certification', delay: 0.6 },
                 ].map((item, i) => (
                   <motion.div
@@ -199,15 +199,28 @@ export function BentoShowcase() {
                     className="flex items-center gap-4 group/item"
                   >
                     <motion.div
-                      className="w-8 h-8 rounded-full bg-brand-cyan/10 border-2 border-brand-cyan flex items-center justify-center font-bold text-brand-cyan text-sm"
+                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                        'highlight' in item && item.highlight
+                          ? 'bg-green-100 border-2 border-green-500 text-green-600'
+                          : 'bg-brand-cyan/10 border-2 border-brand-cyan text-brand-cyan'
+                      }`}
                       whileHover={{ scale: 1.2, rotate: 360 }}
                       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                     >
-                      {i + 1}
+                      {'highlight' in item && item.highlight ? <PenTool className="w-4 h-4" /> : i + 1}
                     </motion.div>
-                    <span className="text-lg text-gray-700 font-medium group-hover/item:text-brand-cyan transition-colors duration-300">
-                      {item.label}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className={`text-lg font-medium transition-colors duration-300 ${
+                        'highlight' in item && item.highlight
+                          ? 'text-green-700 group-hover/item:text-green-600'
+                          : 'text-gray-700 group-hover/item:text-brand-cyan'
+                      }`}>
+                        {item.label}
+                      </span>
+                      {'highlight' in item && item.highlight && (
+                        <span className="text-xs text-green-600 font-medium">100% numérique</span>
+                      )}
+                    </div>
                   </motion.div>
                 ))}
               </div>
@@ -244,7 +257,7 @@ export function BentoShowcase() {
             </motion.div>
           </motion.div>
 
-          {/* Small Card - Feature Highlight (1x1) */}
+          {/* Small Card - Signature électronique (1x1) */}
           <motion.div
             initial={{ opacity: 0, y: 60, scale: 0.95 }}
             animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
@@ -254,23 +267,27 @@ export function BentoShowcase() {
             <motion.div
               whileHover={{ y: -8, scale: 1.02 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              className="group h-full min-h-[280px] rounded-3xl bg-white border-2 border-gray-200 hover:border-brand-blue-pale p-10 shadow-xl hover:shadow-2xl transition-all duration-600 flex flex-col justify-between"
+              className="group h-full min-h-[280px] rounded-3xl bg-gradient-to-br from-green-50 to-white border-2 border-green-200 hover:border-green-400 p-10 shadow-xl hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-600 flex flex-col justify-between"
             >
               <div>
                 <motion.div
-                  className="w-12 h-12 rounded-2xl bg-brand-blue flex items-center justify-center mb-6"
+                  className="w-12 h-12 rounded-2xl bg-green-500 flex items-center justify-center mb-6"
                   whileHover={{ rotate: -360, scale: 1.1 }}
                   transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 >
-                  <Award className="w-6 h-6 text-white" />
+                  <PenTool className="w-6 h-6 text-white" />
                 </motion.div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3 font-display">Certifié Qualiopi</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3 font-display">Signature eIDAS</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  Conformité garantie aux exigences de qualité
+                  Valeur juridique équivalente à un acte notarié
                 </p>
+                <div className="flex items-center gap-2 mt-4">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700">100% sécurisé</span>
+                </div>
               </div>
               <motion.div
-                className="w-full h-1 bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
+                className="w-full h-1 bg-gradient-to-r from-green-400 to-green-600 rounded-full"
                 initial={{ scaleX: 0 }}
                 animate={isInView ? { scaleX: 1 } : {}}
                 transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}

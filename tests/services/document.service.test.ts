@@ -167,6 +167,17 @@ describe('DocumentService - ErrorHandler Standardization', () => {
     mockSupabase.storage.from.mockReturnValue(mockStorageBucket as any)
   })
 
+  describe('constructor', () => {
+    it('devrait lever si supabaseClient est null ou undefined', () => {
+      expect(() => new DocumentService(null as any)).toThrow(
+        'SupabaseClient is required for DocumentService'
+      )
+      expect(() => new DocumentService(undefined as any)).toThrow(
+        'SupabaseClient is required for DocumentService'
+      )
+    })
+  })
+
   describe('getAll', () => {
     it('devrait récupérer tous les documents avec pagination', async () => {
       const mockDocuments = [
@@ -219,6 +230,37 @@ describe('DocumentService - ErrorHandler Standardization', () => {
 
       await expect(service.getAll('org-1')).rejects.toThrow()
     })
+
+    it('devrait filtrer par type quand filters.type est fourni', async () => {
+      selectChain.range.mockResolvedValueOnce({ data: [], error: null, count: 0 })
+
+      await service.getAll('org-1', { type: 'contract', page: 1, limit: 20 })
+
+      expect(selectChain.eq).toHaveBeenCalledWith('type', 'contract')
+    })
+
+    it('devrait filtrer par studentId quand filters.studentId est fourni', async () => {
+      selectChain.range.mockResolvedValueOnce({ data: [], error: null, count: 0 })
+
+      await service.getAll('org-1', { studentId: 'stu-1', page: 1, limit: 10 })
+
+      expect(selectChain.eq).toHaveBeenCalledWith('student_id', 'stu-1')
+    })
+
+    it('devrait relancer AppError si la chaîne getAll rejette avec AppError', async () => {
+      const appErr = new AppError('Query failed', ErrorCode.DB_QUERY_ERROR, 'high' as any, {})
+      selectChain.range.mockRejectedValueOnce(appErr)
+
+      const p = service.getAll('org-1')
+      await expect(p).rejects.toThrow(AppError)
+      await expect(p).rejects.toBe(appErr)
+    })
+
+    it('devrait utiliser handleError (l.70) si la chaîne getAll rejette avec Error générique', async () => {
+      selectChain.range.mockRejectedValueOnce(new Error('Network failure'))
+
+      await expect(service.getAll('org-1')).rejects.toThrow()
+    })
   })
 
   describe('getById', () => {
@@ -255,6 +297,39 @@ describe('DocumentService - ErrorHandler Standardization', () => {
       await expect(service.getById('non-existent')).rejects.toMatchObject({
         code: ErrorCode.DB_NOT_FOUND,
       })
+    })
+
+    it('devrait lever createNotFoundError si data null et error null', async () => {
+      selectChain.single.mockResolvedValueOnce({ data: null, error: null })
+
+      const p = service.getById('missing-doc')
+      await expect(p).rejects.toThrow(AppError)
+      await expect(p).rejects.toMatchObject({ code: ErrorCode.DB_NOT_FOUND })
+    })
+
+    it('devrait utiliser handleError générique si error.code !== PGRST116', async () => {
+      selectChain.single.mockResolvedValueOnce({
+        data: null,
+        error: { code: '22P02', message: 'invalid input syntax for type uuid' },
+      })
+
+      await expect(service.getById('bad-id')).rejects.toThrow(AppError)
+      expect(selectChain.eq).toHaveBeenCalledWith('id', 'bad-id')
+    })
+
+    it('devrait relancer AppError si la chaîne getById rejette avec AppError', async () => {
+      const appErr = new AppError('Fetch failed', ErrorCode.DB_QUERY_ERROR, 'medium' as any, {})
+      selectChain.single.mockRejectedValueOnce(appErr)
+
+      const p = service.getById('doc-1')
+      await expect(p).rejects.toThrow(AppError)
+      await expect(p).rejects.toBe(appErr)
+    })
+
+    it('devrait utiliser handleError (l.113) si la chaîne getById rejette avec Error générique', async () => {
+      selectChain.single.mockRejectedValueOnce(new Error('Fetch failure'))
+
+      await expect(service.getById('doc-1')).rejects.toThrow()
     })
   })
 
@@ -296,10 +371,26 @@ describe('DocumentService - ErrorHandler Standardization', () => {
       expect(mockSupabase.insert).toHaveBeenCalledWith(createData)
     })
 
-    it('devrait valider les champs requis', async () => {
+    it('devrait valider les champs requis (titre manquant)', async () => {
       const invalidData = {
-        organization_id: '',
+        organization_id: 'org-1',
         type: 'contract',
+        file_url: 'http://example.com/doc.pdf',
+        title: '',
+      } as any
+
+      await expect(service.create(invalidData)).rejects.toThrow(AppError)
+      await expect(service.create(invalidData)).rejects.toMatchObject({
+        code: ErrorCode.VALIDATION_ERROR,
+      })
+    })
+
+    it('devrait valider les champs requis (file_url manquant)', async () => {
+      const invalidData = {
+        organization_id: 'org-1',
+        type: 'contract',
+        title: 'Mon document',
+        file_url: '',
       } as any
 
       await expect(service.create(invalidData)).rejects.toThrow(AppError)
@@ -321,9 +412,6 @@ describe('DocumentService - ErrorHandler Standardization', () => {
         metadata: {},
       }
 
-      // Mock the chain: from -> insert -> select -> single
-      // The error should come from single() which is awaited
-      // We need to mock twice because toThrow and toMatchObject both call create()
       const insertChain1 = mockSupabase.insert()
       const selectChain1 = insertChain1.select()
       selectChain1.single.mockResolvedValueOnce({
@@ -334,20 +422,51 @@ describe('DocumentService - ErrorHandler Standardization', () => {
         },
       })
 
-      const insertChain2 = mockSupabase.insert()
-      const selectChain2 = insertChain2.select()
-      selectChain2.single.mockResolvedValueOnce({
-        data: null,
-        error: {
-          code: '23505',
-          message: 'duplicate key value violates unique constraint',
-        },
-      })
-
-      await expect(service.create(createData)).rejects.toThrow(AppError)
-      await expect(service.create(createData)).rejects.toMatchObject({
+      const p = service.create(createData)
+      await expect(p).rejects.toThrow(AppError)
+      await expect(p).rejects.toMatchObject({
         code: ErrorCode.VALIDATION_UNIQUE_CONSTRAINT,
       })
+    })
+
+    it('devrait propager handleError pour erreur create non-23505', async () => {
+      const createData = {
+        organization_id: 'org-1',
+        title: 'Doc',
+        type: 'contract',
+        file_url: 'http://example.com/x.pdf',
+        format: 'PDF',
+        page_count: 1,
+        generated_by: 'user-1',
+        metadata: {},
+      }
+      const insertChain = mockSupabase.insert()
+      const selectChain = insertChain.select()
+      selectChain.single.mockResolvedValueOnce({
+        data: null,
+        error: { code: '22P02', message: 'invalid input syntax' },
+      })
+
+      await expect(service.create(createData)).rejects.toThrow()
+    })
+
+    it('devrait propager handleError en catch si create (insert) rejette', async () => {
+      const createData = {
+        organization_id: 'org-1',
+        title: 'Doc',
+        type: 'contract',
+        file_url: 'http://example.com/x.pdf',
+        format: 'PDF',
+        page_count: 1,
+        generated_by: 'user-1',
+        metadata: {},
+      }
+      const insertChain = mockSupabase.insert()
+      insertChain.select.mockReturnValueOnce({
+        single: vi.fn().mockRejectedValueOnce(new Error('Connection lost')),
+      })
+
+      await expect(service.create(createData)).rejects.toThrow()
     })
   })
 
@@ -382,9 +501,64 @@ describe('DocumentService - ErrorHandler Standardization', () => {
 
       await expect(service.uploadFile(file, path)).rejects.toThrow()
     })
+
+    it('devrait lever une erreur si le fichier est absent', async () => {
+      await expect(
+        service.uploadFile(null as any, 'org-1/test.pdf')
+      ).rejects.toThrow(AppError)
+      await expect(
+        service.uploadFile(null as any, 'org-1/test.pdf')
+      ).rejects.toMatchObject({ code: ErrorCode.VALIDATION_ERROR })
+    })
+
+    it('devrait lever une erreur si le chemin est vide', async () => {
+      const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+      await expect(service.uploadFile(file, '')).rejects.toThrow(AppError)
+      await expect(service.uploadFile(file, '')).rejects.toMatchObject({
+        code: ErrorCode.VALIDATION_ERROR,
+      })
+    })
+
+    it('devrait propager handleError en catch si upload rejette', async () => {
+      const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+      mockStorageBucket.upload.mockRejectedValueOnce(new Error('Network failure'))
+
+      await expect(service.uploadFile(file, 'org-1/test.pdf')).rejects.toThrow()
+    })
+
+    it('devrait lever une erreur si upload retourne "already exists"', async () => {
+      const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
+      mockStorageBucket.upload.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'File already exists at this path' },
+      })
+
+      await expect(service.uploadFile(file, 'org-1/test.pdf')).rejects.toThrow()
+    })
+  })
+
+  describe('getPublicUrl', () => {
+    it('devrait retourner l\'URL publique d\'un document', async () => {
+      mockStorageBucket.getPublicUrl.mockReturnValue({
+        data: { publicUrl: 'https://bucket.supabase.co/documents/org-1/doc.pdf' },
+      })
+
+      const url = await service.getPublicUrl('org-1/doc.pdf')
+
+      expect(url).toBe('https://bucket.supabase.co/documents/org-1/doc.pdf')
+      expect(mockSupabase.storage.from).toHaveBeenCalledWith('documents')
+      expect(mockStorageBucket.getPublicUrl).toHaveBeenCalledWith('org-1/doc.pdf')
+    })
   })
 
   describe('delete', () => {
+    it('devrait lever une erreur si l\'ID est vide', async () => {
+      await expect(service.delete('')).rejects.toThrow(AppError)
+      await expect(service.delete('')).rejects.toMatchObject({
+        code: ErrorCode.VALIDATION_ERROR,
+      })
+    })
+
     it('devrait supprimer un document et son fichier', async () => {
       // Mock the chain: from -> delete -> eq
       const deleteChain = mockSupabase.delete()
@@ -401,8 +575,6 @@ describe('DocumentService - ErrorHandler Standardization', () => {
     })
 
     it('devrait gérer les contraintes de clé étrangère', async () => {
-      // Mock the chain: from -> delete -> eq
-      // delete() returns an object with eq(), which is awaited
       const deleteChain = mockSupabase.delete()
       deleteChain.eq.mockResolvedValueOnce({
         data: null,
@@ -412,21 +584,28 @@ describe('DocumentService - ErrorHandler Standardization', () => {
         },
       })
 
-      await expect(service.delete('doc-1')).rejects.toThrow(AppError)
-      
-      // Mock again for the second call in the matchObject assertion
-      const deleteChain2 = mockSupabase.delete()
-      deleteChain2.eq.mockResolvedValueOnce({
-        data: null,
-        error: {
-          code: '23503',
-          message: 'violates foreign key constraint',
-        },
-      })
-      
-      await expect(service.delete('doc-1')).rejects.toMatchObject({
+      const p = service.delete('doc-1')
+      await expect(p).rejects.toThrow(AppError)
+      await expect(p).rejects.toMatchObject({
         code: ErrorCode.DB_FOREIGN_KEY_CONSTRAINT,
       })
+    })
+
+    it('devrait propager handleError pour erreur delete non-23503', async () => {
+      const deleteChain = mockSupabase.delete()
+      deleteChain.eq.mockResolvedValueOnce({
+        data: null,
+        error: { code: '22P02', message: 'invalid input syntax' },
+      })
+
+      await expect(service.delete('doc-1')).rejects.toThrow()
+    })
+
+    it('devrait propager handleError en catch si delete rejette', async () => {
+      const deleteChain = mockSupabase.delete()
+      deleteChain.eq.mockRejectedValueOnce(new Error('Connection lost'))
+
+      await expect(service.delete('doc-1')).rejects.toThrow()
     })
   })
 

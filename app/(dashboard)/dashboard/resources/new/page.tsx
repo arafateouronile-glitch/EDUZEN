@@ -8,7 +8,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { educationalResourcesService } from '@/lib/services/educational-resources.service'
-import { createClient } from '@/lib/supabase/client'
+import { programService } from '@/lib/services/program.service'
+import { formationService } from '@/lib/services/formation.service'
+import { sessionService } from '@/lib/services/session.service'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { ArrowLeft, Library, Save, Upload, X, FileText, Video, Image, Link as LinkIcon, Music } from 'lucide-react'
@@ -17,7 +19,8 @@ import { useToast } from '@/components/ui/toast'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 
-// Schéma de validation
+const visibilityScopeEnum = z.enum(['all', 'program', 'formation', 'session'])
+
 const resourceSchema = z.object({
   title: z.string().min(3, 'Le titre doit contenir au moins 3 caractères'),
   slug: z.string().min(3, 'Le slug doit contenir au moins 3 caractères').regex(/^[a-z0-9-]+$/, 'Le slug ne peut contenir que des lettres minuscules, chiffres et tirets'),
@@ -28,6 +31,10 @@ const resourceSchema = z.object({
   tags: z.string().optional(),
   is_featured: z.boolean().default(false),
   status: z.enum(['draft', 'published', 'archived']).default('published'),
+  visibility_scope: visibilityScopeEnum.default('all'),
+  visibility_program_id: z.string().optional(),
+  visibility_formation_id: z.string().optional(),
+  visibility_session_id: z.string().optional(),
 })
 
 type ResourceFormData = z.infer<typeof resourceSchema>
@@ -56,7 +63,6 @@ export default function NewResourcePage() {
   const router = useRouter()
   const { user } = useAuth()
   const { addToast } = useToast()
-  const supabase = createClient()
   const [file, setFile] = useState<File | null>(null)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
@@ -82,10 +88,30 @@ export default function NewResourcePage() {
       resource_type: 'document',
       status: 'published',
       is_featured: false,
+      visibility_scope: 'all',
     },
   })
 
   const resourceType = watch('resource_type')
+  const visibilityScope = watch('visibility_scope')
+
+  const { data: programs } = useQuery({
+    queryKey: ['programs', user?.organization_id],
+    queryFn: () => programService.getAllPrograms(user?.organization_id || ''),
+    enabled: !!user?.organization_id && (visibilityScope === 'program'),
+  })
+
+  const { data: formations } = useQuery({
+    queryKey: ['formations', user?.organization_id],
+    queryFn: () => formationService.getAllFormations(user?.organization_id || ''),
+    enabled: !!user?.organization_id && (visibilityScope === 'formation'),
+  })
+
+  const { data: sessions } = useQuery({
+    queryKey: ['sessions', user?.organization_id],
+    queryFn: () => sessionService.getAllSessions(user?.organization_id || ''),
+    enabled: !!user?.organization_id && (visibilityScope === 'session'),
+  })
 
   // Générer le slug automatiquement à partir du titre
   const title = watch('title')
@@ -139,40 +165,30 @@ export default function NewResourcePage() {
     mutationFn: async (data: ResourceFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
-      // Upload du fichier si présent
       let fileUrl: string | null = null
-      let fileSizeBytes: number | null = null
-      if (file) {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${user.organization_id}/resources/${Date.now()}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('educational-resources')
-          .upload(fileName, file)
-
-        if (uploadError) throw uploadError
-
-        const { data: urlData } = supabase.storage
-          .from('educational-resources')
-          .getPublicUrl(fileName)
-        fileUrl = urlData.publicUrl
-        fileSizeBytes = file.size
-      }
-
-      // Upload de la miniature si présente
       let thumbnailUrl: string | null = null
-      if (thumbnailFile) {
-        const fileExt = thumbnailFile.name.split('.').pop()
-        const fileName = `${user.organization_id}/thumbnails/${Date.now()}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('resource-thumbnails')
-          .upload(fileName, thumbnailFile)
+      let fileSizeBytes: number | null = null
 
-        if (uploadError) throw uploadError
+      if (file || thumbnailFile) {
+        const formData = new FormData()
+        formData.set('organization_id', user.organization_id)
+        if (file) formData.set('file', file)
+        if (thumbnailFile) formData.set('thumbnail', thumbnailFile)
 
-        const { data: urlData } = supabase.storage
-          .from('resource-thumbnails')
-          .getPublicUrl(fileName)
-        thumbnailUrl = urlData.publicUrl
+        const res = await fetch('/api/educational-resources/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error || err.details || 'Erreur lors de l\'upload')
+        }
+
+        const uploadResult = await res.json()
+        fileUrl = uploadResult.fileUrl ?? null
+        thumbnailUrl = uploadResult.thumbnailUrl ?? null
+        if (file) fileSizeBytes = file.size
       }
 
       // Parser les tags
@@ -180,6 +196,7 @@ export default function NewResourcePage() {
         ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
         : []
 
+      const visibilityScope = data.visibility_scope || 'all'
       return educationalResourcesService.createResource({
         organization_id: user.organization_id,
         title: data.title,
@@ -198,7 +215,11 @@ export default function NewResourcePage() {
         view_count: 0,
         download_count: 0,
         favorite_count: 0,
-      })
+        visibility_scope: visibilityScope,
+        visibility_program_id: visibilityScope === 'program' ? data.visibility_program_id || null : null,
+        visibility_formation_id: visibilityScope === 'formation' ? data.visibility_formation_id || null : null,
+        visibility_session_id: visibilityScope === 'session' ? data.visibility_session_id || null : null,
+      } as Parameters<typeof educationalResourcesService.createResource>[0])
     },
     onSuccess: (resource) => {
       addToast({
@@ -347,6 +368,73 @@ export default function NewResourcePage() {
                 placeholder="Ex: react, javascript, tutoriel"
               />
               <p className="text-xs text-gray-500 mt-1">Séparez les tags par des virgules</p>
+            </div>
+
+            <div className="border-t pt-6 mt-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Visibilité</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Définir qui peut voir cette ressource : tous les utilisateurs ou uniquement les apprenants d&apos;un programme, d&apos;une formation ou d&apos;une session.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { value: 'all', label: 'Tous les utilisateurs' },
+                  { value: 'program', label: 'Apprenants d\'un programme' },
+                  { value: 'formation', label: 'Apprenants d\'une formation' },
+                  { value: 'session', label: 'Apprenants d\'une session' },
+                ].map((opt) => (
+                  <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      {...register('visibility_scope')}
+                      value={opt.value}
+                      className="rounded-full border-gray-300 text-brand-blue focus:ring-brand-blue"
+                    />
+                    <span className="text-sm text-gray-700">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+              {visibilityScope === 'program' && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Programme</label>
+                  <select
+                    {...register('visibility_program_id')}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue"
+                  >
+                    <option value="">Sélectionner un programme</option>
+                    {programs?.map((p: { id: string; name: string }) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {visibilityScope === 'formation' && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Formation</label>
+                  <select
+                    {...register('visibility_formation_id')}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue"
+                  >
+                    <option value="">Sélectionner une formation</option>
+                    {formations?.map((f: { id: string; name: string }) => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {visibilityScope === 'session' && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Session</label>
+                  <select
+                    {...register('visibility_session_id')}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue"
+                  >
+                    <option value="">Sélectionner une session</option>
+                    {sessions?.map((s: { id: string; name: string }) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {resourceType === 'link' && (

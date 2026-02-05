@@ -119,13 +119,15 @@ export class ELearningService {
       const { data, error } = await query.maybeSingle()
 
       if (error) {
-        // Si la table n'existe pas encore ou erreur 400, retourner null
+        // Si la table n'existe pas, erreur 400/409 (conflit, cache schéma), retourner null
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
           (error as any).status === 400 ||
+          (error as any).status === 409 ||
           error.code === '400' ||
+          error.code === '409' ||
           error.message?.includes('relation') ||
           error.message?.includes('relationship') ||
           error.message?.includes('does not exist') ||
@@ -145,7 +147,9 @@ export class ELearningService {
         errorObj?.code === '42P01' ||
         errorObj?.code === 'PGRST301' ||
         errorObj?.status === 400 ||
+        errorObj?.status === 409 ||
         errorObj?.code === '400' ||
+        errorObj?.code === '409' ||
         errorObj?.message?.includes('relation') ||
         errorObj?.message?.includes('relationship') ||
         errorObj?.message?.includes('does not exist') ||
@@ -199,18 +203,42 @@ export class ELearningService {
       .eq('course_id', courseId)
       .order('order_index', { ascending: true })
 
-    if (error) throw error
-    return data
+    if (error) {
+      // 409 Conflict peut survenir (RLS, cache schéma Supabase) : ne pas faire planter l'UI
+      if ((error as any).code === '409' || (error as any).status === 409) {
+        logger.warn('ELearningService - course_sections 409, retour tableau vide', { courseId })
+        return []
+      }
+      throw error
+    }
+    return data ?? []
   }
 
   async createSection(section: TableInsert<'course_sections'>) {
-    const { data, error } = await this.supabase
+    let { data, error } = await this.supabase
       .from('course_sections')
       .insert(section)
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      // 409 = conflit UNIQUE(course_id, order_index) : réessayer avec le prochain order_index libre
+      if ((error as any).code === '23505' || (error as any).status === 409) {
+        const existing = await this.getCourseSections(section.course_id)
+        const nextOrder =
+          existing.length === 0
+            ? 0
+            : Math.max(...existing.map((s: any) => Number(s.order_index ?? 0))) + 1
+        const retry = await this.supabase
+          .from('course_sections')
+          .insert({ ...section, order_index: nextOrder })
+          .select()
+          .single()
+        if (retry.error) throw retry.error
+        return retry.data
+      }
+      throw error
+    }
     return data
   }
 

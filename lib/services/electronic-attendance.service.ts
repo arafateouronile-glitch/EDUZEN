@@ -3,6 +3,7 @@ import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, AppError, ErrorCode } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
+import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { EmailService } from './email.service'
 import { AttendanceService } from './attendance.service'
 
@@ -32,9 +33,10 @@ export interface CreateAttendanceSessionParams {
 
 export interface AttendanceSessionWithRequests extends ElectronicAttendanceSession {
   requests?: ElectronicAttendanceRequest[]
+  /** Session de formation liée (table sessions : colonne `name`, pas `title`) */
   session?: {
     id: string
-    title: string | null
+    name: string | null
     start_date: string | null
     end_date: string | null
   }
@@ -113,7 +115,7 @@ export class ElectronicAttendanceService {
         .insert(sessionData as ElectronicAttendanceSessionInsert)
         .select(`
           *,
-          session:sessions(id, title, start_date, end_date)
+          session:sessions(id, name, start_date, end_date)
         `)
         .single()
 
@@ -146,7 +148,7 @@ export class ElectronicAttendanceService {
       // Récupérer la session d'émargement
       const { data: attendanceSession, error: sessionError } = await this.supabase
         .from('electronic_attendance_sessions')
-        .select('*, session:sessions(id, title)')
+        .select('*, session:sessions(id, name)')
         .eq('id', attendanceSessionId)
         .single()
 
@@ -203,12 +205,12 @@ export class ElectronicAttendanceService {
 
       if (updateError) throw updateError
 
-      // Envoyer les emails si demandé
+      // Envoyer les emails si demandé (Resend direct pour éviter fetch vers /api/email/send)
       if (sendEmails && createdRequests) {
         await this.sendAttendanceRequestEmails(
           createdRequests,
           attendanceSession,
-          (attendanceSession.session as any)?.title || attendanceSession.title
+          (attendanceSession.session as any)?.name || attendanceSession.title
         )
       }
 
@@ -240,7 +242,7 @@ export class ElectronicAttendanceService {
         .from('electronic_attendance_sessions')
         .select(`
           *,
-          session:sessions(id, title, start_date, end_date),
+          session:sessions(id, name, start_date, end_date),
           requests:electronic_attendance_requests(*)
         `)
         .eq('id', id)
@@ -310,7 +312,7 @@ export class ElectronicAttendanceService {
         .from('electronic_attendance_sessions')
         .select(`
           *,
-          session:sessions(id, title),
+          session:sessions(id, name),
           requests:electronic_attendance_requests(
             id,
             status
@@ -547,7 +549,7 @@ export class ElectronicAttendanceService {
             title,
             date,
             start_time,
-            session:sessions(title)
+            session:sessions(name)
           )
         `)
         .eq('id', requestId)
@@ -571,7 +573,7 @@ export class ElectronicAttendanceService {
       await this.sendAttendanceReminderEmail(
         request.student_email,
         request.student_name,
-        session?.session?.title || session?.title || 'Formation',
+        session?.session?.name || session?.title || 'Formation',
         session?.date,
         attendanceUrl
       )
@@ -824,12 +826,15 @@ Votre signature électronique sera enregistrée de manière sécurisée et confo
 EDUZEN - Plateforme de gestion de formation
     `
 
-    await this.emailService.sendEmail({
+    const result = await sendEmailViaResend({
       to,
       subject: `Émargement électronique - ${sessionTitle}`,
       html: htmlBody,
       text: textBody,
     })
+    if (!result.success) {
+      throw new Error(result.error ?? 'Échec envoi email')
+    }
   }
 
   /**
@@ -938,12 +943,15 @@ ${attendanceUrl}
 EDUZEN - Plateforme de gestion de formation
     `
 
-    await this.emailService.sendEmail({
+    const result = await sendEmailViaResend({
       to,
       subject: `Rappel : Émargement en attente - ${sessionTitle}`,
       html: htmlBody,
       text: textBody,
     })
+    if (!result.success) {
+      throw new Error(result.error ?? 'Échec envoi email de rappel')
+    }
   }
 }
 

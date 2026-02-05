@@ -119,7 +119,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Créer la demande de signature
     const signatureRequestService = new SignatureRequestService(supabase)
     const signatureRequest = await signatureRequestService.createSignatureRequest({
       documentId: document.id,

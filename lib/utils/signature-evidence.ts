@@ -6,6 +6,8 @@
 
 import { createHash } from 'crypto'
 
+const DEV_FALLBACK_SECRET = 'eduzen-dev-signature-evidence-secret-min-16-chars'
+
 export interface SignatureMetadata {
   ip?: string
   user_agent?: string
@@ -42,13 +44,20 @@ export function computeIntegrityHash(
 
 /**
  * Vérifie que le secret est configuré (éviter erreurs en prod).
+ * En développement uniquement : si non configuré, utilise un secret de repli (à ne pas utiliser en prod).
  */
 export function getSignatureEvidenceSecret(): string {
   const secret = process.env.SIGNATURE_EVIDENCE_SECRET ?? process.env.EDUZEN_SIGNATURE_SECRET
-  if (!secret || secret.length < 16) {
-    throw new Error(
-      'SIGNATURE_EVIDENCE_SECRET ou EDUZEN_SIGNATURE_SECRET (min 16 caractères) requis pour la chaîne de preuve.'
-    )
+  if (secret && secret.length >= 16) return secret
+  if (process.env.NODE_ENV === 'development') {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn(
+        '[signature-evidence] SIGNATURE_EVIDENCE_SECRET non défini : utilisation du secret de dev. En production, définissez SIGNATURE_EVIDENCE_SECRET dans .env.'
+      )
+    }
+    return DEV_FALLBACK_SECRET
   }
-  return secret
+  throw new Error(
+    'SIGNATURE_EVIDENCE_SECRET ou EDUZEN_SIGNATURE_SECRET (min 16 caractères) requis pour la chaîne de preuve.'
+  )
 }

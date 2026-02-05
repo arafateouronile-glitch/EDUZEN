@@ -10,7 +10,7 @@ import { logger, maskEmail, sanitizeError } from '@/lib/utils/logger'
  *
  * Configuration requise dans .env.local:
  * - RESEND_API_KEY=re_votre_cle_api
- * - RESEND_FROM_EMAIL=noreply@votredomaine.com
+ * - RESEND_FROM_EMAIL (optionnel, défaut: noreply@eduzen.io)
  */
 
 export async function POST(request: NextRequest) {
@@ -41,28 +41,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Vérifier que Resend est configuré
+    // En dev/test sans Resend configuré : ne pas faire échouer l'appel (éviter 500)
     if (!process.env.RESEND_API_KEY) {
-      logger.error('[CRITICAL] Missing RESEND_API_KEY configuration')
-      return NextResponse.json(
-        {
-          error: 'Configuration email non disponible',
-          hint: 'Ajoutez RESEND_API_KEY dans .env.local. Voir SECURITY_GUIDE.md'
-        },
-        { status: 500 }
-      )
+      logger.info('send-email: mode test (RESEND_API_KEY absente)', { to: maskEmail(to), subject })
+      return NextResponse.json({
+        success: true,
+        message: 'Mode test — email non envoyé',
+        hint: 'Définir RESEND_API_KEY dans .env.local pour envoyer réellement les emails.',
+      })
     }
 
-    if (!process.env.RESEND_FROM_EMAIL) {
-      logger.error('[CRITICAL] Missing RESEND_FROM_EMAIL configuration')
-      return NextResponse.json(
-        {
-          error: 'Configuration email non disponible',
-          hint: 'Ajoutez RESEND_FROM_EMAIL dans .env.local. Voir SECURITY_GUIDE.md'
-        },
-        { status: 500 }
-      )
-    }
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'EDUZEN <noreply@eduzen.io>'
 
     // Instancier Resend uniquement après avoir vérifié la clé API
     const resend = new Resend(process.env.RESEND_API_KEY)
@@ -107,9 +96,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Envoyer l'email via Resend
     const { data, error } = await resend.emails.send({
-      from: `EDUZEN <${process.env.RESEND_FROM_EMAIL}>`,
+      from: fromEmail,
       to: [to],
       subject: subject,
       html: `

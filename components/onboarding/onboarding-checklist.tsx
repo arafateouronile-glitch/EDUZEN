@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   CheckCircle2,
   Circle,
@@ -14,10 +13,14 @@ import {
   Gift,
   ChevronDown,
   ChevronUp,
+  ListChecks,
 } from 'lucide-react'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+
+const STORAGE_HIDDEN = 'dashboard_checklist_hidden'
+const STORAGE_DISMISSED = 'dashboard_checklist_completed_dismissed'
 
 interface ChecklistItem {
   id: string
@@ -28,11 +31,54 @@ interface ChecklistItem {
   completed: boolean
 }
 
+function getStoredHidden(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return localStorage.getItem(STORAGE_HIDDEN) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function getStoredDismissed(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return localStorage.getItem(STORAGE_DISMISSED) === 'true'
+  } catch {
+    return false
+  }
+}
+
 export function OnboardingChecklist() {
   const { user } = useAuth()
   const supabase = createClient()
   const [isExpanded, setIsExpanded] = useState(true)
   const [localCompleted, setLocalCompleted] = useState<Set<string>>(new Set())
+  const [isHidden, setIsHidden] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    setIsHidden(getStoredHidden())
+    setIsDismissed(getStoredDismissed())
+  }, [])
+
+  const setHidden = (value: boolean) => {
+    setIsHidden(value)
+    try {
+      if (value) localStorage.setItem(STORAGE_HIDDEN, 'true')
+      else localStorage.removeItem(STORAGE_HIDDEN)
+    } catch {}
+  }
+
+  const setDismissed = () => {
+    setIsDismissed(true)
+    try {
+      localStorage.setItem(STORAGE_DISMISSED, 'true')
+      localStorage.removeItem(STORAGE_HIDDEN)
+    } catch {}
+  }
 
   // Récupérer les données pour vérifier l'état de complétion
   const { data: students } = useQuery({
@@ -117,6 +163,7 @@ export function OnboardingChecklist() {
   const completedCount = checklistItems.filter((item) => item.completed).length
   const totalCount = checklistItems.length
   const progress = (completedCount / totalCount) * 100
+  const isComplete = completedCount === totalCount
 
   const handleToggle = (id: string) => {
     setLocalCompleted((prev) => {
@@ -130,6 +177,23 @@ export function OnboardingChecklist() {
     })
   }
 
+  if (!mounted) return null
+  if (isDismissed) return null
+
+  if (isHidden) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setHidden(false)}
+        className="fixed bottom-4 right-4 z-50 shadow-lg bg-white hover:bg-gray-50 border-gray-200 gap-2"
+      >
+        <ListChecks className="w-4 h-4" />
+        Afficher la checklist de démarrage
+      </Button>
+    )
+  }
+
   return (
     <Card className="fixed bottom-4 right-4 w-80 shadow-xl z-50">
       <CardContent className="p-0">
@@ -138,17 +202,28 @@ export function OnboardingChecklist() {
           className="p-4 bg-gradient-to-r from-brand-blue to-brand-cyan text-white cursor-pointer"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
               <h3 className="font-semibold">Checklist de démarrage</h3>
               <p className="text-sm opacity-90">
                 {completedCount}/{totalCount} complétés
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {completedCount === totalCount && (
+            <div className="flex items-center gap-1 shrink-0">
+              {isComplete && (
                 <Gift className="w-5 h-5 text-yellow-300" />
               )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setHidden(true)
+                }}
+                className="p-1 rounded hover:bg-white/20 transition-colors"
+                aria-label="Masquer la checklist"
+              >
+                <X className="w-5 h-5" />
+              </button>
               {isExpanded ? (
                 <ChevronDown className="w-5 h-5" />
               ) : (
@@ -232,15 +307,25 @@ export function OnboardingChecklist() {
               </div>
 
               {/* Footer */}
-              <div className="p-4 border-t bg-gray-50">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={() => setIsExpanded(false)}
-                >
-                  Réduire
-                </Button>
+              <div className="p-4 border-t bg-gray-50 flex flex-col gap-2">
+                {isComplete ? (
+                  <Button
+                    size="sm"
+                    className="w-full text-xs bg-green-600 hover:bg-green-700 text-white"
+                    onClick={setDismissed}
+                  >
+                    Masquer définitivement
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => setIsExpanded(false)}
+                  >
+                    Réduire
+                  </Button>
+                )}
               </div>
             </motion.div>
           )}

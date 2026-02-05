@@ -14,6 +14,7 @@ import {
   type SignatureMetadata,
 } from '@/lib/utils/signature-evidence'
 import { sealPdf } from '@/lib/utils/seal-pdf'
+import { sanitizeForPDF } from '@/lib/utils/pdf-sanitizer'
 import {
   extractStoragePathFromPublicUrl,
   downloadDocumentPdf,
@@ -36,6 +37,12 @@ function getIp(req: NextRequest): string | undefined {
     req.headers.get('x-real-ip') ??
     undefined
   )
+}
+
+/** Type du document (table documents) → type du template (document_templates). Les documents utilisent "contract", les templates "contrat". */
+function documentTypeToTemplateType(docType: string): string {
+  if (docType === 'contract') return 'contrat'
+  return docType
 }
 
 export async function POST(request: NextRequest) {
@@ -66,6 +73,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Vous devez certifier sur l\'honneur être présent et accepter les conditions.' },
         { status: 400 }
+      )
+    }
+
+    let secret: string
+    try {
+      secret = getSignatureEvidenceSecret()
+    } catch (e) {
+      logger.error('SIGNATURE_EVIDENCE_SECRET manquant ou invalide:', e)
+      return NextResponse.json(
+        { error: 'Configuration serveur de signature manquante. Contactez l\'administrateur.' },
+        { status: 503 }
       )
     }
 
@@ -192,7 +210,6 @@ export async function POST(request: NextRequest) {
         ? (resolved.signatory.email as string).trim()
         : ((resolved.sig?.recipient_email ?? resolved.att?.student_email) as string).trim()
 
-    const secret = getSignatureEvidenceSecret()
     const integrityHash = computeIntegrityHash(
       signerEmail,
       signatureData.trim(),
@@ -275,11 +292,12 @@ export async function POST(request: NextRequest) {
             label: z.label,
           }))
       } else {
+        const templateType = documentTypeToTemplateType(docType)
         const { data: tpl } = await (supabase as any)
           .from('document_templates')
           .select('sign_zones')
           .eq('organization_id', orgIdP)
-          .eq('type', docType)
+          .eq('type', templateType)
           .order('is_default', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -300,24 +318,50 @@ export async function POST(request: NextRequest) {
       }
 
       const signedAt = new Date().toISOString()
+      const safeSignerName = sanitizeForPDF(signerName)
+      const safeSignerEmail = sanitizeForPDF(signerEmail, 100)
+
+      let orgSignatureDataUrlP: string | undefined
+      const { data: orgRowP } = await (supabase as any)
+        .from('organizations')
+        .select('signature_url, stamp_url')
+        .eq('id', orgIdP)
+        .maybeSingle()
+      const orgImageUrlP = (orgRowP?.signature_url as string) || (orgRowP?.stamp_url as string)
+      if (orgImageUrlP?.trim()) {
+        try {
+          const imgRes = await fetch(orgImageUrlP.trim())
+          if (imgRes.ok) {
+            const blob = await imgRes.blob()
+            const buf = await blob.arrayBuffer()
+            const base64 = Buffer.from(buf).toString('base64')
+            const mime = blob.type || 'image/png'
+            orgSignatureDataUrlP = `data:${mime};base64,${base64}`
+          }
+        } catch {
+          // Ignorer si l'image OF est inaccessible
+        }
+      }
+
       const { sealedPdf: sealed, integrityHash: pdfHash } = await sealPdf(
         currentPdfBytes,
         signatureData.trim(),
         {
-          signerName,
-          signerEmail,
+          signerName: safeSignerName,
+          signerEmail: safeSignerEmail,
           signedAt,
           ip: metadata.ip,
           zones,
           signZoneId: 'sig_stagiaire',
+          orgSignatureImageDataUrl: orgSignatureDataUrlP,
         }
       )
 
       if (isLast) {
-        const finalPath = `${orgIdP}/documents/${docId}/convention_signee_${docId}.pdf`
+        const finalPath = `signed/${orgIdP}/convention_signee_${docId}.pdf`
         const { error: upErr } = await supabase.storage
           .from(bucket)
-          .upload(finalPath, sealed, { contentType: 'application/pdf', cacheControl: '3600', upsert: true })
+          .upload(finalPath, sealed, { contentType: 'application/pdf', cacheControl: '3600', upsert: false })
         if (upErr) {
           logger.error('Upload PDF final process:', upErr)
           return NextResponse.json(
@@ -457,23 +501,49 @@ export async function POST(request: NextRequest) {
 
     if (resolved.type === 'signature' && resolved.sig) {
       if (resolved.sig.status !== 'pending') {
-        return NextResponse.json(
-          { error: 'Cette demande a déjà été signée.' },
-          { status: 409 }
-        )
+        return NextResponse.json({
+          success: true,
+          alreadySigned: true,
+          message: 'Cette demande a déjà été signée.',
+        })
       }
 
       const docId = resolved.sig.document_id as string
       const signerName = (resolved.sig.recipient_name as string) ?? 'Signataire'
-      const signerId = resolved.sig.requester_id as string
+      let signerId = resolved.sig.requester_id as string | null
+      if (!signerId) {
+        const { data: fallbackUser } = await (supabase as any)
+          .from('users')
+          .select('id')
+          .eq('organization_id', orgId)
+          .in('role', ['admin', 'secretary'])
+          .limit(1)
+          .maybeSingle()
+        signerId = fallbackUser?.id ?? null
+      }
+      if (!signerId) {
+        logger.error('Aucun utilisateur requester ou admin trouvé pour document_signatures', { orgId })
+        return NextResponse.json(
+          { error: 'Configuration de la demande invalide. Contactez l\'administrateur.' },
+          { status: 500 }
+        )
+      }
 
-      const { data: docRow } = await (supabase as any)
+      const { data: docRow, error: docErr } = await (supabase as any)
         .from('documents')
         .select('id, title, file_url, organization_id, type, metadata, template_id')
         .eq('id', docId)
         .single()
 
-      const fileUrl = docRow?.file_url as string | null
+      if (docErr || !docRow) {
+        logger.error('Document introuvable pour signature:', { docId, error: docErr })
+        return NextResponse.json(
+          { error: 'Document introuvable.' },
+          { status: 404 }
+        )
+      }
+
+      const fileUrl = docRow.file_url as string | null
       const docTitle = (docRow?.title as string) ?? 'Document'
       const docType = (docRow?.type as string) ?? 'convention'
       const docMeta = (docRow?.metadata as Record<string, unknown>) ?? {}
@@ -493,11 +563,12 @@ export async function POST(request: NextRequest) {
             label: (z as any).label as string | undefined,
           }))
       } else {
+        const templateType = documentTypeToTemplateType(docType)
         const { data: tpl } = await (supabase as any)
           .from('document_templates')
           .select('sign_zones')
           .eq('organization_id', orgId)
-          .eq('type', docType)
+          .eq('type', templateType)
           .order('is_default', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -526,28 +597,54 @@ export async function POST(request: NextRequest) {
           try {
             const pdfBytes = await downloadDocumentPdf(supabase, path)
             const signedAt = new Date().toISOString()
+            const safeSignerName = sanitizeForPDF(signerName)
+            const safeSignerEmail = sanitizeForPDF(signerEmail, 100)
+
+            let orgSignatureDataUrl: string | undefined
+            const { data: orgRow } = await (supabase as any)
+              .from('organizations')
+              .select('signature_url, stamp_url')
+              .eq('id', orgId)
+              .maybeSingle()
+            const orgImageUrl = (orgRow?.signature_url as string) || (orgRow?.stamp_url as string)
+            if (orgImageUrl?.trim()) {
+              try {
+                const imgRes = await fetch(orgImageUrl.trim())
+                if (imgRes.ok) {
+                  const blob = await imgRes.blob()
+                  const buf = await blob.arrayBuffer()
+                  const base64 = Buffer.from(buf).toString('base64')
+                  const mime = blob.type || 'image/png'
+                  orgSignatureDataUrl = `data:${mime};base64,${base64}`
+                }
+              } catch {
+                // Ignorer si l'image OF est inaccessible
+              }
+            }
+
             const { sealedPdf: sp, integrityHash: ph } = await sealPdf(
               pdfBytes,
               signatureData.trim(),
               {
-                signerName,
-                signerEmail,
+                signerName: safeSignerName,
+                signerEmail: safeSignerEmail,
                 signedAt,
                 ip: metadata.ip,
                 zones,
                 signZoneId: 'sig_stagiaire',
+                orgSignatureImageDataUrl: orgSignatureDataUrl,
               }
             )
             sealedPdf = sp
             pdfIntegrityHash = ph
 
-            const signedPath = `${orgId}/documents/${docId}/convention_signee_${docId}.pdf`
+            const signedPath = `signed/${orgId}/convention_signee_${docId}.pdf`
             const { error: upErr } = await supabase.storage
               .from('documents')
               .upload(signedPath, sealedPdf, {
                 contentType: 'application/pdf',
                 cacheControl: '3600',
-                upsert: true,
+                upsert: false,
               })
             if (upErr) {
               logger.error('Erreur upload PDF signé:', upErr)
@@ -561,7 +658,7 @@ export async function POST(request: NextRequest) {
               .from('documents')
               .getPublicUrl(signedPath)
 
-            await (supabase as any)
+            const { error: docUpdErr } = await (supabase as any)
               .from('documents')
               .update({
                 signed_file_path: signedPath,
@@ -572,6 +669,13 @@ export async function POST(request: NextRequest) {
               })
               .eq('id', docId)
               .eq('organization_id', orgId)
+            if (docUpdErr) {
+              logger.error('Erreur mise à jour statut document signé:', docUpdErr)
+              return NextResponse.json(
+                { error: 'Erreur lors de la mise à jour du document (statut signé). Vérifiez que la migration documents status/signed_at est appliquée.' },
+                { status: 500 }
+              )
+            }
           } catch (e) {
             logger.error('Erreur scellement PDF:', e)
             return NextResponse.json(
@@ -649,17 +753,38 @@ export async function POST(request: NextRequest) {
       }
 
       if (sealedPdf) {
+        // Email apprenant (signataire) : priorité recipient_email, sinon students si recipient_id
+        let learnerEmail = (resolved.sig.recipient_email as string)?.trim() ?? ''
+        if (!learnerEmail && resolved.sig.recipient_id) {
+          const { data: studentRow } = await (supabase as any)
+            .from('students')
+            .select('email')
+            .eq('id', resolved.sig.recipient_id)
+            .maybeSingle()
+          learnerEmail = (studentRow?.email as string)?.trim() ?? ''
+        }
+        // Email OF (admin / secrétaire) pour recevoir aussi une copie
         const { data: reqUser } = await (supabase as any)
           .from('users')
           .select('email')
           .eq('id', signerId)
           .maybeSingle()
-        const adminEmail = (reqUser?.email as string) ?? ''
-
+        let adminEmail = (reqUser?.email as string)?.trim() ?? ''
+        if (!adminEmail) {
+          const { data: adminRow } = await (supabase as any)
+            .from('users')
+            .select('email')
+            .eq('organization_id', orgId)
+            .in('role', ['admin', 'secretary'])
+            .limit(1)
+            .maybeSingle()
+          adminEmail = (adminRow?.email as string)?.trim() ?? ''
+        }
+        // Envoi à l'apprenant ET à l'OF (deux emails distincts si les adresses diffèrent)
         await sendSignedPdfEmails({
-          recipientEmail: signerEmail,
+          recipientEmail: learnerEmail ?? '',
           recipientName: signerName,
-          adminEmail,
+          adminEmail: adminEmail ?? undefined,
           documentTitle: docTitle,
           signedPdfBuffer: sealedPdf,
           signedFilename: `convention_signee_${docId}.pdf`,
@@ -676,10 +801,11 @@ export async function POST(request: NextRequest) {
 
     if (resolved.type === 'attendance' && resolved.att) {
       if (resolved.att.status !== 'pending') {
-        return NextResponse.json(
-          { error: 'Vous avez déjà émargé pour cette session.' },
-          { status: 409 }
-        )
+        return NextResponse.json({
+          success: true,
+          alreadySigned: true,
+          message: 'Vous avez déjà émargé pour cette session.',
+        })
       }
 
       const { error: evErr } = await (supabase as any)
@@ -713,6 +839,8 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Insert sans colonnes géoloc : la table attendance peut ne pas les avoir (migration 20241202000026).
+      // La géoloc est enregistrée dans electronic_attendance_requests.
       const { data: attRow, error: attInsErr } = await (supabase as any)
         .from('attendance')
         .insert({
@@ -721,9 +849,6 @@ export async function POST(request: NextRequest) {
           session_id: sessionId ?? null,
           date: date ?? new Date().toISOString().slice(0, 10),
           status: 'present',
-          latitude: geolocation?.lat ?? null,
-          longitude: geolocation?.lng ?? null,
-          location_accuracy: geolocation?.accuracy ?? null,
         })
         .select('id')
         .single()
@@ -773,9 +898,14 @@ export async function POST(request: NextRequest) {
       { status: 404 }
     )
   } catch (e) {
-    logger.error('Erreur POST /api/sign/submit:', e)
+    const err = e instanceof Error ? e : new Error(String(e))
+    logger.error('Erreur POST /api/sign/submit:', err)
+    const message =
+      process.env.NODE_ENV === 'development'
+        ? `${err.message}${err.cause ? ` (${String(err.cause)})` : ''}`
+        : 'Erreur serveur lors de l\'enregistrement de la signature.'
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Erreur serveur' },
+      { error: message },
       { status: 500 }
     )
   }

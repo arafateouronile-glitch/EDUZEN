@@ -35,7 +35,8 @@ export class SessionService {
     endDate?: string
     search?: string
   }) {
-    let query = this.supabase
+    // 1) Sessions avec formation (INNER JOIN) — comme avant
+    let queryWithFormation = this.supabase
       .from('sessions')
       .select(`
         *,
@@ -45,43 +46,72 @@ export class SessionService {
         )
       `)
       .eq('formations.organization_id', organizationId)
+      .not('formation_id', 'is', null)
 
     if (filters?.formationId) {
-      query = query.eq('formation_id', filters.formationId)
+      queryWithFormation = queryWithFormation.eq('formation_id', filters.formationId)
     }
-
     if (filters?.status) {
-      query = query.eq('status', filters.status)
+      queryWithFormation = queryWithFormation.eq('status', filters.status)
     }
-
     if (filters?.startDate) {
-      query = query.gte('start_date', filters.startDate)
+      queryWithFormation = queryWithFormation.gte('start_date', filters.startDate)
     }
-
     if (filters?.endDate) {
-      query = query.lte('end_date', filters.endDate)
+      queryWithFormation = queryWithFormation.lte('end_date', filters.endDate)
     }
-
     if (filters?.search) {
-      query = query.ilike('name', `%${filters.search}%`)
+      queryWithFormation = queryWithFormation.ilike('name', `%${filters.search}%`)
     }
 
-    const { data, error } = await query.order('start_date', { ascending: true })
+    const { data: withFormation, error: err1 } = await queryWithFormation.order('start_date', { ascending: true })
 
-    if (error) throw error
-    return data
+    if (err1) throw err1
+
+    // 2) Sessions sans formation (organisation directe) — créées depuis /sessions/new
+    let queryIndependent = this.supabase
+      .from('sessions')
+      .select('*, formations(*)')
+      .is('formation_id', null)
+      .eq('organization_id', organizationId)
+
+    if (filters?.formationId) {
+      // filtre formation => pas de session indépendante à inclure
+      return withFormation ?? []
+    }
+    if (filters?.status) {
+      queryIndependent = queryIndependent.eq('status', filters.status)
+    }
+    if (filters?.startDate) {
+      queryIndependent = queryIndependent.gte('start_date', filters.startDate)
+    }
+    if (filters?.endDate) {
+      queryIndependent = queryIndependent.lte('end_date', filters.endDate)
+    }
+    if (filters?.search) {
+      queryIndependent = queryIndependent.ilike('name', `%${filters.search}%`)
+    }
+
+    const { data: independent, error: err2 } = await queryIndependent.order('start_date', { ascending: true })
+
+    if (err2) throw err2
+
+    const merged = [...(withFormation ?? []), ...(independent ?? [])]
+    merged.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+    return merged
   }
 
   /**
-   * Récupère une session par son ID avec sa formation, son programme (via formation) et tous ses programmes associés
+   * Récupère une session par son ID avec sa formation (si présente), son programme et les programmes associés.
+   * Gère les sessions sans formation (formation_id null, créées depuis /sessions/new).
    */
   async getSessionById(id: string) {
-    // Récupérer la session avec sa formation et son programme (relation indirecte)
+    // LEFT JOIN formations pour inclure les sessions sans formation (formation_id null)
     const { data: session, error: sessionError } = await this.supabase
       .from('sessions')
       .select(`
         *,
-        formations!inner(
+        formations(
           *,
           programs(*)
         )
@@ -185,15 +215,12 @@ export class SessionService {
         .single()
 
       if (formation) {
-        const sessionPrograms = programIds.map((programId) => ({
-          session_id: data.id,
-          program_id: programId,
-          organization_id: formation.organization_id,
-        }))
-
-        const { error: linkError } = await this.supabase
-          .from('session_programs')
-          .insert(sessionPrograms)
+        const { error: linkError } = await this.supabase.rpc('insert_session_programs', {
+          p_session_id: data.id,
+          p_program_ids: programIds,
+          p_organization_id: formation.organization_id,
+          p_formation_id: data.formation_id ?? undefined,
+        })
 
         if (linkError) {
           logger.error('SessionService - Erreur lors de la création des associations session-programme', linkError, { error: sanitizeError(linkError) })
@@ -234,17 +261,20 @@ export class SessionService {
 
     if (deleteError) throw deleteError
 
-    // Créer les nouvelles associations
+    // Créer les nouvelles associations via RPC (contourne RLS INSERT sur session_programs)
     if (programIds.length > 0) {
-      const sessionPrograms = programIds.map((programId) => ({
-        session_id: sessionId,
-        program_id: programId,
-        organization_id: organizationId,
-      }))
+      const { data: sessionRow } = await this.supabase
+        .from('sessions')
+        .select('formation_id')
+        .eq('id', sessionId)
+        .single()
 
-      const { error: insertError } = await this.supabase
-        .from('session_programs')
-        .insert(sessionPrograms)
+      const { error: insertError } = await this.supabase.rpc('insert_session_programs', {
+        p_session_id: sessionId,
+        p_program_ids: programIds,
+        p_organization_id: organizationId,
+        p_formation_id: sessionRow?.formation_id ?? undefined,
+      })
 
       if (insertError) throw insertError
     }

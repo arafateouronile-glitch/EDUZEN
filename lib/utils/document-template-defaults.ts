@@ -1318,69 +1318,100 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     name: 'Conditions Générales de Vente',
     headerContent: premiumHeader,
     bodyContent: `
-      <div style="text-align: center; margin-bottom: 25px;">
+      <div style="text-align: center; margin-bottom: 20px;">
         <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 8px 0; color: #1A1A1A;">
           CONDITIONS GÉNÉRALES DE VENTE
         </h1>
-        <p style="font-size: 11pt; color: #666; margin: 0;">{ecole_nom}</p>
+        <p style="font-size: 10pt; color: #666; margin: 0;">Applicables aux prestations de formation professionnelle</p>
+        <p style="font-size: 10pt; color: #666; margin: 5px 0 0 0; font-weight: bold;">{ecole_nom}</p>
       </div>
 
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 1 - Objet</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre 
-        <strong>{ecole_nom}</strong> et ses clients dans le cadre de la vente de formations et de services éducatifs.
+      <div style="padding: 10px 15px; background-color: #f9fafb; border-left: 3px solid #335ACF; margin-bottom: 20px;">
+        <p style="font-size: 9pt; margin: 0;">
+          <strong>Organisme de formation :</strong> {ecole_nom}<br/>
+          <strong>SIRET :</strong> {ecole_siret}<br/>
+          <strong>N° déclaration d'activité :</strong> {ecole_numero_declaration}<br/>
+          <strong>Adresse :</strong> {ecole_adresse}, {ecole_code_postal} {ecole_ville}
+        </p>
+      </div>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 1 - Objet et champ d'application</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        Les présentes Conditions Générales de Vente (CGV) s'appliquent à toutes les prestations de formation
+        professionnelle conclues entre <strong>{ecole_nom}</strong> et ses clients. Toute inscription ou commande
+        implique l'acceptation sans réserve par le client des présentes CGV.
       </p>
 
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 2 - Commandes</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        Toute commande de formation implique l'acceptation sans réserve des présentes CGV. 
-        La commande devient ferme et définitive après acceptation de l'établissement.
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 2 - Inscriptions et commandes</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        Toute inscription à une formation doit être formalisée par la signature d'une convention de formation
+        ou l'acceptation d'un devis. L'inscription est définitive à réception du contrat signé accompagné
+        du règlement ou d'un accord de prise en charge par un organisme financeur.
       </p>
 
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 3 - Prix</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        Les prix des formations sont indiqués en euros TTC. Ils sont fermes et non révisables pendant 
-        la durée de validité indiquée sur le devis.
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 3 - Prix et modalités de paiement</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        Les prix des formations sont indiqués en euros et sont exonérés de TVA en vertu de l'article 261-4-4° du CGI.
+        Le règlement s'effectue selon l'échéancier prévu au contrat, par virement bancaire ou chèque.
+        En cas de retard de paiement, des pénalités au taux de 3 fois le taux d'intérêt légal seront appliquées,
+        ainsi qu'une indemnité forfaitaire de 40€ pour frais de recouvrement.
       </p>
 
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 4 - Modalités de paiement</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        Le paiement s'effectue selon les modalités définies dans le contrat ou le devis accepté. 
-        En cas de retard de paiement, des pénalités de retard au taux de 3 fois le taux légal 
-        peuvent être appliquées.
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 4 - Délai de rétractation</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        Conformément aux articles L.6353-5 et L.6353-6 du Code du travail, le stagiaire dispose d'un délai de
+        10 jours à compter de la signature de la convention pour se rétracter par lettre recommandée avec AR.
+        Ce délai est porté à 14 jours pour les contrats conclus à distance (article L.221-18 du Code de la consommation).
       </p>
 
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 5 - Droit de rétractation</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        Conformément à la législation en vigueur, le client dispose d'un délai de 14 jours calendaires 
-        pour exercer son droit de rétractation à compter de l'acceptation de la commande.
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 5 - Annulation et report</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        En cas d'annulation par le client moins de 15 jours avant le début de la formation, 30% du montant
+        total sera facturé. Moins de 7 jours avant, 50% sera facturé. En cas d'absence non signalée,
+        l'intégralité des frais sera due. L'organisme se réserve le droit d'annuler ou reporter une session
+        en cas d'effectif insuffisant, avec proposition de dates alternatives ou remboursement intégral.
       </p>
 
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 6 - Annulation</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        En cas d'annulation par le client, des frais d'annulation peuvent être appliqués selon 
-        les conditions prévues dans le contrat. L'établissement se réserve le droit d'annuler 
-        une formation en cas d'insuffisance d'inscriptions.
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 6 - Déroulement des formations</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        Le stagiaire s'engage à respecter le règlement intérieur de l'organisme et à signer les feuilles
+        d'émargement. Une attestation de fin de formation sera délivrée au stagiaire. L'organisme s'engage
+        à fournir des moyens pédagogiques adaptés et à évaluer les acquis de la formation.
       </p>
 
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 7 - Responsabilité</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        L'établissement s'engage à dispenser les formations dans les conditions de qualité 
-        prévues. La responsabilité de l'établissement est limitée aux dommages directs et prévisibles.
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 7 - Responsabilité</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        L'organisme s'engage sur une obligation de moyens. Sa responsabilité ne saurait être engagée en cas
+        de non-atteinte des objectifs pédagogiques du fait du stagiaire. L'organisme décline toute responsabilité
+        en cas de vol ou dommages aux biens personnels des stagiaires sur le lieu de formation.
       </p>
 
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 8 - Litiges</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        En cas de litige, les parties conviennent de rechercher une solution amiable avant toute 
-        action judiciaire. À défaut, les tribunaux de {ecole_ville} seront seuls compétents.
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 8 - Propriété intellectuelle</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        Les supports pédagogiques sont la propriété exclusive de l'organisme. Leur reproduction, diffusion
+        ou utilisation à des fins commerciales est strictement interdite sans autorisation écrite préalable.
       </p>
 
-      <div style="margin-top: 40px; text-align: right;">
-        <p style="margin: 0; font-size: 10pt;">Fait à {ecole_ville}, le {date_jour}</p>
-        <div style="margin-top: 30px;">
-          <p style="margin: 0; font-weight: bold; font-size: 10pt;">{ecole_representant}</p>
-          <p style="margin: 3px 0 0 0; font-size: 10pt;">Directeur</p>
-        </div>
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 9 - Protection des données personnelles</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        Conformément au RGPD, les données personnelles collectées sont nécessaires au traitement des inscriptions
+        et au suivi pédagogique. Le client dispose d'un droit d'accès, de rectification et de suppression
+        de ses données en contactant : {ecole_email}.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #335ACF;">Article 10 - Litiges et médiation</h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9pt; margin: 0;">
+        En cas de litige, les parties s'engagent à rechercher une solution amiable. Conformément à l'article
+        L.612-1 du Code de la consommation, le client peut recourir gratuitement à un médiateur de la consommation.
+        À défaut de résolution amiable, les tribunaux de {ecole_ville} seront seuls compétents.
+      </p>
+
+      <div style="margin-top: 25px; padding: 12px; background-color: #f9fafb; border-radius: 5px;">
+        <p style="margin: 0; font-size: 9pt; text-align: center;">
+          <strong>Date d'entrée en vigueur :</strong> {date_jour}<br/>
+          Ces CGV sont susceptibles d'être modifiées à tout moment. La version applicable est celle en vigueur
+          à la date de signature du contrat.
+        </p>
       </div>
     `,
     footerContent: premiumFooter,
@@ -1568,21 +1599,81 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
         <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
           CERTIFICAT DE RÉALISATION
         </h1>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <p style="text-align: justify; font-size: 11pt; line-height: 1.6;">
-          L'établissement <strong>{ecole_nom}</strong> certifie que 
-          <strong>{eleve_prenom} {eleve_nom}</strong> a réalisé avec succès la formation 
-          <strong>"{formation_nom}"</strong>.
+        <p style="font-size: 9pt; color: #666; margin-top: 8px; font-style: italic;">
+          (Article L.6353-1 du Code du travail)
         </p>
       </div>
-      
-      <div style="margin-top: 50px; text-align: center;">
-        <p style="margin-bottom: 30px;">{ecole_ville}, le {date_jour}</p>
-        <p><strong>Le Directeur</strong></p>
-        <p style="margin-top: 40px;">________________________</p>
-        <p>{ecole_directeur}</p>
+
+      <div style="margin-bottom: 25px;">
+        <p style="text-align: justify; font-size: 11pt; line-height: 1.8;">
+          Je soussigné(e), <strong>{ecole_representant}</strong>, représentant(e) légal(e) de l'organisme de formation
+          <strong>{ecole_nom}</strong>, atteste que :
+        </p>
+      </div>
+
+      <div style="margin: 30px 0; padding: 20px; background-color: #f9fafb; border-left: 4px solid #335ACF;">
+        <p style="font-size: 12pt; font-weight: bold; margin-bottom: 15px; color: #1A1A1A;">
+          {eleve_prenom} {eleve_nom}
+        </p>
+        <p style="font-size: 10pt; margin-bottom: 5px;">Né(e) le : {eleve_date_naissance}</p>
+        <p style="font-size: 10pt;">Adresse : {eleve_adresse}</p>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <p style="text-align: justify; font-size: 11pt; line-height: 1.8;">
+          a suivi l'action de formation suivante :
+        </p>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; width: 40%; background-color: #f9fafb; font-size: 10pt;">Intitulé de la formation</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{formation_nom}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Objectifs de la formation</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{formation_objectifs}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Nature de l'action</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">Action de formation</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Durée totale</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{formation_duree}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Dates de réalisation</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">Du {session_debut} au {session_fin}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Lieu de formation</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{session_lieu}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Modalité</td>
+          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{session_modalite}</td>
+        </tr>
+      </table>
+
+      <div style="margin-top: 30px; padding: 15px; border: 1px solid #e5e7eb; background-color: #fff;">
+        <p style="font-size: 10pt; line-height: 1.6;">
+          <strong>Attestation :</strong> Le bénéficiaire a bien réalisé l'intégralité du parcours de formation défini
+          dans le programme de formation et les conditions d'exécution ont été conformes aux dispositions prévues.
+        </p>
+      </div>
+
+      <div style="margin-top: 40px;">
+        <p style="text-align: right; margin-bottom: 30px; font-size: 10pt;">
+          Fait à {ecole_ville}, le {date_jour}
+        </p>
+        <div style="text-align: right;">
+          <p style="font-weight: bold; font-size: 10pt;">Pour l'organisme de formation</p>
+          <p style="font-size: 10pt; margin-top: 5px;">{ecole_nom}</p>
+          <p style="margin-top: 50px; font-size: 10pt;">________________________</p>
+          <p style="font-size: 10pt;">{ecole_representant}</p>
+          <p style="font-size: 9pt; color: #666;">Cachet et signature</p>
+        </div>
       </div>
     `,
     footerContent: premiumFooter,
@@ -1628,27 +1719,112 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     name: 'Livret d\'accueil',
     headerContent: premiumHeader,
     bodyContent: `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
+      <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%); border-radius: 8px;">
+        <h1 style="font-size: 20pt; font-weight: bold; margin: 0; color: #1A1A1A;">
           LIVRET D'ACCUEIL
         </h1>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h2 style="font-size: 14pt; font-weight: bold; margin-bottom: 15px;">BIENVENUE</h2>
-        <p style="text-align: justify; font-size: 11pt; line-height: 1.6;">
-          Bienvenue à <strong>{ecole_nom}</strong>.
-        </p>
-        <p style="text-align: justify; font-size: 11pt; line-height: 1.6; margin-top: 10px;">
-          Ce livret vous présente les informations essentielles de notre établissement.
+        <p style="font-size: 11pt; color: #666; margin-top: 10px;">
+          {ecole_nom}
         </p>
       </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h2 style="font-size: 14pt; font-weight: bold; margin-bottom: 15px;">PRÉSENTATION</h2>
-        <p style="font-size: 11pt; line-height: 1.6;"><strong>Établissement :</strong> {ecole_nom}</p>
-        <p style="font-size: 11pt; line-height: 1.6;"><strong>Adresse :</strong> {ecole_adresse}, {ecole_ville}</p>
-        <p style="font-size: 11pt; line-height: 1.6;"><strong>Contact :</strong> {ecole_telephone} | {ecole_email}</p>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 12px; color: #335ACF; border-bottom: 2px solid #335ACF; padding-bottom: 5px;">
+          1. MOT DE BIENVENUE
+        </h2>
+        <p style="text-align: justify; font-size: 10pt; line-height: 1.7;">
+          Nous sommes heureux de vous accueillir au sein de <strong>{ecole_nom}</strong>.
+          Ce livret a pour objectif de vous fournir toutes les informations pratiques nécessaires
+          au bon déroulement de votre formation. N'hésitez pas à le consulter régulièrement.
+        </p>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 12px; color: #335ACF; border-bottom: 2px solid #335ACF; padding-bottom: 5px;">
+          2. PRÉSENTATION DE L'ORGANISME
+        </h2>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <tr>
+            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; width: 35%; font-size: 10pt;">Raison sociale</td>
+            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_nom}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">Adresse</td>
+            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_adresse}, {ecole_code_postal} {ecole_ville}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">Téléphone</td>
+            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_telephone}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">Email</td>
+            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_email}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">N° SIRET</td>
+            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_siret}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">N° déclaration d'activité</td>
+            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_numero_declaration}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 12px; color: #335ACF; border-bottom: 2px solid #335ACF; padding-bottom: 5px;">
+          3. INFORMATIONS PRATIQUES
+        </h2>
+        <h3 style="font-size: 11pt; font-weight: bold; margin: 15px 0 8px 0;">Horaires d'ouverture</h3>
+        <p style="font-size: 10pt; line-height: 1.6; margin-left: 15px;">
+          Du lundi au vendredi : {horaires_ouverture}
+        </p>
+        <h3 style="font-size: 11pt; font-weight: bold; margin: 15px 0 8px 0;">Accès</h3>
+        <p style="font-size: 10pt; line-height: 1.6; margin-left: 15px;">
+          {ecole_adresse}, {ecole_code_postal} {ecole_ville}
+        </p>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 12px; color: #335ACF; border-bottom: 2px solid #335ACF; padding-bottom: 5px;">
+          4. DÉROULEMENT DE LA FORMATION
+        </h2>
+        <ul style="font-size: 10pt; line-height: 1.8; margin-left: 20px;">
+          <li>La formation se déroule selon le programme prévu et communiqué en amont.</li>
+          <li>Une feuille d'émargement sera à signer à chaque demi-journée de formation.</li>
+          <li>Les supports pédagogiques vous seront remis au fur et à mesure de la formation.</li>
+          <li>Des évaluations seront réalisées pour mesurer l'atteinte des objectifs.</li>
+        </ul>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 12px; color: #335ACF; border-bottom: 2px solid #335ACF; padding-bottom: 5px;">
+          5. RÈGLES DE VIE
+        </h2>
+        <ul style="font-size: 10pt; line-height: 1.8; margin-left: 20px;">
+          <li><strong>Ponctualité :</strong> Merci de respecter les horaires de formation.</li>
+          <li><strong>Téléphone :</strong> Veuillez mettre votre téléphone en mode silencieux.</li>
+          <li><strong>Respect :</strong> Le respect mutuel entre stagiaires et formateurs est essentiel.</li>
+          <li><strong>Propreté :</strong> Veillez à maintenir les locaux propres.</li>
+          <li><strong>Interdictions :</strong> Il est interdit de fumer dans l'enceinte de l'établissement.</li>
+        </ul>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 13pt; font-weight: bold; margin-bottom: 12px; color: #335ACF; border-bottom: 2px solid #335ACF; padding-bottom: 5px;">
+          6. CONTACTS UTILES
+        </h2>
+        <p style="font-size: 10pt; line-height: 1.6;">
+          <strong>Responsable pédagogique :</strong> {ecole_representant}<br/>
+          <strong>Contact administratif :</strong> {ecole_telephone}<br/>
+          <strong>Email :</strong> {ecole_email}
+        </p>
+      </div>
+
+      <div style="margin-top: 30px; padding: 15px; background-color: #f9fafb; border-radius: 8px; text-align: center;">
+        <p style="font-size: 10pt; font-style: italic; color: #666;">
+          Nous vous souhaitons une excellente formation au sein de notre établissement !
+        </p>
       </div>
     `,
     footerContent: premiumFooter,
@@ -1662,33 +1838,122 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     name: 'Feuille d\'émargement',
     headerContent: premiumHeader,
     bodyContent: `
-      <div style="text-align: center; margin-bottom: 30px;">
+      <div style="text-align: center; margin-bottom: 20px;">
         <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
           FEUILLE D'ÉMARGEMENT
         </h1>
+        <p style="font-size: 9pt; color: #666; margin-top: 5px; font-style: italic;">
+          (Article L.6353-1 du Code du travail)
+        </p>
       </div>
-      
-      <div style="margin-bottom: 30px;">
-        <p style="font-size: 11pt; line-height: 1.6;"><strong>Formation :</strong> {formation_nom}</p>
-        <p style="font-size: 11pt; line-height: 1.6;"><strong>Session :</strong> {session_nom}</p>
-        <p style="font-size: 11pt; line-height: 1.6;"><strong>Date :</strong> {session_debut}</p>
-        <p style="font-size: 11pt; line-height: 1.6;"><strong>Lieu :</strong> {session_lieu}</p>
-      </div>
-      
-      <table style="width: 100%; border-collapse: collapse; margin-top: 30px;">
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <tr>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; width: 30%; background-color: #f9fafb; font-size: 9pt;">Formation</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{formation_nom}</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; width: 15%; background-color: #f9fafb; font-size: 9pt;">Durée</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{formation_duree}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 9pt;">Session</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{session_nom}</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 9pt;">Horaires</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{session_horaires}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 9pt;">Date</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{session_debut}</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 9pt;">Lieu</td>
+          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{session_lieu}</td>
+        </tr>
+      </table>
+
+      <p style="font-size: 9pt; margin-bottom: 10px; font-style: italic; color: #666;">
+        Les stagiaires sont tenus d'émarger à chaque demi-journée de formation.
+      </p>
+
+      <table style="width: 100%; border-collapse: collapse;">
         <thead>
-          <tr style="background-color: #f3f4f6;">
-            <th style="padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 11pt;">Nom et Prénom</th>
-            <th style="padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 11pt;">Signature</th>
+          <tr style="background-color: #335ACF; color: white;">
+            <th style="padding: 10px; border: 1px solid #335ACF; text-align: left; font-size: 9pt; width: 30%;">Nom et Prénom</th>
+            <th style="padding: 10px; border: 1px solid #335ACF; text-align: center; font-size: 9pt; width: 17.5%;">Matin<br/><span style="font-weight: normal; font-size: 8pt;">Arrivée</span></th>
+            <th style="padding: 10px; border: 1px solid #335ACF; text-align: center; font-size: 9pt; width: 17.5%;">Matin<br/><span style="font-weight: normal; font-size: 8pt;">Départ</span></th>
+            <th style="padding: 10px; border: 1px solid #335ACF; text-align: center; font-size: 9pt; width: 17.5%;">Après-midi<br/><span style="font-weight: normal; font-size: 8pt;">Arrivée</span></th>
+            <th style="padding: 10px; border: 1px solid #335ACF; text-align: center; font-size: 9pt; width: 17.5%;">Après-midi<br/><span style="font-weight: normal; font-size: 8pt;">Départ</span></th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding: 10px; border: 1px solid #ddd; font-size: 11pt;">{eleve_prenom} {eleve_nom}</td>
-            <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">________________</td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{eleve_prenom} {eleve_nom}</td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
           </tr>
         </tbody>
       </table>
+
+      <div style="margin-top: 25px; display: flex; justify-content: space-between;">
+        <div style="width: 48%;">
+          <p style="font-size: 9pt; font-weight: bold; margin-bottom: 5px;">Formateur :</p>
+          <p style="font-size: 9pt; margin-bottom: 30px;">Nom : ____________________________</p>
+          <p style="font-size: 9pt;">Signature :</p>
+        </div>
+        <div style="width: 48%; text-align: right;">
+          <p style="font-size: 9pt; font-weight: bold; margin-bottom: 5px;">Responsable pédagogique :</p>
+          <p style="font-size: 9pt; margin-bottom: 30px;">Nom : ____________________________</p>
+          <p style="font-size: 9pt;">Signature et cachet :</p>
+        </div>
+      </div>
     `,
     footerContent: premiumFooter,
   },

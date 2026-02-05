@@ -91,6 +91,27 @@ describe('lib/errors', () => {
       expect(result.code).toBe(ErrorCode.DB_NOT_FOUND)
     })
 
+    it('devrait convertir une Error standard (unauthorized / 401)', () => {
+      const r1 = errorHandler.handleError(new Error('unauthorized'))
+      expect(r1.code).toBe(ErrorCode.AUTH_REQUIRED)
+      expect(r1.severity).toBe(ErrorSeverity.HIGH)
+      const r2 = errorHandler.handleError(new Error('Request 401 failed'))
+      expect(r2.code).toBe(ErrorCode.AUTH_REQUIRED)
+    })
+
+    it('devrait convertir une Error standard (forbidden / 403)', () => {
+      const result = errorHandler.handleError(new Error('forbidden'))
+      expect(result.code).toBe(ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS)
+      expect(result.severity).toBe(ErrorSeverity.HIGH)
+    })
+
+    it('devrait convertir une Error standard (validation / invalid)', () => {
+      const r1 = errorHandler.handleError(new Error('validation failed'))
+      expect(r1.code).toBe(ErrorCode.VALIDATION_ERROR)
+      const r2 = errorHandler.handleError(new Error('invalid input'))
+      expect(r2.code).toBe(ErrorCode.VALIDATION_ERROR)
+    })
+
     it('devrait gérer une erreur Supabase PGRST116', () => {
       const result = errorHandler.handleError(
         { code: 'PGRST116', message: 'No rows', status: 200 },
@@ -106,6 +127,75 @@ describe('lib/errors', () => {
         {}
       )
       expect(result.code).toBe(ErrorCode.VALIDATION_UNIQUE_CONSTRAINT)
+    })
+
+    it('devrait gérer une erreur Supabase 42501 (RLS)', () => {
+      const result = errorHandler.handleError(
+        { code: '42501', message: 'RLS policy violation' },
+        {}
+      )
+      expect(result.code).toBe(ErrorCode.DB_RLS_POLICY_VIOLATION)
+      expect(result.severity).toBe(ErrorSeverity.HIGH)
+    })
+
+    it('devrait gérer une erreur Supabase 23503 (contrainte)', () => {
+      const result = errorHandler.handleError(
+        { code: '23503', message: 'Foreign key violation' },
+        {}
+      )
+      expect(result.code).toBe(ErrorCode.DB_CONSTRAINT_VIOLATION)
+      expect(result.severity).toBe(ErrorSeverity.MEDIUM)
+    })
+
+    it('devrait gérer une erreur Supabase 400 / PGRST301 (bad request)', () => {
+      const r1 = errorHandler.handleError({ code: '400', message: 'Bad request' }, {})
+      expect(r1.code).toBe(ErrorCode.API_BAD_REQUEST)
+      const r2 = errorHandler.handleError({ code: 'PGRST301', message: 'Invalid' }, {})
+      expect(r2.code).toBe(ErrorCode.API_BAD_REQUEST)
+    })
+
+    it('devrait gérer une erreur Supabase 401 (auth required)', () => {
+      const result = errorHandler.handleError({ code: '401', message: 'Unauthorized' }, {})
+      expect(result.code).toBe(ErrorCode.AUTH_REQUIRED)
+      expect(result.severity).toBe(ErrorSeverity.HIGH)
+    })
+
+    it('devrait gérer une erreur Supabase 403 (insufficient permissions)', () => {
+      const result = errorHandler.handleError(
+        { code: '403', message: 'Forbidden' },
+        {}
+      )
+      expect(result.code).toBe(ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS)
+      expect(result.severity).toBe(ErrorSeverity.HIGH)
+    })
+
+    it('devrait gérer une erreur Supabase 404 (not found)', () => {
+      const result = errorHandler.handleError({ code: '404', message: 'Not found' }, {})
+      expect(result.code).toBe(ErrorCode.API_NOT_FOUND)
+      expect(result.severity).toBe(ErrorSeverity.LOW)
+    })
+
+    it('devrait gérer une erreur Supabase 500 (server error)', () => {
+      const result = errorHandler.handleError({ code: '500', message: 'Server error' }, {})
+      expect(result.code).toBe(ErrorCode.API_SERVER_ERROR)
+      expect(result.severity).toBe(ErrorSeverity.HIGH)
+    })
+
+    it('devrait utiliser context.code en priorité (skip switch)', () => {
+      const result = errorHandler.handleError(
+        { code: '23505', message: 'Duplicate' },
+        { code: ErrorCode.VALIDATION_ERROR }
+      )
+      expect(result.code).toBe(ErrorCode.VALIDATION_ERROR)
+    })
+
+    it('devrait ajuster severity MEDIUM pour DB_FOREIGN_KEY_CONSTRAINT', () => {
+      const result = errorHandler.handleError(
+        { code: '23503', message: 'FK violation' },
+        { code: ErrorCode.DB_FOREIGN_KEY_CONSTRAINT }
+      )
+      expect(result.code).toBe(ErrorCode.DB_FOREIGN_KEY_CONSTRAINT)
+      expect(result.severity).toBe(ErrorSeverity.MEDIUM)
     })
 
     it('devrait gérer une erreur inconnue', () => {

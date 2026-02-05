@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: false, // Mode sombre désactivé - application en mode clair uniquement
+  darkMode: 'media', // Évite l'avertissement Tailwind ; app en mode clair si pas de préférence système sombre
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

@@ -17,27 +17,31 @@ export function useAuth() {
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  // Récupérer la session actuelle
+  // Récupérer l'utilisateur authentifié via getUser() (vérifié côté serveur Auth, pas getSession())
   const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
       try {
-        // Timeout de 3 secondes pour éviter les blocages
-        const timeoutPromise = new Promise<null>((_, reject) => {
+        const timeoutPromise = new Promise<{ user: User } | null>((_, reject) => {
           setTimeout(() => reject(new Error('Session timeout')), 3000)
         })
 
-        const sessionPromise = supabase.auth.getSession().then(({ data: { session }, error }) => {
+        const sessionPromise = supabase.auth.getUser().then(({ data: { user }, error }) => {
           if (error) {
-            logger.error('Session error', error as Error)
+            // Pas de session = cas normal sur login/public, ne pas logger en erreur
+            const isSessionMissing =
+              error?.name === 'AuthSessionMissingError' ||
+              (error as { message?: string })?.message?.includes('Auth session missing')
+            if (!isSessionMissing) {
+              logger.error('Auth getUser error', error as Error)
+            }
             return null
           }
-          return session
+          return user ? { user } : null
         })
 
         return await Promise.race([sessionPromise, timeoutPromise])
       } catch (error) {
-        // En cas d'erreur ou de timeout, retourner null pour ne pas bloquer
         return null
       }
     },
@@ -209,31 +213,24 @@ export function useAuth() {
 
       // Avec Supabase, signUp peut retourner null pour la session si l'email nécessite une confirmation
       // On essaie de récupérer la session de plusieurs façons
-      let currentSession = authData.session
+      let currentSession: { user: User } | null = authData.session
       
-      // Si pas de session immédiatement, attendre un peu et réessayer
+      // Si pas de session immédiatement, attendre un peu et réessayer via getUser()
       if (!currentSession) {
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Essayer de récupérer la session
-        const { data: { session: newSession } } = await supabase.auth.getSession()
-        currentSession = newSession
+        const { data: { user: userFromGetUser } } = await supabase.auth.getUser()
+        if (userFromGetUser) currentSession = { user: userFromGetUser }
       }
 
-      // Si toujours pas de session, essayer refreshSession
       if (!currentSession && authData.user) {
         const { data: { session: refreshedSession } } = await supabase.auth.refreshSession()
         currentSession = refreshedSession
       }
 
-      // Si toujours pas de session, attendre encore et réessayer
       if (!currentSession) {
         await new Promise(resolve => setTimeout(resolve, 2000))
-        
-        const { data: { session: retrySession } } = await supabase.auth.getSession()
-        if (retrySession) {
-          currentSession = retrySession
-        }
+        const { data: { user: userFromGetUser } } = await supabase.auth.getUser()
+        if (userFromGetUser) currentSession = { user: userFromGetUser }
       }
 
       // Si toujours pas de session, mais qu'on a un user, on continue quand même
@@ -452,34 +449,29 @@ export function useAuth() {
       queryClient.invalidateQueries({ queryKey: ['user', userId] })
       queryClient.invalidateQueries({ queryKey: ['session'] })
 
-      // Si on n'a pas de session, attendre un peu et réessayer une dernière fois
       if (!currentSession) {
         await new Promise(resolve => setTimeout(resolve, 1000))
-        const { data: { session: finalSession } } = await supabase.auth.getSession()
-        if (finalSession) {
-          return { ...authData, session: finalSession }
+        const { data: { user: userFromGetUser } } = await supabase.auth.getUser()
+        if (userFromGetUser) {
+          return { ...authData, session: { user: userFromGetUser } }
         }
       }
 
       return authData
     },
     onSuccess: async (authData) => {
-      // Attendre un peu pour que la session soit mise à jour
       await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // Vérifier que la session existe avant de rediriger
       const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+
       queryClient.invalidateQueries({ queryKey: ['session'] })
       if (authData.user) {
         queryClient.invalidateQueries({ queryKey: ['user', authData.user.id] })
       }
-      
-      if (session) {
-        router.push('/dashboard')
+
+      if (authUser) {
+        router.push('/dashboard/onboarding')
       } else {
-        // Si pas de session, peut-être que l'email nécessite une confirmation
         router.push('/auth/login?message=confirm-email')
       }
     },
@@ -497,13 +489,15 @@ export function useAuth() {
     },
   })
 
-  // Écouter les changements de session
+  // Écouter les changements d'auth et mettre à jour avec un utilisateur vérifié (getUser)
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      queryClient.setQueryData(['session'], session)
-      if (!session) {
+    } = supabase.auth.onAuthStateChange(async (_event) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const sessionLike = user ? { user } : null
+      queryClient.setQueryData(['session'], sessionLike)
+      if (!user) {
         queryClient.clear()
       }
     })

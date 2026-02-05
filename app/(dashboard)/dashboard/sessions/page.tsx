@@ -169,12 +169,21 @@ function SessionsPageContent() {
     queryFn: async () => {
       if (!user?.organization_id) return null
 
-      const { data: allSessions, error } = await supabase
-        .from('sessions')
-        .select('status, start_date, end_date, formations!inner(organization_id)')
-        .eq('formations.organization_id', user.organization_id)
+      const [withFormation, withoutFormation] = await Promise.all([
+        supabase
+          .from('sessions')
+          .select('status, start_date, end_date, formation_id, formations!inner(organization_id)')
+          .eq('formations.organization_id', user.organization_id),
+        supabase
+          .from('sessions')
+          .select('status, start_date, end_date, formation_id')
+          .is('formation_id', null)
+          .eq('organization_id', user.organization_id),
+      ])
+      const err = withFormation.error || withoutFormation.error
+      if (err) throw err
 
-      if (error) throw error
+      const allSessions = [...(withFormation.data ?? []), ...(withoutFormation.data ?? [])]
 
       const sessionsArray = (allSessions as unknown as Session[]) || []
       const total = sessionsArray.length

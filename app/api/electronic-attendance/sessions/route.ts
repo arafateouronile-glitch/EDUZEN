@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       .from('electronic_attendance_sessions')
       .select(`
         *,
-        session:sessions(id, title),
+        session:sessions(id, name),
         requests:electronic_attendance_requests(
           id,
           student_name,

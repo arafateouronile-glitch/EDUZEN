@@ -3,6 +3,7 @@ import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, AppError, ErrorCode } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
+import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { EmailService } from './email.service'
 
 type SignatureRequest = TableRow<'signature_requests'>
@@ -49,7 +50,7 @@ export class SignatureRequestService {
   }
 
   /**
-   * Crée une demande de signature et envoie l'email
+   * Crée une demande de signature et envoie l'email (envoi direct Resend côté serveur, sans fetch interne)
    */
   async createSignatureRequest(params: CreateSignatureRequestParams) {
     try {
@@ -109,7 +110,6 @@ export class SignatureRequestService {
 
       const signatureUrl = this.generateSignatureUrl((data as any).access_token ?? signatureToken)
 
-      // Envoyer l'email de demande de signature
       await this.sendSignatureRequestEmail({
         to: params.recipientEmail,
         recipientName: params.recipientName,
@@ -414,19 +414,33 @@ export class SignatureRequestService {
   }
 
   /**
-   * Génère l'URL de signature (portail unifié /sign/[token])
-   * Préfère access_token (UUID v4) pour les liens email.
+   * Génère l'URL de signature (portail unifié /sign/[token]).
+   * Côté serveur (emails) : utilise une URL publique pour que le destinataire puisse ouvrir le lien.
+   * En dev : définir NEXT_PUBLIC_APP_URL avec une URL accessible (ex. https://xxx.ngrok.io) pour que le lien dans le mail soit cliquable depuis n'importe quel appareil.
    */
   private generateSignatureUrl(token: string): string {
-    const baseUrl = typeof window !== 'undefined'
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL ||
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+          `http://localhost:${process.env.PORT || 3001}`
 
-    return `${baseUrl}/sign/${token}`
+    const url = `${baseUrl.replace(/\/$/, '')}/sign/${token}`
+
+    if (typeof window === 'undefined' && (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1'))) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[Signature] Lien généré en localhost : le destinataire ne pourra pas ouvrir le lien depuis un autre appareil. ' +
+          'Définissez NEXT_PUBLIC_APP_URL (ex. URL ngrok) dans .env.local pour des liens accessibles.'
+      )
+    }
+
+    return url
   }
 
   /**
-   * Envoie l'email de demande de signature
+   * Envoie l'email de demande de signature (Resend direct côté serveur)
    */
   private async sendSignatureRequestEmail(params: {
     to: string
@@ -561,12 +575,15 @@ EDUZEN - Plateforme de gestion de formation
 Si vous n'êtes pas le destinataire de ce message, veuillez l'ignorer.
     `
 
-    await this.emailService.sendEmail({
+    const result = await sendEmailViaResend({
       to: params.to,
       subject: `Demande de signature : ${params.documentTitle}`,
       html: htmlBody,
       text: textBody,
     })
+    if (!result.success && result.error) {
+      throw new Error(result.error)
+    }
   }
 
   /**

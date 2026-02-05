@@ -76,12 +76,12 @@ export class EducationalResourcesService {
     tags?: string[]
   }) {
     try {
+      // Pas de jointure author: la FK author_id peut pointer vers auth.users (non exposée en API)
       let query = this.supabase
         .from('educational_resources')
         .select(`
           *,
-          category:resource_categories(*),
-          author:users!author_id(id, full_name, email)
+          category:resource_categories(*)
         `)
         .eq('organization_id', organizationId)
         .eq('status', 'published')
@@ -160,9 +160,8 @@ export class EducationalResourcesService {
         .select(`
           *,
           category:resource_categories(*),
-          author:users!author_id(id, full_name, email),
           versions:resource_versions(*)
-      `)
+        `)
         .eq('slug', slug)
         .eq('organization_id', organizationId)
         .eq('status', 'published')
@@ -182,6 +181,79 @@ export class EducationalResourcesService {
         throw error
       }
       throw error
+    }
+  }
+
+  /** Récupère une ressource par slug pour le dashboard (tous statuts, sans versions). */
+  async getResourceBySlugForDashboard(slug: string, organizationId: string) {
+    const { data, error } = await this.supabase
+      .from('educational_resources')
+      .select('*, category:resource_categories(*)')
+      .eq('slug', slug)
+      .eq('organization_id', organizationId)
+      .maybeSingle()
+
+    if (error) throw error
+    return data
+  }
+
+  /**
+   * Ressources visibles pour un apprenant (étudiant inscrit à des sessions).
+   * Retourne les ressources publiées dont la visibilité est "tous" ou limitée à un programme/formation/session auquel l'étudiant est inscrit.
+   */
+  async getResourcesVisibleForLearner(organizationId: string, studentId: string) {
+    try {
+      const allPublished = await this.supabase
+        .from('educational_resources')
+        .select('*, category:resource_categories(*)')
+        .eq('organization_id', organizationId)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+
+      if (allPublished.error) throw allPublished.error
+      const resources = allPublished.data || []
+
+      const scope = (r: any) => r.visibility_scope ?? 'all'
+
+      const { data: enrollments } = await this.supabase
+        .from('enrollments')
+        .select('session_id')
+        .eq('student_id', studentId)
+        .in('status', ['confirmed', 'completed', 'pending'])
+
+      let sessionIds = new Set<string>()
+      let formationIds = new Set<string>()
+      let programIds = new Set<string>()
+
+      if (enrollments && enrollments.length > 0) {
+        sessionIds = new Set(enrollments.map((e) => e.session_id).filter(Boolean) as string[])
+        const { data: sessions } = await this.supabase
+          .from('sessions')
+          .select('id, formation_id')
+          .in('id', [...sessionIds])
+        if (sessions?.length) {
+          formationIds = new Set(sessions.map((s) => (s as { formation_id?: string }).formation_id).filter(Boolean) as string[])
+          const { data: formations } = await this.supabase
+            .from('formations')
+            .select('id, program_id')
+            .in('id', [...formationIds])
+          if (formations?.length) {
+            programIds = new Set(formations.map((f) => (f as { program_id?: string }).program_id).filter(Boolean) as string[])
+          }
+        }
+      }
+
+      return resources.filter((r) => {
+        const s = scope(r)
+        if (s === 'all') return true
+        if (s === 'session' && (r as any).visibility_session_id && sessionIds.has((r as any).visibility_session_id)) return true
+        if (s === 'formation' && (r as any).visibility_formation_id && formationIds.has((r as any).visibility_formation_id)) return true
+        if (s === 'program' && (r as any).visibility_program_id && programIds.has((r as any).visibility_program_id)) return true
+        return false
+      })
+    } catch (err) {
+      logger.warn('getResourcesVisibleForLearner fallback', { err })
+      return this.getResources(organizationId) as Promise<any[]>
     }
   }
 

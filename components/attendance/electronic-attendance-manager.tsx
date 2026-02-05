@@ -112,6 +112,33 @@ export function ElectronicAttendanceManager({
     }
   }
 
+  const handleExportAttendance = (session: AttendanceSession) => {
+    const rows = session.requests ?? []
+    const header = 'Apprenant;Email;Statut;Date de signature;Géolocalisation'
+    const statusLabel = (s: string) =>
+      s === 'signed' ? 'Signé' : s === 'pending' ? 'En attente' : s === 'expired' ? 'Expiré' : s === 'declined' ? 'Refusé' : s
+    const lines = [
+      header,
+      ...rows.map((r) =>
+        [
+          `"${(r.student_name ?? '').replace(/"/g, '""')}"`,
+          `"${(r.student_email ?? '').replace(/"/g, '""')}"`,
+          statusLabel(r.status),
+          r.signed_at ? new Date(r.signed_at).toLocaleString('fr-FR') : '-',
+          r.location_verified ? 'Oui' : 'Non',
+        ].join(';')
+      ),
+    ]
+    const csv = '\uFEFF' + lines.join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `emargements_${(session.title ?? 'session').replace(/[^a-zA-Z0-9-_]/g, '_')}_${session.date}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleCreateSession = async () => {
     try {
       setCreating(true)
@@ -480,7 +507,11 @@ export function ElectronicAttendanceManager({
                     </Button>
                   )}
 
-                  <Button size="sm" variant="outline">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleExportAttendance(session)}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Exporter
                   </Button>

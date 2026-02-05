@@ -20,6 +20,12 @@ import {
   Users,
   DollarSign,
   BookOpen,
+  Receipt,
+  RefreshCw,
+  Briefcase,
+  Home,
+  Package,
+  Wrench,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -29,7 +35,7 @@ export default function BPFPage() {
   const { addToast } = useToast()
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear() - 1)
 
-  // Query rapports BPF
+  // Query rapports BPF (liste depuis la table)
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['bpf-reports', user?.organization_id],
     queryFn: async () => {
@@ -40,6 +46,28 @@ export default function BPFPage() {
     retry: false,
   })
 
+  // Données live (mêmes calculs que la page /dashboard/bpf/[year]) pour chaque année, incl. charges
+  const { data: liveDataByYear = {}, isLoading: liveLoading, refetch: refetchLive } = useQuery({
+    queryKey: ['bpf-reports-live', user?.organization_id, reports.map((r) => r.year).sort().join(',')],
+    queryFn: async () => {
+      if (!user?.organization_id || reports.length === 0) return {}
+      const entries = await Promise.all(
+        reports.map(async (r) => {
+          const [stats, revenue, charges] = await Promise.all([
+            bpfService.getStats(user.organization_id!, r.year),
+            bpfService.getRevenueBreakdown(user.organization_id!, r.year),
+            bpfService.getChargesBreakdown(user.organization_id!, r.year),
+          ])
+          return [r.year, { stats, revenue, charges }] as const
+        })
+      )
+      return Object.fromEntries(entries)
+    },
+    enabled: !!user?.organization_id && reports.length > 0,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  })
+
   // Mutation pour créer un rapport
   const createReportMutation = useMutation({
     mutationFn: async (year: number) => {
@@ -48,6 +76,7 @@ export default function BPFPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bpf-reports'] })
+      queryClient.invalidateQueries({ queryKey: ['bpf-reports-live'] })
       addToast({
         type: 'success',
         title: 'Rapport BPF créé',
@@ -121,6 +150,17 @@ export default function BPFPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchLive()}
+            disabled={liveLoading || reports.length === 0}
+            className="gap-2"
+            title="Actualiser CA, charges et indicateurs"
+          >
+            <RefreshCw className={`h-4 w-4 ${liveLoading ? 'animate-spin' : ''}`} />
+            Actualiser les données
+          </Button>
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
@@ -242,7 +282,13 @@ export default function BPFPage() {
         <div className="space-y-4">
           {reports.map((report) => {
             const StatusIcon = statusIcons[report.status]
-            const hasData = report.total_revenue > 0 || report.total_students > 0
+            const live = liveDataByYear[report.year as keyof typeof liveDataByYear]
+            const totalRevenue = live?.revenue?.total_revenue ?? report.total_revenue
+            const totalStudents = live?.stats?.total_students_count ?? report.total_students
+            const totalHours = live?.stats?.total_trainee_hours ?? report.total_training_hours ?? report.total_trainee_hours
+            const totalPrograms = live?.stats?.total_programs_count ?? report.total_programs
+            const totalCharges = live?.charges?.total_charges ?? report.subcontracting_amount ?? 0
+            const hasData = totalRevenue > 0 || totalStudents > 0 || totalCharges > 0
 
             return (
               <Card key={report.id} className="hover:shadow-lg hover:scale-[1.01] transition-all duration-300 border-l-4 border-l-brand-blue/30">
@@ -272,7 +318,7 @@ export default function BPFPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Indicateurs clés améliorés */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     <div className="group p-5 bg-gradient-to-br from-brand-blue-ghost to-brand-blue-ghost/50 rounded-xl border border-brand-blue/20 hover:shadow-lg hover:scale-105 transition-all duration-300">
                       <div className="flex items-start justify-between mb-3">
                         <div className="p-2.5 bg-brand-blue/10 rounded-lg group-hover:bg-brand-blue/20 transition-colors">
@@ -281,7 +327,7 @@ export default function BPFPage() {
                         <p className="text-xs font-medium text-gray-600">CA Total</p>
                       </div>
                       <p className="text-2xl font-bold text-gray-900 mb-1">
-                        {formatCurrency(report.total_revenue)}
+                        {formatCurrency(totalRevenue)}
                       </p>
                       <p className="text-xs text-gray-600">Chiffre d'affaires</p>
                     </div>
@@ -294,7 +340,7 @@ export default function BPFPage() {
                         <p className="text-xs font-medium text-gray-600">Stagiaires</p>
                       </div>
                       <p className="text-2xl font-bold text-gray-900 mb-1">
-                        {formatNumber(report.total_students)}
+                        {formatNumber(totalStudents)}
                       </p>
                       <p className="text-xs text-gray-600">Apprenants formés</p>
                     </div>
@@ -307,7 +353,7 @@ export default function BPFPage() {
                         <p className="text-xs font-medium text-gray-600">Heures</p>
                       </div>
                       <p className="text-2xl font-bold text-gray-900 mb-1">
-                        {formatNumber(report.total_training_hours)}h
+                        {formatNumber(totalHours)}h
                       </p>
                       <p className="text-xs text-gray-600">Heures de formation</p>
                     </div>
@@ -320,11 +366,60 @@ export default function BPFPage() {
                         <p className="text-xs font-medium text-gray-600">Programmes</p>
                       </div>
                       <p className="text-2xl font-bold text-gray-900 mb-1">
-                        {formatNumber(report.total_programs)}
+                        {formatNumber(totalPrograms)}
                       </p>
                       <p className="text-xs text-gray-600">Formations actives</p>
                     </div>
+
+                    <div className="group p-5 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200/50 hover:shadow-lg hover:scale-105 transition-all duration-300">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="p-2.5 bg-amber-100 rounded-lg group-hover:bg-amber-200/50 transition-colors">
+                          <Receipt className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <p className="text-xs font-medium text-gray-600">Charges</p>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900 mb-1">
+                        {formatCurrency(totalCharges)}
+                      </p>
+                      <p className="text-xs text-gray-600">Date de charge dans l&apos;année {report.year}</p>
+                    </div>
                   </div>
+
+                  {/* Ventilation des charges (année) */}
+                  {(live?.charges && (live.charges.subcontracting > 0 || live.charges.location > 0 || live.charges.equipment > 0 || live.charges.supplies > 0 || live.charges.other > 0)) && (
+                    <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4">
+                      <p className="text-xs font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                        <Receipt className="h-3.5 w-3.5" />
+                        Ventilation des charges {report.year}
+                      </p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Briefcase className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                          <span className="text-gray-600 shrink-0">Sous-traitance</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(live.charges.subcontracting)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Home className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                          <span className="text-gray-600 shrink-0">Location</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(live.charges.location)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Package className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                          <span className="text-gray-600 shrink-0">Équipements</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(live.charges.equipment)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Wrench className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                          <span className="text-gray-600 shrink-0">Fournitures</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(live.charges.supplies)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-gray-600 shrink-0">Autres</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(live.charges.other)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-5 border-t">

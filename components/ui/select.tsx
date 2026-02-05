@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
+import { getPortalRoot } from '@/lib/utils/dom-utils'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { ChevronDown, Check, AlertCircle } from 'lucide-react'
 
@@ -310,7 +311,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
     )
 
     if (position && typeof document !== 'undefined') {
-      return createPortal(content, document.body)
+      return createPortal(content, getPortalRoot())
     }
     return content
   }

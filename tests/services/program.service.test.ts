@@ -284,4 +284,264 @@ describe('ProgramService', () => {
       await expect(service.deleteProgram('1')).rejects.toEqual(mockError)
     })
   })
+
+  describe('getFormationsByProgram', () => {
+    it('devrait récupérer les formations d\'un programme', async () => {
+      const programId = '1'
+      const mockFormations = [
+        { id: 'f1', name: 'Formation 1', program_id: programId },
+        { id: 'f2', name: 'Formation 2', program_id: programId },
+      ]
+
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: mockFormations, error: null }),
+      }
+
+      ;(mockSupabase.from as any) = vi.fn(() => mockQueryBuilder)
+
+      const result = await service.getFormationsByProgram(programId)
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('formations')
+      expect(mockQueryBuilder.eq).toHaveBeenCalledWith('program_id', programId)
+      expect(result).toEqual(mockFormations)
+    })
+
+    it('devrait gérer les erreurs', async () => {
+      const mockError = { message: 'Database error' }
+      const mockQueryBuilder = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: null, error: mockError }),
+      }
+      ;(mockSupabase.from as any) = vi.fn(() => mockQueryBuilder)
+
+      await expect(service.getFormationsByProgram('1')).rejects.toEqual(mockError)
+    })
+  })
+
+  describe('getGlobalStats', () => {
+    it('devrait retourner les statistiques globales', async () => {
+      const organizationId = 'org-1'
+      const mockPrograms = [
+        { id: '1', is_active: true, created_at: '2024-01-15T00:00:00Z' },
+        { id: '2', is_active: true, created_at: '2024-02-01T00:00:00Z' },
+        { id: '3', is_active: false, created_at: '2024-01-01T00:00:00Z' },
+      ]
+
+      const programsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: mockPrograms, error: null }),
+      }
+      // getGlobalStats: 2) formations count, 3) formations ids, 4) sessions count, 5) formations ids, 6) sessions ids, 7) enrollments count
+      const formationsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: 2, error: null }),
+      }
+      const formationsIdsChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [{ id: 'f1' }], error: null }),
+      }
+      const sessionsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: 3, error: null }),
+      }
+      const sessionsIdsChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [{ id: 's1' }], error: null }),
+      }
+      const enrollmentsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: 5, error: null }),
+      }
+
+      let fromCallCount = 0
+      ;(mockSupabase.from as any) = vi.fn(() => {
+        fromCallCount++
+        if (fromCallCount === 1) return programsChain
+        if (fromCallCount === 2) return formationsCountChain // formations count
+        if (fromCallCount === 3) return formationsIdsChain // formations ids pour sessions
+        if (fromCallCount === 4) return sessionsCountChain // sessions count
+        if (fromCallCount === 5) return formationsIdsChain // formations ids pour enrollments
+        if (fromCallCount === 6) return sessionsIdsChain // sessions ids
+        return enrollmentsCountChain
+      })
+
+      const result = await service.getGlobalStats(organizationId)
+
+      expect(result).toMatchObject({
+        total: 3,
+        active: 2,
+        inactive: 1,
+        totalFormations: 2,
+        totalSessions: 3,
+        totalEnrollments: 5,
+      })
+      expect(result.statusData).toBeDefined()
+      expect(result.monthlyData).toBeDefined()
+    })
+
+    it('devrait gérer une organisation sans programmes', async () => {
+      const programsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+      ;(mockSupabase.from as any) = vi.fn(() => programsChain)
+
+      const result = await service.getGlobalStats('org-empty')
+
+      expect(result).toMatchObject({
+        total: 0,
+        active: 0,
+        inactive: 0,
+        totalFormations: 0,
+        totalSessions: 0,
+        totalEnrollments: 0,
+      })
+    })
+
+    it('devrait gérer programmes avec formations vides (totalSessions 0, skip enrollments)', async () => {
+      const mockPrograms = [
+        { id: 'p1', is_active: true, created_at: '2024-01-15T00:00:00Z' },
+      ]
+      const programsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: mockPrograms, error: null }),
+      }
+      const formationsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: 0, error: null }),
+      }
+      const formationsEmptyChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+      let fromCalls = 0
+      ;(mockSupabase.from as any) = vi.fn(() => {
+        fromCalls++
+        if (fromCalls === 1) return programsChain
+        if (fromCalls === 2) return formationsCountChain
+        return formationsEmptyChain
+      })
+
+      const result = await service.getGlobalStats('org-1')
+
+      expect(result.total).toBe(1)
+      expect(result.active).toBe(1)
+      expect(result.totalFormations).toBe(0)
+      expect(result.totalSessions).toBe(0)
+      expect(result.totalEnrollments).toBe(0)
+    })
+
+    it('devrait propager formationsError sur formations (sessions path)', async () => {
+      const mockPrograms = [
+        { id: 'p1', is_active: true, created_at: '2024-01-15T00:00:00Z' },
+      ]
+      const programsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: mockPrograms, error: null }),
+      }
+      const formationsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: 1, error: null }),
+      }
+      const formationsIdsChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: null, error: { message: 'Formations fetch failed' } }),
+      }
+      let fromCalls = 0
+      ;(mockSupabase.from as any) = vi.fn(() => {
+        fromCalls++
+        if (fromCalls === 1) return programsChain
+        if (fromCalls === 2) return formationsCountChain
+        return formationsIdsChain
+      })
+
+      await expect(service.getGlobalStats('org-1')).rejects.toMatchObject({
+        message: 'Formations fetch failed',
+      })
+    })
+
+    it('devrait propager sessionsError sur sessions count', async () => {
+      const mockPrograms = [
+        { id: 'p1', is_active: true, created_at: '2024-01-15T00:00:00Z' },
+      ]
+      const programsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: mockPrograms, error: null }),
+      }
+      const formationsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: 1, error: null }),
+      }
+      const formationsIdsChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [{ id: 'f1' }], error: null }),
+      }
+      const sessionsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: null, error: { message: 'Sessions count failed' } }),
+      }
+      let fromCalls = 0
+      ;(mockSupabase.from as any) = vi.fn(() => {
+        fromCalls++
+        if (fromCalls === 1) return programsChain
+        if (fromCalls === 2) return formationsCountChain
+        if (fromCalls === 3) return formationsIdsChain
+        return sessionsCountChain
+      })
+
+      await expect(service.getGlobalStats('org-1')).rejects.toMatchObject({
+        message: 'Sessions count failed',
+      })
+    })
+
+    it('devrait propager enrollmentsError sur enrollments count', async () => {
+      const mockPrograms = [
+        { id: 'p1', is_active: true, created_at: '2024-01-15T00:00:00Z' },
+      ]
+      const programsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: mockPrograms, error: null }),
+      }
+      const formationsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: 1, error: null }),
+      }
+      const formationsIdsChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [{ id: 'f1' }], error: null }),
+      }
+      const sessionsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: 1, error: null }),
+      }
+      const sessionsIdsChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: [{ id: 's1' }], error: null }),
+      }
+      const enrollmentsCountChain = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ count: null, error: { message: 'Enrollments count failed' } }),
+      }
+      let fromCalls = 0
+      ;(mockSupabase.from as any) = vi.fn(() => {
+        fromCalls++
+        if (fromCalls === 1) return programsChain
+        if (fromCalls === 2) return formationsCountChain
+        if (fromCalls === 3) return formationsIdsChain
+        if (fromCalls === 4) return sessionsCountChain
+        if (fromCalls === 5) return formationsIdsChain
+        if (fromCalls === 6) return sessionsIdsChain
+        return enrollmentsCountChain
+      })
+
+      await expect(service.getGlobalStats('org-1')).rejects.toMatchObject({
+        message: 'Enrollments count failed',
+      })
+    })
+  })
 })

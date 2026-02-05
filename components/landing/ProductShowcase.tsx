@@ -2,7 +2,8 @@
 
 import { motion, useInView } from '@/components/ui/motion'
 import { useRef, useState } from 'react'
-import { LayoutDashboard, GraduationCap, Users, Play, BookOpen, Award, TrendingUp, Calendar } from 'lucide-react'
+import Image from 'next/image'
+import { LayoutDashboard, GraduationCap, Users, Play, BookOpen, Award, TrendingUp, Calendar, CreditCard, BarChart3 } from 'lucide-react'
 import { useParallax } from '@/lib/hooks/useParallax'
 
 const showcases = [
@@ -25,6 +26,7 @@ const showcases = [
       'Gestion des inscriptions',
       'Rapports financiers',
     ],
+    image: '/landing/dashboard.png',
   },
   {
     id: 'pedagogique',
@@ -45,26 +47,28 @@ const showcases = [
       'Quiz et évaluations',
       'Suivi de progression',
     ],
+    image: '/landing/espace-pedagogique.png',
   },
   {
-    id: 'apprenant',
-    icon: GraduationCap,
-    title: 'Espace Apprenant',
-    subtitle: 'Une expérience d\'apprentissage moderne',
-    description: 'Interface élégante et intuitive pour que vos apprenants accèdent à leurs formations, ressources et suivent leur progression.',
+    id: 'financiere',
+    icon: CreditCard,
+    title: 'Gestion Financière',
+    subtitle: 'Pilotez votre activité et votre trésorerie',
+    description: 'Facturation, suivi des paiements, rapports financiers et conformité. Gérez vos encaissements, relances et tableaux de bord en temps réel.',
     color: 'from-brand-blue-light to-brand-cyan',
     stats: [
-      { label: 'Formations suivies', value: '12', icon: BookOpen },
-      { label: 'Progression', value: '67%', icon: TrendingUp },
-      { label: 'Certificats', value: '8', icon: Award },
-      { label: 'Heures complétées', value: '124h', icon: Play },
+      { label: 'Factures émises', value: '1,2k', icon: CreditCard },
+      { label: 'Encaissements', value: '98%', icon: TrendingUp },
+      { label: 'Relances auto', value: '24/7', icon: BarChart3 },
+      { label: 'Rapports', value: 'Export 1 clic', icon: Award },
     ],
     features: [
-      'Parcours personnalisé',
-      'Accès multi-device',
-      'Badges et certificats',
-      'Forum et messagerie',
+      'Facturation et devis',
+      'Paiements et relances',
+      'Rapports et exports',
+      'Conformité OPCO / CPF',
     ],
+    image: '/landing/gestion-financiere.png',
   },
 ]
 
@@ -251,47 +255,50 @@ export function ProductShowcase() {
                       </div>
                     </div>
 
-                    {/* Screenshot Placeholder - Will be replaced with actual images */}
-                    <div className={`aspect-[16/10] bg-gradient-to-br ${showcase.color} relative overflow-hidden`}>
-                      {/* Animated Grid Pattern */}
-                      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:32px_32px] animate-pulse-premium" />
-
-                      {/* Mock UI Elements */}
-                      <div className="absolute inset-0 p-8 flex flex-col gap-4">
-                        {/* Header Bar */}
-                        <div className="h-12 bg-white/20 backdrop-blur-md rounded-2xl animate-pulse" />
-
-                        {/* Content Grid */}
-                        <div className="flex-1 grid grid-cols-3 gap-4">
-                          <div className="col-span-2 space-y-4">
-                            <div className="h-32 bg-white/20 backdrop-blur-md rounded-2xl animate-pulse" />
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="h-24 bg-white/25 backdrop-blur-md rounded-xl" />
-                              <div className="h-24 bg-white/25 backdrop-blur-md rounded-xl" />
+                    {/* Screenshot : image si définie, sinon placeholder */}
+                    <div className={`aspect-[16/10] relative overflow-hidden bg-gradient-to-br ${showcase.color}`}>
+                      {showcase.image ? (
+                        <>
+                          <Image
+                            src={showcase.image}
+                            alt={showcase.title}
+                            fill
+                            className="object-cover object-top"
+                            sizes="(max-width: 1024px) 100vw, 50vw"
+                          />
+                          <div className="absolute top-8 right-8 px-4 py-2 bg-white/90 backdrop-blur-md rounded-full shadow-xl">
+                            <span className="text-sm font-bold text-gray-900">Données fictives</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:32px_32px] animate-pulse-premium" />
+                          <div className="absolute inset-0 p-8 flex flex-col gap-4">
+                            <div className="h-12 bg-white/20 backdrop-blur-md rounded-2xl animate-pulse" />
+                            <div className="flex-1 grid grid-cols-3 gap-4">
+                              <div className="col-span-2 space-y-4">
+                                <div className="h-32 bg-white/20 backdrop-blur-md rounded-2xl animate-pulse" />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="h-24 bg-white/25 backdrop-blur-md rounded-xl" />
+                                  <div className="h-24 bg-white/25 backdrop-blur-md rounded-xl" />
+                                </div>
+                              </div>
+                              <div className="space-y-4">
+                                <div className="h-20 bg-white/20 backdrop-blur-md rounded-2xl" />
+                                <div className="h-20 bg-white/20 backdrop-blur-md rounded-2xl" />
+                                <div className="h-20 bg-white/20 backdrop-blur-md rounded-2xl" />
+                              </div>
                             </div>
                           </div>
-                          <div className="space-y-4">
-                            <div className="h-20 bg-white/20 backdrop-blur-md rounded-2xl" />
-                            <div className="h-20 bg-white/20 backdrop-blur-md rounded-2xl" />
-                            <div className="h-20 bg-white/20 backdrop-blur-md rounded-2xl" />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Floating Badge */}
-                      <motion.div
-                        animate={{
-                          y: [0, -10, 0],
-                        }}
-                        transition={{
-                          duration: 3,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                        className="absolute top-8 right-8 px-4 py-2 bg-white/90 backdrop-blur-md rounded-full shadow-xl"
-                      >
-                        <span className="text-sm font-bold text-gray-900">Données fictives</span>
-                      </motion.div>
+                          <motion.div
+                            animate={{ y: [0, -10, 0] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                            className="absolute top-8 right-8 px-4 py-2 bg-white/90 backdrop-blur-md rounded-full shadow-xl"
+                          >
+                            <span className="text-sm font-bold text-gray-900">Données fictives</span>
+                          </motion.div>
+                        </>
+                      )}
                     </div>
                   </div>
 

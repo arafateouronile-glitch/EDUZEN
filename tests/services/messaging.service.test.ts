@@ -46,6 +46,41 @@ describe('MessagingService', () => {
       expect(result).toEqual([])
     })
 
+    it('should throw when participant query returns error', async () => {
+      const participantError = { message: 'DB error', code: 'PGRST_ERROR' }
+      mockSupabaseClient.from.mockImplementationOnce(() => {
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({ data: null, error: participantError }),
+        }
+        return query
+      })
+
+      await expect(service.getConversations('user-id', 'org-id')).rejects.toEqual(participantError)
+    })
+
+    it('should throw when conversations query returns error', async () => {
+      const conversationsError = { message: 'Conversations fetch failed', code: 'PGRST_ERROR' }
+      let callCount = 0
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        callCount++
+        const query: any = {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockReturnThis(),
+          order: vi.fn(),
+        }
+        if (callCount === 1 && table === 'conversation_participants') {
+          query.eq.mockResolvedValue({ data: [{ conversation_id: 'conv-1' }], error: null })
+        } else if (callCount === 2 && table === 'conversations') {
+          query.order.mockResolvedValue({ data: null, error: conversationsError })
+        }
+        return query
+      })
+
+      await expect(service.getConversations('user-id', 'org-id')).rejects.toEqual(conversationsError)
+    })
+
     it('should return conversations with enriched participants', async () => {
       const mockConversation = {
         id: 'conv-1',
@@ -146,6 +181,18 @@ describe('MessagingService', () => {
       expect(result).toEqual([])
     })
 
+    it('should throw when messages query returns error', async () => {
+      const dbError = { message: 'DB error', code: 'PGRST_ERROR' }
+      mockSupabaseClient.from.mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        range: vi.fn().mockResolvedValue({ data: null, error: dbError }),
+      })
+
+      await expect(service.getMessages('conv-id', 50, 0)).rejects.toEqual(dbError)
+    })
+
     it('should return messages with sender information', async () => {
       const mockMessage = {
         id: 'msg-1',
@@ -235,6 +282,23 @@ describe('MessagingService', () => {
       
       expect(result.content).toBe('New message')
       expect(result.sender).toBeDefined()
+    })
+
+    it('should throw when insert returns error', async () => {
+      const insertError = { message: 'Insert failed', code: '23505' }
+      mockSupabaseClient.from.mockReturnValueOnce({
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: insertError }),
+      })
+
+      await expect(
+        service.sendMessage({
+          conversation_id: 'conv-id',
+          sender_id: 'user-1',
+          content: 'New message',
+        })
+      ).rejects.toEqual(insertError)
     })
   })
 

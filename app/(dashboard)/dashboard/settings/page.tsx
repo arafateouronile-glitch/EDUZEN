@@ -12,11 +12,11 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/toast'
-import { 
-  Settings, Users, Shield, Bell, CreditCard, Globe, FileText, 
-  Layout, Code, Save, Building2, Mail, Phone, MapPin, 
+import {
+  Settings, Users, Shield, Bell, CreditCard, Globe, FileText,
+  Layout, Code, Save, Building2, Mail, Phone, MapPin,
   Calendar, DollarSign, Languages, Moon, Sun, Key,
-  Briefcase, Video, GraduationCap, ChevronRight, Upload, Image, Award, Palette, X, Clock, Receipt
+  Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image, Award, Palette, X, Clock, Receipt, FileSignature
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -95,16 +95,20 @@ export default function SettingsPage() {
     email: '',
     logo_url: '',
     qualiopi_certificate_url: '',
+    stamp_url: '',
+    signature_url: '',
     brand_color: '#335ACF',
   })
 
   // États pour les uploads
   const [logoUploading, setLogoUploading] = useState(false)
   const [qualiopiUploading, setQualiopiUploading] = useState(false)
+  const [stampSignatureUploading, setStampSignatureUploading] = useState(false)
   
   // Refs pour les inputs file
   const logoInputRef = useRef<HTMLInputElement>(null)
   const qualiopiInputRef = useRef<HTMLInputElement>(null)
+  const stampSignatureInputRef = useRef<HTMLInputElement>(null)
 
   // État pour les paramètres de notifications
   const [notificationSettings, setNotificationSettings] = useState({
@@ -183,6 +187,8 @@ export default function SettingsPage() {
         email: (organization as any).email ?? '',
         logo_url: (organization as any).logo_url ?? '',
         qualiopi_certificate_url: (organization as any).qualiopi_certificate_url ?? '',
+        stamp_url: (organization as any).stamp_url ?? '',
+        signature_url: (organization as any).signature_url ?? '',
         brand_color: (organization as any).brand_color ?? '#335ACF',
       })
     }
@@ -270,6 +276,12 @@ export default function SettingsPage() {
       }
       if (data.brand_color !== undefined && data.brand_color !== currentOrg?.brand_color) {
         validFields.brand_color = data.brand_color || '#335ACF'
+      }
+      if (data.stamp_url !== undefined && data.stamp_url !== (currentOrg as any)?.stamp_url) {
+        validFields.stamp_url = data.stamp_url || null
+      }
+      if (data.signature_url !== undefined && data.signature_url !== (currentOrg as any)?.signature_url) {
+        validFields.signature_url = data.signature_url || null
       }
       
       // postal_code n'existe pas dans la table, on le stocke dans settings
@@ -532,30 +544,135 @@ export default function SettingsPage() {
     }
   }
 
-  const tabs = [
-    { id: 'organization', label: 'Organisation', icon: Building2 },
-    { id: 'users', label: 'Utilisateurs', icon: Users, href: '/dashboard/settings/users' },
-    { id: 'permissions', label: 'Permissions', icon: Shield },
-    { id: 'security', label: 'Sécurité', icon: Shield, href: '/dashboard/settings/security' },
-    { id: 'notifications', label: 'Notifications', icon: Bell, href: '/dashboard/settings/notifications' },
-    { id: 'billing', label: 'Abonnement', icon: CreditCard },
-    { id: 'general', label: 'Général', icon: Globe },
-  ]
+  // Une seule image : cachet + signature sur le même fichier (affiché dans la zone sig_of des documents)
+  const handleStampSignatureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !user?.organization_id) return
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg']
+    if (!allowedTypes.includes(file.type)) {
+      addToast({ title: 'Erreur', description: 'Veuillez sélectionner une image (PNG, JPG)', type: 'error' })
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      addToast({ title: 'Erreur', description: 'Le fichier est trop volumineux (max 5 Mo)', type: 'error' })
+      return
+    }
+    setStampSignatureUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.organization_id}/stamp_signature.${fileExt}`
+      const currentUrl = orgFormData.signature_url || orgFormData.stamp_url
+      if (currentUrl) {
+        const oldPath = currentUrl.split('/').slice(-2).join('/')
+        await supabase.storage.from('organizations').remove([oldPath])
+      }
+      const { error: uploadError } = await supabase.storage.from('organizations').upload(fileName, file, { cacheControl: '3600', upsert: true })
+      if (uploadError) throw uploadError
+      const { data: urlData } = supabase.storage.from('organizations').getPublicUrl(fileName)
+      const url = urlData.publicUrl
+      setOrgFormData({ ...orgFormData, stamp_url: url, signature_url: url })
+      addToast({ title: 'Succès', description: 'Cachet et signature enregistrés', type: 'success' })
+    } catch (error: any) {
+      logger.error('Erreur upload cachet/signature:', error)
+      addToast({ title: 'Erreur', description: error.message || 'Erreur lors du téléchargement', type: 'error' })
+    } finally {
+      setStampSignatureUploading(false)
+    }
+  }
 
-  const secondaryTabs = [
-    { id: 'payment-reminders', label: 'Rappels', icon: Bell, href: '/dashboard/settings/payment-reminders' },
-    { id: 'stripe', label: 'Stripe', icon: CreditCard, href: '/dashboard/settings/stripe' },
-    { id: 'sepa', label: 'SEPA', icon: CreditCard, href: '/dashboard/settings/sepa' },
-    { id: 'accounting', label: 'Compta', icon: Building2, href: '/dashboard/settings/accounting' },
-    { id: 'calendar', label: 'Calendrier', icon: Calendar, href: '/dashboard/settings/calendar' },
-    { id: 'lms', label: 'LMS', icon: GraduationCap, href: '/dashboard/settings/lms' },
-    { id: 'document-templates', label: 'Modèles', icon: FileText, href: '/dashboard/settings/document-templates' },
-    { id: 'email-templates', label: 'Modèles d\'emails', icon: Mail, href: '/dashboard/settings/email-templates' },
-    { id: 'email-schedules', label: 'Planification d\'emails', icon: Clock, href: '/dashboard/settings/email-schedules' },
-    { id: 'email-test', label: 'Test Email', icon: Mail, href: '/dashboard/settings/email-test' },
-    { id: 'funding-types', label: 'Types de financement', icon: DollarSign, href: '/dashboard/settings/funding-types' },
-    { id: 'charge-categories', label: 'Catégories de charges', icon: Receipt, href: '/dashboard/settings/charge-categories' },
-    { id: 'api', label: 'API', icon: Key, href: '/dashboard/settings/api' },
+  const handleRemoveStampSignature = async () => {
+    const currentUrl = orgFormData.signature_url || orgFormData.stamp_url
+    if (!currentUrl || !user?.organization_id) return
+    try {
+      const path = currentUrl.split('/').slice(-2).join('/')
+      await supabase.storage.from('organizations').remove([path])
+      setOrgFormData({ ...orgFormData, stamp_url: '', signature_url: '' })
+      addToast({ title: 'Succès', description: 'Cachet et signature supprimés', type: 'success' })
+    } catch (error: any) {
+      logger.error('Erreur suppression cachet/signature:', error)
+      addToast({ title: 'Erreur', description: 'Erreur lors de la suppression', type: 'error' })
+    }
+  }
+
+  // État pour gérer les sections collapsibles
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    principal: true,
+    security: false,
+    communications: false,
+    payments: false,
+    modules: false,
+    developer: false,
+  })
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  // Organisation des onglets par catégories
+  const menuSections = [
+    {
+      id: 'principal',
+      label: 'Principal',
+      color: 'brand-blue',
+      tabs: [
+        { id: 'organization', label: 'Organisation', icon: Building2 },
+        { id: 'billing', label: 'Abonnement', icon: CreditCard },
+        { id: 'general', label: 'Général', icon: Globe },
+      ]
+    },
+    {
+      id: 'security',
+      label: 'Utilisateurs & Sécurité',
+      color: 'purple-600',
+      tabs: [
+        { id: 'users', label: 'Utilisateurs', icon: Users, href: '/dashboard/settings/users' },
+        { id: 'permissions', label: 'Permissions', icon: Shield },
+        { id: 'security-page', label: 'Sécurité', icon: Key, href: '/dashboard/settings/security' },
+      ]
+    },
+    {
+      id: 'communications',
+      label: 'Communications',
+      color: 'orange-500',
+      tabs: [
+        { id: 'notifications', label: 'Notifications', icon: Bell, href: '/dashboard/settings/notifications' },
+        { id: 'email-templates', label: 'Modèles d\'emails', icon: Mail, href: '/dashboard/settings/email-templates' },
+        { id: 'email-schedules', label: 'Planification', icon: Clock, href: '/dashboard/settings/email-schedules' },
+        { id: 'email-test', label: 'Test Email', icon: Mail, href: '/dashboard/settings/email-test' },
+        { id: 'document-templates', label: 'Documents', icon: FileText, href: '/dashboard/settings/document-templates' },
+      ]
+    },
+    {
+      id: 'payments',
+      label: 'Paiements & Finances',
+      color: 'emerald-600',
+      tabs: [
+        { id: 'payment-reminders', label: 'Rappels', icon: Bell, href: '/dashboard/settings/payment-reminders' },
+        { id: 'stripe', label: 'Stripe', icon: CreditCard, href: '/dashboard/settings/stripe' },
+        { id: 'sepa', label: 'SEPA', icon: CreditCard, href: '/dashboard/settings/sepa' },
+        { id: 'funding-types', label: 'Financements', icon: DollarSign, href: '/dashboard/settings/funding-types' },
+        { id: 'charge-categories', label: 'Charges', icon: Receipt, href: '/dashboard/settings/charge-categories' },
+        { id: 'accounting', label: 'Comptabilité', icon: Building2, href: '/dashboard/settings/accounting' },
+      ]
+    },
+    {
+      id: 'modules',
+      label: 'Modules',
+      color: 'brand-cyan',
+      tabs: [
+        { id: 'calendar', label: 'Calendrier', icon: Calendar, href: '/dashboard/settings/calendar' },
+        { id: 'sites', label: 'Sites', icon: MapPin, href: '/dashboard/settings/sites' },
+        { id: 'lms', label: 'LMS', icon: GraduationCap, href: '/dashboard/settings/lms' },
+      ]
+    },
+    {
+      id: 'developer',
+      label: 'Développeur',
+      color: 'gray-600',
+      tabs: [
+        { id: 'api', label: 'API', icon: Key, href: '/dashboard/settings/api' },
+      ]
+    },
   ]
 
   const containerVariants = {
@@ -696,128 +813,123 @@ export default function SettingsPage() {
               }}
             />
 
-            <div className="relative z-10 space-y-1">
-              <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <div className="w-1 h-4 bg-brand-blue rounded-full" />
-                Général
-              </div>
-              {tabs.map((tab) => {
-                const Icon = tab.icon
-                const isActive = activeTab === tab.id
-
-                if (tab.href) {
-                  return (
-                    <motion.div
-                      key={tab.id}
-                      whileHover={{ x: isActive ? 0 : 4 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    >
-                      <Link
-                        href={tab.href}
-                        className={cn(
-                          "flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group relative overflow-hidden",
-                          isActive
-                            ? "bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white shadow-lg shadow-brand-blue/30"
-                            : "text-gray-600 hover:bg-gradient-to-r hover:from-gray-50 hover:to-brand-blue-ghost hover:text-brand-blue"
-                        )}
-                      >
-                        {isActive && (
-                          <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                            initial={{ x: '-100%' }}
-                            animate={{ x: '100%' }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                          />
-                        )}
-                        <div className="flex items-center gap-3 relative z-10">
-                          <motion.div
-                            whileHover={{ rotate: isActive ? 0 : 360 }}
-                            transition={{ duration: 0.6 }}
-                          >
-                            <Icon className={cn("h-5 w-5 transition-colors", isActive ? "text-white" : "text-gray-400 group-hover:text-brand-blue")} />
-                          </motion.div>
-                          {tab.label}
-                        </div>
-                        {!isActive && (
-                          <ChevronRight className="h-4 w-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-                        )}
-                      </Link>
-                    </motion.div>
-                  )
-                }
+            <div className="relative z-10 space-y-2">
+              {menuSections.map((section) => {
+                const isExpanded = expandedSections[section.id]
+                const sectionHasActiveTab = section.tabs.some(tab => activeTab === tab.id)
 
                 return (
-                  <motion.div
-                    key={tab.id}
-                    whileHover={{ x: isActive ? 0 : 4 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  >
+                  <div key={section.id} className="space-y-1">
+                    {/* Section Header */}
                     <button
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => toggleSection(section.id)}
                       className={cn(
-                        "w-full flex items-center justify-between px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 group relative overflow-hidden",
-                        isActive
-                          ? "bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white shadow-lg shadow-brand-blue/30"
-                          : "text-gray-600 hover:bg-gradient-to-r hover:from-gray-50 hover:to-brand-blue-ghost hover:text-brand-blue"
+                        "w-full flex items-center justify-between px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all duration-200",
+                        sectionHasActiveTab
+                          ? "text-brand-blue bg-brand-blue/5"
+                          : "text-gray-500 hover:bg-gray-50"
                       )}
                     >
-                      {isActive && (
-                        <motion.div
-                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                          initial={{ x: '-100%' }}
-                          animate={{ x: '100%' }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        />
-                      )}
-                      <div className="flex items-center gap-3 relative z-10">
-                        <motion.div
-                          whileHover={{ rotate: isActive ? 0 : 360 }}
-                          transition={{ duration: 0.6 }}
-                        >
-                          <Icon className={cn("h-5 w-5 transition-colors", isActive ? "text-white" : "text-gray-400 group-hover:text-brand-blue")} />
-                        </motion.div>
-                        {tab.label}
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          "w-1 h-4 rounded-full transition-colors",
+                          sectionHasActiveTab ? `bg-${section.color}` : "bg-gray-300",
+                          section.color === 'brand-blue' && "bg-brand-blue",
+                          section.color === 'purple-600' && "bg-purple-600",
+                          section.color === 'orange-500' && "bg-orange-500",
+                          section.color === 'emerald-600' && "bg-emerald-600",
+                          section.color === 'brand-cyan' && "bg-brand-cyan",
+                          section.color === 'gray-600' && "bg-gray-600",
+                        )} />
+                        {section.label}
+                        <span className="text-[10px] font-normal normal-case text-gray-400">
+                          ({section.tabs.length})
+                        </span>
                       </div>
-                      {!isActive && (
-                        <ChevronRight className="h-4 w-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-                      )}
+                      <motion.div
+                        animate={{ rotate: isExpanded ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                      </motion.div>
                     </button>
-                  </motion.div>
+
+                    {/* Section Content */}
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-1 pl-2">
+                            {section.tabs.map((tab) => {
+                              const Icon = tab.icon
+                              const isActive = activeTab === tab.id
+
+                              if (tab.href) {
+                                return (
+                                  <motion.div
+                                    key={tab.id}
+                                    whileHover={{ x: isActive ? 0 : 4 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                  >
+                                    <Link
+                                      href={tab.href}
+                                      className={cn(
+                                        "flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 group relative overflow-hidden",
+                                        isActive
+                                          ? "bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white shadow-md"
+                                          : "text-gray-600 hover:bg-gray-50 hover:text-brand-blue"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-3 relative z-10">
+                                        <Icon className={cn("h-4 w-4 transition-colors", isActive ? "text-white" : "text-gray-400 group-hover:text-brand-blue")} />
+                                        {tab.label}
+                                      </div>
+                                      {!isActive && (
+                                        <ChevronRight className="h-3.5 w-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-all" />
+                                      )}
+                                    </Link>
+                                  </motion.div>
+                                )
+                              }
+
+                              return (
+                                <motion.div
+                                  key={tab.id}
+                                  whileHover={{ x: isActive ? 0 : 4 }}
+                                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                >
+                                  <button
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={cn(
+                                      "w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-300 group relative overflow-hidden",
+                                      isActive
+                                        ? "bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white shadow-md"
+                                        : "text-gray-600 hover:bg-gray-50 hover:text-brand-blue"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-3 relative z-10">
+                                      <Icon className={cn("h-4 w-4 transition-colors", isActive ? "text-white" : "text-gray-400 group-hover:text-brand-blue")} />
+                                      {tab.label}
+                                    </div>
+                                    {!isActive && (
+                                      <ChevronRight className="h-3.5 w-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-all" />
+                                    )}
+                                  </button>
+                                </motion.div>
+                              )
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 )
               })}
-
-              <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider mt-6 mb-3 flex items-center gap-2">
-                <div className="w-1 h-4 bg-brand-cyan rounded-full" />
-                Modules
-              </div>
-              <div className="space-y-1">
-                {secondaryTabs.map((tab) => {
-                  const Icon = tab.icon
-                  return (
-                    <motion.div
-                      key={tab.id}
-                      whileHover={{ x: 4 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    >
-                      <Link
-                        href={tab.href}
-                        className="flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-xl text-gray-600 hover:bg-gradient-to-r hover:from-gray-50 hover:to-brand-cyan-ghost hover:text-brand-cyan transition-all duration-300 group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <motion.div
-                            whileHover={{ rotate: 360 }}
-                            transition={{ duration: 0.6 }}
-                          >
-                            <Icon className="h-4 w-4 text-gray-400 group-hover:text-brand-cyan transition-colors" />
-                          </motion.div>
-                          {tab.label}
-                        </div>
-                        <ChevronRight className="h-3.5 w-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1" />
-                      </Link>
-                    </motion.div>
-                  )
-                })}
-              </div>
             </div>
           </GlassCard>
         </motion.div>
@@ -883,6 +995,8 @@ export default function SettingsPage() {
                                 email: (organization as any).email ?? '',
                                 logo_url: (organization as any).logo_url ?? '',
                                 qualiopi_certificate_url: (organization as any).qualiopi_certificate_url ?? '',
+                                stamp_url: (organization as any).stamp_url ?? '',
+                                signature_url: (organization as any).signature_url ?? '',
                                 brand_color: (organization as any).brand_color ?? '#335ACF',
                               })
                             }
@@ -925,6 +1039,8 @@ export default function SettingsPage() {
                                   email: (organization as any).email ?? '',
                                   logo_url: (organization as any).logo_url ?? '',
                                   qualiopi_certificate_url: (organization as any).qualiopi_certificate_url ?? '',
+                                  stamp_url: (organization as any).stamp_url ?? '',
+                                  signature_url: (organization as any).signature_url ?? '',
                                   brand_color: (organization as any).brand_color ?? '#335ACF',
                                 })
                               }
@@ -1289,6 +1405,63 @@ export default function SettingsPage() {
                                       {qualiopiUploading ? 'Téléchargement...' : orgFormData.qualiopi_certificate_url ? 'Remplacer' : 'Télécharger'}
                                     </Button>
                                     <p className="text-xs text-gray-500 mt-1">PDF, PNG, JPG max 10MB</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Cachet et signature de l'organisme (une seule image) */}
+                            <div className="space-y-2">
+                              <Label className="flex items-center gap-2">
+                                <FileSignature className="h-4 w-4" />
+                                Cachet et signature de l'organisme
+                              </Label>
+                              <p className="text-xs text-gray-500">Une seule image contenant le cachet et la signature. Elle sera placée automatiquement dans la zone prévue sur les documents à signer par les deux parties (conventions, contrats).</p>
+                              <div className="flex items-center gap-4">
+                                {(orgFormData.signature_url || orgFormData.stamp_url) ? (
+                                  <div className="relative">
+                                    <img
+                                      src={orgFormData.signature_url || orgFormData.stamp_url}
+                                      alt="Cachet et signature"
+                                      className="h-20 w-32 object-contain border border-gray-200 rounded-lg p-2 bg-white"
+                                    />
+                                    {isEditing && (
+                                      <button
+                                        onClick={handleRemoveStampSignature}
+                                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                        type="button"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="h-20 w-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+                                    Aucune image
+                                  </div>
+                                )}
+                                {isEditing && (
+                                  <div>
+                                    <input
+                                      ref={stampSignatureInputRef}
+                                      type="file"
+                                      accept="image/png,image/jpeg,image/jpg"
+                                      onChange={handleStampSignatureUpload}
+                                      disabled={stampSignatureUploading}
+                                      className="hidden"
+                                      id="stamp-signature-upload"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      disabled={stampSignatureUploading}
+                                      className="cursor-pointer"
+                                      onClick={() => stampSignatureInputRef.current?.click()}
+                                    >
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      {stampSignatureUploading ? 'Téléchargement...' : (orgFormData.signature_url || orgFormData.stamp_url) ? 'Remplacer' : 'Télécharger'}
+                                    </Button>
+                                    <p className="text-xs text-gray-500 mt-1">PNG, JPG max 5 Mo — une image avec cachet + signature</p>
                                   </div>
                                 )}
                               </div>

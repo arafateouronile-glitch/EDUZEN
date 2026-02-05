@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": ["."],
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "tests/**",
+    "e2e/**",
+    "scripts/**",
+    "supabase/functions/**",
+    "remotion/**",
+    "lib/services/_example-standardized.service.ts",
+    "playwright-report/**",
+    "test-results/**",
+    "test-output/**"
+  ],
+  "ignoreDependencies": [
+    "@next/bundle-analyzer",
+    "@playwright/test",
+    "@testing-library/jest-dom",
+    "@testing-library/react",
+    "@vitejs/plugin-react",
+    "@vitest/coverage-v8",
+    "@vitest/ui",
+    "dotenv",
+    "eslint-config-next",
+    "eslint-plugin-no-secrets",
+    "eslint-plugin-security",
+    "jsdom",
+    "tsx",
+    "vitest",
+    "ws"
+  ]
+}

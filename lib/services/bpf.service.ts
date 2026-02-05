@@ -136,6 +136,15 @@ export interface BPFStudentBreakdown {
   age_breakdown: Record<string, number>
 }
 
+export interface BPFChargesBreakdown {
+  total_charges: number
+  subcontracting: number
+  location: number
+  equipment: number
+  supplies: number
+  other: number
+}
+
 export interface BPFDrillDownResult {
   total_count: number
   items: Record<string, any>[]
@@ -449,6 +458,29 @@ export class BPFService {
   }
 
   /**
+   * Récupérer la ventilation des charges par catégorie BPF pour l'année (période charge_date)
+   */
+  async getChargesBreakdown(organizationId: string, year: number): Promise<BPFChargesBreakdown> {
+    try {
+      const { data, error } = await this.supabase.rpc('get_bpf_charges_breakdown', {
+        target_org_id: organizationId,
+        target_year: year,
+      })
+
+      if (error) {
+        logger.warn('BPFService - Could not get charges breakdown', { errorMessage: error.message })
+        return this.getDefaultChargesBreakdown()
+      }
+
+      const result = Array.isArray(data) ? data[0] : data
+      return result || this.getDefaultChargesBreakdown()
+    } catch (err) {
+      logger.warn('BPFService - Error getting charges breakdown', { error: sanitizeError(err) })
+      return this.getDefaultChargesBreakdown()
+    }
+  }
+
+  /**
    * Détecter les incohérences de données qui pourraient fausser le BPF
    * C'est le "vérificateur d'incohérences" qui signale les problèmes
    */
@@ -644,6 +676,17 @@ export class BPFService {
       revenue_state: 0,
       revenue_other: 0,
       breakdown_details: {},
+    }
+  }
+
+  private getDefaultChargesBreakdown(): BPFChargesBreakdown {
+    return {
+      total_charges: 0,
+      subcontracting: 0,
+      location: 0,
+      equipment: 0,
+      supplies: 0,
+      other: 0,
     }
   }
 
