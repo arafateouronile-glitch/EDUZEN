@@ -20942,6 +20942,10 @@ export type Database = {
         | "cgv"
         | "programme"
         | "attestation_assiduite"
+        | "livret_accueil"
+        | "emargement"
+        | "certificat_realisation"
+        | "attestation"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -21083,6 +21087,10 @@ export const Constants = {
         "cgv",
         "programme",
         "attestation_assiduite",
+        "livret_accueil",
+        "emargement",
+        "certificat_realisation",
+        "attestation",
       ],
     },
   },
