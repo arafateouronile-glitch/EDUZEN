@@ -390,20 +390,21 @@ export function QualiopiDashboardPremium() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- init une seule fois quand indicateurs vides
   }, [loadingIndicators, indicators.length, user?.organization_id])
 
-  // Récupérer le score de conformité
-  const { data: complianceRate = 0 } = useQuery({
-    queryKey: ['qualiopi-compliance-rate-premium', user?.organization_id],
+  // Score unique (API) : même source que le dashboard pour cohérence 13% / 19%
+  const { data: apiComplianceScore } = useQuery({
+    queryKey: ['qualiopi-compliance-rate', user?.organization_id],
     queryFn: async () => {
-      if (!user?.organization_id) return 0
-      try {
-        return await qualiopiService.calculateComplianceRate(user.organization_id)
-      } catch {
-        return 0
-      }
+      if (!user?.organization_id) return null
+      const res = await fetch('/api/qualiopi/compliance-rate')
+      if (!res.ok) return 0
+      const json = await res.json()
+      return typeof json.score === 'number' ? json.score : 0
     },
     enabled: !!user?.organization_id,
-    staleTime: 5 * 60 * 1000,
+    refetchOnMount: true,
+    staleTime: 1000,
   })
+  const headerScore = apiComplianceScore ?? 0
 
   // Sync des preuves auto (catalogue, accessibilité, conventions, convocations) au chargement
   const { refetch: refetchEvidence } = useQuery({
@@ -486,7 +487,7 @@ export function QualiopiDashboardPremium() {
   const handleRefreshEvidence = useCallback(async () => {
     await fetch('/api/qualiopi/sync-evidence', { method: 'POST' })
     queryClient.invalidateQueries({ queryKey: ['compliance-evidence-premium'] })
-    queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate-premium'] })
+    queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate'] })
     await refetchEvidenceList()
   }, [queryClient, refetchEvidenceList])
 
@@ -498,7 +499,7 @@ export function QualiopiDashboardPremium() {
       .then(async () => {
         if (cancelled) return
         queryClient.invalidateQueries({ queryKey: ['compliance-evidence-premium'] })
-        queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate-premium'] })
+        queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate'] })
         await refetchEvidenceList()
       })
       .catch(() => {})
@@ -558,23 +559,6 @@ export function QualiopiDashboardPremium() {
           total > 0 ? Math.round((coveredCount / total) * 100) : 0,
       }
     })
-  }, [effectiveIndicators, evidenceIndicatorNumbers])
-
-  // Score d'avancement pour le ring : (conformes + en cours) / 32, pour qu'il se mette à jour avec les preuves
-  const TOTAL_REFERENTIAL_INDICATORS = 32
-  const displayScore = useMemo(() => {
-    let covered = 0
-    for (let num = 1; num <= TOTAL_REFERENTIAL_INDICATORS; num++) {
-      const ind = effectiveIndicators.find(
-        (i) => indicatorCodeToReferentialNumber(i.indicator_code) === num
-      )
-      if (ind && (ind.status === 'compliant' || ind.status === 'in_progress')) {
-        covered++
-      } else if (!ind && evidenceIndicatorNumbers.has(num)) {
-        covered++
-      }
-    }
-    return Math.round((covered / TOTAL_REFERENTIAL_INDICATORS) * 100)
   }, [effectiveIndicators, evidenceIndicatorNumbers])
 
   // Indicateurs à risque (à partir des indicateurs effectifs)
@@ -691,9 +675,9 @@ export function QualiopiDashboardPremium() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-[#34B9EE]/5 p-6">
       <div className="max-w-[1600px] mx-auto space-y-6">
-        {/* Header avec Score (mis à jour par preuves + indicateurs conformes/en cours) */}
+        {/* Header avec Score (API partagée avec le dashboard pour affichage identique) */}
         <PremiumHeader
-          score={displayScore}
+          score={headerScore}
           onSimulateAudit={handleSimulateAudit}
           onEnterAuditMode={handleEnterAuditMode}
         />

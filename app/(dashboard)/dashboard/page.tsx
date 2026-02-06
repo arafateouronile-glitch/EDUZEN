@@ -242,10 +242,9 @@ function TeacherDashboard() {
       return sorted
     },
     enabled: !!user?.id,
-    staleTime: 0, // Toujours considérer les données comme obsolètes
-    gcTime: 0, // Ne pas mettre en cache
+    staleTime: 60 * 1000, // Cache 1 min pour limiter les refetch
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   })
 
   // Récupérer le nombre total d'apprenants uniques dans toutes les sessions
@@ -284,10 +283,9 @@ function TeacherDashboard() {
       return uniqueStudentIds.size
     },
     enabled: !!user?.id && teacherSessions && teacherSessions.length > 0,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 60 * 1000,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   })
 
   // Récupérer le nombre d'apprenants par session
@@ -332,10 +330,9 @@ function TeacherDashboard() {
       return counts
     },
     enabled: !!user?.id && teacherSessions && teacherSessions.length > 0,
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 60 * 1000,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   })
 
   // Récupérer les émargements à faire aujourd'hui
@@ -392,10 +389,9 @@ function TeacherDashboard() {
       return { total, done }
     },
     enabled: !!user?.id && teacherSessions && teacherSessions.length > 0,
-    staleTime: 0, // Toujours considérer les données comme obsolètes
-    gcTime: 0, // Ne pas mettre en cache
+    staleTime: 60 * 1000,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   })
 
   // Toutes les sessions assignées (triées par date)
@@ -1068,10 +1064,9 @@ export default function DashboardPage() {
     // Attendre que les stats critiques soient chargées avant de charger les données secondaires
     // ✅ OPTIMISATION LCP: Augmenter le délai pour laisser plus de temps au LCP
     if (!isLoadingStats && stats) {
-      // Délai plus long pour laisser le LCP se terminer complètement
       const timer = setTimeout(() => {
         setShouldLoadSecondaryData(true)
-      }, 300) // Augmenté de 100ms à 300ms pour améliorer le LCP
+      }, 100)
       return () => clearTimeout(timer)
     }
   }, [isLoadingStats, stats])
@@ -1084,103 +1079,59 @@ export default function DashboardPage() {
     // Attendre que les données secondaires soient chargées avant de charger les données tertiaires
     // ✅ OPTIMISATION LCP: Augmenter le délai pour améliorer le LCP
     if (shouldLoadSecondaryData) {
-      // Délai plus long pour laisser les données secondaires se charger complètement
       const timer = setTimeout(() => {
         setShouldLoadTertiaryData(true)
-      }, 500) // Augmenté de 200ms à 500ms pour améliorer le LCP
+      }, 200)
       return () => clearTimeout(timer)
     }
   }, [shouldLoadSecondaryData])
 
-  // Récupérer l'évolution des revenus (6 derniers mois)
+  // Récupérer l'évolution des revenus (6 derniers mois) — 1 requête au lieu de 12
   const { data: revenueData } = useQuery({
     queryKey: ['revenue-evolution', user?.organization_id],
     enabled: !!user?.organization_id && user?.role !== 'teacher' && shouldLoadSecondaryData,
-    staleTime: 5 * 60 * 1000, // Cache 5 minutes
-    gcTime: 15 * 60 * 1000, // Garder en cache 15 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     queryFn: async () => {
       if (!user?.organization_id) return []
-
-      logger.debug('📈 [REVENUE-EVOLUTION] Calcul de l\'évolution des revenus...', {
-        organization_id: user.organization_id,
-      })
-
-      const months = []
       const now = new Date()
-      
-      for (let i = 5; i >= 0; i--) {
-        const month = new Date(now.getFullYear(), now.getMonth() - i, 1)
-        const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
-        
-        // Récupérer les paiements avec paid_at dans ce mois
-        const { data: paymentsWithPaidAt, error: error1 } = await supabase
-          .from('payments')
-          .select('amount, paid_at, created_at')
-          .eq('organization_id', user.organization_id)
-          .eq('status', 'completed')
-          .not('paid_at', 'is', null)
-          .gte('paid_at', month.toISOString())
-          .lt('paid_at', nextMonth.toISOString())
-
-        // Récupérer les paiements avec paid_at null mais created_at dans ce mois
-        const { data: paymentsWithoutPaidAt, error: error2 } = await supabase
-          .from('payments')
-          .select('amount, paid_at, created_at')
-          .eq('organization_id', user.organization_id)
-          .eq('status', 'completed')
-          .is('paid_at', null)
-          .gte('created_at', month.toISOString())
-          .lt('created_at', nextMonth.toISOString())
-
-        if (error1 || error2) {
-          const error = error1 || error2
-          logger.error(`❌ [REVENUE-EVOLUTION] Erreur pour le mois ${month.toLocaleDateString('fr-FR')}:`, error)
-          // Gérer les erreurs de table inexistante, erreurs 400, ou problèmes de schéma
-          if (
-            error?.code === 'PGRST116' ||
-            error?.code === '42P01' ||
-            error?.code === 'PGRST301' ||
-            error?.code === '400' ||
-            error?.message?.includes('relation') ||
-            error?.message?.includes('relationship') ||
-            error?.message?.includes('does not exist') ||
-            error?.message?.includes('schema cache') ||
-            error?.message?.includes('column') ||
-            error?.message?.includes('permission')
-          ) {
-            // Ignorer silencieusement et continuer avec un tableau vide
-          }
-        }
-
-        // Combiner les deux résultats
-        const payments1 = (paymentsWithPaidAt as Payment[]) || []
-        const payments2 = (paymentsWithoutPaidAt as Payment[]) || []
-        const monthlyPayments = [...payments1, ...payments2]
-        
-        const revenue = monthlyPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-        
-        logger.debug(`📈 [REVENUE-EVOLUTION] Mois ${month.toLocaleDateString('fr-FR')}:`, {
-          paymentsWithPaidAt: payments1.length,
-          paymentsWithoutPaidAt: payments2.length,
-          totalPayments: monthlyPayments.length,
-          revenue: Math.round(revenue),
-          payments: monthlyPayments.map((p) => ({
-            amount: p.amount,
-            paid_at: p.paid_at,
-            created_at: p.created_at,
-          })),
-        })
-        
-        months.push({
-          month: month.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
-          revenue: Math.round(revenue),
-        })
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+      const { data: payments, error } = await supabase
+        .from('payments')
+        .select('amount, paid_at, created_at')
+        .eq('organization_id', user.organization_id)
+        .eq('status', 'completed')
+        .or(`paid_at.gte.${sixMonthsAgo.toISOString()},and(paid_at.is.null,created_at.gte.${sixMonthsAgo.toISOString()})`)
+      if (error) {
+        if (error?.code === 'PGRST116' || error?.code === '42P01' || error?.message?.includes('relation')) return []
+        throw error
       }
-
-      logger.debug('✅ [REVENUE-EVOLUTION] Évolution calculée', { months })
-      return months
+      const list = (payments as Payment[]) || []
+      const byMonth: Record<string, number> = {}
+      for (let i = 5; i >= 0; i--) {
+        const m = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const key = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`
+        byMonth[key] = 0
+      }
+      for (const p of list) {
+        const dateStr = p.paid_at || p.created_at
+        if (!dateStr) continue
+        const d = new Date(dateStr)
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        if (key in byMonth) byMonth[key] += Number(p.amount) || 0
+      }
+      return Object.entries(byMonth)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, revenue]) => {
+          const [y, m] = key.split('-')
+          const month = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1)
+          return {
+            month: month.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
+            revenue: Math.round(revenue),
+          }
+        })
     },
   })
 

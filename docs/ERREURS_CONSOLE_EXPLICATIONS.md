@@ -53,6 +53,7 @@ The node to be removed is not a child of this node.
 - **Impact** : Le calcul du scroll peut être faux.  
 - **Action** : Donner au conteneur de scroll une position non statique, par ex. `relative` :  
   `className="... relative"` ou `style={{ position: 'relative' }}` sur l’élément qui contient la zone scrollable.
+- **Correctif appliqué** : `position: relative` a été ajouté sur le `<body>` dans `app/layout.tsx` pour que tout le document ait un ancêtre positionné et que l’avertissement disparaisse (parallaxe landing, `useParallax` / `useScroll`).
 
 ---
 

@@ -157,10 +157,7 @@ export default function MyStudentsPage() {
       }))
     },
     enabled: !!user?.id,
-    staleTime: 0, // Toujours considérer les données comme obsolètes
-    gcTime: 0, // Ne pas mettre en cache
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
   })
 
   // Récupérer les apprenants des sessions de l'enseignant
@@ -414,10 +411,7 @@ export default function MyStudentsPage() {
       return allEnrollments
     },
     enabled: !!user?.id && teacherSessions && teacherSessions.length > 0,
-    staleTime: 0, // Toujours considérer les données comme obsolètes
-    gcTime: 0, // Ne pas mettre en cache
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
   })
 
   // Récupérer les statistiques d'émargement pour chaque apprenant

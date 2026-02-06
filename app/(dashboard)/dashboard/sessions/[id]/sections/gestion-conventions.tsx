@@ -922,6 +922,8 @@ export function GestionConventions({
                   setSignatureRequestForm(null)
                   queryClient.invalidateQueries({ queryKey: ['session-contract-documents', sessionData?.id, user?.organization_id] })
                   queryClient.invalidateQueries({ queryKey: ['signature-requests-signed'] })
+                  queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionData?.id] })
+                  queryClient.invalidateQueries({ queryKey: ['session', sessionData?.id] })
 
                   addToast({
                     type: 'success',

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { formationService } from '@/lib/services/formation.service'
 import { programService } from '@/lib/services/program.service'
@@ -9,7 +9,17 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
-import { Plus, Search, BookMarked, Calendar, Users, DollarSign, Filter, TrendingUp, CheckCircle, XCircle, BookOpen, Activity, ArrowRight, SlidersHorizontal, ArrowUpRight, Clock } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Plus, Search, BookMarked, Calendar, Users, DollarSign, Filter, TrendingUp, CheckCircle, XCircle, BookOpen, Activity, ArrowRight, SlidersHorizontal, ArrowUpRight, Clock, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency, cn } from '@/lib/utils'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -17,6 +27,7 @@ import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
 import { PremiumBarChart } from '@/components/charts/premium-bar-chart'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { RoleGuard, FORMATION_MANAGEMENT_ROLES } from '@/components/auth/role-guard'
+import { useToast } from '@/components/ui/toast'
 
 type Formation = TableRow<'formations'>
 type Session = TableRow<'sessions'>
@@ -32,10 +43,13 @@ export default function FormationsPage() {
 function FormationsPageContent() {
   const { user } = useAuth()
   const supabase = createClient()
+  const queryClient = useQueryClient()
+  const { addToast } = useToast()
   const [search, setSearch] = useState('')
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [selectedProgramId, setSelectedProgramId] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
+  const [formationToDelete, setFormationToDelete] = useState<string | null>(null)
 
   // Récupérer les programmes pour le filtre
   const { data: programs } = useQuery({
@@ -45,6 +59,7 @@ function FormationsPageContent() {
       return programService.getAllPrograms(user.organization_id, { isActive: true })
     },
     enabled: !!user?.organization_id,
+    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
   })
 
   // Récupérer les formations
@@ -59,6 +74,20 @@ function FormationsPageContent() {
       })
     },
     enabled: !!user?.organization_id,
+    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
+  })
+
+  const deleteFormationMutation = useMutation({
+    mutationFn: (id: string) => formationService.deleteFormation(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['formations'] })
+      await queryClient.invalidateQueries({ queryKey: ['formation-stats'] })
+      addToast({ title: 'Formation supprimée', description: 'La formation a été désactivée.', type: 'success' })
+      setFormationToDelete(null)
+    },
+    onError: (err: any) => {
+      addToast({ title: 'Erreur', description: err?.message || 'Impossible de supprimer la formation.', type: 'error' })
+    },
   })
 
   // Statistiques des formations
@@ -152,6 +181,7 @@ function FormationsPageContent() {
       }
     },
     enabled: !!user?.organization_id,
+    staleTime: 1000 * 60 * 5, // 5 minutes - les stats changent moins souvent
   })
 
   const containerVariants = {
@@ -534,18 +564,34 @@ function FormationsPageContent() {
                             <BookMarked className="h-6 w-6" />
                           </motion.div>
 
-                          <motion.span
-                            className={cn(
-                              'px-3 py-1.5 rounded-xl text-xs font-bold border-2 shadow-sm uppercase tracking-wide',
-                              formation.is_active
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : 'bg-gray-50 text-gray-600 border-gray-200'
-                            )}
-                            whileHover={{ scale: 1.05 }}
-                            transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                          >
-                            {formation.is_active ? 'Active' : 'Inactive'}
-                          </motion.span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setFormationToDelete(formation.id)
+                              }}
+                              title="Supprimer la formation"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <motion.span
+                              className={cn(
+                                'px-3 py-1.5 rounded-xl text-xs font-bold border-2 shadow-sm uppercase tracking-wide',
+                                formation.is_active
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-gray-50 text-gray-600 border-gray-200'
+                              )}
+                              whileHover={{ scale: 1.05 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                            >
+                              {formation.is_active ? 'Active' : 'Inactive'}
+                            </motion.span>
+                          </div>
                         </div>
 
                         <h3 className="text-xl font-display font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-brand-blue transition-colors tracking-tight leading-tight">
@@ -668,6 +714,32 @@ function FormationsPageContent() {
           </motion.div>
         )}
       </motion.div>
+
+      <AlertDialog open={!!formationToDelete} onOpenChange={(open) => !open && setFormationToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la formation ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La formation sera désactivée (suppression douce). Vous pourrez la réactiver depuis les formations inactives si besoin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteFormationMutation.isPending}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                if (formationToDelete) {
+                  deleteFormationMutation.mutate(formationToDelete)
+                }
+              }}
+              disabled={deleteFormationMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {deleteFormationMutation.isPending ? 'Suppression…' : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   )
 }

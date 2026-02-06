@@ -164,6 +164,8 @@ export default function QualiopiEvidenceAddPage() {
       queryClient.invalidateQueries({ queryKey: ['qualiopi-evidence-manual'] })
       queryClient.invalidateQueries({ queryKey: ['compliance-evidence-list'] })
       queryClient.invalidateQueries({ queryKey: ['qualiopi-dashboard-premium'] })
+      queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate'] })
+      queryClient.invalidateQueries({ queryKey: ['qualiopi-indicators'] })
       addToast({
         title: 'Preuve enregistrée',
         description: 'La preuve manuelle a été ajoutée au coffre.',

@@ -33,15 +33,17 @@ export function RoleGuard({
   const [hasAccess, setHasAccess] = useState<boolean | null>(null)
 
   useEffect(() => {
-    if (!isLoading && user) {
-      const userRole = user.role || ''
-      const access = allowedRoles.includes(userRole)
-      setHasAccess(access)
-      
-      // Si l'utilisateur n'a pas accès et qu'une redirection est définie
-      if (!access && redirectTo && !fallback) {
-        router.push(redirectTo)
-      }
+    if (isLoading) return
+    if (!user) {
+      setHasAccess(false)
+      return
+    }
+    const userRole = user.role || ''
+    const access = allowedRoles.includes(userRole)
+    setHasAccess(access)
+
+    if (!access && redirectTo && !fallback) {
+      router.push(redirectTo)
     }
   }, [user, isLoading, allowedRoles, redirectTo, router, fallback])
 

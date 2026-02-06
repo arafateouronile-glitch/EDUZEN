@@ -1,16 +1,11 @@
 import type { Metadata } from 'next'
-import '@fontsource/inter/300.css'
-import '@fontsource/inter/400.css'
-import '@fontsource/inter/500.css'
-import '@fontsource/inter/600.css'
-import '@fontsource/inter/700.css'
-import '@fontsource/inter/800.css'
-import '@fontsource/inter/900.css'
-import '@fontsource/space-grotesk/300.css'
-import '@fontsource/space-grotesk/400.css'
-import '@fontsource/space-grotesk/500.css'
-import '@fontsource/space-grotesk/600.css'
-import '@fontsource/space-grotesk/700.css'
+// Fonts optimisés: seulement les weights essentiels (~50KB économisés)
+import '@fontsource/inter/400.css'  // Regular - corps de texte
+import '@fontsource/inter/500.css'  // Medium - labels, boutons
+import '@fontsource/inter/600.css'  // Semibold - sous-titres
+import '@fontsource/inter/700.css'  // Bold - titres
+import '@fontsource/space-grotesk/500.css'  // Display font - titres principaux
+import '@fontsource/space-grotesk/700.css'  // Display font bold
 import './globals.css'
 import { Providers } from './providers'
 import { cn } from '@/lib/utils'
@@ -104,7 +99,7 @@ export default async function RootLayout({
   const nonce = headersList.get(CSP_NONCE_HEADER) || undefined
 
   return (
-    <html lang={locale} className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang={locale} className="scroll-smooth relative" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/icons/icon-192x192.png" type="image/png" />
         <link rel="shortcut icon" href="/icons/icon-192x192.png" type="image/png" />
@@ -122,7 +117,7 @@ export default async function RootLayout({
         {/* Note: Les polices sont chargées via @fontsource, les preloads sont optionnels */}
         {/* Les chemins exacts seront générés au build par Next.js */}
       </head>
-      <body className={cn('smooth-scroll-premium')}>
+      <body className={cn('smooth-scroll-premium relative')}>
         <NonceProvider nonce={nonce}>
           <NextIntlClientProvider messages={messages}>
             <Providers>

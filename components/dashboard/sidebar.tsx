@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useVocabulary } from '@/lib/hooks/use-vocabulary'
 import { getVocabulary } from '@/lib/utils/vocabulary'
@@ -219,6 +219,7 @@ const filterNavigationByRole = (navigation: NavigationSection[], userRole: strin
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { logout, user } = useAuth()
   const vocab = useVocabulary() || getVocabulary('school')
   const t = useTranslations()
@@ -344,18 +345,8 @@ export function Sidebar() {
             backdropFilter: 'blur(20px)',
           }}
         >
-          {/* Animated gradient overlay */}
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-b from-brand-blue/[0.02] via-transparent to-brand-cyan/[0.02] pointer-events-none"
-            animate={{
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
+          {/* Gradient overlay statique - pas d'animation infinie pour la performance */}
+          <div className="absolute inset-0 bg-gradient-to-b from-brand-blue/[0.02] via-transparent to-brand-cyan/[0.02] pointer-events-none opacity-40" />
 
           {/* Logo Ultra-Premium */}
           <motion.div
@@ -405,18 +396,7 @@ export function Sidebar() {
                     className="px-3 mb-3"
                   >
                     <div className="flex items-center gap-2">
-                      <motion.div
-                        className="h-1 w-1 rounded-full bg-gradient-to-r from-brand-blue to-brand-cyan shadow-sm"
-                        animate={{
-                          scale: [1, 1.3, 1],
-                          opacity: [0.5, 1, 0.5],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          delay: sectionIndex * 0.2
-                        }}
-                      />
+                      <div className="h-1 w-1 rounded-full bg-gradient-to-r from-brand-blue to-brand-cyan shadow-sm" />
                       <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                         {section.title}
                       </h3>
@@ -529,6 +509,8 @@ export function Sidebar() {
                                         >
                                           <Link
                                             href={child.href}
+                                            prefetch={true}
+                                            onMouseEnter={() => router.prefetch(child.href)}
                                             className={cn(
                                               'group relative flex items-center px-3 py-2.5 text-sm font-medium rounded-lg overflow-hidden',
                                               'transition-all duration-300',
@@ -607,6 +589,8 @@ export function Sidebar() {
                           >
                             <Link
                               href={item.href}
+                              prefetch={true}
+                              onMouseEnter={() => item.href && router.prefetch(item.href)}
                               className={cn(
                                 'group relative flex items-center px-4 py-3 text-sm font-semibold rounded-xl overflow-hidden',
                                 'transition-all duration-300 ease-out',
@@ -677,27 +661,17 @@ export function Sidebar() {
               transition={{ delay: 0.6, duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               className="relative z-10 px-4 mt-auto pt-6 space-y-2"
             >
-              {/* Séparateur décoratif */}
+              {/* Séparateur décoratif - sans animation pour la performance */}
               <div className="relative mb-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t-2 border-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
                 </div>
                 <div className="relative flex justify-center">
-                  <motion.div
-                    className="px-3 bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full p-0.5"
-                    animate={{
-                      scale: [1, 1.05, 1],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
+                  <div className="px-3 bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full p-0.5">
                     <div className="bg-white px-2 py-0.5 rounded-full">
                       <span className="text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan uppercase tracking-widest">Système</span>
                     </div>
-                  </motion.div>
+                  </div>
                 </div>
               </div>
 
@@ -711,6 +685,8 @@ export function Sidebar() {
                 <motion.div whileHover={{ x: 4 }}>
                   <Link
                     href="/dashboard/settings"
+                    prefetch={true}
+                    onMouseEnter={() => router.prefetch('/dashboard/settings')}
                     className={cn(
                       'group relative flex items-center px-4 py-3 text-sm font-semibold rounded-xl overflow-hidden',
                       'transition-all duration-300',

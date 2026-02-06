@@ -147,6 +147,7 @@ function SessionsPageContent() {
       return formationService.getAllFormations(user.organization_id, { isActive: true })
     },
     enabled: !!user?.organization_id,
+    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
   })
 
   // Récupérer les sessions
@@ -161,9 +162,10 @@ function SessionsPageContent() {
       })
     },
     enabled: !!user?.organization_id,
+    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
   })
 
-  // Statistiques des sessions
+  // Statistiques des sessions (refetch au montage pour graphiques corrects après navigation)
   const { data: sessionStats } = useQuery({
     queryKey: ['session-stats', user?.organization_id],
     queryFn: async () => {
@@ -245,6 +247,7 @@ function SessionsPageContent() {
       }
     },
     enabled: !!user?.organization_id,
+    staleTime: 1000 * 60 * 5, // 5 minutes - les stats changent moins souvent
   })
 
   const getStatusColor = (status: Session['status']) => {

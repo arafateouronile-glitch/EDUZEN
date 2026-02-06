@@ -1,17 +1,31 @@
 'use client'
 
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Program } from './types'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { CardTitle } from '@/components/ui/card'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
-import { Plus, Search, BookOpen, Calendar, Users, BookMarked, TrendingUp, CheckCircle, XCircle, Activity, ArrowRight, SlidersHorizontal } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Plus, Search, BookOpen, Calendar, Users, BookMarked, TrendingUp, CheckCircle, XCircle, Activity, ArrowRight, SlidersHorizontal, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { PulseOnMount } from '@/components/ui/micro-interactions'
 import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
 import { PremiumBarChart } from '@/components/charts/premium-bar-chart'
 import { cn } from '@/lib/utils'
+import { programService } from '@/lib/services/program.service'
+import { useToast } from '@/components/ui/toast'
 
 type GlobalStats = {
   total: number
@@ -43,6 +57,23 @@ export function ProgramsContent({
   showActiveOnly,
   setShowActiveOnly,
 }: ProgramsContentProps) {
+  const queryClient = useQueryClient()
+  const { addToast } = useToast()
+  const [programToDelete, setProgramToDelete] = useState<string | null>(null)
+
+  const deleteProgramMutation = useMutation({
+    mutationFn: (id: string) => programService.deleteProgram(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['programs'] })
+      await queryClient.invalidateQueries({ queryKey: ['programs-global-stats'] })
+      addToast({ title: 'Programme supprimé', description: 'Le programme a été désactivé.', type: 'success' })
+      setProgramToDelete(null)
+    },
+    onError: (err: Error & { message?: string }) => {
+      addToast({ title: 'Erreur', description: err?.message || 'Impossible de supprimer le programme.', type: 'error' })
+    },
+  })
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -338,14 +369,30 @@ export function ProgramsContent({
                             </motion.div>
                           </div>
 
-                          <span className={cn(
-                            'px-2.5 py-1 rounded-lg text-xs font-semibold border-2',
-                            program.is_active
-                              ? 'bg-gradient-to-br from-brand-cyan-ghost to-brand-cyan-ghost/50 text-brand-cyan border-brand-cyan/30'
-                              : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 border-gray-200'
-                          )}>
-                            {program.is_active ? 'Actif' : 'Inactif'}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setProgramToDelete(program.id)
+                              }}
+                              title="Supprimer le programme"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <span className={cn(
+                              'px-2.5 py-1 rounded-lg text-xs font-semibold border-2',
+                              program.is_active
+                                ? 'bg-gradient-to-br from-brand-cyan-ghost to-brand-cyan-ghost/50 text-brand-cyan border-brand-cyan/30'
+                                : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 border-gray-200'
+                            )}>
+                              {program.is_active ? 'Actif' : 'Inactif'}
+                            </span>
+                          </div>
                         </div>
 
                         <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-brand-blue transition-colors">
@@ -388,6 +435,32 @@ export function ProgramsContent({
           </div>
         )}
       </motion.div>
+
+      <AlertDialog open={!!programToDelete} onOpenChange={(open) => !open && setProgramToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le programme ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Le programme sera désactivé (suppression douce). Vous pourrez le réactiver depuis les programmes inactifs si besoin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteProgramMutation.isPending}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                if (programToDelete) {
+                  deleteProgramMutation.mutate(programToDelete)
+                }
+              }}
+              disabled={deleteProgramMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {deleteProgramMutation.isPending ? 'Suppression…' : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   )
 }

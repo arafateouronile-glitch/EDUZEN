@@ -6,16 +6,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import type { DocumentType, DocumentTemplate, DocumentContent } from '@/lib/types/document-templates'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { ArrowLeft, Save, Eye, Copy, RotateCcw, History, Loader2, Moon, Sun, Keyboard, Clock, Users, CheckCircle2, MousePointer2, Maximize2, Minimize2 } from 'lucide-react'
+import { ArrowLeft, Save, Eye, RotateCcw, History, Loader2, Moon, Sun, Keyboard, Clock, Users, CheckCircle2, MousePointer2, Maximize2, Minimize2 } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
 import { useFocusMode } from '@/lib/contexts/focus-mode-context'
-import { HeaderEditor } from './components/header-editor'
-import { BodyEditor } from './components/body-editor'
-import { FooterEditor } from './components/footer-editor'
+import { UnifiedDocumentEditor } from './components/unified-document-editor'
 import { VersionHistory } from './components/version-history'
 import { SkeletonLoader } from './components/skeleton-loader'
 import { KeyboardShortcutsSettings } from './components/keyboard-shortcuts-settings'
@@ -687,110 +684,80 @@ export default function DocumentTemplateEditPage() {
         </div>
       </div>
 
-      {/* Contenu principal avec sidebar - Canvas-First Architecture */}
+      {/* Contenu principal - Éditeur unifié style PDF */}
       <div className="flex-1 flex overflow-hidden w-full">
-        {/* Zone des accordéons avec défilement vertical */}
-        <div className="flex-1 overflow-y-auto py-4 w-full">
-          <Accordion 
-            type="single" 
-            defaultValue={accordionValue || undefined}
-            className="w-full space-y-4"
-          >
-            <AccordionItem value="header" className="border rounded-lg">
-              <AccordionTrigger className="px-4 py-4 hover:no-underline">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">🔝</span>
-                  <span className="text-lg font-semibold">En-tête</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-0">
-                <div className="px-4 pb-4">
-                  <HeaderEditor
-                    template={template}
-                    onTemplateChange={handleTemplateChange}
-                    onEditorRefReady={handleEditorRefReady}
-                    isActive={accordionValue === 'header'}
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+        {/* Zone principale - Éditeur de document unifié */}
+        <div className="flex-1 overflow-hidden">
+          <UnifiedDocumentEditor
+            template={template}
+            onTemplateChange={handleTemplateChange}
+            onEditorRefReady={handleEditorRefReady}
+          />
+        </div>
 
-            <AccordionItem value="body" className="border rounded-lg">
-              <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">📄</span>
-                  <span className="text-lg font-semibold">Contenu du document</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-0">
-                <div className="px-4 pb-4">
-                  <BodyEditor
-                    template={template}
-                    onTemplateChange={handleTemplateChange}
-                    onEditorRefReady={handleEditorRefReady}
-                    isActive={accordionValue === 'body'}
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+        {/* Sidebar fixe à droite avec les balises et options */}
+        <aside className={cn(
+          "border-l border-gray-200 flex-shrink-0 overflow-y-auto bg-white flex flex-col transition-all duration-300 ease-in-out",
+          isFocusMode
+            ? "w-0 translate-x-full overflow-hidden opacity-0"
+            : "w-80 opacity-100"
+        )}>
+          {/* Paramètres du document */}
+          <div className="p-4 border-b border-gray-200">
+            <DocumentSettings
+              template={template}
+              onTemplateChange={handleTemplateChange}
+            />
+          </div>
 
-            <AccordionItem value="footer" className="border rounded-lg">
-              <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">🔻</span>
-                  <span className="text-lg font-semibold">Pied de page</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-0">
-                <div className="px-4 pb-4">
-                  <FooterEditor
-                    template={template}
-                    onTemplateChange={handleTemplateChange}
-                    onEditorRefReady={handleEditorRefReady}
-                    isActive={accordionValue === 'footer'}
-                  />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+          {/* Variables */}
+          <div className="flex-1 overflow-y-auto border-b border-gray-200">
+            <VariablesSidebar
+              onVariableSelect={(variable) => {
+                if (activeEditorRef) {
+                  activeEditorRef.insertVariable(variable)
+                }
+              }}
+              className="h-full border-0 rounded-none"
+            />
+          </div>
 
-            <AccordionItem value="versions" className="border rounded-lg">
-              <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <div className="flex items-center gap-3">
-                  <History className="h-5 w-5" />
-                  <span className="text-lg font-semibold">Versions</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-0">
-                <div className="px-4 pb-4">
+          {/* Panneau des options supplémentaires */}
+          <div className="border-t border-gray-200">
+            <Accordion type="single" className="w-full">
+              <AccordionItem value="versions" className="border-0">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm">
+                  <div className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    <span className="font-medium">Historique des versions</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
                   <VersionHistory
                     templateId={template.id}
                     onVersionRestore={() => {
-                      // Recharger le template après restauration
-                      queryClient.invalidateQueries({ 
-                        queryKey: ['document-template', user?.organization_id, documentType] 
+                      queryClient.invalidateQueries({
+                        queryKey: ['document-template', user?.organization_id, documentType]
                       })
-                      setAccordionValue('body')
                       setHasChanges(false)
                     }}
                   />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+                </AccordionContent>
+              </AccordionItem>
 
-            <AccordionItem value="docx-template" className="border rounded-lg">
-              <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">📝</span>
-                  <span className="text-lg font-semibold">Template Word (DOCX)</span>
-                  {template.docx_template_url && (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                      Configuré
-                    </span>
-                  )}
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-0">
-                <div className="px-4 pb-4">
+              <AccordionItem value="docx-template" className="border-0">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📝</span>
+                    <span className="font-medium">Template Word (DOCX)</span>
+                    {template.docx_template_url && (
+                      <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded-full ml-auto">
+                        Actif
+                      </span>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
                   <DocxTemplateUploader
                     templateId={template.id}
                     currentDocxUrl={template.docx_template_url}
@@ -799,7 +766,7 @@ export default function DocumentTemplateEditPage() {
                       addToast({
                         type: 'success',
                         title: 'Template DOCX uploadé',
-                        description: 'Le template Word sera utilisé pour la génération de documents Word.',
+                        description: 'Le template Word sera utilisé pour la génération.',
                       })
                     }}
                     onRemoveSuccess={() => {
@@ -807,38 +774,13 @@ export default function DocumentTemplateEditPage() {
                       addToast({
                         type: 'info',
                         title: 'Template DOCX supprimé',
-                        description: 'La génération Word utilisera désormais la conversion HTML.',
+                        description: 'La génération utilisera la conversion HTML.',
                       })
                     }}
                   />
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-
-        {/* Sidebar fixe à droite avec les balises */}
-        <aside className={cn(
-          "border-l border-gray-200 flex-shrink-0 overflow-y-auto bg-white flex flex-col transition-all duration-300 ease-in-out",
-          isFocusMode 
-            ? "w-0 translate-x-full overflow-hidden opacity-0" 
-            : "w-80 opacity-100"
-        )}>
-          <div className="p-4 border-b border-gray-200">
-            <DocumentSettings
-              template={template}
-              onTemplateChange={handleTemplateChange}
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <VariablesSidebar 
-              onVariableSelect={(variable) => {
-                if (activeEditorRef) {
-                  activeEditorRef.insertVariable(variable)
-                }
-              }} 
-              className="h-full border-0 rounded-none"
-            />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         </aside>
       </div>

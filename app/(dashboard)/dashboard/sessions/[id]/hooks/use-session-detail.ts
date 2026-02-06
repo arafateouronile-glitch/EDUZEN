@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -1546,6 +1546,15 @@ export function useSessionDetail(sessionId: string) {
 
   const isGlobalLoading = isSessionLoading || isEnrollmentsLoading || isAttendanceLoading || isGradesLoading
 
+  /** Invalide et refetch les données qui alimentent la timeline Suivi (session, inscriptions, présences, notes) */
+  const refetchSessionDetail = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
+    queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionId] })
+    queryClient.invalidateQueries({ queryKey: ['session-attendance-stats', sessionId] })
+    queryClient.invalidateQueries({ queryKey: ['session-grades', sessionId] })
+    queryClient.invalidateQueries({ queryKey: ['session-payments', sessionId] })
+  }, [queryClient, sessionId])
+
   return {
     // États de navigation
     activeStep,
@@ -1619,6 +1628,7 @@ export function useSessionDetail(sessionId: string) {
     handleSave,
     refetchSlots,
     handleTemplateChange,
+    refetchSessionDetail,
 
     // Utilitaires
     user,

@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FileText, Copy, Plus, Check } from 'lucide-react'
-import type { DocumentType } from '@/lib/types/document-templates'
+import { FileText, Copy, Plus, Check, Loader2 } from 'lucide-react'
+import type { DocumentTemplate, DocumentType } from '@/lib/types/document-templates'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+
+const TEMPLATES_STALE_MS = 5 * 60 * 1000 // 5 min de cache pour éviter refetch à chaque changement de type
 
 interface TemplateSelectorProps {
   documentType: DocumentType | string
@@ -30,10 +32,10 @@ export function TemplateSelector({
   const { user } = useAuth()
   const [showAll, setShowAll] = useState(false)
 
-  // Récupérer tous les templates du type sélectionné
-  const { data: templates, isLoading } = useQuery({
+  // Récupérer tous les templates du type sélectionné (cache 5 min + garder les données précédentes pendant le chargement)
+  const { data: templates, isLoading, isFetching } = useQuery<DocumentTemplate[]>({
     queryKey: ['document-templates-by-type', user?.organization_id, documentType],
-    queryFn: async () => {
+    queryFn: async (): Promise<DocumentTemplate[]> => {
       if (!user?.organization_id || !documentType) return []
       try {
         return await documentTemplateService.getTemplatesByType(
@@ -46,19 +48,28 @@ export function TemplateSelector({
       }
     },
     enabled: !!user?.organization_id && !!documentType,
+    staleTime: TEMPLATES_STALE_MS,
+    placeholderData: (previousData) => previousData, // Garder l’affichage des modèles du type précédent pendant le chargement
   })
 
-  const activeTemplates = templates?.filter((t) => t.is_active) || []
+  const templatesList: DocumentTemplate[] = Array.isArray(templates) ? templates : []
+  const activeTemplates = templatesList.filter((t) => t.is_active)
   const defaultTemplate = activeTemplates.find((t) => t.is_default)
   const otherTemplates = activeTemplates.filter((t) => !t.is_default)
 
-  const displayedTemplates = showAll ? activeTemplates : [defaultTemplate, ...otherTemplates.slice(0, 2)].filter(Boolean)
+  const displayedTemplates: DocumentTemplate[] = showAll
+    ? activeTemplates
+    : [defaultTemplate, ...otherTemplates.slice(0, 2)].filter((t): t is DocumentTemplate => t != null)
 
-  if (isLoading) {
+  // Premier chargement (aucune donnée en cache) : afficher un skeleton au lieu de bloquer toute la carte
+  if (isLoading && templatesList.length === 0) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <div className="text-sm text-gray-500">Chargement des modèles...</div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Chargement des modèles...</span>
+          </div>
         </CardContent>
       </Card>
     )
@@ -89,7 +100,12 @@ export function TemplateSelector({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Modèle de document</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg">Modèle de document</CardTitle>
+            {isFetching && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-hidden />
+            )}
+          </div>
           {onCreateNew && (
             <Button onClick={onCreateNew} variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-2" />

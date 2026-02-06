@@ -275,6 +275,33 @@ export default function DocumentTemplatesPage() {
     },
   })
 
+  // Mutation pour réinitialiser facture/devis avec le nouveau design
+  const resetDefaultsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/document-templates/reset-defaults', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ types: ['facture', 'devis'] }),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la réinitialisation')
+      }
+      return response.json()
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['document-templates', user?.organization_id] })
+      queryClient.invalidateQueries({ queryKey: ['document-templates-by-type', user?.organization_id] })
+      alert(`${data.summary.updated} modèle(s) réinitialisé(s) avec le nouveau design INSSI !`)
+    },
+    onError: (error) => {
+      logger.error('Erreur lors de la réinitialisation:', error)
+      alert(error instanceof Error ? error.message : 'Erreur lors de la réinitialisation')
+    },
+  })
+
   // Filtrer les types selon la recherche et le statut
   const filteredTypes = DOCUMENT_TYPES.filter((docType) => {
     const matchesSearch =
@@ -344,22 +371,41 @@ export default function DocumentTemplatesPage() {
           </h1>
           <p className="text-text-tertiary mt-1">Gérez vos modèles de documents avec header et footer personnalisables</p>
         </div>
-        <Button
-          onClick={() => seedDefaultsMutation.mutate()}
-          disabled={seedDefaultsMutation.isPending}
-        >
-          {seedDefaultsMutation.isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Création en cours...
-            </>
-          ) : (
-            <>
-              <Wand2 className="h-4 w-4 mr-2" />
-              Créer tous les modèles par défaut
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => resetDefaultsMutation.mutate()}
+            disabled={resetDefaultsMutation.isPending}
+          >
+            {resetDefaultsMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Réinitialisation...
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-4 w-4 mr-2" />
+                Réinitialiser Facture/Devis
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={() => seedDefaultsMutation.mutate()}
+            disabled={seedDefaultsMutation.isPending}
+          >
+            {seedDefaultsMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Création en cours...
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-4 w-4 mr-2" />
+                Créer tous les modèles par défaut
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Analytics Link */}

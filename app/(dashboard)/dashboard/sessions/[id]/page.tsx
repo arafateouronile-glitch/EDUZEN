@@ -2,15 +2,28 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Suspense, lazy, useMemo } from 'react'
+import { Suspense, lazy, useMemo, useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   ArrowLeft, Save, Copy, Archive, Trash2, Calendar, BookOpen, Sparkles,
   LayoutDashboard, Users, Clock, CheckCircle2, TrendingUp, Zap,
   MoreHorizontal, ExternalLink, ChevronRight
 } from 'lucide-react'
 import { useSessionDetail } from './hooks/use-session-detail'
+import { sessionService } from '@/lib/services/session.service'
+import { useToast } from '@/components/ui/toast'
 import { SessionSidebar } from './components/session-sidebar'
 import { SkeletonLoader } from './components/skeleton-loader'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -102,10 +115,36 @@ export default function SessionDetailPage() {
 
     // Actions
     handleSave,
+    refetchSessionDetail,
 
     // Utilitaires
     user,
   } = useSessionDetail(sessionId)
+
+  const queryClient = useQueryClient()
+
+  // Rafraîchir les données (timeline, stats) quand on ouvre l’étape Suivi
+  useEffect(() => {
+    if (activeStep === 'suivi') refetchSessionDetail()
+  }, [activeStep, refetchSessionDetail])
+  const { addToast } = useToast()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDeleteSession = async () => {
+    if (!sessionId) return
+    setIsDeleting(true)
+    try {
+      await sessionService.deleteSession(sessionId)
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      await queryClient.invalidateQueries({ queryKey: ['session-stats'] })
+      addToast({ title: 'Session supprimée', description: 'La session a été supprimée.', type: 'success' })
+      router.push('/dashboard/sessions')
+    } catch (err: any) {
+      addToast({ title: 'Erreur', description: err?.message || 'Impossible de supprimer la session.', type: 'error' })
+      setIsDeleting(false)
+    }
+  }
 
   // Calculate session metrics
   const sessionMetrics = useMemo(() => {
@@ -358,12 +397,41 @@ export default function SessionDetailPage() {
                   <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm rounded-xl text-xs font-medium">
                     <Archive className="w-3.5 h-3.5 mr-2" /> Archiver
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start h-9 text-red-600 hover:bg-red-50 hover:text-red-700 hover:shadow-sm rounded-xl text-xs font-medium"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Supprimer la session
+                  </Button>
                 </div>
               </motion.div>
             </div>
           </div>
         </div>
       </aside>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la session ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La session et les données associées (inscriptions, évaluations, etc.) seront définitivement supprimées.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeleteSession() }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? 'Suppression…' : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 overflow-hidden w-0 min-w-0">
@@ -781,6 +849,8 @@ export default function SessionDetailPage() {
                     grades={grades}
                     gradesStats={gradesStats}
                     attendanceStats={attendanceStats}
+                    sessionId={sessionId}
+                    onRefresh={refetchSessionDetail}
                   />
                 </Suspense>
               )}

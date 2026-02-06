@@ -27,23 +27,23 @@ export interface DocumentTemplateDefault {
  * Toutes les écritures en Times New Roman, taille 8pt
  */
 const premiumHeader = `
-  <div style="width: 100%; padding: 10px 0 10px 0; margin-bottom: 12px; font-family: 'Times New Roman', Times, serif;">
+  <div style="width: 100%; padding: 5px 0 3px 0; margin-bottom: 0; font-family: 'Times New Roman', Times, serif;">
     <table cellpadding="0" cellspacing="0" style="width: 100%; border: 0; table-layout: fixed;">
       <tr>
         <td style="width: 70%; vertical-align: top; padding-right: 15px; border: 0; text-align: left;">
-          <p style="font-weight: bold; font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; margin: 0 0 3px 0; color: #1A1A1A; line-height: 1.2;">
+          <p style="font-weight: bold; font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; margin: 0 0 2px 0; color: #1A1A1A; line-height: 1.1;">
             {ecole_nom}
           </p>
-          <p style="font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 1px 0; line-height: 1.3;">
+          <p style="font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 0; line-height: 1.2;">
             {ecole_adresse}
           </p>
-          <p style="font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 1px 0; line-height: 1.3;">
+          <p style="font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 0; line-height: 1.2;">
             {ecole_code_postal} {ecole_ville}
           </p>
-          <p style="font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 1px 0; line-height: 1.3;">
+          <p style="font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 0; line-height: 1.2;">
             Email : {ecole_email}
           </p>
-          <p style="font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 1px 0; line-height: 1.3;">
+          <p style="font-size: 7.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 0; line-height: 1.2;">
             Tel : {ecole_telephone}
           </p>
         </td>
@@ -60,15 +60,12 @@ const premiumHeader = `
  * SIRET, déclaration d'activité, mention légale et pagination
  */
 const premiumFooter = `
-  <div style="padding: 8px 0 6px 0; margin-top: 10px; background-color: #FAFAFA; font-family: 'Times New Roman', Times, serif;">
-    <p style="font-size: 7pt; font-family: 'Times New Roman', Times, serif; color: #1A1A1A; margin: 0; text-align: center; font-weight: 500; line-height: 1.3;">
-      {ecole_nom} | {ecole_adresse} {ecole_ville} {ecole_code_postal} | Numéro SIRET: {ecole_siret}
+  <div style="padding: 4px 0 3px 0; margin-top: 0; background-color: #FAFAFA; font-family: 'Times New Roman', Times, serif;">
+    <p style="font-size: 6.5pt; font-family: 'Times New Roman', Times, serif; color: #1A1A1A; margin: 0; text-align: center; font-weight: 500; line-height: 1.2;">
+      {ecole_nom} | {ecole_adresse} {ecole_ville} {ecole_code_postal} | SIRET: {ecole_siret}
     </p>
-    <p style="font-size: 7pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 2px 0 0 0; text-align: center; line-height: 1.2;">
-      Numéro de déclaration d'activité: {ecole_numero_declaration} <em>(auprès du préfet de région de: {ecole_region})</em>
-    </p>
-    <p style="font-size: 7pt; font-family: 'Times New Roman', Times, serif; color: #888; font-style: italic; margin: 2px 0 0 0; text-align: center; line-height: 1.2;">
-      Cet enregistrement ne vaut pas l'agrément de l'État.
+    <p style="font-size: 6.5pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 1px 0 0 0; text-align: center; line-height: 1.1;">
+      Déclaration d'activité: {ecole_numero_declaration} <em>(préfet de région: {ecole_region})</em> - Cet enregistrement ne vaut pas agrément de l'État.
     </p>
   </div>
 `
@@ -620,32 +617,207 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
   },
 
   // ==========================================
-  // FACTURE - ULTRA PREMIUM (1 page compacte)
+  // FACTURE - Style INSSI FORMATION
   // ==========================================
   facture: {
     type: 'facture',
     name: 'Facture',
     headerContent: premiumHeader,
     bodyContent: `
-      <!-- En-tête Facture Ultra Premium Compact -->
-      <div style="margin-bottom: 5px;">
+      <!-- Titre et date -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 8px; border: 0; font-family: 'Times New Roman', Times, serif;">
+        <tr>
+          <td style="width: 60%; vertical-align: top; border: 0;">
+            <h1 style="margin: 0; font-size: 12pt; font-weight: bold; color: #000;">Facture n°{numero_facture}</h1>
+          </td>
+          <td style="width: 40%; vertical-align: top; border: 0; text-align: right;">
+            <p style="margin: 0; font-size: 8pt; color: #333;">Date de facture : {date_emission}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Destinataire et Détails formation -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 8px; border: 0; font-family: 'Times New Roman', Times, serif;">
+        <tr>
+          <td style="width: 50%; vertical-align: top; border: 0;">
+            <p style="margin: 0 0 1px 0; font-size: 8pt;"><strong>Destinataire :</strong> <span style="color: #0066CC;">{eleve_prenom} {eleve_nom}</span></p>
+            <p style="margin: 0; font-size: 8pt; color: #333;">{eleve_adresse}</p>
+            <p style="margin: 0; font-size: 8pt; color: #333;">{eleve_code_postal} {eleve_ville}</p>
+          </td>
+          <td style="width: 50%; vertical-align: top; border: 0;">
+            <p style="margin: 0 0 1px 0; font-size: 8pt;"><strong>Intitulé de la formation :</strong> {formation_nom}</p>
+            <p style="margin: 0; font-size: 8pt; color: #333;">Dates : du {session_debut} au {session_fin}</p>
+            <p style="margin: 0; font-size: 8pt; color: #333;">Durée : {formation_duree}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Tableau des prestations -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 5px; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
+        <thead>
+          <tr style="background-color: #E8E8E8;">
+            <th style="padding: 4px 6px; text-align: left; border: 1px solid #ccc; font-weight: bold;">Désignation</th>
+            <th style="padding: 4px 6px; text-align: center; border: 1px solid #ccc; font-weight: bold; width: 50px;">Qté</th>
+            <th style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 80px;">Prix unit. HT</th>
+            <th style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 80px;">Total HT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 4px 6px; border: 1px solid #ccc;">{formation_nom}</td>
+            <td style="padding: 4px 6px; text-align: center; border: 1px solid #ccc;">1</td>
+            <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">{montant_ht}</td>
+            <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">{montant_ht}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Totaux -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px; border: 0; font-family: 'Times New Roman', Times, serif;">
+        <tr>
+          <td style="width: 60%; border: 0;"></td>
+          <td style="width: 40%; border: 0;">
+            <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 8pt;">
+              <tr>
+                <td style="padding: 3px 6px; text-align: right; border: 1px solid #ccc;">Total HT</td>
+                <td style="padding: 3px 6px; text-align: right; border: 1px solid #ccc; width: 80px;">{montant_ht}</td>
+              </tr>
+              <tr>
+                <td style="padding: 3px 6px; text-align: right; border: 1px solid #ccc; font-size: 7pt;">TVA exonérée (art. 261 CGI)</td>
+                <td style="padding: 3px 6px; text-align: right; border: 1px solid #ccc;">{tva}</td>
+              </tr>
+              <tr style="background-color: #E8E8E8;">
+                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold;">Total TTC</td>
+                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold;">{montant_ttc}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Date d'échéance -->
+      <div style="margin-bottom: 10px; font-family: 'Times New Roman', Times, serif;">
+        <p style="margin: 0; font-size: 9pt; font-weight: bold; text-align: center;">
+          Date d'échéance : {date_echeance} (paiement à 30 jours)
+        </p>
+      </div>
+
+      <!-- Informations bancaires -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 0; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 7pt;">
+        <tr style="background-color: #E8E8E8;">
+          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">Code banque</th>
+          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">Code guichet</th>
+          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">N° compte</th>
+          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">Clé RIB</th>
+          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">IBAN</th>
+          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">BIC</th>
+        </tr>
+        <tr>
+          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{code_banque}</td>
+          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{code_guichet}</td>
+          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{numero_compte}</td>
+          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{cle_rib}</td>
+          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{iban}</td>
+          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{bic}</td>
+        </tr>
+      </table>
+    `,
+    footerContent: premiumFooter,
+  },
+
+  // ==========================================
+  // DEVIS - Style INSSI FORMATION (compact)
+  // ==========================================
+  devis: {
+    type: 'devis',
+    name: 'Devis de formation professionnelle',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <!-- Titre et date -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 6px; border: 0; font-family: 'Times New Roman', Times, serif;">
+        <tr>
+          <td style="width: 70%; vertical-align: top; border: 0;">
+            <h1 style="margin: 0; font-size: 11pt; font-weight: bold; color: #000; border-bottom: 1px solid #000; padding-bottom: 2px; display: inline-block;">
+              Devis de formation professionnelle
+            </h1>
+          </td>
+          <td style="width: 30%; vertical-align: top; border: 0; text-align: right;">
+            <p style="margin: 0; font-size: 8pt; color: #333;">Date : {date_emission}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Destinataire et Organisme -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 6px; border: 0; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
+        <tr>
+          <td style="width: 50%; vertical-align: top; border: 0;">
+            <p style="margin: 0 0 1px 0;"><strong>Destinataire :</strong> {entreprise_nom}</p>
+            <p style="margin: 0; color: #333;">{eleve_adresse}, {eleve_code_postal} {eleve_ville}</p>
+            <p style="margin: 0; color: #333;">Représenté par : {tuteur_nom}</p>
+          </td>
+          <td style="width: 50%; vertical-align: top; border: 0;">
+            <p style="margin: 0 0 1px 0;"><strong>Organisme :</strong> {ecole_nom}</p>
+            <p style="margin: 0; color: #333;">SIRET : {ecole_siret} | Décl. : {ecole_numero_declaration}</p>
+            <p style="margin: 0; color: #333;">Représenté par : {ecole_representant}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Section 1: Objet, nature et durée -->
+      <div style="margin-bottom: 6px; font-family: 'Times New Roman', Times, serif;">
+        <h2 style="margin: 0 0 3px 0; font-size: 9pt; font-weight: bold; color: #000;">1. Objet, nature et durée de la formation</h2>
+        <p style="margin: 0; font-size: 8pt; line-height: 1.4;">
+          <strong>Intitulé :</strong> {formation_nom} | <strong>Nature :</strong> Action de formation (art. L6313-1 Code du Travail)<br/>
+          <strong>Durée :</strong> {formation_duree} | <strong>Dates :</strong> du {session_debut} au {session_fin} | <strong>Effectifs :</strong> {session_effectif}
+        </p>
+      </div>
+
+      <!-- Section 2: Programme -->
+      <div style="margin-bottom: 6px; font-family: 'Times New Roman', Times, serif;">
+        <h2 style="margin: 0 0 2px 0; font-size: 9pt; font-weight: bold; color: #000;">2. Programme de la formation</h2>
+        <p style="margin: 0; font-size: 8pt;">Le programme détaillé est en annexes.</p>
+      </div>
+
+      <!-- Section 3: Prix -->
+      <div style="margin-bottom: 6px; font-family: 'Times New Roman', Times, serif;">
+        <h2 style="margin: 0 0 3px 0; font-size: 9pt; font-weight: bold; color: #000;">3. Prix de la formation</h2>
+
+        <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 4px; border-collapse: collapse; font-size: 8pt;">
+          <thead>
+            <tr style="background-color: #E8E8E8;">
+              <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold;">Désignation</th>
+              <th style="padding: 3px 5px; text-align: center; border: 1px solid #ccc; font-weight: bold; width: 40px;">Qté</th>
+              <th style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 70px;">Prix unit. HT</th>
+              <th style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 70px;">Total HT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 3px 5px; border: 1px solid #ccc;">{formation_nom}</td>
+              <td style="padding: 3px 5px; text-align: center; border: 1px solid #ccc;">1</td>
+              <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">{montant_ht}</td>
+              <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">{montant_ht}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Totaux -->
         <table cellpadding="0" cellspacing="0" style="width: 100%; border: 0;">
           <tr>
-            <td style="width: 60%; vertical-align: top; border: 0;">
-              <div style="background: linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%); color: white; padding: 6px 12px; border-radius: 3px; display: inline-block;">
-                <p style="margin: 0; font-size: 16pt; font-weight: 800; letter-spacing: 0.3px; font-family: 'Times New Roman', Times, serif;">FACTURE</p>
-              </div>
-              <p style="margin: 3px 0 0 0; font-size: 10pt; font-weight: 700; color: #1E3A5F; font-family: 'Times New Roman', Times, serif;">N° {numero_facture}</p>
-            </td>
-            <td style="width: 40%; vertical-align: top; border: 0; text-align: right;">
-              <table cellpadding="0" cellspacing="0" style="margin-left: auto; border: 0;">
+            <td style="width: 60%; border: 0;"></td>
+            <td style="width: 40%; border: 0;">
+              <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 8pt;">
                 <tr>
-                  <td style="padding: 1px 5px 1px 0; font-size: 6.5pt; color: #64748B; border: 0; text-align: right;">Date d'émission</td>
-                  <td style="padding: 1px 0; font-size: 7.5pt; font-weight: 600; color: #1E293B; border: 0;">{date_emission}</td>
+                  <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc;">Total HT</td>
+                  <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc; width: 70px;">{montant_ht}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 1px 5px 1px 0; font-size: 6.5pt; color: #64748B; border: 0; text-align: right;">Échéance</td>
-                  <td style="padding: 1px 0; font-size: 7.5pt; font-weight: 600; color: #DC2626; border: 0;">{date_echeance}</td>
+                  <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc; font-size: 7pt;">TVA exonérée (art. 261 CGI)</td>
+                  <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc;">{tva}</td>
+                </tr>
+                <tr style="background-color: #E8E8E8;">
+                  <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold;">Total TTC</td>
+                  <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold;">{montant_ttc}</td>
                 </tr>
               </table>
             </td>
@@ -653,202 +825,27 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
         </table>
       </div>
 
-      <!-- Séparateur élégant -->
-      <div style="height: 1px; background: linear-gradient(90deg, #2563EB 0%, #60A5FA 50%, transparent 100%); margin: 4px 0;"></div>
+      <!-- Section 4: Validité -->
+      <div style="margin-bottom: 8px; font-family: 'Times New Roman', Times, serif;">
+        <h2 style="margin: 0 0 2px 0; font-size: 9pt; font-weight: bold; color: #000;">4. Durée de validité</h2>
+        <p style="margin: 0; font-size: 8pt;">Ce devis est valable 30 jours.</p>
+      </div>
 
-      <!-- Informations Client Ultra Compact -->
-      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 5px; border: 0;">
+      <!-- Signatures -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-top: 10px; border: 0; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
         <tr>
-          <td style="width: 55%; vertical-align: top; padding-right: 8px; border: 0;">
-            <div style="background: #F8FAFC; border-left: 2px solid #2563EB; padding: 4px 8px; border-radius: 0 2px 2px 0;">
-              <p style="margin: 0 0 2px 0; font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #64748B;">Facturé à</p>
-              <p style="margin: 0 0 1px 0; font-size: 9pt; font-weight: 700; color: #0F172A;">{eleve_prenom} {eleve_nom}</p>
-              <p style="margin: 0 0 1px 0; font-size: 7pt; color: #475569; line-height: 1.15;">{eleve_adresse}</p>
-              <p style="margin: 0 0 1px 0; font-size: 7pt; color: #475569; line-height: 1.15;">{eleve_code_postal} {eleve_ville}</p>
-              <p style="margin: 0; font-size: 6.5pt; color: #475569; line-height: 1.15;">{eleve_email} | {eleve_telephone}</p>
-            </div>
-          </td>
-          <td style="width: 45%; vertical-align: top; border: 0;">
-            <div style="background: #EFF6FF; border: 1px solid #BFDBFE; padding: 4px 8px; border-radius: 2px;">
-              <p style="margin: 0 0 2px 0; font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #1D4ED8;">Référence client</p>
-              <p style="margin: 0 0 1px 0; font-size: 8.5pt; font-weight: 700; color: #1E40AF;">N° {eleve_numero}</p>
-              <p style="margin: 0; font-size: 7pt; color: #3B82F6; line-height: 1.15;">{formation_nom}</p>
-            </div>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Tableau des prestations Ultra Compact -->
-      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 5px; border-collapse: collapse; font-size: 7.5pt;">
-        <thead>
-          <tr>
-            <th style="padding: 5px 6px; text-align: left; background: linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%); color: white; font-weight: 600; font-size: 6.5pt; text-transform: uppercase; letter-spacing: 0.2px;">Description</th>
-            <th style="padding: 5px 4px; text-align: center; background: linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%); color: white; font-weight: 600; font-size: 6.5pt; text-transform: uppercase; width: 35px;">Qté</th>
-            <th style="padding: 5px 4px; text-align: right; background: linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%); color: white; font-weight: 600; font-size: 6.5pt; text-transform: uppercase; width: 65px;">P.U. HT</th>
-            <th style="padding: 5px 6px; text-align: right; background: linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%); color: white; font-weight: 600; font-size: 6.5pt; text-transform: uppercase; width: 65px;">Total HT</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style="background: #FFFFFF;">
-            <td style="padding: 6px; border-bottom: 1px solid #E2E8F0; border-left: 1px solid #E2E8F0;">
-              <p style="margin: 0 0 1px 0; font-weight: 600; font-size: 8pt; color: #0F172A;">{formation_nom}</p>
-              <p style="margin: 0; font-size: 6.5pt; color: #64748B; line-height: 1.15;">{session_debut} → {session_fin} | {formation_duree}</p>
-            </td>
-            <td style="padding: 6px 4px; text-align: center; border-bottom: 1px solid #E2E8F0; font-weight: 500; color: #334155; font-size: 7.5pt;">1</td>
-            <td style="padding: 6px 4px; text-align: right; border-bottom: 1px solid #E2E8F0; font-weight: 500; color: #334155; font-size: 7.5pt;">{montant_ht} €</td>
-            <td style="padding: 6px; text-align: right; border-bottom: 1px solid #E2E8F0; border-right: 1px solid #E2E8F0; font-weight: 700; color: #0F172A; font-size: 7.5pt;">{montant_ht} €</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- Bloc Totaux Ultra Compact -->
-      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 5px; border: 0;">
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding-right: 8px; border: 0;">
-            <!-- Montant en lettres -->
-            <div style="background: #F0FDF4; border: 1px solid #86EFAC; padding: 4px 8px; border-radius: 2px;">
-              <p style="margin: 0 0 1px 0; font-size: 6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2px; color: #166534;">Arrêté à la somme de</p>
-              <p style="margin: 0; font-size: 7.5pt; font-style: italic; color: #15803D; line-height: 1.15;">{montant_lettres}</p>
-            </div>
+          <td style="width: 50%; vertical-align: top; border: 0;">
+            <p style="margin: 0 0 2px 0; font-weight: bold;">Pour l'organisme de formation,</p>
+            <p style="margin: 0;">{ecole_nom}, {ecole_representant}</p>
+            <p style="margin: 25px 0 0 0; border-top: 1px solid #000; padding-top: 2px; width: 70%;">Signature</p>
           </td>
           <td style="width: 50%; vertical-align: top; border: 0;">
-            <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 3px 6px; text-align: right; background: #F8FAFC; font-size: 7pt; color: #64748B; border: 1px solid #E2E8F0;">Sous-total HT</td>
-                <td style="padding: 3px 6px; text-align: right; background: #F8FAFC; font-size: 7.5pt; font-weight: 600; color: #334155; border: 1px solid #E2E8F0; width: 70px;">{montant_ht} €</td>
-              </tr>
-              <tr>
-                <td style="padding: 3px 6px; text-align: right; background: #F8FAFC; font-size: 7pt; color: #64748B; border: 1px solid #E2E8F0;">TVA ({taux_tva}%)</td>
-                <td style="padding: 3px 6px; text-align: right; background: #F8FAFC; font-size: 7.5pt; font-weight: 500; color: #334155; border: 1px solid #E2E8F0;">{tva} €</td>
-              </tr>
-              <tr>
-                <td style="padding: 5px; text-align: right; background: linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%); color: white; font-size: 8pt; font-weight: 700; border-radius: 0 0 0 2px;">TOTAL TTC</td>
-                <td style="padding: 5px; text-align: right; background: linear-gradient(135deg, #1E3A5F 0%, #1E40AF 100%); color: white; font-size: 9.5pt; font-weight: 800; border-radius: 0 0 2px 0;">{montant_ttc} €</td>
-              </tr>
-            </table>
+            <p style="margin: 0 0 2px 0; font-weight: bold;">Pour le bénéficiaire, bon pour accord</p>
+            <p style="margin: 0;">{entreprise_nom}</p>
+            <p style="margin: 25px 0 0 0; border-top: 1px solid #000; padding-top: 2px; width: 70%;">Signature</p>
           </td>
         </tr>
       </table>
-
-      <!-- Informations de paiement Ultra Compact -->
-      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 4px; border: 0;">
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding-right: 4px; border: 0;">
-            <div style="background: #FEF3C7; border-left: 2px solid #F59E0B; padding: 4px 8px; border-radius: 0 2px 2px 0;">
-              <p style="margin: 0 0 2px 0; font-size: 6.5pt; font-weight: 700; color: #92400E;">💳 PAIEMENT</p>
-              <p style="margin: 0 0 1px 0; font-size: 6.5pt; color: #78350F; line-height: 1.1;"><strong>Mode:</strong> {mode_paiement}</p>
-              <p style="margin: 0; font-size: 6.5pt; color: #78350F; line-height: 1.1;"><strong>IBAN:</strong> {iban}</p>
-            </div>
-          </td>
-          <td style="width: 50%; vertical-align: top; padding-left: 4px; border: 0;">
-            <div style="background: #FEF2F2; border-left: 2px solid #EF4444; padding: 4px 8px; border-radius: 0 2px 2px 0;">
-              <p style="margin: 0 0 2px 0; font-size: 6.5pt; font-weight: 700; color: #991B1B;">⚠️ RETARD</p>
-              <p style="margin: 0; font-size: 6pt; color: #7F1D1D; line-height: 1.1;">Taux × 3 + 40€ (L441-10)</p>
-            </div>
-          </td>
-        </tr>
-      </table>
-
-      <!-- Mentions légales ultra compactes -->
-      <div style="background: #F1F5F9; padding: 3px 8px; border-radius: 2px; margin-top: 3px;">
-        <p style="margin: 0; font-size: 6pt; color: #64748B; text-align: center; line-height: 1.2;">
-          TVA non applicable (art. 293B CGI) • SIRET: {ecole_siret} • Déclaration: {ecole_numero_declaration}
-        </p>
-      </div>
-    `,
-    footerContent: premiumFooter,
-  },
-
-  // ==========================================
-  // DEVIS
-  // ==========================================
-  devis: {
-    type: 'devis',
-    name: 'Devis',
-    headerContent: premiumHeader,
-    bodyContent: `
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px;">
-        <div style="flex: 1;">
-          <h1 style="font-size: 20pt; font-weight: bold; margin: 0; color: #1A1A1A;">DEVIS</h1>
-          <p style="font-size: 12pt; margin: 8px 0 0 0; color: #666;">N° {numero_devis}</p>
-        </div>
-        <div style="text-align: right;">
-          <p style="font-size: 10pt; margin: 0;"><strong>Date d'émission :</strong> {date_emission}</p>
-          <p style="font-size: 10pt; margin: 5px 0;"><strong>Valable jusqu'au :</strong> {validite_devis}</p>
-        </div>
-      </div>
-
-      ${separator}
-
-      <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
-        <div style="width: 48%; padding: 15px; background-color: #F9FAFB; border-left: 3px solid #1A1A1A;">
-          <p style="font-weight: bold; margin: 0 0 10px 0; font-size: 10pt; text-transform: uppercase; color: #666;">Devis pour :</p>
-          <p style="margin: 0; font-size: 11pt; font-weight: bold;">{eleve_nom} {eleve_prenom}</p>
-          <p style="margin: 5px 0; font-size: 10pt; color: #666;">{eleve_adresse}</p>
-          <p style="margin: 3px 0; font-size: 10pt; color: #666;">Tél : {eleve_telephone}</p>
-          <p style="margin: 3px 0; font-size: 10pt; color: #666;">Email : {eleve_email}</p>
-        </div>
-      </div>
-
-      <div style="padding: 15px; background-color: #F0F9FF; border-left: 3px solid #0EA5E9; margin-bottom: 20px;">
-        <p style="margin: 0; font-size: 11pt; font-weight: 600;">
-          Objet : Devis pour la formation "{formation_nom}"
-        </p>
-        <p style="margin: 8px 0 0 0; font-size: 10pt; color: #333;">{formation_description}</p>
-      </div>
-
-      <table style="width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 10pt;">
-        <thead>
-          <tr style="background-color: #1A1A1A; color: white;">
-            <th style="padding: 10px 12px; text-align: left; font-weight: bold;">Description</th>
-            <th style="padding: 10px 12px; text-align: center; font-weight: bold; width: 80px;">Durée</th>
-            <th style="padding: 10px 12px; text-align: right; font-weight: bold; width: 100px;">Prix HT</th>
-            <th style="padding: 10px 12px; text-align: right; font-weight: bold; width: 100px;">Montant HT</th>
-          </tr>
-        </thead>
-        <tbody>
-          {modules_lignes}
-        </tbody>
-      </table>
-
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 25px;">
-        <table style="width: 280px; border-collapse: collapse; font-size: 10pt;">
-          <tr style="border-bottom: 1px solid #E5E7EB;">
-            <td style="padding: 8px 12px; text-align: right; background-color: #F9FAFB;">Sous-total HT :</td>
-            <td style="padding: 8px 12px; text-align: right; background-color: #F9FAFB; font-weight: 600;">{montant_ht} €</td>
-          </tr>
-          <tr style="border-bottom: 1px solid #E5E7EB;">
-            <td style="padding: 8px 12px; text-align: right; background-color: #F9FAFB;">TVA ({taux_tva}%) :</td>
-            <td style="padding: 8px 12px; text-align: right; background-color: #F9FAFB;">{tva} €</td>
-          </tr>
-          <tr style="background-color: #1A1A1A; color: white;">
-            <td style="padding: 12px; text-align: right; font-weight: bold; font-size: 12pt;">TOTAL TTC :</td>
-            <td style="padding: 12px; text-align: right; font-weight: bold; font-size: 12pt;">{montant_ttc} €</td>
-          </tr>
-        </table>
-      </div>
-
-      <div style="padding: 15px; background-color: #FEF3C7; border-left: 3px solid #F59E0B; margin-bottom: 20px;">
-        <p style="margin: 0 0 10px 0; font-size: 10pt; font-weight: 600; color: #92400E;">
-          Conditions et validité du devis
-        </p>
-        <ul style="margin: 0 0 0 20px; font-size: 10pt; line-height: 1.6; color: #78350F;">
-          <li>Ce devis est valable jusqu'au <strong>{validite_devis}</strong></li>
-          <li>Modalités de paiement : <strong>{mode_paiement}</strong></li>
-          <li>La réservation est définitive après acceptation écrite du présent devis</li>
-          <li>En cas d'acceptation, un acompte de 30% peut être demandé</li>
-        </ul>
-      </div>
-
-      <div style="padding: 15px; background-color: #F0FDF4; border-left: 3px solid #10B981;">
-        <p style="margin: 0; font-size: 10pt; line-height: 1.6; color: #166534;">
-          <strong>Pour accepter ce devis :</strong><br/>
-          Veuillez retourner ce document signé par courrier, email ({ecole_email}) ou directement à notre secrétariat 
-          avant le {validite_devis}.
-        </p>
-      </div>
-
-      ${generateSignatureSection('L\'Organisme de Formation', 'Le Client (Bon pour accord)')}
     `,
     footerContent: premiumFooter,
   },

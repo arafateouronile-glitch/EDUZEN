@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Activity, CheckCircle, Star, DollarSign, Download, User, TrendingUp, Sparkles, ClipboardList, GitBranch, AlertCircle, Calendar, GraduationCap } from 'lucide-react'
+import { Activity, CheckCircle, Star, DollarSign, Download, User, TrendingUp, Sparkles, ClipboardList, GitBranch, AlertCircle, Calendar, GraduationCap, FileEdit, Plus, Pencil } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 // Lazy load recharts pour réduire le bundle initial
 import {
@@ -25,6 +26,7 @@ import {
   RechartsResponsiveContainer,
 } from '@/components/charts/recharts-wrapper'
 import { useDocumentGeneration } from '../hooks/use-document-generation'
+import { useToast } from '@/components/ui/toast'
 import { motion } from '@/components/ui/motion'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useQuery } from '@tanstack/react-query'
@@ -40,6 +42,17 @@ import type {
 } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { evaluationService } from '@/lib/services/evaluation.service'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 // Lazy load SessionTimeline avec gestion d'erreur
 const SessionTimeline = dynamic(
@@ -95,6 +108,8 @@ interface SuiviProps {
     excused: number
     byStudent: Record<string, { present: number; total: number }>
   } | null
+  sessionId?: string
+  onRefresh?: () => void
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -113,6 +128,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const EXAM_TYPES = ['exam', 'quiz']
+
 export function Suivi({
   sessionData,
   formation,
@@ -122,8 +139,24 @@ export function Suivi({
   grades = [],
   gradesStats,
   attendanceStats,
+  sessionId,
+  onRefresh,
 }: SuiviProps) {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const { addToast } = useToast()
+  const [examFormOpen, setExamFormOpen] = useState(false)
+  const [editingGrade, setEditingGrade] = useState<GradeWithRelations | null>(null)
+  const [examForm, setExamForm] = useState({
+    subject: '',
+    student_id: '',
+    score: '',
+    max_score: '20',
+    notes: '',
+  })
+  const [editForm, setEditForm] = useState({ score: '', max_score: '20' })
+  const [isSubmittingExam, setIsSubmittingExam] = useState(false)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
   const {
     handleGenerateSessionReport,
   } = useDocumentGeneration({
@@ -235,9 +268,58 @@ export function Suivi({
   
   const studentPerformance: StudentPerformanceItem[] = studentPerformanceRaw.filter((item) => item !== null) as StudentPerformanceItem[]
 
+  const examGrades = (grades || []).filter((g: GradeWithRelations) => EXAM_TYPES.includes((g.assessment_type as string) || ''))
+
+  const handleAddExamResult = async () => {
+    if (!user?.organization_id || !sessionId || !examForm.subject.trim() || !examForm.student_id) return
+    setIsSubmittingExam(true)
+    try {
+      await evaluationService.create(user.organization_id, {
+        session_id: sessionId,
+        student_id: examForm.student_id,
+        subject: examForm.subject.trim(),
+        assessment_type: 'exam',
+        score: examForm.score ? parseFloat(examForm.score) : null,
+        max_score: examForm.max_score ? parseFloat(examForm.max_score) : 20,
+        notes: examForm.notes || null,
+        graded_at: new Date().toISOString(),
+        teacher_id: user.id || null,
+      })
+      queryClient.invalidateQueries({ queryKey: ['session-grades', sessionId] })
+      onRefresh?.()
+      setExamFormOpen(false)
+      setExamForm({ subject: '', student_id: '', score: '', max_score: '20', notes: '' })
+      addToast({ type: 'success', title: 'Résultat enregistré', description: 'Le résultat d\'examen a été ajouté.' })
+    } catch (err: any) {
+      logger.error('Erreur ajout résultat examen', err)
+      addToast({ type: 'error', title: 'Erreur', description: err?.message || 'Impossible d\'enregistrer le résultat.' })
+    } finally {
+      setIsSubmittingExam(false)
+    }
+  }
+
+  const handleSaveExamEdit = async () => {
+    if (!editingGrade?.id) return
+    setIsSavingEdit(true)
+    try {
+      const score = editForm.score ? parseFloat(editForm.score) : null
+      const maxScore = editForm.max_score ? parseFloat(editForm.max_score) : 20
+      await evaluationService.update(editingGrade.id, { score, max_score: maxScore })
+      queryClient.invalidateQueries({ queryKey: ['session-grades', sessionId] })
+      onRefresh?.()
+      setEditingGrade(null)
+      addToast({ type: 'success', title: 'Note mise à jour', description: 'La note a été enregistrée.' })
+    } catch (err: any) {
+      logger.error('Erreur mise à jour note', err)
+      addToast({ type: 'error', title: 'Erreur', description: err?.message || 'Impossible de mettre à jour la note.' })
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+
   return (
     <Tabs defaultValue="statistics" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-3 p-1 bg-gray-100/50 backdrop-blur-sm rounded-xl">
+      <TabsList className="grid w-full grid-cols-4 p-1 bg-gray-100/50 backdrop-blur-sm rounded-xl">
         <TabsTrigger value="statistics" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-brand-blue transition-all">
           <TrendingUp className="h-4 w-4 mr-2" />
           Statistiques
@@ -245,6 +327,10 @@ export function Suivi({
         <TabsTrigger value="timeline" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-brand-blue transition-all">
           <GitBranch className="h-4 w-4 mr-2" />
           Timeline & Tâches
+        </TabsTrigger>
+        <TabsTrigger value="examens" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-brand-blue transition-all">
+          <FileEdit className="h-4 w-4 mr-2" />
+          Résultats d'examens
         </TabsTrigger>
         <TabsTrigger value="attendance" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-brand-blue transition-all">
           <ClipboardList className="h-4 w-4 mr-2" />
@@ -276,6 +362,107 @@ export function Suivi({
             <p>Chargement des données de session...</p>
           </div>
         )}
+      </TabsContent>
+
+      <TabsContent value="examens" className="space-y-6">
+        <GlassCard variant="premium" className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-display font-bold text-gray-900">Résultats des examens</h3>
+              <p className="text-sm text-gray-500">Saisir et consulter les notes d'examens et quiz de la session.</p>
+            </div>
+            {sessionId && user?.organization_id && (
+              <Button onClick={() => setExamFormOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Ajouter un résultat
+              </Button>
+            )}
+          </div>
+          {examGrades.length === 0 ? (
+            <div className="text-center py-12 rounded-xl bg-gray-50 border border-dashed border-gray-200">
+              <FileEdit className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 font-medium">Aucun résultat d'examen enregistré</p>
+              <p className="text-sm text-gray-500 mt-1">Ajoutez les notes des examens ou quiz de la session.</p>
+              {sessionId && user?.organization_id && (
+                <Button variant="outline" className="mt-4" onClick={() => setExamFormOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter un résultat
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-gray-200">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left p-3 font-semibold text-gray-700">Apprenant</th>
+                    <th className="text-left p-3 font-semibold text-gray-700">Sujet / Type</th>
+                    <th className="text-left p-3 font-semibold text-gray-700">Note</th>
+                    <th className="text-left p-3 font-semibold text-gray-700">Date</th>
+                    {sessionId && <th className="w-10 p-3" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {examGrades.map((g: GradeWithRelations) => {
+                    const student = (g as any).students
+                    const name = student ? `${student.first_name || ''} ${student.last_name || ''}`.trim() || '—' : '—'
+                    return (
+                      <tr key={g.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                        <td className="p-3 text-gray-900">{name}</td>
+                        <td className="p-3">
+                          <span className="font-medium text-gray-800">{g.subject || '—'}</span>
+                          <span className="ml-2 text-xs text-gray-500">({g.assessment_type === 'quiz' ? 'Quiz' : 'Examen'})</span>
+                        </td>
+                        <td className="p-3">
+                          {editingGrade?.id === g.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="w-20 h-8"
+                                value={editForm.score}
+                                onChange={(e) => setEditForm((f) => ({ ...f, score: e.target.value }))}
+                              />
+                              <span>/</span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="w-16 h-8"
+                                value={editForm.max_score}
+                                onChange={(e) => setEditForm((f) => ({ ...f, max_score: e.target.value }))}
+                              />
+                              <Button size="sm" onClick={handleSaveExamEdit} disabled={isSavingEdit}>
+                                {isSavingEdit ? '...' : 'Enregistrer'}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingGrade(null)}>Annuler</Button>
+                            </div>
+                          ) : (
+                            <span className="font-medium">
+                              {g.score != null ? Number(g.score) : '—'} / {g.max_score != null ? Number(g.max_score) : 20}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-gray-500">{g.graded_at ? formatDate(g.graded_at) : '—'}</td>
+                        {sessionId && (
+                          <td className="p-3">
+                            {editingGrade?.id !== g.id && (
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => {
+                                setEditingGrade(g)
+                                setEditForm({ score: g.score != null ? String(g.score) : '', max_score: g.max_score != null ? String(g.max_score) : '20' })
+                              }}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </GlassCard>
       </TabsContent>
 
       <TabsContent value="statistics" className="space-y-6">
@@ -755,6 +942,83 @@ export function Suivi({
           </GlassCard>
         )}
       </TabsContent>
+
+      {/* Dialog ajout résultat d'examen */}
+      <Dialog open={examFormOpen} onOpenChange={setExamFormOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajouter un résultat d'examen</DialogTitle>
+            <DialogDescription>
+              Saisissez la note d'un examen ou quiz pour un apprenant de la session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Sujet / Intitulé</Label>
+              <Input
+                value={examForm.subject}
+                onChange={(e) => setExamForm((f) => ({ ...f, subject: e.target.value }))}
+                placeholder="Ex. Examen final, Quiz module 1"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Apprenant</Label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={examForm.student_id}
+                onChange={(e) => setExamForm((f) => ({ ...f, student_id: e.target.value }))}
+              >
+                <option value="">Sélectionner un apprenant</option>
+                {enrollments.filter((e) => e.status !== 'cancelled').map((e) => {
+                  const s = (e as EnrollmentWithRelations).students as StudentWithRelations | null
+                  const name = s ? `${s.first_name || ''} ${s.last_name || ''}`.trim() : e.student_id
+                  return (
+                    <option key={e.id} value={e.student_id || ''}>
+                      {name || e.student_id}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Note</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={examForm.score}
+                  onChange={(e) => setExamForm((f) => ({ ...f, score: e.target.value }))}
+                  placeholder="12.5"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Note max</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={examForm.max_score}
+                  onChange={(e) => setExamForm((f) => ({ ...f, max_score: e.target.value }))}
+                  placeholder="20"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Commentaire (optionnel)</Label>
+              <Input
+                value={examForm.notes}
+                onChange={(e) => setExamForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Remarques"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExamFormOpen(false)}>Annuler</Button>
+            <Button onClick={handleAddExamResult} disabled={!examForm.subject.trim() || !examForm.student_id || isSubmittingExam}>
+              {isSubmittingExam ? 'Enregistrement...' : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Tabs>
   )
 }

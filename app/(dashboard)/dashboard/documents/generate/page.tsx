@@ -47,6 +47,13 @@ type Student = TableRow<'students'>
 type Session = TableRow<'sessions'>
 type Invoice = TableRow<'invoices'>
 
+/** Types de documents proposés sur la page (pour précharger les modèles au montage). */
+const GENERATE_PAGE_DOCUMENT_TYPES: DocumentType[] = [
+  'convention', 'facture', 'devis', 'convocation', 'contrat',
+  'attestation_reussite', 'certificat_scolarite', 'releve_notes', 'attestation_entree',
+  'reglement_interieur', 'cgv', 'programme', 'attestation_assiduite',
+]
+
 export default function GenerateDocumentPage() {
   const router = useRouter()
   const { user } = useAuth()
@@ -667,6 +674,26 @@ export default function GenerateDocumentPage() {
     setSelectedTemplateId('')
     setGeneratedDocument(null)
   }, [documentType])
+
+  // Précharger les modèles pour tous les types au montage (évite attente au changement de type)
+  useEffect(() => {
+    if (!user?.organization_id) return
+    const orgId = user.organization_id
+    GENERATE_PAGE_DOCUMENT_TYPES.forEach((type) => {
+      queryClient.prefetchQuery({
+        queryKey: ['document-templates-by-type', orgId, type],
+        queryFn: async () => {
+          try {
+            return await documentTemplateService.getTemplatesByType(type, orgId)
+          } catch (e) {
+            logger.warn('Prefetch templates par type ignoré', { type, error: e })
+            return []
+          }
+        },
+        staleTime: 5 * 60 * 1000,
+      })
+    })
+  }, [user?.organization_id, queryClient])
 
   // Fonction pour télécharger le document
   const handleDownload = () => {

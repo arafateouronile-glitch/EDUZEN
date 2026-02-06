@@ -144,10 +144,7 @@ function UsersSettingsPageContent() {
       return data || []
     },
     enabled: !!user?.organization_id,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    staleTime: 0, // Toujours considérer les données comme obsolètes pour forcer le refetch
-    gcTime: 0, // Ne pas mettre en cache pour toujours avoir les données à jour
+    staleTime: 1000 * 60 * 5, // 5 minutes - les utilisateurs changent rarement
   })
 
   // Mutation pour activer/désactiver un utilisateur

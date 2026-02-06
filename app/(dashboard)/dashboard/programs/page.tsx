@@ -21,6 +21,7 @@ function ProgramsPageContent() {
   const [search, setSearch] = useState('')
   const [showActiveOnly, setShowActiveOnly] = useState(true)
 
+  // Refetch au montage pour affichage correct après navigation (liste + graphiques)
   const { data: programs, isLoading } = useQuery({
     queryKey: ['programs', user?.organization_id, search, showActiveOnly],
     queryFn: async () => {
@@ -31,6 +32,7 @@ function ProgramsPageContent() {
       })
     },
     enabled: !!user?.organization_id,
+    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
   })
 
   const { data: globalStats } = useQuery({
@@ -40,6 +42,7 @@ function ProgramsPageContent() {
       return await programService.getGlobalStats(user.organization_id)
     },
     enabled: !!user?.organization_id,
+    staleTime: 1000 * 60 * 5, // 5 minutes - les stats changent moins souvent
   })
 
   if (!user?.organization_id) {

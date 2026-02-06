@@ -311,9 +311,7 @@ export default function AttendancePage() {
     },
     enabled: !!user?.organization_id && (!isTeacher || (isTeacher && teacherSessionIds !== undefined)),
     refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    staleTime: 0, // Toujours considérer les données comme périmées
-    gcTime: 0, // Ne pas mettre en cache (anciennement cacheTime)
+    staleTime: 1000 * 30, // 30 secondes - données de présence changent souvent mais pas à chaque milliseconde
   })
 
   // Statistiques sur une période

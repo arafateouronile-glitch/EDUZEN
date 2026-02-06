@@ -1,15 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { Header } from '@/components/dashboard/header'
 import { PageTransition } from '@/components/ui/page-transition'
 import { InstallPrompt } from '@/components/pwa/install-prompt'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { createClient } from '@/lib/supabase/client'
-import { logger, sanitizeError } from '@/lib/utils/logger'
+import { logger } from '@/lib/utils/logger'
 import { cn } from '@/lib/utils'
 import { FocusModeProvider, useFocusMode } from '@/lib/contexts/focus-mode-context'
 
@@ -18,58 +16,10 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const router = useRouter()
   const pathname = usePathname()
-  const { user, isLoading: authLoading } = useAuth()
-  const supabase = createClient()
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true)
-
-  // Vérifier si l'onboarding est terminé
-  const { data: onboardingStatus } = useQuery({
-    queryKey: ['onboarding-status', user?.organization_id],
-    queryFn: async () => {
-      if (!user?.organization_id) return { completed: false }
-
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('settings')
-        .eq('id', user.organization_id)
-        .single()
-
-      if (error) {
-        logger.error('Erreur récupération onboarding status', error)
-        return { completed: false }
-      }
-
-      const settings = (data?.settings as any) || {}
-      return {
-        completed: settings.onboarding_completed === true,
-      }
-    },
-    enabled: !!user?.organization_id && !authLoading,
-  })
-
-  useEffect(() => {
-    if (authLoading || isCheckingOnboarding) return
-
-    // Si l'onboarding n'est pas terminé et qu'on n'est pas déjà sur la page d'onboarding
-    if (
-      onboardingStatus &&
-      !onboardingStatus.completed &&
-      pathname !== '/dashboard/onboarding'
-    ) {
-      router.push('/dashboard/onboarding')
-    }
-  }, [onboardingStatus, pathname, router, authLoading, isCheckingOnboarding])
-
-  useEffect(() => {
-    if (!authLoading && onboardingStatus !== undefined) {
-      setIsCheckingOnboarding(false)
-    }
-  }, [authLoading, onboardingStatus])
+  const { isLoading: authLoading } = useAuth()
 
   // Gestion d'erreur globale pour les scripts externes (extensions de navigateur, etc.)
-  // IMPORTANT: Tous les hooks doivent être appelés AVANT les retours conditionnels
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       const msg = event.message ?? ''
@@ -154,19 +104,8 @@ export default function DashboardLayout({
     }
   }, [])
 
-  // Afficher le wizard d'onboarding si nécessaire
-  // IMPORTANT: Tous les hooks doivent être appelés AVANT les retours conditionnels
-  if (
-    !authLoading &&
-    onboardingStatus &&
-    !onboardingStatus.completed &&
-    pathname === '/dashboard/onboarding'
-  ) {
-    return <>{children}</>
-  }
-
-  // Si l'onboarding est en cours de vérification, ne rien afficher
-  if (isCheckingOnboarding || authLoading) {
+  // Afficher un spinner pendant le chargement de l'authentification
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -185,8 +124,8 @@ export default function DashboardLayout({
 
   return (
     <FocusModeProvider>
-      <DashboardLayoutContent 
-        isSessionPage={isSessionPage} 
+      <DashboardLayoutContent
+        isSessionPage={isSessionPage}
         isOnboardingPage={isOnboardingPage}
         isTemplateEditPage={isTemplateEditPage}
       >

@@ -8,7 +8,6 @@ import { Progress } from '@/components/ui/progress'
 import { Award, TrendingUp, AlertCircle, CheckCircle2, Info } from 'lucide-react'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/client'
 import { useState } from 'react'
 import {
   Tooltip,
@@ -19,50 +18,27 @@ import {
 
 export function QualiopiComplianceScore() {
   const { user } = useAuth()
-  const supabase = createClient()
   const [showDetails, setShowDetails] = useState(false)
 
-  // Récupérer le score de conformité Qualiopi
+  // Score aligné sur la page Qualiopi : indicateurs + preuves (auto + manuelles), 32 indicateurs
   const { data: complianceRate, isLoading } = useQuery<number | null>({
     queryKey: ['qualiopi-compliance-rate', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
-
       try {
-        // Utiliser la fonction RPC si disponible
-        const { data, error } = await supabase.rpc('calculate_qualiopi_compliance_rate', {
-          org_id: user.organization_id,
-        })
-
-        if (error) {
-          // Fallback : calculer manuellement
-          return calculateComplianceRateFallback(user.organization_id)
-        }
-
-        return data as number
-      } catch (error) {
-        return calculateComplianceRateFallback(user.organization_id)
+        const res = await fetch('/api/qualiopi/compliance-rate')
+        if (!res.ok) return 0
+        const json = await res.json()
+        return typeof json.score === 'number' ? json.score : 0
+      } catch {
+        return 0
       }
     },
     enabled: !!user?.organization_id,
-    refetchInterval: 60000, // Rafraîchir toutes les minutes
+    refetchOnMount: true,
+    staleTime: 1000,
+    refetchInterval: 60000,
   })
-
-  // Fallback : calculer le taux de conformité manuellement
-  const calculateComplianceRateFallback = async (organizationId: string): Promise<number> => {
-    try {
-      const indicators = await qualiopiService.getIndicators(organizationId)
-      if (!indicators || indicators.length === 0) return 0
-
-      const compliantCount = indicators.filter(
-        (ind) => ind.status === 'compliant' || ind.status === 'in_progress'
-      ).length
-
-      return Math.round((compliantCount / indicators.length) * 100)
-    } catch (error) {
-      return 0
-    }
-  }
 
   // Récupérer les indicateurs pour les détails
   const { data: indicators } = useQuery({

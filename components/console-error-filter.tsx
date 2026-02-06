@@ -27,6 +27,7 @@ export function ConsoleErrorFilter() {
       /The message port closed/i, // Erreur commune des extensions
       /Script loaded: operationBanner\.js/i, // Extension de bannière
       /removeChild.*not a child of this node/i, // Erreur DOM venant d'extensions/iframes
+      /container has a non-static position.*scroll offset/i, // Framer Motion useScroll (html/body ont déjà position: relative)
     ]
 
     // Fonction pour vérifier si une erreur doit être filtrée
