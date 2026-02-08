@@ -291,16 +291,18 @@ export function useSessionDetail(sessionId: string) {
     queryKey: ['formations', user?.organization_id, formData.program_ids],
     queryFn: async () => {
       if (!user?.organization_id) return []
+      const result = await formationService.getAllFormations(user.organization_id, { isActive: true })
+      const allFormations = Array.isArray(result) ? result : result.data
+
       if (!formData.program_ids || formData.program_ids.length === 0) {
-        return formationService.getAllFormations(user.organization_id, { isActive: true })
+        return allFormations
       }
-      const allFormations = await formationService.getAllFormations(user.organization_id, { isActive: true })
       // Mapper programs: null en programs: undefined pour correspondre à FormationWithRelations
       const mappedFormations = allFormations.map((f: any) => ({
         ...f,
         programs: f.programs || undefined,
       }))
-      return mappedFormations.filter((f: any) => 
+      return mappedFormations.filter((f: any) =>
         f.program_id && formData.program_ids.includes(f.program_id)
       )
     },
@@ -396,13 +398,35 @@ export function useSessionDetail(sessionId: string) {
   const { data: payments } = useQuery({
     queryKey: ['session-payments', sessionId],
     queryFn: async () => {
-      if (!sessionId) return []
+      if (!sessionId || !enrollments || enrollments.length === 0) return []
+
+      // Récupérer les IDs des inscriptions de cette session
+      const enrollmentIds = (enrollments as EnrollmentWithRelations[])
+        .map((e) => e.id)
+        .filter((id): id is string => id !== null)
+
+      if (enrollmentIds.length === 0) return []
+
+      // Récupérer d'abord les factures liées à ces inscriptions
+      const { data: sessionInvoices, error: invoicesError } = await supabase
+        .from('invoices')
+        .select('id')
+        .in('enrollment_id', enrollmentIds)
+
+      if (invoicesError) throw invoicesError
+
+      const invoiceIds = (sessionInvoices || []).map((inv) => inv.id)
+
+      if (invoiceIds.length === 0) return []
+
+      // Récupérer les paiements liés à ces factures
       const { data, error } = await supabase
         .from('payments')
         .select('*, students(*), invoices(*)')
         .eq('organization_id', user?.organization_id || '')
-        .in('student_id', (enrollments as EnrollmentWithRelations[])?.map((e) => e.student_id).filter((id): id is string => id !== null) || [])
+        .in('invoice_id', invoiceIds)
         .order('paid_at', { ascending: false })
+
       if (error) throw error
       return data || []
     },
@@ -595,14 +619,26 @@ export function useSessionDetail(sessionId: string) {
         status: (sessionData.status || 'planned') as 'completed' | 'planned' | 'ongoing' | 'cancelled',
       })
 
-      if (formation) {
-        setEnrollmentForm(prev => ({
-          ...prev,
-          total_amount: prev.total_amount || (formation as FormationWithRelations & { price?: number }).price?.toString() || '0',
-        }))
-      }
+      // Note: le total_amount sera mis à jour par l'effet sessionModules ci-dessous
     }
   }, [session, user?.id, sessionPrograms])
+
+  // Mettre à jour le montant par défaut du formulaire d'inscription quand les modules changent
+  useEffect(() => {
+    if (sessionModules && sessionModules.length > 0) {
+      const modulesTotal = sessionModules.reduce((sum, m) => sum + Number(m.amount || 0), 0)
+      setEnrollmentForm(prev => ({
+        ...prev,
+        total_amount: prev.total_amount || modulesTotal.toString(),
+      }))
+    } else if (formation) {
+      // Fallback au prix de la formation si pas de modules
+      setEnrollmentForm(prev => ({
+        ...prev,
+        total_amount: prev.total_amount || (formation as FormationWithRelations & { price?: number }).price?.toString() || '0',
+      }))
+    }
+  }, [sessionModules, formation])
 
   // Mutations
   const updateMutation = useMutation({
@@ -802,12 +838,17 @@ export function useSessionDetail(sessionId: string) {
       queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionId] })
       queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
       setShowEnrollmentForm(false)
+      // Utiliser le total des modules ou le prix de la formation comme fallback
+      const modulesTotal = sessionModules?.reduce((sum, m) => sum + Number(m.amount || 0), 0) || 0
+      const defaultTotal = modulesTotal > 0
+        ? modulesTotal.toString()
+        : (formation as FormationWithRelations & { price?: number })?.price?.toString() || '0'
       setEnrollmentForm({
         student_id: '',
         enrollment_date: new Date().toISOString().split('T')[0],
         status: 'confirmed',
         payment_status: 'pending',
-        total_amount: (formation as FormationWithRelations & { price?: number })?.price?.toString() || '0',
+        total_amount: defaultTotal,
         paid_amount: '0',
         funding_type_id: '',
       })

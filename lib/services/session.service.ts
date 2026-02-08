@@ -26,7 +26,10 @@ export class SessionService {
   }
 
   /**
-   * Récupère toutes les sessions d'une organisation
+   * Récupère toutes les sessions d'une organisation avec pagination optionnelle
+   * Optimisé: requêtes parallèles
+   * Si limit/offset sont fournis, retourne un objet { data, count, hasMore }
+   * Sinon, retourne directement le tableau pour compatibilité
    */
   async getAllSessions(organizationId: string, filters?: {
     formationId?: string
@@ -34,70 +37,91 @@ export class SessionService {
     startDate?: string
     endDate?: string
     search?: string
+    limit?: number
+    offset?: number
   }) {
-    // 1) Sessions avec formation (INNER JOIN) — comme avant
+    const usePagination = filters?.limit !== undefined || filters?.offset !== undefined
+
+    // Si filtre formation, pas besoin de chercher les sessions indépendantes
+    if (filters?.formationId) {
+      let query = this.supabase
+        .from('sessions')
+        .select(`*, formations!inner(*, programs(*))`, usePagination ? { count: 'exact' } : undefined)
+        .eq('formations.organization_id', organizationId)
+        .eq('formation_id', filters.formationId)
+
+      if (filters?.status) query = query.eq('status', filters.status)
+      if (filters?.startDate) query = query.gte('start_date', filters.startDate)
+      if (filters?.endDate) query = query.lte('end_date', filters.endDate)
+      if (filters?.search) query = query.ilike('name', `%${filters.search}%`)
+
+      if (usePagination) {
+        const limit = filters?.limit ?? 50
+        const offset = filters?.offset ?? 0
+        query = query.range(offset, offset + limit - 1).order('start_date', { ascending: true })
+
+        const { data, error, count } = await query
+        if (error) throw error
+        return { data: data ?? [], count: count ?? 0, hasMore: (count ?? 0) > offset + limit }
+      }
+
+      const { data, error } = await query.order('start_date', { ascending: true })
+      if (error) throw error
+      return data ?? []
+    }
+
+    // Construction des requêtes de base
     let queryWithFormation = this.supabase
       .from('sessions')
-      .select(`
-        *,
-        formations!inner(
-          *,
-          programs(*)
-        )
-      `)
+      .select(`*, formations!inner(*, programs(*))`)
       .eq('formations.organization_id', organizationId)
       .not('formation_id', 'is', null)
 
-    if (filters?.formationId) {
-      queryWithFormation = queryWithFormation.eq('formation_id', filters.formationId)
-    }
-    if (filters?.status) {
-      queryWithFormation = queryWithFormation.eq('status', filters.status)
-    }
-    if (filters?.startDate) {
-      queryWithFormation = queryWithFormation.gte('start_date', filters.startDate)
-    }
-    if (filters?.endDate) {
-      queryWithFormation = queryWithFormation.lte('end_date', filters.endDate)
-    }
-    if (filters?.search) {
-      queryWithFormation = queryWithFormation.ilike('name', `%${filters.search}%`)
-    }
-
-    const { data: withFormation, error: err1 } = await queryWithFormation.order('start_date', { ascending: true })
-
-    if (err1) throw err1
-
-    // 2) Sessions sans formation (organisation directe) — créées depuis /sessions/new
     let queryIndependent = this.supabase
       .from('sessions')
       .select('*, formations(*)')
       .is('formation_id', null)
       .eq('organization_id', organizationId)
 
-    if (filters?.formationId) {
-      // filtre formation => pas de session indépendante à inclure
-      return withFormation ?? []
-    }
+    // Appliquer les filtres communs
     if (filters?.status) {
+      queryWithFormation = queryWithFormation.eq('status', filters.status)
       queryIndependent = queryIndependent.eq('status', filters.status)
     }
     if (filters?.startDate) {
+      queryWithFormation = queryWithFormation.gte('start_date', filters.startDate)
       queryIndependent = queryIndependent.gte('start_date', filters.startDate)
     }
     if (filters?.endDate) {
+      queryWithFormation = queryWithFormation.lte('end_date', filters.endDate)
       queryIndependent = queryIndependent.lte('end_date', filters.endDate)
     }
     if (filters?.search) {
+      queryWithFormation = queryWithFormation.ilike('name', `%${filters.search}%`)
       queryIndependent = queryIndependent.ilike('name', `%${filters.search}%`)
     }
 
-    const { data: independent, error: err2 } = await queryIndependent.order('start_date', { ascending: true })
+    // Exécution parallèle des requêtes
+    const [withFormationResult, independentResult] = await Promise.all([
+      queryWithFormation.order('start_date', { ascending: true }),
+      queryIndependent.order('start_date', { ascending: true })
+    ])
 
-    if (err2) throw err2
+    if (withFormationResult.error) throw withFormationResult.error
+    if (independentResult.error) throw independentResult.error
 
-    const merged = [...(withFormation ?? []), ...(independent ?? [])]
+    // Fusionner et trier
+    const merged = [...(withFormationResult.data ?? []), ...(independentResult.data ?? [])]
     merged.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+
+    // Si pagination demandée, appliquer et retourner le format paginé
+    if (usePagination) {
+      const limit = filters?.limit ?? 50
+      const offset = filters?.offset ?? 0
+      const paginatedData = merged.slice(offset, offset + limit)
+      return { data: paginatedData, count: merged.length, hasMore: merged.length > offset + limit }
+    }
+
     return merged
   }
 

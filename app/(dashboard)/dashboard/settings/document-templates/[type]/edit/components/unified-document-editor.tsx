@@ -332,6 +332,7 @@ export function UnifiedDocumentEditor({
                 value={headerContent}
                 onChange={handleHeaderChange}
                 placeholder="En-tête du document (cliquez pour modifier)..."
+                previewMode="pdf"
               />
             </div>
           </div>
@@ -351,6 +352,7 @@ export function UnifiedDocumentEditor({
                 value={bodyContent}
                 onChange={handleBodyChange}
                 placeholder="Contenu du document (cliquez pour modifier)..."
+                previewMode="pdf"
               />
             </div>
           </div>
@@ -370,6 +372,7 @@ export function UnifiedDocumentEditor({
                 value={footerContent}
                 onChange={handleFooterChange}
                 placeholder="Pied de page (cliquez pour modifier)..."
+                previewMode="pdf"
               />
             </div>
           </div>

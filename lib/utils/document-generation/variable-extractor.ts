@@ -56,15 +56,17 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     const total = sessionModules.reduce((s, m) => s + Number(m.amount), 0)
     montantHt = total.toFixed(2)
     const currency = sessionModules[0]?.currency || 'EUR'
+    // Générer une ligne par module avec 3 colonnes (Désignation, Durée, Prix HT)
     modulesLignes = sessionModules.map((m) => {
       const a = Number(m.amount).toFixed(2)
-      return `<tr style="border-bottom: 1px solid #E5E7EB;"><td style="padding: 12px;"><p style="margin: 0; font-weight: 600;">${escapeHtml(m.name)}</p><p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Période : ${sessionDebut} au ${sessionFin}</p></td><td style="padding: 12px; text-align: center; font-weight: 500;">${formationDuree}</td><td style="padding: 12px; text-align: right; font-weight: 500;">${a} ${currency}</td><td style="padding: 12px; text-align: right; font-weight: 600;">${a} ${currency}</td></tr>`
+      return `<tr><td style="padding: 12px; border-bottom: 1px solid #e9ecef;"><p style="margin: 0; font-weight: 500;">${escapeHtml(m.name)}</p><p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Du ${sessionDebut} au ${sessionFin}</p></td><td style="padding: 12px; text-align: center; border-bottom: 1px solid #e9ecef;">${formationDuree}</td><td style="padding: 12px; text-align: right; border-bottom: 1px solid #e9ecef; font-weight: 500;">${a} ${currency}</td></tr>`
     }).join('')
   } else {
     const fallbackAmount = (invoice?.amount != null ? Number(invoice.amount) : (formation as any)?.price != null ? Number((formation as any).price) : 0)
     montantHt = fallbackAmount.toFixed(2)
     const cur = (formation as any)?.currency || invoice?.currency || 'EUR'
-    modulesLignes = `<tr style="border-bottom: 1px solid #E5E7EB;"><td style="padding: 12px;"><p style="margin: 0; font-weight: 600;">${escapeHtml(formationName)}</p><p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Période : ${sessionDebut} au ${sessionFin}</p><p style="margin: 2px 0 0 0; font-size: 9pt; color: #666;">Lieu : ${escapeHtml((session as any)?.location || '')}</p></td><td style="padding: 12px; text-align: center; font-weight: 500;">${formationDuree}</td><td style="padding: 12px; text-align: right; font-weight: 500;">${montantHt} ${cur}</td><td style="padding: 12px; text-align: right; font-weight: 600;">${montantHt} ${cur}</td></tr>`
+    // Ligne par défaut avec le nom de la formation (3 colonnes)
+    modulesLignes = `<tr><td style="padding: 12px; border-bottom: 1px solid #e9ecef;"><p style="margin: 0; font-weight: 500;">${escapeHtml(formationName)}</p><p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Du ${sessionDebut} au ${sessionFin}</p></td><td style="padding: 12px; text-align: center; border-bottom: 1px solid #e9ecef;">${formationDuree}</td><td style="padding: 12px; text-align: right; border-bottom: 1px solid #e9ecef; font-weight: 500;">${montantHt} ${cur}</td></tr>`
   }
 
   function escapeHtml (s: string) {

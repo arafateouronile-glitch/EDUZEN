@@ -4,18 +4,31 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
-import { TableCell } from '@tiptap/extension-table-cell'
 import { TableHeader } from '@tiptap/extension-table-header'
 import TextAlign from '@tiptap/extension-text-align'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
 import { Extension } from '@tiptap/core'
 import Underline from '@tiptap/extension-underline'
+import Subscript from '@tiptap/extension-subscript'
+import Superscript from '@tiptap/extension-superscript'
 import TiptapImage from '@tiptap/extension-image'
 import { useImperativeHandle, forwardRef, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { VariableExtension } from '@/components/document-editor/extensions/VariableExtension'
 import { ConditionalBlockExtension } from '@/components/document-editor/extensions/ConditionalBlockExtension'
+import {
+  HighlightExtension,
+  LineHeightExtension,
+  ParagraphStyleExtension,
+  CustomTableCell,
+} from '@/components/document-editor/extensions'
+import { ColorPickerPopover } from '@/components/document-editor/toolbar/ColorPickerPopover'
+import { LineHeightDropdown } from '@/components/document-editor/toolbar/LineHeightDropdown'
+import { TableToolbar } from '@/components/document-editor/toolbar/TableToolbar'
+import { FindReplaceDialog } from '@/components/document-editor/toolbar/FindReplaceDialog'
+import { WordCounter } from '@/components/document-editor/toolbar/WordCounter'
+import { ParagraphStyleDropdown } from '@/components/document-editor/toolbar/ParagraphStyleDropdown'
 import { Button } from './button'
 import { Select } from './select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
@@ -29,6 +42,7 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  AlignJustify,
   Undo,
   Redo,
   Link,
@@ -43,7 +57,21 @@ import {
   Image as ImageIcon,
   Zap,
   Droplet,
+  Highlighter,
+  Palette,
+  Subscript as SubscriptIcon,
+  Superscript as SuperscriptIcon,
+  RemoveFormatting,
+  Minus,
+  Indent,
+  Outdent,
+  Search,
+  FileText,
+  ChevronDown,
 } from 'lucide-react'
+
+// Importation des styles de l'éditeur
+import '@/components/document-editor/editor-styles.css'
 
 export interface TiptapEditorProps {
   value: string
@@ -63,6 +91,8 @@ export interface TiptapEditorProps {
   onSignatureFieldOpen?: () => void
   onMapEmbedOpen?: () => void
   onAttachmentEmbedOpen?: () => void
+  /** Mode aperçu PDF - applique les styles identiques au PDF généré */
+  previewMode?: 'pdf' | 'screen'
 }
 
 export interface TiptapEditorRef {
@@ -103,6 +133,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       onSignatureFieldOpen,
       onMapEmbedOpen,
       onAttachmentEmbedOpen,
+      previewMode = 'screen',
     },
     ref
   ) {
@@ -223,23 +254,29 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           underline: false,
         }),
         Underline,
+        Subscript,
+        Superscript,
         TextAlign.configure({
           types: ['heading', 'paragraph'],
+          alignments: ['left', 'center', 'right', 'justify'],
         }),
         TextStyle,
         FontFamily,
         FontSizeExtension,
         Color,
+        // Nouvelles extensions pour l'éditeur amélioré
+        HighlightExtension.configure({ multicolor: true }),
+        LineHeightExtension,
+        ParagraphStyleExtension,
         Table.configure({
           resizable: true,
           HTMLAttributes: {
             class: 'tiptap-table',
-            style: 'width: 100%; border-collapse: collapse; margin: 15px 0; border: 2px solid #335ACF; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(51, 90, 207, 0.1);',
           },
         }),
         TableRow,
         TableHeader,
-        TableCell,
+        CustomTableCell, // Extension personnalisée avec couleur de fond et bordures
         TiptapImage.extend({
           addAttributes() {
             return {
@@ -492,7 +529,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       },
       insertTable: (rows: number = 3, cols: number = 3) => {
         if (editor) {
-          editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+          editor.chain().focus().insertTable({ rows, cols, withHeaderRow: false }).run()
         }
       },
       insertBorderedFrame: (options?: {
@@ -587,19 +624,24 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
                       setTimeout(() => onFontFamilyChange(newFont), 0)
                     }
                   }}
-                  className="h-8 px-2 text-xs border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[120px]"
+                  className="h-8 px-2 text-xs border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[130px]"
                   title="Choisir la police (applique au texte sélectionné)"
                 >
-                  <option value="Inter">Inter</option>
                   <option value="Arial">Arial</option>
-                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Calibri">Calibri</option>
+                  <option value="Cambria">Cambria</option>
+                  <option value="Comic Sans MS">Comic Sans MS</option>
                   <option value="Courier New">Courier New</option>
                   <option value="Georgia">Georgia</option>
-                  <option value="Verdana">Verdana</option>
                   <option value="Helvetica">Helvetica</option>
-                  <option value="Calibri">Calibri</option>
-                  <option value="Comic Sans MS">Comic Sans MS</option>
+                  <option value="Impact">Impact</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Lucida Sans">Lucida Sans</option>
+                  <option value="Palatino">Palatino</option>
+                  <option value="Tahoma">Tahoma</option>
+                  <option value="Times New Roman">Times New Roman</option>
                   <option value="Trebuchet MS">Trebuchet MS</option>
+                  <option value="Verdana">Verdana</option>
                 </select>
               </div>
             </div>
@@ -627,20 +669,25 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
                   className="h-8 px-2 text-xs border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[70px]"
                   title="Choisir la taille de police (applique au texte sélectionné)"
                 >
+                  <option value="6">6pt</option>
+                  <option value="7">7pt</option>
                   <option value="8">8pt</option>
                   <option value="9">9pt</option>
                   <option value="10">10pt</option>
+                  <option value="10.5">10.5pt</option>
                   <option value="11">11pt</option>
                   <option value="12">12pt</option>
                   <option value="14">14pt</option>
                   <option value="16">16pt</option>
                   <option value="18">18pt</option>
                   <option value="20">20pt</option>
+                  <option value="22">22pt</option>
                   <option value="24">24pt</option>
+                  <option value="26">26pt</option>
                   <option value="28">28pt</option>
-                  <option value="32">32pt</option>
                   <option value="36">36pt</option>
                   <option value="48">48pt</option>
+                  <option value="72">72pt</option>
                 </select>
               </div>
             </div>
@@ -682,60 +729,25 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
                   <p className="text-xs text-gray-400">Ctrl+Shift+Z</p>
                 </TooltipContent>
               </Tooltip>
+              <FindReplaceDialog
+                editor={editor}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    title="Rechercher et remplacer (Ctrl+F)"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                }
+              />
             </div>
 
+            {/* Styles de paragraphe */}
             <div className="flex items-center gap-1 border-r pr-2 mr-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-                    className={cn('h-8 w-8 p-0 transition-all', editor.isActive('heading', { level: 1 }) && 'bg-brand-blue-ghost text-brand-blue shadow-sm')}
-                  >
-                    <Heading1 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Titre 1</p>
-                  <p className="text-xs text-gray-400">Ctrl+Alt+1</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-                    className={cn('h-8 w-8 p-0 transition-all', editor.isActive('heading', { level: 2 }) && 'bg-brand-blue-ghost text-brand-blue shadow-sm')}
-                  >
-                    <Heading2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Titre 2</p>
-                  <p className="text-xs text-gray-400">Ctrl+Alt+2</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-                    className={cn('h-8 w-8 p-0 transition-all', editor.isActive('heading', { level: 3 }) && 'bg-brand-blue-ghost text-brand-blue shadow-sm')}
-                  >
-                    <Heading3 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Titre 3</p>
-                  <p className="text-xs text-gray-400">Ctrl+Alt+3</p>
-                </TooltipContent>
-              </Tooltip>
+              <ParagraphStyleDropdown editor={editor} />
             </div>
 
             <div className="flex items-center gap-1 border-r pr-2 mr-2">
@@ -807,6 +819,76 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
                   <p className="text-xs text-gray-400">Ctrl+Shift+X</p>
                 </TooltipContent>
               </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.chain().focus().toggleSubscript().run()}
+                    className={cn('h-8 w-8 p-0 transition-all', editor.isActive('subscript') && 'bg-brand-blue-ghost text-brand-blue shadow-sm')}
+                  >
+                    <SubscriptIcon className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Indice</p>
+                  <p className="text-xs text-gray-400">Ctrl+,</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.chain().focus().toggleSuperscript().run()}
+                    className={cn('h-8 w-8 p-0 transition-all', editor.isActive('superscript') && 'bg-brand-blue-ghost text-brand-blue shadow-sm')}
+                  >
+                    <SuperscriptIcon className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Exposant</p>
+                  <p className="text-xs text-gray-400">Ctrl+.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+
+            {/* Effacer formatage et ligne horizontale */}
+            <div className="flex items-center gap-1 border-r pr-2 mr-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+                    className="h-8 w-8 p-0 transition-all"
+                  >
+                    <RemoveFormatting className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Effacer le formatage</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.chain().focus().setHorizontalRule().run()}
+                    className="h-8 w-8 p-0 transition-all"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Ligne horizontale</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
 
             <div className="flex items-center gap-1 border-r pr-2 mr-2">
@@ -842,6 +924,42 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
                 <TooltipContent>
                   <p>Liste numérotée</p>
                   <p className="text-xs text-gray-400">Ctrl+Shift+7</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+                    disabled={!editor.can().sinkListItem('listItem')}
+                    className="h-8 w-8 p-0 transition-all"
+                  >
+                    <Indent className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Augmenter le retrait</p>
+                  <p className="text-xs text-gray-400">Tab</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+                    disabled={!editor.can().liftListItem('listItem')}
+                    className="h-8 w-8 p-0 transition-all"
+                  >
+                    <Outdent className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Diminuer le retrait</p>
+                  <p className="text-xs text-gray-400">Shift+Tab</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -895,7 +1013,80 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
                   <p>Aligner à droite</p>
                 </TooltipContent>
               </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                    className={cn('h-8 w-8 p-0 transition-all', editor.isActive({ textAlign: 'justify' }) && 'bg-brand-blue-ghost text-brand-blue shadow-sm')}
+                  >
+                    <AlignJustify className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Justifier</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
+
+            {/* Couleurs et Interligne */}
+            <div className="flex items-center gap-1 border-r pr-2 mr-2">
+              {/* Couleur du texte */}
+              <ColorPickerPopover
+                type="text"
+                currentColor={editor.getAttributes('textStyle').color}
+                onColorChange={(color) => editor.chain().focus().setColor(color).run()}
+                onRemove={() => editor.chain().focus().unsetColor().run()}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 transition-all"
+                    title="Couleur du texte"
+                  >
+                    <div className="relative">
+                      <Type className="h-4 w-4" />
+                      <div
+                        className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-sm"
+                        style={{ backgroundColor: editor.getAttributes('textStyle').color || '#000000' }}
+                      />
+                    </div>
+                  </Button>
+                }
+              />
+
+              {/* Surlignage */}
+              <ColorPickerPopover
+                type="highlight"
+                currentColor={editor.getAttributes('highlight').color}
+                onColorChange={(color) => editor.chain().focus().setHighlight({ color }).run()}
+                onRemove={() => editor.chain().focus().unsetHighlight().run()}
+                trigger={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className={cn('h-8 w-8 p-0 transition-all', editor.isActive('highlight') && 'bg-yellow-100')}
+                    title="Surlignage"
+                  >
+                    <Highlighter className="h-4 w-4" />
+                  </Button>
+                }
+              />
+
+              {/* Interligne */}
+              <LineHeightDropdown
+                currentValue={editor.getAttributes('paragraph').lineHeight}
+                onChange={(value) => editor.chain().focus().setLineHeight(value).run()}
+                onReset={() => editor.chain().focus().unsetLineHeight().run()}
+              />
+            </div>
+
+            {/* Tableau */}
+            <TableToolbar editor={editor} />
 
             {/* Boutons Éditeur Premium */}
             {(onQuickTemplatesOpen || onTableEditorOpen || onShapeEditorOpen || onElementPaletteOpen) && (
@@ -1030,10 +1221,20 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         )}
 
         {/* Editor Content */}
-        <EditorContent 
-          editor={editor} 
-          className="prose-editor"
+        <EditorContent
+          editor={editor}
+          className={cn('prose-editor', previewMode === 'pdf' && 'pdf-preview-mode')}
         />
+
+        {/* Barre de statut avec compteur de mots */}
+        {!readOnly && (
+          <div className="flex items-center justify-between px-3 py-1.5 border-t bg-gray-50 text-xs">
+            <WordCounter editor={editor} />
+            <div className="text-gray-400">
+              {previewMode === 'pdf' ? 'Mode aperçu PDF' : 'Mode édition'}
+            </div>
+          </div>
+        )}
 
         {/* Styles globaux pour l'éditeur */}
         <style jsx global>{`
@@ -1054,22 +1255,19 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
             outline: none;
           }
 
-          /* Styles pour les tables dans l'éditeur */
+          /* Styles pour les tables dans l'éditeur - Neutre sans couleur prédéfinie */
           .tiptap-editor .ProseMirror table {
             border-collapse: collapse;
             table-layout: fixed;
             width: 100%;
-            margin: 18pt 0;
-            overflow: hidden;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin: 12pt 0;
           }
 
           .tiptap-editor .ProseMirror table td,
           .tiptap-editor .ProseMirror table th {
             min-width: 1em;
-            border: 1px solid #E5E7EB;
-            padding: 10pt 12pt;
+            border: 1px solid #000000;
+            padding: 8pt 10pt;
             vertical-align: top;
             box-sizing: border-box;
             position: relative;
@@ -1078,17 +1276,6 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
           .tiptap-editor .ProseMirror table th {
             font-weight: 600;
             text-align: left;
-            background-color: #335ACF;
-            color: white;
-          }
-
-          .tiptap-editor .ProseMirror table td {
-            background-color: white;
-            color: #374151;
-          }
-
-          .tiptap-editor .ProseMirror table tr:nth-child(even) td {
-            background-color: #f9fafb;
           }
 
           .tiptap-editor .ProseMirror table .selectedCell:after {
@@ -1099,7 +1286,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
             right: 0;
             top: 0;
             bottom: 0;
-            background: rgba(200, 200, 255, 0.4);
+            background: rgba(51, 90, 207, 0.2);
             pointer-events: none;
           }
 
@@ -1109,7 +1296,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
             top: 0;
             bottom: -2px;
             width: 4px;
-            background-color: #335ACF;
+            background-color: #3B82F6;
             pointer-events: none;
           }
 

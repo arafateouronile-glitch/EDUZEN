@@ -48,7 +48,8 @@ export default function NewSessionPage() {
     queryKey: ['programs', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return programService.getAllPrograms(user.organization_id, { isActive: true })
+      const result = await programService.getAllPrograms(user.organization_id, { isActive: true })
+      return Array.isArray(result) ? result : result.data
     },
     enabled: !!user?.organization_id,
   })
@@ -58,7 +59,8 @@ export default function NewSessionPage() {
     queryKey: ['formations', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return formationService.getAllFormations(user.organization_id, { isActive: true })
+      const result = await formationService.getAllFormations(user.organization_id, { isActive: true })
+      return Array.isArray(result) ? result : result.data
     },
     enabled: !!user?.organization_id,
   })

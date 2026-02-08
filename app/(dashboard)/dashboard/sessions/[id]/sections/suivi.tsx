@@ -31,7 +31,7 @@ import { motion } from '@/components/ui/motion'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useQuery } from '@tanstack/react-query'
 import { signatureService } from '@/lib/services/signature.service.client'
-import { ElectronicAttendanceManager } from '@/components/attendance'
+import { ElectronicAttendanceManager, PhysicalAttendanceSheetDownloader } from '@/components/attendance'
 import dynamic from 'next/dynamic'
 import type {
   SessionWithRelations,
@@ -73,6 +73,7 @@ const SessionTimeline = dynamic(
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
+type SessionSlot = TableRow<'session_slots'>
 
 type StudentPerformanceItem = {
   id: string
@@ -109,6 +110,7 @@ interface SuiviProps {
     byStudent: Record<string, { present: number; total: number }>
   } | null
   sessionId?: string
+  sessionSlots?: SessionSlot[]
   onRefresh?: () => void
 }
 
@@ -140,6 +142,7 @@ export function Suivi({
   gradesStats,
   attendanceStats,
   sessionId,
+  sessionSlots = [],
   onRefresh,
 }: SuiviProps) {
   const { user } = useAuth()
@@ -933,6 +936,30 @@ export function Suivi({
       </TabsContent>
 
       <TabsContent value="attendance" className="space-y-6">
+        {/* Feuilles d'émargement physiques */}
+        {sessionData?.id && organization && (
+          <GlassCard variant="premium" className="p-6">
+            <PhysicalAttendanceSheetDownloader
+              sessionId={sessionData.id}
+              sessionName={sessionData.name || 'Session'}
+              sessionSlots={sessionSlots}
+              students={enrollments
+                .filter((e) => e.students && e.status !== 'cancelled')
+                .map((e) => ({
+                  id: e.students?.id || '',
+                  first_name: e.students?.first_name || null,
+                  last_name: e.students?.last_name || null,
+                  student_number: e.students?.student_number || null,
+                  email: e.students?.email || null,
+                }))}
+              organizationName={organization.name || 'Organisation'}
+              organizationAddress={organization.address || undefined}
+              formationName={formation?.name}
+            />
+          </GlassCard>
+        )}
+
+        {/* Émargement électronique */}
         {sessionData?.id && user?.organization_id && (
           <GlassCard variant="premium" className="p-6">
             <ElectronicAttendanceManager

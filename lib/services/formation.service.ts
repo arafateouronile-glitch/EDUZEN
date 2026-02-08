@@ -24,19 +24,25 @@ export class FormationService {
   }
 
   /**
-   * Récupère toutes les formations d'une organisation
+   * Récupère toutes les formations d'une organisation avec pagination optionnelle
+   * Si limit/offset sont fournis, retourne un objet { data, count, hasMore }
+   * Sinon, retourne directement le tableau pour compatibilité
    */
   async getAllFormations(organizationId: string, filters?: {
     programId?: string
     isActive?: boolean
     search?: string
+    limit?: number
+    offset?: number
   }) {
+    const usePagination = filters?.limit !== undefined || filters?.offset !== undefined
+
     let query = this.supabase
       .from('formations')
       .select(`
         *,
-        programs(*)
-      `)
+        programs(id, name)
+      `, usePagination ? { count: 'exact' } : undefined)
       .eq('organization_id', organizationId)
 
     if (filters?.programId) {
@@ -51,8 +57,18 @@ export class FormationService {
       query = query.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false })
+    // Appliquer pagination seulement si demandée
+    if (usePagination) {
+      const limit = filters?.limit ?? 50
+      const offset = filters?.offset ?? 0
+      query = query.range(offset, offset + limit - 1)
 
+      const { data, error, count } = await query.order('created_at', { ascending: false })
+      if (error) throw error
+      return { data: data ?? [], count: count ?? 0, hasMore: (count ?? 0) > offset + limit }
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throw error
     return data
   }

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useCallback, useMemo, useTransition } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { sessionService } from '@/lib/services/session.service'
 import { formationService } from '@/lib/services/formation.service'
@@ -17,6 +17,7 @@ import type { TableRow } from '@/lib/types/supabase-helpers'
 import { PremiumBarChart } from '@/components/charts/premium-bar-chart'
 import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
 import { RoleGuard, FORMATION_MANAGEMENT_ROLES } from '@/components/auth/role-guard'
+import { useShouldReduceAnimations } from '@/lib/hooks/use-reduced-motion'
 import { differenceInDays, isAfter, isBefore, formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
@@ -131,39 +132,116 @@ export default function SessionsPage() {
   )
 }
 
+const PAGE_SIZE = 24
+
+// Cache agressif pour les listes
+const CACHE_CONFIG = {
+  staleTime: 1000 * 60 * 5,  // 5 minutes
+  gcTime: 1000 * 60 * 30,    // 30 minutes
+  refetchOnWindowFocus: false,
+  refetchOnMount: false,
+}
+
 function SessionsPageContent() {
   const { user } = useAuth()
   const supabase = createClient()
+  const queryClient = useQueryClient()
+  const shouldReduceAnimations = useShouldReduceAnimations()
   const [search, setSearch] = useState('')
   const [selectedFormationId, setSelectedFormationId] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
+  const [page, setPage] = useState(0)
+  const [isPending, startTransition] = useTransition()
 
-  // Récupérer les formations pour le filtre
+  // Reset page when filters change avec transition
+  const handleSearchChange = useCallback((value: string) => {
+    startTransition(() => {
+      setSearch(value)
+      setPage(0)
+    })
+  }, [])
+
+  const handleFormationChange = useCallback((value: string) => {
+    startTransition(() => {
+      setSelectedFormationId(value)
+      setPage(0)
+    })
+  }, [])
+
+  const handleStatusChange = useCallback((value: string) => {
+    startTransition(() => {
+      setStatusFilter(value)
+      setPage(0)
+    })
+  }, [])
+
+  // Récupérer les formations pour le filtre avec cache long
   const { data: formations } = useQuery({
-    queryKey: ['formations', user?.organization_id],
+    queryKey: ['formations-filter', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return formationService.getAllFormations(user.organization_id, { isActive: true })
+      const result = await formationService.getAllFormations(user.organization_id, { isActive: true })
+      return Array.isArray(result) ? result : result.data
     },
     enabled: !!user?.organization_id,
-    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
+    staleTime: 1000 * 60 * 10, // 10 minutes pour les filtres
+    gcTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
   })
 
-  // Récupérer les sessions
-  const { data: sessions, isLoading } = useQuery({
-    queryKey: ['sessions', user?.organization_id, search, selectedFormationId, statusFilter],
+  // Récupérer les sessions avec pagination et cache
+  const { data: sessionsResult, isLoading, isFetching } = useQuery({
+    queryKey: ['sessions', user?.organization_id, search, selectedFormationId, statusFilter, page],
     queryFn: async () => {
-      if (!user?.organization_id) return []
-      return sessionService.getAllSessions(user.organization_id, {
+      if (!user?.organization_id) return { data: [], count: 0, hasMore: false }
+      const result = await sessionService.getAllSessions(user.organization_id, {
         formationId: selectedFormationId || undefined,
         status: statusFilter ? (statusFilter as Session['status']) : undefined,
         search,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
       })
+      return result as { data: Session[]; count: number; hasMore: boolean }
     },
     enabled: !!user?.organization_id,
-    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
+    ...CACHE_CONFIG,
+    placeholderData: (previousData) => previousData,
   })
+
+  const sessions = sessionsResult?.data ?? []
+  const totalCount = sessionsResult?.count ?? 0
+  const hasMore = sessionsResult?.hasMore ?? false
+
+  // Prefetch page suivante
+  useMemo(() => {
+    const orgId = user?.organization_id
+    if (hasMore && orgId) {
+      queryClient.prefetchQuery({
+        queryKey: ['sessions', orgId, search, selectedFormationId, statusFilter, page + 1],
+        queryFn: async () => {
+          const result = await sessionService.getAllSessions(orgId, {
+            formationId: selectedFormationId || undefined,
+            status: statusFilter ? (statusFilter as Session['status']) : undefined,
+            search,
+            limit: PAGE_SIZE,
+            offset: (page + 1) * PAGE_SIZE,
+          })
+          return result as { data: Session[]; count: number; hasMore: boolean }
+        },
+        ...CACHE_CONFIG,
+      })
+    }
+  }, [hasMore, user?.organization_id, search, selectedFormationId, statusFilter, page, queryClient])
+
+  // Prefetch détails session sur hover
+  const prefetchSessionDetails = useCallback((sessionId: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['session', sessionId],
+      queryFn: () => sessionService.getSessionById(sessionId),
+      staleTime: 1000 * 60 * 5,
+    })
+  }, [queryClient])
 
   // Statistiques des sessions (refetch au montage pour graphiques corrects après navigation)
   const { data: sessionStats } = useQuery({
@@ -285,22 +363,14 @@ function SessionsPageContent() {
     }
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  }
+  // Variants d'animation conditionnelles (réduites sur mobile)
+  const containerVariants = shouldReduceAnimations
+    ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
+    : { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } }
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
-    }
-  }
+  const itemVariants = shouldReduceAnimations
+    ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
+    : { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } } }
 
   return (
     <motion.div
@@ -323,13 +393,13 @@ function SessionsPageContent() {
             <h1 className="text-4xl md:text-6xl font-display font-bold text-gray-900 tracking-tighter leading-none">
               Sessions
             </h1>
-            {(sessions as Session[])?.length > 0 && (
+            {totalCount > 0 && (
               <motion.span
                 className="px-3 py-1.5 bg-brand-blue-ghost text-brand-blue rounded-full text-sm font-bold flex items-center gap-2 shadow-sm"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
-                {(sessions as Session[])?.length || 0}
+                {totalCount}
               </motion.span>
             )}
           </div>
@@ -499,7 +569,7 @@ function SessionsPageContent() {
                 type="text"
                 placeholder="Rechercher une session..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all outline-none text-sm font-medium tracking-tight shadow-sm"
               />
             </div>
@@ -542,11 +612,11 @@ function SessionsPageContent() {
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Formation</label>
                     <select
                       value={selectedFormationId}
-                      onChange={(e) => setSelectedFormationId(e.target.value)}
+                      onChange={(e) => handleFormationChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-gray-50 border-transparent focus:bg-white focus:border-brand-blue/20 focus:ring-2 focus:ring-brand-blue/10 outline-none text-sm transition-all"
                     >
                       <option value="">Toutes les formations</option>
-                      {(formations as any[])?.map((formation) => (
+                      {(formations ?? []).map((formation: any) => (
                         <option key={formation.id} value={formation.id}>
                           {formation.name}
                         </option>
@@ -557,7 +627,7 @@ function SessionsPageContent() {
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</label>
                     <select
                       value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
+                      onChange={(e) => handleStatusChange(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-gray-50 border-transparent focus:bg-white focus:border-brand-blue/20 focus:ring-2 focus:ring-brand-blue/10 outline-none text-sm transition-all"
                     >
                       <option value="">Tous les statuts</option>
@@ -614,7 +684,7 @@ function SessionsPageContent() {
               <div key={i} className="h-48 bg-gray-100 rounded-2xl animate-pulse" />
             ))}
           </div>
-        ) : !sessions || (sessions as Session[]).length === 0 ? (
+        ) : sessions.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -666,9 +736,10 @@ function SessionsPageContent() {
             </GlassCard>
           </motion.div>
         ) : (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <AnimatePresence mode="popLayout">
-              {((sessions as Session[]) || []).map((session, index) => {
+              {sessions.map((session: any, index: number) => {
                 const StatusIcon = getStatusIcon(session.status)
                 return (
                   <motion.div
@@ -683,6 +754,7 @@ function SessionsPageContent() {
                       ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
                     }}
                     whileHover={{ y: -8, scale: 1.02 }}
+                    onMouseEnter={() => prefetchSessionDetails(session.id)}
                   >
                     <Link href={`/dashboard/sessions/${session.id}`}>
                       <GlassCard
@@ -770,6 +842,37 @@ function SessionsPageContent() {
               })}
             </AnimatePresence>
           </div>
+
+          {/* Pagination */}
+          {totalCount > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-6 px-2">
+              <p className="text-sm text-gray-600">
+                {page * PAGE_SIZE + 1} - {Math.min((page + 1) * PAGE_SIZE, totalCount)} sur {totalCount} sessions
+                {isFetching && <span className="ml-2 text-brand-blue">(Chargement...)</span>}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 0 || isFetching}
+                  className="border-brand-blue/20 hover:border-brand-blue hover:bg-brand-blue-ghost"
+                >
+                  Précédent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page + 1)}
+                  disabled={!hasMore || isFetching}
+                  className="border-brand-blue/20 hover:border-brand-blue hover:bg-brand-blue-ghost"
+                >
+                  Suivant
+                </Button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </motion.div>
     </motion.div>

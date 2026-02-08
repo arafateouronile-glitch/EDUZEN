@@ -35,6 +35,15 @@ const BentoShowcase = dynamic(() => import('@/components/landing/BentoShowcase')
 const ProductShowcase = dynamic(() => import('@/components/landing/ProductShowcase').then(mod => ({ default: mod.ProductShowcase })), {
   loading: () => <div className="min-h-screen" />,
 })
+
+// Nouvelles sections orientées conversion
+const Benefits = dynamic(() => import('@/components/landing/Benefits').then(mod => ({ default: mod.Benefits })), {
+  loading: () => <div className="min-h-screen" />,
+})
+const HowItWorks = dynamic(() => import('@/components/landing/HowItWorks').then(mod => ({ default: mod.HowItWorks })), {
+  loading: () => <div className="min-h-screen" />,
+})
+
 const Testimonials = dynamic(() => import('@/components/landing/Testimonials').then(mod => ({ default: mod.Testimonials })), {
   loading: () => <div className="min-h-screen" />,
 })
@@ -59,6 +68,10 @@ export default function HomePage() {
         <Features />
         <BentoShowcase />
         <ProductShowcase />
+        {/* Nouvelles sections orientées bénéfices */}
+        <Benefits />
+        <HowItWorks />
+        {/* Témoignages et conversion */}
         <Testimonials />
         <Pricing />
         <FAQ />

@@ -41,6 +41,13 @@ import type { TableRow } from '@/lib/types/supabase-helpers'
 
 type Enrollment = TableRow<'enrollments'>
 
+interface SessionModule {
+  id: string
+  name: string
+  amount: number
+  currency: string
+}
+
 interface ConfigApprenantsProps {
   sessionId: string
   formationId?: string
@@ -62,6 +69,7 @@ interface ConfigApprenantsProps {
     error: Error | null
   }
   formationPrice?: number
+  sessionModules?: SessionModule[]
 }
 
 export function ConfigApprenants({
@@ -74,7 +82,16 @@ export function ConfigApprenants({
   onCreateEnrollment,
   createEnrollmentMutation,
   formationPrice,
+  sessionModules = [],
 }: ConfigApprenantsProps) {
+  // Calculer le total des modules de la session
+  const sessionModulesTotal = useMemo(() =>
+    sessionModules.reduce((sum, m) => sum + Number(m.amount || 0), 0),
+    [sessionModules]
+  )
+
+  // Montant par défaut: modules > prix formation
+  const defaultAmount = sessionModulesTotal > 0 ? sessionModulesTotal : (formationPrice || 0)
   const { user } = useAuth()
   const { addToast } = useToast()
   const queryClient = useQueryClient()
@@ -329,7 +346,7 @@ export function ConfigApprenants({
       ...enrollmentForm,
       student_id: studentId,
       enrollment_date: new Date().toISOString().split('T')[0],
-      total_amount: formationPrice?.toString() || enrollmentForm.total_amount || '0',
+      total_amount: defaultAmount.toString(),
       funding_type_id: enrollmentForm.funding_type_id || '',
     })
     setShowEnrollmentForm(true)
@@ -1140,7 +1157,7 @@ export function ConfigApprenants({
                       enrollment_date: new Date().toISOString().split('T')[0],
                       status: 'confirmed',
                       payment_status: 'pending',
-                      total_amount: formationPrice?.toString() || '0',
+                      total_amount: defaultAmount.toString(),
                       paid_amount: '0',
                       funding_type_id: '',
                     })
@@ -1301,7 +1318,7 @@ export function ConfigApprenants({
                         enrollment_date: new Date().toISOString().split('T')[0],
                         status: 'confirmed',
                         payment_status: 'pending',
-                        total_amount: formationPrice?.toString() || '0',
+                        total_amount: defaultAmount.toString(),
                         paid_amount: '0',
                         funding_type_id: '',
                       })

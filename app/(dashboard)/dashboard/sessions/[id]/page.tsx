@@ -689,6 +689,7 @@ export default function SessionDetailPage() {
                           : undefined
                         : undefined
                     }
+                    sessionModules={sessionModules || []}
                   />
                 </Suspense>
               )}
@@ -785,6 +786,7 @@ export default function SessionDetailPage() {
                     sessionId={sessionId}
                     sessionData={sessionData}
                     organization={organization}
+                    sessionModules={sessionModules || []}
                   />
                 </Suspense>
               )}
@@ -850,6 +852,7 @@ export default function SessionDetailPage() {
                     gradesStats={gradesStats}
                     attendanceStats={attendanceStats}
                     sessionId={sessionId}
+                    sessionSlots={sessionSlots}
                     onRefresh={refetchSessionDetail}
                   />
                 </Suspense>

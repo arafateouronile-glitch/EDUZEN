@@ -97,19 +97,28 @@ export default function NewResourcePage() {
 
   const { data: programs } = useQuery({
     queryKey: ['programs', user?.organization_id],
-    queryFn: () => programService.getAllPrograms(user?.organization_id || ''),
+    queryFn: async () => {
+      const result = await programService.getAllPrograms(user?.organization_id || '')
+      return Array.isArray(result) ? result : result.data
+    },
     enabled: !!user?.organization_id && (visibilityScope === 'program'),
   })
 
   const { data: formations } = useQuery({
     queryKey: ['formations', user?.organization_id],
-    queryFn: () => formationService.getAllFormations(user?.organization_id || ''),
+    queryFn: async () => {
+      const result = await formationService.getAllFormations(user?.organization_id || '')
+      return Array.isArray(result) ? result : result.data
+    },
     enabled: !!user?.organization_id && (visibilityScope === 'formation'),
   })
 
   const { data: sessions } = useQuery({
     queryKey: ['sessions', user?.organization_id],
-    queryFn: () => sessionService.getAllSessions(user?.organization_id || ''),
+    queryFn: async () => {
+      const result = await sessionService.getAllSessions(user?.organization_id || '')
+      return Array.isArray(result) ? result : result.data
+    },
     enabled: !!user?.organization_id && (visibilityScope === 'session'),
   })
 

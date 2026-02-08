@@ -1100,15 +1100,48 @@ export async function generateHTML(
       font-size: ${(template.font_size || 10) * 0.9}pt;
     }
     table th, table td {
-      border: 1px solid #ddd;
       padding: 4px 6px;
       text-align: left;
       word-wrap: break-word;
       overflow-wrap: break-word;
       vertical-align: top;
     }
+    /* Bordures par défaut uniquement si aucune bordure personnalisée n'est définie */
+    table th:not([data-border-top]):not([style*="border"]),
+    table td:not([data-border-top]):not([style*="border"]) {
+      border: 1px solid #000;
+    }
+    /* Respecter les bordures invisibles (none, 0px) */
+    table th[data-border-top="none"], table td[data-border-top="none"],
+    table th[data-border-top="0px"], table td[data-border-top="0px"],
+    table th[style*="border-top: none"], table td[style*="border-top: none"],
+    table th[style*="border-width: 0"], table td[style*="border-width: 0"],
+    table th[style*="border-style: none"], table td[style*="border-style: none"],
+    table th[style*="border-style: initial"], table td[style*="border-style: initial"] {
+      border-top: none !important;
+    }
+    table th[data-border-bottom="none"], table td[data-border-bottom="none"],
+    table th[data-border-bottom="0px"], table td[data-border-bottom="0px"] {
+      border-bottom: none !important;
+    }
+    table th[data-border-left="none"], table td[data-border-left="none"],
+    table th[data-border-left="0px"], table td[data-border-left="0px"] {
+      border-left: none !important;
+    }
+    table th[data-border-right="none"], table td[data-border-right="none"],
+    table th[data-border-right="0px"], table td[data-border-right="0px"] {
+      border-right: none !important;
+    }
+    /* Gérer les cellules avec toutes les bordures désactivées */
+    table th[style*="border-width: 0px"], table td[style*="border-width: 0px"],
+    table th[style*="border-width:0"], table td[style*="border-width:0"] {
+      border: none !important;
+    }
+    table th[style*="border: none"], table td[style*="border: none"],
+    table th[style*="border:none"], table td[style*="border:none"] {
+      border: none !important;
+    }
     table th {
-      background-color: #f3f4f6;
       font-weight: bold;
       font-size: ${(template.font_size || 10) * 0.9}pt;
     }
@@ -1130,9 +1163,9 @@ export async function generateHTML(
       print-color-adjust: exact !important;
       color-adjust: exact !important;
     }
-    /* Assurer que les bordures sont visibles */
-    [style*="border"] {
-      border-style: solid !important;
+    /* Assurer que les bordures sont visibles (sauf si explicitement masquées) */
+    [style*="border"]:not([style*="border: none"]):not([style*="border-width: 0"]):not([style*="border-style: none"]):not([style*="border-style: initial"]) {
+      border-style: solid;
     }
     /* Préserver les espacements */
     p, div, span {
@@ -1161,6 +1194,44 @@ export async function generateHTML(
       line-height: 1.3;
       margin-bottom: 4px;
       margin-top: 8px;
+    }
+    /* Surlignage - préserver les couleurs de fond du texte */
+    mark, mark[style] {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+    /* Alignement justifié */
+    [style*="text-align: justify"], [style*="text-align:justify"] {
+      text-align: justify !important;
+      text-justify: inter-word;
+    }
+    /* Interligne personnalisée */
+    [style*="line-height"] {
+      line-height: inherit !important;
+    }
+    /* Cellules de tableau avec couleurs */
+    td[style*="background-color"], th[style*="background-color"],
+    td[data-background-color], th[data-background-color] {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    /* Bordures de cellules personnalisées */
+    td[style*="border-color"], th[style*="border-color"],
+    td[data-border-color], th[data-border-color] {
+      border-style: solid !important;
+    }
+    /* Retrait de paragraphe */
+    [style*="text-indent"] {
+      text-indent: inherit !important;
+    }
+    /* Marges de paragraphe */
+    [style*="margin-top"], [style*="margin-bottom"] {
+      margin-top: inherit !important;
+      margin-bottom: inherit !important;
     }
     /* Réduire les espacements généraux */
     .header {

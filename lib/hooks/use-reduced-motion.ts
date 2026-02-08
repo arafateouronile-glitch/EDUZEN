@@ -41,5 +41,31 @@ export function useReducedMotion(): boolean {
   return prefersReducedMotion
 }
 
+/**
+ * Hook pour détecter si on est sur mobile
+ */
+export function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false)
 
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
 
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  return isMobile
+}
+
+/**
+ * Hook combiné pour réduire les animations sur mobile ou si préférence réduite
+ */
+export function useShouldReduceAnimations(): boolean {
+  const prefersReducedMotion = useReducedMotion()
+  const isMobile = useIsMobile()
+
+  return prefersReducedMotion || isMobile
+}

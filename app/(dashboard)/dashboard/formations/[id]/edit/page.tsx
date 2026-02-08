@@ -51,7 +51,8 @@ export default function EditFormationPage() {
     queryKey: ['programs', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return programService.getAllPrograms(user.organization_id, { isActive: true })
+      const result = await programService.getAllPrograms(user.organization_id, { isActive: true })
+      return Array.isArray(result) ? result : result.data
     },
     enabled: !!user?.organization_id && !userLoading,
   })
@@ -61,7 +62,8 @@ export default function EditFormationPage() {
     queryKey: ['sessions', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return sessionService.getAllSessions(user.organization_id)
+      const result = await sessionService.getAllSessions(user.organization_id)
+      return Array.isArray(result) ? result : result.data
     },
     enabled: !!user?.organization_id && !userLoading,
   })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Program } from './types'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -26,6 +26,7 @@ import { PremiumBarChart } from '@/components/charts/premium-bar-chart'
 import { cn } from '@/lib/utils'
 import { programService } from '@/lib/services/program.service'
 import { useToast } from '@/components/ui/toast'
+import { useShouldReduceAnimations } from '@/lib/hooks/use-reduced-motion'
 
 type GlobalStats = {
   total: number
@@ -41,24 +42,37 @@ type GlobalStats = {
 type ProgramsContentProps = {
   programs: Program[]
   isLoading: boolean
+  isFetching?: boolean
   globalStats: GlobalStats | null | undefined
   search: string
   setSearch: (value: string) => void
   showActiveOnly: boolean
   setShowActiveOnly: (value: boolean) => void
+  page?: number
+  setPage?: (page: number) => void
+  totalCount?: number
+  hasMore?: boolean
+  pageSize?: number
 }
 
 export function ProgramsContent({
   programs,
   isLoading,
+  isFetching,
   globalStats,
   search,
   setSearch,
   showActiveOnly,
   setShowActiveOnly,
+  page = 0,
+  setPage,
+  totalCount = 0,
+  hasMore = false,
+  pageSize = 24,
 }: ProgramsContentProps) {
   const queryClient = useQueryClient()
   const { addToast } = useToast()
+  const shouldReduceAnimations = useShouldReduceAnimations()
   const [programToDelete, setProgramToDelete] = useState<string | null>(null)
 
   const deleteProgramMutation = useMutation({
@@ -74,22 +88,23 @@ export function ProgramsContent({
     },
   })
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  }
+  // Prefetch détails programme sur hover
+  const prefetchProgramDetails = useCallback((programId: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['program', programId],
+      queryFn: () => programService.getProgramById(programId),
+      staleTime: 1000 * 60 * 5,
+    })
+  }, [queryClient])
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
-    }
-  }
+  // Variants d'animation conditionnelles (réduites sur mobile)
+  const containerVariants = shouldReduceAnimations
+    ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
+    : { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } }
+
+  const itemVariants = shouldReduceAnimations
+    ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
+    : { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } } }
 
   return (
     <motion.div 
@@ -335,104 +350,137 @@ export function ProgramsContent({
             )}
           </GlassCard>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <AnimatePresence mode="popLayout">
-              {programs.map((program, index) => (
-                <motion.div
-                  key={program.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Link href={`/dashboard/programs/${program.id}`}>
-                    <GlassCard
-                      variant="default"
-                      hoverable
-                      className="h-full p-0 group cursor-pointer flex flex-col overflow-hidden border-2 border-brand-blue/10 hover:border-brand-blue/30 bg-gradient-to-br from-white to-brand-blue-ghost/10 hover:shadow-lg transition-all duration-300"
-                    >
-                      <div className="p-6 flex-1">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/20 to-brand-cyan/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <motion.div
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                              className={cn(
-                                'relative h-12 w-12 rounded-2xl flex items-center justify-center shadow-md transition-all duration-300',
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence mode="popLayout">
+                {programs.map((program, index) => (
+                  <motion.div
+                    key={program.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ delay: index * 0.05 }}
+                    onMouseEnter={() => prefetchProgramDetails(program.id)}
+                  >
+                    <Link href={`/dashboard/programs/${program.id}`}>
+                      <GlassCard
+                        variant="default"
+                        hoverable
+                        className="h-full p-0 group cursor-pointer flex flex-col overflow-hidden border-2 border-brand-blue/10 hover:border-brand-blue/30 bg-gradient-to-br from-white to-brand-blue-ghost/10 hover:shadow-lg transition-all duration-300"
+                      >
+                        <div className="p-6 flex-1">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="relative">
+                              <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/20 to-brand-cyan/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <motion.div
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                className={cn(
+                                  'relative h-12 w-12 rounded-2xl flex items-center justify-center shadow-md transition-all duration-300',
+                                  program.is_active
+                                    ? 'bg-gradient-to-br from-brand-blue to-brand-cyan text-white shadow-brand-blue/20'
+                                    : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400'
+                                )}
+                              >
+                                <BookOpen className="h-6 w-6" />
+                              </motion.div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setProgramToDelete(program.id)
+                                }}
+                                title="Supprimer le programme"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                              <span className={cn(
+                                'px-2.5 py-1 rounded-lg text-xs font-semibold border-2',
                                 program.is_active
-                                  ? 'bg-gradient-to-br from-brand-blue to-brand-cyan text-white shadow-brand-blue/20'
-                                  : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400'
-                              )}
-                            >
-                              <BookOpen className="h-6 w-6" />
-                            </motion.div>
+                                  ? 'bg-gradient-to-br from-brand-cyan-ghost to-brand-cyan-ghost/50 text-brand-cyan border-brand-cyan/30'
+                                  : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 border-gray-200'
+                              )}>
+                                {program.is_active ? 'Actif' : 'Inactif'}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                setProgramToDelete(program.id)
-                              }}
-                              title="Supprimer le programme"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                            <span className={cn(
-                              'px-2.5 py-1 rounded-lg text-xs font-semibold border-2',
-                              program.is_active
-                                ? 'bg-gradient-to-br from-brand-cyan-ghost to-brand-cyan-ghost/50 text-brand-cyan border-brand-cyan/30'
-                                : 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-600 border-gray-200'
-                            )}>
-                              {program.is_active ? 'Actif' : 'Inactif'}
-                            </span>
+                          <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-brand-blue transition-colors">
+                            {program.name}
+                          </h3>
+
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {program.code && (
+                              <span className="text-xs font-mono bg-gradient-to-br from-gray-100 to-gray-50 text-gray-600 px-2.5 py-1 rounded-lg border border-gray-200">
+                                {program.code}
+                              </span>
+                            )}
+                            {program.category && (
+                              <span className="text-xs bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost text-brand-blue px-2.5 py-1 rounded-lg font-semibold border border-brand-blue/20">
+                                {program.category}
+                              </span>
+                            )}
                           </div>
-                        </div>
 
-                        <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-1 group-hover:text-brand-blue transition-colors">
-                          {program.name}
-                        </h3>
-
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {program.code && (
-                            <span className="text-xs font-mono bg-gradient-to-br from-gray-100 to-gray-50 text-gray-600 px-2.5 py-1 rounded-lg border border-gray-200">
-                              {program.code}
-                            </span>
-                          )}
-                          {program.category && (
-                            <span className="text-xs bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost text-brand-blue px-2.5 py-1 rounded-lg font-semibold border border-brand-blue/20">
-                              {program.category}
-                            </span>
+                          {program.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2">
+                              {program.description}
+                            </p>
                           )}
                         </div>
 
-                        {program.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2">
-                            {program.description}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="px-6 py-4 bg-gradient-to-r from-gray-50/50 to-brand-blue-ghost/10 border-t border-brand-blue/10 flex items-center justify-between group-hover:from-brand-blue-ghost/20 group-hover:to-brand-cyan-ghost/20 transition-all">
-                        <span className="text-xs font-semibold text-gray-600 group-hover:text-brand-blue transition-colors">
-                          Voir les détails
-                        </span>
-                        <div className="w-8 h-8 rounded-full bg-white border-2 border-brand-blue/20 flex items-center justify-center group-hover:border-brand-blue/40 group-hover:text-brand-blue group-hover:scale-110 transition-all">
-                          <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                        <div className="px-6 py-4 bg-gradient-to-r from-gray-50/50 to-brand-blue-ghost/10 border-t border-brand-blue/10 flex items-center justify-between group-hover:from-brand-blue-ghost/20 group-hover:to-brand-cyan-ghost/20 transition-all">
+                          <span className="text-xs font-semibold text-gray-600 group-hover:text-brand-blue transition-colors">
+                            Voir les détails
+                          </span>
+                          <div className="w-8 h-8 rounded-full bg-white border-2 border-brand-blue/20 flex items-center justify-center group-hover:border-brand-blue/40 group-hover:text-brand-blue group-hover:scale-110 transition-all">
+                            <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                          </div>
                         </div>
-                      </div>
-                    </GlassCard>
-                  </Link>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+                      </GlassCard>
+                    </Link>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Pagination */}
+            {setPage && totalCount > pageSize && (
+              <div className="flex items-center justify-between mt-6 px-2">
+                <p className="text-sm text-gray-600">
+                  {page * pageSize + 1} - {Math.min((page + 1) * pageSize, totalCount)} sur {totalCount} programmes
+                  {isFetching && <span className="ml-2 text-brand-blue">(Chargement...)</span>}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page === 0 || isFetching}
+                    className="border-brand-blue/20 hover:border-brand-blue hover:bg-brand-blue-ghost"
+                  >
+                    Précédent
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page + 1)}
+                    disabled={!hasMore || isFetching}
+                    className="border-brand-blue/20 hover:border-brand-blue hover:bg-brand-blue-ghost"
+                  >
+                    Suivant
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </motion.div>
 

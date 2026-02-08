@@ -62,12 +62,20 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Payment = TableRow<'payments'>
 
+interface SessionModule {
+  id: string
+  name: string
+  amount: number
+  currency: string
+}
+
 interface GestionFinancesProps {
   enrollments?: EnrollmentWithRelations[]
   payments?: Payment[]
   sessionId?: string
   sessionData?: SessionWithRelations
   organization?: TableRow<'organizations'>
+  sessionModules?: SessionModule[]
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -90,6 +98,7 @@ export function GestionFinances({
   sessionId,
   sessionData,
   organization,
+  sessionModules = [],
 }: GestionFinancesProps) {
   const { user } = useAuth()
   const supabase = createClient()
@@ -157,22 +166,22 @@ export function GestionFinances({
   // Filtrer les modèles de devis
   const quoteTemplates = allTemplates?.filter(template => template.type === 'devis') || []
 
-  // Récupérer les factures et devis pour tous les étudiants de la session (1 requête au lieu de N)
-  const studentIds = enrollments.map((e) => e.student_id).filter(Boolean) as string[]
+  // Récupérer les factures et devis liés aux inscriptions de cette session uniquement
+  const enrollmentIds = enrollments.map((e) => e.id).filter(Boolean) as string[]
   const { data: invoices, isLoading: isInvoicesLoading } = useQuery({
-    queryKey: ['session-invoices', sessionId, studentIds],
+    queryKey: ['session-invoices', sessionId, enrollmentIds],
     queryFn: async () => {
-      if (!user?.organization_id || studentIds.length === 0) return []
+      if (!user?.organization_id || enrollmentIds.length === 0) return []
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, students(id, first_name, last_name, student_number, email), payments(id, amount, status, paid_at)')
+        .select('*, students(id, first_name, last_name, student_number, email), payments(id, amount, status, paid_at), enrollments(id, session_id)')
         .eq('organization_id', user.organization_id)
-        .in('student_id', studentIds)
+        .in('enrollment_id', enrollmentIds)
         .order('issue_date', { ascending: false })
       if (error) throw error
       return (data || []) as any[]
     },
-    enabled: !!user?.organization_id && studentIds.length > 0,
+    enabled: !!user?.organization_id && enrollmentIds.length > 0,
     staleTime: 60 * 1000, // 1 min (invalidate après création facture/devis)
   })
 
@@ -634,7 +643,7 @@ export function GestionFinances({
     onMutate: async () => {
       const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
       if (!enrollment?.student_id) return {}
-      const key = ['session-invoices', sessionId, studentIds] as const
+      const key = ['session-invoices', sessionId, enrollmentIds] as const
       const prev = queryClient.getQueryData(key)
       const optimistic = {
         id: `opt-inv-${Date.now()}`,
@@ -671,7 +680,7 @@ export function GestionFinances({
     },
     onError: (error: any, _vars, ctx) => {
       if (ctx?.previous != null) {
-        queryClient.setQueryData(['session-invoices', sessionId, studentIds], ctx.previous)
+        queryClient.setQueryData(['session-invoices', sessionId, enrollmentIds], ctx.previous)
       }
       addToast({
         type: 'error',
@@ -715,7 +724,7 @@ export function GestionFinances({
     onMutate: async () => {
       const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
       if (!enrollment?.student_id) return {}
-      const key = ['session-invoices', sessionId, studentIds] as const
+      const key = ['session-invoices', sessionId, enrollmentIds] as const
       const prev = queryClient.getQueryData(key)
       const optimistic = {
         id: `opt-quote-${Date.now()}`,
@@ -752,7 +761,7 @@ export function GestionFinances({
     },
     onError: (error: any, _vars, ctx) => {
       if (ctx?.previous != null) {
-        queryClient.setQueryData(['session-invoices', sessionId, studentIds], ctx.previous)
+        queryClient.setQueryData(['session-invoices', sessionId, enrollmentIds], ctx.previous)
       }
       addToast({
         type: 'error',
@@ -805,7 +814,8 @@ export function GestionFinances({
         throw new Error('Montant de paiement invalide')
       }
 
-      return paymentService.create({
+      // Créer le paiement
+      const payment = await paymentService.create({
         organization_id: user.organization_id,
         invoice_id: selectedPaymentInvoiceId,
         student_id: enrollment.student_id,
@@ -820,6 +830,44 @@ export function GestionFinances({
           notes: paymentForm.notes,
         },
       })
+
+      // Mettre à jour le montant payé de l'inscription si paiement cash (immédiatement complété)
+      if (paymentForm.payment_method === 'cash' && selectedEnrollmentId) {
+        const currentPaid = Number(enrollment.paid_amount || 0)
+        const newPaidAmount = currentPaid + amountNumber
+
+        // Calculer le total dynamique: facture > devis > modules session
+        const enrollmentInvoices = invoices?.filter((inv: any) => inv.enrollment_id === selectedEnrollmentId) || []
+        const invoicesList = enrollmentInvoices.filter((inv: any) => inv.document_type === 'invoice' && !inv?._optimistic)
+        const quotesList = enrollmentInvoices.filter((inv: any) => inv.document_type === 'quote' && !inv?._optimistic)
+
+        let totalAmount = 0
+        if (invoicesList.length > 0) {
+          totalAmount = Number(invoicesList[0]?.total_amount || invoicesList[0]?.amount || 0)
+        } else if (quotesList.length > 0) {
+          totalAmount = Number(quotesList[0]?.total_amount || quotesList[0]?.amount || 0)
+        } else {
+          totalAmount = sessionModules.reduce((sum, m) => sum + Number(m.amount || 0), 0)
+        }
+
+        // Déterminer le nouveau statut de paiement
+        let newPaymentStatus: 'pending' | 'partial' | 'paid' | 'overdue' = 'pending'
+        if (newPaidAmount >= totalAmount) {
+          newPaymentStatus = 'paid'
+        } else if (newPaidAmount > 0) {
+          newPaymentStatus = 'partial'
+        }
+
+        await supabase
+          .from('enrollments')
+          .update({
+            paid_amount: newPaidAmount,
+            payment_status: newPaymentStatus
+          })
+          .eq('id', selectedEnrollmentId)
+      }
+
+      return payment
     },
     onSuccess: () => {
       addToast({
@@ -836,8 +884,11 @@ export function GestionFinances({
         transaction_id: '',
         notes: '',
       })
-      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      // Invalider toutes les queries liées aux finances pour rafraîchir le dashboard
+      queryClient.invalidateQueries({ queryKey: ['session-payments', sessionId] })
+      queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionId] })
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
     },
     onError: (error: any) => {
       addToast({
@@ -848,23 +899,9 @@ export function GestionFinances({
     },
   })
 
-  const totalRevenue = enrollments.reduce((sum, e) => sum + Number(e.total_amount || 0), 0)
-  const totalPaid = enrollments.reduce((sum, e) => sum + Number(e.paid_amount || 0), 0)
-  const totalRemaining = enrollments.reduce((sum, e) => {
-    const total = Number(e.total_amount || 0)
-    const paid = Number(e.paid_amount || 0)
-    return sum + (total - paid)
-  }, 0)
-  const paymentsViaPayments = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
-  const enrollmentsWithBalance = enrollments.filter((e) => {
-    const total = Number(e.total_amount || 0)
-    const paid = Number(e.paid_amount || 0)
-    return total - paid > 0
-  })
-
-  // Obtenir les factures et devis pour un étudiant
-  const getInvoicesForStudent = (studentId: string) => {
-    return invoices?.filter((inv: any) => inv.student_id === studentId) || []
+  // Obtenir les factures et devis pour une inscription (enrollment)
+  const getInvoicesForEnrollment = (enrollmentId: string) => {
+    return invoices?.filter((inv: any) => inv.enrollment_id === enrollmentId) || []
   }
 
   const getInvoiceTotal = (inv: any) => {
@@ -886,6 +923,49 @@ export function GestionFinances({
     const remaining = getInvoiceTotal(inv) - getInvoicePaid(inv)
     return remaining > 0 ? remaining : 0
   }
+
+  // Calculer le total des modules de la session
+  const sessionModulesTotal = sessionModules.reduce((sum, m) => sum + Number(m.amount || 0), 0)
+
+  // Calculer le montant à afficher pour une inscription selon la priorité :
+  // 1. Facture (si existe) → total de la facture
+  // 2. Devis (si existe) → total du devis
+  // 3. Par défaut → total des modules de la session
+  const getEnrollmentDisplayTotal = (enrollmentId: string) => {
+    const enrollmentInvoices = getInvoicesForEnrollment(enrollmentId)
+    const invoicesList = enrollmentInvoices.filter((inv: any) => inv.document_type === 'invoice' && !inv?._optimistic)
+    const quotesList = enrollmentInvoices.filter((inv: any) => inv.document_type === 'quote' && !inv?._optimistic)
+
+    // Priorité 1: Facture
+    if (invoicesList.length > 0) {
+      // Prendre le total de la facture la plus récente
+      return getInvoiceTotal(invoicesList[0])
+    }
+
+    // Priorité 2: Devis
+    if (quotesList.length > 0) {
+      // Prendre le total du devis le plus récent
+      return getInvoiceTotal(quotesList[0])
+    }
+
+    // Priorité 3: Total des modules de la session
+    return sessionModulesTotal
+  }
+
+  // Calculs du résumé financier (utilise les montants dynamiques)
+  const totalRevenue = enrollments.reduce((sum, e) => sum + (e.id ? getEnrollmentDisplayTotal(e.id) : 0), 0)
+  const totalPaid = enrollments.reduce((sum, e) => sum + Number(e.paid_amount || 0), 0)
+  const totalRemaining = enrollments.reduce((sum, e) => {
+    const total = e.id ? getEnrollmentDisplayTotal(e.id) : 0
+    const paid = Number(e.paid_amount || 0)
+    return sum + (total - paid)
+  }, 0)
+  const paymentsViaPayments = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+  const enrollmentsWithBalance = enrollments.filter((e) => {
+    const total = e.id ? getEnrollmentDisplayTotal(e.id) : 0
+    const paid = Number(e.paid_amount || 0)
+    return total - paid > 0
+  })
 
   // Mutation pour créer une charge
   const createChargeMutation = useMutation({
@@ -1379,10 +1459,11 @@ export function GestionFinances({
                     const student = enrollment.students
                     if (!student) return null
 
-                    const total = Number(enrollment.total_amount || 0)
+                    // Montant dynamique: facture > devis > modules session
+                    const total = enrollment.id ? getEnrollmentDisplayTotal(enrollment.id) : 0
                     const paid = Number(enrollment.paid_amount || 0)
                     const remaining = total - paid
-                    const studentInvoices = enrollment.student_id ? getInvoicesForStudent(enrollment.student_id) : []
+                    const studentInvoices = enrollment.id ? getInvoicesForEnrollment(enrollment.id) : []
                     const studentInvoicesList = studentInvoices.filter((inv: any) => inv.document_type === 'invoice')
                     const studentQuotesList = studentInvoices.filter((inv: any) => inv.document_type === 'quote')
 
@@ -1568,7 +1649,7 @@ export function GestionFinances({
                                 setShowChargeForm(false)
                                 setInvoiceForm({
                                   ...invoiceForm,
-                                  amount: enrollment.total_amount != null ? String(enrollment.total_amount) : '0',
+                                  amount: sessionModulesTotal > 0 ? String(sessionModulesTotal) : '0',
                                 })
                                 setShowQuoteForm(true)
                               }}
@@ -1586,7 +1667,7 @@ export function GestionFinances({
                                 setShowChargeForm(false)
                                 setInvoiceForm({
                                   ...invoiceForm,
-                                  amount: enrollment.total_amount != null ? String(enrollment.total_amount) : '0',
+                                  amount: sessionModulesTotal > 0 ? String(sessionModulesTotal) : '0',
                                 })
                                 setShowInvoiceForm(true)
                               }}
@@ -1597,9 +1678,6 @@ export function GestionFinances({
                               size="sm"
                               className="h-7 text-xs bg-brand-blue hover:bg-brand-blue-dark text-white shadow-sm"
                               onClick={() => {
-                                const total = Number(enrollment.total_amount || 0)
-                                const paid = Number(enrollment.paid_amount || 0)
-                                const remaining = total - paid
                                 setSelectedEnrollmentId(enrollment.id)
                                 const defaultInvoice =
                                   (studentInvoicesList || []).find((inv: any) => !inv?._optimistic && getInvoiceRemaining(inv) > 0) ||
@@ -2207,8 +2285,7 @@ export function GestionFinances({
           )}
           {selectedEnrollmentId && (() => {
             const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
-            const studentId = enrollment?.student_id
-            const studentInvoices = studentId ? getInvoicesForStudent(studentId) : []
+            const studentInvoices = selectedEnrollmentId ? getInvoicesForEnrollment(selectedEnrollmentId) : []
             const studentInvoiceList = studentInvoices.filter((inv: any) => inv.document_type === 'invoice' && !inv?._optimistic)
             if (studentInvoiceList.length === 0) {
               return (

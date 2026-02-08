@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useCallback, useMemo, useTransition } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { formationService } from '@/lib/services/formation.service'
@@ -28,9 +28,20 @@ import { PremiumBarChart } from '@/components/charts/premium-bar-chart'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { RoleGuard, FORMATION_MANAGEMENT_ROLES } from '@/components/auth/role-guard'
 import { useToast } from '@/components/ui/toast'
+import { useShouldReduceAnimations } from '@/lib/hooks/use-reduced-motion'
 
 type Formation = TableRow<'formations'>
 type Session = TableRow<'sessions'>
+
+const PAGE_SIZE = 24
+
+// Cache agressif: 5 min pour les données, 30 min en mémoire
+const CACHE_CONFIG = {
+  staleTime: 1000 * 60 * 5, // 5 minutes - données considérées fraîches
+  gcTime: 1000 * 60 * 30,   // 30 minutes - garder en cache
+  refetchOnWindowFocus: false,
+  refetchOnMount: false,
+}
 
 export default function FormationsPage() {
   return (
@@ -45,37 +56,107 @@ function FormationsPageContent() {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { addToast } = useToast()
+  const shouldReduceAnimations = useShouldReduceAnimations()
   const [search, setSearch] = useState('')
   const [showActiveOnly, setShowActiveOnly] = useState(true)
   const [selectedProgramId, setSelectedProgramId] = useState<string>('')
   const [showFilters, setShowFilters] = useState(false)
   const [formationToDelete, setFormationToDelete] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [isPending, startTransition] = useTransition()
+
+  // Reset page when filters change avec transition pour éviter le blocage UI
+  const handleSearchChange = useCallback((value: string) => {
+    startTransition(() => {
+      setSearch(value)
+      setPage(0)
+    })
+  }, [])
+
+  const handleActiveOnlyChange = useCallback((value: boolean) => {
+    startTransition(() => {
+      setShowActiveOnly(value)
+      setPage(0)
+    })
+  }, [])
+
+  const handleProgramChange = useCallback((value: string) => {
+    startTransition(() => {
+      setSelectedProgramId(value)
+      setPage(0)
+    })
+  }, [])
+
+  // Prefetch de la page suivante
+  const prefetchNextPage = useCallback(() => {
+    const orgId = user?.organization_id
+    if (!orgId) return
+    queryClient.prefetchQuery({
+      queryKey: ['formations', orgId, search, showActiveOnly, selectedProgramId, page + 1],
+      queryFn: async () => {
+        const result = await formationService.getAllFormations(orgId, {
+          programId: selectedProgramId || undefined,
+          search,
+          isActive: showActiveOnly || undefined,
+          limit: PAGE_SIZE,
+          offset: (page + 1) * PAGE_SIZE,
+        })
+        return result as { data: Formation[]; count: number; hasMore: boolean }
+      },
+      ...CACHE_CONFIG,
+    })
+  }, [queryClient, user?.organization_id, search, showActiveOnly, selectedProgramId, page])
 
   // Récupérer les programmes pour le filtre
   const { data: programs } = useQuery({
-    queryKey: ['programs', user?.organization_id],
+    queryKey: ['programs-filter', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return programService.getAllPrograms(user.organization_id, { isActive: true })
+      const result = await programService.getAllPrograms(user.organization_id, { isActive: true })
+      // Sans limit/offset, le service retourne directement un tableau
+      return Array.isArray(result) ? result : result.data
     },
     enabled: !!user?.organization_id,
-    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
+    ...CACHE_CONFIG,
   })
 
-  // Récupérer les formations
-  const { data: formations, isLoading } = useQuery({
-    queryKey: ['formations', user?.organization_id, search, showActiveOnly, selectedProgramId],
+  // Récupérer les formations avec pagination et cache agressif
+  const { data: formationsResult, isLoading, isFetching } = useQuery({
+    queryKey: ['formations', user?.organization_id, search, showActiveOnly, selectedProgramId, page],
     queryFn: async () => {
-      if (!user?.organization_id) return []
-      return formationService.getAllFormations(user.organization_id, {
+      if (!user?.organization_id) return { data: [], count: 0, hasMore: false }
+      const result = await formationService.getAllFormations(user.organization_id, {
         programId: selectedProgramId || undefined,
         search,
         isActive: showActiveOnly || undefined,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
       })
+      // Le service retourne { data, count, hasMore } quand limit/offset sont fournis
+      return result as { data: Formation[]; count: number; hasMore: boolean }
     },
     enabled: !!user?.organization_id,
-    staleTime: 1000 * 60 * 2, // 2 minutes - évite les refetch inutiles
+    ...CACHE_CONFIG,
+    placeholderData: (previousData) => previousData,
   })
+
+  const formations = formationsResult?.data ?? []
+  const totalCount = formationsResult?.count ?? 0
+  const hasMore = formationsResult?.hasMore ?? false
+
+  // Prefetch page suivante quand hasMore
+  useMemo(() => {
+    if (hasMore) prefetchNextPage()
+  }, [hasMore, prefetchNextPage])
+
+  // Prefetch détails formation sur hover
+  const prefetchFormationDetails = useCallback((formationId: string) => {
+    queryClient.prefetchQuery({
+      queryKey: ['formation', formationId],
+      queryFn: () => formationService.getFormationById(formationId),
+      staleTime: 1000 * 60 * 5,
+    })
+  }, [queryClient])
 
   const deleteFormationMutation = useMutation({
     mutationFn: (id: string) => formationService.deleteFormation(id),
@@ -181,18 +262,20 @@ function FormationsPageContent() {
       }
     },
     enabled: !!user?.organization_id,
-    staleTime: 1000 * 60 * 5, // 5 minutes - les stats changent moins souvent
+    staleTime: 1000 * 60 * 10, // 10 minutes - les stats changent moins souvent
+    gcTime: 1000 * 60 * 60,    // 1 heure
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-  }
+  // Variants d'animation conditionnelles (réduites sur mobile)
+  const containerVariants = shouldReduceAnimations
+    ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
+    : { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } }
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-  } as const
+  const itemVariants = shouldReduceAnimations
+    ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
+    : { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5 } } }
 
   return (
     <motion.div 
@@ -215,13 +298,13 @@ function FormationsPageContent() {
             <h1 className="text-4xl md:text-6xl font-display font-bold text-gray-900 tracking-tighter leading-none">
               Formations
             </h1>
-            {formations && formations.length > 0 && (
+            {totalCount > 0 && (
               <motion.span
                 className="px-3 py-1.5 bg-brand-blue-ghost text-brand-blue rounded-full text-sm font-bold flex items-center gap-2 shadow-sm"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               >
-                {formations.length}
+                {totalCount}
               </motion.span>
             )}
           </div>
@@ -441,7 +524,7 @@ function FormationsPageContent() {
                 type="text"
                 placeholder="Rechercher une formation..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 transition-all outline-none text-sm font-medium tracking-tight shadow-sm"
               />
             </div>
@@ -486,7 +569,7 @@ function FormationsPageContent() {
                         <input
                           type="checkbox"
                           checked={showActiveOnly}
-                          onChange={(e) => setShowActiveOnly(e.target.checked)}
+                          onChange={(e) => handleActiveOnlyChange(e.target.checked)}
                           className="sr-only peer"
                         />
                         <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-brand-blue/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-blue"></div>
@@ -499,11 +582,11 @@ function FormationsPageContent() {
                       <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Programme</label>
                       <select
                         value={selectedProgramId}
-                        onChange={(e) => setSelectedProgramId(e.target.value)}
+                        onChange={(e) => handleProgramChange(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg bg-gray-50 border-transparent focus:bg-white focus:border-brand-blue/20 focus:ring-2 focus:ring-brand-blue/10 outline-none text-sm transition-all"
                       >
                         <option value="">Tous les programmes</option>
-                        {(programs as any[])?.map((program) => (
+                        {(programs ?? []).map((program: any) => (
                           <option key={program.id} value={program.id}>
                             {program.name}
                           </option>
@@ -526,10 +609,11 @@ function FormationsPageContent() {
               <div key={i} className="h-64 bg-gray-100 rounded-2xl animate-pulse" />
             ))}
           </div>
-        ) : formations && formations.length > 0 ? (
+        ) : formations.length > 0 ? (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence mode="popLayout">
-              {(formations as Formation[])?.map((formation, index) => (
+              {formations.map((formation: any, index: number) => (
                 <motion.div
                   key={formation.id}
                   layout
@@ -542,6 +626,7 @@ function FormationsPageContent() {
                     ease: 'easeOut'
                   }}
                   whileHover={{ y: -8, scale: 1.02 }}
+                  onMouseEnter={() => prefetchFormationDetails(formation.id)}
                 >
                   <Link href={`/dashboard/formations/${formation.id}`}>
                     <GlassCard
@@ -661,6 +746,37 @@ function FormationsPageContent() {
               ))}
             </AnimatePresence>
           </div>
+
+          {/* Pagination */}
+          {totalCount > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-6 px-2">
+              <p className="text-sm text-gray-600">
+                {page * PAGE_SIZE + 1} - {Math.min((page + 1) * PAGE_SIZE, totalCount)} sur {totalCount} formations
+                {(isFetching || isPending) && <span className="ml-2 text-brand-blue">(Chargement...)</span>}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 0 || isFetching || isPending}
+                  className="border-brand-blue/20 hover:border-brand-blue hover:bg-brand-blue-ghost"
+                >
+                  Précédent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page + 1)}
+                  disabled={!hasMore || isFetching || isPending}
+                  className="border-brand-blue/20 hover:border-brand-blue hover:bg-brand-blue-ghost"
+                >
+                  Suivant
+                </Button>
+              </div>
+            </div>
+          )}
+          </>
         ) : (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

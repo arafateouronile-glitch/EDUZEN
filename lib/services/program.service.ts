@@ -24,15 +24,21 @@ export class ProgramService {
   }
 
   /**
-   * Récupère tous les programmes d'une organisation
+   * Récupère tous les programmes d'une organisation avec pagination optionnelle
+   * Si limit/offset sont fournis, retourne un objet { data, count, hasMore }
+   * Sinon, retourne directement le tableau pour compatibilité
    */
   async getAllPrograms(organizationId: string, filters?: {
     isActive?: boolean
     search?: string
-  }) {
+    limit?: number
+    offset?: number
+  }): Promise<Program[] | { data: Program[]; count: number; hasMore: boolean }> {
+    const usePagination = filters?.limit !== undefined || filters?.offset !== undefined
+
     let query = this.supabase
       .from('programs')
-      .select('*')
+      .select('*', usePagination ? { count: 'exact' } : undefined)
       .eq('organization_id', organizationId)
 
     if (filters?.isActive !== undefined) {
@@ -43,10 +49,20 @@ export class ProgramService {
       query = query.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false })
+    // Appliquer pagination seulement si demandée
+    if (usePagination) {
+      const limit = filters?.limit ?? 50
+      const offset = filters?.offset ?? 0
+      query = query.range(offset, offset + limit - 1)
 
+      const { data, error, count } = await query.order('created_at', { ascending: false })
+      if (error) throw error
+      return { data: (data ?? []) as Program[], count: count ?? 0, hasMore: (count ?? 0) > offset + limit }
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throw error
-    return data
+    return (data ?? []) as Program[]
   }
 
   /**
@@ -118,6 +134,7 @@ export class ProgramService {
 
   /**
    * Récupère les statistiques globales des programmes pour une organisation
+   * Optimisé: une seule requête formations, une seule requête sessions
    */
   async getGlobalStats(organizationId: string) {
     const { data: allPrograms, error } = await this.supabase
@@ -132,62 +149,58 @@ export class ProgramService {
     const active = programsArray.filter((p) => p.is_active).length
     const inactive = programsArray.filter((p) => !p.is_active).length
 
-    // Compter les formations
-    let totalFormations = 0
     const programIds = programsArray.map((p) => p.id)
+
+    // Requêtes parallèles optimisées - une seule fois chaque
+    let totalFormations = 0
+    let totalSessions = 0
+    let totalEnrollments = 0
+    let formationIds: string[] = []
+    let sessionIds: string[] = []
+
     if (programIds.length > 0) {
-      const { count, error: formationsError } = await this.supabase
-        .from('formations')
-        .select('*', { count: 'exact', head: true })
-        .in('program_id', programIds)
-      if (formationsError) throw formationsError
-      totalFormations = count || 0
+      // Récupérer formations avec count en une seule requête
+      const [formationsResult, formationsCountResult] = await Promise.all([
+        this.supabase
+          .from('formations')
+          .select('id')
+          .in('program_id', programIds),
+        this.supabase
+          .from('formations')
+          .select('*', { count: 'exact', head: true })
+          .in('program_id', programIds)
+      ])
+
+      if (formationsResult.error) throw formationsResult.error
+      formationIds = (formationsResult.data as Array<{ id: string }>)?.map((f) => f.id) || []
+      totalFormations = formationsCountResult.count || 0
     }
 
-    // Compter les sessions via les formations
-    let totalSessions = 0
-    if (programIds.length > 0) {
-      const { data: formations, error: formationsError } = await this.supabase
-        .from('formations')
-        .select('id')
-        .in('program_id', programIds)
-      if (formationsError) throw formationsError
-      const formationIds = (formations as Array<{ id: string }>)?.map((f) => f.id) || []
-      if (formationIds.length > 0) {
-        const { count, error: sessionsError } = await this.supabase
+    if (formationIds.length > 0) {
+      // Récupérer sessions avec count en une seule requête
+      const [sessionsResult, sessionsCountResult] = await Promise.all([
+        this.supabase
+          .from('sessions')
+          .select('id')
+          .in('formation_id', formationIds),
+        this.supabase
           .from('sessions')
           .select('*', { count: 'exact', head: true })
           .in('formation_id', formationIds)
-        if (sessionsError) throw sessionsError
-        totalSessions = count || 0
-      }
+      ])
+
+      if (sessionsResult.error) throw sessionsResult.error
+      sessionIds = (sessionsResult.data as Array<{ id: string }>)?.map((s) => s.id) || []
+      totalSessions = sessionsCountResult.count || 0
     }
 
-    // Compter les inscriptions
-    let totalEnrollments = 0
-    if (programIds.length > 0) {
-      const { data: formations, error: formationsError2 } = await this.supabase
-        .from('formations')
-        .select('id')
-        .in('program_id', programIds)
-      if (formationsError2) throw formationsError2
-      const formationIds = (formations as Array<{ id: string }>)?.map((f) => f.id) || []
-      if (formationIds.length > 0) {
-        const { data: sessions, error: sessionsError2 } = await this.supabase
-          .from('sessions')
-          .select('id')
-          .in('formation_id', formationIds)
-        if (sessionsError2) throw sessionsError2
-        const sessionIds = (sessions as Array<{ id: string }>)?.map((s) => s.id) || []
-        if (sessionIds.length > 0) {
-          const { count, error: enrollmentsError } = await this.supabase
-            .from('enrollments')
-            .select('*', { count: 'exact', head: true })
-            .in('session_id', sessionIds)
-          if (enrollmentsError) throw enrollmentsError
-          totalEnrollments = count || 0
-        }
-      }
+    if (sessionIds.length > 0) {
+      const { count, error: enrollmentsError } = await this.supabase
+        .from('enrollments')
+        .select('*', { count: 'exact', head: true })
+        .in('session_id', sessionIds)
+      if (enrollmentsError) throw enrollmentsError
+      totalEnrollments = count || 0
     }
 
     // Grouper par statut pour le graphique
