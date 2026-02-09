@@ -65,11 +65,11 @@ export function FinalCTA() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight"
           >
-            Rejoignez les{' '}
+            Devenez{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan-light to-white">
-              +500 organismes
+              membre fondateur
             </span>
-            {' '}qui nous font confiance
+            {' '}et profitez de -50%
           </motion.h2>
 
           {/* Subtitle */}

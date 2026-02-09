@@ -37,9 +37,9 @@ export function LogoCloud() {
             className="mt-2 text-2xl md:text-3xl font-bold text-gray-900"
           >
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan">
-              +500
+              Déjà adoptée
             </span>{' '}
-            organismes de formation
+            par des organismes de formation
           </motion.p>
         </motion.div>
 

@@ -249,11 +249,11 @@ export function BentoShowcase() {
               >
                 <Users className="w-6 h-6 text-white" />
               </motion.div>
-              <p className="text-white/80 mb-2 text-lg">Organismes clients</p>
+              <p className="text-white/80 mb-2 text-lg">Avis clients</p>
               <p className="text-6xl font-bold text-white mb-4 font-display">
-                <AnimatedCounter end={500} suffix="+" />
+                <AnimatedCounter end={12} suffix="" />
               </p>
-              <p className="text-white/70">Nous font confiance</p>
+              <p className="text-white/70">Note moyenne 4.9/5</p>
             </motion.div>
           </motion.div>
 

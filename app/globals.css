@@ -3605,8 +3605,95 @@
   }
 
   .ring-glow-cyan {
-    box-shadow: 
+    box-shadow:
       0 0 0 3px rgba(52, 185, 238, 0.1),
       0 0 0 6px rgba(52, 185, 238, 0.05),
       0 0 20px rgba(52, 185, 238, 0.15);
+  }
+
+  /* ============================================
+     PERFORMANCE OPTIMIZED ANIMATIONS
+     CSS-only animations for better LCP/FCP
+     ============================================ */
+
+  /* Fade in up animation - GPU accelerated */
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px) translateZ(0);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) translateZ(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  /* Animation delays */
+  .animation-delay-100 { animation-delay: 100ms; }
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-300 { animation-delay: 300ms; }
+  .animation-delay-400 { animation-delay: 400ms; }
+  .animation-delay-500 { animation-delay: 500ms; }
+  .animation-delay-600 { animation-delay: 600ms; }
+  .animation-delay-700 { animation-delay: 700ms; }
+
+  /* Float animations - GPU accelerated, reduced motion */
+  @keyframes float-slow {
+    0%, 100% {
+      transform: translateY(0) translateZ(0);
+    }
+    50% {
+      transform: translateY(-20px) translateZ(0);
+    }
+  }
+
+  @keyframes float-slower {
+    0%, 100% {
+      transform: translateY(0) translateZ(0);
+    }
+    50% {
+      transform: translateY(-15px) translateZ(0);
+    }
+  }
+
+  .animate-float-slow {
+    animation: float-slow 8s ease-in-out infinite;
+  }
+
+  .animate-float-slower {
+    animation: float-slower 12s ease-in-out infinite;
+  }
+
+  /* Gradient X animation - optimized */
+  @keyframes gradient-x {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient-x {
+    animation: gradient-x 4s ease infinite;
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in-up,
+    .animate-float-slow,
+    .animate-float-slower,
+    .animate-gradient-x,
+    .animate-gradient-shift,
+    .animate-pulse,
+    .animate-ping {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }

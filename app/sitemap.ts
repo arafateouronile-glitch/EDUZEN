@@ -1,37 +1,85 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  // Remplacer par votre URL de production
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-domain.com'
-  
-  const routes = [
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.app'
+  const currentDate = new Date()
+
+  // Pages principales du site
+  const routes: MetadataRoute.Sitemap = [
+    // Page d'accueil - priorité maximale
     {
       url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
       priority: 1,
     },
+    // Pages de fonctionnalités
     {
-      url: `${baseUrl}/formations`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
+      url: `${baseUrl}/#features`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.9,
     },
     {
-      url: `${baseUrl}/programmes`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
+      url: `${baseUrl}/#benefices`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+    // Tarification
+    {
+      url: `${baseUrl}/#tarifs`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
       priority: 0.8,
     },
+    // FAQ
     {
-      url: `${baseUrl}/cataloguepublic`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
+      url: `${baseUrl}/#faq`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    // Blog (si existant)
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    // Pages légales
+    {
+      url: `${baseUrl}/mentions-legales`,
+      lastModified: currentDate,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/politique-confidentialite`,
+      lastModified: currentDate,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/cgv`,
+      lastModified: currentDate,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    // Authentification (pages publiques)
+    {
+      url: `${baseUrl}/auth/login`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/auth/register`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
       priority: 0.7,
     },
   ]
 
   return routes
 }
-
-

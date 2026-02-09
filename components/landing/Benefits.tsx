@@ -1,7 +1,6 @@
 'use client'
 
-import { motion, useInView } from '@/components/ui/motion'
-import { useRef } from 'react'
+import { memo, useRef } from 'react'
 import { Clock, Shield, TrendingUp, Award, Sparkles } from 'lucide-react'
 
 const benefits = [
@@ -39,65 +38,46 @@ const benefits = [
   }
 ]
 
-export function Benefits() {
+export const Benefits = memo(function Benefits() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const isInView = useInView(containerRef, { once: true, margin: '-100px' })
 
   return (
     <section id="benefices" className="relative py-24 md:py-32 lg:py-40 overflow-hidden bg-gradient-to-b from-white via-gray-50/30 to-white">
-      {/* Background decorations */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-brand-blue/5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 left-0 w-[400px] h-[400px] bg-brand-cyan/5 rounded-full blur-[100px]" />
+      {/* Background - simplifié */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute top-1/4 right-0 w-[400px] h-[400px] bg-brand-blue/5 rounded-full blur-[60px]" />
+        <div className="absolute bottom-1/4 left-0 w-[300px] h-[300px] bg-brand-cyan/5 rounded-full blur-[60px]" />
       </div>
 
       <div className="container mx-auto px-4 md:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-blue-ghost border border-brand-blue-pale mb-6"
-          >
+          <div className="animate-fade-in-up inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-blue-ghost border border-brand-blue-pale mb-6">
             <Sparkles className="w-4 h-4 text-brand-blue" />
             <span className="text-sm font-medium text-brand-blue-darker">Ce que vous gagnez</span>
-          </motion.div>
+          </div>
 
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-6"
-          >
+          <h2 className="animate-fade-in-up animation-delay-100 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 mb-6">
             Concentrez-vous sur{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan">
               l'essentiel
             </span>
-          </motion.h2>
+          </h2>
 
-          <motion.p
-            initial={{ opacity: 0, y: 30 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-xl text-gray-600"
-          >
+          <p className="animate-fade-in-up animation-delay-200 text-lg md:text-xl text-gray-600">
             Pendant que vous formez vos stagiaires, EduZen s'occupe de tout le reste.
-          </motion.p>
+          </p>
         </div>
 
         {/* Benefits grid */}
         <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-5xl mx-auto">
           {benefits.map((benefit, index) => (
-            <motion.div
+            <div
               key={benefit.title}
-              initial={{ opacity: 0, y: 40 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: 0.1 * index }}
-              whileHover={{ y: -8, scale: 1.02 }}
-              className="group relative bg-white rounded-3xl p-8 md:p-10 border-2 border-gray-100 hover:border-brand-blue/30 shadow-lg hover:shadow-2xl hover:shadow-brand-blue/10 transition-all duration-500"
+              className={`animate-fade-in-up group relative bg-white rounded-3xl p-8 md:p-10 border-2 border-gray-100 hover:border-brand-blue/30 shadow-lg hover:shadow-xl hover:shadow-brand-blue/5 transition-all duration-300 hover:-translate-y-1`}
+              style={{ animationDelay: `${200 + index * 100}ms` }}
             >
-              {/* Icon with gradient background */}
+              {/* Icon */}
               <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br ${benefit.gradient} mb-6 shadow-lg`}>
                 <benefit.icon className="w-7 h-7 text-white" />
               </div>
@@ -120,13 +100,10 @@ export function Benefits() {
                   {benefit.highlightLabel}
                 </span>
               </div>
-
-              {/* Hover glow effect */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
     </section>
   )
-}
+})

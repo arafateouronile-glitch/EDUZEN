@@ -18,14 +18,29 @@ import { NonceProvider } from '@/lib/contexts/nonce-context'
 
 export const metadata: Metadata = {
   title: {
-    default: "eduzen - Gestion Scolaire pour l'Afrique",
-    template: "%s | eduzen"
+    default: "EduZen - Logiciel de Gestion pour Organismes de Formation | Qualiopi & CPF",
+    template: "%s | EduZen"
   },
-  description: "Solution SaaS complète pour digitaliser la gestion des établissements d'enseignement africains. Gestion des étudiants, paiements, formations et bien plus.",
-  keywords: ['gestion scolaire', 'afrique', 'éducation', 'saas', 'mobile money', 'école', 'université', 'formation'],
-  authors: [{ name: 'eduzen' }],
-  creator: 'eduzen',
-  publisher: 'eduzen',
+  description: "Simplifiez la gestion de votre organisme de formation avec EduZen. Conformité Qualiopi automatique, émargement numérique, facturation CPF, signature électronique eIDAS. Essai gratuit 14 jours.",
+  keywords: [
+    'logiciel organisme de formation',
+    'gestion formation professionnelle',
+    'conformité Qualiopi',
+    'émargement numérique',
+    'signature électronique eIDAS',
+    'facturation CPF',
+    'logiciel formation',
+    'gestion stagiaires',
+    'attestation de formation',
+    'feuille de présence dématérialisée',
+    'OPCO',
+    'certification Qualiopi',
+    'e-learning',
+    'plateforme formation'
+  ],
+  authors: [{ name: 'EduZen' }],
+  creator: 'EduZen',
+  publisher: 'EduZen',
   formatDetection: {
     email: false,
     address: false,
@@ -34,47 +49,54 @@ export const metadata: Metadata = {
   ...(process.env.NEXT_PUBLIC_APP_URL ? { metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL) } : {}),
   alternates: {
     canonical: '/',
+    languages: {
+      'fr-FR': '/',
+    },
   },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: process.env.NEXT_PUBLIC_APP_URL || 'https://your-domain.com',
-    siteName: 'eduzen',
-    title: "eduzen - Gestion Scolaire pour l'Afrique",
-    description: "Solution SaaS complète pour digitaliser la gestion des établissements d'enseignement africains",
+    url: process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.app',
+    siteName: 'EduZen',
+    title: "EduZen - Logiciel de Gestion pour Organismes de Formation",
+    description: "Simplifiez la gestion de votre organisme de formation. Conformité Qualiopi automatique, émargement numérique, facturation CPF. Essai gratuit 14 jours.",
     images: [
       {
-        url: '/og-image.svg', // Utilise og-image.svg (1200x630px), peut être remplacé par og-image.jpg
+        url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'eduzen - Gestion Scolaire pour l\'Afrique',
+        alt: 'EduZen - Plateforme de gestion pour organismes de formation',
+        type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: "eduzen - Gestion Scolaire pour l'Afrique",
-    description: "Solution SaaS complète pour digitaliser la gestion des établissements d'enseignement africains",
-    images: ['/og-image.svg'], // Utilise og-image.svg, peut être remplacé par og-image.jpg
-    creator: '@eduzen', // À mettre à jour avec votre compte Twitter
+    title: "EduZen - Gérez votre organisme de formation avec simplicité",
+    description: "Conformité Qualiopi automatique, émargement numérique, facturation CPF. Essai gratuit 14 jours.",
+    images: ['/og-image.png'],
+    creator: '@eduzen_app',
+    site: '@eduzen_app',
   },
   robots: {
     index: true,
     follow: true,
+    nocache: false,
     googleBot: {
       index: true,
       follow: true,
+      noimageindex: false,
       'max-video-preview': -1,
       'max-image-preview': 'large',
       'max-snippet': -1,
     },
   },
   verification: {
-    // À ajouter quand vous aurez les codes de vérification
-    // google: 'votre-code-google',
-    // yandex: 'votre-code-yandex',
-    // yahoo: 'votre-code-yahoo',
+    // Ajouter votre code Google Search Console ici
+    // google: 'votre-code-google-search-console',
   },
+  category: 'technology',
+  classification: 'Business Software',
 }
 
 export default async function RootLayout({

@@ -24,6 +24,7 @@ export function Navbar() {
     { label: 'Tarifs', href: '#tarifs' },
     { label: 'Témoignages', href: '#testimonials' },
     { label: 'FAQ', href: '#faq' },
+    { label: 'Contact', href: '/contact' },
   ]
 
   return (

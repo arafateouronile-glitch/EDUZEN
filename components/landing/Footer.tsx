@@ -65,10 +65,10 @@ export function Footer() {
             {
               title: 'Entreprise',
               links: [
-                { label: 'À propos', href: '#' },
+                { label: 'À propos', href: '/a-propos' },
                 { label: 'Carrières', href: '#' },
                 { label: 'Blog', href: '/blog' },
-                { label: 'Contact', href: '#' },
+                { label: 'Contact', href: '/contact' },
               ]
             },
             {
@@ -135,9 +135,9 @@ export function Footer() {
                 </motion.div>
               </div>
               <p className="text-base md:text-lg font-light text-gray-700 tracking-tight">
-                <span className="font-normal">Rejoignez</span>{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan font-extrabold italic tracking-tighter">+500 organismes</span>{' '}
-                <span className="font-medium">qui nous font confiance</span>
+                <span className="font-normal">Rejoignez nos</span>{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan font-extrabold italic tracking-tighter">premiers utilisateurs</span>{' '}
+                <span className="font-medium">et bénéficiez de l'offre fondateur</span>
               </p>
             </div>
 
