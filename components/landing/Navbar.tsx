@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
-import { Menu, X, ArrowRight } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Menu, X, ArrowRight, Sparkles } from 'lucide-react'
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -20,99 +19,132 @@ export function Navbar() {
 
   const navItems = [
     { label: 'Fonctionnalités', href: '#features' },
-    { label: 'Bénéfices', href: '#benefices' },
     { label: 'Tarifs', href: '#tarifs' },
-    { label: 'Témoignages', href: '#testimonials' },
     { label: 'FAQ', href: '#faq' },
     { label: 'Contact', href: '/contact' },
   ]
 
   return (
     <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-600 ${
-        isScrolled
-          ? 'bg-white/90 backdrop-blur-xl border-b-2 border-gray-200 py-4 md:py-5 shadow-xl shadow-brand-blue/5'
-          : 'bg-transparent py-6 md:py-8'
-      }`}
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+      className="fixed top-0 left-0 right-0 z-50"
     >
-      <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <motion.span
-              whileHover={{ scale: 1.05 }}
-              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              className="text-3xl md:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-brand-blue to-brand-cyan font-display tracking-tighter italic"
-            >
-              EDUZEN
-            </motion.span>
-          </Link>
+      {/* Subtle top accent line */}
+      <div className="h-[1px] bg-gradient-to-r from-transparent via-brand-cyan/40 to-transparent" />
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-10">
-            {navItems.map((item, index) => (
+      <div className={`transition-all duration-700 ease-out ${
+        isScrolled
+          ? 'bg-white/80 backdrop-blur-2xl shadow-[0_8px_40px_-12px_rgba(39,68,114,0.12)] border-b border-gray-100/80'
+          : 'bg-transparent'
+      }`}>
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className={`flex items-center justify-between transition-all duration-700 ${
+            isScrolled ? 'h-16 md:h-[72px]' : 'h-20 md:h-24'
+          }`}>
+            {/* Logo */}
+            <Link href="/" className="relative flex items-center gap-2.5 group">
               <motion.div
-                key={item.label}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 + index * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                whileHover={{ scale: 1.03 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                className="flex items-center gap-2"
+              >
+                {/* Logo mark */}
+                <div className="relative">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-cyan/80 flex items-center justify-center shadow-lg shadow-brand-blue/20 group-hover:shadow-brand-blue/30 transition-shadow duration-500">
+                    <span className="text-white font-black text-sm tracking-tighter italic">E</span>
+                  </div>
+                  <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-br from-brand-blue to-brand-cyan opacity-0 group-hover:opacity-20 blur-sm transition-opacity duration-500" />
+                </div>
+                <span className="text-[22px] md:text-2xl font-black tracking-[-0.04em] bg-clip-text text-transparent bg-gradient-to-r from-brand-blue via-brand-blue-dark to-brand-blue font-display">
+                  EDUZEN
+                </span>
+              </motion.div>
+            </Link>
+
+            {/* Desktop Navigation - Floating pill */}
+            <div className="hidden lg:flex items-center">
+              <div className={`relative flex items-center gap-1 rounded-full px-2 py-1.5 transition-all duration-700 ${
+                isScrolled
+                  ? 'bg-gradient-to-r from-brand-cyan/10 via-brand-cyan/15 to-brand-cyan/10 border border-brand-cyan/20 shadow-sm shadow-brand-cyan/10'
+                  : 'bg-gradient-to-r from-brand-cyan/8 via-brand-cyan/12 to-brand-cyan/8 backdrop-blur-sm border border-brand-cyan/15'
+              }`}>
+                {navItems.map((item, index) => (
+                  <motion.div
+                    key={item.label}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 + index * 0.08, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                  >
+                    <Link
+                      href={item.href}
+                      className="relative px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-300 group text-brand-blue-dark/80 hover:text-brand-blue hover:bg-white/60"
+                    >
+                      {item.label}
+                      <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0 h-[2px] rounded-full bg-gradient-to-r from-brand-blue to-brand-cyan group-hover:w-4 transition-all duration-300" />
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop CTA */}
+            <div className="hidden lg:flex items-center gap-3">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
                 <Link
-                  href={item.href}
-                  className="group relative text-base md:text-lg font-semibold text-gray-700 hover:text-brand-blue transition-colors duration-400"
+                  href="/auth/login"
+                  className={`px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all duration-300 ${
+                    isScrolled
+                      ? 'text-gray-600 hover:text-brand-blue hover:bg-brand-blue/[0.06]'
+                      : 'text-gray-700 hover:text-brand-blue hover:bg-white/40'
+                  }`}
                 >
-                  {item.label}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-brand-blue to-brand-cyan group-hover:w-full transition-all duration-400" />
+                  Se connecter
                 </Link>
               </motion.div>
-            ))}
-          </div>
 
-          {/* Desktop CTA */}
-          <div className="hidden lg:flex items-center gap-6">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            >
-              <Link
-                href="/auth/login"
-                className="text-base md:text-lg font-semibold text-gray-700 hover:text-brand-blue transition-colors duration-400"
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
-                Se connecter
-              </Link>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            >
-              <Link href="/auth/register">
-                <motion.div
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                >
-                  <Button className="h-12 md:h-14 px-8 text-base md:text-lg font-bold bg-brand-blue hover:bg-brand-blue-dark text-white rounded-full shadow-xl shadow-brand-blue/30 hover:shadow-2xl hover:shadow-brand-blue/40 transition-all duration-600">
-                    Commencer
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </motion.div>
-              </Link>
-            </motion.div>
-          </div>
+                <Link href="/auth/register">
+                  <motion.div
+                    whileHover={{ scale: 1.02, y: -1 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                    className="relative group"
+                  >
+                    {/* Glow effect */}
+                    <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue opacity-0 group-hover:opacity-30 blur-lg transition-opacity duration-500" />
+                    <div className="relative flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white text-[13px] font-semibold shadow-lg shadow-brand-blue/25 group-hover:shadow-xl group-hover:shadow-brand-blue/30 transition-all duration-500">
+                      <Sparkles className="w-3.5 h-3.5 opacity-80" />
+                      Commencer
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-300" />
+                    </div>
+                  </motion.div>
+                </Link>
+              </motion.div>
+            </div>
 
-          {/* Mobile Menu Button */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            className="lg:hidden p-3 rounded-2xl bg-white border-2 border-gray-200 text-gray-700 hover:border-brand-blue hover:text-brand-blue transition-all duration-400"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </motion.button>
+            {/* Mobile Menu Button */}
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              className={`lg:hidden relative p-2.5 rounded-xl transition-all duration-300 ${
+                isScrolled
+                  ? 'bg-gray-50 border border-gray-200 text-gray-700 hover:border-brand-blue/30 hover:text-brand-blue'
+                  : 'bg-white/10 backdrop-blur-sm border border-white/20 text-gray-700 hover:bg-white/30'
+              }`}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </motion.button>
+          </div>
         </div>
       </div>
 
@@ -123,51 +155,60 @@ export function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl border-b-2 border-gray-200 shadow-2xl overflow-hidden"
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+            className="lg:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur-2xl border-b border-gray-100 shadow-[0_24px_48px_-12px_rgba(39,68,114,0.15)] overflow-hidden"
           >
-            <div className="container mx-auto px-4 py-8">
-              <div className="flex flex-col gap-6">
+            <div className="container mx-auto px-4 py-6">
+              <div className="flex flex-col gap-1">
                 {navItems.map((item, index) => (
                   <motion.div
                     key={item.label}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                    transition={{ duration: 0.4, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   >
                     <Link
                       href={item.href}
-                      className="block text-lg font-semibold text-gray-700 hover:text-brand-blue transition-colors py-2"
+                      className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-medium text-gray-700 hover:text-brand-blue hover:bg-brand-blue/[0.04] transition-all duration-300"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
+                      <span className="w-1 h-1 rounded-full bg-brand-cyan/50" />
                       {item.label}
                     </Link>
                   </motion.div>
                 ))}
-                <div className="h-px bg-gray-200 my-2" />
+
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-3" />
+
                 <motion.div
-                  initial={{ opacity: 0, x: -20 }}
+                  initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                  transition={{ duration: 0.4, delay: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                 >
                   <Link
                     href="/auth/login"
-                    className="block text-lg font-semibold text-gray-700 hover:text-brand-blue py-2"
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-medium text-gray-600 hover:text-brand-blue hover:bg-brand-blue/[0.04] transition-all duration-300"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Se connecter
                   </Link>
                 </motion.div>
+
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                  transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                  className="mt-2"
                 >
                   <Link href="/auth/register" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button className="w-full h-14 text-lg font-bold bg-brand-blue hover:bg-brand-blue-dark text-white rounded-full shadow-xl shadow-brand-blue/30">
-                      Commencer
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </Button>
+                    <div className="relative group">
+                      <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-brand-blue to-brand-cyan opacity-20 blur-sm" />
+                      <div className="relative flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white text-[15px] font-semibold shadow-lg shadow-brand-blue/20">
+                        <Sparkles className="w-4 h-4 opacity-80" />
+                        Commencer gratuitement
+                        <ArrowRight className="w-4 h-4" />
+                      </div>
+                    </div>
                   </Link>
                 </motion.div>
               </div>

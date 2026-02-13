@@ -86,8 +86,8 @@ function ProgramsPageContent() {
     placeholderData: (previousData) => previousData,
   })
 
-  // Stats avec cache très long (10 min)
-  const { data: globalStats } = useQuery({
+  // Stats — refetch au montage pour que les graphiques chargent à l’arrivée / refresh (comme page Sessions)
+  const { data: globalStats, isLoading: isLoadingGlobalStats } = useQuery({
     queryKey: ['programs-global-stats', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
@@ -95,9 +95,9 @@ function ProgramsPageContent() {
     },
     enabled: !!user?.organization_id,
     staleTime: 1000 * 60 * 10, // 10 minutes
-    gcTime: 1000 * 60 * 60,    // 1 heure
+    gcTime: 1000 * 60 * 60,   // 1 heure
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,      // Toujours refetch à l’arrivée sur la page pour afficher les graphiques
   })
 
   if (!user?.organization_id) {
@@ -119,6 +119,7 @@ function ProgramsPageContent() {
       programs={(programsResult?.data as Program[]) || []}
       isLoading={isLoading}
       isFetching={isFetching || isPending}
+      isLoadingGlobalStats={isLoadingGlobalStats}
       globalStats={globalStats}
       search={search}
       setSearch={handleSearchChange}

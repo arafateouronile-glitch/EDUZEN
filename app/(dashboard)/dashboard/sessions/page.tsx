@@ -243,8 +243,8 @@ function SessionsPageContent() {
     })
   }, [queryClient])
 
-  // Statistiques des sessions (refetch au montage pour graphiques corrects après navigation)
-  const { data: sessionStats } = useQuery({
+  // Statistiques des sessions — refetch au montage pour que les graphiques chargent à l'arrivée / refresh
+  const { data: sessionStats, isLoading: isLoadingSessionStats } = useQuery({
     queryKey: ['session-stats', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
@@ -326,6 +326,7 @@ function SessionsPageContent() {
     },
     enabled: !!user?.organization_id,
     staleTime: 1000 * 60 * 5, // 5 minutes - les stats changent moins souvent
+    refetchOnMount: true, // Toujours refetch à l'arrivée sur la page pour afficher les graphiques
   })
 
   const getStatusColor = (status: Session['status']) => {
@@ -644,35 +645,52 @@ function SessionsPageContent() {
         </GlassCard>
       </motion.div>
 
-      {/* Graphiques Premium */}
-      {sessionStats && (sessionStats.statusData.length > 0 || sessionStats.evolutionData.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {sessionStats.statusData.length > 0 && (
-            <motion.div variants={itemVariants} className="h-full">
-              <PremiumPieChart
-                title="Répartition par statut"
-                subtitle="Vue d'ensemble des sessions"
-                data={sessionStats.statusData}
-                colors={['#3B82F6', '#335ACF', '#6B7280', '#EF4444']}
-                className="h-full"
-                innerRadius={70}
-              />
-            </motion.div>
-          )}
+      {/* Graphiques Premium — skeleton pendant le chargement, puis graphiques sans animation */}
+      {(isLoadingSessionStats || (sessionStats && (sessionStats.statusData.length > 0 || sessionStats.evolutionData.length > 0))) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[320px]">
+          {isLoadingSessionStats ? (
+            <>
+              <GlassCard variant="premium" className="p-6 md:p-8 border-2 border-gray-100">
+                <div className="h-5 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mb-6" />
+                <div className="h-[300px] rounded-2xl bg-gray-100 animate-pulse" />
+              </GlassCard>
+              <GlassCard variant="premium" className="p-6 md:p-8 border-2 border-gray-100">
+                <div className="h-5 w-56 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-36 bg-gray-100 rounded animate-pulse mb-6" />
+                <div className="h-[300px] rounded-2xl bg-gray-100 animate-pulse" />
+              </GlassCard>
+            </>
+          ) : sessionStats ? (
+            <>
+              {sessionStats.statusData.length > 0 && (
+                <div className="h-full min-h-[320px]">
+                  <PremiumPieChart
+                    title="Répartition par statut"
+                    subtitle="Vue d'ensemble des sessions"
+                    data={sessionStats.statusData}
+                    colors={['#3B82F6', '#335ACF', '#6B7280', '#EF4444']}
+                    className="h-full"
+                    innerRadius={70}
+                  />
+                </div>
+              )}
 
-          {sessionStats.evolutionData.length > 0 && (
-            <motion.div variants={itemVariants} className="h-full">
-              <PremiumBarChart
-                title="Évolution des sessions"
-                subtitle="Nombre de sessions par mois"
-                data={sessionStats.evolutionData}
-                dataKey="count"
-                xAxisKey="month"
-                className="h-full"
-                color="#3B82F6"
-              />
-            </motion.div>
-          )}
+              {sessionStats.evolutionData.length > 0 && (
+                <div className="h-full min-h-[320px]">
+                  <PremiumBarChart
+                    title="Évolution des sessions"
+                    subtitle="Nombre de sessions par mois"
+                    data={sessionStats.evolutionData}
+                    dataKey="count"
+                    xAxisKey="month"
+                    className="h-full"
+                    color="#3B82F6"
+                  />
+                </div>
+              )}
+            </>
+          ) : null}
         </div>
       )}
 

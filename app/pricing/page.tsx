@@ -119,9 +119,9 @@ export default function PricingPage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-blue/10 to-brand-cyan/10 rounded-full mb-6">
             <Sparkles className="w-5 h-5 text-brand-cyan" />
             <span className="text-sm font-semibold text-brand-blue">
-              Offre Spéciale : Bénéficiez de -50% en devenant "Membre Fondateur"
+              Offre de lancement France : -50% sur tous les plans
             </span>
-            <span className="text-xs text-gray-500">(Limité aux 100 premiers inscrits)</span>
+            <span className="text-xs text-gray-500">(Durée limitée)</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-black tracking-tightest mb-4 bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">
             Choisissez le plan qui propulsera votre organisme
@@ -211,7 +211,7 @@ export default function PricingPage() {
                         <div className="mt-2 flex items-center justify-center gap-2">
                           <Gift className="w-4 h-4 text-brand-cyan" />
                           <span className="text-sm font-semibold text-brand-cyan">
-                            -{discount}% Offre Fondateur
+                            -{discount}% Lancement France
                           </span>
                         </div>
                       )}

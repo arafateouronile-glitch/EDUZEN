@@ -18,27 +18,28 @@ import { NonceProvider } from '@/lib/contexts/nonce-context'
 
 export const metadata: Metadata = {
   title: {
-    default: "EduZen - Logiciel de Gestion pour Organismes de Formation | Qualiopi & CPF",
-    template: "%s | EduZen"
+    default: "EduZen | Le Logiciel N°1 des Organismes de Formation en France",
+    template: "%s | EduZen - Gestion Formation Professionnelle"
   },
-  description: "Simplifiez la gestion de votre organisme de formation avec EduZen. Conformité Qualiopi automatique, émargement numérique, facturation CPF, signature électronique eIDAS. Essai gratuit 14 jours.",
+  description: "Gagnez 10h/semaine sur l'administratif. EduZen automatise votre conformité Qualiopi, émargement numérique, facturation CPF et génération de documents. Conçu par des formateurs, pour des formateurs. Essai gratuit 14 jours.",
   keywords: [
     'logiciel organisme de formation',
-    'gestion formation professionnelle',
-    'conformité Qualiopi',
-    'émargement numérique',
+    'logiciel gestion formation professionnelle',
+    'conformité Qualiopi automatique',
+    'émargement numérique formation',
     'signature électronique eIDAS',
-    'facturation CPF',
-    'logiciel formation',
-    'gestion stagiaires',
-    'attestation de formation',
+    'facturation CPF EDOF',
+    'logiciel formation professionnelle France',
+    'gestion stagiaires formation',
+    'attestation de formation automatique',
     'feuille de présence dématérialisée',
-    'OPCO',
-    'certification Qualiopi',
-    'e-learning',
-    'plateforme formation'
+    'financement OPCO formation',
+    'certification Qualiopi logiciel',
+    'plateforme e-learning formation',
+    'logiciel formateur indépendant',
+    'gestion centre de formation'
   ],
-  authors: [{ name: 'EduZen' }],
+  authors: [{ name: 'EduZen', url: 'https://eduzen.io' }],
   creator: 'EduZen',
   publisher: 'EduZen',
   formatDetection: {
@@ -56,24 +57,24 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.app',
+    url: process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io',
     siteName: 'EduZen',
-    title: "EduZen - Logiciel de Gestion pour Organismes de Formation",
-    description: "Simplifiez la gestion de votre organisme de formation. Conformité Qualiopi automatique, émargement numérique, facturation CPF. Essai gratuit 14 jours.",
+    title: "EduZen | Simplifiez la Gestion de Votre Organisme de Formation",
+    description: "Fini les heures perdues sur l'administratif. Conformité Qualiopi automatique, émargement digital, facturation CPF en 1 clic. Rejoignez les formateurs qui ont choisi la sérénité.",
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'EduZen - Plateforme de gestion pour organismes de formation',
+        alt: 'EduZen - La plateforme tout-en-un pour les organismes de formation en France',
         type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: "EduZen - Gérez votre organisme de formation avec simplicité",
-    description: "Conformité Qualiopi automatique, émargement numérique, facturation CPF. Essai gratuit 14 jours.",
+    title: "EduZen | Le Logiciel qui Libère les Formateurs",
+    description: "Conformité Qualiopi automatique, émargement numérique, facturation CPF. Gagnez 10h/semaine. Essai gratuit 14 jours.",
     images: ['/og-image.png'],
     creator: '@eduzen_app',
     site: '@eduzen_app',

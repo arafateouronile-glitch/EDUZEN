@@ -171,8 +171,8 @@ function FormationsPageContent() {
     },
   })
 
-  // Statistiques des formations
-  const { data: formationStats } = useQuery({
+  // Statistiques des formations — refetch au montage pour que les graphiques chargent à l'arrivée / refresh (comme Sessions/Programmes)
+  const { data: formationStats, isLoading: isLoadingFormationStats } = useQuery({
     queryKey: ['formation-stats', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
@@ -265,7 +265,7 @@ function FormationsPageContent() {
     staleTime: 1000 * 60 * 10, // 10 minutes - les stats changent moins souvent
     gcTime: 1000 * 60 * 60,    // 1 heure
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true,       // Toujours refetch à l'arrivée sur la page pour afficher les graphiques
   })
 
   // Variants d'animation conditionnelles (réduites sur mobile)
@@ -323,10 +323,21 @@ function FormationsPageContent() {
         </motion.div>
       </motion.div>
 
-      {/* Statistiques Ultra-Premium - 2 lignes de 3 carreaux */}
-      {formationStats && (
+      {/* Statistiques Ultra-Premium — skeleton pendant le chargement (comme Sessions/Programmes) */}
+      {(isLoadingFormationStats || formationStats) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
+          {isLoadingFormationStats ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="relative overflow-hidden rounded-2xl p-6 border-2 border-gray-100 bg-gray-50">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="h-14 w-14 rounded-2xl bg-gray-200 animate-pulse" />
+                  <div className="h-10 w-20 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="h-4 w-28 bg-gray-100 rounded animate-pulse" />
+                <div className="h-1.5 rounded-full mt-4 bg-gray-100 animate-pulse w-2/3" />
+              </div>
+            ))
+          ) : formationStats ? [
             {
               title: 'Total formations',
               value: formationStats.total,
@@ -460,57 +471,74 @@ function FormationsPageContent() {
                 />
               </div>
             </motion.div>
-          ))}
+          )) : null}
         </div>
       )}
 
-      {/* Graphiques Premium */}
-      {formationStats && (formationStats.statusData.length > 0 || formationStats.monthlyData.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {formationStats.statusData.length > 0 && (
-            <motion.div variants={itemVariants as any} className="h-full">
-              <GlassCard variant="default" className="p-6 h-full">
-                <div className="mb-6 flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-brand-blue" />
-                    Répartition par statut
-                  </h3>
-                </div>
-                <div className="h-[300px]">
-                  <PremiumPieChart
-                    data={formationStats.statusData}
-                    colors={formationStats.statusData.map(d => d.color)}
-                    variant="default"
-                    className="h-full !p-0 !bg-transparent !border-none !shadow-none"
-                    innerRadius={70}
-                  />
-                </div>
+      {/* Graphiques Premium — skeleton pendant le chargement, puis graphiques sans animation (comme Sessions/Programmes) */}
+      {(isLoadingFormationStats || (formationStats && (formationStats.statusData?.length > 0 || formationStats.monthlyData?.length > 0))) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[320px]">
+          {isLoadingFormationStats ? (
+            <>
+              <GlassCard variant="default" className="p-6 border-2 border-gray-100">
+                <div className="h-5 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mb-6" />
+                <div className="h-[300px] rounded-2xl bg-gray-100 animate-pulse" />
               </GlassCard>
-            </motion.div>
-          )}
+              <GlassCard variant="default" className="p-6 border-2 border-gray-100">
+                <div className="h-5 w-56 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-36 bg-gray-100 rounded animate-pulse mb-6" />
+                <div className="h-[300px] rounded-2xl bg-gray-100 animate-pulse" />
+              </GlassCard>
+            </>
+          ) : formationStats ? (
+            <>
+              {formationStats.statusData?.length > 0 && (
+                <div className="h-full min-h-[320px]">
+                  <GlassCard variant="default" className="p-6 h-full">
+                    <div className="mb-6 flex items-center justify-between">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-brand-blue" />
+                        Répartition par statut
+                      </h3>
+                    </div>
+                    <div className="h-[300px]">
+                      <PremiumPieChart
+                        data={formationStats.statusData}
+                        colors={formationStats.statusData.map(d => d.color)}
+                        variant="default"
+                        className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                        innerRadius={70}
+                      />
+                    </div>
+                  </GlassCard>
+                </div>
+              )}
 
-          {formationStats.monthlyData.length > 0 && (
-            <motion.div variants={itemVariants as any} className="h-full">
-              <GlassCard variant="default" className="p-6 h-full">
-                <div className="mb-6 flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-brand-cyan" />
-                    Évolution des formations
-                  </h3>
+              {formationStats.monthlyData?.length > 0 && (
+                <div className="h-full min-h-[320px]">
+                  <GlassCard variant="default" className="p-6 h-full">
+                    <div className="mb-6 flex items-center justify-between">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-brand-cyan" />
+                        Évolution des formations
+                      </h3>
+                    </div>
+                    <div className="h-[300px]">
+                      <PremiumBarChart
+                        data={formationStats.monthlyData}
+                        dataKey="formations"
+                        xAxisKey="month"
+                        color="#8B5CF6"
+                        variant="default"
+                        className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                      />
+                    </div>
+                  </GlassCard>
                 </div>
-                <div className="h-[300px]">
-                  <PremiumBarChart
-                    data={formationStats.monthlyData}
-                    dataKey="formations"
-                    xAxisKey="month"
-                    color="#8B5CF6"
-                    variant="default"
-                    className="h-full !p-0 !bg-transparent !border-none !shadow-none"
-                  />
-                </div>
-              </GlassCard>
-            </motion.div>
-          )}
+              )}
+            </>
+          ) : null}
         </div>
       )}
 

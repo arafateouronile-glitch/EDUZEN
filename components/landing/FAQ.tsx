@@ -39,7 +39,7 @@ export function FAQ() {
   const isInView = useInView(containerRef, { once: true, margin: '-100px' })
 
   return (
-    <section id="faq" className="relative py-32 md:py-40 lg:py-48 overflow-hidden bg-gradient-to-b from-gray-50 via-white to-gray-50">
+    <section id="faq" className="relative py-16 md:py-20 lg:py-24 overflow-hidden bg-gradient-to-b from-gray-50 via-white to-gray-50">
       {/* Background Parallax */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <motion.div

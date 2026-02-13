@@ -18,36 +18,39 @@ export function useAuth() {
   const queryClient = useQueryClient()
 
   // Récupérer l'utilisateur authentifié via getUser() (vérifié côté serveur Auth, pas getSession())
+  // refetchOnMount: true pour récupérer la session après hard refresh (cache vidé)
   const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
-      try {
-        const timeoutPromise = new Promise<{ user: User } | null>((_, reject) => {
-          setTimeout(() => reject(new Error('Session timeout')), 3000)
-        })
-
-        const sessionPromise = supabase.auth.getUser().then(({ data: { user }, error }) => {
-          if (error) {
-            // Pas de session = cas normal sur login/public, ne pas logger en erreur
-            const isSessionMissing =
-              error?.name === 'AuthSessionMissingError' ||
-              (error as { message?: string })?.message?.includes('Auth session missing')
-            if (!isSessionMissing) {
-              logger.error('Auth getUser error', error as Error)
-            }
-            return null
+      const fetchSession = async (): Promise<{ user: User } | null> => {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) {
+          const isSessionMissing =
+            error?.name === 'AuthSessionMissingError' ||
+            (error as { message?: string })?.message?.includes('Auth session missing')
+          if (!isSessionMissing) {
+            logger.error('Auth getUser error', error as Error)
           }
-          return user ? { user } : null
-        })
+          return null
+        }
+        return user ? { user } : null
+      }
 
-        return await Promise.race([sessionPromise, timeoutPromise])
+      try {
+        let result = await fetchSession()
+        // Après hard refresh, la session peut ne pas être réhydratée tout de suite : réessayer une fois
+        if (!result && typeof window !== 'undefined') {
+          await new Promise((r) => setTimeout(r, 400))
+          result = await fetchSession()
+        }
+        return result
       } catch (error) {
         return null
       }
     },
     retry: false,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true, // Important : recharger la session au montage (ex. après Cmd+Shift+R)
     staleTime: 1000 * 60 * 5, // Cache pendant 5 minutes
   })
 
@@ -152,7 +155,7 @@ export function useAuth() {
     enabled: !!session?.user?.id && !sessionLoading,
     retry: false,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: true, // Récharger l'utilisateur (et organization_id) au montage après hard refresh
     staleTime: 1000 * 60 * 5, // Cache pendant 5 minutes
   })
 

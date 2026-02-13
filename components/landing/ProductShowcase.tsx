@@ -79,7 +79,7 @@ export function ProductShowcase() {
   const [activeTab, setActiveTab] = useState(0)
 
   return (
-    <section className="relative py-32 md:py-40 lg:py-56 overflow-hidden bg-gradient-to-b from-white via-gray-50 to-white">
+    <section className="relative py-16 md:py-20 lg:py-24 overflow-hidden bg-gradient-to-b from-white via-gray-50 to-white">
       {/* Enhanced Background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-gradient-mesh opacity-40" />
@@ -101,7 +101,7 @@ export function ProductShowcase() {
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-          className="text-center mb-20 md:mb-28 max-w-4xl mx-auto"
+          className="text-center mb-12 md:mb-16 max-w-4xl mx-auto"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

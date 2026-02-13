@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.app'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
   const currentDate = new Date()
 
   // Pages principales du site
@@ -39,6 +39,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.7,
+    },
+    // À propos
+    {
+      url: `${baseUrl}/a-propos`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    // Contact
+    {
+      url: `${baseUrl}/contact`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.8,
     },
     // Blog (si existant)
     {

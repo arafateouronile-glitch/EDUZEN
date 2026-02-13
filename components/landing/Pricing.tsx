@@ -13,7 +13,7 @@ const plans = [
     price: "79",
     period: "/mois",
     originalPrice: "79",
-    founderPrice: "39",
+    launchPrice: "39",
     description: "L'essentiel pour débuter",
     features: [
       "20 stagiaires / mois",
@@ -32,7 +32,7 @@ const plans = [
     price: "169",
     period: "/mois",
     originalPrice: "169",
-    founderPrice: "84",
+    launchPrice: "84",
     description: "La sérénité administrative",
     features: [
       "100 stagiaires / mois",
@@ -53,7 +53,7 @@ const plans = [
     price: "Sur mesure",
     period: "",
     originalPrice: "349",
-    founderPrice: null,
+    launchPrice: null,
     description: "Pour changer d'échelle",
     features: [
       "Stagiaires illimités",
@@ -78,7 +78,7 @@ export function Pricing() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   return (
-    <section id="tarifs" className="relative py-32 md:py-40 lg:py-56 overflow-hidden bg-gradient-to-b from-white via-gray-50/50 to-white">
+    <section id="tarifs" className="relative py-16 md:py-20 lg:py-24 overflow-hidden bg-gradient-to-b from-white via-gray-50/50 to-white">
       {/* Enhanced Background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         {/* Animated aurora gradient */}
@@ -100,7 +100,7 @@ export function Pricing() {
 
       <div className="container mx-auto px-4 md:px-6 lg:px-8 relative z-10">
         {/* Header */}
-        <div className="text-center max-w-4xl mx-auto mb-20 md:mb-28">
+        <div className="text-center max-w-4xl mx-auto mb-12 md:mb-16">
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={isInView ? { opacity: 1, scale: 1, y: 0 } : {}}
@@ -150,9 +150,9 @@ export function Pricing() {
           >
             <Sparkles className="w-5 h-5 text-brand-cyan" />
             <span className="text-sm font-semibold text-gray-900">
-              Offre Spéciale : -50% sur tous les tarifs en devenant "Membre Fondateur"
+              Offre de lancement France : -50% sur tous les plans
             </span>
-            <span className="text-xs text-gray-500">(Limité aux 100 premiers inscrits)</span>
+            <span className="text-xs text-gray-500">(Durée limitée)</span>
           </motion.div>
         </div>
 
@@ -272,7 +272,7 @@ export function Pricing() {
                     </div>
                   ) : (
                     <div>
-                      {plan.founderPrice && (
+                      {plan.launchPrice && (
                         <div className="mb-2 flex items-center gap-2 flex-wrap">
                           <span className={`text-lg line-through ${
                             plan.highlight ? 'text-white/60' : 'text-gray-400'
@@ -284,7 +284,7 @@ export function Pricing() {
                               ? 'bg-white/20 text-white' 
                               : 'bg-brand-cyan/10 text-brand-cyan'
                           }`}>
-                            -50% Offre Fondateur
+                            -50% Lancement France
                           </span>
                         </div>
                       )}
@@ -292,7 +292,7 @@ export function Pricing() {
                         <span className={`text-6xl md:text-7xl lg:text-8xl font-black font-display leading-none ${
                           plan.highlight ? 'text-white' : 'text-gray-900'
                         }`}>
-                          {plan.founderPrice ? plan.founderPrice : plan.price}
+                          {plan.launchPrice ? plan.launchPrice : plan.price}
                         </span>
                         <div className="flex flex-col">
                           <span className={`text-2xl md:text-3xl font-bold ${

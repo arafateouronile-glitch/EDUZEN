@@ -3683,6 +3683,50 @@
     animation: gradient-x 4s ease infinite;
   }
 
+  /* Marquee animations - infinite scroll */
+  @keyframes marquee-left {
+    0% {
+      transform: translateX(0) translateZ(0);
+    }
+    100% {
+      transform: translateX(-50%) translateZ(0);
+    }
+  }
+
+  @keyframes marquee-right {
+    0% {
+      transform: translateX(-50%) translateZ(0);
+    }
+    100% {
+      transform: translateX(0) translateZ(0);
+    }
+  }
+
+  .animate-marquee-left {
+    animation: marquee-left linear infinite;
+    will-change: transform;
+  }
+
+  .animate-marquee-right {
+    animation: marquee-right linear infinite;
+    will-change: transform;
+  }
+
+  /* Shimmer slow animation - premium card effect */
+  @keyframes shimmer-slow {
+    0% {
+      transform: translateX(-100%) translateZ(0);
+    }
+    100% {
+      transform: translateX(100%) translateZ(0);
+    }
+  }
+
+  .animate-shimmer-slow {
+    animation: shimmer-slow 3s ease-in-out infinite;
+    will-change: transform;
+  }
+
   /* Reduce motion for users who prefer it */
   @media (prefers-reduced-motion: reduce) {
     .animate-fade-in-up,
@@ -3690,6 +3734,9 @@
     .animate-float-slower,
     .animate-gradient-x,
     .animate-gradient-shift,
+    .animate-marquee-left,
+    .animate-marquee-right,
+    .animate-shimmer-slow,
     .animate-pulse,
     .animate-ping {
       animation: none !important;

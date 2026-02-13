@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 
 interface PremiumChartContainerProps {
@@ -12,6 +11,11 @@ interface PremiumChartContainerProps {
   variant?: 'default' | 'glass' | 'dark'
 }
 
+/**
+ * Conteneur pour graphiques premium. Pas d'animation d'entrée pour que
+ * ResponsiveContainer (Recharts) ait des dimensions dès le premier rendu
+ * et que les graphiques s'affichent à l'arrivée sur la page / au refresh.
+ */
 export function PremiumChartContainer({
   children,
   title,
@@ -26,10 +30,7 @@ export function PremiumChartContainer({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+    <div
       className={cn(
         'chart-container-premium rounded-2xl p-6 md:p-8',
         'transition-all duration-500 ease-out',
@@ -58,10 +59,10 @@ export function PremiumChartContainer({
           )}
         </div>
       )}
-      <div className="relative z-10">
+      <div className="relative z-10 min-h-[300px]" style={{ minHeight: 300 }}>
         {children}
       </div>
-    </motion.div>
+    </div>
   )
 }
 

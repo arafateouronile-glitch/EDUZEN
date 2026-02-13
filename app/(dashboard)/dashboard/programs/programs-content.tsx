@@ -43,6 +43,7 @@ type ProgramsContentProps = {
   programs: Program[]
   isLoading: boolean
   isFetching?: boolean
+  isLoadingGlobalStats?: boolean
   globalStats: GlobalStats | null | undefined
   search: string
   setSearch: (value: string) => void
@@ -59,6 +60,7 @@ export function ProgramsContent({
   programs,
   isLoading,
   isFetching,
+  isLoadingGlobalStats,
   globalStats,
   search,
   setSearch,
@@ -142,10 +144,24 @@ export function ProgramsContent({
         </Link>
       </motion.div>
 
-      {/* Statistiques Premium */}
-      {globalStats && (
+      {/* Statistiques Premium — skeleton pendant le chargement (comme page Sessions) */}
+      {(isLoadingGlobalStats || globalStats) && (
         <BentoGrid columns={3} gap="md">
-          {[
+          {isLoadingGlobalStats ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <BentoCard key={i} span={1}>
+                <div className="h-full p-5 border-2 border-gray-100 rounded-xl animate-pulse">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="h-10 w-10 rounded-xl bg-gray-200" />
+                    <div className="h-8 w-24 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-4 w-32 bg-gray-100 rounded mb-1" />
+                  <div className="h-3 w-24 bg-gray-100 rounded" />
+                </div>
+              </BentoCard>
+            ))
+          ) : globalStats ? (
+          [
             {
               title: 'Total',
               value: globalStats.total,
@@ -227,57 +243,75 @@ export function ProgramsContent({
                 </div>
               </GlassCard>
             </BentoCard>
-          ))}
+          ))
+          ) : null}
         </BentoGrid>
       )}
 
-      {/* Graphiques Premium */}
-      {globalStats && (globalStats.statusData.length > 0 || globalStats.monthlyData.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {globalStats.statusData.length > 0 && (
-            <motion.div variants={itemVariants} className="h-full">
-              <GlassCard variant="default" className="p-6 h-full">
-                <div className="mb-6 flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-brand-blue" />
-                    Répartition par statut
-                  </h3>
-                </div>
-                <div className="h-[300px]">
-                  <PremiumPieChart
-                    data={globalStats.statusData.map(item => ({ name: item.name, value: item.value }))}
-                    colors={globalStats.statusData.map(item => item.color)}
-                    variant="default"
-                    className="h-full !p-0 !bg-transparent !border-none !shadow-none"
-                    innerRadius={70}
-                  />
-                </div>
+      {/* Graphiques Premium — skeleton pendant le chargement, puis graphiques sans animation (comme page Sessions) */}
+      {(isLoadingGlobalStats || (globalStats && (globalStats.statusData?.length > 0 || globalStats.monthlyData?.length > 0))) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[320px]">
+          {isLoadingGlobalStats ? (
+            <>
+              <GlassCard variant="default" className="p-6 border-2 border-gray-100">
+                <div className="h-5 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mb-6" />
+                <div className="h-[300px] rounded-2xl bg-gray-100 animate-pulse" />
               </GlassCard>
-            </motion.div>
-          )}
+              <GlassCard variant="default" className="p-6 border-2 border-gray-100">
+                <div className="h-5 w-56 bg-gray-200 rounded animate-pulse mb-2" />
+                <div className="h-4 w-36 bg-gray-100 rounded animate-pulse mb-6" />
+                <div className="h-[300px] rounded-2xl bg-gray-100 animate-pulse" />
+              </GlassCard>
+            </>
+          ) : globalStats ? (
+            <>
+              {globalStats.statusData?.length > 0 && (
+                <div className="h-full min-h-[320px]">
+                  <GlassCard variant="default" className="p-6 h-full">
+                    <div className="mb-6 flex items-center justify-between">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-brand-blue" />
+                        Répartition par statut
+                      </h3>
+                    </div>
+                    <div className="h-[300px]">
+                      <PremiumPieChart
+                        data={globalStats.statusData.map(item => ({ name: item.name, value: item.value }))}
+                        colors={globalStats.statusData.map(item => item.color)}
+                        variant="default"
+                        className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                        innerRadius={70}
+                      />
+                    </div>
+                  </GlassCard>
+                </div>
+              )}
 
-          {globalStats.monthlyData.length > 0 && (
-            <motion.div variants={itemVariants} className="h-full">
-              <GlassCard variant="default" className="p-6 h-full">
-                <div className="mb-6 flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-brand-cyan" />
-                    Évolution des programmes
-                  </h3>
+              {globalStats.monthlyData?.length > 0 && (
+                <div className="h-full min-h-[320px]">
+                  <GlassCard variant="default" className="p-6 h-full">
+                    <div className="mb-6 flex items-center justify-between">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-brand-cyan" />
+                        Évolution des programmes
+                      </h3>
+                    </div>
+                    <div className="h-[300px]">
+                      <PremiumBarChart
+                        data={globalStats.monthlyData}
+                        dataKey="programmes"
+                        xAxisKey="month"
+                        colors={['#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#DBEAFE', '#EFF6FF']}
+                        variant="default"
+                        className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                      />
+                    </div>
+                  </GlassCard>
                 </div>
-                <div className="h-[300px]">
-                  <PremiumBarChart
-                    data={globalStats.monthlyData}
-                    dataKey="programmes"
-                    xAxisKey="month"
-                    colors={['#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#DBEAFE', '#EFF6FF']}
-                    variant="default"
-                    className="h-full !p-0 !bg-transparent !border-none !shadow-none"
-                  />
-                </div>
-              </GlassCard>
-            </motion.div>
-          )}
+              )}
+            </>
+          ) : null}
         </div>
       )}
 

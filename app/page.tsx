@@ -43,6 +43,11 @@ const SectionSkeleton = () => (
 )
 
 // Sections lazy-loaded - chargées uniquement quand visibles
+const LogoCloud = dynamic(
+  () => import('@/components/landing/LogoCloud').then(mod => ({ default: mod.LogoCloud })),
+  { loading: () => <SectionSkeleton /> }
+)
+
 const Features = dynamic(
   () => import('@/components/landing/Features').then(mod => ({ default: mod.Features })),
   { loading: () => <SectionSkeleton /> }
@@ -58,10 +63,6 @@ const ProductShowcase = dynamic(
   { loading: () => <SectionSkeleton /> }
 )
 
-const Benefits = dynamic(
-  () => import('@/components/landing/Benefits').then(mod => ({ default: mod.Benefits })),
-  { loading: () => <SectionSkeleton /> }
-)
 
 const HowItWorks = dynamic(
   () => import('@/components/landing/HowItWorks').then(mod => ({ default: mod.HowItWorks })),
@@ -101,6 +102,11 @@ export default function HomePage() {
         {/* Hero - SSR activé, critique pour LCP */}
         <Hero />
 
+        {/* Logo Cloud - bande défilante après le hero */}
+        <Suspense fallback={<SectionSkeleton />}>
+          <LogoCloud />
+        </Suspense>
+
         {/* Sections below-the-fold avec Suspense */}
         <Suspense fallback={<SectionSkeleton />}>
           <Features />
@@ -115,10 +121,6 @@ export default function HomePage() {
         </Suspense>
 
         <Suspense fallback={<SectionSkeleton />}>
-          <Benefits />
-        </Suspense>
-
-        <Suspense fallback={<SectionSkeleton />}>
           <HowItWorks />
         </Suspense>
 
@@ -128,6 +130,11 @@ export default function HomePage() {
 
         <Suspense fallback={<SectionSkeleton />}>
           <Pricing />
+        </Suspense>
+
+        {/* Logo Cloud - répétition avant FAQ pour renforcer la preuve sociale */}
+        <Suspense fallback={<SectionSkeleton />}>
+          <LogoCloud />
         </Suspense>
 
         <Suspense fallback={<SectionSkeleton />}>

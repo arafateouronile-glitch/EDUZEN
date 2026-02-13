@@ -6,9 +6,9 @@ import { Facebook, Twitter, Instagram, Linkedin, Heart, ArrowRight } from 'lucid
 
 export function Footer() {
   return (
-    <footer className="relative bg-gradient-to-b from-white via-gray-50 to-white border-t-2 border-gray-200 pt-24 md:pt-32 lg:pt-40 pb-12">
+    <footer className="relative bg-gradient-to-b from-white via-gray-50 to-white border-t-2 border-gray-200 pt-16 md:pt-20 lg:pt-24 pb-8">
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-16 mb-16 md:mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-12 mb-12 md:mb-14">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <motion.div
@@ -135,9 +135,9 @@ export function Footer() {
                 </motion.div>
               </div>
               <p className="text-base md:text-lg font-light text-gray-700 tracking-tight">
-                <span className="font-normal">Rejoignez nos</span>{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan font-extrabold italic tracking-tighter">premiers utilisateurs</span>{' '}
-                <span className="font-medium">et bénéficiez de l'offre fondateur</span>
+                <span className="font-normal">Profitez de</span>{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan font-extrabold italic tracking-tighter">-50% pour le lancement</span>{' '}
+                <span className="font-medium">en France</span>
               </p>
             </div>
 

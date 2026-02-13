@@ -18,7 +18,7 @@ export function FinalCTA() {
   ]
 
   return (
-    <section className="relative py-24 md:py-32 lg:py-40 overflow-hidden">
+    <section className="relative py-16 md:py-20 lg:py-24 overflow-hidden">
       {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-cyan" />
 
@@ -65,11 +65,11 @@ export function FinalCTA() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight"
           >
-            Devenez{' '}
+            Profitez de{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan-light to-white">
-              membre fondateur
+              -50% pour le lancement
             </span>
-            {' '}et profitez de -50%
+            {' '}en France
           </motion.h2>
 
           {/* Subtitle */}
@@ -79,7 +79,7 @@ export function FinalCTA() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto"
           >
-            Commencez votre essai gratuit aujourd'hui et découvrez pourquoi EduZen est la solution préférée des organismes de formation.
+            Déjà adoptée par des organismes en Europe, EduZen arrive en France avec une offre de lancement exceptionnelle. Essayez gratuitement pendant 14 jours.
           </motion.p>
 
           {/* Benefits list */}

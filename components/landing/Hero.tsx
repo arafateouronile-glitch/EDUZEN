@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 // Hero optimisé pour le LCP - animations CSS uniquement, pas de Framer Motion au chargement initial
 export const Hero = memo(function Hero() {
   return (
-    <section className="relative pt-40 pb-32 md:pt-56 md:pb-48 lg:pt-72 lg:pb-72 overflow-hidden bg-gradient-to-b from-white via-gray-50/30 to-white">
+    <section className="relative pt-36 pb-16 md:pt-48 md:pb-20 lg:pt-56 lg:pb-24 overflow-hidden bg-gradient-to-b from-white via-gray-50/30 to-white">
       {/* Background simplifié - blurs réduits pour performance GPU */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         {/* Gradient mesh léger */}
@@ -115,7 +115,7 @@ export const Hero = memo(function Hero() {
           </div>
 
           {/* Dashboard Preview - Simplifié, pas d'animation complexe */}
-          <div className="animate-fade-in-up animation-delay-700 mt-24 md:mt-32 lg:mt-40 relative w-full max-w-6xl">
+          <div className="animate-fade-in-up animation-delay-700 mt-16 md:mt-20 lg:mt-24 relative w-full max-w-6xl">
             <div className="relative rounded-2xl md:rounded-3xl border-2 border-gray-200/50 bg-white/60 backdrop-blur-sm p-3 md:p-4 shadow-2xl hover:shadow-3xl transition-shadow duration-500">
               <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 via-gray-50 to-white aspect-[16/9]">
                 {/* Placeholder simple */}

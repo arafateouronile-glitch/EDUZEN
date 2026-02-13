@@ -17532,10 +17532,13 @@ export type Database = {
           current_period_start: string | null
           id: string
           organization_id: string
+          payment_method_id: string | null
           plan_id: string
           status: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          trial_end_at: string | null
+          trial_start_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -17545,10 +17548,13 @@ export type Database = {
           current_period_start?: string | null
           id?: string
           organization_id: string
+          payment_method_id?: string | null
           plan_id: string
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          trial_end_at?: string | null
+          trial_start_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -17558,10 +17564,13 @@ export type Database = {
           current_period_start?: string | null
           id?: string
           organization_id?: string
+          payment_method_id?: string | null
           plan_id?: string
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          trial_end_at?: string | null
+          trial_start_at?: string | null
           updated_at?: string | null
         }
         Relationships: [

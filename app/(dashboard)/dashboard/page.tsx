@@ -831,7 +831,7 @@ function AnimatedCounter({ value, duration = 1500, className = '' }: { value: nu
 
 export default function DashboardPage() {
   const supabase = createClient()
-  const { user, isLoading: userLoading } = useAuth()
+  const { user, isLoading: userLoading, session } = useAuth()
   const vocab = useVocabulary()
   const prefersReducedMotion = useReducedMotion()
   const [currentDate, setCurrentDate] = useState<string>('')
@@ -855,7 +855,7 @@ export default function DashboardPage() {
     staleTime: 2 * 60 * 1000, // Cache 2 minutes (données dashboard changent peu)
     gcTime: 10 * 60 * 1000, // Garder en cache 10 minutes
     refetchOnWindowFocus: false, // Ne pas refetch au focus
-    refetchOnMount: false, // Utiliser cache si disponible
+    refetchOnMount: true, // Recharger les stats au montage (ex. après hard refresh quand org vient d’être dispo)
     queryFn: async () => {
       if (!user?.organization_id) return null
 
@@ -1339,8 +1339,9 @@ export default function DashboardPage() {
   })
 
   // Maintenant que tous les hooks sont appelés, on peut faire les retours conditionnels
-  // Afficher un loader pendant le chargement de l'utilisateur
-  if (userLoading) {
+  // Afficher un loader pendant le chargement de l'utilisateur ou tant que la session est là mais pas encore l'utilisateur (ex. après Cmd+Shift+R)
+  const waitingForUser = userLoading || (session?.user && user == null)
+  if (waitingForUser) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

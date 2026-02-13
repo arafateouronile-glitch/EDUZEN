@@ -1,34 +1,24 @@
 'use client'
 
-import { motion, AnimatePresence } from '@/components/ui/motion'
 import { usePathname } from 'next/navigation'
 import { ReactNode } from 'react'
-
-const DURATION = 0.15
 
 interface PageTransitionProps {
   children: ReactNode
 }
 
+/**
+ * Wrapper avec key=pathname pour que React remonte le contenu à chaque changement de route.
+ * Pas d'animation d'entrée (opacity 0, y: 8) : affichage immédiat comme au refresh,
+ * pour éviter le décalage à la navigation entre pages dashboard.
+ */
 export function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname()
 
   return (
-    <AnimatePresence mode="sync">
-      <motion.div
-        key={pathname}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{
-          duration: DURATION,
-          ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
-        }}
-        className="w-full"
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <div key={pathname} className="w-full">
+      {children}
+    </div>
   )
 }
 

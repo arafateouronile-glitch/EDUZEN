@@ -1,6 +1,5 @@
 import createMiddleware from 'next-intl/middleware'
 import { routing } from './i18n/routing'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { logger, sanitizeError } from './lib/utils/logger'
@@ -52,11 +51,10 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    // SOLUTION PERMANENTE: Appeler next-intl de manière conditionnelle
-    // Nous créons toujours une réponse NextResponse.next() pour garantir que Next.js gère les routes
-    // Si next-intl retourne une redirection valide, nous l'utilisons
-    // Sinon, nous continuons avec NextResponse.next() pour laisser Next.js gérer la route
-    let intlResponse = NextResponse.next()
+    // Réponse avec x-pathname pour le layout dashboard (auth faite côté layout, pas ici = proxy rapide)
+    const requestHeaders = new Headers(req.headers)
+    requestHeaders.set('x-pathname', pathname)
+    let intlResponse = NextResponse.next({ request: { headers: requestHeaders } })
     
     // Appliquer le middleware next-intl pour gérer les locales
     // Le middleware next-intl gère automatiquement les exclusions via son propre matcher
@@ -91,172 +89,10 @@ export async function middleware(req: NextRequest) {
       })
     }
     
-    // Ensuite, gérer l'authentification Supabase
-    const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          req.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          intlResponse.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          req.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          intlResponse.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
-    }
-  )
+    // Auth et onboarding : gérés dans app/(dashboard)/layout.tsx (server) pour garder le proxy rapide
 
-  const { data: { user: authUser } } = await supabase.auth.getUser()
-
-  // Routes protégées (nécessitent une authentification)
-  const protectedRoutes = ['/dashboard', '/students', '/programs', '/payments', '/attendance']
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    req.nextUrl.pathname.startsWith(route)
-  )
-
-  // Routes d'authentification (redirigent si déjà connecté)
-  const authRoutes = ['/auth/login', '/auth/register']
-  const isAuthRoute = authRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
-
-  // Routes apprenant (ne nécessitent pas d'authentification Supabase, utilisent leur propre système)
-  const learnerRoutes = ['/learner', '/learner/access']
-  const isLearnerRoute = learnerRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
-
-  // Si la route est protégée et l'utilisateur n'est pas connecté
-  if (isProtectedRoute && !authUser) {
-    // Pour les routes API, retourner une erreur au lieu de rediriger
-    if (req.nextUrl.pathname.startsWith('/api')) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
-    }
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/auth/login'
-    // Préserver le pathname complet avec les query params pour la redirection après connexion
-    const fullPath = req.nextUrl.pathname + (req.nextUrl.search ? req.nextUrl.search : '')
-    redirectUrl.searchParams.set('redirect', fullPath)
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  // Route d'onboarding
-  const isOnboardingRoute = req.nextUrl.pathname.startsWith('/dashboard/onboarding')
-  const isSubscribeRoute = req.nextUrl.pathname.startsWith('/dashboard/subscribe')
-
-  // Vérifier si l'utilisateur vient de compléter l'onboarding (flag temporaire)
-  const justCompletedOnboarding = req.nextUrl.searchParams.get('onboarding_completed') === 'true'
-
-  // Vérifier si l'utilisateur a complété l'onboarding ou si l'essai est valide
-  // Cette vérification est faite uniquement pour les routes dashboard protégées
-  // Skip la vérification si l'utilisateur vient de compléter l'onboarding
-  if (isProtectedRoute && authUser && !isOnboardingRoute && !isSubscribeRoute && !justCompletedOnboarding) {
-    try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('id', authUser.id)
-        .single()
-
-      if (userData?.organization_id) {
-        // Vérifier le statut de l'onboarding et de la subscription
-        const { data: org } = await supabase
-          .from('organizations')
-          .select('settings, subscription_status')
-          .eq('id', userData.organization_id)
-          .single()
-
-        const settings = (org?.settings || {}) as Record<string, unknown>
-        const paymentMethodAdded = settings.payment_method_added === true
-        const onboardingCompleted = settings.onboarding_completed === true
-
-        // Si l'onboarding n'est pas complété du tout, rediriger vers l'onboarding
-        if (!onboardingCompleted) {
-          const redirectUrl = req.nextUrl.clone()
-          redirectUrl.pathname = '/dashboard/onboarding'
-          return NextResponse.redirect(redirectUrl)
-        }
-
-        // Si le paiement n'est pas configuré, vérifier si l'essai est encore valide
-        if (!paymentMethodAdded) {
-          // Récupérer la subscription pour vérifier la date de fin d'essai
-          const { data: subscription } = await supabase
-            .from('subscriptions')
-            .select('trial_end_at, status')
-            .eq('organization_id', userData.organization_id)
-            .single()
-
-          if (subscription) {
-            const trialEndAt = subscription.trial_end_at
-              ? new Date(subscription.trial_end_at)
-              : null
-            const now = new Date()
-
-            // Si l'essai est expiré ET pas de carte → bloquer et rediriger vers paiement
-            if (trialEndAt && trialEndAt < now) {
-              const redirectUrl = req.nextUrl.clone()
-              redirectUrl.pathname = '/dashboard/onboarding'
-              redirectUrl.searchParams.set('reason', 'trial_expired')
-              redirectUrl.searchParams.set('step', '4')
-              return NextResponse.redirect(redirectUrl)
-            }
-            // Si l'essai est encore actif → laisser passer (l'utilisateur peut utiliser l'app)
-          } else {
-            // Pas de subscription trouvée, rediriger vers l'onboarding
-            const redirectUrl = req.nextUrl.clone()
-            redirectUrl.pathname = '/dashboard/onboarding'
-            redirectUrl.searchParams.set('reason', 'payment_required')
-            redirectUrl.searchParams.set('step', '4')
-            return NextResponse.redirect(redirectUrl)
-          }
-        }
-      }
-    } catch (error) {
-      // En cas d'erreur, ne pas bloquer l'accès (erreur de requête DB)
-      // L'utilisateur sera redirigé côté client si nécessaire
-      logger.error('Middleware - Erreur vérification onboarding', error)
-    }
-  }
-
-  // Si l'utilisateur est connecté et essaie d'accéder aux routes d'authentification
-  // MAIS: Ne pas rediriger si le redirect pointe vers /learner (espace apprenant)
-  if (isAuthRoute && authUser) {
-    const redirectParam = req.nextUrl.searchParams.get('redirect')
-    // Si le redirect pointe vers /learner, laisser passer (pour permettre l'accès apprenant)
-    if (redirectParam && redirectParam.startsWith('/learner')) {
-      // Laisser passer sans redirection
-    } else {
-      // Rediriger vers le dashboard uniquement si ce n'est pas pour accéder à l'espace apprenant
-      const redirectUrl = req.nextUrl.clone()
-      redirectUrl.pathname = '/dashboard'
-      return NextResponse.redirect(redirectUrl)
-    }
-  }
-
-  // Les routes apprenant ne nécessitent pas d'authentification Supabase
-  // Elles utilisent leur propre système d'authentification via student_id
-  // Ne pas interférer avec ces routes
-
-  // Configuration CORS pour les routes API
-  const origin = req.headers.get('origin')
+    // Configuration CORS pour les routes API
+    const origin = req.headers.get('origin')
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || []
   const isAllowedOrigin = origin && (
     allowedOrigins.includes(origin) ||
@@ -295,8 +131,8 @@ export async function middleware(req: NextRequest) {
 
   // Passer le nonce aux Server Components via le header de requête
   // Cela permet aux composants de récupérer le nonce pour les scripts inline
-  const requestHeaders = new Headers(req.headers)
-  requestHeaders.set(CSP_NONCE_HEADER, nonce)
+  const reqHeadersWithNonce = new Headers(req.headers)
+  reqHeadersWithNonce.set(CSP_NONCE_HEADER, nonce)
 
       return intlResponse
     } catch (error) {

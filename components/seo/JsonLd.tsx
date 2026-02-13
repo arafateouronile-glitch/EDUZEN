@@ -2,7 +2,7 @@
 
 import Script from 'next/script'
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.app'
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
 
 // Données structurées pour l'organisation
 const organizationSchema = {
@@ -11,16 +11,16 @@ const organizationSchema = {
   name: 'EduZen',
   url: baseUrl,
   logo: `${baseUrl}/logo.png`,
-  description: 'Plateforme de gestion pour organismes de formation. Conformité Qualiopi, émargement numérique, facturation CPF.',
+  description: 'EduZen est le logiciel de gestion n°1 pour les organismes de formation en France. Conçu par des formateurs, pour des formateurs. Conformité Qualiopi automatique, émargement numérique, facturation CPF.',
   foundingDate: '2024',
+  slogan: 'Libérez-vous de l\'administratif, concentrez-vous sur la formation',
   sameAs: [
     'https://twitter.com/eduzen_app',
-    'https://www.linkedin.com/company/eduzen',
-    'https://www.facebook.com/eduzen',
+    'https://www.linkedin.com/company/eduzen-app',
   ],
   contactPoint: {
     '@type': 'ContactPoint',
-    telephone: '+33-1-XX-XX-XX-XX',
+    email: 'contact@eduzen.io',
     contactType: 'customer service',
     availableLanguage: ['French'],
     areaServed: 'FR',
@@ -29,6 +29,12 @@ const organizationSchema = {
     '@type': 'PostalAddress',
     addressCountry: 'FR',
   },
+  knowsAbout: [
+    'Gestion des organismes de formation',
+    'Conformité Qualiopi',
+    'Formation professionnelle continue',
+    'Financement CPF et OPCO',
+  ],
 }
 
 // Données structurées pour le produit SaaS
@@ -36,10 +42,12 @@ const softwareSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: 'EduZen',
+  alternateName: 'EduZen - Logiciel Organisme de Formation',
   applicationCategory: 'BusinessApplication',
+  applicationSubCategory: 'Training Management Software',
   operatingSystem: 'Web',
   url: baseUrl,
-  description: 'Logiciel de gestion pour organismes de formation. Simplifiez votre conformité Qualiopi, gérez vos émargements numériques et votre facturation CPF.',
+  description: 'Le logiciel tout-en-un pour les organismes de formation en France. Gagnez 10h/semaine : conformité Qualiopi automatique, émargement numérique par QR Code, facturation CPF/OPCO, signature électronique eIDAS. Créé par des formateurs.',
   offers: {
     '@type': 'AggregateOffer',
     lowPrice: '39',
@@ -49,28 +57,31 @@ const softwareSchema = {
     offers: [
       {
         '@type': 'Offer',
-        name: 'Starter',
+        name: 'Starter - Formateurs indépendants',
+        description: 'Idéal pour les formateurs indépendants et petits organismes',
         price: '39',
         priceCurrency: 'EUR',
-        priceValidUntil: '2025-12-31',
+        priceValidUntil: '2026-12-31',
         availability: 'https://schema.org/InStock',
         url: `${baseUrl}/#tarifs`,
       },
       {
         '@type': 'Offer',
-        name: 'Pro',
+        name: 'Pro - Organismes en croissance',
+        description: 'Pour les organismes de formation en développement',
         price: '84',
         priceCurrency: 'EUR',
-        priceValidUntil: '2025-12-31',
+        priceValidUntil: '2026-12-31',
         availability: 'https://schema.org/InStock',
         url: `${baseUrl}/#tarifs`,
       },
       {
         '@type': 'Offer',
-        name: 'Enterprise',
+        name: 'Enterprise - Grands centres',
+        description: 'Solution complète pour les grands centres de formation',
         price: '349',
         priceCurrency: 'EUR',
-        priceValidUntil: '2025-12-31',
+        priceValidUntil: '2026-12-31',
         availability: 'https://schema.org/InStock',
         url: `${baseUrl}/#tarifs`,
       },
@@ -84,35 +95,49 @@ const softwareSchema = {
     worstRating: '1',
   },
   featureList: [
-    'Conformité Qualiopi automatique',
-    'Émargement numérique QR Code',
-    'Signature électronique eIDAS',
-    'Facturation CPF intégrée',
-    'Gestion des formations',
-    'Portail e-learning',
-    'Génération de documents automatique',
-    'Dashboard analytics',
+    'Conformité Qualiopi 100% automatique',
+    'Émargement numérique par QR Code',
+    'Signature électronique certifiée eIDAS',
+    'Facturation CPF et OPCO intégrée',
+    'Gestion complète des formations',
+    'Portail e-learning intégré',
+    'Génération automatique de tous les documents',
+    'Tableau de bord et analytics en temps réel',
+    'Suivi des stagiaires et des évaluations',
+    'Export comptable automatisé',
   ],
+  screenshot: `${baseUrl}/og-image.png`,
+  softwareHelp: {
+    '@type': 'CreativeWork',
+    url: `${baseUrl}/aide`,
+  },
 }
 
 // Données structurées pour la page web
 const webPageSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
-  name: 'EduZen - Logiciel de Gestion pour Organismes de Formation',
-  description: 'Simplifiez la gestion de votre organisme de formation avec EduZen. Conformité Qualiopi automatique, émargement numérique, facturation CPF.',
+  name: 'EduZen | Le Logiciel N°1 des Organismes de Formation en France',
+  description: 'Gagnez 10h/semaine sur l\'administratif. EduZen automatise votre conformité Qualiopi, émargement numérique, facturation CPF. Conçu par des formateurs, pour des formateurs.',
   url: baseUrl,
   inLanguage: 'fr-FR',
   isPartOf: {
     '@type': 'WebSite',
-    name: 'EduZen',
+    name: 'EduZen - Gestion Formation Professionnelle',
     url: baseUrl,
+    description: 'Plateforme de gestion tout-en-un pour les organismes de formation professionnelle en France',
   },
   about: {
     '@type': 'Thing',
-    name: 'Gestion des organismes de formation',
+    name: 'Logiciel de gestion pour organismes de formation professionnelle',
+    description: 'Solution SaaS complète pour digitaliser et automatiser la gestion des centres de formation en France',
   },
   mainEntity: softwareSchema,
+  speakable: {
+    '@type': 'SpeakableSpecification',
+    cssSelector: ['h1', '.hero-description'],
+  },
+  specialty: 'Formation professionnelle continue en France',
 }
 
 // FAQ Schema pour les rich snippets FAQ
@@ -122,34 +147,42 @@ const faqSchema = {
   mainEntity: [
     {
       '@type': 'Question',
-      name: 'EduZen est-il conforme avec les normes Qualiopi et Datadock ?',
+      name: 'Quel est le meilleur logiciel pour gérer un organisme de formation en France ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Oui, EduZen génère automatiquement tous les documents nécessaires à la conformité Qualiopi (contrats de formation, feuilles de présence, évaluations, etc.) et est compatible avec les exigences Datadock pour la certification.',
+        text: 'EduZen est le logiciel de référence pour les organismes de formation en France. Conçu par des professionnels de la formation, il automatise la conformité Qualiopi, l\'émargement numérique, la facturation CPF/OPCO et la génération de documents. Les utilisateurs gagnent en moyenne 10h/semaine sur l\'administratif.',
       },
     },
     {
       '@type': 'Question',
-      name: 'Comment fonctionne l\'intégration avec le CPF ?',
+      name: 'EduZen permet-il de passer l\'audit Qualiopi facilement ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'EduZen s\'intègre avec les plateformes CPF pour générer automatiquement les factures et gérer les subrogations de paiement. Les stagiaires peuvent consulter leurs formations directement depuis leur espace CPF.',
+        text: 'Oui, EduZen génère automatiquement 100% des documents exigés par Qualiopi : contrats de formation, conventions, feuilles de présence signées électroniquement, évaluations à chaud et à froid, attestations. Votre taux de conformité est suivi en temps réel dans le tableau de bord.',
       },
     },
     {
       '@type': 'Question',
-      name: 'Mes données sont-elles conformes au RGPD ?',
+      name: 'Comment fonctionne la facturation CPF et OPCO avec EduZen ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Absolument. EduZen est entièrement conforme au RGPD. Vos données sont hébergées en Europe, cryptées de bout en bout, et vous gardez le contrôle total. Nous réalisons des sauvegardes quotidiennes automatiques.',
+        text: 'EduZen s\'intègre avec Mon Compte Formation (CPF) et les OPCO pour générer automatiquement les factures conformes, gérer les subrogations de paiement et suivre les encaissements. Vous pouvez facturer en 1 clic et exporter vers votre comptabilité.',
       },
     },
     {
       '@type': 'Question',
-      name: 'Y a-t-il une période d\'engagement ?',
+      name: 'EduZen est-il adapté aux formateurs indépendants ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Non, tous nos plans sont sans engagement. Vous pouvez annuler votre abonnement à tout moment sans frais cachés. Nous proposons également un essai gratuit de 14 jours pour tester la plateforme.',
+        text: 'Absolument. EduZen propose une offre Starter à 39€/mois spécialement conçue pour les formateurs indépendants. Elle inclut la gestion illimitée des formations, l\'émargement numérique, la génération de documents et la conformité Qualiopi. Sans engagement.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Les données sont-elles sécurisées et conformes au RGPD ?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'EduZen est 100% conforme au RGPD. Vos données sont hébergées en France sur des serveurs sécurisés, chiffrées de bout en bout avec des sauvegardes quotidiennes automatiques. La signature électronique est certifiée eIDAS.',
       },
     },
   ],

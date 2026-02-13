@@ -10,26 +10,12 @@ import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Plus, Search, FileText, AlertCircle, CheckCircle, TrendingUp, X, DollarSign, Receipt, CreditCard, ArrowUpRight, SlidersHorizontal, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Search, FileText, AlertCircle, CheckCircle, TrendingUp, X, DollarSign, Receipt, CreditCard, ArrowUpRight, SlidersHorizontal, TrendingDown, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import Link from 'next/link'
 import { BRAND_COLORS } from '@/lib/config/app-config'
-// Lazy load recharts pour réduire le bundle initial
-import {
-  RechartsLineChart,
-  RechartsLine,
-  RechartsBarChart,
-  RechartsBar,
-  RechartsPieChart,
-  RechartsPie,
-  RechartsCell,
-  RechartsXAxis,
-  RechartsYAxis,
-  RechartsCartesianGrid,
-  RechartsTooltip,
-  RechartsLegend,
-  RechartsResponsiveContainer,
-} from '@/components/charts/recharts-wrapper'
+import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
+import { PremiumBarChart } from '@/components/charts/premium-bar-chart'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { InvoiceWithRelations } from '@/lib/types/query-types'
@@ -227,8 +213,14 @@ function PaymentsPageContent() {
     retry: false,
   })
 
-  // Calculer les statistiques des paiements par période
-  const { data: paymentStats } = useQuery({
+  // Calculer les statistiques des paiements par période (cache 2 min, requête limitée pour perf)
+  const {
+    data: paymentStats,
+    isLoading: isLoadingPaymentStats,
+    isError: isPaymentStatsError,
+    error: paymentStatsError,
+    refetch: refetchPaymentStats,
+  } = useQuery({
     queryKey: ['payment-stats', user?.organization_id, dateRangeFilter],
     queryFn: async () => {
       if (!user?.organization_id) return null
@@ -248,7 +240,8 @@ function PaymentsPageContent() {
           startDate = new Date(now.getFullYear(), 0, 1)
           break
         default:
-          startDate = null
+          // "Toutes les périodes" : limiter à 24 mois pour alléger la requête
+          startDate = new Date(now.getFullYear(), now.getMonth() - 23, 1)
       }
 
       let query = supabase
@@ -256,10 +249,9 @@ function PaymentsPageContent() {
         .select('amount, currency, payment_method, paid_at')
         .eq('organization_id', user.organization_id)
         .eq('status', 'completed')
-
-      if (startDate) {
-        query = query.gte('paid_at', startDate.toISOString())
-      }
+        .gte('paid_at', startDate.toISOString())
+        .order('paid_at', { ascending: false })
+        .limit(5000)
 
       const { data: payments, error } = await query
 
@@ -280,10 +272,17 @@ function PaymentsPageContent() {
           logger.warn('Erreur lors de la récupération des paiements', sanitizeError(error))
           return { totalAmount: 0, count: 0, byMethod: [], monthlyData: [] }
         }
+        logger.error('Erreur Supabase lors de la récupération des paiements', sanitizeError(error))
         throw error
       }
 
       const paymentsArray = (payments as Payment[]) || []
+      logger.debug('Paiements récupérés pour les graphiques', {
+        count: paymentsArray.length,
+        organizationId: user.organization_id,
+        dateRangeFilter,
+        startDate: startDate.toISOString(),
+      })
       const totalAmount = paymentsArray.reduce((sum, p) => sum + Number(p.amount), 0)
 
       // Grouper par méthode de paiement
@@ -323,14 +322,26 @@ function PaymentsPageContent() {
                method === 'bank_transfer' ? BRAND_COLORS.accent : '#6B7280',
       }))
 
-      return {
+      const result = {
         totalAmount,
         count: payments?.length || 0,
         byMethod: methodData,
         monthlyData,
       }
+      logger.debug('Statistiques de paiements calculées', {
+        totalAmount,
+        count: result.count,
+        byMethodCount: methodData.length,
+        monthlyDataCount: monthlyData.length,
+        byMethod: methodData,
+        monthlyData: monthlyData.slice(0, 3), // Log seulement les 3 premiers pour ne pas surcharger
+      })
+      return result
     },
     enabled: !!user?.organization_id,
+    staleTime: 2 * 60 * 1000, // 2 min de cache pour éviter refetch à chaque visite
+    gcTime: 10 * 60 * 1000,
+    retry: 1, // une réessai si échec (ex. RLS pas encore appliqué)
   })
 
   const getStatusColor = (status: string) => {
@@ -373,32 +384,11 @@ function PaymentsPageContent() {
       return sum + Number(inv.total_amount) - Number(paidAmount)
     }, 0) || 0
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
-    }
-  }
-
+  /* Pas d'animation d'entrée au niveau page : évite le décalage à la navigation */
   return (
-    <motion.div
-      className="space-y-8 pb-12 max-w-[1600px] mx-auto"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div className="space-y-8 pb-12 max-w-[1600px] mx-auto">
       {/* Header Premium avec Gradient Background */}
-      <motion.div variants={itemVariants} className="relative">
+      <div className="relative">
         <div className="absolute inset-0 bg-gradient-mesh opacity-30 rounded-3xl" />
         <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-8 rounded-3xl bg-white/50 backdrop-blur-sm border border-gray-100">
           <div className="flex-1">
@@ -439,10 +429,10 @@ function PaymentsPageContent() {
             </Link>
           </motion.div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Statistiques Premium avec Glassmorphism */}
-      <motion.div variants={itemVariants}>
+      <div>
         <BentoGrid columns={4} gap="md">
           {[
             {
@@ -534,10 +524,10 @@ function PaymentsPageContent() {
             </BentoCard>
           ))}
         </BentoGrid>
-      </motion.div>
+      </div>
 
       {/* Onglets et Filtres - Design Premium */}
-      <motion.div variants={itemVariants}>
+      <div>
         <GlassCard variant="default" className="p-4 shadow-xl">
           <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
             {/* Onglets avec Animation */}
@@ -681,149 +671,91 @@ function PaymentsPageContent() {
             )}
           </AnimatePresence>
         </GlassCard>
-      </motion.div>
+      </div>
 
-      {/* Graphiques Premium avec Glassmorphism */}
-      {paymentStats && (paymentStats.byMethod.length > 0 || paymentStats.monthlyData.length > 0) && (
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {paymentStats.byMethod.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            >
-              <GlassCard variant="premium" className="p-8 h-full border-2 border-gray-100 shadow-xl hover:shadow-2xl transition-all duration-500">
-                <div className="mb-8 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <motion.div
-                      className="p-3 rounded-2xl bg-gradient-to-br from-brand-blue-ghost to-brand-blue-pale"
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                    >
-                      <CreditCard className="h-6 w-6 text-brand-blue" />
-                    </motion.div>
-                    <div>
-                      <h3 className="text-xl font-black text-gray-900 tracking-tight font-display">
-                        Méthodes de paiement
-                      </h3>
-                      <p className="text-sm text-gray-500 font-medium">Répartition par type</p>
-                    </div>
-                  </div>
+      {/* Graphiques — même niveau que Formations / Programmes / Sessions */}
+      {!paymentStats && !isPaymentStatsError && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[320px]">
+          <GlassCard variant="default" className="p-6 border-2 border-gray-100">
+            <div className="h-5 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mb-6" />
+            <div className="h-[300px] rounded-2xl bg-gray-100 animate-pulse" />
+          </GlassCard>
+          <GlassCard variant="default" className="p-6 border-2 border-gray-100">
+            <div className="h-5 w-56 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-36 bg-gray-100 rounded animate-pulse mb-6" />
+            <div className="h-[300px] rounded-2xl bg-gray-100 animate-pulse" />
+          </GlassCard>
+        </div>
+      )}
+      {isPaymentStatsError && (
+        <div className="grid grid-cols-1 gap-6 min-h-[320px]">
+          <GlassCard variant="default" className="p-6 border-2 border-amber-100">
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Impossible de charger les graphiques</h3>
+              <p className="text-sm text-gray-500 mb-4 max-w-md">
+                {paymentStatsError instanceof Error ? paymentStatsError.message : 'Une erreur est survenue.'}
+              </p>
+              <Button variant="outline" onClick={() => refetchPaymentStats()} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Réessayer
+              </Button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
+      {!isLoadingPaymentStats && !isPaymentStatsError && paymentStats && (paymentStats.byMethod?.length > 0 || paymentStats.monthlyData?.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[320px]">
+          {paymentStats.byMethod?.length > 0 && (
+            <div className="h-full min-h-[320px]">
+              <GlassCard variant="default" className="p-6 h-full">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-brand-blue" />
+                    Méthodes de paiement
+                  </h3>
                 </div>
-                <div className="h-[340px] relative">
-                  <div className="absolute inset-0 bg-gradient-mesh opacity-20 rounded-2xl" />
-                  {React.createElement(RechartsResponsiveContainer as any, { width: "100%", height: "100%" },
-                    React.createElement(RechartsPieChart as any, {},
-                      React.createElement(RechartsPie as any, {
-                        data: paymentStats.byMethod,
-                        cx: "50%",
-                        cy: "50%",
-                        innerRadius: 70,
-                        outerRadius: 100,
-                        paddingAngle: 6,
-                        dataKey: "value",
-                      },
-                        paymentStats.byMethod.map((entry, index) => (
-                          React.createElement(RechartsCell as any, { key: `cell-${index}`, fill: entry.color })
-                        ))
-                      ),
-                      React.createElement(RechartsTooltip as any, {
-                        formatter: (value: any) => formatCurrency(Number(value), 'EUR'),
-                        contentStyle: {
-                          borderRadius: '16px',
-                          border: 'none',
-                          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                          padding: '12px 16px',
-                          fontWeight: '600',
-                        },
-                      }),
-                      React.createElement(RechartsLegend as any, {
-                        verticalAlign: "bottom",
-                        height: 48,
-                        wrapperStyle: { fontSize: '14px', fontWeight: '600' },
-                      })
-                    )
-                  )}
+                <div className="h-[300px]">
+                  <PremiumPieChart
+                    data={paymentStats.byMethod.map((m) => ({ name: m.name, value: m.value }))}
+                    colors={paymentStats.byMethod.map((m) => m.color)}
+                    variant="default"
+                    className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                    innerRadius={70}
+                  />
                 </div>
               </GlassCard>
-            </motion.div>
+            </div>
           )}
 
-          {paymentStats.monthlyData.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            >
-              <GlassCard variant="premium" className="p-8 h-full border-2 border-gray-100 shadow-xl hover:shadow-2xl transition-all duration-500">
-                <div className="mb-8 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <motion.div
-                      className="p-3 rounded-2xl bg-gradient-to-br from-cyan-50 to-cyan-100"
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                    >
-                      <TrendingUp className="h-6 w-6 text-brand-cyan" />
-                    </motion.div>
-                    <div>
-                      <h3 className="text-xl font-black text-gray-900 tracking-tight font-display">
-                        Évolution des paiements
-                      </h3>
-                      <p className="text-sm text-gray-500 font-medium">6 derniers mois</p>
-                    </div>
-                  </div>
+          {paymentStats.monthlyData?.length > 0 && (
+            <div className="h-full min-h-[320px]">
+              <GlassCard variant="default" className="p-6 h-full">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-brand-cyan" />
+                    Évolution des paiements
+                  </h3>
                 </div>
-                <div className="h-[340px] relative">
-                  <div className="absolute inset-0 bg-gradient-aurora opacity-20 rounded-2xl" />
-                  {React.createElement(RechartsResponsiveContainer as any, { width: "100%", height: "100%" },
-                    React.createElement(RechartsLineChart as any, { data: paymentStats.monthlyData },
-                      React.createElement(RechartsCartesianGrid as any, { strokeDasharray: "5 5", vertical: false, stroke: "#E5E7EB" }),
-                      React.createElement(RechartsXAxis as any, {
-                        dataKey: "month",
-                        axisLine: false,
-                        tickLine: false,
-                        tick: { fill: '#6B7280', fontSize: 12, fontWeight: '600' },
-                        dy: 12,
-                      }),
-                      React.createElement(RechartsYAxis as any, {
-                        axisLine: false,
-                        tickLine: false,
-                        tick: { fill: '#6B7280', fontSize: 12, fontWeight: '600' },
-                        dx: -10,
-                      }),
-                      React.createElement(RechartsTooltip as any, {
-                        formatter: (value: any) => formatCurrency(Number(value), 'EUR'),
-                        contentStyle: {
-                          borderRadius: '16px',
-                          border: 'none',
-                          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                          padding: '12px 16px',
-                          fontWeight: '600',
-                        },
-                      }),
-                      React.createElement(RechartsLine as any, {
-                        type: "monotone",
-                        dataKey: "amount",
-                        stroke: "url(#colorGradient)",
-                        strokeWidth: 4,
-                        dot: { fill: BRAND_COLORS.secondary, r: 5, strokeWidth: 3, stroke: '#fff' },
-                        activeDot: { r: 7, strokeWidth: 0, fill: BRAND_COLORS.primary },
-                      }),
-                      React.createElement('defs' as any, {},
-                        React.createElement('linearGradient' as any, { id: "colorGradient", x1: "0", y1: "0", x2: "1", y2: "0" },
-                          React.createElement('stop' as any, { offset: "0%", stopColor: BRAND_COLORS.primary }),
-                          React.createElement('stop' as any, { offset: "100%", stopColor: BRAND_COLORS.secondary })
-                        )
-                      )
-                    )
-                  )}
+                <div className="h-[300px]">
+                  <PremiumBarChart
+                    data={paymentStats.monthlyData}
+                    dataKey="amount"
+                    xAxisKey="month"
+                    color="#335ACF"
+                    variant="default"
+                    className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                  />
                 </div>
               </GlassCard>
-            </motion.div>
+            </div>
           )}
-        </motion.div>
+        </div>
       )}
 
       {/* Liste des documents Premium */}
-      <motion.div variants={itemVariants}>
+      <div>
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {[...Array(8)].map((_, i) => (
@@ -1025,10 +957,10 @@ function PaymentsPageContent() {
             })()}
           </GlassCard>
         )}
-      </motion.div>
+      </div>
 
       {/* Section Charges - Tableau de Bord */}
-      <motion.div variants={itemVariants}>
+      <div>
         <GlassCard variant="premium" className="p-8 border-2 border-gray-100">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
@@ -1190,122 +1122,52 @@ function PaymentsPageContent() {
                   ))}
                 </div>
 
-                {/* Graphiques */}
-                {chargesArray.length > 0 && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* Répartition par catégorie */}
+                {/* Graphiques charges — même niveau que Formations / Programmes / Paiements */}
+                {(categoryData.length > 0 || monthlyChargesData.length > 0) && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[320px] mb-8">
                     {categoryData.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white/80 rounded-2xl p-6 border border-gray-200"
-                      >
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="p-2 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100">
-                            <Receipt className="h-5 w-5 text-purple-600" />
+                      <div className="h-full min-h-[320px]">
+                        <GlassCard variant="default" className="p-6 h-full">
+                          <div className="mb-6 flex items-center justify-between">
+                            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                              <Receipt className="h-5 w-5 text-brand-blue" />
+                              Répartition par catégorie
+                            </h3>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-gray-900">Répartition par catégorie</h4>
-                            <p className="text-xs text-gray-500">Analyse des dépenses</p>
+                          <div className="h-[300px]">
+                            <PremiumPieChart
+                              data={categoryData.map((c) => ({ name: c.name, value: c.value }))}
+                              colors={categoryData.map((c) => c.color)}
+                              variant="default"
+                              className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                              innerRadius={70}
+                            />
                           </div>
-                        </div>
-                        <div className="h-[280px]">
-                          {React.createElement(RechartsResponsiveContainer as any, { width: "100%", height: "100%" },
-                            React.createElement(RechartsPieChart as any, {},
-                              React.createElement(RechartsPie as any, {
-                                data: categoryData,
-                                cx: "50%",
-                                cy: "50%",
-                                innerRadius: 60,
-                                outerRadius: 90,
-                                paddingAngle: 4,
-                                dataKey: "value",
-                              },
-                                categoryData.map((entry, index) => (
-                                  React.createElement(RechartsCell as any, { key: `cell-${index}`, fill: entry.color })
-                                ))
-                              ),
-                              React.createElement(RechartsTooltip as any, {
-                                formatter: (value: any) => formatCurrency(Number(value), 'EUR'),
-                                contentStyle: {
-                                  borderRadius: '12px',
-                                  border: 'none',
-                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                                  padding: '10px 14px',
-                                  fontWeight: '600',
-                                },
-                              }),
-                              React.createElement(RechartsLegend as any, {
-                                verticalAlign: "bottom",
-                                height: 36,
-                                wrapperStyle: { fontSize: '12px', fontWeight: '500' },
-                              })
-                            )
-                          )}
-                        </div>
-                      </motion.div>
+                        </GlassCard>
+                      </div>
                     )}
 
-                    {/* Évolution mensuelle des charges */}
                     {monthlyChargesData.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="bg-white/80 rounded-2xl p-6 border border-gray-200"
-                      >
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="p-2 rounded-xl bg-gradient-to-br from-red-50 to-red-100">
-                            <TrendingDown className="h-5 w-5 text-red-600" />
+                      <div className="h-full min-h-[320px]">
+                        <GlassCard variant="default" className="p-6 h-full">
+                          <div className="mb-6 flex items-center justify-between">
+                            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                              <TrendingDown className="h-5 w-5 text-brand-cyan" />
+                              Évolution des charges
+                            </h3>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-gray-900">Évolution des charges</h4>
-                            <p className="text-xs text-gray-500">6 derniers mois</p>
+                          <div className="h-[300px]">
+                            <PremiumBarChart
+                              data={monthlyChargesData}
+                              dataKey="amount"
+                              xAxisKey="month"
+                              color="#EF4444"
+                              variant="default"
+                              className="h-full !p-0 !bg-transparent !border-none !shadow-none"
+                            />
                           </div>
-                        </div>
-                        <div className="h-[280px]">
-                          {React.createElement(RechartsResponsiveContainer as any, { width: "100%", height: "100%" },
-                            React.createElement(RechartsBarChart as any, { data: monthlyChargesData },
-                              React.createElement(RechartsCartesianGrid as any, { strokeDasharray: "5 5", vertical: false, stroke: "#E5E7EB" }),
-                              React.createElement(RechartsXAxis as any, {
-                                dataKey: "month",
-                                axisLine: false,
-                                tickLine: false,
-                                tick: { fill: '#6B7280', fontSize: 11, fontWeight: '500' },
-                                dy: 8,
-                              }),
-                              React.createElement(RechartsYAxis as any, {
-                                axisLine: false,
-                                tickLine: false,
-                                tick: { fill: '#6B7280', fontSize: 11, fontWeight: '500' },
-                                dx: -8,
-                              }),
-                              React.createElement(RechartsTooltip as any, {
-                                formatter: (value: any) => formatCurrency(Number(value), 'EUR'),
-                                contentStyle: {
-                                  borderRadius: '12px',
-                                  border: 'none',
-                                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                                  padding: '10px 14px',
-                                  fontWeight: '600',
-                                },
-                              }),
-                              React.createElement(RechartsBar as any, {
-                                dataKey: "amount",
-                                fill: "url(#chargeGradient)",
-                                radius: [6, 6, 0, 0],
-                              }),
-                              React.createElement('defs' as any, {},
-                                React.createElement('linearGradient' as any, { id: "chargeGradient", x1: "0", y1: "0", x2: "0", y2: "1" },
-                                  React.createElement('stop' as any, { offset: "0%", stopColor: "#EF4444" }),
-                                  React.createElement('stop' as any, { offset: "100%", stopColor: "#F97316" })
-                                )
-                              )
-                            )
-                          )}
-                        </div>
-                      </motion.div>
+                        </GlassCard>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1650,7 +1512,7 @@ function PaymentsPageContent() {
             )}
           </AnimatePresence>
         </GlassCard>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   )
 }

@@ -1,300 +1,300 @@
 'use client'
 
-import { motion, useInView } from '@/components/ui/motion'
-import { useRef, useState, useEffect } from 'react'
-import { TrendingUp, Users, BookOpen, Award, PenTool, Shield, Clock } from 'lucide-react'
+import { motion, useInView, useMotionValue, useTransform, useSpring } from '@/components/ui/motion'
+import { useRef, useState, useEffect, useCallback } from 'react'
+import { Clock, ShieldCheck, TrendingUp, FileCheck, ArrowRight, Sparkles } from 'lucide-react'
 import { useParallax } from '@/lib/hooks/useParallax'
 
-// Counter component with count-up animation
-function AnimatedCounter({ end, duration = 2000, suffix = '' }: { end: number; duration?: number; suffix?: string }) {
+// Animated counter with easeOutCubic
+function AnimatedCounter({ end, duration = 2000, suffix = '', prefix = '' }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-100px' })
 
   useEffect(() => {
     if (!isInView) return
-
     const startTime = Date.now()
-    const endTime = startTime + duration
-
-    const updateCount = () => {
-      const now = Date.now()
-      const progress = Math.min((now - startTime) / duration, 1)
-
-      // Easing function (easeOutCubic)
-      const easedProgress = 1 - Math.pow(1 - progress, 3)
-      const currentCount = Math.floor(easedProgress * end)
-
-      setCount(currentCount)
-
-      if (progress < 1) {
-        requestAnimationFrame(updateCount)
-      }
+    const update = () => {
+      const progress = Math.min((Date.now() - startTime) / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setCount(Math.floor(eased * end))
+      if (progress < 1) requestAnimationFrame(update)
     }
-
-    requestAnimationFrame(updateCount)
+    requestAnimationFrame(update)
   }, [isInView, end, duration])
 
-  return <span ref={ref}>{count}{suffix}</span>
+  return <span ref={ref}>{prefix}{count}{suffix}</span>
+}
+
+const bentoCards = [
+  {
+    title: "Gagnez 20h par semaine",
+    description: "Automatisez 80% de vos tâches administratives. Feuilles de présence, attestations, conventions... tout est généré en 1 clic.",
+    stat: 80,
+    statSuffix: "%",
+    statLabel: "moins d'admin",
+    icon: Clock,
+    size: 'large' as const,
+  },
+  {
+    title: "Passez Qualiopi sereinement",
+    description: "Tous vos documents sont automatiquement conformes aux critères Qualiopi. Préparez votre audit en quelques clics, pas en quelques semaines.",
+    stat: 100,
+    statSuffix: "%",
+    statLabel: "conforme",
+    icon: FileCheck,
+    size: 'large' as const,
+  },
+  {
+    title: "Augmentez vos revenus",
+    description: "Proposez des formations e-learning 24/7, gérez plus de stagiaires avec moins d'effort et réduisez vos coûts opérationnels.",
+    stat: 30,
+    statPrefix: "+",
+    statSuffix: "%",
+    statLabel: "de CA moyen",
+    icon: TrendingUp,
+    size: 'small' as const,
+  },
+  {
+    title: "Sécurisez vos données",
+    description: "Cryptage bancaire AES-256, hébergement en France, conformité RGPD totale. Vos données et celles de vos stagiaires sont en sécurité.",
+    stat: 99.9,
+    statSuffix: "%",
+    statLabel: "disponibilité",
+    icon: ShieldCheck,
+    size: 'small' as const,
+  },
+]
+
+// 3D tilt bento card
+function BentoCard({ card, index, isInView }: { card: typeof bentoCards[0]; index: number; isInView: boolean }) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [isHovered, setIsHovered] = useState(false)
+
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [5, -5]), { stiffness: 200, damping: 20 })
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-5, 5]), { stiffness: 200, damping: 20 })
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return
+    const rect = cardRef.current.getBoundingClientRect()
+    mouseX.set((e.clientX - rect.left) / rect.width - 0.5)
+    mouseY.set((e.clientY - rect.top) / rect.height - 0.5)
+  }, [mouseX, mouseY])
+
+  const handleMouseLeave = useCallback(() => {
+    mouseX.set(0)
+    mouseY.set(0)
+    setIsHovered(false)
+  }, [mouseX, mouseY])
+
+  const isLarge = card.size === 'large'
+  const Icon = card.icon
+
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 60, filter: 'blur(8px)' }}
+      animate={isInView ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}}
+      transition={{ duration: 0.8, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+      style={{
+        rotateX: isHovered ? rotateX : 0,
+        rotateY: isHovered ? rotateY : 0,
+        transformPerspective: 1200,
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={handleMouseLeave}
+      className={`relative group cursor-default ${isLarge ? 'md:col-span-1' : ''}`}
+    >
+      {/* Animated gradient border */}
+      <div className="absolute -inset-[1px] rounded-[28px] overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue bg-[length:200%_auto] animate-gradient-x" />
+      </div>
+
+      {/* Card */}
+      <div className={`relative h-full rounded-[26px] bg-white transition-all duration-700 overflow-hidden ${
+        isLarge
+          ? 'border-2 border-brand-blue/10 shadow-xl group-hover:shadow-2xl group-hover:shadow-brand-blue/10'
+          : 'border border-gray-200/60 shadow-lg group-hover:shadow-xl group-hover:shadow-brand-blue/5'
+      }`}>
+        {/* Glow */}
+        <div
+          className="absolute inset-0 rounded-[26px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+          style={{ background: 'radial-gradient(600px circle at 50% 0%, rgba(52, 185, 238, 0.06), transparent 50%)' }}
+        />
+
+        {/* Shimmer top line */}
+        <div className="absolute top-0 left-10 right-10 h-[1px] overflow-hidden rounded-full">
+          <div className="h-full bg-gradient-to-r from-brand-blue/40 via-brand-cyan/60 to-brand-blue/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent animate-shimmer-slow opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+        </div>
+
+        <div className={`relative ${isLarge ? 'p-10 md:p-12' : 'p-8 md:p-10'}`}>
+          {/* Icon */}
+          <motion.div
+            className="relative w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br from-brand-blue to-brand-cyan text-white shadow-lg shadow-brand-blue/20 mb-8"
+            whileHover={{ scale: 1.1, rotate: 4 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+          >
+            <Icon className="w-7 h-7 relative z-10" strokeWidth={1.5} />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-blue to-brand-cyan opacity-30 blur-xl group-hover:opacity-60 group-hover:blur-2xl transition-all duration-700" />
+          </motion.div>
+
+          {/* Title */}
+          <h3 className={`font-bold text-gray-900 font-display leading-tight tracking-tight mb-4 ${
+            isLarge ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'
+          }`}>
+            {card.title}
+          </h3>
+
+          {/* Description */}
+          <p className={`text-gray-500 leading-relaxed font-light tracking-[-0.01em] mb-8 ${
+            isLarge ? 'text-[15px] md:text-base' : 'text-[15px]'
+          }`}>
+            {card.description}
+          </p>
+
+          {/* Stat block */}
+          <div className={`relative rounded-2xl border border-brand-blue-pale/30 bg-gradient-to-br from-brand-blue-ghost/40 to-white ${
+            isLarge ? 'p-8' : 'p-6'
+          }`}>
+            {/* Stat number */}
+            <motion.div
+              className={`font-black text-brand-blue font-display tracking-tighter ${
+                isLarge ? 'text-6xl md:text-7xl' : 'text-5xl md:text-6xl'
+              }`}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={isInView ? { opacity: 1, scale: 1 } : {}}
+              transition={{ duration: 0.8, delay: index * 0.1 + 0.3, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {card.stat === 99.9 ? (
+                <span>99.9<span className="text-brand-cyan">%</span></span>
+              ) : (
+                <AnimatedCounter
+                  end={card.stat}
+                  prefix={card.statPrefix || ''}
+                  suffix={card.statSuffix || ''}
+                />
+              )}
+            </motion.div>
+
+            {/* Stat label */}
+            <p className="text-sm text-gray-400 font-medium tracking-tight mt-2">
+              {card.statLabel}
+            </p>
+
+            {/* Progress bar */}
+            <motion.div
+              className="mt-4 h-[3px] rounded-full bg-brand-blue-pale/30 overflow-hidden"
+            >
+              <motion.div
+                className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
+                initial={{ scaleX: 0 }}
+                animate={isInView ? { scaleX: 1 } : {}}
+                transition={{ duration: 1.2, delay: index * 0.1 + 0.5, ease: [0.16, 1, 0.3, 1] }}
+                style={{ transformOrigin: 'left', width: `${Math.min(card.stat, 100)}%` }}
+              />
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
 }
 
 export function BentoShowcase() {
-  const { ref: bgRef, y: bgY } = useParallax(60)
+  const { ref: bgRef1, y: bg1Y } = useParallax(60)
+  const { ref: bgRef2, y: bg2Y } = useParallax(100)
   const containerRef = useRef<HTMLDivElement>(null)
-  const isInView = useInView(containerRef, { once: true, margin: '-100px' })
+  const isInView = useInView(containerRef, { once: true, margin: '-80px' })
+  const headerRef = useRef<HTMLDivElement>(null)
+  const headerInView = useInView(headerRef, { once: true, margin: '-50px' })
 
   return (
-    <section className="relative py-32 md:py-40 lg:py-48 overflow-hidden bg-gradient-to-b from-white via-gray-50 to-white">
-      {/* Background Parallax */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        {/* Animated mesh gradient */}
-        <div className="absolute inset-0 bg-gradient-mesh opacity-60" />
+    <section className="relative py-16 md:py-20 lg:py-24 overflow-hidden bg-gradient-to-b from-white via-gray-50/20 to-white">
+      {/* Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(39,68,114,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(39,68,114,0.02)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_50%,black,transparent)]" />
 
         <motion.div
-          ref={bgRef}
-          style={{ y: bgY }}
-          className="absolute top-[20%] left-[10%] w-[500px] h-[500px] bg-gradient-radial-cyan rounded-full blur-[100px] opacity-30 animate-pulse-premium"
+          ref={bgRef1}
+          style={{ y: bg1Y }}
+          className="absolute top-[10%] left-[-5%] w-[500px] h-[500px] bg-gradient-to-br from-brand-cyan/8 to-brand-blue/5 rounded-full blur-[100px]"
+        />
+        <motion.div
+          ref={bgRef2}
+          style={{ y: bg2Y }}
+          className="absolute bottom-[5%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-tr from-brand-blue/6 to-brand-cyan/4 rounded-full blur-[120px]"
         />
 
-        <motion.div
-          className="absolute bottom-[30%] right-[15%] w-[400px] h-[400px] bg-gradient-radial-blue rounded-full blur-[100px] opacity-25 animate-wave"
-        />
+        <div className="absolute top-[30%] right-[12%] w-1.5 h-1.5 rounded-full bg-brand-blue/20 animate-float" />
+        <div className="absolute bottom-[35%] left-[18%] w-2 h-2 rounded-full bg-brand-cyan/15 animate-float" style={{ animationDelay: '2s' }} />
       </div>
 
       <div className="container mx-auto px-4 md:px-6 lg:px-8 relative z-10">
-        {/* Section Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-          className="text-center mb-20 md:mb-24 lg:mb-28"
-        >
+        {/* Header */}
+        <div ref={headerRef} className="text-center max-w-4xl mx-auto mb-14 md:mb-16 lg:mb-20">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={isInView ? { opacity: 1, scale: 1 } : {}}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-cyan-ghost border border-brand-cyan-pale mb-8"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={headerInView ? { opacity: 1, scale: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-md mb-10"
           >
-            <Award className="w-4 h-4 text-brand-cyan" />
-            <span className="text-sm md:text-base font-medium text-brand-cyan-darker">Plateforme de référence</span>
+            <Sparkles className="w-4 h-4 text-brand-cyan" />
+            <span className="text-[11px] font-bold tracking-widest uppercase text-brand-blue-darker/80 font-display">
+              Résultats concrets
+            </span>
           </motion.div>
 
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tightest text-gray-900 mb-6 leading-tighter font-display">
-            <span className="font-extralight italic tracking-luxe">Une solution</span>{' '}
-            <span className="text-gradient-animated font-black not-italic">
-              complète
+          <motion.h2
+            initial={{ opacity: 0, y: 50, filter: 'blur(8px)' }}
+            animate={headerInView ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}}
+            transition={{ duration: 0.9, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-4xl md:text-6xl lg:text-7xl tracking-tightest text-gray-900 mb-8 leading-tighter font-display"
+          >
+            <span className="font-extralight italic tracking-luxe">Concentrez-vous sur</span>
+            <br />
+            <span className="relative inline-block">
+              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue bg-[length:200%_auto] animate-gradient-x font-black not-italic">
+                l'essentiel
+              </span>
+              <motion.div
+                initial={{ scaleX: 0 }}
+                animate={headerInView ? { scaleX: 1 } : {}}
+                transition={{ duration: 1, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute -bottom-2 left-0 right-0 h-[3px] bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue rounded-full origin-left"
+              />
             </span>
-          </h2>
-          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-light tracking-tight">
-            Tout ce dont vous avez besoin pour{' '}
-            <span className="italic font-normal text-brand-blue">gérer votre organisme</span>{' '}
-            de formation avec{' '}
-            <span className="font-semibold">excellence</span>
-          </p>
-        </motion.div>
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 30 }}
+            animate={headerInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="text-lg md:text-xl lg:text-2xl text-gray-400 leading-relaxed max-w-3xl mx-auto font-light tracking-tight"
+          >
+            Pendant que vous formez vos stagiaires,{' '}
+            <span className="font-medium text-gray-700">EduZen s'occupe de tout le reste.</span>
+          </motion.p>
+        </div>
 
         {/* Bento Grid */}
-        <div ref={containerRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-          {/* Large Card - Dashboard Preview (2x2) */}
-          <motion.div
-            initial={{ opacity: 0, y: 60, scale: 0.95 }}
-            animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="md:col-span-2 md:row-span-2 lg:col-span-2 lg:row-span-2"
-          >
-            <motion.div
-              whileHover={{ y: -12, scale: 1.02 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              className="group h-full rounded-3xl bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-blue p-1 shadow-xl hover:shadow-2xl transition-all duration-600 relative overflow-hidden"
-            >
-              {/* Shimmer effect on hover */}
-              <div className="absolute inset-0 bg-gradient-shimmer opacity-0 group-hover:opacity-100 transition-opacity duration-600" />
+        <div ref={containerRef} className="max-w-7xl mx-auto">
+          {/* Top row - 2 large cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-5 md:mb-7">
+            {bentoCards.slice(0, 2).map((card, index) => (
+              <BentoCard key={index} card={card} index={index} isInView={isInView} />
+            ))}
+          </div>
 
-              <div className="h-full rounded-[22px] bg-white/95 backdrop-blur-xl p-10 md:p-12 flex flex-col relative z-10">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-12 h-12 rounded-2xl bg-brand-blue flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-900 font-display">Dashboard Analytics</h3>
-                    <p className="text-gray-600">Suivi en temps réel</p>
-                  </div>
-                </div>
-
-                {/* Mock Stats */}
-                <div className="flex-1 grid grid-cols-2 gap-6 mb-8">
-                  <motion.div
-                    whileHover={{ scale: 1.05, rotateY: 5 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                    className="p-6 rounded-2xl bg-gradient-aurora border border-brand-blue-pale hover-glow"
-                    style={{ transformStyle: 'preserve-3d' }}
-                  >
-                    <p className="text-sm text-gray-600 mb-2 font-light">Stagiaires actifs</p>
-                    <p className="text-3xl font-bold text-brand-blue font-display">
-                      <AnimatedCounter end={1247} suffix="+" />
-                    </p>
-                  </motion.div>
-                  <motion.div
-                    whileHover={{ scale: 1.05, rotateY: -5 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                    className="p-6 rounded-2xl bg-gradient-aurora border border-brand-cyan-pale hover-glow"
-                    style={{ transformStyle: 'preserve-3d' }}
-                  >
-                    <p className="text-sm text-gray-600 mb-2 font-light">Formations</p>
-                    <p className="text-3xl font-bold text-brand-cyan font-display">
-                      <AnimatedCounter end={89} suffix="+" />
-                    </p>
-                  </motion.div>
-                </div>
-
-                {/* Mock Chart */}
-                <div className="h-40 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-200 flex items-end p-4 gap-2">
-                  {[40, 65, 45, 80, 55, 90, 70, 85, 95].map((height, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ height: 0 }}
-                      animate={isInView ? { height: `${height}%` } : {}}
-                      transition={{ duration: 0.8, delay: 0.5 + i * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                      className="flex-1 bg-gradient-to-t from-brand-blue to-brand-cyan rounded-lg"
-                    />
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-
-          {/* Tall Card - Timeline Features (1x2) */}
-          <motion.div
-            initial={{ opacity: 0, y: 60, scale: 0.95 }}
-            animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="md:col-span-1 md:row-span-2 lg:col-span-1 lg:row-span-2"
-          >
-            <motion.div
-              whileHover={{ y: -12, scale: 1.02 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              className="group h-full rounded-3xl bg-white border-2 border-gray-200 hover:border-brand-cyan-pale p-10 shadow-xl hover:shadow-2xl transition-all duration-600 hover-lift"
-            >
-              <motion.div
-                className="w-12 h-12 rounded-2xl bg-brand-cyan flex items-center justify-center mb-6"
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              >
-                <BookOpen className="w-6 h-6 text-white" />
-              </motion.div>
-              <h3 className="text-xl font-bold text-gray-900 mb-8 font-display tracking-tight">Process simplifié</h3>
-
-              <div className="space-y-6">
-                {[
-                  { label: 'Inscription', delay: 0.3 },
-                  { label: 'Signature contrat', delay: 0.4, highlight: true },
-                  { label: 'Émargement', delay: 0.5, highlight: true },
-                  { label: 'Certification', delay: 0.6 },
-                ].map((item, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={isInView ? { opacity: 1, x: 0 } : {}}
-                    transition={{ duration: 0.6, delay: item.delay, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                    className="flex items-center gap-4 group/item"
-                  >
-                    <motion.div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                        'highlight' in item && item.highlight
-                          ? 'bg-green-100 border-2 border-green-500 text-green-600'
-                          : 'bg-brand-cyan/10 border-2 border-brand-cyan text-brand-cyan'
-                      }`}
-                      whileHover={{ scale: 1.2, rotate: 360 }}
-                      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                    >
-                      {'highlight' in item && item.highlight ? <PenTool className="w-4 h-4" /> : i + 1}
-                    </motion.div>
-                    <div className="flex flex-col">
-                      <span className={`text-lg font-medium transition-colors duration-300 ${
-                        'highlight' in item && item.highlight
-                          ? 'text-green-700 group-hover/item:text-green-600'
-                          : 'text-gray-700 group-hover/item:text-brand-cyan'
-                      }`}>
-                        {item.label}
-                      </span>
-                      {'highlight' in item && item.highlight && (
-                        <span className="text-xs text-green-600 font-medium">100% numérique</span>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-
-          {/* Small Card - User Counter (1x1) */}
-          <motion.div
-            initial={{ opacity: 0, y: 60, scale: 0.95 }}
-            animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="md:col-span-1 md:row-span-1 lg:col-span-1 lg:row-span-1"
-          >
-            <motion.div
-              whileHover={{ y: -12, scale: 1.03, rotateZ: 2 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              className="group h-full min-h-[280px] rounded-3xl bg-gradient-to-br from-brand-cyan via-brand-cyan to-brand-cyan-dark p-10 shadow-xl hover:shadow-2xl transition-all duration-600 relative overflow-hidden"
-              style={{ transformStyle: 'preserve-3d' }}
-            >
-              {/* Animated gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-aurora opacity-30 animate-gradient-xy" />
-              <motion.div
-                className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6"
-                whileHover={{ rotate: 360, scale: 1.1 }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              >
-                <Users className="w-6 h-6 text-white" />
-              </motion.div>
-              <p className="text-white/80 mb-2 text-lg">Avis clients</p>
-              <p className="text-6xl font-bold text-white mb-4 font-display">
-                <AnimatedCounter end={12} suffix="" />
-              </p>
-              <p className="text-white/70">Note moyenne 4.9/5</p>
-            </motion.div>
-          </motion.div>
-
-          {/* Small Card - Signature électronique (1x1) */}
-          <motion.div
-            initial={{ opacity: 0, y: 60, scale: 0.95 }}
-            animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="md:col-span-1 md:row-span-1 lg:col-span-1 lg:row-span-1"
-          >
-            <motion.div
-              whileHover={{ y: -8, scale: 1.02 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              className="group h-full min-h-[280px] rounded-3xl bg-gradient-to-br from-green-50 to-white border-2 border-green-200 hover:border-green-400 p-10 shadow-xl hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-600 flex flex-col justify-between"
-            >
-              <div>
-                <motion.div
-                  className="w-12 h-12 rounded-2xl bg-green-500 flex items-center justify-center mb-6"
-                  whileHover={{ rotate: -360, scale: 1.1 }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                >
-                  <PenTool className="w-6 h-6 text-white" />
-                </motion.div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3 font-display">Signature eIDAS</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Valeur juridique équivalente à un acte notarié
-                </p>
-                <div className="flex items-center gap-2 mt-4">
-                  <Shield className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-700">100% sécurisé</span>
-                </div>
-              </div>
-              <motion.div
-                className="w-full h-1 bg-gradient-to-r from-green-400 to-green-600 rounded-full"
-                initial={{ scaleX: 0 }}
-                animate={isInView ? { scaleX: 1 } : {}}
-                transition={{ duration: 1, delay: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                style={{ transformOrigin: 'left' }}
-              />
-            </motion.div>
-          </motion.div>
+          {/* Bottom row - 2 smaller cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7">
+            {bentoCards.slice(2).map((card, index) => (
+              <BentoCard key={index + 2} card={card} index={index + 2} isInView={isInView} />
+            ))}
+          </div>
         </div>
       </div>
     </section>

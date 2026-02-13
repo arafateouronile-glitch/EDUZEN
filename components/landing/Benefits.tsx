@@ -42,7 +42,7 @@ export const Benefits = memo(function Benefits() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   return (
-    <section id="benefices" className="relative py-24 md:py-32 lg:py-40 overflow-hidden bg-gradient-to-b from-white via-gray-50/30 to-white">
+    <section id="benefices" className="relative py-16 md:py-20 lg:py-24 overflow-hidden bg-gradient-to-b from-white via-gray-50/30 to-white">
       {/* Background - simplifié */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <div className="absolute top-1/4 right-0 w-[400px] h-[400px] bg-brand-blue/5 rounded-full blur-[60px]" />
