@@ -1,25 +1,24 @@
 'use client'
 
-import { motion, useInView, useMotionValue, useTransform } from '@/components/ui/motion'
+import { motion, useInView } from '@/components/ui/motion'
 import { useRef, useState } from 'react'
 import { Check, ArrowRight, Sparkles, Zap, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { useParallax } from '@/lib/hooks/useParallax'
+import { cn } from '@/lib/utils'
 
 const plans = [
   {
     name: "Starter",
-    price: "79",
+    price: { monthly: "79", yearly: "65" },
     period: "/mois",
     originalPrice: "79",
-    launchPrice: "39",
     description: "L'essentiel pour débuter",
     features: [
       "20 stagiaires / mois",
       "Gestion Pédagogique",
       "Émargement QR & Signature",
-      "Génération de Documents (Standard)",
+      "Génération de Documents",
       "Facturation & Paiements",
       "Support Email (48h)"
     ],
@@ -29,10 +28,9 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "169",
+    price: { monthly: "169", yearly: "139" },
     period: "/mois",
     originalPrice: "169",
-    launchPrice: "84",
     description: "La sérénité administrative",
     features: [
       "100 stagiaires / mois",
@@ -40,8 +38,6 @@ const plans = [
       "Dashboard Qualiopi",
       "Automate BPF",
       "Portail E-learning",
-      "Relances Automatiques",
-      "Génération de Documents (Illimitée)",
       "Support Prioritaire (24h)"
     ],
     cta: "Essayer le plan Pro",
@@ -50,20 +46,17 @@ const plans = [
   },
   {
     name: "Enterprise",
-    price: "Sur mesure",
+    price: { monthly: "Sur mesure", yearly: "Sur mesure" },
     period: "",
     originalPrice: "349",
-    launchPrice: null,
     description: "Pour changer d'échelle",
     features: [
       "Stagiaires illimités",
       "Tout du plan Pro",
       "Marque Blanche / URL",
-      "Multi-établissements",
-      "API & Intégrations personnalisées",
-      "Formation et accompagnement dédiés",
+      "API & Intégrations",
       "Account Manager dédié",
-      "Support Dédié & Téléphone"
+      "Support Téléphone"
     ],
     cta: "Contacter les ventes",
     highlight: false,
@@ -72,321 +65,140 @@ const plans = [
 ]
 
 export function Pricing() {
-  const { ref: bgRef, y: bgY } = useParallax(60)
   const containerRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(containerRef, { once: true, margin: '-100px' })
+  const [isYearly, setIsYearly] = useState(true)
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   return (
-    <section id="tarifs" className="relative py-16 md:py-20 lg:py-24 overflow-hidden bg-gradient-to-b from-white via-gray-50/50 to-white">
-      {/* Enhanced Background */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        {/* Animated aurora gradient */}
-        <div className="absolute inset-0 bg-gradient-aurora" />
-
-        <motion.div
-          ref={bgRef}
-          style={{ y: bgY }}
-          className="absolute bottom-[10%] left-[5%] w-[600px] h-[600px] bg-gradient-radial-cyan rounded-full blur-[120px] opacity-40 animate-wave"
-        />
-
-        <motion.div
-          className="absolute top-[20%] right-[10%] w-[500px] h-[500px] bg-gradient-radial-blue rounded-full blur-[100px] opacity-30 animate-bounce-slow"
-        />
-
-        {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(39,68,114,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(39,68,114,0.015)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,black,transparent)]" />
-      </div>
-
+    <section id="tarifs" className="relative py-24 md:py-32 overflow-hidden bg-[#FDFDFD]">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 relative z-10">
+        
         {/* Header */}
-        <div className="text-center max-w-4xl mx-auto mb-12 md:mb-16">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={isInView ? { opacity: 1, scale: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="relative inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-white/80 to-white/60 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(52,185,238,0.12)] mb-8 overflow-hidden group"
-          >
-            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-            <Sparkles className="relative w-4 h-4 text-brand-cyan" />
-            <span className="relative text-sm md:text-base font-bold bg-gradient-to-r from-brand-cyan-darker to-brand-blue-darker bg-clip-text text-transparent">
-              Tarification transparente
-            </span>
-          </motion.div>
-
-          <motion.h2
-            initial={{ opacity: 0, y: 40 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tightest text-gray-900 mb-8 leading-tighter font-display"
-          >
+        <div className="text-center max-w-4xl mx-auto mb-16 md:mb-24">
+          <h2 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tightest text-gray-900 mb-8 font-display">
             Des tarifs{' '}
-            <span className="relative inline-block italic font-light">
-              <span className="absolute inset-0 blur-3xl bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue opacity-50 animate-gradient-xy" />
-              <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue bg-[length:200%_auto] animate-gradient-shift font-extrabold">
-                simples
-              </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan">
+              simples.
             </span>
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 40 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="text-lg md:text-xl lg:text-2xl text-gray-700 leading-relaxed font-light tracking-tight"
-          >
-            Choisissez le plan qui{' '}
-            <span className="italic font-normal">correspond</span> à la taille et aux besoins de{' '}
-            <span className="text-gradient-animated font-extrabold tracking-tighter not-italic">
-              votre organisme
-            </span>
-          </motion.p>
+          </h2>
           
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-brand-cyan/10 to-brand-blue/10 border border-brand-cyan/20"
-          >
-            <Sparkles className="w-5 h-5 text-brand-cyan" />
-            <span className="text-sm font-semibold text-gray-900">
-              Offre de lancement France : -50% sur tous les plans
+          <p className="text-xl text-gray-500 font-light mb-12">
+            Choisissez le plan qui correspond à la taille de votre organisme.
+          </p>
+
+          {/* Toggle */}
+          <div className="flex justify-center items-center gap-4 mb-12 relative z-20">
+            <span className={cn("text-sm font-medium transition-colors", !isYearly ? "text-gray-900" : "text-gray-500")}>
+              Mensuel
             </span>
-            <span className="text-xs text-gray-500">(Durée limitée)</span>
-          </motion.div>
+            
+            <button
+              onClick={() => setIsYearly(!isYearly)}
+              className="relative w-16 h-8 rounded-full bg-gray-200 transition-colors focus:outline-none"
+            >
+              <motion.div
+                className="absolute top-1 left-1 w-6 h-6 rounded-full bg-white shadow-md"
+                animate={{ x: isYearly ? 32 : 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              />
+            </button>
+
+            <div className="flex items-center gap-2">
+              <span className={cn("text-sm font-medium transition-colors", isYearly ? "text-gray-900" : "text-gray-500")}>
+                Annuel
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wide">
+                -20%
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Pricing Cards */}
-        <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-10 max-w-7xl mx-auto items-stretch">
+        <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto items-stretch">
           {plans.map((plan, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 80, scale: 0.9 }}
-              animate={isInView ? {
-                opacity: 1,
-                y: 0,
-                scale: plan.highlight ? 1.08 : 1
-              } : {}}
-              transition={{ duration: 0.8, delay: index * 0.15, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              whileHover={{
-                y: -16,
-                scale: plan.highlight ? 1.12 : 1.04,
-                rotateY: hoveredIndex === index ? 2 : 0
-              }}
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
               onHoverStart={() => setHoveredIndex(index)}
               onHoverEnd={() => setHoveredIndex(null)}
-              className={`relative rounded-[2rem] md:rounded-[3rem] p-10 md:p-12 flex flex-col transition-all duration-800 ${
-                plan.highlight
-                  ? 'bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-cyan'
-                  : 'bg-white/60 backdrop-blur-2xl border-2 border-white/40'
-              }`}
-              style={{
-                transformStyle: 'preserve-3d',
-                boxShadow: plan.highlight
-                  ? '0 50px 100px -20px rgba(39,68,114,0.35), 0 0 80px rgba(52,185,238,0.25), inset 0 1px 0 rgba(255,255,255,0.2)'
-                  : '0 20px 60px -15px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.6)'
-              }}
+              className={cn(
+                "relative rounded-[2rem] p-8 md:p-10 flex flex-col transition-all duration-300",
+                plan.highlight 
+                  ? "bg-gray-900 text-white shadow-2xl scale-105 z-10 ring-4 ring-brand-blue/20" 
+                  : "bg-white border border-gray-100 shadow-xl hover:shadow-2xl hover:-translate-y-2"
+              )}
             >
-              {/* Glassmorphic overlay */}
-              {!plan.highlight && (
-                <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-white/50 to-white/80 rounded-[2rem] md:rounded-[3rem]" />
-              )}
-
-              {/* Animated glow on hover */}
               {plan.highlight && (
-                <motion.div
-                  className="absolute inset-0 rounded-[2rem] md:rounded-[3rem] opacity-0 transition-opacity duration-800"
-                  animate={{
-                    opacity: hoveredIndex === index ? 1 : 0
-                  }}
-                  style={{
-                    background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.2), transparent 70%)'
-                  }}
-                />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full text-xs font-bold uppercase tracking-widest text-white shadow-lg">
+                  Recommandé
+                </div>
               )}
 
-              {/* Popular badge */}
-              {plan.highlight && (
-                <motion.div
-                  initial={{ opacity: 0, y: -20, scale: 0.8 }}
-                  animate={isInView ? { opacity: 1, y: 0, scale: 1 } : {}}
-                  transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                  className="absolute -top-6 left-1/2 -translate-x-1/2"
-                >
-                  <div className="relative px-6 py-2.5 rounded-full bg-gradient-to-r from-brand-cyan via-brand-cyan-light to-brand-cyan shadow-2xl shadow-brand-cyan/50 overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    <div className="relative flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-white animate-pulse" />
-                      <span className="text-sm font-black text-white uppercase tracking-wider">
-                        Le plus populaire
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+              <div className="flex-1">
+                <div className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center mb-6",
+                  plan.highlight ? "bg-white/10" : "bg-gray-50"
+                )}>
+                  <plan.icon className={cn("w-6 h-6", plan.highlight ? "text-white" : "text-brand-blue")} />
+                </div>
 
-              <div className="relative z-10">
-                {/* Icon */}
-                <motion.div
-                  className={`inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-3xl mb-8 ${
-                    plan.highlight
-                      ? 'bg-white/20 backdrop-blur-xl border border-white/30'
-                      : 'bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 border border-brand-blue/20'
-                  }`}
-                  whileHover={{ rotate: 360, scale: 1.1 }}
-                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                >
-                  <plan.icon className={`w-8 h-8 md:w-10 md:h-10 ${
-                    plan.highlight ? 'text-white' : 'text-brand-blue'
-                  }`} />
-                </motion.div>
-
-                {/* Plan name */}
-                <h3 className={`text-3xl md:text-4xl font-black mb-4 font-display tracking-tight ${
-                  plan.highlight ? 'text-white italic' : 'text-gray-900'
-                }`}>
-                  {plan.name}
-                </h3>
-
-                {/* Description */}
-                <p className={`text-base md:text-lg mb-10 min-h-[3rem] font-light italic tracking-wide ${
-                  plan.highlight ? 'text-white/95' : 'text-gray-700'
-                }`}>
+                <h3 className="text-2xl font-bold mb-2 font-display">{plan.name}</h3>
+                <p className={cn("text-sm mb-8", plan.highlight ? "text-gray-400" : "text-gray-500")}>
                   {plan.description}
                 </p>
 
-                {/* Price */}
-                <div className="mb-12">
-                  {plan.price === "Sur mesure" ? (
-                    <div>
-                      <span className={`text-4xl md:text-5xl lg:text-6xl font-black font-display ${
-                        plan.highlight ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        {plan.price}
+                <div className="mb-8">
+                  <div className="flex items-baseline gap-1">
+                    {plan.price.monthly !== "Sur mesure" && <span className="text-2xl font-bold">€</span>}
+                    <span className="text-5xl font-black tracking-tight">
+                      {isYearly ? plan.price.yearly : plan.price.monthly}
+                    </span>
+                    {plan.price.monthly !== "Sur mesure" && (
+                      <span className={cn("text-sm font-medium ml-1", plan.highlight ? "text-gray-400" : "text-gray-500")}>
+                        /mois
                       </span>
-                      <p className={`text-sm mt-2 ${
-                        plan.highlight ? 'text-white/80' : 'text-gray-600'
-                      }`}>
-                        Dès {plan.originalPrice}€ HT / mois
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      {plan.launchPrice && (
-                        <div className="mb-2 flex items-center gap-2 flex-wrap">
-                          <span className={`text-lg line-through ${
-                            plan.highlight ? 'text-white/60' : 'text-gray-400'
-                          }`}>
-                            {plan.originalPrice}€ HT
-                          </span>
-                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                            plan.highlight 
-                              ? 'bg-white/20 text-white' 
-                              : 'bg-brand-cyan/10 text-brand-cyan'
-                          }`}>
-                            -50% Lancement France
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-baseline gap-2">
-                        <span className={`text-6xl md:text-7xl lg:text-8xl font-black font-display leading-none ${
-                          plan.highlight ? 'text-white' : 'text-gray-900'
-                        }`}>
-                          {plan.launchPrice ? plan.launchPrice : plan.price}
-                        </span>
-                        <div className="flex flex-col">
-                          <span className={`text-2xl md:text-3xl font-bold ${
-                            plan.highlight ? 'text-white' : 'text-gray-900'
-                          }`}>€</span>
-                          <span className={`text-lg ${
-                            plan.highlight ? 'text-white/80' : 'text-gray-600'
-                          }`}>
-                            {plan.period}
-                          </span>
-                        </div>
-                      </div>
-                      <p className={`text-sm mt-1 ${
-                        plan.highlight ? 'text-white/80' : 'text-gray-500'
-                      }`}>
-                        HT
-                      </p>
-                    </div>
+                    )}
+                  </div>
+                  {isYearly && plan.price.monthly !== "Sur mesure" && (
+                    <p className={cn("text-xs mt-2 font-medium", plan.highlight ? "text-green-400" : "text-green-600")}>
+                      Facturé {parseInt(plan.price.yearly) * 12}€ / an
+                    </p>
                   )}
                 </div>
 
-                {/* Features */}
-                <ul className="space-y-5 mb-12 flex-1">
+                <ul className="space-y-4 mb-8">
                   {plan.features.map((feature, i) => (
-                    <motion.li
-                      key={i}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={isInView ? { opacity: 1, x: 0 } : {}}
-                      transition={{ duration: 0.6, delay: 0.5 + i * 0.08, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                      className="flex items-start gap-4"
-                    >
-                      <div className={`shrink-0 w-6 h-6 rounded-lg flex items-center justify-center ${
-                        plan.highlight
-                          ? 'bg-white/20 backdrop-blur-md'
-                          : 'bg-brand-blue/10'
-                      }`}>
-                        <Check className={`w-4 h-4 ${
-                          plan.highlight ? 'text-white' : 'text-brand-blue'
-                        }`} />
-                      </div>
-                      <span className={`text-base md:text-lg font-medium ${
-                        plan.highlight ? 'text-white/95' : 'text-gray-800'
-                      }`}>
+                    <li key={i} className="flex items-start gap-3">
+                      <Check className={cn("w-5 h-5 flex-shrink-0", plan.highlight ? "text-brand-cyan" : "text-brand-blue")} />
+                      <span className={cn("text-sm font-medium", plan.highlight ? "text-gray-300" : "text-gray-600")}>
                         {feature}
                       </span>
-                    </motion.li>
+                    </li>
                   ))}
                 </ul>
-
-                {/* CTA Button */}
-                <Link href="/auth/register" className="block">
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    className="relative group"
-                  >
-                    {plan.highlight && (
-                      <div className="absolute -inset-1 bg-white rounded-3xl opacity-20 blur-xl" />
-                    )}
-                    <Button
-                      className={`relative w-full h-16 md:h-18 rounded-2xl text-lg md:text-xl font-black transition-all duration-600 overflow-hidden ${
-                        plan.highlight
-                          ? 'bg-white text-brand-blue hover:bg-gray-50 shadow-2xl shadow-white/30'
-                          : 'bg-gradient-to-r from-brand-blue to-brand-cyan text-white hover:from-brand-blue-dark hover:to-brand-cyan-dark shadow-2xl shadow-brand-blue/30'
-                      }`}
-                    >
-                      {!plan.highlight && (
-                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                      )}
-                      <span className="relative">{plan.cta}</span>
-                      <ArrowRight className="relative w-5 h-5 ml-3 group-hover:translate-x-1 transition-transform" />
-                    </Button>
-                  </motion.div>
-                </Link>
               </div>
+
+              <Link href="/auth/register" className="block mt-auto">
+                <Button 
+                  className={cn(
+                    "w-full h-12 rounded-xl font-bold transition-all",
+                    plan.highlight 
+                      ? "bg-white text-gray-900 hover:bg-gray-100" 
+                      : "bg-gray-900 text-white hover:bg-black"
+                  )}
+                >
+                  {plan.cta}
+                </Button>
+              </Link>
             </motion.div>
           ))}
         </div>
 
-        {/* Bottom guarantee */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, delay: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-          className="mt-20 md:mt-24 text-center"
-        >
-          <div className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-white/60 backdrop-blur-xl border border-white/40 shadow-xl">
-            <Sparkles className="w-6 h-6 text-brand-cyan" />
-            <span className="text-lg md:text-xl font-bold text-gray-900">
-              Garantie satisfait ou remboursé pendant 30 jours
-            </span>
-          </div>
-        </motion.div>
       </div>
     </section>
   )

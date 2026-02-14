@@ -353,10 +353,17 @@ export interface DocumentVariables {
   // Variables supplémentaires pour documents spécifiques
   ecole_siret?: string
   ecole_code_postal?: string
+  entreprise_nom?: string
+  destinataire_du_devis?: string
+  adresse_destinataire?: string
+  code_postal_destinataire?: string
+  ville_destinataire?: string
   ecole_region?: string
   ecole_numero_declaration?: string
   ecole_representant?: string
   eleve_adresse?: string
+  eleve_code_postal?: string
+  eleve_ville?: string
   eleve_telephone?: string
   eleve_email?: string
   taux_tva?: string

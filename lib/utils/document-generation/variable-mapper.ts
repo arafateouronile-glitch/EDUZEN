@@ -40,6 +40,8 @@ export function mapStudentToVariables(
     eleve_classe: session?.name || '',
     eleve_photo: student?.photo_url || '',
     eleve_adresse: student?.address || '',
+    eleve_code_postal: (student as any)?.postal_code || '',
+    eleve_ville: (student as any)?.city || '',
     eleve_telephone: student?.phone || '',
     eleve_email: student?.email || '',
     
@@ -100,6 +102,8 @@ export function mapInvoiceToVariables(
     eleve_prenom: student?.first_name || '',
     eleve_numero: student?.student_number || '',
     eleve_adresse: student?.address || '',
+    eleve_code_postal: (student as any)?.postal_code || '',
+    eleve_ville: (student as any)?.city || '',
     
     // Finances
     montant: invoice?.total_amount ? `${invoice.total_amount} ${invoice.currency || 'EUR'}` : '',
@@ -273,6 +277,9 @@ export function mapDataToVariables(
     eleve_nom: student?.last_name || '',
     eleve_prenom: student?.first_name || '',
     eleve_numero: student?.student_number || '',
+    eleve_adresse: student?.address || '',
+    eleve_code_postal: (student as any)?.postal_code || '',
+    eleve_ville: (student as any)?.city || '',
     date_jour: formatDate(now),
     date_emission: formatDate(now),
     date_generation: formatDate(now),

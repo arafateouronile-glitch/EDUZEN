@@ -27,6 +27,8 @@ export function ConsoleErrorFilter() {
       /The message port closed/i, // Erreur commune des extensions
       /Script loaded: operationBanner\.js/i, // Extension de bannière
       /removeChild.*not a child of this node/i, // Erreur DOM venant d'extensions/iframes
+      /NotFoundError.*removeChild|removeChild.*NotFoundError/i, // Uncaught NotFoundError (frame_start / iframe)
+      /node to be removed is not a child/i, // Message alternatif removeChild
       /container has a non-static position.*scroll offset/i, // Framer Motion useScroll (html/body ont déjà position: relative)
     ]
 
@@ -64,14 +66,17 @@ export function ConsoleErrorFilter() {
     const handleError = (event: ErrorEvent) => {
       const errorMessage = event.message || event.error?.message || ''
       const errorSource = event.filename || ''
+      const errorStack = event.error?.stack || ''
 
-      // Filtrer les erreurs provenant d'extensions
+      // Filtrer les erreurs provenant d'extensions / iframes (frame_start, operationBanner, removeChild)
+      const fullText = [errorMessage, errorSource, errorStack].join(' ')
       if (
         filteredPatterns.some((pattern) => 
-          pattern.test(errorMessage) || pattern.test(errorSource)
+          pattern.test(errorMessage) || pattern.test(errorSource) || pattern.test(errorStack) || pattern.test(fullText)
         )
       ) {
-        event.preventDefault() // Empêcher l'affichage dans la console
+        event.preventDefault()
+        event.stopPropagation()
         return false
       }
     }

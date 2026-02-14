@@ -45,9 +45,20 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
 
   const formation = (session as SessionWithRelations)?.formations
   const formationName = formation?.name || ''
+  // Libellé pour la ligne unique (fallback) quand pas de session ni d'items détaillés : formation, programme ou "Formation"
+  const fallbackDesignation = formationName || (program as any)?.name || 'Formation'
   const sessionDebut = session?.start_date ? new Date(session.start_date).toLocaleDateString('fr-FR') : ''
   const sessionFin = session?.end_date ? new Date(session.end_date).toLocaleDateString('fr-FR') : ''
   const formationDuree = (formation as any)?.duration_hours ? `${(formation as any).duration_hours} heures` : ''
+  const orgSettings = (organization as any)?.settings as Record<string, unknown> | undefined
+  const orgCity = (organization as any)?.city ?? orgSettings?.city
+  const orgPostalCode = (organization as any)?.postal_code ?? orgSettings?.postal_code
+  const orgSiret = (organization as any)?.siret ?? orgSettings?.siret
+  const orgDeclarationNumber = (organization as any)?.declaration_number ?? (organization as any)?.nda_number ?? orgSettings?.declaration_number ?? orgSettings?.nda_number
+  const orgRepresentative = (organization as any)?.representative_name ?? orgSettings?.representative_name
+  const orgRegion = (organization as any)?.region ?? (organization as any)?.administrative_region ?? orgSettings?.region
+  const sessionLieu = (session as any)?.location || (session as any)?.venue || ''
+  const formationContenu = ((session as SessionWithRelations)?.formations as any)?.content || (program as any)?.content || ''
 
   let montantHt: string
   let modulesLignes: string
@@ -79,7 +90,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
 
   const variables: any = {
     // Date actuelle
-    date_emission: new Date().toLocaleDateString('fr-FR'),
+    date_emission: (issueDate ? new Date(issueDate).toLocaleDateString('fr-FR') : invoice?.issue_date ? new Date(invoice.issue_date).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR')),
     date_aujourd_hui: new Date().toLocaleDateString('fr-FR'),
     date_jour: new Date().toLocaleDateString('fr-FR'),
     annee_courante: new Date().getFullYear().toString(),
@@ -92,11 +103,11 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     ecole_nom: organization?.name || '',
     ecole_logo: organization?.logo_url || '',
     ecole_adresse: organization?.address || '',
-    ecole_ville: (organization?.address || '').split(',').pop()?.trim() || '',
+    ecole_ville: (typeof orgCity === 'string' ? orgCity : '') || (organization?.address || '').split(',').pop()?.trim() || '',
     ecole_telephone: organization?.phone || '',
     ecole_email: organization?.email || '',
     ecole_site_web: (organization as any)?.website || '',
-    ecole_code_postal: (organization?.address || '').match(/\d{5}/)?.[0] || '',
+    ecole_code_postal: (typeof orgPostalCode === 'string' ? orgPostalCode : '') || (organization?.address || '').match(/\d{5}/)?.[0] || '',
     
     // Format alternatif (organisation_*) pour compatibilité avec anciens templates
     organisation_nom: organization?.name || '',
@@ -119,9 +130,25 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
       : '',
     eleve_photo: (student as any)?.photo_url || '',
     eleve_adresse: (student as any)?.address || '',
+    eleve_code_postal: (student as any)?.postal_code || '',
+    eleve_ville: (student as any)?.city || '',
     eleve_telephone: (student as any)?.phone || '',
     eleve_email: (student as any)?.email || '',
-    
+
+    // Destinataire / client (devis, facture)
+    entreprise_nom: (student as any)?.company_name || (student as any)?.entreprise_nom || '',
+    tuteur_nom: (student as any)?.tutor_name || (student as any)?.representative_name || (student ? `${student.first_name || ''} ${student.last_name || ''}`.trim() : ''),
+    // Destinataire du devis : nom de l'entreprise pour les entreprises, prénom + nom pour les particuliers
+    destinataire_du_devis:
+      (() => {
+        const ent = (student as any)?.company_name || (student as any)?.entreprise_nom
+        if (ent && String(ent).trim()) return String(ent).trim()
+        return student ? `${student.first_name || ''} ${student.last_name || ''}`.trim() : ''
+      })(),
+    adresse_destinataire: (student as any)?.address || '',
+    code_postal_destinataire: (student as any)?.postal_code || '',
+    ville_destinataire: (student as any)?.city || '',
+
     // Format alternatif (etudiant_*) pour compatibilité
     etudiant_nom: student?.last_name || '',
     etudiant_prenom: student?.first_name || '',
@@ -133,6 +160,8 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
       ? new Date(student.date_of_birth).toLocaleDateString('fr-FR')
       : '',
     etudiant_adresse: (student as any)?.address || '',
+    etudiant_code_postal: (student as any)?.postal_code || '',
+    etudiant_ville: (student as any)?.city || '',
     etudiant_telephone: (student as any)?.phone || '',
     etudiant_email: (student as any)?.email || '',
     etudiant_photo: (student as any)?.photo_url || '',
@@ -172,10 +201,11 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     formation_equipe_pedagogique: ((session as SessionWithRelations)?.formations as any)?.pedagogical_team || (program as any)?.pedagogical_team || '',
     formation_ressources: ((session as SessionWithRelations)?.formations as any)?.resources || (program as any)?.resources || '',
     formation_supports: ((session as SessionWithRelations)?.formations as any)?.materials || (program as any)?.materials || '',
-    session_lieu: (session as any)?.location || (session as any)?.venue || '',
-    session_effectif: (session as any)?.enrollment_count?.toString() || (session as any)?.student_count?.toString() || '',
+    session_lieu: sessionLieu,
+    session_effectif: (session as any)?.enrollment_count?.toString() || (session as any)?.student_count?.toString() || (sessionModules?.length ? String(sessionModules.length) : '') || '1',
     diplome_ou_certification: ((session as SessionWithRelations)?.formations as any)?.certification || (program as any)?.certification || '',
-    ecole_region: (organization as any)?.region || (organization as any)?.administrative_region || '',
+    ecole_region: (typeof orgRegion === 'string' ? orgRegion : '') || (organization as any)?.region || (organization as any)?.administrative_region || '',
+    formation_prix: (formation as any)?.price != null ? `${Number((formation as any).price).toFixed(2)} ${(formation as any)?.currency || 'EUR'}` : (invoice?.amount != null ? `${Number(invoice.amount).toFixed(2)} ${invoice?.currency || 'EUR'}` : (montantHt ? `${montantHt} EUR` : '')),
     // Programme
     programme_nom: program?.name || (session as SessionWithRelations)?.formations?.programs?.name || '',
     programme_code: (program as any)?.code || '',
@@ -205,6 +235,88 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     montant: montantHt,
     montant_ht: montantHt,
     modules_lignes: modulesLignes,
+    // Tableau des modules pour la boucle {FOR:modules} (devis et factures : une ligne par module)
+    modules: (() => {
+      if (sessionModules && sessionModules.length > 0) {
+        return sessionModules.map((m) => {
+          const amount = Number(m.amount)
+          const a = (Number.isFinite(amount) ? amount : 0).toFixed(2)
+          return { nom: m.name || fallbackDesignation, prix_ht: a, total_ht: a, quantite: 1 }
+        })
+      }
+      // Facture sans session : construire les lignes à partir des items de la facture
+      const items = invoice?.items
+      if (invoice && Array.isArray(items) && items.length > 0) {
+        const invoiceAmount = Number(invoice.amount)
+        const totalInvoice = Number.isFinite(invoiceAmount) ? invoiceAmount : 0
+        return items.map((item: any) => {
+          const desc = item.description ?? item.name ?? fallbackDesignation
+          const qty = Math.max(1, Number(item.quantity) || 1)
+          let unit = Number(item.unit_price)
+          let total = Number(item.total)
+          if (!Number.isFinite(unit)) unit = item.amount != null ? Number(item.amount) : 0
+          if (!Number.isFinite(total)) total = Number.isFinite(unit) ? unit * qty : 0
+          // Si aucun montant sur la ligne, répartir le total HT de la facture
+          if (!Number.isFinite(total) || total <= 0) {
+            total = items.length > 0 ? totalInvoice / items.length : totalInvoice
+            unit = qty > 0 ? total / qty : total
+          }
+          const totalVal = Number.isFinite(total) ? total : 0
+          const unitVal = Number.isFinite(unit) ? unit : 0
+          return {
+            nom: String(desc || fallbackDesignation),
+            prix_ht: unitVal.toFixed(2),
+            total_ht: totalVal.toFixed(2),
+            quantite: qty,
+          }
+        })
+      }
+      return [{ nom: fallbackDesignation, prix_ht: montantHt, total_ht: montantHt, quantite: 1 }]
+    })(),
+    // Lignes HTML du tableau facture (Désignation, Qté, Prix unit. HT, Total HT) — une ligne par module, à injecter dans <tbody>
+    modules_lignes_facture: (() => {
+      const mods = (() => {
+        if (sessionModules && sessionModules.length > 0) {
+          return sessionModules.map((m) => {
+            const amount = Number(m.amount)
+            const a = (Number.isFinite(amount) ? amount : 0).toFixed(2)
+            return { nom: m.name || fallbackDesignation, prix_ht: a, total_ht: a, quantite: 1 }
+          })
+        }
+        const items = invoice?.items
+        if (invoice && Array.isArray(items) && items.length > 0) {
+          const invoiceAmount = Number(invoice.amount)
+          const totalInvoice = Number.isFinite(invoiceAmount) ? invoiceAmount : 0
+          return items.map((item: any) => {
+            const desc = item.description ?? item.name ?? fallbackDesignation
+            const qty = Math.max(1, Number(item.quantity) || 1)
+            let unit = Number(item.unit_price)
+            let total = Number(item.total)
+            if (!Number.isFinite(unit)) unit = item.amount != null ? Number(item.amount) : 0
+            if (!Number.isFinite(total)) total = Number.isFinite(unit) ? unit * qty : 0
+            if (!Number.isFinite(total) || total <= 0) {
+              total = items.length > 0 ? totalInvoice / items.length : totalInvoice
+              unit = qty > 0 ? total / qty : total
+            }
+            const totalVal = Number.isFinite(total) ? total : 0
+            const unitVal = Number.isFinite(unit) ? unit : 0
+            return {
+              nom: String(desc || fallbackDesignation),
+              prix_ht: unitVal.toFixed(2),
+              total_ht: totalVal.toFixed(2),
+              quantite: qty,
+            }
+          })
+        }
+        return [{ nom: fallbackDesignation, prix_ht: montantHt, total_ht: montantHt, quantite: 1 }]
+      })()
+      return mods
+        .map(
+          (m) =>
+            `<tr><td style="padding: 3px 5px; border: 1px solid #ccc;">${escapeHtml(String(m.nom ?? ''))}</td><td style="padding: 3px 5px; text-align: center; border: 1px solid #ccc;">${Number(m.quantite ?? 1)}</td><td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">${String(m.prix_ht ?? '0.00')}</td><td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">${String(m.total_ht ?? '0.00')}</td></tr>`
+        )
+        .join('')
+    })(),
     montant_ttc: sessionModules?.length ? montantHt : (invoice?.total_amount ? Number(invoice.total_amount).toFixed(2) : '0.00'),
     tva: sessionModules?.length ? '0.00' : (invoice?.tax_amount ? Number(invoice.tax_amount).toFixed(2) : '0.00'),
     taux_tva: sessionModules?.length ? '0.00' : (invoice?.tax_amount && invoice?.amount ? ((Number(invoice.tax_amount) / Number(invoice.amount)) * 100).toFixed(2) : '0.00'),
@@ -228,9 +340,22 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     date_paiement: (invoice as any)?.paid_at
       ? new Date((invoice as any).paid_at).toLocaleDateString('fr-FR')
       : '',
-    ecole_siret: (organization as any)?.siret || '',
-    ecole_numero_declaration: (organization as any)?.declaration_number || '',
-    ecole_representant: (organization as any)?.representative_name || '',
+    ecole_siret: (typeof orgSiret === 'string' ? orgSiret : '') || (organization as any)?.siret || '',
+    ecole_numero_declaration: (typeof orgDeclarationNumber === 'string' ? orgDeclarationNumber : '') || (organization as any)?.declaration_number || (organization as any)?.nda_number || '',
+    ecole_representant: (typeof orgRepresentative === 'string' ? orgRepresentative : '') || (organization as any)?.representative_name || '',
+    iban: (organization as any)?.iban || (orgSettings as any)?.iban || '',
+    bic: (organization as any)?.bic || (orgSettings as any)?.bic || '',
+
+    // Convocation
+    convocation_objet: session?.name || formationName || 'Session de formation',
+    convocation_date: sessionDebut,
+    convocation_heure: (session as any)?.start_time || (session?.start_date 
+      ? new Date(session.start_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      : '09:00'),
+    convocation_lieu: sessionLieu || (organization as any)?.city || '',
+    convocation_adresse: (session as any)?.address || (organization as any)?.address || '',
+    convocation_duree: formationDuree,
+    convocation_contenu: formationContenu || 'Programme de formation standard',
 
     // Langue
     langue: language,

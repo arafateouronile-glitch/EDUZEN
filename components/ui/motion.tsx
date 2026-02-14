@@ -21,6 +21,7 @@ export {
   useSpring,
   useAnimationControls,
   useScroll,
+  useMotionValueEvent,
   Reorder,
   type MotionProps,
   type AnimatePresenceProps,

@@ -19,12 +19,12 @@ export default function DashboardClientLayout({
   const pathname = usePathname()
   const { isLoading: authLoading } = useAuth()
 
-  // Gestion d'erreur globale pour les scripts externes (extensions de navigateur, etc.)
+  // Gestion d'erreur globale pour les scripts externes (extensions de navigateur, iframe Cursor/Vercel)
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       const msg = event.message ?? ''
       const filename = event.filename ?? ''
-      // Ignorer les erreurs provenant de scripts externes (extensions de navigateur, iframes)
+      const stack = event.error?.stack ?? ''
       const isExternalScript =
         filename.includes('frame.js') ||
         filename.includes('frame_start') ||
@@ -33,15 +33,15 @@ export default function DashboardClientLayout({
         filename.includes('moz-extension://') ||
         filename.includes('safari-extension://')
       const isKnownDomNoise =
-        /removeChild.*not a child of this node/i.test(msg) || /NotFoundError.*removeChild/i.test(msg)
+        /removeChild.*not a child of this node/i.test(msg) ||
+        /NotFoundError.*removeChild/i.test(msg) ||
+        /node to be removed is not a child/i.test(msg) ||
+        /frame_start|operationBanner/i.test(stack)
       if (isExternalScript || isKnownDomNoise) {
-        // Ne pas afficher ces erreurs dans la console en production
-        if (process.env.NODE_ENV === 'production') {
-          event.preventDefault()
-          return false
-        }
-        // En développement, on les log mais on ne les affiche pas comme erreurs critiques
-        logger.warn('Erreur ignorée depuis une extension de navigateur', { message: event.message, filename: event.filename })
+        event.preventDefault()
+        event.stopPropagation()
+        if (process.env.NODE_ENV === 'production') return false
+        logger.warn('Erreur ignorée (script externe / iframe)', { message: event.message, filename: event.filename })
         return false
       }
     }

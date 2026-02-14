@@ -275,7 +275,7 @@ export default function DocumentTemplatesPage() {
     },
   })
 
-  // Mutation pour réinitialiser facture/devis avec le nouveau design
+  // Mutation pour réinitialiser facture/devis/contrat avec le nouveau design
   const resetDefaultsMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch('/api/document-templates/reset-defaults', {
@@ -283,7 +283,7 @@ export default function DocumentTemplatesPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ types: ['facture', 'devis'] }),
+        body: JSON.stringify({ types: ['facture', 'devis', 'contrat', 'convocation'] }),
       })
       if (!response.ok) {
         const error = await response.json()
@@ -294,11 +294,40 @@ export default function DocumentTemplatesPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['document-templates', user?.organization_id] })
       queryClient.invalidateQueries({ queryKey: ['document-templates-by-type', user?.organization_id] })
+      queryClient.invalidateQueries({ queryKey: ['document-template'] })
       alert(`${data.summary.updated} modèle(s) réinitialisé(s) avec le nouveau design INSSI !`)
     },
     onError: (error) => {
       logger.error('Erreur lors de la réinitialisation:', error)
       alert(error instanceof Error ? error.message : 'Erreur lors de la réinitialisation')
+    },
+  })
+
+  // Mutation pour mettre à jour uniquement le modèle Contrat (dernière version par défaut)
+  const updateContratMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/document-templates/reset-defaults', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ types: ['contrat', 'convention'] }),
+      })
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la mise à jour du contrat et de la convention')
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-templates', user?.organization_id] })
+      queryClient.invalidateQueries({ queryKey: ['document-templates-by-type', user?.organization_id] })
+      queryClient.invalidateQueries({ queryKey: ['document-template'] })
+      alert('Modèles Contrat et Convention mis à jour avec la dernière version. Rechargez la page d\'édition (F5) ou la page de génération si besoin.')
+    },
+    onError: (error) => {
+      logger.error('Erreur lors de la mise à jour du contrat:', error)
+      alert(error instanceof Error ? error.message : 'Erreur lors de la mise à jour du contrat et de la convention')
     },
   })
 
@@ -371,7 +400,7 @@ export default function DocumentTemplatesPage() {
           </h1>
           <p className="text-text-tertiary mt-1">Gérez vos modèles de documents avec header et footer personnalisables</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={() => resetDefaultsMutation.mutate()}
@@ -385,7 +414,24 @@ export default function DocumentTemplatesPage() {
             ) : (
               <>
                 <Wand2 className="h-4 w-4 mr-2" />
-                Réinitialiser Facture/Devis
+                Réinitialiser Facture / Devis / Contrat / Convocation
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => updateContratMutation.mutate()}
+            disabled={updateContratMutation.isPending}
+          >
+            {updateContratMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Mise à jour...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Mettre à jour Contrat & Convention
               </>
             )}
           </Button>

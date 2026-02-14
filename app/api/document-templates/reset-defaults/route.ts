@@ -150,7 +150,11 @@ export async function POST(request: NextRequest) {
             header_height: 50,
             footer_enabled: true,
             footer_height: 30,
+            is_default: true,
           })
+
+          // S'assurer que ce template est bien le modèle par défaut (session + page génération + liste modèles)
+          await documentTemplateService.setAsDefault(templateToUpdate.id, organizationId)
 
           logger.info(`Update result for ${type}:`, {
             updateResult: updateResult ? 'success' : 'no result',

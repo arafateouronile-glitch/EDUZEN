@@ -328,6 +328,10 @@ module.exports = {
           '0%': { transform: 'scale(1)', opacity: 1 },
           '75%, 100%': { transform: 'scale(1.5)', opacity: 0 },
         },
+        'marquee-vertical': {
+          '0%': { transform: 'translateY(0)' },
+          '100%': { transform: 'translateY(calc(-100% - 1.5rem))' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -351,6 +355,7 @@ module.exports = {
         'bounce-slow': 'bounce-slow 3s ease-in-out infinite',
         'spin-slow': 'spin-slow 8s linear infinite',
         'ping-slow': 'ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite',
+        'marquee-vertical': 'marquee-vertical var(--duration, 40s) linear infinite',
       },
       boxShadow: {
         'premium': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -374,5 +379,3 @@ module.exports = {
   },
   plugins: [require('tailwindcss-animate')],
 }
-
-

@@ -76,7 +76,8 @@
       "Bash(PATH=\"/usr/local/bin:$PATH\" npm install:*)",
       "Bash(PATH=\"/usr/local/bin:$PATH\" npm run lint:*)",
       "Bash(pnpm exec tsc:*)",
-      "Bash(/usr/bin/env npm run type-check)"
+      "Bash(/usr/bin/env npm run type-check)",
+      "Bash(npx next build:*)"
     ],
     "additionalDirectories": [
       "/Users/arafatetoure/Documents/EDUZEN/app/api/opco-access",

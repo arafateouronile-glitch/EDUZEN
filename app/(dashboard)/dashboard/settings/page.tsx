@@ -98,6 +98,8 @@ export default function SettingsPage() {
     stamp_url: '',
     signature_url: '',
     brand_color: '#335ACF',
+    siret: '',
+    nda_number: '',
   })
 
   // États pour les uploads
@@ -190,6 +192,8 @@ export default function SettingsPage() {
         stamp_url: (organization as any).stamp_url ?? '',
         signature_url: (organization as any).signature_url ?? '',
         brand_color: (organization as any).brand_color ?? '#335ACF',
+        siret: (organization as any).siret ?? '',
+        nda_number: (organization as any).nda_number ?? '',
       })
     }
   }, [organization])
@@ -282,6 +286,12 @@ export default function SettingsPage() {
       }
       if (data.signature_url !== undefined && data.signature_url !== (currentOrg as any)?.signature_url) {
         validFields.signature_url = data.signature_url || null
+      }
+      if (data.siret !== undefined && (data.siret?.trim() ?? '') !== ((currentOrg as any)?.siret ?? '')) {
+        validFields.siret = data.siret?.trim() || null
+      }
+      if (data.nda_number !== undefined && (data.nda_number?.trim() ?? '') !== ((currentOrg as any)?.nda_number ?? '')) {
+        validFields.nda_number = data.nda_number?.trim() || null
       }
       
       // postal_code n'existe pas dans la table, on le stocke dans settings
@@ -998,6 +1008,8 @@ export default function SettingsPage() {
                                 stamp_url: (organization as any).stamp_url ?? '',
                                 signature_url: (organization as any).signature_url ?? '',
                                 brand_color: (organization as any).brand_color ?? '#335ACF',
+                                siret: (organization as any).siret ?? '',
+                                nda_number: (organization as any).nda_number ?? '',
                               })
                             }
                             setIsEditing(true)
@@ -1042,6 +1054,8 @@ export default function SettingsPage() {
                                   stamp_url: (organization as any).stamp_url ?? '',
                                   signature_url: (organization as any).signature_url ?? '',
                                   brand_color: (organization as any).brand_color ?? '#335ACF',
+                                  siret: (organization as any).siret ?? '',
+                                  nda_number: (organization as any).nda_number ?? '',
                                 })
                               }
                             }}
@@ -1165,6 +1179,30 @@ export default function SettingsPage() {
                             value={orgFormData.code ?? ''}
                             onChange={(e) => setOrgFormData({ ...orgFormData, code: e.target.value })}
                             disabled={!isEditing}
+                            className="bg-gray-50/50"
+                          />
+                        </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label>SIRET</Label>
+                          <Input
+                            value={orgFormData.siret ?? ''}
+                            onChange={(e) => setOrgFormData({ ...orgFormData, siret: e.target.value.replace(/\D/g, '').slice(0, 14) })}
+                            disabled={!isEditing}
+                            placeholder="14 chiffres"
+                            maxLength={14}
+                            className="bg-gray-50/50 font-mono"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Numéro de déclaration d'activité</Label>
+                          <Input
+                            value={orgFormData.nda_number ?? ''}
+                            onChange={(e) => setOrgFormData({ ...orgFormData, nda_number: e.target.value })}
+                            disabled={!isEditing}
+                            placeholder="Numéro attribué par la préfecture / DIRECCTE"
                             className="bg-gray-50/50"
                           />
                         </div>

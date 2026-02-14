@@ -6,163 +6,76 @@ import { Facebook, Twitter, Instagram, Linkedin, Heart, ArrowRight } from 'lucid
 
 export function Footer() {
   return (
-    <footer className="relative bg-gradient-to-b from-white via-gray-50 to-white border-t-2 border-gray-200 pt-16 md:pt-20 lg:pt-24 pb-8">
-      <div className="container mx-auto px-4 md:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-12 mb-12 md:mb-14">
-          {/* Brand Column */}
-          <div className="lg:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            >
-              <Link href="/" className="inline-block mb-8">
-                <span className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-blue to-brand-cyan font-display">
-                  EDUZEN
-                </span>
-              </Link>
-              <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed max-w-md font-light tracking-tight">
-                La plateforme de gestion{' '}
-                <span className="italic font-normal text-brand-blue">nouvelle génération</span> pour les organismes de formation en France et en Europe.{' '}
-                <span className="font-semibold">Simple, puissante, conforme</span>.
-              </p>
+    <footer className="relative bg-[#0B0F19] text-white pt-24 pb-12 overflow-hidden">
+      
+      {/* Massive Background Text */}
+      <div className="absolute inset-0 flex items-end justify-center pointer-events-none overflow-hidden select-none">
+        <h1 className="text-[15vw] md:text-[22vw] font-black text-white/[0.03] leading-none tracking-tighter font-display translate-y-[20%]">
+          EDUZEN
+        </h1>
+      </div>
 
-              {/* Social Icons */}
-              <div className="flex gap-4">
-                {[
-                  { Icon: Twitter, href: '#' },
-                  { Icon: Facebook, href: '#' },
-                  { Icon: Linkedin, href: '#' },
-                  { Icon: Instagram, href: '#' },
-                ].map(({ Icon, href }, index) => (
-                  <motion.a
-                    key={index}
-                    href={href}
-                    whileHover={{ scale: 1.1, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                    className="w-12 h-12 rounded-2xl bg-white border-2 border-gray-200 hover:border-brand-blue flex items-center justify-center text-gray-500 hover:text-brand-blue hover:shadow-lg transition-all duration-600"
-                  >
-                    <Icon className="w-5 h-5" />
-                  </motion.a>
-                ))}
-              </div>
-            </motion.div>
+      <div className="container mx-auto px-4 md:px-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mb-20">
+          
+          {/* Brand & Mission */}
+          <div className="md:col-span-5 lg:col-span-4">
+            <Link href="/" className="inline-block mb-8">
+              <span className="text-3xl font-black text-white tracking-tight">
+                EDUZEN
+              </span>
+            </Link>
+            <p className="text-gray-400 text-lg leading-relaxed mb-8 max-w-sm">
+              La plateforme tout-en-un qui libère le potentiel des organismes de formation.
+            </p>
+            <div className="flex gap-4">
+              {[Twitter, Linkedin, Instagram].map((Icon, i) => (
+                <a key={i} href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300">
+                  <Icon className="w-4 h-4" />
+                </a>
+              ))}
+            </div>
           </div>
 
-          {/* Links Columns */}
-          {[
-            {
-              title: 'Produit',
-              links: [
-                { label: 'Fonctionnalités', href: '#features' },
-                { label: 'Tarifs', href: '#tarifs' },
-                { label: 'Guide d\'utilisation', href: '#' },
-                { label: 'Mises à jour', href: '#' },
-              ]
-            },
-            {
-              title: 'Entreprise',
-              links: [
-                { label: 'À propos', href: '/a-propos' },
-                { label: 'Carrières', href: '#' },
-                { label: 'Blog', href: '/blog' },
-                { label: 'Contact', href: '/contact' },
-              ]
-            },
-            {
-              title: 'Légal',
-              links: [
-                { label: 'Confidentialité', href: '/legal/privacy' },
-                { label: 'CGU', href: '/legal/terms' },
-                { label: 'Sécurité', href: '#' },
-                { label: 'RGPD', href: '/legal/privacy#9-droits-des-utilisateurs-rgpd' },
-              ]
-            }
-          ].map((column, colIndex) => (
-            <motion.div
-              key={colIndex}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: colIndex * 0.1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            >
-              <h4 className="text-lg md:text-xl font-bold text-gray-900 mb-6 md:mb-8 font-display">{column.title}</h4>
-              <ul className="space-y-4">
-                {column.links.map((link, linkIndex) => (
-                  <li key={linkIndex}>
-                    <Link
-                      href={link.href}
-                      className="group inline-flex items-center gap-2 text-base md:text-lg text-gray-600 hover:text-brand-blue transition-all duration-400"
-                    >
-                      <span>{link.label}</span>
-                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-400" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
+          {/* Links */}
+          <div className="md:col-span-7 lg:col-span-8 grid grid-cols-2 md:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Produit",
+                links: ["Fonctionnalités", "Tarifs", "Mises à jour", "Roadmap"]
+              },
+              {
+                title: "Ressources",
+                links: ["Blog", "Guide Qualiopi", "Centre d'aide", "API Docs"]
+              },
+              {
+                title: "Légal",
+                links: ["Confidentialité", "CGU", "Mentions Légales", "Sécurité"]
+              }
+            ].map((col, i) => (
+              <div key={i}>
+                <h4 className="font-bold text-white mb-6">{col.title}</h4>
+                <ul className="space-y-4">
+                  {col.links.map((link, j) => (
+                    <li key={j}>
+                      <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm hover:translate-x-1 inline-block duration-200">
+                        {link}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="border-t-2 border-gray-200 pt-10 md:pt-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="flex flex-col md:flex-row justify-between items-center gap-8 mb-10"
-          >
-            {/* Badges */}
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-brand-cyan-ghost border-2 border-brand-cyan-pale rounded-full"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-brand-cyan animate-pulse"></span>
-                  <span className="text-sm font-bold text-brand-cyan-darker">Certifié Qualiopi</span>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-brand-blue-ghost border-2 border-brand-blue-pale rounded-full"
-                >
-                  <span className="text-sm font-bold text-brand-blue-darker">✓ RGPD conforme</span>
-                </motion.div>
-              </div>
-              <p className="text-base md:text-lg font-light text-gray-700 tracking-tight">
-                <span className="font-normal">Profitez de</span>{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan font-extrabold italic tracking-tighter">-50% pour le lancement</span>{' '}
-                <span className="font-medium">en France</span>
-              </p>
-            </div>
-
-            {/* Made with love */}
-            <p className="text-base text-gray-600 flex items-center gap-2 font-medium">
-              Fait avec <Heart className="w-5 h-5 text-red-500 fill-current animate-pulse" /> en France
-            </p>
-          </motion.div>
-
-          {/* Copyright */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-            className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-gray-200"
-          >
-            <p className="text-sm md:text-base text-gray-500">
-              © {new Date().getFullYear()} EduZen. Tous droits réservés.
-            </p>
-            <p className="text-sm md:text-base text-gray-500 font-light italic tracking-wide">
-              Votre organisme de formation{' '}
-              <span className="font-semibold not-italic text-brand-blue">mérite mieux</span>
-            </p>
-          </motion.div>
+        {/* Bottom Bar */}
+        <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
+          <p>© {new Date().getFullYear()} EduZen. Fait avec passion en France.</p>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span>Systèmes opérationnels</span>
+          </div>
         </div>
       </div>
     </footer>

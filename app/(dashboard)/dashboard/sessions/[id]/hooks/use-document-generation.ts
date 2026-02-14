@@ -540,6 +540,7 @@ export function useDocumentGeneration({
           start_time: sessionData.start_time || undefined,
           end_time: sessionData.end_time || undefined,
           location: sessionData.location || undefined,
+          formations: formation, // Important pour l'extracteur de variables
         } as any,
         organization: organization as any,
         program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,

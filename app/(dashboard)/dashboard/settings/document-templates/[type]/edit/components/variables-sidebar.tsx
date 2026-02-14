@@ -49,6 +49,8 @@ const VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: 'eleve_classe', label: 'Classe de l\'élève' },
       { key: 'eleve_photo', label: 'Photo de l\'élève' },
       { key: 'eleve_adresse', label: 'Adresse de l\'élève' },
+      { key: 'eleve_code_postal', label: 'Code postal de l\'élève' },
+      { key: 'eleve_ville', label: 'Ville de l\'élève' },
       { key: 'eleve_telephone', label: 'Téléphone de l\'élève' },
       { key: 'eleve_email', label: 'Email de l\'élève' },
     ],

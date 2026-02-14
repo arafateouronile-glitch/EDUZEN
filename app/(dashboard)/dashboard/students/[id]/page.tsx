@@ -56,7 +56,7 @@ export default function StudentDetailPage() {
         .from('sessions')
         .select('*')
         .eq('id', student.class_id)
-        .single()
+        .maybeSingle()
       
       if (sessionError) {
         logger.warn('Erreur récupération session pour étudiant', { error: sessionError, class_id: student.class_id })

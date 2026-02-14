@@ -174,7 +174,12 @@ export function GestionFinances({
       if (!user?.organization_id || enrollmentIds.length === 0) return []
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, students(id, first_name, last_name, student_number, email), payments(id, amount, status, paid_at), enrollments(id, session_id)')
+        .select(`
+          *,
+          students(id, first_name, last_name, student_number, email, address, postal_code, city, phone, date_of_birth),
+          payments(id, amount, status, paid_at),
+          enrollments(id, session_id, students(id, first_name, last_name, student_number, email, address, postal_code, city, phone, date_of_birth))
+        `)
         .eq('organization_id', user.organization_id)
         .in('enrollment_id', enrollmentIds)
         .order('issue_date', { ascending: false })
@@ -371,7 +376,7 @@ export function GestionFinances({
         return
       }
 
-      const student = invoice.students as StudentWithRelations | undefined
+      const student = (invoice.students ?? (invoice.enrollments as { students?: StudentWithRelations }[])?.[0]?.students) as StudentWithRelations | undefined
       const invoiceData = invoice as InvoiceWithRelations
 
       let sessionModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
@@ -443,7 +448,7 @@ export function GestionFinances({
   const generatePdfBlobForEmail = async (invoice: any, type: 'invoice' | 'quote', templateId?: string): Promise<Blob> => {
     if (!org || !invoice || !user?.organization_id) throw new Error('Données manquantes pour la génération du document.')
 
-    const student = invoice.students as (StudentWithRelations & { email?: string | null }) | undefined
+    const student = (invoice.students ?? (invoice.enrollments as { students?: StudentWithRelations }[])?.[0]?.students) as (StudentWithRelations & { email?: string | null }) | undefined
 
     try {
       // Récupérer le template depuis la base de données
@@ -1228,98 +1233,98 @@ export function GestionFinances({
         </div>
       </motion.div>
 
-      {/* Statistiques financières - Grille moderne */}
+      {/* Statistiques financières - Grille moderne et épurée */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Revenu total - Brand Blue */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
-          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-brand-blue/20 hover:border-brand-blue/40 transition-all duration-500 group">
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-brand-blue/20 to-cyan-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-brand-blue/10 hover:border-brand-blue/30 transition-all duration-300 group bg-white/50">
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-brand-blue to-cyan-500 rounded-xl shadow-lg shadow-brand-blue/25">
-                  <Wallet className="h-5 w-5 text-white" />
+                <div className="p-2.5 bg-brand-blue/10 rounded-xl">
+                  <Wallet className="h-5 w-5 text-brand-blue" />
                 </div>
-                <span className="text-xs font-semibold text-brand-blue bg-brand-blue/10 px-2 py-1 rounded-full">
+                <span className="text-xs font-medium text-brand-blue bg-brand-blue/5 px-2.5 py-1 rounded-full">
                   {enrollments.length} inscrit{enrollments.length > 1 ? 's' : ''}
                 </span>
               </div>
               <p className="text-sm font-medium text-gray-500 mb-1">Revenu total</p>
-              <p className="text-3xl font-bold text-gray-900 tracking-tight">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 {formatCurrency(totalRevenue, 'EUR')}
               </p>
             </div>
           </GlassCard>
         </motion.div>
 
+        {/* Encaissé - Style unifié (Success/Blue) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-500 group">
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-brand-blue/10 hover:border-brand-blue/30 transition-all duration-300 group bg-white/50">
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-lg shadow-emerald-500/25">
-                  <CheckCircle2 className="h-5 w-5 text-white" />
+                <div className="p-2.5 bg-brand-cyan/10 rounded-xl">
+                  <CheckCircle2 className="h-5 w-5 text-brand-cyan-dark" />
                 </div>
-                <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-full">
+                <span className="text-xs font-medium text-brand-cyan-dark bg-brand-cyan/5 px-2.5 py-1 rounded-full">
                   {collectionRate}%
                 </span>
               </div>
               <p className="text-sm font-medium text-gray-500 mb-1">Encaissé</p>
-              <p className="text-3xl font-bold text-emerald-600 tracking-tight">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 {formatCurrency(totalPaid, 'EUR')}
               </p>
             </div>
           </GlassCard>
         </motion.div>
 
+        {/* Reste à payer - Warning/Cyan */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
         >
-          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-amber-500/20 hover:border-amber-500/40 transition-all duration-500 group">
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-brand-blue/10 hover:border-brand-blue/30 transition-all duration-300 group bg-white/50">
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl shadow-lg shadow-amber-500/25">
-                  <AlertCircle className="h-5 w-5 text-white" />
+                <div className="p-2.5 bg-amber-50 rounded-xl">
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
                 </div>
-                <span className="text-xs font-semibold text-amber-600 bg-amber-500/10 px-2 py-1 rounded-full">
+                <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
                   {enrollmentsWithBalance.length} en cours
                 </span>
               </div>
               <p className="text-sm font-medium text-gray-500 mb-1">Reste à payer</p>
-              <p className="text-3xl font-bold text-amber-600 tracking-tight">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 {formatCurrency(totalRemaining, 'EUR')}
               </p>
             </div>
           </GlassCard>
         </motion.div>
 
+        {/* Dépenses - Danger/Red (Subtil) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.4 }}
         >
-          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-rose-500/20 hover:border-rose-500/40 transition-all duration-500 group">
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-rose-500/20 to-pink-500/20 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+          <GlassCard variant="premium" className="relative overflow-hidden h-full p-6 border border-brand-blue/10 hover:border-brand-blue/30 transition-all duration-300 group bg-white/50">
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl shadow-lg shadow-rose-500/25">
-                  <TrendingDown className="h-5 w-5 text-white" />
+                <div className="p-2.5 bg-rose-50 rounded-xl">
+                  <TrendingDown className="h-5 w-5 text-rose-500" />
                 </div>
-                <span className="text-xs font-semibold text-rose-600 bg-rose-500/10 px-2 py-1 rounded-full">
+                <span className="text-xs font-medium text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full">
                   {chargesSummary?.charge_count || 0} charge{(chargesSummary?.charge_count || 0) > 1 ? 's' : ''}
                 </span>
               </div>
               <p className="text-sm font-medium text-gray-500 mb-1">Dépenses</p>
-              <p className="text-3xl font-bold text-rose-600 tracking-tight">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
                 {formatCurrency(chargesSummary?.total_amount || 0, 'EUR')}
               </p>
             </div>
@@ -1337,10 +1342,10 @@ export function GestionFinances({
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <GlassCard variant="premium" className="overflow-hidden border border-gray-200/50 shadow-xl shadow-gray-200/20">
-              <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-white via-gray-50/50 to-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="p-6 border-b border-gray-100 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-br from-brand-blue to-indigo-600 rounded-xl shadow-lg shadow-brand-blue/20">
-                    <Receipt className="h-6 w-6 text-white" />
+                  <div className="p-3 bg-brand-blue/10 rounded-xl">
+                    <Receipt className="h-6 w-6 text-brand-blue" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">Inscriptions & Facturation</h3>
@@ -1365,7 +1370,7 @@ export function GestionFinances({
                   </Button>
                   <Button
                     size="sm"
-                    className="bg-gradient-to-r from-brand-blue to-indigo-600 hover:from-brand-blue-dark hover:to-indigo-700 text-white shadow-lg shadow-brand-blue/25 transition-all"
+                    className="bg-brand-blue hover:bg-brand-blue-dark text-white shadow-lg shadow-brand-blue/25 transition-all"
                     onClick={() => {
                       setSelectedEnrollmentId(null)
                       setShowPaymentForm(false)
@@ -1492,16 +1497,17 @@ export function GestionFinances({
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Payé</p>
-                              <p className="font-bold text-green-600">{formatCurrency(paid, 'EUR')}</p>
+                              <p className="font-bold text-brand-blue">{formatCurrency(paid, 'EUR')}</p>
                             </div>
                             <div className="text-right min-w-[80px]">
                               <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Statut</p>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border inline-block mt-0.5 ${
-                                enrollment.payment_status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
-                                enrollment.payment_status === 'partial' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              <span className={cn(
+                                "text-[10px] font-bold px-2 py-0.5 rounded-full border inline-block mt-0.5",
+                                enrollment.payment_status === 'paid' ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20' :
+                                enrollment.payment_status === 'partial' ? 'bg-brand-cyan/10 text-brand-cyan-dark border-brand-cyan/20' :
                                 enrollment.payment_status === 'overdue' ? 'bg-red-50 text-red-700 border-red-200' :
-                                'bg-amber-50 text-amber-700 border-amber-200'
-                              }`}>
+                                'bg-gray-100 text-gray-600 border-gray-200'
+                              )}>
                                 {enrollment.payment_status === 'paid' ? 'PAYÉ' :
                                  enrollment.payment_status === 'partial' ? 'PARTIEL' :
                                  enrollment.payment_status === 'overdue' ? 'RETARD' : 'ATTENTE'}
@@ -1530,7 +1536,7 @@ export function GestionFinances({
                                   <button
                                     onClick={() => handleSendDocumentByEmail(quote, 'quote')}
                                     disabled={isEmailSending === quote.id}
-                                    className="text-gray-400 hover:text-purple-600 transition-colors"
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Envoyer par email"
                                   >
                                     {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
@@ -1558,7 +1564,7 @@ export function GestionFinances({
                                       })
                                     }}
                                     disabled={!quote.students?.email}
-                                    className="text-gray-400 hover:text-purple-600 transition-colors"
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Envoyer en demande de signature"
                                   >
                                     <PenTool className="h-3 w-3" />
@@ -1570,7 +1576,7 @@ export function GestionFinances({
                                       convertQuoteToInvoiceMutation.mutate(quote.id)
                                     }}
                                     disabled={convertingQuoteId === quote.id}
-                                    className="text-gray-400 hover:text-green-600 transition-colors"
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Convertir en facture"
                                   >
                                     {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
@@ -1581,14 +1587,14 @@ export function GestionFinances({
                             
                             {/* Factures */}
                             {studentInvoicesList.map((invoice: any) => (
-                              <div key={invoice.id} className="flex items-center bg-blue-50/50 border border-blue-100 rounded-md px-2 py-1">
-                                <Receipt className="h-3 w-3 text-blue-500 mr-1.5" />
-                                <span className="text-xs font-medium text-blue-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
-                                <div className="flex gap-1 border-l border-blue-200 pl-2">
+                              <div key={invoice.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
+                                <Receipt className="h-3 w-3 text-brand-blue mr-1.5" />
+                                <span className="text-xs font-medium text-gray-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
+                                <div className="flex gap-1 border-l border-gray-200 pl-2">
                                   <button 
                                     onClick={() => handleDownloadDocument(invoice, 'invoice', selectedInvoiceTemplateId)}
                                     disabled={isDownloading === invoice.id}
-                                    className="text-blue-400 hover:text-blue-700 transition-colors"
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Télécharger PDF"
                                   >
                                     {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
@@ -1596,7 +1602,7 @@ export function GestionFinances({
                                   <button
                                     onClick={() => handleSendDocumentByEmail(invoice, 'invoice')}
                                     disabled={isEmailSending === invoice.id}
-                                    className="text-blue-400 hover:text-purple-600 transition-colors"
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Envoyer par email"
                                   >
                                     {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
@@ -1624,12 +1630,12 @@ export function GestionFinances({
                                       })
                                     }}
                                     disabled={!invoice.students?.email}
-                                    className="text-blue-400 hover:text-purple-600 transition-colors"
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Envoyer en demande de signature"
                                   >
                                     <PenTool className="h-3 w-3" />
                                   </button>
-                                  <Link href={`/dashboard/payments/${invoice.id}`} className="text-blue-400 hover:text-blue-700 transition-colors" title="Voir détails">
+                                  <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
                                     <Eye className="h-3 w-3" />
                                   </Link>
                                 </div>
@@ -1716,10 +1722,10 @@ export function GestionFinances({
               transition={{ duration: 0.5, delay: 0.3 }}
             >
               <GlassCard variant="premium" className="overflow-hidden border border-gray-200/50 shadow-xl shadow-gray-200/20">
-                <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-white via-emerald-50/30 to-white">
+                <div className="p-5 border-b border-gray-100 bg-white">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-lg shadow-emerald-500/20">
-                      <CreditCard className="h-5 w-5 text-white" />
+                    <div className="p-3 bg-brand-blue/10 rounded-xl">
+                      <CreditCard className="h-5 w-5 text-brand-blue" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">Paiements récents</h3>
@@ -1742,8 +1748,8 @@ export function GestionFinances({
                           <div className={cn(
                             "w-11 h-11 rounded-xl flex items-center justify-center shadow-sm",
                             payment.status === 'completed'
-                              ? 'bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600'
-                              : 'bg-gradient-to-br from-amber-100 to-orange-100 text-amber-600'
+                              ? 'bg-brand-blue/10 text-brand-blue'
+                              : 'bg-amber-50 text-amber-600'
                           )}>
                             <DollarSign className="h-5 w-5" />
                           </div>
@@ -1763,14 +1769,14 @@ export function GestionFinances({
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-emerald-600 text-lg">
+                          <p className="font-bold text-brand-blue text-lg">
                             +{formatCurrency(Number(payment.amount || 0), payment.currency || 'EUR')}
                           </p>
                           <span className={cn(
                             "text-[10px] font-bold px-2.5 py-1 rounded-full inline-block",
-                            payment.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                            payment.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                            'bg-red-100 text-red-700'
+                            payment.status === 'completed' ? 'bg-brand-blue/10 text-brand-blue' :
+                            payment.status === 'pending' ? 'bg-amber-50 text-amber-700' :
+                            'bg-red-50 text-red-700'
                           )}>
                             {payment.status === 'completed' ? 'COMPLÉTÉ' :
                              payment.status === 'pending' ? 'EN ATTENTE' : 'ÉCHOUÉ'}
@@ -1795,8 +1801,8 @@ export function GestionFinances({
           >
             <GlassCard variant="premium" className="p-6 border border-gray-200/50 shadow-xl shadow-gray-200/20">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-lg shadow-violet-500/20">
-                  <PieChartIcon className="h-5 w-5 text-white" />
+                <div className="p-3 bg-brand-blue/10 rounded-xl">
+                  <PieChartIcon className="h-5 w-5 text-brand-blue" />
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">Statut des paiements</h3>
@@ -1860,15 +1866,15 @@ export function GestionFinances({
             transition={{ duration: 0.5, delay: 0.5 }}
           >
             <GlassCard variant="premium" className="overflow-hidden border border-gray-200/50 shadow-xl shadow-gray-200/20">
-              <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-white via-rose-50/30 to-white flex items-center justify-between">
+              <div className="p-5 border-b border-gray-100 bg-white flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl shadow-lg shadow-rose-500/20">
-                    <TrendingDown className="h-5 w-5 text-white" />
+                  <div className="p-3 bg-red-50 rounded-xl">
+                    <TrendingDown className="h-5 w-5 text-red-600" />
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900">Charges & Dépenses</h3>
                     {chargesSummary && chargesSummary.charge_count > 0 && (
-                      <p className="text-sm text-rose-600 font-semibold">
+                      <p className="text-sm text-red-600 font-semibold">
                         Total: -{formatCurrency(chargesSummary.total_amount, 'EUR')}
                       </p>
                     )}
@@ -1876,7 +1882,8 @@ export function GestionFinances({
                 </div>
                 <Button
                   size="sm"
-                  className="bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white shadow-lg shadow-rose-500/25"
+                  variant="outline"
+                  className="border-gray-200 hover:bg-gray-50 text-gray-700"
                   onClick={handleNewCharge}
                 >
                   <Plus className="h-4 w-4 mr-1" />
@@ -1889,7 +1896,7 @@ export function GestionFinances({
                   charges.map((charge, index) => (
                     <motion.div
                       key={charge.id}
-                      className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-rose-200/50 transition-all group"
+                      className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all group"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -1904,14 +1911,14 @@ export function GestionFinances({
                               {new Date(charge.charge_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                             </span>
                             {charge.charge_categories && (
-                              <span className="text-[10px] px-2 py-0.5 bg-gradient-to-r from-gray-100 to-gray-50 text-gray-600 rounded-full font-medium border border-gray-200/50">
+                              <span className="text-[10px] px-2 py-0.5 bg-gray-50 text-gray-600 rounded-full font-medium border border-gray-200">
                                 {charge.charge_categories.name}
                               </span>
                             )}
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="font-bold text-rose-600 text-base">
+                          <span className="font-bold text-red-600 text-base">
                             -{formatCurrency(Number(charge.amount), charge.currency)}
                           </span>
                         </div>
@@ -1920,9 +1927,9 @@ export function GestionFinances({
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <span className={cn(
                           "text-[10px] px-2.5 py-1 rounded-full font-semibold",
-                          charge.payment_status === 'paid' ? 'bg-emerald-100 text-emerald-700' :
-                          charge.payment_status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                          'bg-red-100 text-red-700'
+                          charge.payment_status === 'paid' ? 'bg-gray-100 text-gray-700' :
+                          charge.payment_status === 'pending' ? 'bg-amber-50 text-amber-700' :
+                          'bg-red-50 text-red-700'
                         )}>
                           {charge.payment_status === 'paid' ? '✓ Payé' :
                            charge.payment_status === 'pending' ? '⏳ En attente' : '✕ Annulé'}
@@ -1959,7 +1966,7 @@ export function GestionFinances({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-rose-200 text-rose-600 hover:bg-rose-50"
+                      className="border-gray-200 text-gray-600 hover:bg-gray-50"
                       onClick={handleNewCharge}
                     >
                       <Plus className="h-4 w-4 mr-1" />
@@ -1970,11 +1977,11 @@ export function GestionFinances({
               </div>
 
               {chargesSummary && chargesSummary.charge_count > 0 && (
-                <div className="p-4 bg-gradient-to-r from-gray-50 via-white to-gray-50 border-t border-gray-100">
+                <div className="p-4 bg-gray-50 border-t border-gray-100">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
                       <span className="text-xs text-gray-500 block mb-1 font-medium">Payé</span>
-                      <span className="text-lg font-bold text-emerald-600">{formatCurrency(chargesSummary.paid_amount, 'EUR')}</span>
+                      <span className="text-lg font-bold text-gray-900">{formatCurrency(chargesSummary.paid_amount, 'EUR')}</span>
                     </div>
                     <div className="text-center p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
                       <span className="text-xs text-gray-500 block mb-1 font-medium">En attente</span>

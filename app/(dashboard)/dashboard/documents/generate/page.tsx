@@ -115,7 +115,7 @@ export default function GenerateDocumentPage() {
           if (studentIds.length > 0) {
             const { data, error } = await supabase
               .from('students')
-              .select('id, first_name, last_name, student_number, date_of_birth, photo_url, class_id, classes(name)')
+              .select('id, first_name, last_name, student_number, date_of_birth, photo_url, class_id, address, email, phone, postal_code, city, classes(name)')
               .eq('organization_id', user.organization_id)
               .eq('status', 'active')
               .in('id', studentIds)
@@ -126,10 +126,10 @@ export default function GenerateDocumentPage() {
         }
       }
       
-      // Sinon, récupérer tous les étudiants actifs
+      // Sinon, récupérer tous les étudiants actifs (avec toutes les infos pour les variables de document)
       const { data, error } = await supabase
         .from('students')
-        .select('id, first_name, last_name, student_number, date_of_birth, photo_url, class_id, classes(name)')
+        .select('id, first_name, last_name, student_number, date_of_birth, photo_url, class_id, address, email, phone, postal_code, city, classes(name)')
         .eq('organization_id', user.organization_id)
         .eq('status', 'active')
         .order('last_name')
@@ -148,7 +148,7 @@ export default function GenerateDocumentPage() {
       // Essayer d'abord avec la jointure complète
       let query = supabase
         .from('invoices')
-        .select('id, invoice_number, student_id, issue_date, due_date, amount, tax_amount, total_amount, currency, items, students(first_name, last_name, student_number)')
+        .select('id, invoice_number, student_id, enrollment_id, issue_date, due_date, amount, tax_amount, total_amount, currency, items, students(first_name, last_name, student_number), enrollments(session_id)')
         .eq('organization_id', user.organization_id)
         .order('created_at', { ascending: false })
         .limit(100)
@@ -160,7 +160,7 @@ export default function GenerateDocumentPage() {
         logger.warn('Erreur récupération factures avec jointure, réessai sans jointure', sanitizeError(error))
         const { data: invoicesData, error: invoicesError } = await supabase
           .from('invoices')
-          .select('id, invoice_number, student_id, issue_date, due_date, amount, tax_amount, total_amount, currency, items')
+          .select('id, invoice_number, student_id, enrollment_id, issue_date, due_date, amount, tax_amount, total_amount, currency, items, enrollments(session_id)')
           .eq('organization_id', user.organization_id)
           .order('created_at', { ascending: false })
           .limit(100)
@@ -279,19 +279,28 @@ export default function GenerateDocumentPage() {
     enabled: !!user?.organization_id && !!documentType,
   })
 
+  // Session liée à la facture sélectionnée (pour récupérer les modules même sans sélectionner la session)
+  const sessionIdFromInvoice = useMemo(() => {
+    if (documentType !== 'facture' || !selectedInvoiceId || !invoices?.length) return null
+    const inv = invoices.find((i: any) => i.id === selectedInvoiceId) as any
+    return inv?.enrollments?.session_id ?? inv?.session_id ?? null
+  }, [documentType, selectedInvoiceId, invoices])
+
+  const effectiveSessionId = selectedSessionId || sessionIdFromInvoice
+
   const { data: sessionModules } = useQuery({
-    queryKey: ['session-modules', selectedSessionId],
+    queryKey: ['session-modules', effectiveSessionId],
     queryFn: async () => {
-      if (!selectedSessionId) return []
+      if (!effectiveSessionId) return []
       const { data, error } = await supabase
         .from('session_modules' as any)
         .select('id, name, amount, currency, display_order')
-        .eq('session_id', selectedSessionId)
+        .eq('session_id', effectiveSessionId)
         .order('display_order', { ascending: true })
       if (error) throw error
       return (data || []) as unknown as Array<{ id: string; name: string; amount: number; currency: string }>
     },
-    enabled: !!selectedSessionId,
+    enabled: !!effectiveSessionId,
   })
   
   // Réinitialiser l'apprenant sélectionné quand la session change
@@ -359,6 +368,9 @@ export default function GenerateDocumentPage() {
       if (selectedSessionId) {
         session = sessions?.find((s) => s.id === selectedSessionId) as SessionWithRelations | undefined
       }
+      if (!session && documentType === 'facture' && sessionIdFromInvoice && sessions?.length) {
+        session = sessions.find((s) => s.id === sessionIdFromInvoice) as SessionWithRelations | undefined
+      }
 
       if (selectedProgramId && selectedProgram) {
         program = selectedProgram
@@ -369,6 +381,14 @@ export default function GenerateDocumentPage() {
         // Si une facture est sélectionnée, extraire l'étudiant depuis la facture si disponible
         if (invoice && (invoice as any).students && !student) {
           student = (invoice as any).students as StudentWithRelations
+        }
+      }
+
+      // Utiliser le profil complet de l'apprenant depuis la liste chargée (address, email, phone, etc.)
+      if (student && Array.isArray(students) && students.length > 0) {
+        const fullStudent = (students as StudentWithRelations[]).find((s) => s.id === student!.id)
+        if (fullStudent) {
+          student = fullStudent
         }
       }
 

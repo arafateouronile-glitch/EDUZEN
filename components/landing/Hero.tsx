@@ -1,144 +1,216 @@
 'use client'
 
-import { memo } from 'react'
-import { ArrowRight, CheckCircle2, PlayCircle, Sparkles, Zap } from 'lucide-react'
+import { memo, useRef, useState, useEffect } from 'react'
+import { ArrowRight, CheckCircle2, PlayCircle, Sparkles, Zap, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { motion, useScroll, useTransform, useMotionValue, useSpring } from '@/components/ui/motion'
 
-// Hero optimisé pour le LCP - animations CSS uniquement, pas de Framer Motion au chargement initial
-export const Hero = memo(function Hero() {
+// Composant de bouton magnétique
+const MagneticButton = ({ children, className, ...props }: any) => {
+  const ref = useRef<HTMLButtonElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const springConfig = { damping: 15, stiffness: 150, mass: 0.1 };
+  const springX = useSpring(x, springConfig);
+  const springY = useSpring(y, springConfig);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!ref.current) return;
+    const { clientX, clientY } = e;
+    const { left, top, width, height } = ref.current.getBoundingClientRect();
+    const centerX = left + width / 2;
+    const centerY = top + height / 2;
+    x.set((clientX - centerX) * 0.2);
+    y.set((clientY - centerY) * 0.2);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
   return (
-    <section className="relative pt-36 pb-16 md:pt-48 md:pb-20 lg:pt-56 lg:pb-24 overflow-hidden bg-gradient-to-b from-white via-gray-50/30 to-white">
-      {/* Background simplifié - blurs réduits pour performance GPU */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        {/* Gradient mesh léger */}
-        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(59,130,246,0.15),transparent)]" />
+    <motion.button
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ x: springX, y: springY }}
+      className={className}
+      {...props}
+    >
+      {children}
+    </motion.button>
+  );
+};
 
-        {/* Blobs simplifiés avec will-change pour GPU */}
-        <div
-          className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-gradient-to-br from-brand-blue/20 to-brand-cyan/10 rounded-full blur-[80px] opacity-50 will-change-transform animate-float-slow"
-          style={{ transform: 'translateZ(0)' }}
-        />
-        <div
-          className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-gradient-to-tr from-brand-cyan/15 to-brand-blue/10 rounded-full blur-[80px] opacity-40 will-change-transform animate-float-slower"
-          style={{ transform: 'translateZ(0)' }}
-        />
+export const Hero = memo(function Hero() {
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 500], [0, 200]);
+  const y2 = useTransform(scrollY, [0, 500], [0, -150]);
+  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
+  
+  // Animation variantes pour le texte
+  const textVariants = {
+    hidden: { y: "100%" },
+    visible: (i: number) => ({
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.8,
+        ease: [0.2, 0.65, 0.3, 0.9] as const,
+      },
+    }),
+  };
 
-        {/* Grid pattern optimisé */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(39,68,114,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(39,68,114,0.02)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,black,transparent)]" />
+  return (
+    <section className="relative min-h-screen pt-32 pb-16 md:pt-48 md:pb-32 overflow-hidden bg-[#FDFDFD]">
+      {/* Background Grille Subtile */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-brand-cyan/20 opacity-20 blur-[100px]" />
+         <div className="absolute right-[-10%] top-[-10%] -z-10 h-[500px] w-[500px] rounded-full bg-brand-blue/10 opacity-20 blur-[120px]" />
       </div>
 
       <div className="container mx-auto px-4 md:px-6 lg:px-8 relative z-10">
-        <div className="flex flex-col items-center text-center max-w-7xl mx-auto">
-          {/* Premium Badge - CSS animation only */}
-          <div className="animate-fade-in-up relative inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-lg mb-12 md:mb-16">
-            <span className="flex h-2.5 w-2.5 relative">
+        <div className="flex flex-col items-center text-center max-w-5xl mx-auto">
+          
+          {/* Badge Premium */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm mb-8 hover:border-brand-blue/30 transition-colors cursor-default"
+          >
+            <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-cyan opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-cyan"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-cyan"></span>
             </span>
-            <span className="text-sm md:text-base font-bold bg-gradient-to-r from-brand-blue-darker to-brand-cyan-dark bg-clip-text text-transparent">
-              La référence pour les organismes de formation
+            <span className="text-xs font-medium text-gray-600 tracking-wide uppercase">
+              Nouvelle Version 2.0 Disponible
             </span>
-            <Sparkles className="w-4 h-4 text-brand-cyan" />
-          </div>
+            <ChevronRight className="w-3 h-3 text-gray-400" />
+          </motion.div>
 
-          {/* Headline - Pas d'animation JS, CSS fade-in */}
-          <div className="animate-fade-in-up animation-delay-100 relative mb-12 md:mb-16">
-            <h1 className="relative text-5xl md:text-7xl lg:text-8xl font-black tracking-tightest leading-tightest font-display">
-              <span className="block text-gray-900 font-extralight tracking-luxe">
+          {/* Titre Principal avec Mask Reveal */}
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tightest leading-[0.95] md:leading-[0.9] font-display text-gray-900 mb-8 md:mb-10">
+            <div className="overflow-hidden">
+              <motion.span custom={0} variants={textVariants} initial="hidden" animate="visible" className="block pb-2">
                 Gérez votre organisme
-              </span>
-              <span className="block text-gray-900 italic font-medium tracking-tight">
+              </motion.span>
+            </div>
+            <div className="overflow-hidden">
+              <motion.span custom={1} variants={textVariants} initial="hidden" animate="visible" className="block text-gray-400 font-light italic pb-2">
                 de formation avec
-              </span>
-              <span className="block relative mt-4">
-                <span className="relative inline-block">
-                  <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue bg-[length:200%_auto] animate-gradient-x font-black not-italic">
-                    simplicité
-                  </span>
-                </span>
-              </span>
-            </h1>
-          </div>
+              </motion.span>
+            </div>
+            <div className="overflow-hidden">
+              <motion.span custom={2} variants={textVariants} initial="hidden" animate="visible" className="block bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-x pb-4">
+                simplicité absolue.
+              </motion.span>
+            </div>
+          </h1>
 
-          {/* Subtitle */}
-          <p className="animate-fade-in-up animation-delay-200 text-lg md:text-xl lg:text-2xl text-gray-700 mb-16 md:mb-20 max-w-4xl leading-relaxed font-light tracking-tight">
-            Une plateforme{' '}
-            <span className="italic font-normal">complète</span> pour{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan font-extrabold tracking-tighter not-italic">
-              digitaliser et optimiser
-            </span>{' '}
-            la gestion de votre organisme de formation.{' '}
-            <span className="font-medium">De l'inscription des stagiaires à la facturation CPF</span>, en passant par la{' '}
-            <span className="italic text-brand-blue font-semibold">conformité Qualiopi</span>.
-          </p>
+          {/* Sous-titre */}
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl leading-relaxed font-light"
+          >
+            Automatisez votre conformité Qualiopi, émargement et facturation. 
+            <span className="text-gray-900 font-medium"> Gagnez 10h par semaine</span> et concentrez-vous sur ce qui compte vraiment : vos apprenants.
+          </motion.p>
 
-          {/* CTAs - CSS hover effects */}
-          <div className="animate-fade-in-up animation-delay-300 flex flex-col sm:flex-row gap-6 w-full sm:w-auto mb-20 md:mb-24">
-            <Link href="/auth/register" className="group">
-              <Button
-                size="lg"
-                className="relative h-16 md:h-18 px-12 text-xl font-bold rounded-full bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan-dark text-white shadow-xl hover:shadow-2xl hover:shadow-brand-blue/30 w-full sm:w-auto transition-all duration-300 hover:-translate-y-1"
-              >
-                <Zap className="w-6 h-6 mr-3" />
-                Essayer gratuitement
-                <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
-              </Button>
+          {/* CTAs Magnétiques */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+            className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-16 md:mb-24 items-center justify-center"
+          >
+            <Link href="/auth/register" className="w-full sm:w-auto">
+              <MagneticButton className="group relative w-full sm:w-auto overflow-hidden rounded-full bg-[#111] px-8 py-4 text-white transition-all hover:bg-gray-900 active:scale-95 shadow-xl hover:shadow-2xl hover:shadow-brand-blue/20">
+                <div className="relative z-10 flex items-center justify-center gap-2 font-semibold">
+                  <Zap className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <span>Commencer Gratuitement</span>
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </div>
+                <div className="absolute inset-0 -z-10 bg-gradient-to-r from-brand-blue to-brand-cyan opacity-0 transition-opacity duration-500 group-hover:opacity-20" />
+              </MagneticButton>
             </Link>
 
-            <Button
-              size="lg"
-              variant="outline"
-              className="relative h-16 md:h-18 px-12 text-xl font-bold rounded-full border-2 border-gray-300 hover:border-brand-blue bg-white hover:bg-gray-50 text-gray-900 hover:text-brand-blue shadow-lg hover:shadow-xl w-full sm:w-auto transition-all duration-300 hover:-translate-y-1"
+            <MagneticButton className="group relative w-full sm:w-auto overflow-hidden rounded-full border border-gray-200 bg-white px-8 py-4 text-gray-900 transition-all hover:bg-gray-50 active:scale-95 shadow-sm hover:shadow-md">
+              <div className="relative z-10 flex items-center justify-center gap-2 font-semibold">
+                <PlayCircle className="w-4 h-4 text-gray-500 group-hover:text-brand-blue transition-colors" />
+                <span>Voir la Démo</span>
+              </div>
+            </MagneticButton>
+          </motion.div>
+
+          {/* Dashboard Preview - Glassmorphism Avancé */}
+          <motion.div 
+            style={{ y: y1, opacity }}
+            className="relative w-full max-w-6xl mx-auto perspective-[2000px]"
+          >
+            <motion.div
+              initial={{ rotateX: 20, opacity: 0, y: 100 }}
+              animate={{ rotateX: 0, opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 1.2, type: "spring", stiffness: 30 }}
+              className="relative rounded-2xl border border-gray-200/60 bg-white/40 p-2 shadow-2xl backdrop-blur-xl ring-1 ring-white/50"
             >
-              <PlayCircle className="w-6 h-6 mr-3" />
-              Voir la démo
-            </Button>
-          </div>
-
-          {/* Trust badges - CSS stagger animation */}
-          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
-            {[
-              { text: "14 jours d'essai gratuit" },
-              { text: "Aucune carte bancaire requise" },
-              { text: "Support 24/7" }
-            ].map((item, index) => (
-              <div
-                key={index}
-                className={`animate-fade-in-up flex items-center gap-3 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-gray-200/50 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}
-                style={{ animationDelay: `${400 + index * 100}ms` }}
-              >
-                <CheckCircle2 className="w-5 h-5 text-brand-cyan" />
-                <span className="text-base md:text-lg font-semibold text-gray-800">{item.text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Dashboard Preview - Simplifié, pas d'animation complexe */}
-          <div className="animate-fade-in-up animation-delay-700 mt-16 md:mt-20 lg:mt-24 relative w-full max-w-6xl">
-            <div className="relative rounded-2xl md:rounded-3xl border-2 border-gray-200/50 bg-white/60 backdrop-blur-sm p-3 md:p-4 shadow-2xl hover:shadow-3xl transition-shadow duration-500">
-              <div className="relative rounded-xl md:rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 via-gray-50 to-white aspect-[16/9]">
-                {/* Placeholder simple */}
-                <div className="absolute inset-0 bg-gradient-to-br from-brand-blue-pale/30 via-white to-brand-cyan-pale/30" />
-
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue font-display">
-                    Interface Dashboard Premium
+              <div className="rounded-xl overflow-hidden bg-white border border-gray-100 shadow-inner">
+                {/* Fake Browser Bar */}
+                <div className="h-10 border-b border-gray-100 bg-gray-50/50 flex items-center px-4 gap-2">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-400/80" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
+                    <div className="w-3 h-3 rounded-full bg-green-400/80" />
+                  </div>
+                  <div className="mx-auto w-1/3 h-5 bg-white rounded-md border border-gray-100 shadow-sm flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-gray-300 mr-2" />
+                    <div className="h-2 w-20 bg-gray-100 rounded-full" />
                   </div>
                 </div>
-
-                {/* Badge statique */}
-                <div className="absolute bottom-6 right-6 px-5 py-2.5 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-brand-cyan animate-pulse" />
-                    <span className="text-sm md:text-base font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">
-                      Plateforme complète
-                    </span>
+                
+                {/* Image Placeholder avec Shimmer */}
+                <div className="relative aspect-[16/9] w-full bg-gray-50 group overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-gray-100 via-white to-gray-50" />
+                  
+                  {/* Contenu simulé du dashboard */}
+                  <div className="absolute inset-0 p-8 grid grid-cols-12 gap-6 opacity-60">
+                    <div className="col-span-3 h-full bg-white rounded-xl border border-gray-100 shadow-sm" />
+                    <div className="col-span-9 h-full flex flex-col gap-6">
+                      <div className="h-32 w-full bg-white rounded-xl border border-gray-100 shadow-sm" />
+                      <div className="flex-1 grid grid-cols-3 gap-6">
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm" />
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm" />
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm" />
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Overlay avec Texte */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/10 backdrop-blur-[2px]">
+                    <div className="bg-white/80 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/60 shadow-xl flex flex-col items-center gap-3">
+                       <span className="text-4xl font-black bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent font-display tracking-tight">
+                         Interface Premium
+                       </span>
+                       <div className="h-1 w-20 bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full" />
+                    </div>
+                  </div>
+
+                   {/* Reflet lumineux sur le verre */}
+                   <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform ease-in-out" />
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+            
+            {/* Glow derrière le dashboard */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-brand-blue to-brand-cyan opacity-20 blur-3xl -z-10 rounded-[3rem]" />
+          </motion.div>
+
         </div>
       </div>
     </section>

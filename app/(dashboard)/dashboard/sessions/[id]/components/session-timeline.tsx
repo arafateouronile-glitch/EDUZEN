@@ -287,12 +287,12 @@ const createTimelinePhases = (sessionData?: SessionTimelineProps['sessionData'])
   ]
 }
 
-// Couleurs par statut
+// Couleurs par statut harmonisées
 const statusColors = {
   pending: 'text-gray-400 bg-gray-100',
-  in_progress: 'text-blue-600 bg-blue-100',
-  completed: 'text-green-600 bg-green-100',
-  overdue: 'text-red-600 bg-red-100',
+  in_progress: 'text-brand-blue bg-brand-blue/10',
+  completed: 'text-brand-cyan-dark bg-brand-cyan/10',
+  overdue: 'text-red-600 bg-red-50',
   skipped: 'text-gray-400 bg-gray-50',
 }
 
@@ -306,17 +306,17 @@ const statusIcons = {
 
 const priorityColors = {
   low: 'bg-gray-100 text-gray-600',
-  medium: 'bg-blue-100 text-blue-700',
-  high: 'bg-orange-100 text-orange-700',
-  critical: 'bg-red-100 text-red-700',
+  medium: 'bg-brand-blue/5 text-brand-blue',
+  high: 'bg-amber-50 text-amber-600',
+  critical: 'bg-red-50 text-red-600',
 }
 
 const phaseColors: Record<string, { bg: string; text: string; border: string }> = {
-  purple: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-  blue: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-  green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
-  orange: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
-  teal: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+  purple: { bg: 'bg-white', text: 'text-gray-900', border: 'border-gray-200' }, // Préparation -> Standard
+  blue: { bg: 'bg-white', text: 'text-gray-900', border: 'border-gray-200' },   // Inscriptions -> Standard
+  green: { bg: 'bg-white', text: 'text-gray-900', border: 'border-gray-200' },  // Déroulement -> Standard
+  orange: { bg: 'bg-white', text: 'text-gray-900', border: 'border-gray-200' }, // Clôture -> Standard
+  teal: { bg: 'bg-white', text: 'text-gray-900', border: 'border-gray-200' },   // Suivi -> Standard
 }
 
 // Composant Task
@@ -329,9 +329,9 @@ function TaskItem({ task, onComplete, onStart }: { task: Task; onComplete?: () =
       animate={{ opacity: 1, x: 0 }}
       className={cn(
         'flex items-start gap-3 p-3 rounded-lg border transition-all',
-        task.status === 'completed' ? 'bg-green-50 border-green-200' :
-        task.status === 'in_progress' ? 'bg-blue-50 border-blue-200' :
-        task.status === 'overdue' ? 'bg-red-50 border-red-200' :
+        task.status === 'completed' ? 'bg-gray-50/50 border-gray-200' :
+        task.status === 'in_progress' ? 'bg-white border-brand-blue/30 shadow-sm' :
+        task.status === 'overdue' ? 'bg-red-50/30 border-red-100' :
         'bg-white border-gray-200 hover:border-gray-300'
       )}
     >
@@ -343,11 +343,11 @@ function TaskItem({ task, onComplete, onStart }: { task: Task; onComplete?: () =
         <div className="flex items-center gap-2">
           <span className={cn(
             'font-medium text-sm',
-            task.status === 'completed' ? 'text-green-800 line-through' : 'text-gray-900'
+            task.status === 'completed' ? 'text-gray-500 line-through' : 'text-gray-900'
           )}>
             {task.title}
           </span>
-          <span className={cn('text-xs px-2 py-0.5 rounded-full', priorityColors[task.priority])}>
+          <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-medium', priorityColors[task.priority])}>
             {task.priority === 'critical' ? 'Critique' : 
              task.priority === 'high' ? 'Haute' : 
              task.priority === 'medium' ? 'Moyenne' : 'Basse'}
@@ -365,13 +365,13 @@ function TaskItem({ task, onComplete, onStart }: { task: Task; onComplete?: () =
       </div>
 
       {task.status === 'pending' && onStart && (
-        <Button size="sm" variant="ghost" onClick={onStart} className="h-7">
+        <Button size="sm" variant="ghost" onClick={onStart} className="h-7 text-xs">
           <Play className="h-3 w-3 mr-1" />
           Démarrer
         </Button>
       )}
       {task.status === 'in_progress' && onComplete && (
-        <Button size="sm" variant="ghost" onClick={onComplete} className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50">
+        <Button size="sm" variant="ghost" onClick={onComplete} className="h-7 text-xs text-brand-cyan-dark hover:text-brand-cyan-darker hover:bg-brand-cyan/10">
           <Check className="h-3 w-3 mr-1" />
           Terminer
         </Button>
@@ -400,21 +400,26 @@ function PhaseCard({ phase, isExpanded, onToggle, onTaskComplete, onTaskStart }:
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'rounded-xl border-2 overflow-hidden transition-all',
+        'rounded-xl border overflow-hidden transition-all bg-white',
         colors.border,
-        phase.status === 'in_progress' ? 'ring-2 ring-offset-2 ring-blue-400' : ''
+        phase.status === 'in_progress' ? 'ring-1 ring-brand-blue shadow-md' : 'shadow-sm'
       )}
     >
       {/* Header */}
       <button
         onClick={onToggle}
         className={cn(
-          'w-full flex items-center justify-between p-4 transition-colors',
+          'w-full flex items-center justify-between p-4 transition-colors hover:bg-gray-50/50',
           colors.bg
         )}
       >
         <div className="flex items-center gap-3">
-          <div className={cn('p-2 rounded-lg', colors.bg, colors.text)}>
+          <div className={cn(
+            'p-2 rounded-lg', 
+            phase.status === 'in_progress' ? 'bg-brand-blue/10 text-brand-blue' : 
+            phase.status === 'completed' ? 'bg-brand-cyan/10 text-brand-cyan-dark' : 
+            'bg-gray-100 text-gray-500'
+          )}>
             <PhaseIcon className="h-5 w-5" />
           </div>
           <div className="text-left">
@@ -426,33 +431,33 @@ function PhaseCard({ phase, isExpanded, onToggle, onTaskComplete, onTaskStart }:
         <div className="flex items-center gap-4">
           {/* Progress */}
           <div className="flex items-center gap-2">
-            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
               <div 
                 className={cn(
                   'h-full rounded-full transition-all',
-                  phase.status === 'completed' ? 'bg-green-500' :
-                  phase.status === 'in_progress' ? 'bg-blue-500' : 'bg-gray-300'
+                  phase.status === 'completed' ? 'bg-brand-cyan' :
+                  phase.status === 'in_progress' ? 'bg-brand-blue' : 'bg-gray-300'
                 )}
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-xs text-gray-500 w-12">
+            <span className="text-xs text-gray-500 w-12 text-right">
               {completedTasks}/{totalTasks}
             </span>
           </div>
           
           {/* Status badge */}
           <span className={cn(
-            'text-xs px-2 py-1 rounded-full font-medium',
-            phase.status === 'completed' ? 'bg-green-100 text-green-700' :
-            phase.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-            'bg-gray-100 text-gray-600'
+            'text-[10px] px-2 py-0.5 rounded-full font-medium border',
+            phase.status === 'completed' ? 'bg-brand-cyan/10 text-brand-cyan-dark border-brand-cyan/20' :
+            phase.status === 'in_progress' ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20' :
+            'bg-gray-50 text-gray-500 border-gray-200'
           )}>
             {phase.status === 'completed' ? 'Terminé' :
              phase.status === 'in_progress' ? 'En cours' : 'À venir'}
           </span>
           
-          {isExpanded ? <ChevronUp className="h-5 w-5 text-gray-400" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
+          {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
         </div>
       </button>
 
@@ -463,7 +468,7 @@ function PhaseCard({ phase, isExpanded, onToggle, onTaskComplete, onTaskStart }:
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="bg-white"
+            className="bg-white border-t border-gray-100"
           >
             <div className="p-4 space-y-2">
               {phase.tasks.map((task) => (
@@ -530,34 +535,34 @@ export function SessionTimeline({ sessionId, sessionData, onTaskComplete, onTask
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm">
             <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded-full bg-green-500" />
-              <span className="text-gray-600">{completedTasks} terminées</span>
+              <div className="h-2.5 w-2.5 rounded-full bg-brand-cyan" />
+              <span className="text-gray-600 text-xs">{completedTasks} terminées</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded-full bg-blue-500" />
-              <span className="text-gray-600">{inProgressTasks} en cours</span>
+              <div className="h-2.5 w-2.5 rounded-full bg-brand-blue" />
+              <span className="text-gray-600 text-xs">{inProgressTasks} en cours</span>
             </div>
             {overdueTasks > 0 && (
               <div className="flex items-center gap-1">
-                <div className="h-3 w-3 rounded-full bg-red-500" />
-                <span className="text-red-600 font-medium">{overdueTasks} en retard</span>
+                <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                <span className="text-red-600 font-medium text-xs">{overdueTasks} en retard</span>
               </div>
             )}
           </div>
           
           <div className="text-right">
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 leading-none">
               {progressPercentage}%
             </div>
-            <div className="text-xs text-gray-500">Progression globale</div>
+            <div className="text-[10px] text-gray-500 uppercase font-semibold">Progression</div>
           </div>
         </div>
       </div>
 
       {/* Progress bar globale */}
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div 
-          className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-green-500 transition-all"
+          className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan transition-all"
           style={{ width: `${progressPercentage}%` }}
         />
       </div>
@@ -565,17 +570,17 @@ export function SessionTimeline({ sessionId, sessionData, onTaskComplete, onTask
       {/* Phases Timeline */}
       <div className="relative">
         {/* Ligne verticale de connexion */}
-        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
+        <div className="absolute left-6 top-0 bottom-0 w-px bg-gray-200" />
         
         <div className="space-y-4 relative">
           {phases.map((phase, index) => (
             <div key={phase.id} className="relative pl-12">
               {/* Point sur la timeline */}
               <div className={cn(
-                'absolute left-4 top-6 w-4 h-4 rounded-full border-2 bg-white z-10',
-                phase.status === 'completed' ? 'border-green-500 bg-green-500' :
-                phase.status === 'in_progress' ? 'border-blue-500 bg-blue-500' :
-                'border-gray-300'
+                'absolute left-[22px] top-6 w-3 h-3 rounded-full border-2 bg-white z-10 transition-colors',
+                phase.status === 'completed' ? 'border-brand-cyan bg-brand-cyan' :
+                phase.status === 'in_progress' ? 'border-brand-blue bg-white' :
+                'border-gray-300 bg-white'
               )} />
               
               <PhaseCard

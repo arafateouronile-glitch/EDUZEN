@@ -483,12 +483,31 @@ export function useAuth() {
   // Déconnexion
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.auth.signOut()
+      const { error } = await supabase.auth.signOut({ scope: 'local' })
       if (error) throw error
+      // Laisser le temps au client Supabase SSR d’écrire la suppression des cookies
+      if (typeof window !== 'undefined') {
+        await new Promise((r) => setTimeout(r, 150))
+      }
     },
     onSuccess: () => {
+      queryClient.setQueryData(['session'], null)
+      queryClient.removeQueries({ queryKey: ['user'] })
       queryClient.clear()
-      router.push('/')
+      if (typeof window !== 'undefined') {
+        window.location.replace('/auth/login')
+      } else {
+        router.refresh()
+        router.push('/auth/login')
+      }
+    },
+    onError: () => {
+      // Même en cas d’erreur (ex. réseau), on quitte le dashboard
+      queryClient.setQueryData(['session'], null)
+      queryClient.clear()
+      if (typeof window !== 'undefined') {
+        window.location.replace('/auth/login')
+      }
     },
   })
 
@@ -510,6 +529,28 @@ export function useAuth() {
 
   const isLoading = sessionLoading || userLoading
 
+  // Déconnexion : signOut + redirection dans le même flux (avec timeout de sécurité)
+  const logout = async () => {
+    const redirect = () => {
+      if (typeof window !== 'undefined') {
+        window.location.replace('/auth/login')
+      } else {
+        router.push('/auth/login')
+      }
+    }
+    try {
+      await Promise.race([
+        logoutMutation.mutateAsync(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('logout_timeout')), 3000)
+        ),
+      ])
+    } catch {
+      // Erreur ou timeout : on redirige quand même
+    }
+    redirect()
+  }
+
   return {
     session,
     user,
@@ -517,7 +558,7 @@ export function useAuth() {
     isAuthenticated: !!session,
     login: loginMutation.mutate,
     register: registerMutation.mutate,
-    logout: logoutMutation.mutate,
+    logout,
     isLoggingIn: loginMutation.isPending,
     isRegistering: registerMutation.isPending,
     isLoggingOut: logoutMutation.isPending,

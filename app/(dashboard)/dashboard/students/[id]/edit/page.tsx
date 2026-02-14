@@ -31,6 +31,7 @@ export default function EditStudentPage() {
     email: '',
     phone: '',
     address: '',
+    postal_code: '',
     city: '',
     class_id: '',
     enrollment_date: '',
@@ -77,6 +78,7 @@ export default function EditStudentPage() {
         email: student.email || '',
         phone: student.phone || '',
         address: student.address || '',
+        postal_code: student.postal_code || '',
         city: student.city || '',
         class_id: student.class_id || '',
         enrollment_date: student.enrollment_date ? student.enrollment_date.split('T')[0] : '',
@@ -98,6 +100,7 @@ export default function EditStudentPage() {
         email: formData.email || null,
         phone: formData.phone || null,
         address: formData.address || null,
+        postal_code: formData.postal_code || null,
         city: formData.city || null,
         class_id: formData.class_id || null,
         enrollment_date: formData.enrollment_date || new Date().toISOString().split('T')[0],
@@ -205,7 +208,7 @@ export default function EditStudentPage() {
                 <input
                   type="text"
                   required
-                  value={formData.first_name}
+                  value={formData.first_name ?? ''}
                   onChange={(e) =>
                     setFormData({ ...formData, first_name: e.target.value })
                   }
@@ -235,7 +238,7 @@ export default function EditStudentPage() {
                 </label>
                 <input
                   type="date"
-                  value={formData.date_of_birth}
+                  value={formData.date_of_birth ?? ''}
                   onChange={(e) =>
                     setFormData({ ...formData, date_of_birth: e.target.value })
                   }
@@ -245,7 +248,7 @@ export default function EditStudentPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Genre</label>
                 <select
-                  value={formData.gender}
+                  value={formData.gender ?? ''}
                   onChange={(e) =>
                     setFormData({ ...formData, gender: e.target.value })
                   }
@@ -275,7 +278,7 @@ export default function EditStudentPage() {
                 <label className="block text-sm font-medium mb-2">Téléphone</label>
                 <input
                   type="tel"
-                  value={formData.phone}
+                  value={formData.phone ?? ''}
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
                   }
@@ -288,7 +291,7 @@ export default function EditStudentPage() {
               <label className="block text-sm font-medium mb-2">Adresse</label>
               <input
                 type="text"
-                value={formData.address}
+                value={formData.address ?? ''}
                 onChange={(e) =>
                   setFormData({ ...formData, address: e.target.value })
                 }
@@ -296,23 +299,39 @@ export default function EditStudentPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Ville</label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) =>
-                  setFormData({ ...formData, city: e.target.value })
-                }
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Code postal</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="ex. 75001"
+                  value={formData.postal_code ?? ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, postal_code: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Ville</label>
+                <input
+                  type="text"
+                  value={formData.city ?? ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, city: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Session</label>
                 <select
-                  value={formData.class_id}
+                  value={formData.class_id ?? ''}
                   onChange={(e) =>
                     setFormData({ ...formData, class_id: e.target.value })
                   }
@@ -329,7 +348,7 @@ export default function EditStudentPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Statut</label>
                 <select
-                  value={formData.status}
+                  value={formData.status ?? 'active'}
                   onChange={(e) =>
                     setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' | 'graduated' })
                   }
@@ -349,7 +368,7 @@ export default function EditStudentPage() {
               <input
                 type="date"
                 required
-                value={formData.enrollment_date}
+                value={formData.enrollment_date ?? ''}
                 onChange={(e) =>
                   setFormData({ ...formData, enrollment_date: e.target.value })
                 }

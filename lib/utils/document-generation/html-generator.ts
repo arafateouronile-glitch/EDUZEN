@@ -433,7 +433,7 @@ function replaceVariablesInHTML(html: string, variables: Record<string, any>): s
   const logoKeys = ['ecole_logo', 'organization_logo', 'organisation_logo']
   // Variables autorisées à injecter du HTML brut (généré côté serveur/app)
   // Exemple: lignes de modules (tableaux) pour devis/factures, lignes étudiants pour rapports.
-  const rawHtmlKeys = ['modules_lignes', 'students_table_rows']
+  const rawHtmlKeys = ['modules_lignes', 'modules_lignes_facture', 'students_table_rows']
   const sortedKeys = Object.keys(variables)
     .filter(key => !logoKeys.includes(key)) // Exclure les variables de logo
     .sort((a, b) => b.length - a.length)

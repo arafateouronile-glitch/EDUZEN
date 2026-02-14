@@ -624,8 +624,8 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     name: 'Facture',
     headerContent: premiumHeader,
     bodyContent: `
-      <!-- Titre et date -->
-      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 8px; border: 0; font-family: 'Times New Roman', Times, serif;">
+      <!-- Numéro de facture et date -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px; border: 0; font-family: 'Times New Roman', Times, serif;">
         <tr>
           <td style="width: 60%; vertical-align: top; border: 0;">
             <h1 style="margin: 0; font-size: 12pt; font-weight: bold; color: #000;">Facture n°{numero_facture}</h1>
@@ -636,59 +636,62 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
         </tr>
       </table>
 
-      <!-- Destinataire et Détails formation -->
-      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 8px; border: 0; font-family: 'Times New Roman', Times, serif;">
+      <!-- Destinataire (gauche) et Détails formation (droite) -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px; border: 0; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
         <tr>
           <td style="width: 50%; vertical-align: top; border: 0;">
-            <p style="margin: 0 0 1px 0; font-size: 8pt;"><strong>Destinataire :</strong> <span style="color: #0066CC;">{eleve_prenom} {eleve_nom}</span></p>
-            <p style="margin: 0; font-size: 8pt; color: #333;">{eleve_adresse}</p>
-            <p style="margin: 0; font-size: 8pt; color: #333;">{eleve_code_postal} {eleve_ville}</p>
+            <p style="margin: 0 0 2px 0;"><strong>Destinataire :</strong> {destinataire_du_devis}</p>
+            <p style="margin: 0 0 1px 0;">{adresse_destinataire}</p>
+            <p style="margin: 0 0 1px 0;">{code_postal_destinataire} {ville_destinataire}</p>
           </td>
           <td style="width: 50%; vertical-align: top; border: 0;">
-            <p style="margin: 0 0 1px 0; font-size: 8pt;"><strong>Intitulé de la formation :</strong> {formation_nom}</p>
-            <p style="margin: 0; font-size: 8pt; color: #333;">Dates : du {session_debut} au {session_fin}</p>
-            <p style="margin: 0; font-size: 8pt; color: #333;">Durée : {formation_duree}</p>
+            <p style="margin: 0 0 1px 0;"><strong>Intitulé de la formation :</strong> {formation_nom}</p>
+            <p style="margin: 0 0 1px 0;">Lieu de la formation : {session_lieu}</p>
+            <p style="margin: 0 0 1px 0;">Dates de la formation : du {session_debut} au {session_fin}</p>
+            <p style="margin: 0; font-size: 8pt; color: #333;">Durée de la formation : {formation_duree}</p>
           </td>
         </tr>
       </table>
 
-      <!-- Tableau des prestations -->
-      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 5px; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
+      <!-- Tableau des prestations (une ligne par module) -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 8px; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
         <thead>
-          <tr style="background-color: #E8E8E8;">
+          <tr>
             <th style="padding: 4px 6px; text-align: left; border: 1px solid #ccc; font-weight: bold;">Désignation</th>
-            <th style="padding: 4px 6px; text-align: center; border: 1px solid #ccc; font-weight: bold; width: 50px;">Qté</th>
-            <th style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 80px;">Prix unit. HT</th>
-            <th style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 80px;">Total HT</th>
+            <th style="padding: 4px 6px; text-align: center; border: 1px solid #ccc; font-weight: bold; width: 60px;">Quantité</th>
+            <th style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 90px;">Prix unitaire HT</th>
+            <th style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 90px;">Total HT</th>
           </tr>
         </thead>
         <tbody>
+          {FOR:modules}
           <tr>
-            <td style="padding: 4px 6px; border: 1px solid #ccc;">{formation_nom}</td>
+            <td style="padding: 4px 6px; border: 1px solid #ccc;">Formation<br/>{module_nom}</td>
             <td style="padding: 4px 6px; text-align: center; border: 1px solid #ccc;">1</td>
-            <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">{montant_ht}</td>
-            <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">{montant_ht}</td>
+            <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">{module_prix_ht} €</td>
+            <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">{module_total_ht} €</td>
           </tr>
+          {ENDFOR}
         </tbody>
       </table>
 
       <!-- Totaux -->
       <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px; border: 0; font-family: 'Times New Roman', Times, serif;">
         <tr>
-          <td style="width: 60%; border: 0;"></td>
-          <td style="width: 40%; border: 0;">
+          <td style="width: 55%; border: 0;"></td>
+          <td style="width: 45%; border: 0;">
             <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 8pt;">
               <tr>
-                <td style="padding: 3px 6px; text-align: right; border: 1px solid #ccc;">Total HT</td>
-                <td style="padding: 3px 6px; text-align: right; border: 1px solid #ccc; width: 80px;">{montant_ht}</td>
+                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">Total HT</td>
+                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; width: 90px;">{montant_ht} €</td>
               </tr>
               <tr>
-                <td style="padding: 3px 6px; text-align: right; border: 1px solid #ccc; font-size: 7pt;">TVA exonérée (art. 261 CGI)</td>
-                <td style="padding: 3px 6px; text-align: right; border: 1px solid #ccc;">{tva}</td>
+                <td style="padding: 4px 6px; text-align: left; border: 1px solid #ccc; font-size: 7pt;">Prestations de formation en exonération de TVA, article 261-4-4a du CGI</td>
+                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;"></td>
               </tr>
-              <tr style="background-color: #E8E8E8;">
+              <tr>
                 <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold;">Total TTC</td>
-                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold;">{montant_ttc}</td>
+                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold;">{montant_ttc} €</td>
               </tr>
             </table>
           </td>
@@ -696,30 +699,28 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
       </table>
 
       <!-- Date d'échéance -->
-      <div style="margin-bottom: 10px; font-family: 'Times New Roman', Times, serif;">
-        <p style="margin: 0; font-size: 9pt; font-weight: bold; text-align: center;">
+      <div style="margin-bottom: 12px; font-family: 'Times New Roman', Times, serif;">
+        <p style="margin: 0; font-size: 9pt; font-weight: bold;">
           Date d'échéance : {date_echeance} (paiement à 30 jours)
         </p>
       </div>
 
       <!-- Informations bancaires -->
       <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 0; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 7pt;">
-        <tr style="background-color: #E8E8E8;">
-          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">Code banque</th>
-          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">Code guichet</th>
-          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">N° compte</th>
-          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">Clé RIB</th>
-          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">IBAN</th>
-          <th style="padding: 3px; text-align: center; border: 1px solid #ccc;">BIC</th>
-        </tr>
-        <tr>
-          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{code_banque}</td>
-          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{code_guichet}</td>
-          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{numero_compte}</td>
-          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{cle_rib}</td>
-          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{iban}</td>
-          <td style="padding: 3px; text-align: center; border: 1px solid #ccc;">{bic}</td>
-        </tr>
+        <thead>
+          <tr>
+            <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold;">IBAN</th>
+            <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold; width: 120px;">BIC</th>
+            <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold; width: 50px;">Monnaie</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 3px 5px; border: 1px solid #ccc;">{iban}</td>
+            <td style="padding: 3px 5px; border: 1px solid #ccc;">{bic}</td>
+            <td style="padding: 3px 5px; border: 1px solid #ccc;">EUR</td>
+          </tr>
+        </tbody>
       </table>
     `,
     footerContent: premiumFooter,
@@ -737,7 +738,7 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
       <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 6px; border: 0; font-family: 'Times New Roman', Times, serif;">
         <tr>
           <td style="width: 70%; vertical-align: top; border: 0;">
-            <h1 style="margin: 0; font-size: 11pt; font-weight: bold; color: #000; border-bottom: 1px solid #000; padding-bottom: 2px; display: inline-block;">
+            <h1 style="margin: 0; font-size: 11pt; font-weight: bold; color: #000;">
               Devis de formation professionnelle
             </h1>
           </td>
@@ -751,8 +752,10 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
       <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 6px; border: 0; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
         <tr>
           <td style="width: 50%; vertical-align: top; border: 0;">
-            <p style="margin: 0 0 1px 0;"><strong>Destinataire :</strong> {entreprise_nom}</p>
-            <p style="margin: 0; color: #333;">{eleve_adresse}, {eleve_code_postal} {eleve_ville}</p>
+            <p style="margin: 0 0 2px 0;"><strong>Destinataire</strong></p>
+            <p style="margin: 0 0 1px 0;">{destinataire_du_devis}</p>
+            <p style="margin: 0 0 1px 0;">{adresse_destinataire}</p>
+            <p style="margin: 0 0 1px 0;">{code_postal_destinataire} {ville_destinataire}</p>
             <p style="margin: 0; color: #333;">Représenté par : {tuteur_nom}</p>
           </td>
           <td style="width: 50%; vertical-align: top; border: 0;">
@@ -784,7 +787,7 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
         <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 4px; border-collapse: collapse; font-size: 8pt;">
           <thead>
-            <tr style="background-color: #E8E8E8;">
+            <tr>
               <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold;">Désignation</th>
               <th style="padding: 3px 5px; text-align: center; border: 1px solid #ccc; font-weight: bold; width: 40px;">Qté</th>
               <th style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 70px;">Prix unit. HT</th>
@@ -792,12 +795,14 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
             </tr>
           </thead>
           <tbody>
+            {FOR:modules}
             <tr>
-              <td style="padding: 3px 5px; border: 1px solid #ccc;">{formation_nom}</td>
-              <td style="padding: 3px 5px; text-align: center; border: 1px solid #ccc;">1</td>
-              <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">{montant_ht}</td>
-              <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">{montant_ht}</td>
+              <td style="padding: 3px 5px; border: 1px solid #ccc;">Formation<br/>{module_nom}</td>
+              <td style="padding: 3px 5px; text-align: center; border: 1px solid #ccc;">{module_quantite}</td>
+              <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">{module_prix_ht} €</td>
+              <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">{module_total_ht} €</td>
             </tr>
+            {ENDFOR}
           </tbody>
         </table>
 
@@ -815,7 +820,7 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
                   <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc; font-size: 7pt;">TVA exonérée (art. 261 CGI)</td>
                   <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc;">{tva}</td>
                 </tr>
-                <tr style="background-color: #E8E8E8;">
+                <tr>
                   <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold;">Total TTC</td>
                   <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold;">{montant_ttc}</td>
                 </tr>
@@ -837,12 +842,12 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
           <td style="width: 50%; vertical-align: top; border: 0;">
             <p style="margin: 0 0 2px 0; font-weight: bold;">Pour l'organisme de formation,</p>
             <p style="margin: 0;">{ecole_nom}, {ecole_representant}</p>
-            <p style="margin: 25px 0 0 0; border-top: 1px solid #000; padding-top: 2px; width: 70%;">Signature</p>
+            <p style="margin: 25px 0 0 0; width: 70%;">Signature</p>
           </td>
           <td style="width: 50%; vertical-align: top; border: 0;">
             <p style="margin: 0 0 2px 0; font-weight: bold;">Pour le bénéficiaire, bon pour accord</p>
             <p style="margin: 0;">{entreprise_nom}</p>
-            <p style="margin: 25px 0 0 0; border-top: 1px solid #000; padding-top: 2px; width: 70%;">Signature</p>
+            <p style="margin: 25px 0 0 0; width: 70%;">Signature</p>
           </td>
         </tr>
       </table>
@@ -858,43 +863,73 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     name: 'Convocation',
     headerContent: premiumHeader,
     bodyContent: `
-      <div style="text-align: center; margin-bottom: 25px;">
-        <h1 style="font-size: 16pt; font-weight: bold; margin: 0; color: #1A1A1A;">
-          CONVOCATION
-        </h1>
-      </div>
+      <!-- Titre et date -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 6px; border: 0; font-family: 'Times New Roman', Times, serif;">
+        <tr>
+          <td style="width: 70%; vertical-align: top; border: 0;">
+            <h1 style="margin: 0; font-size: 16pt; font-weight: bold; color: #000;">
+              CONVOCATION
+            </h1>
+          </td>
+          <td style="width: 30%; vertical-align: top; border: 0; text-align: right;">
+            <p style="margin: 0; font-size: 8pt; color: #333;">Date : {date_jour}</p>
+          </td>
+        </tr>
+      </table>
 
-      <div style="margin-bottom: 25px;">
+      <!-- Destinataire et Organisme -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 25px; border: 0; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
+        <tr>
+          <td style="width: 50%; vertical-align: top; border: 0;">
+            <p style="margin: 0 0 2px 0;"><strong>Destinataire</strong></p>
+            <p style="margin: 0 0 1px 0;">{destinataire_du_devis}</p>
+            <p style="margin: 0 0 1px 0;">{adresse_destinataire}</p>
+            <p style="margin: 0 0 1px 0;">{code_postal_destinataire} {ville_destinataire}</p>
+            <p style="margin: 0; color: #333;">Représenté par : {tuteur_nom}</p>
+          </td>
+          <td style="width: 50%; vertical-align: top; border: 0;">
+            <p style="margin: 0 0 1px 0;"><strong>Organisme :</strong> {ecole_nom}</p>
+            <p style="margin: 0; color: #333;">SIRET : {ecole_siret} | Décl. : {ecole_numero_declaration}</p>
+            <p style="margin: 0; color: #333;">Représenté par : {ecole_representant}</p>
+          </td>
+        </tr>
+      </table>
+
+      <div style="margin-bottom: 25px; font-family: 'Times New Roman', Times, serif;">
         <p style="font-size: 10pt; margin: 0 0 15px 0;">Madame, Monsieur,</p>
         <p style="font-size: 10pt; margin: 0 0 10px 0; text-align: justify; line-height: 1.6;">
-          Nous avons l'honneur de vous convier à :
+          Nous avons l'honneur de vous convier à la session de formation suivante :
         </p>
       </div>
 
-      <div style="padding: 20px; background-color: #F9FAFB; border-left: 3px solid #1A1A1A; margin-bottom: 25px;">
-        <p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Objet :</strong> {convocation_objet}</p>
-        <p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Date :</strong> {convocation_date}</p>
-        <p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Heure :</strong> {convocation_heure}</p>
-        <p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Lieu :</strong> {convocation_lieu}</p>
-        <p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Adresse :</strong> {convocation_adresse}</p>
+      <!-- Détails -->
+      <div style="padding: 15px; background-color: #F9FAFB; border-left: 3px solid #1A1A1A; margin-bottom: 25px; font-family: 'Times New Roman', Times, serif;">
+        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Objet :</strong> {convocation_objet}</p>
+        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Date :</strong> {convocation_date}</p>
+        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Heure :</strong> {convocation_heure}</p>
+        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Lieu :</strong> {convocation_lieu}</p>
+        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Adresse :</strong> {convocation_adresse}</p>
         <p style="margin: 0; font-size: 10pt;"><strong>Durée prévue :</strong> {convocation_duree}</p>
       </div>
 
-      <div style="margin-bottom: 25px;">
-        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Participant(s) :</strong></p>
+      <!-- Participant -->
+      <div style="margin-bottom: 25px; font-family: 'Times New Roman', Times, serif;">
+        <p style="margin: 0 0 5px 0; font-size: 10pt;"><strong>Participant(s) :</strong></p>
         <p style="margin: 0; font-size: 10pt;">{eleve_nom} {eleve_prenom}</p>
-        <p style="margin: 5px 0 0 0; font-size: 10pt;">Numéro d'élève : {eleve_numero}</p>
-        <p style="margin: 5px 0 0 0; font-size: 10pt;">Formation : {formation_nom}</p>
+        <p style="margin: 2px 0 0 0; font-size: 10pt;">Numéro d'élève : {eleve_numero}</p>
+        <p style="margin: 2px 0 0 0; font-size: 10pt;">Formation : {formation_nom}</p>
       </div>
 
-      <div style="margin-bottom: 25px;">
-        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Ordre du jour :</strong></p>
+      <!-- Ordre du jour -->
+      <div style="margin-bottom: 25px; font-family: 'Times New Roman', Times, serif;">
+        <p style="margin: 0 0 5px 0; font-size: 10pt;"><strong>Ordre du jour :</strong></p>
         <div style="margin-left: 15px; font-size: 10pt;">
           {convocation_contenu}
         </div>
       </div>
 
-      <div style="padding: 15px; background-color: #FEF3C7; border-left: 3px solid #F59E0B; margin-bottom: 25px;">
+      <!-- Note importante -->
+      <div style="padding: 15px; background-color: #FEF3C7; border-left: 3px solid #F59E0B; margin-bottom: 25px; font-family: 'Times New Roman', Times, serif;">
         <p style="margin: 0; font-size: 10pt; font-weight: 600; color: #92400E;">Note importante :</p>
         <p style="margin: 5px 0 0 0; font-size: 10pt; color: #78350F;">
           Veuillez confirmer votre présence avant le {date_confirmation} en répondant à ce message ou en contactant 
@@ -902,15 +937,15 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
         </p>
       </div>
 
-      <p style="margin: 25px 0 10px 0; font-size: 10pt;">Nous restons à votre disposition pour tout complément d'information.</p>
-      <p style="margin: 10px 0 20px 0; font-size: 10pt;">Cordialement,</p>
+      <p style="margin: 25px 0 10px 0; font-size: 10pt; font-family: 'Times New Roman', Times, serif;">Nous restons à votre disposition pour tout complément d'information.</p>
+      <p style="margin: 10px 0 20px 0; font-size: 10pt; font-family: 'Times New Roman', Times, serif;">Cordialement,</p>
       
-      <div style="margin-top: 30px;">
+      <div style="margin-top: 30px; font-family: 'Times New Roman', Times, serif;">
         <p style="margin: 0; font-size: 10pt; font-weight: bold;">{ecole_representant}</p>
         <p style="margin: 3px 0; font-size: 10pt;">{ecole_nom}</p>
       </div>
 
-      <p style="margin-top: 25px; font-size: 9pt; color: #666;">
+      <p style="margin-top: 25px; font-size: 9pt; color: #666; font-family: 'Times New Roman', Times, serif;">
         Fait à {ecole_ville}, le {date_jour}
       </p>
     `,
@@ -918,66 +953,280 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
   },
 
   // ==========================================
-  // CONTRAT DE SCOLARITÉ
+  // CONTRAT DE FORMATION PROFESSIONNELLE
   // ==========================================
   contrat: {
     type: 'contrat',
-    name: 'Contrat de scolarité',
+    name: 'Contrat de formation professionnelle',
     headerContent: premiumHeader,
     bodyContent: `
-      <div style="text-align: center; margin-bottom: 25px;">
-        <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 8px 0; color: #1A1A1A;">
-          CONTRAT DE SCOLARITÉ
-        </h1>
-        <p style="font-size: 11pt; color: #666; margin: 0;">Année scolaire {annee_scolaire}</p>
+      <!-- En-tête spécifique au contrat -->
+      <div style="font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4;">
+        <h1 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 5px;">Contrat de formation professionnelle</h1>
+        <p style="text-align: center; font-size: 10pt; font-style: italic; margin-top: 0; margin-bottom: 20px;">
+          (Article L. 6353-1 du Code du Travail Décret N° 2018-1341 du 28 décembre 2018)
+        </p>
+
+        <p style="margin-bottom: 10px;"><strong>Entre l'organisme de formation : {ecole_nom}</strong></p>
+        <p style="margin-left: 20px; margin-bottom: 5px;">immatriculée au RCS de sous le numéro {ecole_siret}</p>
+        <p style="margin-left: 20px; margin-bottom: 5px;">Dont le siège social est situé {ecole_adresse} {ecole_code_postal} {ecole_ville}.</p>
+        <p style="margin-left: 20px; margin-bottom: 5px;">Représentée aux fins des présentes par {ecole_representant} en sa qualité de représentant, dûment habilité(e).</p>
+        <p style="margin-left: 20px; margin-bottom: 15px;">Déclaration d'activité n°{ecole_numero_declaration} auprès de la préfecture de la région {ecole_region}.</p>
+        
+        <p style="text-align: right; margin-bottom: 20px;"><strong>Ci-après dénommée « l'Organisme de Formation »<br/>D'une part</strong></p>
+
+        <p style="margin-bottom: 10px;"><strong>Et {eleve_prenom} {eleve_nom}</strong></p>
+        
+        <p style="text-align: right; margin-bottom: 20px;"><strong>Ci-après dénommée « le Bénéficiaire »<br/>D'autre part</strong></p>
+
+        <p style="margin-bottom: 20px;">Ci-après individuellement ou collectivement désigné(s) la ou les « Partie(s) »</p>
+
+        <p style="text-align: justify; margin-bottom: 20px;">
+          Il est conclu un contrat de formation professionnelle conformément aux dispositions des articles L. 6311-1 à
+          L. 6363-2 du Code du Travail, et également en application des dispositions du Livre III de la 6ème partie et
+          des catégories prévues à l'article L6313.1 du Code du Travail relatif à la formation professionnelle continue
+          tout au long de la vie
+        </p>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">1. Objet du contrat</h3>
+        <p style="margin-bottom: 10px;">
+          Aux termes du présent contrat, l'Organisme de Formation s'engage à organiser l'action de formation suivante :
+        </p>
+        <p style="font-weight: bold; margin-bottom: 15px; text-align: center;">
+          {formation_nom} DU {session_debut} au {session_fin}
+        </p>
+        
+        <p style="margin-bottom: 5px;"><strong>Catégorie de l'action de formation (art. L6313-1 du code du travail) :</strong></p>
+        <p style="margin-bottom: 15px;">Action de formation</p>
+
+        <p style="margin-bottom: 5px;"><strong>Diplôme visé :</strong> Certification (dont CQP) ou habilitation enregistrée au Répertoire National des Certifications Professionnelles (RNCP)</p>
+
+        <p style="margin-bottom: 5px;"><strong>Objectifs :</strong> {formation_objectifs}</p>
+        
+        <p style="margin-bottom: 5px;"><strong>Contenu de l'action de formation et moyens prévus :</strong> Annexe 1</p>
+        
+        <p style="margin-bottom: 5px;"><strong>Durée :</strong> {formation_duree}</p>
+        
+        <p style="margin-bottom: 5px;"><strong>Lieu de la formation :</strong> {session_lieu}</p>
+        
+        <p style="margin-bottom: 15px;"><strong>Effectifs formés :</strong> {session_effectif}</p>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <thead>
+            <tr style="background-color: #f0f0f0;">
+              <th style="border: 1px solid #000; padding: 5px; text-align: left;">Date</th>
+              <th style="border: 1px solid #000; padding: 5px; text-align: center;">Heure</th>
+              <th style="border: 1px solid #000; padding: 5px; text-align: left;">Lieu</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #000; padding: 5px;">du {session_debut} au {session_fin}</td>
+              <td style="border: 1px solid #000; padding: 5px; text-align: center;">{formation_duree}</td>
+              <td style="border: 1px solid #000; padding: 5px;">{session_lieu}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">2. Effectif formé</h3>
+        <p style="margin-bottom: 5px;"><strong>Public visé au sens de l'article L 6313-3 du Code du Travail :</strong></p>
+        <ul style="margin-top: 5px; margin-bottom: 15px;">
+          <li>les actions de formation ont pour objet de permettre à toute personne sans qualification professionnelle ou sans contrat de travail d'accéder dans les meilleures conditions à un emploi</li>
+          <li>favoriser l'adaptation des travailleurs à leur poste de travail, à l'évolution des emplois ainsi que leur maintien dans l'emploi et de participer au développement des compétences en lien ou non avec leur poste de travail. Elles peuvent permettre à des travailleurs d'acquérir une qualification plus élevée</li>
+          <li>réduire, pour les travailleurs dont l'emploi est menacé, les risques résultant d'une qualification inadaptée à l'évolution des techniques et des structures des entreprises, en les préparant à une mutation d'activité soit dans le cadre, soit en dehors de leur entreprise. Elles peuvent permettre à des salariés dont le contrat de travail est rompu d'accéder à des emplois exigeant une qualification différente, ou à des non-salariés d'accéder à de nouvelles activités professionnelles</li>
+          <li>favoriser la mobilité professionnelle.</li>
+        </ul>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">3. Prix de la formation</h3>
+        <p style="text-align: justify; margin-bottom: 15px;">
+          En contrepartie de cette action de formation, le bénéficiaire (ou le financeur dans le cadre d'une subrogation de paiement) s'acquittera des coûts suivants qui couvrent l'intégralité des frais engagés par l'organisme de formation pour cette session :
+        </p>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+          <thead>
+            <tr style="background-color: #f0f0f0;">
+              <th style="border: 1px solid #000; padding: 5px; text-align: left;">Description</th>
+              <th style="border: 1px solid #000; padding: 5px; text-align: right;">Prix</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #000; padding: 5px;">{formation_nom}</td>
+              <td style="border: 1px solid #000; padding: 5px; text-align: right;">{montant_ht} €</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #000; padding: 5px; font-weight: bold;">TOTAL NET DE TAXES</td>
+              <td style="border: 1px solid #000; padding: 5px; text-align: right; font-weight: bold;">{montant_ht} €</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-style: italic; margin-bottom: 20px;">L'organisme de formation atteste être exonéré de TVA.</p>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">4. Modalités de déroulement et de suivi</h3>
+        <p style="margin-bottom: 10px;">La Formation s'effectue Formation présentielle.</p>
+        <p style="margin-bottom: 10px;">
+          Des feuilles de présence seront signées par les Stagiaires et le(s) formateur(s) par demi-journée de formation, l'objectif étant de justifier la réalisation de la Formation.
+        </p>
+        <p style="margin-bottom: 20px;">
+          L'appréciation des résultats se fera à travers la mise en œuvre QCM et/ou grilles d'évaluation et/ou travaux pratiques et/ou fiches d'évaluation et/ou mises en situation et/ou autre.
+        </p>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">5. Moyens de sanction</h3>
+        <p style="margin-bottom: 20px;">
+          À l'issue de la Formation, l'Organisme de Formation délivre au Stagiaire le en cas de réussite (diplôme, titre professionnel, certification, attestation de fin de formation ou autres).
+        </p>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">6. Dédit ou abandon</h3>
+        <p style="text-align: justify; margin-bottom: 10px;">
+          En cas de dédit par le Bénéficiaire à moins de 7 jours francs avant le début de l'action mentionnée à l'article 1, ou d'abandon en cours de Formation par un ou plusieurs Stagiaire(s), l'Organisme de Formation (i) remboursera sur le coût total, les sommes qu'il n'aura pas réellement dépensées ou engagées pour la réalisation de ladite action et/ou (ii) proposera une nouvelle date de Formation.
+        </p>
+        <p style="text-align: justify; margin-bottom: 20px;">
+          Le cas échéant, le Bénéficiaire s'engage au versement d'un montant de 20 % du coût total de la Formation à titre de dédommagement, cette somme ne pouvant faire l'objet d'un financement par fonds publics ou paritaires.
+        </p>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">7. Modalités de règlement</h3>
+        <p style="margin-bottom: 20px;">
+          Le paiement sera dû en totalité à réception d'une facture émise par l'Organisme de Formation à destination du Bénéficiaire.
+        </p>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">8. Propriété intellectuelle</h3>
+        <p style="text-align: justify; margin-bottom: 20px;">
+          Les supports de formation, quelle qu'en soit la forme, et les contenus de toute nature (textes, images, visuels, musiques, logos, marques, base de données, etc.) exploités par l'Organisme de Formation dans le cadre de l'action de formation sont protégés par tous droits de propriété intellectuelle ou droits des producteurs de bases de données en vigueur. Tous désassemblages, décompilations, décryptages, extractions, réutilisations, copies et plus généralement, tous actes de reproduction, représentation, diffusion et utilisation de l'un quelconque de ces éléments, en tout ou partie, sans l'autorisation de l'Organisme de Formation sont strictement interdits et pourront faire l'objet de poursuites judiciaires.
+        </p>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">9. Données à caractère personnel</h3>
+        <p style="margin-bottom: 20px;">
+          L'Organisme de Formation pratique une politique de protection des données personnelles dont les caractéristiques sont explicitées dans la politique de confidentialité.
+        </p>
+
+        <h3 style="font-size: 11pt; font-weight: bold; margin-top: 1.8em; margin-bottom: 10px; background-color: #f0f0f0; padding: 5px;">10. Différents éventuels</h3>
+        <p style="margin-bottom: 30px;">
+          Si une contestation ou un différend ne peuvent être réglés à l'amiable, le Tribunal de {ecole_ville} sera seul compétent pour régler le litige.
+        </p>
+
+        <p style="margin-bottom: 30px;">
+          Document réalisé en 2 exemplaires à {ecole_ville}, le {date_jour}.
+        </p>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <tr>
+            <td style="width: 50%; vertical-align: top; padding-right: 20px;">
+              <strong>Pour l'Organisme de Formation</strong><br/>
+              {ecole_nom}<br/><br/><br/><br/>
+              Signature
+            </td>
+            <td style="width: 50%; vertical-align: top; padding-left: 20px;">
+              <strong>Pour le Bénéficiaire</strong><br/>
+              {eleve_nom} {eleve_prenom}<br/><br/><br/><br/>
+              Signature
+            </td>
+          </tr>
+        </table>
+
+        <!-- Annexe 1 : Programme -->
+        <div style="page-break-before: always;">
+          <h2 style="text-align: center; padding-bottom: 10px; margin-bottom: 20px;">Annexe 1 : Programme de formation</h2>
+          
+          <p style="margin-bottom: 15px;"><strong>Nom de la session :</strong> {formation_nom} DU {session_debut} au {session_fin}</p>
+
+          <h3 style="font-size: 11pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px;">DURÉE ET LIEU DE FORMATION</h3>
+          <p><strong>Durée en heures :</strong> {formation_duree}</p>
+          <p><strong>Lieu :</strong> {session_lieu}</p>
+
+          <h3 style="font-size: 11pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px;">PUBLIC CONCERNÉ</h3>
+          <p>{formation_public_concerne}</p>
+
+          <h3 style="font-size: 11pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px;">PRÉREQUIS</h3>
+          <p>{formation_prerequis}</p>
+
+          <h3 style="font-size: 11pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px;">QUALITÉ ET INDICATEURS DE RÉSULTATS</h3>
+          <p>{formation_qualite_et_resultats}</p>
+
+          <h3 style="font-size: 11pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px;">ACCESSIBILITÉ</h3>
+          <p>Formation accessible aux personnes en situation de handicap. Pour toutes demandes d'adaptation, veuillez contacter notre référent handicap.</p>
+
+          <h3 style="font-size: 11pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px;">OBJECTIFS</h3>
+          <p>{formation_objectifs}</p>
+
+          <h3 style="font-size: 11pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px;">CONTENU DE LA FORMATION</h3>
+          <div style="margin-left: 20px;">{formation_contenu}</div>
+
+          <h3 style="font-size: 11pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px;">ORGANISATION DE LA FORMATION</h3>
+          <p><strong>Équipe pédagogique :</strong> {formation_equipe_pedagogique}</p>
+          <p><strong>Ressources pédagogiques et techniques prévues :</strong> {formation_ressources}</p>
+          <p>accueil des Stagiaires dans une salle dédiée à la formation.</p>
+        </div>
+
+        <!-- Annexe 2 : Règlement Intérieur -->
+        <div style="page-break-before: always;">
+          <h2 style="text-align: center; padding-bottom: 10px; margin-bottom: 20px;">Annexe 2 : Règlement Intérieur</h2>
+          
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 1 - Objet et champ d'application</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            Conformément aux dispositions des articles L.6352-3, L.6352-4 et R.6352-1 à R.6352-15 du Code du Travail, le présent règlement a pour objet de déterminer les principales mesures applicables en matière de santé, de sécurité et de discipline aux stagiaires de l'organisme de formation, dénommé ci-après.<br/>
+            Tout stagiaire doit respecter les termes du présent règlement durant toute la durée de l'action de formation. Toutefois, lorsque la formation se déroule dans une entreprise déjà dotée d'un règlement intérieur, les mesures de santé et de sécurité applicables aux stagiaires sont celles de ce règlement.
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 2 - Hygiène et sécurité</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 5px;">Chaque stagiaire doit veiller au respect des consignes générales et particulières en matière d'hygiène et de sécurité, sous peine de sanctions disciplinaires.</p>
+          <ul style="font-size: 9pt; margin-bottom: 10px; padding-left: 20px;">
+            <li><strong>Propreté des locaux :</strong> Les stagiaires doivent maintenir en ordre et en état de propreté constante les locaux où se déroule la formation. À ce titre, il leur est interdit de manger dans les salles de cours.</li>
+            <li><strong>Alcool et produits stupéfiants :</strong> L'introduction et la consommation de produits stupéfiants ou de boissons alcoolisées est strictement interdite. Il est également interdit de pénétrer ou de demeurer dans l'établissement en état d'ivresse ou sous l'emprise de produits stupéfiants.</li>
+            <li><strong>Consignes de sécurité – Incendie :</strong> Les consignes d'incendie et notamment un plan de localisation des extincteurs et des issues de secours sont affichés dans les locaux de formation. Les stagiaires sont tenu·e·s d'exécuter sans délai l'ordre d'évacuation donné.</li>
+            <li><strong>Accident - déclaration :</strong> Tout accident ou incident survenu à l'occasion ou en cours de formation doit être immédiatement déclaré. Conformément à l'article R. 6342-3 du Code du Travail, l'organisme de formation effectue la déclaration auprès de la caisse de sécurité sociale.</li>
+            <li><strong>Interdiction de fumer ou de vapoter :</strong> Il est interdit de fumer ou de vapoter dans les locaux de formation.</li>
+          </ul>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 3 – Horaires, absences et retards</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            Les horaires de la formation seront communiqués aux stagiaires au préalable. Les stagiaires sont tenu·e·s de respecter ces horaires. Sauf autorisation express, les stagiaires ne peuvent pas s'absenter pendant les heures de formation.<br/>
+            L'émargement devra être fait au début ou à la fin de chaque atelier. En cas d'absence ou retard, les stagiaires en informent l'organisme de formation. L'employeur est informé des absences. Pour les stagiaires financés par un tiers, les absences non justifiées entraînent une retenue.
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 4 - Comportement</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            Il est demandé à tout stagiaire d'avoir un comportement garantissant le respect des règles élémentaires de savoir vivre. Il est formellement interdit de modifier/diffuser les supports sans autorisation, modifier les réglages informatiques, ou utiliser les téléphones portables à des fins personnelles durant les sessions.
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 5 : Accès aux locaux</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            Les stagiaires ont accès aux locaux exclusivement pour suivre le stage. Il leur est interdit d'être accompagné·e·s de personnes non inscrites.
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 6 - Utilisation du matériel</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            Tout·e stagiaire est tenu·e de conserver en bon état le matériel et la documentation. L'utilisation à d'autres fins est interdite. Il est interdit de diffuser les codes d'accès. La documentation est protégée par droits d'auteur. Il est interdit d'enregistrer ou filmer les sessions sans autorisation.
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 7 : Vol ou dégradation des biens personnels</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            L'organisme de formation décline toute responsabilité en cas de perte, vol ou détérioration des objets personnels des stagiaires.
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 8 - Sanctions</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            Tout agissement fautif pourra faire l'objet de sanctions : rappel à l'ordre, avertissement écrit, blâme, exclusion temporaire ou définitive.
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 9 - Procédure disciplinaire</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            En application de l'article R.6352-4 du Code du Travail, aucune sanction ne peut être prononcée sans information préalable des griefs. Une procédure d'entretien préalable est prévue, avec possibilité d'assistance. La sanction est notifiée par écrit.
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 10 : Représentation des stagiaires</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            Dans les stages d'une durée supérieure à 500 heures, il est procédé à l'élection de délégués (titulaire et suppléant).
+          </p>
+
+          <h4 style="font-weight: bold; margin-bottom: 5px;">Article 11 : Publicité</h4>
+          <p style="text-align: justify; font-size: 9pt; margin-bottom: 10px;">
+            Le présent règlement est affiché dans les locaux et sur le site internet. Un exemplaire est remis à chaque stagiaire.
+          </p>
+
+          <p style="margin-top: 20px;">Fait à {ecole_ville}</p>
+          <p>Le {date_jour}</p>
+        </div>
       </div>
-
-      ${generatePartiesSection()}
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 1 - Inscription et scolarité</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt;">
-        L'élève <strong>{eleve_nom} {eleve_prenom}</strong> est inscrit(e) pour l'année scolaire <strong>{annee_scolaire}</strong> 
-        dans la classe <strong>{eleve_classe}</strong> de l'établissement <strong>{ecole_nom}</strong>.
-      </p>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin-top: 10px;">
-        La scolarité débute le {session_debut} et se termine le {session_fin}. 
-        Les cours sont dispensés selon le calendrier scolaire et les horaires définis par l'établissement.
-      </p>
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 2 - Frais de scolarité</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt;">
-        Les frais de scolarité pour l'année scolaire <strong>{annee_scolaire}</strong> s'élèvent à 
-        <strong>{montant_ttc} €</strong> (en toutes lettres : {montant_lettres}).
-      </p>
-      <p style="margin: 15px 0 5px 0; font-size: 10pt;"><strong>Modalités de paiement :</strong></p>
-      <p style="font-size: 10pt; margin: 0;">{mode_paiement}</p>
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 3 - Obligations de l'élève</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt;">L'élève s'engage à :</p>
-      <ul style="margin: 10px 0 10px 20px; font-size: 10pt; line-height: 1.6;">
-        <li>Suivre assidûment tous les cours et activités pédagogiques</li>
-        <li>Respecter le règlement intérieur de l'établissement</li>
-        <li>Acquitter les frais de scolarité dans les délais convenus</li>
-        <li>Participer activement aux évaluations</li>
-      </ul>
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 4 - Engagements de l'établissement</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt;">L'établissement s'engage à :</p>
-      <ul style="margin: 10px 0 10px 20px; font-size: 10pt; line-height: 1.6;">
-        <li>Dispenser un enseignement de qualité conforme aux programmes</li>
-        <li>Fournir les moyens pédagogiques nécessaires</li>
-        <li>Assurer le suivi pédagogique et l'évaluation des acquis</li>
-        <li>Délivrer les documents administratifs nécessaires</li>
-      </ul>
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Article 5 - Résiliation</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt;">
-        Le présent contrat peut être résilié par l'une ou l'autre des parties, sous réserve d'un préavis d'un mois. 
-        En cas de résiliation par l'élève ou sa famille, les frais de scolarité dus pour la période déjà écoulée 
-        restent acquis à l'établissement.
-      </p>
-
-      ${generateSignatureSection('L\'Établissement', 'L\'Élève / Représentant légal')}
     `,
     footerContent: premiumFooter,
   },
@@ -1957,9 +2206,20 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 }
 
 /**
- * Récupère le template par défaut pour un type de document
+ * Récupère le template par défaut pour un type de document.
+ * Convention et contrat partagent le même design (contrat de formation professionnelle).
  */
 export function getDefaultTemplateContent(type: DocumentType): DocumentTemplateDefault {
+  if (type === 'convention') {
+    const contratDefault = documentTemplateDefaults['contrat']
+    return {
+      type: 'convention',
+      name: 'Convention de formation',
+      headerContent: contratDefault.headerContent,
+      bodyContent: contratDefault.bodyContent,
+      footerContent: contratDefault.footerContent,
+    }
+  }
   return documentTemplateDefaults[type]
 }
 

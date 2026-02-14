@@ -15,6 +15,8 @@ import { NextIntlClientProvider } from 'next-intl'
 import { headers } from 'next/headers'
 import { CSP_NONCE_HEADER } from '@/lib/utils/csp'
 import { NonceProvider } from '@/lib/contexts/nonce-context'
+import { Noise } from '@/components/ui/Noise'
+import { Preloader } from '@/components/ui/Preloader'
 
 export const metadata: Metadata = {
   title: {
@@ -127,7 +129,7 @@ export default async function RootLayout({
         <link rel="icon" href="/icons/icon-192x192.png" type="image/png" />
         <link rel="shortcut icon" href="/icons/icon-192x192.png" type="image/png" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#3B82F6" />
+        <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="EDUZEN" />
@@ -140,7 +142,9 @@ export default async function RootLayout({
         {/* Note: Les polices sont chargées via @fontsource, les preloads sont optionnels */}
         {/* Les chemins exacts seront générés au build par Next.js */}
       </head>
-      <body className={cn('smooth-scroll-premium relative')}>
+      <body className={cn('smooth-scroll-premium relative selection:bg-brand-blue-pale/50 selection:text-brand-blue-darker')}>
+        <Preloader />
+        <Noise />
         <NonceProvider nonce={nonce}>
           <NextIntlClientProvider messages={messages}>
             <Providers>

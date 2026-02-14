@@ -166,79 +166,135 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
     `,
 
     devis: `
-      <h1 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 30px;">
-        DEVIS
-      </h1>
-      
-      <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
-        <div style="width: 45%;">
-          <p><strong>{ecole_nom}</strong></p>
-          <p>{ecole_adresse}</p>
-          <p>{ecole_ville}</p>
-          <p>Tél : {ecole_telephone}</p>
-          <p>Email : {ecole_email}</p>
-        </div>
-        <div style="width: 45%;">
-          <p><strong>Devis N° :</strong> {numero_devis}</p>
-          <p><strong>Date :</strong> {date_emission}</p>
-          <p><strong>Valable jusqu'au :</strong> {date_validite}</p>
-        </div>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">DEVIS POUR :</h2>
-        <p>{eleve_prenom} {eleve_nom}</p>
-        <p>{eleve_adresse}</p>
-        <p>{eleve_ville}</p>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">FORMATION PROPOSÉE :</h2>
-        <p><strong>{formation_nom}</strong></p>
-        <p>Durée : {formation_duree}</p>
-        <p>Description : {formation_description}</p>
-      </div>
-      
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-        <thead>
-          <tr style="background-color: #f3f4f6; border-bottom: 2px solid #000;">
-            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Prestation</th>
-            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Montant HT</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div style="font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; color: #000;">
+        
+        <!-- Header -->
+        <table style="width: 100%; margin-bottom: 30px;">
           <tr>
-            <td style="padding: 10px; border: 1px solid #ddd;">{formation_nom}</td>
-            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">{montant_ht}</td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <div style="margin-left: auto; width: 300px; margin-bottom: 30px;">
-        <table style="width: 100%;">
-          <tr>
-            <td style="padding: 5px; text-align: right;"><strong>Total HT :</strong></td>
-            <td style="padding: 5px; text-align: right;">{montant_ht}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px; text-align: right;"><strong>TVA ({taux_tva}%) :</strong></td>
-            <td style="padding: 5px; text-align: right;">{tva}</td>
-          </tr>
-          <tr style="font-size: 18px; font-weight: bold; border-top: 2px solid #000;">
-            <td style="padding: 10px; text-align: right;"><strong>Total TTC :</strong></td>
-            <td style="padding: 10px; text-align: right;">{montant_ttc}</td>
+            <td style="width: 60%; vertical-align: top;">
+              <h2 style="margin: 0; font-size: 14pt; font-weight: bold; text-transform: uppercase;">{ecole_nom}</h2>
+              <p style="margin: 5px 0 0 0;">{ecole_adresse}</p>
+              <p style="margin: 0;">{ecole_code_postal} {ecole_ville}</p>
+              <p style="margin: 5px 0 0 0;">Email : {ecole_email}</p>
+              <p style="margin: 0;">Tel : {ecole_telephone}</p>
+            </td>
+            <td style="width: 40%; text-align: right; vertical-align: top;">
+               <!-- Logo placeholder or variable -->
+               <img src="{ecole_logo}" alt="Logo" style="max-height: 80px; max-width: 200px;" />
+            </td>
           </tr>
         </table>
-      </div>
-      
-      <p style="text-align: center; margin-top: 40px; font-size: 12px;">
-        <strong>Montant en lettres :</strong> {montant_lettres}
-      </p>
-      
-      <div style="margin-top: 50px; padding: 15px; background-color: #fef3c7; border-left: 4px solid #f59e0b;">
-        <p style="font-size: 12px;">
-          <strong>Conditions :</strong> Ce devis est valable 30 jours. L'acceptation du devis vaut commande ferme et définitive.
-        </p>
+
+        <!-- Title & Date -->
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="font-size: 20pt; font-weight: normal; margin: 0;">Devis de formation professionnelle</h1>
+        </div>
+        <div style="text-align: right; margin-bottom: 30px;">
+          <strong>Date du devis : {date_emission}</strong>
+        </div>
+
+        <!-- Addresses - Destinataire avec balises explicites -->
+        <div style="margin-bottom: 30px;">
+          <p style="margin: 0 0 4px 0;"><strong>Destinataire</strong></p>
+          <p style="margin: 0 0 2px 0;">Nom de l'entreprise : {entreprise_nom}</p>
+          <p style="margin: 0 0 2px 0;">Nom de l'apprenant : {eleve_nom}</p>
+          <p style="margin: 0 0 2px 0;">Prénom de l'apprenant : {eleve_prenom}</p>
+          <p style="margin: 0 0 2px 0;">Adresse : {eleve_adresse}</p>
+          <p style="margin: 0 0 2px 0;">Code postal : {eleve_code_postal}</p>
+          <p style="margin: 0 0 2px 0;">Ville : {eleve_ville}</p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <p style="margin: 0 0 5px 0;"><strong>Organisateur de la formation : {ecole_nom}</strong></p>
+          <p style="margin: 0;">Situé : {ecole_adresse} {ecole_code_postal} {ecole_ville}</p>
+          <p style="margin: 0;">Déclaration d'activité n° {ecole_numero_declaration}</p>
+          <p style="margin: 0;">Numéro SIRET : {ecole_siret}</p>
+          <p style="margin: 0;">Représenté par : {ecole_representant}</p>
+        </div>
+
+        <!-- 1. Objet, nature et durée -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12pt; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 10px;">1. Objet, nature et durée de la formation</h3>
+          <ul style="list-style-type: disc; margin: 0; padding-left: 20px;">
+            <li style="margin-bottom: 5px;"><strong>Intitulé de la formation :</strong> {formation_nom}</li>
+            <li style="margin-bottom: 5px;"><strong>Type d'action de formation (au sens de l'article L6313-1 du Code du Travail) :</strong> Action de formation</li>
+            <li style="margin-bottom: 5px;"><strong>Durée :</strong> {formation_duree}</li>
+            <li style="margin-bottom: 5px;"><strong>Dates de la formation :</strong> du {session_debut} au {session_fin}</li>
+            <li style="margin-bottom: 5px;"><strong>Lieu de la formation :</strong> {session_lieu}</li>
+            <li style="margin-bottom: 5px;"><strong>Effectifs formés du bénéficiaire :</strong> {session_effectif}</li>
+          </ul>
+        </div>
+
+        <!-- 2. Programme -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12pt; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 10px;">2. Programme de la formation et formateur</h3>
+          <p style="margin: 0;">La description détaillée du programme de formation et du formateur est fournie en annexe.</p>
+        </div>
+
+        <!-- 3. Prix -->
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 12pt; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 10px;">3. Prix de la formation</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+            <thead>
+              <tr style="font-weight: bold;">
+                <th style="border: 1px solid #000; padding: 5px; text-align: left; width: 50%;">Désignation</th>
+                <th style="border: 1px solid #000; padding: 5px; text-align: center; width: 15%;">Quantité</th>
+                <th style="border: 1px solid #000; padding: 5px; text-align: right; width: 15%;">Prix unitaire HT</th>
+                <th style="border: 1px solid #000; padding: 5px; text-align: right; width: 20%;">Total HT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FOR:modules}
+              <tr>
+                <td style="border: 1px solid #000; padding: 5px;">Formation<br/>{module_nom}</td>
+                <td style="border: 1px solid #000; padding: 5px; text-align: center;">{module_quantite}</td>
+                <td style="border: 1px solid #000; padding: 5px; text-align: right;">{module_prix_ht} €</td>
+                <td style="border: 1px solid #000; padding: 5px; text-align: right;">{module_total_ht} €</td>
+              </tr>
+              {ENDFOR}
+              <tr>
+                <td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: right; font-weight: bold;">Total HT</td>
+                <td style="border: 1px solid #000; padding: 5px; text-align: right; font-weight: bold;">{montant_ht}</td>
+              </tr>
+              <tr>
+                <td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: left;">Prestations de formation en exonération de TVA, article 261-4-4a du CGI</td>
+                <td style="border: 1px solid #000; padding: 5px;"></td>
+              </tr>
+              <tr>
+                <td colspan="3" style="border: 1px solid #000; padding: 5px; text-align: right; font-weight: bold;">Total TTC</td>
+                <td style="border: 1px solid #000; padding: 5px; text-align: right; font-weight: bold;">{montant_ttc}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4. Validité -->
+        <div style="margin-bottom: 40px;">
+          <h3 style="font-size: 12pt; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 10px;">4. Durée de validité du devis</h3>
+          <p style="margin: 0;">Ce devis sera valable pour une durée de 30 jours.</p>
+        </div>
+
+        <!-- Signatures -->
+        <table style="width: 100%; margin-top: 30px; page-break-inside: avoid;">
+          <tr>
+            <td style="width: 50%; vertical-align: top;">
+              <p style="margin-bottom: 10px;"><strong>Pour l'organisme de formation,</strong></p>
+              <p style="margin-bottom: 0;"><strong>{ecole_nom},</strong></p>
+              <p>{ecole_representant}</p>
+            </td>
+            <td style="width: 50%; vertical-align: top; padding-left: 20px;">
+              <p style="margin-bottom: 10px;"><strong>Pour le bénéficiaire, bon pour accord</strong></p>
+              <p>{eleve_nom} {eleve_prenom}</p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer (custom content if not using default footer) -->
+        <div style="margin-top: 50px; text-align: center; font-size: 9pt; color: #666; border-top: 1px solid #ccc; padding-top: 10px;">
+          <p style="margin: 0 0 5px 0;">{ecole_nom} | {ecole_adresse} {ecole_code_postal} {ecole_ville} | Numéro SIRET : {ecole_siret} | N° TVA : {tva}</p>
+          <p style="margin: 0 0 5px 0;">Numéro de déclaration d'activité : {ecole_numero_declaration}</p>
+          <p style="margin: 0; font-style: italic;">Cet enregistrement ne vaut pas l'agrément de l'État.</p>
+        </div>
       </div>
     `,
 
