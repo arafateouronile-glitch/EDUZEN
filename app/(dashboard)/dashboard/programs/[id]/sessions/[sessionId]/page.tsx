@@ -29,11 +29,13 @@ export default function SessionDetailPage() {
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
     queryKey: ['session-enrollments', sessionId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('enrollments')
         .select('*, students(*)')
         .eq('session_id', sessionId) // Utiliser session_id au lieu de program_session_id
         .order('enrollment_date', { ascending: false })
+      const { data, error } = await q
       if (error) throw error
       return data || []
     },

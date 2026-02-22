@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { calendarService } from './calendar.service'
-import { videoconferenceService } from './videoconference.service'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -259,13 +258,6 @@ export class SessionService {
           })
         }
 
-        // Créer une réunion visioconférence si activé
-        if (formation.organization_id) {
-          await this.createVideoconferenceMeeting(data.id, formation.organization_id).catch((error) => {
-            logger.error('SessionService - Erreur lors de la création de la réunion visioconférence', error, { error: sanitizeError(error) })
-            // Ne pas échouer la création de session si la création de réunion échoue
-          })
-        }
       }
     }
 
@@ -447,39 +439,6 @@ export class SessionService {
       .eq('id', id)
 
     if (error) throw error
-  }
-
-  /**
-   * Crée une réunion visioconférence pour une session
-   */
-  private async createVideoconferenceMeeting(
-    sessionId: string,
-    organizationId: string
-  ): Promise<void> {
-    // Récupérer les intégrations visioconférence actives
-    const { data: integrations } = await this.supabase
-      .from('videoconference_integrations')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .eq('auto_create_meetings', true)
-
-    if (!integrations || integrations.length === 0) {
-      return // Pas d'intégrations actives
-    }
-
-    // Créer une réunion avec chaque système actif
-    for (const integration of integrations) {
-      try {
-        await videoconferenceService.createMeetingForSession(
-          sessionId,
-          { organizationId, provider: integration.provider as string }
-        )
-      } catch (error) {
-        logger.error(`SessionService - Erreur lors de la création de réunion avec ${integration.provider}`, error, { provider: integration.provider, error: sanitizeError(error) })
-        // Continuer avec les autres intégrations même si une échoue
-      }
-    }
   }
 
   /**

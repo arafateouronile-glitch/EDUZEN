@@ -868,6 +868,13 @@ export default function DashboardPage() {
         organization_id: user.organization_id,
       })
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const qSessionsOngoing: any = supabase
+        .from('sessions')
+        .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
+        .eq('formations.organization_id', user.organization_id)
+        .eq('status', 'ongoing')
+
       // ✅ Exécuter toutes les requêtes indépendantes en parallèle (13 requêtes)
       const [
         studentsResult,
@@ -919,12 +926,7 @@ export default function DashboardPage() {
           .eq('role', 'teacher')
           .eq('is_active', true),
 
-        // Sessions en cours
-        supabase
-          .from('sessions')
-          .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
-          .eq('formations.organization_id', user.organization_id)
-          .eq('status', 'ongoing'),
+        qSessionsOngoing,
 
         // Formations actives
         supabase
@@ -1271,12 +1273,14 @@ export default function DashboardPage() {
       if (!sessions || sessions.length === 0) return []
       const sessionIds = sessions.map(s => s.id)
 
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('enrollments')
         .select('*, students(first_name, last_name, photo_url), sessions(name, formations(name, programs(name)))')
         .in('session_id', sessionIds)
         .order('created_at', { ascending: false })
         .limit(5)
+      const { data, error } = await q
 
       if (error) return []
       return data || []

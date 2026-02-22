@@ -51,13 +51,15 @@ export default function AttendancePage() {
         0
       ).toISOString().split('T')[0]
 
-      const { data } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, photo_url), classes(name)')
         .in('student_id', studentIds)
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: false })
+      const { data } = await q
 
       return data || []
     },

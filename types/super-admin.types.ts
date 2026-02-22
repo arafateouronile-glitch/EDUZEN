@@ -19,6 +19,7 @@ export interface AdminPermissions {
   manage_invoices: boolean
   manage_promo_codes: boolean
   manage_referrals: boolean
+  manage_affiliates: boolean
   manage_blog: boolean
   publish_posts: boolean
   moderate_comments: boolean
@@ -36,6 +37,7 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<
     manage_invoices: true,
     manage_promo_codes: true,
     manage_referrals: true,
+    manage_affiliates: true,
     manage_blog: true,
     publish_posts: true,
     moderate_comments: true,
@@ -48,6 +50,7 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<
     manage_invoices: false,
     manage_promo_codes: false,
     manage_referrals: false,
+    manage_affiliates: false,
     manage_blog: true,
     publish_posts: true,
     moderate_comments: true,
@@ -60,6 +63,7 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<
     manage_invoices: false,
     manage_promo_codes: false,
     manage_referrals: false,
+    manage_affiliates: false,
     manage_blog: false,
     publish_posts: false,
     moderate_comments: true,
@@ -72,6 +76,7 @@ export const DEFAULT_PERMISSIONS_BY_ROLE: Record<
     manage_invoices: true,
     manage_promo_codes: true,
     manage_referrals: true,
+    manage_affiliates: true,
     manage_blog: false,
     publish_posts: false,
     moderate_comments: false,
@@ -238,6 +243,147 @@ export interface Referral {
   metadata: Record<string, unknown>
   created_at: string
   updated_at: string
+}
+
+// =====================================================
+// 3b. AFFILIATE ENGINE
+// =====================================================
+
+export type AffiliateStatus = 'pending' | 'approved' | 'banned'
+
+export type AffiliateReferralType = 'click' | 'signup' | 'conversion'
+
+export type AffiliatePayoutStatus =
+  | 'pending'
+  | 'approved'
+  | 'processing'
+  | 'paid'
+  | 'failed'
+  | 'cancelled'
+
+export type AffiliateCommissionType = 'recurring' | 'one_time'
+
+export interface AffiliateCampaign {
+  id: string
+  name: string
+  description: string | null
+  commission_type: AffiliateCommissionType
+  commission_percent: number
+  cookie_days: number
+  is_active: boolean
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface Affiliate {
+  id: string
+  email: string
+  full_name: string | null
+  company_name: string | null
+  status: AffiliateStatus
+  commission_rate_override: number | null
+  payment_iban: string | null
+  payment_bic: string | null
+  payment_holder_name: string | null
+  payment_notes: string | null
+  campaign_id: string | null
+  cookie_days: number
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+  campaign?: AffiliateCampaign | null
+}
+
+export interface AffiliateReferral {
+  id: string
+  affiliate_id: string
+  campaign_id: string | null
+  type: AffiliateReferralType
+  visitor_id: string | null
+  organization_id: string | null
+  subscription_id: string | null
+  promo_code_used: string | null
+  mrr_contribution: number
+  commission_amount: number
+  clicked_at: string
+  converted_at: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+  affiliate?: Affiliate | null
+}
+
+export interface AffiliatePayout {
+  id: string
+  affiliate_id: string
+  amount: number
+  currency: string
+  status: AffiliatePayoutStatus
+  period_start: string
+  period_end: string
+  paid_at: string | null
+  reference: string | null
+  invoice_url: string | null
+  referral_ids: string[]
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+  affiliate?: Affiliate | null
+}
+
+export type AffiliateCommissionStatus = 'pending' | 'paid' | 'cancelled'
+
+export interface AffiliateCommission {
+  id: string
+  affiliate_id: string
+  stripe_customer_id: string
+  stripe_invoice_id: string
+  stripe_charge_id: string | null
+  order_amount: number
+  commission_amount: number
+  commission_percent: number
+  currency: string
+  status: AffiliateCommissionStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateAffiliateInput {
+  email: string
+  full_name?: string | null
+  company_name?: string | null
+  commission_rate_override?: number | null
+  payment_iban?: string | null
+  payment_bic?: string | null
+  payment_holder_name?: string | null
+  campaign_id?: string | null
+  cookie_days?: number
+}
+
+export interface CreateAffiliateCampaignInput {
+  name: string
+  description?: string | null
+  commission_type: AffiliateCommissionType
+  commission_percent: number
+  cookie_days?: number
+  is_active?: boolean
+}
+
+export interface AffiliateOverviewStats {
+  totalClicks: number
+  totalConversions: number
+  conversionRate: number
+  mrrFromAffiliates: number
+  topAffiliates: Array<{
+    id: string
+    email: string
+    full_name: string | null
+    company_name: string | null
+    conversions: number
+    mrr: number
+    commissionDue: number
+  }>
 }
 
 // =====================================================

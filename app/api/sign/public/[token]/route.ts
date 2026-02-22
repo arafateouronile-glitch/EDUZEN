@@ -3,12 +3,14 @@
  * Résout un token (UUID v4 ou legacy) et retourne la demande de signature, d'émargement,
  * ou de processus en cascade (signatories).
  * Utilisé par le portail /sign/[token] (lien email).
+ * Rate limit: 20 req/min par IP (anti brute-force).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
+import { withDistributedRateLimit } from '@/lib/utils/rate-limiter-distributed'
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -21,6 +23,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  return withDistributedRateLimit(request, 'public', async () => {
   try {
     const { token } = await params
     if (!token?.trim()) {
@@ -219,4 +222,5 @@ export async function GET(
       { status: 500 }
     )
   }
+  })
 }

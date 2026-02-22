@@ -6,11 +6,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { elearningService } from '@/lib/services/elearning.service'
 import { Button } from '@/components/ui/button'
-import { GlassCard } from '@/components/ui/glass-card'
 import {
   ArrowLeft, Play, CheckCircle, Star, Users, Clock, BookOpen, Award,
-  GraduationCap, Target, TrendingUp, ChevronDown, ChevronRight, Sparkles,
-  PlayCircle, FileText, Video, Layers, Calendar, MessageSquare, Share2, Edit
+  GraduationCap, Target, TrendingUp, ChevronDown, Sparkles,
+  PlayCircle, FileText, Video, Layers, Calendar, MessageSquare, Share2, Edit, AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, cn } from '@/lib/utils'
@@ -72,37 +71,13 @@ export default function CourseDetailPage() {
   const getDifficultyConfig = (difficulty: string) => {
     switch (difficulty) {
       case 'beginner':
-        return {
-          label: 'Débutant',
-          color: 'from-brand-blue to-brand-cyan',
-          bgColor: 'bg-brand-blue/10',
-          textColor: 'text-brand-blue',
-          icon: Target
-        }
+        return { label: 'Débutant', color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: Target }
       case 'intermediate':
-        return {
-          label: 'Intermédiaire',
-          color: 'from-brand-blue to-brand-blue-dark',
-          bgColor: 'bg-brand-blue/15',
-          textColor: 'text-brand-blue-dark',
-          icon: TrendingUp
-        }
+        return { label: 'Intermédiaire', color: 'text-blue-600 bg-blue-50 border-blue-100', icon: TrendingUp }
       case 'advanced':
-        return {
-          label: 'Avancé',
-          color: 'from-brand-blue-dark to-brand-blue-darker',
-          bgColor: 'bg-brand-blue/20',
-          textColor: 'text-brand-blue-darker',
-          icon: Sparkles
-        }
+        return { label: 'Avancé', color: 'text-purple-600 bg-purple-50 border-purple-100', icon: Sparkles }
       default:
-        return {
-          label: difficulty,
-          color: 'from-gray-500 to-gray-600',
-          bgColor: 'bg-gray-50',
-          textColor: 'text-gray-700',
-          icon: Target
-        }
+        return { label: difficulty, color: 'text-gray-600 bg-gray-50 border-gray-200', icon: Target }
     }
   }
 
@@ -117,25 +92,10 @@ export default function CourseDetailPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        <div className="container mx-auto py-12 px-4 max-w-7xl">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center"
-            >
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-blue flex items-center justify-center">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                >
-                  <GraduationCap className="h-8 w-8 text-white" />
-                </motion.div>
-              </div>
-              <p className="text-gray-500">Chargement du cours...</p>
-            </motion.div>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-brand-blue/20 border-t-brand-blue rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 font-medium">Chargement du cours...</p>
         </div>
       </div>
     )
@@ -143,20 +103,19 @@ export default function CourseDetailPage() {
 
   if (!course) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-        <div className="container mx-auto py-12 px-4 max-w-7xl">
-          <div className="text-center py-12">
-            <GlassCard variant="premium" className="inline-block p-8">
-              <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Cours non trouvé</p>
-              <Link href="/dashboard/elearning">
-                <Button className="mt-4 bg-brand-blue hover:bg-brand-blue-dark">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Retour aux cours
-                </Button>
-              </Link>
-            </GlassCard>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="text-center max-w-md px-6">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-gray-400" />
           </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Cours introuvable</h2>
+          <p className="text-gray-500 mb-6">Ce cours n'existe pas ou a été supprimé.</p>
+          <Link href="/dashboard/elearning">
+            <Button className="bg-brand-blue hover:bg-brand-blue-dark text-white">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au catalogue
+            </Button>
+          </Link>
         </div>
       </div>
     )
@@ -179,745 +138,422 @@ export default function CourseDetailPage() {
   const completedLessons = enrollment?.completed_lessons?.length || 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden">
-        {/* Background with course cover */}
-        <div className="absolute inset-0">
-          {course.cover_image_url ? (
-            <img
-              src={course.cover_image_url}
-              alt={course.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-blue-darker" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-blue-darker/30 to-brand-blue-dark/30" />
-        </div>
-
-        {/* Content */}
-        <div className="relative container mx-auto px-4 py-8 max-w-7xl">
-          {/* Back button */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <Link href="/dashboard/elearning">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mb-6 text-white/90 hover:text-white hover:bg-white/10 backdrop-blur-sm border border-white/20"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour aux cours
-              </Button>
+    <div className="min-h-screen bg-gray-50/50 flex flex-col">
+      {/* Header Simple */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col gap-4">
+            <Link href="/dashboard/elearning" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors w-fit">
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              Retour au catalogue
             </Link>
-          </motion.div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-end pb-8">
-            {/* Course Info */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="lg:col-span-2"
-            >
-              {/* Badges */}
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium",
-                  "bg-gradient-to-r shadow-lg backdrop-blur-sm",
-                  difficultyConfig.color,
-                  "text-white"
-                )}>
-                  <DifficultyIcon className="h-3.5 w-3.5" />
-                  {difficultyConfig.label}
-                </span>
-                {course.is_featured && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-white/20 backdrop-blur-sm text-white border border-white/30 shadow-lg">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Populaire
+            
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+              <div className="space-y-3 max-w-3xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border", difficultyConfig.color)}>
+                    <DifficultyIcon className="h-3 w-3" />
+                    {difficultyConfig.label}
                   </span>
+                  {course.is_featured && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      <Sparkles className="h-3 w-3" />
+                      Populaire
+                    </span>
+                  )}
+                </div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">{course.title}</h1>
+                {course.short_description && (
+                  <p className="text-gray-500 text-lg leading-relaxed">{course.short_description}</p>
                 )}
-                {enrollment && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-white/20 backdrop-blur-sm text-white border border-white/30">
-                    <CheckCircle className="h-3.5 w-3.5" />
-                    Inscrit
-                  </span>
-                )}
-              </div>
-
-              {/* Title */}
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
-                {course.title}
-              </h1>
-
-              {/* Short description */}
-              {course.short_description && (
-                <p className="text-lg text-white/80 mb-6 max-w-2xl">
-                  {course.short_description}
-                </p>
-              )}
-
-              {/* Stats */}
-              <div className="flex flex-wrap items-center gap-6 text-white/90">
-                {ratingStats && ratingStats.total > 0 && (
+                
+                <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500 pt-2">
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={cn(
-                            "h-4 w-4",
-                            star <= Math.round(ratingStats.average)
-                              ? "text-brand-blue fill-brand-blue"
-                              : "text-white/30"
-                          )}
-                        />
-                      ))}
-                    </div>
-                    <span className="font-semibold">{ratingStats.average.toFixed(1)}</span>
-                    <span className="text-white/60">({ratingStats.total} avis)</span>
+                    <Users className="h-4 w-4" />
+                    <span>{course.total_students || 0} étudiant{(course.total_students || 0) > 1 ? 's' : ''}</span>
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <span>{course.total_students || 0} étudiants</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  <span>{totalLessons} leçons</span>
-                </div>
-                {course.estimated_duration_hours && (
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    <span>{course.estimated_duration_hours}h de contenu</span>
+                    <span>{course.estimated_duration_hours || 0}h de contenu</span>
+                  </div>
+                  {ratingStats && ratingStats.total > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center text-amber-400">
+                        <Star className="h-4 w-4 fill-current" />
+                      </div>
+                      <span className="font-medium text-gray-900">{ratingStats.average.toFixed(1)}</span>
+                      <span className="text-gray-400">({ratingStats.total} avis)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Edit button for instructors */}
+              <div className="flex-shrink-0">
+                <Link href={`/dashboard/elearning/courses/${slug}/edit`}>
+                  <Button variant="outline" className="gap-2">
+                    <Edit className="h-4 w-4" />
+                    Éditer le cours
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Colonne Gauche : Contenu (8/12) */}
+          <div className="lg:col-span-8 space-y-8">
+            
+            {/* Image Cover (si présente) */}
+            {course.cover_image_url && (
+              <div className="aspect-video w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-100 shadow-sm">
+                <img
+                  src={course.cover_image_url}
+                  alt={course.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {/* Description détaillée */}
+            {course.description && (
+              <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-gray-400" />
+                  À propos de ce cours
+                </h2>
+                <div className="prose prose-sm md:prose-base prose-gray max-w-none">
+                  <ReactMarkdown>{course.description}</ReactMarkdown>
+                </div>
+              </section>
+            )}
+
+            {/* Programme du cours */}
+            <section className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-gray-400" />
+                    Contenu du cours
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {course.sections?.length || 0} sections • {totalLessons} leçons
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (course.sections?.length) {
+                      setExpandedSections(
+                        expandedSections.length === course.sections.length
+                          ? []
+                          : course.sections.map((s: any) => s.id)
+                      )
+                    }
+                  }}
+                  className="text-brand-blue hover:text-brand-blue-dark hover:bg-brand-blue/5"
+                >
+                  {expandedSections.length === (course.sections?.length || 0) ? 'Tout réduire' : 'Tout développer'}
+                </Button>
+              </div>
+
+              <div className="divide-y divide-gray-100">
+                {course.sections && course.sections.length > 0 ? (
+                  course.sections.map((section: any, sectionIndex: number) => {
+                    const sectionLessons = lessonsBySection[section.id] || []
+                    const isExpanded = expandedSections.includes(section.id)
+                    const completedInSection = enrollment?.completed_lessons?.filter(
+                      (id: string) => sectionLessons.some((l: any) => l.id === id)
+                    ).length || 0
+
+                    return (
+                      <div key={section.id} className="group/section">
+                        <button
+                          onClick={() => toggleSection(section.id)}
+                          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-100 text-gray-500 font-medium text-sm flex items-center justify-center group-hover/section:bg-white group-hover/section:border group-hover/section:border-gray-200 transition-all">
+                              {sectionIndex + 1}
+                            </span>
+                            <div className="text-left">
+                              <h3 className="font-semibold text-gray-900 text-sm md:text-base">{section.title}</h3>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {sectionLessons.length} leçon{sectionLessons.length > 1 ? 's' : ''}
+                                {enrollment && completedInSection > 0 && (
+                                  <span className="text-emerald-600 font-medium ml-2">
+                                    • {completedInSection} terminée{completedInSection > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <ChevronDown className={cn("h-5 w-5 text-gray-400 transition-transform", isExpanded && "rotate-180")} />
+                        </button>
+
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden bg-gray-50/30"
+                            >
+                              <div className="px-6 pb-4 pt-1 space-y-2">
+                                {sectionLessons.map((lesson: any) => {
+                                  const isCompleted = enrollment?.completed_lessons?.includes(lesson.id)
+                                  return (
+                                    <div
+                                      key={lesson.id}
+                                      className={cn(
+                                        "flex items-center justify-between p-3 rounded-lg border transition-all",
+                                        isCompleted
+                                          ? "bg-emerald-50/50 border-emerald-100"
+                                          : "bg-white border-gray-200 hover:border-brand-blue/30 hover:shadow-sm"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-3 overflow-hidden">
+                                        <div className={cn(
+                                          "flex-shrink-0 p-1.5 rounded-md",
+                                          isCompleted ? "text-emerald-600 bg-emerald-100" : "text-gray-400 bg-gray-100"
+                                        )}>
+                                          {isCompleted ? <CheckCircle className="h-4 w-4" /> : 
+                                           lesson.lesson_type === 'video' ? <Video className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className={cn("text-sm font-medium truncate", isCompleted ? "text-emerald-900" : "text-gray-700")}>
+                                            {lesson.title}
+                                          </p>
+                                          {lesson.video_duration_minutes && (
+                                            <p className="text-xs text-gray-400">{lesson.video_duration_minutes} min</p>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {enrollment ? (
+                                        <Link href={`/dashboard/elearning/courses/${slug}/lessons/${lesson.slug}`}>
+                                          <Button size="sm" variant="ghost" className="h-8 text-xs">
+                                            {isCompleted ? 'Revoir' : 'Lancer'}
+                                          </Button>
+                                        </Link>
+                                      ) : lesson.is_preview ? (
+                                        <Link href={`/dashboard/elearning/courses/${slug}/lessons/${lesson.slug}`}>
+                                          <Button size="sm" variant="outline" className="h-8 text-xs border-brand-blue/30 text-brand-blue">
+                                            Aperçu
+                                          </Button>
+                                        </Link>
+                                      ) : (
+                                        <LockIcon className="h-4 w-4 text-gray-300" />
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="p-12 text-center text-gray-500">
+                    <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                    <p>Le contenu de ce cours n'est pas encore disponible.</p>
                   </div>
                 )}
               </div>
+            </section>
 
-              {/* Instructor */}
-              {course.instructor && (
-                <div className="mt-6 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-semibold border border-white/30">
-                    {(course.instructor.full_name || course.instructor.email)?.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-white/60 text-sm">Créé par</p>
-                    <p className="text-white font-medium">
-                      {course.instructor.full_name || course.instructor.email}
-                    </p>
+            {/* Avis */}
+            {course.reviews && course.reviews.length > 0 && (
+              <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-gray-400" />
+                    Avis des étudiants
+                  </h2>
+                  <div className="text-sm text-gray-500">
+                    {course.reviews.length} avis
                   </div>
                 </div>
-              )}
-            </motion.div>
-
-            {/* Quick Actions Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="hidden lg:block"
-            >
-              <GlassCard variant="premium" className="p-6 backdrop-blur-xl bg-white/95 border-white/50">
-                {enrollment ? (
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-blue mb-3">
-                        <CheckCircle className="h-8 w-8 text-white" />
+                <div className="space-y-4">
+                  {course.reviews.slice(0, 5).map((review: any) => (
+                    <div key={review.id} className="p-4 bg-gray-50 rounded-lg border border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-bold text-xs">
+                            {(review.student?.full_name || review.student?.email || 'U')?.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium text-sm text-gray-900">
+                            {review.student?.full_name || review.student?.email || 'Utilisateur'}
+                          </span>
+                        </div>
+                        <div className="flex text-amber-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={cn("h-3 w-3", i < (review.rating || 0) ? "fill-current" : "text-gray-300")} />
+                          ))}
+                        </div>
                       </div>
-                      <h3 className="font-semibold text-gray-900">Vous êtes inscrit</h3>
-                    </div>
-
-                    {/* Progress */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Progression</span>
-                        <span className="font-semibold text-brand-blue">
-                          {Math.round(enrollment.progress_percentage || 0)}%
-                        </span>
-                      </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${enrollment.progress_percentage || 0}%` }}
-                          transition={{ duration: 1, delay: 0.5 }}
-                          className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 text-center">
-                        {completedLessons} / {totalLessons} leçons terminées
-                      </p>
-                    </div>
-
-                    <Link href={`/dashboard/elearning/courses/${slug}/learn`} className="block">
-                      <Button className="w-full bg-brand-blue hover:bg-brand-blue-dark shadow-lg shadow-brand-blue/25">
-                        <PlayCircle className="h-4 w-4 mr-2" />
-                        Continuer le cours
-                      </Button>
-                    </Link>
-
-                    {enrollment.enrollment_status === 'completed' && (
-                      <Button variant="outline" className="w-full border-brand-blue/20 text-brand-blue hover:bg-brand-blue/5">
-                        <Award className="h-4 w-4 mr-2" />
-                        Télécharger le certificat
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-blue mb-3">
-                        <GraduationCap className="h-8 w-8 text-white" />
-                      </div>
-                      <h3 className="font-semibold text-gray-900">Commencez à apprendre</h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Accédez à toutes les leçons
-                      </p>
-                    </div>
-
-                    <Button
-                      className="w-full bg-brand-blue hover:bg-brand-blue-dark shadow-lg shadow-brand-blue/25"
-                      onClick={() => enrollMutation.mutate()}
-                      disabled={enrollMutation.isPending}
-                    >
-                      {enrollMutation.isPending ? (
-                        <>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                            className="mr-2"
-                          >
-                            <GraduationCap className="h-4 w-4" />
-                          </motion.div>
-                          Inscription...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          S'inscrire gratuitement
-                        </>
+                      {review.review_text && (
+                        <p className="text-sm text-gray-600 pl-10">{review.review_text}</p>
                       )}
-                    </Button>
-                  </div>
-                )}
-
-                {/* Quick stats */}
-                <div className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">{totalLessons}</div>
-                    <div className="text-xs text-gray-500">Leçons</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {course.estimated_duration_hours || '—'}
                     </div>
-                    <div className="text-xs text-gray-500">Heures</div>
-                  </div>
+                  ))}
                 </div>
-              </GlassCard>
-            </motion.div>
+              </section>
+            )}
           </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Column */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Mobile CTA Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="lg:hidden"
-            >
-              <GlassCard variant="premium" className="p-6">
-                {enrollment ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-brand-blue/10 rounded-lg">
-                          <CheckCircle className="h-5 w-5 text-brand-blue" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">Vous êtes inscrit</p>
-                          <p className="text-sm text-gray-500">
-                            {Math.round(enrollment.progress_percentage || 0)}% complété
-                          </p>
-                        </div>
-                      </div>
-                      <Link href={`/dashboard/elearning/courses/${slug}/learn`}>
-                        <Button className="bg-brand-blue hover:bg-brand-blue-dark">
-                          <PlayCircle className="h-4 w-4 mr-2" />
-                          Continuer
-                        </Button>
-                      </Link>
+          {/* Colonne Droite : Sidebar (4/12) */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            {/* Carte d'inscription / Progression */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm sticky top-6">
+              {enrollment ? (
+                <div className="space-y-6">
+                  <div className="text-center pb-4 border-b border-gray-100">
+                    <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium border border-emerald-100">
+                      <CheckCircle className="h-4 w-4" />
+                      Inscrit
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600 font-medium">Progression</span>
+                      <span className="text-gray-900 font-bold">{Math.round(enrollment.progress_percentage || 0)}%</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
+                      <div 
+                        className="h-full bg-brand-blue rounded-full transition-all duration-500" 
                         style={{ width: `${enrollment.progress_percentage || 0}%` }}
                       />
                     </div>
+                    <p className="text-xs text-gray-500 text-right">{completedLessons}/{totalLessons} leçons</p>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">Prêt à apprendre ?</p>
-                      <p className="text-sm text-gray-500">{totalLessons} leçons disponibles</p>
-                    </div>
-                    <Button
-                      className="bg-brand-blue hover:bg-brand-blue-dark"
-                      onClick={() => enrollMutation.mutate()}
-                      disabled={enrollMutation.isPending}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      S'inscrire
+
+                  <Link href={`/dashboard/elearning/courses/${slug}/learn`} className="block">
+                    <Button className="w-full bg-brand-blue hover:bg-brand-blue-dark text-white font-medium py-6 text-base shadow-sm">
+                      <PlayCircle className="h-5 w-5 mr-2" />
+                      Continuer la formation
                     </Button>
-                  </div>
-                )}
-              </GlassCard>
-            </motion.div>
+                  </Link>
 
-            {/* Description */}
-            {course.description && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-              >
-                <GlassCard variant="premium" className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-brand-blue rounded-lg">
-                      <FileText className="h-5 w-5 text-white" />
-                    </div>
-                    <h2 className="text-xl font-semibold text-gray-900">À propos de ce cours</h2>
-                  </div>
-                  <div className="prose prose-brand-blue max-w-none text-gray-600">
-                    <ReactMarkdown>{course.description}</ReactMarkdown>
-                  </div>
-                </GlassCard>
-              </motion.div>
-            )}
-
-            {/* Course Content */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              <GlassCard variant="premium" className="overflow-hidden">
-                <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-brand-blue rounded-lg">
-                        <Layers className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Contenu du cours</h2>
-                        <p className="text-sm text-gray-500">
-                          {course.sections?.length || 0} sections • {totalLessons} leçons
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (course.sections?.length) {
-                          setExpandedSections(
-                            expandedSections.length === course.sections.length
-                              ? []
-                              : course.sections.map((s: any) => s.id)
-                          )
-                        }
-                      }}
-                      className="text-brand-blue hover:text-brand-blue-dark hover:bg-brand-blue/10"
-                    >
-                      {expandedSections.length === (course.sections?.length || 0)
-                        ? 'Tout réduire'
-                        : 'Tout développer'}
+                  {enrollment.enrollment_status === 'completed' && (
+                    <Button variant="outline" className="w-full border-gray-300 text-gray-700 hover:bg-gray-50">
+                      <Award className="h-4 w-4 mr-2" />
+                      Télécharger le certificat
                     </Button>
-                  </div>
-                </div>
-
-                <div className="divide-y divide-gray-100">
-                  {course.sections && course.sections.length > 0 ? (
-                    course.sections.map((section: any, sectionIndex: number) => {
-                      const sectionLessons = lessonsBySection[section.id] || []
-                      const isExpanded = expandedSections.includes(section.id)
-                      const completedInSection = enrollment?.completed_lessons?.filter(
-                        (id: string) => sectionLessons.some((l: any) => l.id === id)
-                      ).length || 0
-
-                      return (
-                        <div key={section.id}>
-                          {/* Section Header */}
-                          <button
-                            onClick={() => toggleSection(section.id)}
-                            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex items-center gap-4">
-                              <div className={cn(
-                                "w-10 h-10 rounded-xl flex items-center justify-center font-semibold text-sm",
-                                isExpanded
-                                  ? "bg-brand-blue text-white"
-                                  : "bg-brand-blue/10 text-brand-blue"
-                              )}>
-                                {sectionIndex + 1}
-                              </div>
-                              <div className="text-left">
-                                <h3 className="font-semibold text-gray-900">{section.title}</h3>
-                                <p className="text-sm text-gray-500">
-                                  {sectionLessons.length} leçons
-                                  {enrollment && completedInSection > 0 && (
-                                    <span className="text-brand-blue ml-2">
-                                      • {completedInSection}/{sectionLessons.length} terminées
-                                    </span>
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <motion.div
-                              animate={{ rotate: isExpanded ? 180 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ChevronDown className="h-5 w-5 text-gray-400" />
-                            </motion.div>
-                          </button>
-
-                          {/* Section Lessons */}
-                          <AnimatePresence>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="pl-4 pr-4 pb-4 space-y-2">
-                                  {sectionLessons.map((lesson: any, lessonIndex: number) => {
-                                    const isCompleted = enrollment?.completed_lessons?.includes(lesson.id)
-
-                                    return (
-                                      <motion.div
-                                        key={lesson.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ duration: 0.2, delay: lessonIndex * 0.05 }}
-                                        className={cn(
-                                          "group flex items-center justify-between p-3 rounded-xl transition-all",
-                                          "border",
-                                          isCompleted
-                                            ? "bg-brand-blue/5 border-brand-blue/20"
-                                            : "bg-white border-gray-100 hover:border-brand-blue/30 hover:bg-brand-blue/5"
-                                        )}
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          <div className={cn(
-                                            "w-8 h-8 rounded-lg flex items-center justify-center",
-                                            isCompleted
-                                              ? "bg-brand-blue text-white"
-                                              : "bg-gray-100 text-gray-500 group-hover:bg-brand-blue/10 group-hover:text-brand-blue"
-                                          )}>
-                                            {isCompleted ? (
-                                              <CheckCircle className="h-4 w-4" />
-                                            ) : lesson.lesson_type === 'video' ? (
-                                              <Video className="h-4 w-4" />
-                                            ) : (
-                                              <FileText className="h-4 w-4" />
-                                            )}
-                                          </div>
-                                          <div>
-                                            <h4 className={cn(
-                                              "font-medium text-sm",
-                                              isCompleted ? "text-brand-blue" : "text-gray-700"
-                                            )}>
-                                              {lesson.title}
-                                            </h4>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                              {lesson.video_duration_minutes && (
-                                                <span>{lesson.video_duration_minutes} min</span>
-                                              )}
-                                              {lesson.is_preview && (
-                                                <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
-                                                  Aperçu gratuit
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        {enrollment ? (
-                                          <Link href={`/dashboard/elearning/courses/${slug}/lessons/${lesson.slug}`}>
-                                            <Button
-                                              size="sm"
-                                              variant={isCompleted ? "outline" : "default"}
-                                              className={cn(
-                                                "opacity-0 group-hover:opacity-100 transition-opacity",
-                                                isCompleted
-                                                  ? "border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
-                                                  : "bg-brand-blue hover:bg-brand-blue-dark"
-                                              )}
-                                            >
-                                              {isCompleted ? 'Revoir' : 'Commencer'}
-                                            </Button>
-                                          </Link>
-                                        ) : lesson.is_preview ? (
-                                          <Link href={`/dashboard/elearning/courses/${slug}/lessons/${lesson.slug}`}>
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="opacity-0 group-hover:opacity-100 transition-opacity border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
-                                            >
-                                              Aperçu
-                                            </Button>
-                                          </Link>
-                                        ) : (
-                                          <div className="flex items-center gap-1 text-xs text-gray-400">
-                                            <span>Inscrivez-vous</span>
-                                            <ChevronRight className="h-3 w-3" />
-                                          </div>
-                                        )}
-                                      </motion.div>
-                                    )
-                                  })}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      )
-                    })
-                  ) : course.lessons && course.lessons.length > 0 ? (
-                    <div className="p-4 space-y-2">
-                      {course.lessons.map((lesson: any, index: number) => {
-                        const isCompleted = enrollment?.completed_lessons?.includes(lesson.id)
-
-                        return (
-                          <motion.div
-                            key={lesson.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: index * 0.05 }}
-                            className={cn(
-                              "group flex items-center justify-between p-3 rounded-xl transition-all border",
-                              isCompleted
-                                ? "bg-brand-blue/5 border-brand-blue/20"
-                                : "bg-white border-gray-100 hover:border-brand-blue/30 hover:bg-brand-blue/5"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "w-8 h-8 rounded-lg flex items-center justify-center",
-                                isCompleted
-                                  ? "bg-brand-blue text-white"
-                                  : "bg-gray-100 text-gray-500 group-hover:bg-brand-blue/10 group-hover:text-brand-blue"
-                              )}>
-                                {isCompleted ? (
-                                  <CheckCircle className="h-4 w-4" />
-                                ) : lesson.lesson_type === 'video' ? (
-                                  <Video className="h-4 w-4" />
-                                ) : (
-                                  <FileText className="h-4 w-4" />
-                                )}
-                              </div>
-                              <div>
-                                <h4 className={cn(
-                                  "font-medium text-sm",
-                                  isCompleted ? "text-brand-blue" : "text-gray-700"
-                                )}>
-                                  {lesson.title}
-                                </h4>
-                                {lesson.video_duration_minutes && (
-                                  <span className="text-xs text-gray-500">
-                                    {lesson.video_duration_minutes} min
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {enrollment && (
-                              <Link href={`/dashboard/elearning/courses/${slug}/lessons/${lesson.slug}`}>
-                                <Button
-                                  size="sm"
-                                  variant={isCompleted ? "outline" : "default"}
-                                  className={cn(
-                                    "opacity-0 group-hover:opacity-100 transition-opacity",
-                                    isCompleted
-                                      ? "border-brand-blue/30 text-brand-blue hover:bg-brand-blue/10"
-                                      : "bg-brand-blue hover:bg-brand-blue-dark"
-                                  )}
-                                >
-                                  {isCompleted ? 'Revoir' : 'Commencer'}
-                                </Button>
-                              </Link>
-                            )}
-                          </motion.div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                        <BookOpen className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <p className="text-gray-500">Aucune leçon disponible pour le moment</p>
-                    </div>
                   )}
                 </div>
-              </GlassCard>
-            </motion.div>
-
-            {/* Reviews */}
-            {course.reviews && course.reviews.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-              >
-                <GlassCard variant="premium" className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-brand-blue rounded-lg">
-                        <MessageSquare className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Avis des étudiants</h2>
-                        <p className="text-sm text-gray-500">{course.reviews.length} avis</p>
-                      </div>
-                    </div>
-                    {ratingStats && ratingStats.total > 0 && (
-                      <div className="flex items-center gap-2 px-4 py-2 bg-brand-blue/10 rounded-xl">
-                        <Star className="h-5 w-5 text-brand-blue fill-brand-blue" />
-                        <span className="text-xl font-bold text-brand-blue">
-                          {ratingStats.average.toFixed(1)}
-                        </span>
-                      </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="text-3xl font-bold text-gray-900 text-center">
+                    {course.price && course.price > 0 ? (
+                      <span>{course.price.toLocaleString()} {course.currency}</span>
+                    ) : (
+                      <span className="text-brand-blue">Gratuit</span>
                     )}
                   </div>
 
-                  <div className="space-y-4">
-                    {course.reviews.slice(0, 5).map((review: any, index: number) => (
-                      <motion.div
-                        key={review.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className="p-4 rounded-xl bg-gray-50/50 border border-gray-100"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-brand-blue flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                            {(review.student?.full_name || review.student?.email || 'U')?.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <span className="font-medium text-gray-900 truncate">
-                                {review.student?.full_name || review.student?.email || 'Utilisateur'}
-                              </span>
-                              <span className="text-xs text-gray-500 flex-shrink-0">
-                                {formatDate(review.created_at)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 mb-2">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
-                                  key={star}
-                                  className={cn(
-                                    "h-3.5 w-3.5",
-                                    star <= (review.rating || 0)
-                                      ? "text-brand-blue fill-brand-blue"
-                                      : "text-gray-300"
-                                  )}
-                                />
-                              ))}
-                            </div>
-                            {review.review_text && (
-                              <p className="text-sm text-gray-600">{review.review_text}</p>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                  <Button 
+                    className="w-full bg-brand-blue hover:bg-brand-blue-dark text-white font-medium py-6 text-base shadow-sm"
+                    onClick={() => enrollMutation.mutate()}
+                    disabled={enrollMutation.isPending}
+                  >
+                    {enrollMutation.isPending ? 'Inscription...' : 'Commencer maintenant'}
+                  </Button>
+
+                  <p className="text-xs text-center text-gray-500">
+                    Accès immédiat et illimité à vie
+                  </p>
+                </div>
+              )}
+
+              {/* Infos Sidebar */}
+              <div className="mt-8 space-y-4 pt-6 border-t border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-500">
+                    <Award className="h-4 w-4" />
                   </div>
-                </GlassCard>
-              </motion.div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Certification</p>
+                    <p className="text-sm text-gray-900">Certificat de complétion</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-500">
+                    <Target className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Niveau</p>
+                    <p className="text-sm text-gray-900">{difficultyConfig.label}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-500">
+                    <Calendar className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium">Dernière mise à jour</p>
+                    <p className="text-sm text-gray-900">{course.updated_at ? formatDate(course.updated_at) : formatDate(course.created_at)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <Button variant="outline" className="w-full text-gray-600 border-gray-200 hover:bg-gray-50">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Partager ce cours
+                </Button>
+              </div>
+            </div>
+
+            {/* Instructeur Card */}
+            {course.instructor && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-bold text-gray-900 mb-4">Instructeur</h3>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-bold text-lg">
+                    {(course.instructor.full_name || course.instructor.email)?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{course.instructor.full_name || course.instructor.email}</p>
+                    <p className="text-xs text-gray-500">Formateur expert</p>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-
-          {/* Sidebar - Desktop only (mobile has card at top) */}
-          <div className="hidden lg:block space-y-6">
-            {/* Sticky enrollment card is in hero, show course info here */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-              className="sticky top-6"
-            >
-              <GlassCard variant="premium" className="p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Ce cours comprend</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="p-2 bg-brand-blue/10 rounded-lg">
-                      <BookOpen className="h-4 w-4 text-brand-blue" />
-                    </div>
-                    <span className="text-gray-600">{totalLessons} leçons</span>
-                  </div>
-                  {course.estimated_duration_hours && (
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="p-2 bg-brand-blue/10 rounded-lg">
-                        <Clock className="h-4 w-4 text-brand-blue" />
-                      </div>
-                      <span className="text-gray-600">{course.estimated_duration_hours}h de contenu</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="p-2 bg-brand-blue/10 rounded-lg">
-                      <Award className="h-4 w-4 text-brand-blue" />
-                    </div>
-                    <span className="text-gray-600">Certificat de complétion</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="p-2 bg-brand-blue/10 rounded-lg">
-                      <Target className="h-4 w-4 text-brand-blue" />
-                    </div>
-                    <span className="text-gray-600">Niveau {difficultyConfig.label.toLowerCase()}</span>
-                  </div>
-                </div>
-
-                {/* Share & Edit buttons */}
-                <div className="mt-6 pt-4 border-t border-gray-100 flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Partager
-                  </Button>
-                  <Link href={`/dashboard/elearning/courses/${slug}/edit`}>
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </GlassCard>
-
-              {/* Published info */}
-              {course.published_at && (
-                <GlassCard variant="subtle" className="p-4 mt-4">
-                  <div className="flex items-center gap-3 text-sm text-gray-500">
-                    <Calendar className="h-4 w-4" />
-                    <span>Publié le {formatDate(course.published_at)}</span>
-                  </div>
-                </GlassCard>
-              )}
-            </motion.div>
-          </div>
         </div>
-      </div>
+      </main>
     </div>
+  )
+}
+
+function LockIcon({ className }: { className?: string }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
   )
 }

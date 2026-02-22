@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Stripe from 'stripe'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
+import { APP_URLS } from '@/lib/config/app-config'
 
 // Initialiser Stripe uniquement si la clé est disponible
 const getStripe = () => {
@@ -10,21 +12,26 @@ const getStripe = () => {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
   return new Stripe(secretKey, {
-    apiVersion: '2025-12-15.clover',
+    apiVersion: '2026-01-28.clover',
   })
 }
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
 /**
- * Webhook Stripe pour gérer automatiquement les souscriptions
- * 
+ * Webhook Stripe principal — souscriptions + commissions affiliées.
+ *
+ * IMPORTANT : Ne configurer qu'UN SEUL endpoint webhook dans le dashboard Stripe.
+ * Il existe aussi app/api/subscriptions/webhook/route.ts (souscriptions + emails).
+ * Choisir celui-ci (webhooks/stripe) pour avoir souscriptions + affiliation + emails
+ * (trial_will_end géré ici). Désactiver l'autre pour éviter le double traitement.
+ *
  * Événements gérés :
- * - customer.subscription.created : Création d'une souscription
- * - customer.subscription.updated : Mise à jour (changement de plan, renouvellement)
- * - customer.subscription.deleted : Annulation
- * - invoice.payment_succeeded : Paiement réussi
- * - invoice.payment_failed : Échec de paiement
+ * - customer.subscription.created/updated/deleted
+ * - invoice.payment_succeeded ( + commission affilié )
+ * - invoice.payment_failed
+ * - charge.refunded ( annulation commission )
+ * - customer.subscription.trial_will_end ( email )
  */
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +59,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    // Webhooks Stripe n'ont pas de session utilisateur : utiliser service_role pour bypass RLS
+    const supabase = createAdminClient()
 
     // Traiter l'événement selon son type
     switch (event.type) {
@@ -72,12 +80,39 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
         await handlePaymentSuccess(supabase, invoice)
+        const stripe = getStripe()
+        try {
+          await handleAffiliateCommission(stripe, invoice)
+        } catch (commissionError) {
+          logger.error('Stripe Webhook - Erreur commission (réponse 200 pour éviter retry Stripe)', commissionError, {
+            error: sanitizeError(commissionError),
+            invoiceId: invoice.id,
+          })
+        }
+        break
+      }
+
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge
+        try {
+          await handleAffiliateCommissionRefund(charge)
+        } catch (refundError) {
+          logger.error('Stripe Webhook - Erreur annulation commission (réponse 200)', refundError, {
+            error: sanitizeError(refundError),
+          })
+        }
         break
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
         await handlePaymentFailure(supabase, invoice)
+        break
+      }
+
+      case 'customer.subscription.trial_will_end': {
+        const subscription = event.data.object as Stripe.Subscription
+        await sendTrialWillEndEmail(subscription)
         break
       }
 
@@ -296,6 +331,187 @@ async function handlePaymentFailure(supabase: any, invoice: Stripe.Invoice) {
     // await emailService.sendPaymentFailedAlert(organizationId)
   } catch (error) {
     logger.error('Stripe Webhook - Erreur handlePaymentFailure', error, {
+      error: sanitizeError(error),
+    })
+    throw error
+  }
+}
+
+/** O7 : Envoie l'email "fin d'essai dans 3 jours" (customer.subscription.trial_will_end). */
+async function sendTrialWillEndEmail(subscription: Stripe.Subscription) {
+  const organizationId = subscription.metadata?.organization_id as string | undefined
+  if (!organizationId) return
+  try {
+    const supabase = createAdminClient()
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('id, name, email')
+      .eq('id', organizationId)
+      .single()
+    const { data: adminUsers } = await supabase
+      .from('users')
+      .select('email')
+      .eq('organization_id', organizationId)
+      .in('role', ['admin', 'super_admin'])
+      .limit(3)
+    const toEmails = [
+      ...(org?.email ? [org.email] : []),
+      ...(adminUsers?.map((u) => u.email).filter(Boolean) ?? []),
+    ]
+    const uniqueEmails = [...new Set(toEmails)].slice(0, 5)
+    const orgName = org?.name ?? 'Votre organisation'
+    const dashboardUrl = `${APP_URLS.getBaseUrl()}/dashboard/subscribe`
+    const trialEndDate = subscription.trial_end
+      ? new Date(subscription.trial_end * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'sous 3 jours'
+    if (uniqueEmails.length === 0) return
+    const escapeHtml = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    await sendEmailViaResend({
+      to: uniqueEmails,
+      subject: `EDUZEN — Votre essai gratuit se termine le ${trialEndDate}`,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; line-height: 1.6;">
+<p>Bonjour,</p>
+<p>Votre période d'essai gratuit d'EDUZEN pour <strong>${escapeHtml(orgName)}</strong> se termine dans 3 jours (le ${escapeHtml(trialEndDate)}).</p>
+<p>Pour continuer sans interruption, ajoutez votre moyen de paiement :</p>
+<p style="text-align: center; margin: 28px 0;"><a href="${escapeHtml(dashboardUrl)}" style="display: inline-block; background: #335ACF; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">Ajouter ma carte et continuer</a></p>
+<p style="font-size: 14px; color: #666;">Aucun prélèvement avant la fin de votre essai. Annulation possible à tout moment.</p>
+<p>Cordialement,<br>L'équipe EDUZEN</p>
+</body></html>`,
+      text: `Bonjour,\n\nVotre essai EDUZEN pour ${orgName} se termine le ${trialEndDate}. Ajoutez votre moyen de paiement : ${dashboardUrl}\n\nCordialement,\nL'équipe EDUZEN`,
+    })
+    logger.info('Stripe Webhook - Email fin d\'essai envoyé', { organizationId, to: uniqueEmails })
+  } catch (err) {
+    logger.error('Stripe Webhook - Erreur email trial_will_end', err, { organizationId, error: sanitizeError(err) })
+  }
+}
+
+/**
+ * Calcule et enregistre la commission affilié sur une facture payée.
+ * Lit affiliate_id dans les metadata du client Stripe (attribution conservée renouvellements/upgrades).
+ */
+async function handleAffiliateCommission(stripe: Stripe, invoice: Stripe.Invoice) {
+  try {
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id
+    if (!customerId) return
+
+    const customer = await stripe.customers.retrieve(customerId)
+    if (customer.deleted) return
+
+    const affiliateId = (customer as Stripe.Customer).metadata?.affiliate_id
+    if (!affiliateId) return
+
+    const supabase = createAdminClient()
+    const { data: affiliate, error: affError } = await supabase
+      .from('affiliates')
+      .select('id, status, commission_rate_override, campaign_id')
+      .eq('id', affiliateId)
+      .single()
+
+    if (affError || !affiliate) {
+      logger.warn('Stripe Webhook - Affilié introuvable', { affiliateId })
+      return
+    }
+
+    const aff = affiliate as { status: string; commission_rate_override: number | null; campaign_id: string | null }
+    if (aff.status !== 'approved') {
+      logger.info('Stripe Webhook - Affilié non approuvé, pas de commission', { affiliateId })
+      return
+    }
+
+    let commissionPercent = aff.commission_rate_override ?? null
+    let commissionType: 'recurring' | 'one_time' = 'recurring'
+    if (aff.campaign_id) {
+      const { data: campaign } = await supabase
+        .from('affiliate_campaigns')
+        .select('commission_percent, commission_type')
+        .eq('id', aff.campaign_id)
+        .single()
+      const camp = campaign as { commission_percent: number; commission_type?: string } | null
+      if (commissionPercent == null && camp) commissionPercent = camp.commission_percent ?? 0
+      if (camp?.commission_type === 'one_time') commissionType = 'one_time'
+    }
+    if (commissionPercent == null) commissionPercent = 0
+
+    // O5 : one_time = une seule commission par client (pas sur les renouvellements)
+    if (commissionType === 'one_time') {
+      const { data: existingCommission } = await supabase
+        .from('affiliate_commissions')
+        .select('id')
+        .eq('affiliate_id', affiliateId)
+        .eq('stripe_customer_id', customerId)
+        .limit(1)
+        .maybeSingle()
+      if (existingCommission) {
+        logger.info('Stripe Webhook - Campagne one_time : commission déjà versée pour ce client', { affiliateId, customerId })
+        return
+      }
+    }
+
+    const amountPaid = (invoice.amount_paid ?? 0) / 100
+    const commissionAmount = Math.round((amountPaid * Number(commissionPercent) / 100) * 100) / 100
+    const currency = (invoice.currency ?? 'eur').toLowerCase()
+
+    const { error: insertError } = await supabase.from('affiliate_commissions').insert({
+      affiliate_id: affiliateId,
+      stripe_customer_id: customerId,
+      stripe_invoice_id: invoice.id,
+      stripe_charge_id: typeof invoice.charge === 'string' ? invoice.charge : invoice.charge?.id ?? null,
+      order_amount: amountPaid,
+      commission_amount: commissionAmount,
+      commission_percent: commissionPercent,
+      currency,
+      status: 'pending',
+    })
+
+    if (insertError) {
+      const err = insertError as { code?: string; message?: string }
+      const isDuplicate = err.code === '23505' || /unique|duplicate/i.test(err.message ?? '')
+      if (isDuplicate) {
+        logger.info('Stripe Webhook - Commission déjà enregistrée pour cette facture (idempotent)', { invoiceId: invoice.id })
+        return
+      }
+      logger.error('Stripe Webhook - Erreur insert commission', insertError)
+      throw insertError
+    }
+
+    logger.info('Stripe Webhook - Commission enregistrée', {
+      affiliateId,
+      invoiceId: invoice.id,
+      orderAmount: amountPaid,
+      commissionAmount,
+      commissionPercent,
+    })
+  } catch (error) {
+    logger.error('Stripe Webhook - Erreur handleAffiliateCommission', error, {
+      error: sanitizeError(error),
+    })
+    throw error
+  }
+}
+
+/**
+ * En cas de remboursement, passe la commission liée à la facture en cancelled.
+ */
+async function handleAffiliateCommissionRefund(charge: Stripe.Charge) {
+  try {
+    const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice?.id
+    if (!invoiceId) return
+
+    const supabase = createAdminClient()
+    const { error } = await supabase
+      .from('affiliate_commissions')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('stripe_invoice_id', invoiceId)
+      .in('status', ['pending', 'paid'])
+
+    if (error) {
+      logger.error('Stripe Webhook - Erreur annulation commission', error)
+      throw error
+    }
+
+    logger.info('Stripe Webhook - Commission annulée (remboursement)', { invoiceId })
+  } catch (error) {
+    logger.error('Stripe Webhook - Erreur handleAffiliateCommissionRefund', error, {
       error: sanitizeError(error),
     })
     throw error

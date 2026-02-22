@@ -57,11 +57,13 @@ export default function ProgramSessionsPage() {
       const formationIds = formations.map(f => f.id)
 
       // Récupérer les sessions des formations
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('sessions')
         .select('*, formations(*, programs(*))')
         .in('formation_id', formationIds)
         .order('start_date', { ascending: false })
+      const { data, error } = await q
 
       if (error) throw error
       return data || []

@@ -30,6 +30,10 @@ import {
   Percent,
   Share2,
   Sparkles,
+  Link2,
+  Target,
+  Banknote,
+  Eye,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -118,6 +122,43 @@ const navigation: NavSection[] = [
           },
         ],
       },
+      {
+        name: 'Affiliation',
+        icon: Link2,
+        permission: 'manage_affiliates',
+        children: [
+          {
+            name: 'Dashboard',
+            href: '/super-admin/affiliation',
+            icon: LayoutDashboard,
+          },
+          {
+            name: 'Affiliés',
+            href: '/super-admin/affiliation/affiliates',
+            icon: Users,
+          },
+          {
+            name: 'Campagnes',
+            href: '/super-admin/affiliation/campaigns',
+            icon: Target,
+          },
+          {
+            name: 'Codes Promo',
+            href: '/super-admin/affiliation/promo-codes',
+            icon: Percent,
+          },
+          {
+            name: 'Paiements',
+            href: '/super-admin/affiliation/payouts',
+            icon: Banknote,
+          },
+          {
+            name: 'Aperçu Portail',
+            href: '/super-admin/affiliation/preview',
+            icon: Eye,
+          },
+        ],
+      },
     ],
   },
   {
@@ -174,7 +215,7 @@ const navigation: NavSection[] = [
 
 export function SuperAdminSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Abonnements', 'Blog'])
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Abonnements', 'Blog', 'Affiliation'])
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const { role, roleLabel, hasPermission, isPlatformAdmin } = usePlatformAdmin()

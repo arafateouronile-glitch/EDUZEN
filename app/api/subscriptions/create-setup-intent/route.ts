@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
@@ -69,14 +70,19 @@ export async function POST(request: NextRequest) {
     if (existingSubscription?.stripe_customer_id) {
       customerId = existingSubscription.stripe_customer_id
     } else {
+      const cookieStore = await cookies()
+      const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
+      const metadata: Record<string, string> = {
+        organization_id: userData.organization_id,
+        user_id: user.id,
+      }
+      if (affiliateRef) metadata.affiliate_id = affiliateRef
+
       // Créer un nouveau customer Stripe
       const customer = await stripe.customers.create({
         email: user.email,
         name: organization?.name || 'Organisation',
-        metadata: {
-          organization_id: userData.organization_id,
-          user_id: user.id,
-        },
+        metadata,
       })
 
       customerId = customer.id

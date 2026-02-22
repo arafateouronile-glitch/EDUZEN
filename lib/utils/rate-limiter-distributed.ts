@@ -20,6 +20,7 @@ import {
   authRateLimiter as memoryAuthLimiter,
   mutationRateLimiter as memoryMutationLimiter,
   uploadRateLimiter as memoryUploadLimiter,
+  publicRouteRateLimiter as memoryPublicRouteLimiter,
   createRateLimitResponse,
 } from './rate-limiter'
 
@@ -98,6 +99,18 @@ export const strictRateLimiter = redis
   : null
 
 /**
+ * Rate limiter pour les routes publiques à token (20 req/min par IP, anti brute-force)
+ */
+export const publicRouteRateLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(20, '1 m'),
+      analytics: true,
+      prefix: 'ratelimit:public',
+    })
+  : null
+
+/**
  * Génère une clé de rate limiting basée sur l'IP et le chemin
  */
 export function getRateLimitKey(req: Request): string {
@@ -128,7 +141,7 @@ type UpstashLimiter = Ratelimit | null
  */
 export async function withDistributedRateLimit(
   req: Request,
-  limiterType: 'general' | 'auth' | 'mutation' | 'upload' | 'strict',
+  limiterType: 'general' | 'auth' | 'mutation' | 'upload' | 'strict' | 'public',
   handler: (req: Request) => Promise<Response>
 ): Promise<Response> {
   // Sélectionner le limiter approprié
@@ -150,18 +163,23 @@ export async function withDistributedRateLimit(
       break
     case 'strict':
       upstashLimiter = strictRateLimiter
-      memoryLimiter = memoryAuthLimiter // Utiliser auth limiter comme fallback
+      memoryLimiter = memoryAuthLimiter
+      break
+    case 'public':
+      upstashLimiter = publicRouteRateLimiter
+      memoryLimiter = memoryPublicRouteLimiter
       break
     default:
       upstashLimiter = generalRateLimiter
       memoryLimiter = memoryGeneralLimiter
   }
 
+  // Clé par IP pour auth, strict et public (anti brute-force)
+  const keyByIp = limiterType === 'auth' || limiterType === 'strict' || limiterType === 'public'
+
   // Utiliser Upstash si disponible
   if (upstashLimiter) {
-    const key = limiterType === 'auth' || limiterType === 'strict'
-      ? getRateLimitKeyByIp(req)
-      : getRateLimitKey(req)
+    const key = keyByIp ? getRateLimitKeyByIp(req) : getRateLimitKey(req)
 
     const { success, remaining, reset } = await upstashLimiter.limit(key)
 
@@ -200,6 +218,33 @@ export async function withDistributedRateLimit(
   } catch (error) {
     throw error
   }
+}
+
+/**
+ * Vérification rate limit pour le middleware (routes /api/*).
+ * Utilisable en Edge. Retourne une réponse 429 si limit dépassée, sinon null.
+ */
+export async function checkApiRateLimitForMiddleware(req: Request): Promise<{
+  limited: true
+  response: Response
+} | {
+  limited: false
+  remaining: number
+  reset: number
+}> {
+  const key = getRateLimitKey(req)
+  if (generalRateLimiter) {
+    const { success, remaining, reset } = await generalRateLimiter.limit(key)
+    if (!success) {
+      return { limited: true, response: createRateLimitResponse(remaining, reset) }
+    }
+    return { limited: false, remaining, reset }
+  }
+  const result = await memoryGeneralLimiter.check(req)
+  if (!result.allowed) {
+    return { limited: true, response: createRateLimitResponse(result.remaining, result.resetTime) }
+  }
+  return { limited: false, remaining: result.remaining, reset: result.resetTime }
 }
 
 /**

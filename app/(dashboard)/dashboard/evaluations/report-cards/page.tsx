@@ -27,12 +27,14 @@ export default function ReportCardsPage() {
       if (!user?.organization_id) return []
 
       // Récupérer les bulletins depuis la table documents
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('documents')
         .select('*, students(*)')
         .eq('organization_id', user.organization_id)
         .eq('type', 'report_card')
         .order('created_at', { ascending: false })
+      const { data, error } = await q
 
       if (error) {
         logger.error('Erreur lors de la récupération des bulletins:', error)

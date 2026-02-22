@@ -3,7 +3,7 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["cdg1"],
+  "regions": ["cdg1", "iad1", "sfo1"],
   "env": {
     "NODE_ENV": "production"
   },
@@ -39,5 +39,17 @@
       "source": "/api/:path*",
       "destination": "/api/:path*"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/documents/generate-pdf/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/webhooks/stripe/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/subscriptions/webhook/route.ts": {
+      "maxDuration": 30
+    }
+  }
 }

@@ -1,15 +1,15 @@
 /**
  * API Route: GET /api/auditor/public?token=xxx
- * Accès public aux données du portail auditeur via un token temporaire
- * Cette route ne nécessite PAS d'authentification - le token fait office de clé d'accès
+ * Accès public aux données du portail auditeur via un token temporaire.
+ * Rate limit: 20 req/min par IP (anti brute-force).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { AuditorPortalService } from '@/lib/services/auditor-portal.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { withDistributedRateLimit } from '@/lib/utils/rate-limiter-distributed'
 
-// Créer le client Supabase admin à la demande
 function getSupabaseAdmin() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,10 +23,8 @@ function getSupabaseAdmin() {
   )
 }
 
-/**
- * GET - Récupère les données du portail auditeur
- */
 export async function GET(request: NextRequest) {
+  return withDistributedRateLimit(request, 'public', async () => {
   const supabaseAdmin = getSupabaseAdmin()
   try {
     const { searchParams } = new URL(request.url)
@@ -71,6 +69,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+  })
 }
 
 /**

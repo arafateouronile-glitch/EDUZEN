@@ -40,7 +40,8 @@ async function getMatchingSessions(
   supabase: any,
   now: Date
 ): Promise<any[]> {
-  let query = supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+  let query: any = supabase
     .from('sessions')
     .select('*, formations(*), programs(*)')
     .eq('is_active', true)
@@ -134,7 +135,8 @@ async function getMatchingEvaluations(
   supabase: any,
   now: Date
 ): Promise<any[]> {
-  let query = supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+  let query: any = supabase
     .from('evaluations')
     .select('*, sessions(*), formations(*)')
     .eq('is_active', true)
@@ -229,11 +231,13 @@ async function getRecipientsForSchedule(
       for (const session of matchingSessions) {
         // Récupérer les étudiants inscrits à cette session
         if (schedule.send_to_students) {
-          const { data: enrollments } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+          const qEnr: any = supabase
             .from('enrollments')
             .select('*, students(*)')
             .eq('session_id', session.id)
             .eq('status', 'active')
+          const { data: enrollments } = await qEnr
 
           if (enrollments) {
             for (const enrollment of enrollments) {
@@ -298,11 +302,13 @@ async function getRecipientsForSchedule(
       for (const evaluation of matchingEvaluations) {
         // Récupérer les étudiants concernés par cette évaluation
         if (schedule.send_to_students && evaluation.session_id) {
-          const { data: enrollments } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+          const qEnr2: any = supabase
             .from('enrollments')
             .select('*, students(*)')
             .eq('session_id', evaluation.session_id)
             .eq('status', 'active')
+          const { data: enrollments } = await qEnr2
 
           if (enrollments) {
             for (const enrollment of enrollments) {
@@ -321,11 +327,13 @@ async function getRecipientsForSchedule(
 
         // Récupérer les enseignants
         if (schedule.send_to_teachers) {
-          const { data: session } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+          const qSess: any = supabase
             .from('sessions')
             .select('*, users(*)')
             .eq('id', evaluation.session_id)
             .single()
+          const { data: session } = await qSess
 
           if (session?.users?.email) {
             recipients.push({

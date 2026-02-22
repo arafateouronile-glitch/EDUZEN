@@ -69,6 +69,19 @@ export default function DashboardPage() {
       currentMonth.setDate(1)
       const today = new Date().toISOString().split('T')[0]
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const qSessionsOngoing: any = supabase
+        .from('sessions')
+        .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
+        .eq('formations.organization_id', user.organization_id)
+        .eq('status', 'ongoing')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const qSessionsCompleted: any = supabase
+        .from('sessions')
+        .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
+        .eq('formations.organization_id', user.organization_id)
+        .eq('status', 'completed')
+
       // Paralléliser toutes les requêtes indépendantes
       const [
         studentsResult,
@@ -120,12 +133,8 @@ export default function DashboardPage() {
           .eq('role', 'teacher')
           .eq('is_active', true),
 
-        // Sessions en cours
-        supabase
-          .from('sessions')
-          .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
-          .eq('formations.organization_id', user.organization_id)
-          .eq('status', 'ongoing'),
+        // Sessions en cours (q typé any pour éviter "Type instantiation is excessively deep")
+        qSessionsOngoing,
 
         // Formations actives
         supabase
@@ -147,12 +156,8 @@ export default function DashboardPage() {
           .select('id')
           .eq('organization_id', user.organization_id),
 
-        // Sessions terminées
-        supabase
-          .from('sessions')
-          .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
-          .eq('formations.organization_id', user.organization_id)
-          .eq('status', 'completed'),
+        // Sessions terminées (q typé any pour éviter "Type instantiation is excessively deep")
+        qSessionsCompleted,
       ])
 
       // Traiter les résultats
@@ -354,12 +359,14 @@ export default function DashboardPage() {
       const sessionIds = sessions.map((s: any) => s.id)
 
       // Enfin, récupérer les inscriptions pour ces sessions
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('enrollments')
         .select('*, students(first_name, last_name), sessions(name, formations(name, programs(name)))')
         .in('session_id', sessionIds)
         .order('created_at', { ascending: false })
         .limit(5)
+      const { data, error } = await q
 
       if (error) {
         logger.error('Erreur lors de la récupération des inscriptions:', error)
@@ -378,7 +385,8 @@ export default function DashboardPage() {
       if (!user?.organization_id) return []
 
       const today = new Date().toISOString().split('T')[0]
-      const { data: sessions } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('sessions')
         .select('*, formations!inner(name, organization_id, programs(name))')
         .eq('formations.organization_id', user.organization_id)
@@ -386,6 +394,7 @@ export default function DashboardPage() {
         .in('status', ['planned', 'ongoing'])
         .order('start_date', { ascending: true })
         .limit(5)
+      const { data: sessions } = await q
 
       return (sessions || []).map((session: any) => ({
         id: session.id,

@@ -1,0 +1,83 @@
+@tailwind utilities;
+/* Animations, transitions, utilitaires premium */
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  .min-touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+  .transition-premium {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+  .transition-fast {
+    transition-duration: 150ms;
+  }
+  .transition-slow {
+    transition-duration: 500ms;
+  }
+  .hover-lift {
+    @apply transition-transform duration-300 ease-out;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+  .hover-glow {
+    @apply transition-shadow duration-300;
+  }
+  .hover-glow:hover {
+    box-shadow: 0 10px 40px -10px rgba(37, 99, 235, 0.3);
+  }
+  .gradient-animate {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+  }
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(var(--muted) / 0.5) 50%, hsl(var(--muted)) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .pulse-premium {
+    animation: pulse-premium 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse-premium {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.02); }
+  }
+  .fade-in {
+    animation: fade-in 0.5s ease-in-out;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .slide-in-right {
+    animation: slide-in-right 0.3s ease-out;
+  }
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .scale-in {
+    animation: scale-in 0.2s ease-out;
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}

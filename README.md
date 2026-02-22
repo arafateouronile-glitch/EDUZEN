@@ -83,12 +83,10 @@ yarn install
 cp .env.example .env.local
 ```
 
-Éditer `.env.local` avec vos clés Supabase :
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon
-SUPABASE_SERVICE_ROLE_KEY=votre_cle_service_role
-```
+Éditer `.env.local` avec vos clés Supabase (voir `.env.example`). Variables utiles :
+- **Supabase** : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- **PDF** (optionnel) : `GOTENBERG_URL` pour utiliser Gotenberg au lieu de Puppeteer — voir [docs/GOTENBERG_PDF.md](docs/GOTENBERG_PDF.md)
+- **Logs** (optionnel) : `LOG_LEVEL=error|warn|info|debug` (défaut : prod=warn, dev=debug)
 
 4. **Appliquer les migrations Supabase**
 ```bash

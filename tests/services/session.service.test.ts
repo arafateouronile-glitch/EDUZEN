@@ -41,12 +41,6 @@ vi.mock('@/lib/services/calendar.service', () => ({
   },
 }))
 
-vi.mock('@/lib/services/videoconference.service', () => ({
-  videoconferenceService: {
-    createMeeting: vi.fn().mockResolvedValue({ id: 'meeting-123', url: 'https://meet.example.com' }),
-  },
-}))
-
 describe('SessionService', () => {
   let service: SessionService
 

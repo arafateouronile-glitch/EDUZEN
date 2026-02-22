@@ -32,6 +32,7 @@ interface UsePlatformAdminReturn {
   canManageInvoices: boolean
   canManagePromoCodes: boolean
   canManageReferrals: boolean
+  canManageAffiliates: boolean
   canManageBlog: boolean
   canPublishPosts: boolean
   canModerateComments: boolean
@@ -149,6 +150,7 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
   const canManageInvoices = hasPermission('manage_invoices')
   const canManagePromoCodes = hasPermission('manage_promo_codes')
   const canManageReferrals = hasPermission('manage_referrals')
+  const canManageAffiliates = hasPermission('manage_affiliates')
   const canManageBlog = hasPermission('manage_blog')
   const canPublishPosts = hasPermission('publish_posts')
   const canModerateComments = hasPermission('moderate_comments')
@@ -175,6 +177,7 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
     canManageInvoices,
     canManagePromoCodes,
     canManageReferrals,
+    canManageAffiliates,
     canManageBlog,
     canPublishPosts,
     canModerateComments,
@@ -197,6 +200,7 @@ function getDefaultPermissions(role: PlatformAdminRole): AdminPermissions {
       manage_invoices: true,
       manage_promo_codes: true,
       manage_referrals: true,
+      manage_affiliates: true,
       manage_blog: true,
       publish_posts: true,
       moderate_comments: true,
@@ -209,6 +213,7 @@ function getDefaultPermissions(role: PlatformAdminRole): AdminPermissions {
       manage_invoices: false,
       manage_promo_codes: false,
       manage_referrals: false,
+      manage_affiliates: false,
       manage_blog: true,
       publish_posts: true,
       moderate_comments: true,
@@ -221,6 +226,7 @@ function getDefaultPermissions(role: PlatformAdminRole): AdminPermissions {
       manage_invoices: false,
       manage_promo_codes: false,
       manage_referrals: false,
+      manage_affiliates: false,
       manage_blog: false,
       publish_posts: false,
       moderate_comments: true,
@@ -233,6 +239,7 @@ function getDefaultPermissions(role: PlatformAdminRole): AdminPermissions {
       manage_invoices: true,
       manage_promo_codes: true,
       manage_referrals: true,
+      manage_affiliates: true,
       manage_blog: false,
       publish_posts: false,
       moderate_comments: false,

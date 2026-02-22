@@ -50,11 +50,13 @@ export default function PaymentsPage() {
 
       if (studentIds.length === 0) return []
 
-      const { data } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const qInv: any = supabase
         .from('invoices')
         .select('*, students(first_name, last_name)')
         .in('student_id', studentIds)
         .order('issue_date', { ascending: false })
+      const { data } = await qInv
 
       return data || []
     },
@@ -90,13 +92,15 @@ export default function PaymentsPage() {
 
       if (studentIds.length === 0) return []
 
-      const { data } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const qPay: any = supabase
         .from('payments')
         .select('*, invoices(invoice_number), students(first_name, last_name)')
         .in('student_id', studentIds)
         .eq('status', 'completed')
         .order('paid_at', { ascending: false })
         .limit(10)
+      const { data } = await qPay
 
       return data || []
     },

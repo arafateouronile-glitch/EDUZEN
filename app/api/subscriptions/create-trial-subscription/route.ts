@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
@@ -11,7 +12,7 @@ const getStripe = () => {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
   return new Stripe(secretKey, {
-    apiVersion: '2025-12-15.clover',
+    apiVersion: '2026-01-28.clover',
   })
 }
 
@@ -101,6 +102,10 @@ export async function POST(request: NextRequest) {
         planId,
       })
 
+      // Cookie affilié : conserver l'attribution pour la conversion ultérieure (O3)
+      const cookieStore = await cookies()
+      const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
+
       // Mettre à jour les settings de l'organisation
       const { data: orgData } = await supabase
         .from('organizations')
@@ -119,6 +124,7 @@ export async function POST(request: NextRequest) {
             onboarding_completed_at: new Date().toISOString(),
             payment_method_added: false, // Pas de carte
             selected_plan_id: planId,
+            ...(affiliateRef ? { affiliate_id: affiliateRef } : {}),
           },
           subscription_status: 'trialing',
           updated_at: new Date().toISOString(),

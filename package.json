@@ -19,6 +19,7 @@
     "test:coverage": "vitest --coverage",
     "test:coverage:report": "vitest --coverage --reporter=html",
     "test:security": "vitest run tests/security",
+    "test:critical": "vitest run tests/critical tests/security",
     "test:integration": "vitest run tests/integration",
     "test:components": "vitest run tests/components",
     "test:e2e": "playwright test",
@@ -98,6 +99,8 @@
     "pizzip": "^3.2.0",
     "postcss": "^8.4.32",
     "puppeteer": "^24.36.0",
+    "puppeteer-core": "^24.36.0",
+    "@sparticuz/chromium-min": "^131.0.0",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -149,5 +152,8 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "overrides": {
+    "tar": ">=7.5.8"
   }
 }

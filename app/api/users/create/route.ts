@@ -147,12 +147,20 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Créer l'utilisateur dans Auth
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseServiceKey =
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY!;
+      // Créer l'utilisateur dans Auth (service role obligatoire, pas de fallback anon)
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!supabaseServiceKey) {
+        logger.error("User Create - SUPABASE_SERVICE_ROLE_KEY non configurée");
+        return NextResponse.json(
+          { error: "Configuration serveur manquante" },
+          { status: 503 }
+        );
+      }
 
-      const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey, {
+      const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        supabaseServiceKey,
+        {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
@@ -272,12 +280,13 @@ export async function POST(request: NextRequest) {
           const resendApiKey = process.env.RESEND_API_KEY;
           
           if (resendApiKey) {
-            // Utiliser Resend si disponible
+            // Utiliser Resend si disponible — toujours envoyer depuis un domaine vérifié (audit B7)
             const { Resend } = await import("resend");
             const resend = new Resend(resendApiKey);
-            
+            const fromEmail = process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM || 'EDUZEN <noreply@eduzen.io>';
+
             await resend.emails.send({
-              from: organization?.email || `noreply@${process.env.NEXT_PUBLIC_SITE_URL?.replace('https://', '').replace('http://', '') || 'eduzen.com'}`,
+              from: fromEmail,
               to: String(email),
               subject: `Votre compte EDUZEN a été créé - ${organization?.name || 'EDUZEN'}`,
               html: `

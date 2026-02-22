@@ -11,9 +11,43 @@ let lastUsed: number = Date.now()
 // Timeout d'inactivité avant de fermer le navigateur (5 minutes)
 const IDLE_TIMEOUT = 5 * 60 * 1000
 
-// Configuration Puppeteer optimisée
-const getLaunchOptions = async () => {
-  const launchOptions: any = {
+// Arguments Chrome recommandés pour Vercel (évitent timeouts)
+const VERCEL_CHROME_ARGS = [
+  '--no-sandbox',
+  '--disable-setuid-sandbox',
+  '--disable-dev-shm-usage',
+  '--disable-accelerated-2d-canvas',
+  '--disable-gpu',
+  '--no-first-run',
+  '--no-zygote',
+  '--single-process',
+  '--font-render-hinting=none',
+  '--disable-animations',
+  '--disable-background-timer-throttling',
+  '--disable-restore-session-state',
+]
+
+// Configuration Puppeteer optimisée (local + Vercel)
+const getLaunchOptions = async (): Promise<Record<string, unknown>> => {
+  const isVercel = process.env.VERCEL === '1'
+
+  // Vercel : utiliser @sparticuz/chromium-min (binaire compatible serverless)
+  if (isVercel) {
+    const chromium = await import('@sparticuz/chromium-min')
+    const chrom = chromium.default
+    const executablePath = await chrom.executablePath()
+    logger.debug('[Puppeteer Pool] Vercel: @sparticuz/chromium-min')
+    return {
+      executablePath,
+      args: [...(chrom.args || []), ...VERCEL_CHROME_ARGS],
+      headless: chrom.headless ?? true,
+      defaultViewport: chrom.defaultViewport ?? null,
+      timeout: 30000,
+      protocolTimeout: 180000,
+    }
+  }
+
+  const launchOptions: Record<string, unknown> = {
     headless: true,
     args: [
       '--no-sandbox',
@@ -23,9 +57,7 @@ const getLaunchOptions = async () => {
       '--no-first-run',
       '--no-zygote',
       '--disable-gpu',
-      '--disable-web-security',
-      '--disable-features=IsolateOrigins,site-per-process',
-      '--single-process', // Plus rapide pour les opérations simples
+      '--single-process',
     ],
     timeout: 30000,
     protocolTimeout: 180000,
@@ -45,7 +77,7 @@ const getLaunchOptions = async () => {
       try {
         if (fs.existsSync(path)) {
           launchOptions.executablePath = path
-          logger.info('[Puppeteer Pool] Utilisation de Chrome système', { path })
+          logger.debug('[Puppeteer Pool] Chrome système', { path })
           break
         }
       } catch {
@@ -70,7 +102,7 @@ export async function getBrowser(): Promise<Browser> {
       // Vérifier si le navigateur est toujours actif
       const pages = await browserInstance.pages()
       lastUsed = Date.now()
-      logger.info('[Puppeteer Pool] Réutilisation du navigateur existant', { pagesCount: pages.length })
+      logger.debug('[Puppeteer Pool] Réutilisation du navigateur', { pagesCount: pages.length })
       return browserInstance
     } catch (error) {
       // Le navigateur est mort, le recréer
@@ -79,22 +111,19 @@ export async function getBrowser(): Promise<Browser> {
     }
   }
 
-  // Lancer un nouveau navigateur
   browserLaunchPromise = (async () => {
     try {
-      logger.info('[Puppeteer Pool] Lancement d\'un nouveau navigateur...')
       const startTime = Date.now()
-
-      const puppeteer = (await import('puppeteer')).default
+      const puppeteer = process.env.VERCEL === '1'
+        ? (await import('puppeteer-core')).default
+        : (await import('puppeteer')).default
       const launchOptions = await getLaunchOptions()
 
-      const browser = await puppeteer.launch(launchOptions)
+      const browser = await puppeteer.launch(launchOptions as any)
       browserInstance = browser
       lastUsed = Date.now()
 
-      logger.info('[Puppeteer Pool] Navigateur lancé avec succès', {
-        duration: `${Date.now() - startTime}ms`
-      })
+      logger.debug('[Puppeteer Pool] Navigateur prêt', { duration: `${Date.now() - startTime}ms` })
 
       // Démarrer le timer d'inactivité
       startIdleTimer()
@@ -120,7 +149,7 @@ function startIdleTimer() {
     const timeSinceLastUse = Date.now() - lastUsed
     if (timeSinceLastUse >= IDLE_TIMEOUT && browserInstance) {
       try {
-        logger.info('[Puppeteer Pool] Fermeture du navigateur après inactivité')
+        logger.debug('[Puppeteer Pool] Fermeture du navigateur après inactivité')
         await browserInstance.close()
         browserInstance = null
       } catch (error) {
@@ -144,7 +173,7 @@ export async function closeBrowser(): Promise<void> {
   if (browserInstance) {
     try {
       await browserInstance.close()
-      logger.info('[Puppeteer Pool] Navigateur fermé proprement')
+      logger.debug('[Puppeteer Pool] Navigateur fermé')
     } catch (error) {
       logger.warn('[Puppeteer Pool] Erreur lors de la fermeture', { error })
     } finally {

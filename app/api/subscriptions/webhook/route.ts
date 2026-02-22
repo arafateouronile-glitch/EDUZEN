@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Stripe from 'stripe'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
+import { APP_URLS } from '@/lib/config/app-config'
 
 // Initialiser Stripe uniquement si la clé est disponible
 const getStripe = () => {
@@ -10,11 +13,19 @@ const getStripe = () => {
     throw new Error('STRIPE_SECRET_KEY is not configured')
   }
   return new Stripe(secretKey, {
-    apiVersion: '2025-12-15.clover',
+    apiVersion: '2026-01-28.clover',
   })
 }
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || ''
+
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
 
 /** Récupère l'ID de subscription depuis une facture (compatible ancienne API Stripe avec .subscription ou nouvelle avec .subscription_details). */
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
@@ -52,7 +63,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const supabase = await createClient()
+  // Webhooks Stripe n'ont pas de session : utiliser service_role pour bypass RLS
+  const supabase = createAdminClient()
 
   try {
     switch (event.type) {
@@ -148,9 +160,9 @@ export async function POST(request: NextRequest) {
       }
 
       case 'customer.subscription.trial_will_end': {
-        // L'essai gratuit se termine dans 3 jours
+        // O7 : L'essai gratuit se termine dans 3 jours — envoi email de rappel
         const subscription = event.data.object as Stripe.Subscription
-        const organizationId = subscription.metadata?.organization_id
+        const organizationId = subscription.metadata?.organization_id as string | undefined
 
         if (organizationId) {
           logger.info('Essai gratuit se termine bientôt', {
@@ -159,8 +171,56 @@ export async function POST(request: NextRequest) {
             trialEnd: subscription.trial_end,
           })
 
-          // TODO: Envoyer une notification email à l'utilisateur
-          // Vous pouvez intégrer un service d'email ici
+          try {
+            const admin = createAdminClient()
+            const { data: org } = await admin
+              .from('organizations')
+              .select('id, name, email')
+              .eq('id', organizationId)
+              .single()
+
+            const { data: adminUsers } = await admin
+              .from('users')
+              .select('email, full_name')
+              .eq('organization_id', organizationId)
+              .in('role', ['admin', 'super_admin'])
+              .limit(3)
+
+            const toEmails = [
+              ...(org?.email ? [org.email] : []),
+              ...(adminUsers?.map((u) => u.email).filter(Boolean) ?? []),
+            ]
+            const uniqueEmails = [...new Set(toEmails)].slice(0, 5)
+            const orgName = org?.name ?? 'Votre organisation'
+            const dashboardUrl = `${APP_URLS.getBaseUrl()}/dashboard/subscribe`
+            const trialEndDate = subscription.trial_end
+              ? new Date(subscription.trial_end * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+              : 'sous 3 jours'
+
+            if (uniqueEmails.length > 0) {
+              await sendEmailViaResend({
+                to: uniqueEmails,
+                subject: `EDUZEN — Votre essai gratuit se termine le ${trialEndDate}`,
+                html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1a1a1a; line-height: 1.6;">
+  <p>Bonjour,</p>
+  <p>Votre période d'essai gratuit d'EDUZEN pour <strong>${escapeHtml(orgName)}</strong> se termine dans 3 jours (le ${escapeHtml(trialEndDate)}).</p>
+  <p>Pour continuer à profiter de toutes les fonctionnalités sans interruption, ajoutez votre moyen de paiement avant cette date :</p>
+  <p style="text-align: center; margin: 28px 0;"><a href="${escapeHtml(dashboardUrl)}" style="display: inline-block; background: #335ACF; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">Ajouter ma carte et continuer</a></p>
+  <p style="font-size: 14px; color: #666;">Vous pourrez annuler à tout moment. Aucun prélèvement avant la fin de votre essai.</p>
+  <p>Cordialement,<br>L'équipe EDUZEN</p>
+</body>
+</html>`,
+                text: `Bonjour,\n\nVotre essai gratuit EDUZEN pour ${orgName} se termine le ${trialEndDate}. Ajoutez votre moyen de paiement ici : ${dashboardUrl}\n\nCordialement,\nL'équipe EDUZEN`,
+              })
+              logger.info('Email fin d\'essai envoyé', { organizationId, to: uniqueEmails })
+            }
+          } catch (emailErr) {
+            logger.error('Erreur envoi email trial_will_end', emailErr, { organizationId, error: sanitizeError(emailErr) })
+          }
         }
         break
       }

@@ -27,13 +27,15 @@ export default function SubscribeSuccessPage() {
     queryFn: async () => {
       if (!user?.organization_id) return null
       
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('subscriptions')
         .select('*, plans(*)')
         .eq('organization_id', user.organization_id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
+      const { data, error } = await q
       
       if (error) {
         logger.error('Erreur récupération subscription', error)

@@ -88,24 +88,22 @@ export function generateCSP(config: CSPConfig = {}): string {
   // script-src: Scripts autorisés
   const scriptSrc = ["'self'"]
 
-  // Avec nonce (préféré pour la sécurité)
+  // Avec nonce : pas de 'unsafe-inline' pour garder la protection XSS
   if (scriptNonce) {
     scriptSrc.push(`'nonce-${scriptNonce}'`)
-    // strict-dynamic permet aux scripts avec nonce de charger d'autres scripts
-    // Cela est nécessaire pour Next.js qui charge dynamiquement des chunks
+    // strict-dynamic permet aux scripts avec nonce de charger d'autres scripts (chunks Next.js)
     if (isProduction) {
       scriptSrc.push("'strict-dynamic'")
     }
+  } else {
+    // Fallback sans nonce (ex: report-only) : unsafe-inline pour compatibilité
+    scriptSrc.push("'unsafe-inline'")
   }
 
-  // En développement, autoriser unsafe-eval pour le hot reload et les bibliothèques PDF (html2canvas, jsPDF)
+  // En développement uniquement : unsafe-eval pour le hot reload Next.js
   if (allowEval) {
     scriptSrc.push("'unsafe-eval'")
   }
-
-  // Autoriser unsafe-inline pour html2canvas et jsPDF qui injectent des scripts inline
-  // Ces bibliothèques sont nécessaires pour la génération PDF côté client
-  scriptSrc.push("'unsafe-inline'")
 
   // Domaines externes autorisés pour les scripts
   // Note: avec strict-dynamic, ces domaines sont ignorés mais gardés pour fallback

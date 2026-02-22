@@ -1,0 +1,10 @@
+{
+  "name": "eduzen-gotenberg-proxy",
+  "version": "1.0.0",
+  "description": "Proxy qui vérifie X-API-Key avant de transmettre à Gotenberg",
+  "main": "server.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

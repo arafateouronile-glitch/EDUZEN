@@ -159,8 +159,7 @@ const nextConfig = {
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'none'",
-              // upgrade-insecure-requests uniquement en production
-              ...(process.env.NODE_ENV === 'production' ? ["upgrade-insecure-requests"] : []),
+              // upgrade-insecure-requests retiré : ignoré en report-only (le navigateur l'ignore et affiche un warning)
             ].join('; '),
           },
         ],

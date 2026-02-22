@@ -2,17 +2,14 @@ import createMiddleware from 'next-intl/middleware'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { routing } from '@/i18n/routing'
 
-// Configuration des locales supportées
-export const locales = ['fr', 'en'] as const
-export const defaultLocale = 'fr' as const
+// Configuration des locales (alignée sur i18n/routing pour éviter 404 sur /dashboard)
+export const locales = routing.locales as readonly ['fr', 'en']
+export const defaultLocale = routing.defaultLocale as 'fr'
 
-// Créer le middleware next-intl
-const intlMiddleware = createMiddleware({
-  locales,
-  defaultLocale,
-  localePrefix: 'as-needed', // Pas de préfixe pour la locale par défaut (fr)
-})
+// Créer le middleware next-intl avec la même config que i18n/routing (localePrefix: 'never')
+const intlMiddleware = createMiddleware(routing)
 
 export async function middleware(req: NextRequest) {
   // D'abord, gérer l'authentification Supabase

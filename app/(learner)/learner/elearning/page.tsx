@@ -80,10 +80,12 @@ export default function LearnerElearningPage() {
 
       try {
         // Récupérer la progression des leçons
-        const { data: progress, error } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        const qLp: any = supabase
           .from('lesson_progress')
           .select('*, lessons(course_id)')
           .eq('student_id', studentId)
+        const { data: progress, error } = await qLp
 
         if (error) {
           logger.warn('Error fetching lesson progress', {

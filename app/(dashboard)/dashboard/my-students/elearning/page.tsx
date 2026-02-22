@@ -224,10 +224,12 @@ export default function TeacherElearningProgressPage() {
         const allLessonProgress: any[] = []
         for (let i = 0; i < studentIds.length; i += BATCH_SIZE) {
           const batch = studentIds.slice(i, i + BATCH_SIZE)
-          const { data: lessonProgress } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+          const qLp: any = supabase
             .from('lesson_progress')
             .select('*, lessons(course_id)')
             .in('student_id', batch)
+          const { data: lessonProgress } = await qLp
           
           if (lessonProgress) {
             allLessonProgress.push(...lessonProgress)
@@ -238,11 +240,13 @@ export default function TeacherElearningProgressPage() {
         const allQuizAttempts: any[] = []
         for (let i = 0; i < studentIds.length; i += BATCH_SIZE) {
           const batch = studentIds.slice(i, i + BATCH_SIZE)
-          const { data: quizAttempts } = await supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+          const qQuiz: any = supabase
             .from('quiz_attempts')
             .select('*, quizzes(lesson_id, lessons(course_id))')
             .in('student_id', batch)
             .eq('is_completed', true)
+          const { data: quizAttempts } = await qQuiz
           
           if (quizAttempts) {
             allQuizAttempts.push(...quizAttempts)

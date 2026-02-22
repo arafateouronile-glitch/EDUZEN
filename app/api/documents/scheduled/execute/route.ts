@@ -18,17 +18,22 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 // POST /api/documents/scheduled/execute - Exécute les générations programmées
 export async function POST(request: NextRequest) {
   try {
-    // Vérifier la clé secrète pour sécuriser l'endpoint
+    // Vérifier la clé secrète pour sécuriser l'endpoint (obligatoire en production)
     const authHeader = request.headers.get('authorization')
     const secretKey = process.env.SCHEDULED_GENERATION_SECRET_KEY
-    
-    if (secretKey && authHeader !== `Bearer ${secretKey}`) {
+
+    if (!secretKey || authHeader !== `Bearer ${secretKey}`) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceRoleKey) {
+      logger.error('Scheduled execute: SUPABASE_SERVICE_ROLE_KEY manquante')
+      return NextResponse.json({ error: 'Configuration serveur manquante' }, { status: 503 })
+    }
     const supabase = createSupabaseServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      serviceRoleKey,
       {
         cookies: {
           get() { return undefined },
@@ -78,11 +83,13 @@ export async function POST(request: NextRequest) {
         for (const studentId of studentIds) {
           try {
             // Récupérer les données de l'étudiant
-            const { data: student } = await supabase
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+            const q: any = supabase
               .from('students')
               .select('*, sessions(*, formations(*, programs(*)))')
               .eq('id', studentId)
               .single()
+            const { data: student } = await q
 
             if (!student) continue
 

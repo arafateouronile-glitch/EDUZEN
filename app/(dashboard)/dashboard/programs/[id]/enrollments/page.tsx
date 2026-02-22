@@ -77,7 +77,8 @@ export default function ProgramEnrollmentsPage() {
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
     queryKey: ['program-enrollments', programId, selectedSessionId],
     queryFn: async () => {
-      let query = supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      let query: any = supabase
         .from('enrollments')
         .select('*, students(*), sessions(name, formations(name, programs(name)))')
         .order('enrollment_date', { ascending: false })

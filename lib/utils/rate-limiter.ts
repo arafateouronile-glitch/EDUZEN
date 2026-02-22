@@ -190,6 +190,21 @@ export const uploadRateLimiter = new RateLimiter({
 })
 
 /**
+ * Rate limiter pour les routes publiques à token (sign, auditor, attendance)
+ * 20 req/min par IP pour limiter le brute-force de tokens
+ */
+export const publicRouteRateLimiter = new RateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 20,
+  keyGenerator: (req) => {
+    const forwarded = req.headers.get('x-forwarded-for')
+    const realIp = req.headers.get('x-real-ip')
+    const ip = forwarded?.split(',')[0]?.trim() || realIp || 'unknown'
+    return `public:${ip}`
+  },
+})
+
+/**
  * Helper pour créer une réponse de rate limit
  */
 export function createRateLimitResponse(

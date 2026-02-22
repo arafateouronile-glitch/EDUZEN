@@ -201,10 +201,12 @@ export function SessionElearningSection({
         }
 
         // Récupérer la progression des leçons
-        const { data: lessonProgress, error: progressError } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        const qProgress: any = supabase
           .from('lesson_progress')
           .select('*, lessons(course_id)')
           .in('student_id', studentIds)
+        const { data: lessonProgress, error: progressError } = await qProgress
 
         if (progressError) {
           if (!isMissingTableError(progressError)) logger.warn('Error fetching lesson progress', sanitizeError(progressError))
@@ -221,12 +223,14 @@ export function SessionElearningSection({
         }
 
         // Récupérer les scores des quiz
-        const { data: quizAttempts, error: quizError } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        const qQuiz: any = supabase
           .from('quiz_attempts')
           .select('*, quizzes(lesson_id, lessons(course_id))')
           .in('student_id', studentIds)
           // Le schéma actuel utilise `completed_at` (pas `is_completed`)
           .not('completed_at', 'is', null)
+        const { data: quizAttempts, error: quizError } = await qQuiz
 
         if (quizError) {
           if (!isMissingTableError(quizError)) logger.warn('Error fetching quiz attempts', sanitizeError(quizError))

@@ -1,7 +1,7 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { ToastProvider } from '@/components/ui/toast'
 import { Toaster } from 'sonner'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -9,6 +9,7 @@ import { logger } from '@/lib/utils/logger'
 import { PWAProvider } from '@/components/pwa/pwa-provider'
 import { ConsoleErrorFilter } from '@/components/console-error-filter'
 import { ThemeScript } from '@/components/theme-script'
+import { AffiliateRefTracker } from '@/components/affiliate-ref-tracker'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -58,6 +59,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <ToastProvider>
           <PWAProvider>
             {children}
+            <Suspense fallback={null}>
+              <AffiliateRefTracker />
+            </Suspense>
             <Toaster position="bottom-right" richColors />
           </PWAProvider>
         </ToastProvider>

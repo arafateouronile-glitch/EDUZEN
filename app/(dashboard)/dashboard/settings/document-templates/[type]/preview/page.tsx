@@ -182,12 +182,14 @@ export default function DocumentTemplatePreviewPage() {
     queryKey: ['sessions', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('sessions')
         .select('*, formations(*)')
         .eq('organization_id', user.organization_id)
         .order('start_date', { ascending: false })
         .limit(50)
+      const { data, error } = await q
       if (error) throw error
       return data || []
     },
@@ -202,11 +204,13 @@ export default function DocumentTemplatePreviewPage() {
       const student = await studentService.getById(selectedStudentId)
       // Récupérer la session/classe
       if (student?.class_id) {
-        const { data: session } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        const qSess: any = supabase
           .from('sessions')
           .select('*, formations(*)')
           .eq('id', student.class_id)
           .single()
+        const { data: session } = await qSess
         return { ...student, session }
       }
       return student

@@ -1,0 +1,3 @@
+# Déposer ici vos polices .ttf (charte graphique EDUZEN)
+# Ex. : EduzenSans-Regular.ttf, EduzenSerif.ttf
+# Puis rebuild l'image Docker. Les polices seront dans /usr/share/fonts/eduzen du conteneur.

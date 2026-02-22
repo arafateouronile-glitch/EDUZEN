@@ -1,0 +1,17 @@
+# Gotenberg 8 pour EDUZEN – usage local ou déploiement
+# Build : docker compose -f infrastructure/gotenberg/docker-compose.yml build
+# Run   : docker compose -f infrastructure/gotenberg/docker-compose.yml up -d
+
+services:
+  gotenberg:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # Optionnel : désactiver les logs de health check
+      - GOTENBERG_API_DISABLE_HEALTH_CHECK_LOGGING=true
+      # Sécurité : à utiliser en prod avec un reverse proxy (Railway, etc.)
+      # - GOTENBERG_API_KEY=your-secret-key
+    restart: unless-stopped

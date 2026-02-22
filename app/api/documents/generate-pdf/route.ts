@@ -9,15 +9,12 @@ export const maxDuration = 60 // 60 secondes maximum
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
-  logger.info('[PDF API] Début de la requête')
-
   let page: Awaited<ReturnType<typeof createPage>> | null = null
 
   try {
     let body
     try {
       body = await request.json()
-      logger.info('[PDF API] Body parsé avec succès')
     } catch (error) {
       logger.error('[PDF API] Erreur lors du parsing du body:', error)
       return NextResponse.json(
@@ -32,9 +29,6 @@ export async function POST(request: NextRequest) {
       documentId?: string
       organizationId?: string
     }
-
-    logger.info('[PDF API] Template', { templateName: template?.name || 'N/A', type: template?.type || 'N/A' })
-    logger.info('[PDF API] Variables count', { count: variables ? Object.keys(variables).length : 0 })
 
     if (!template) {
       logger.error('[PDF API] Template manquant')
@@ -52,16 +46,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    logger.debug('[PDF API] Génération PDF', { template: template?.name || 'N/A', type: template?.type || 'N/A', variablesCount: variables ? Object.keys(variables).length : 0 })
+
     // Générer le HTML avec Paged.js
-    logger.info('[PDF API] Génération du HTML...')
     let htmlResult
     let html: string
     try {
-      // Import dynamique pour éviter les problèmes de compilation
       const { generateHTML } = await import('@/lib/utils/document-generation/html-generator')
-      logger.info('[PDF API] Appel de generateHTML...')
       htmlResult = await generateHTML(template, variables, documentId, organizationId)
-      logger.info('[PDF API] HTML généré', { length: htmlResult.html?.length || 0 })
       html = htmlResult.html
     } catch (error) {
       logger.error('[PDF API] Erreur lors de la génération du HTML:', error)
@@ -93,15 +85,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Utiliser le pool Puppeteer (réutilisation du navigateur)
-    logger.info('[PDF API] Obtention d\'une page Puppeteer...')
     const puppeteerStartTime = Date.now()
-
     try {
       page = await createPage()
-      logger.info('[PDF API] Page Puppeteer obtenue', {
-        duration: `${Date.now() - puppeteerStartTime}ms`
-      })
+      logger.debug('[PDF API] Page Puppeteer obtenue', { duration: `${Date.now() - puppeteerStartTime}ms` })
 
     // Charger le HTML
     await page.setContent(html, {
@@ -179,7 +166,8 @@ export async function POST(request: NextRequest) {
     }
 
     const totalDuration = Date.now() - startTime
-    logger.info('[PDF API] PDF généré avec succès', {
+    logger.info('[PDF API] PDF généré', {
+      template: template.name || 'N/A',
       duration: `${totalDuration}ms`,
       size: `${Math.round(pdf.length / 1024)}KB`
     })

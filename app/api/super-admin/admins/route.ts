@@ -41,10 +41,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Erreur lors de la récupération' }, { status: 500 })
     }
 
-    // Créer un client admin pour récupérer les infos utilisateur
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseServiceKey) {
+      return NextResponse.json({ error: 'Configuration serveur manquante' }, { status: 503 })
+    }
     const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -118,10 +119,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email et rôle requis' }, { status: 400 })
     }
 
-    // Créer un client admin pour les opérations auth
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseServiceKey) {
+      return NextResponse.json({ error: 'Configuration serveur manquante' }, { status: 503 })
+    }
     const supabaseAdmin = createAdminClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,

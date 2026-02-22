@@ -222,11 +222,13 @@ export function ConfigApprenants({
       
       const entityIds = externalEntities.map((e: any) => e.id)
       
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('student_entities')
         .select('*, students(*), external_entities(*)')
         .in('entity_id', entityIds)
         .eq('is_current', true)
+      const { data, error } = await q
       
       if (error) throw error
       return data || []

@@ -357,6 +357,19 @@ function ReportsPageContent() {
     queryFn: async () => {
       if (!user?.organization_id) return null
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const qSessions: any = supabase
+        .from('sessions')
+        .select('*, formations!inner(organization_id)', { count: 'exact' })
+        .eq('formations.organization_id', user.organization_id)
+        .gte('start_date', dateFilter.start)
+        .lte('end_date', dateFilter.end)
+      const qEnrollments: any = supabase
+        .from('enrollments')
+        .select('*, sessions!inner(formations!inner(organization_id))', { count: 'exact' })
+        .eq('sessions.formations.organization_id', user.organization_id)
+        .gte('created_at', dateFilter.start)
+
       const [
         studentsResult,
         sessionsResult,
@@ -372,20 +385,9 @@ function ReportsPageContent() {
           .eq('organization_id', user.organization_id)
           .eq('status', 'active'),
 
-        // Sessions
-        supabase
-          .from('sessions')
-          .select('*, formations!inner(organization_id)', { count: 'exact' })
-          .eq('formations.organization_id', user.organization_id)
-          .gte('start_date', dateFilter.start)
-          .lte('end_date', dateFilter.end),
+        qSessions,
 
-        // Inscriptions
-        supabase
-          .from('enrollments')
-          .select('*, sessions!inner(formations!inner(organization_id))', { count: 'exact' })
-          .eq('sessions.formations.organization_id', user.organization_id)
-          .gte('created_at', dateFilter.start),
+        qEnrollments,
 
         // Présences
         supabase

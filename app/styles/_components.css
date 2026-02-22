@@ -1,0 +1,632 @@
+@tailwind components;
+@layer components {
+  .skeleton {
+    @apply animate-pulse bg-muted rounded;
+  }
+  
+  .skeleton-premium {
+    @apply relative overflow-hidden rounded;
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted) / 0.5) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+  
+  /* Premium card */
+  .card-premium {
+    @apply rounded-xl border bg-card text-card-foreground shadow-lg;
+    @apply transition-all duration-300 ease-out;
+    @apply hover:shadow-xl hover:border-primary/20;
+  }
+  
+  /* Premium button effects */
+  .btn-premium {
+    @apply relative overflow-hidden;
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .btn-premium::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+  
+  .btn-premium:hover::before {
+    width: 300px;
+    height: 300px;
+  }
+  
+  .btn-premium:active {
+    transform: scale(0.98);
+  }
+  
+  /* Glass morphism effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  /* .glass-dark supprimé - Mode sombre désactivé */
+  
+  /* Glass morphism premium - Revolut/TrendTrack style */
+  .glass-morphism {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  }
+  
+  /* .glass-morphism-dark supprimé - Mode sombre désactivé */
+  
+  /* Animated gradient border - Ultra premium */
+  .animated-gradient-border {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  
+  .animated-gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 16px;
+    padding: 2px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    background-size: 200% 200%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: gradient-shift 3s ease infinite;
+  }
+  
+  /* Text gradients - Bleu → Cyan uniquement (pour headers spéciaux) */
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #335ACF 0%, #34B9EE 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    background-size: 200% 200%;
+    animation: gradient-shift 5s ease infinite;
+  }
+  
+  /* Règle : Textes uniquement en noir par défaut */
+  /* Les gradients texte sont réservés pour les headers ou éléments spéciaux */
+  
+  /* Premium card hover effects */
+  .card-hover-glow {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-hover-glow:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 30px 80px -20px rgba(99, 102, 241, 0.5), 0 0 60px -15px rgba(139, 92, 246, 0.4);
+  }
+  
+  /* Ultra premium button effects */
+  .btn-ultra-premium {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    background-size: 200% 200%;
+    animation: gradient-shift 5s ease infinite;
+  }
+  
+  .btn-ultra-premium::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+  }
+  
+  .btn-ultra-premium:hover::before {
+    left: 100%;
+  }
+  
+  .btn-ultra-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.6);
+  }
+  
+  .btn-ultra-premium:active {
+    transform: translateY(0);
+  }
+  
+  /* Premium chart container */
+  .chart-container-premium {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+      0 20px 60px -15px rgba(0, 0, 0, 0.2),
+      0 0 40px -10px rgba(99, 102, 241, 0.3);
+  }
+  
+  /* Ultra smooth scroll */
+  .smooth-scroll-premium {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Premium number display */
+  .number-premium {
+    font-variant-numeric: lining-nums tabular-nums;
+    font-feature-settings: "tnum", "lnum";
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+  
+  /* Smooth page transitions */
+  .page-transition-enter {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  
+  .page-transition-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s ease-out, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .page-transition-exit {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .page-transition-exit-active {
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.2s ease-in, transform 0.2s ease-in;
+  }
+  
+  /* Enhanced focus states */
+  .focus-premium:focus-visible {
+    outline: none;
+    ring: 2px;
+    ring-color: hsl(var(--primary));
+    ring-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), 0 0 20px rgba(99, 102, 241, 0.2);
+  }
+  
+  /* Hover glow effect */
+  .hover-glow-premium {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-glow-premium:hover {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.4), 0 0 60px rgba(139, 92, 246, 0.2);
+  }
+  
+  /* Smooth scrollbar - Premium */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.3);
+    border-radius: 10px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)) / 0.8);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background 0.3s ease;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, hsl(var(--primary)) / 0.9, hsl(var(--primary)) / 0.7);
+    background-clip: padding-box;
+  }
+  
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.5) hsl(var(--muted) / 0.3);
+  }
+  
+  /* Selection styling */
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
+  }
+  
+  ::-moz-selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
+  }
+  
+  /* Focus ring premium */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  
+  /* Tiptap Editor Styles */
+  .tiptap-image {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .tiptap-image[src^="data:image/svg"] {
+    display: inline-block;
+    vertical-align: middle;
+  }
+  
+  /* ProseMirror editor styles - Premium Document Layout */
+  .ProseMirror {
+    outline: none;
+    max-width: 210mm; /* Format A4 */
+    margin: 0 auto;
+    padding: 20mm 25mm; /* Marges standard pour documents */
+    background: white;
+    min-height: 297mm; /* Hauteur A4 */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    font-family: var(--document-font-family, 'Inter'), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+  }
+  
+  /* Typographie améliorée */
+  .ProseMirror h1 {
+    font-size: 24pt;
+    font-weight: 700;
+    margin-top: 24pt;
+    margin-bottom: 12pt;
+    line-height: 1.3;
+    color: #1a1a1a;
+    page-break-after: avoid;
+  }
+  
+  .ProseMirror h2 {
+    font-size: 18pt;
+    font-weight: 600;
+    margin-top: 18pt;
+    margin-bottom: 10pt;
+    line-height: 1.4;
+    color: #1a1a1a;
+    page-break-after: avoid;
+  }
+  
+  .ProseMirror h3 {
+    font-size: 14pt;
+    font-weight: 600;
+    margin-top: 14pt;
+    margin-bottom: 8pt;
+    line-height: 1.4;
+    color: #1a1a1a;
+    page-break-after: avoid;
+  }
+  
+  .ProseMirror h4,
+  .ProseMirror h5,
+  .ProseMirror h6 {
+    font-size: 12pt;
+    font-weight: 600;
+    margin-top: 12pt;
+    margin-bottom: 6pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+    page-break-after: avoid;
+  }
+  
+  /* Paragraphes avec espacement approprié */
+  .ProseMirror p {
+    margin-top: 0;
+    margin-bottom: 12pt;
+    text-align: justify;
+    orphans: 3;
+    widows: 3;
+  }
+  
+  .ProseMirror p:first-child {
+    margin-top: 0;
+  }
+  
+  .ProseMirror p:last-child {
+    margin-bottom: 0;
+  }
+  
+  /* Listes avec espacement */
+  .ProseMirror ul,
+  .ProseMirror ol {
+    margin-top: 12pt;
+    margin-bottom: 12pt;
+    padding-left: 24pt;
+  }
+  
+  .ProseMirror ul li,
+  .ProseMirror ol li {
+    margin-bottom: 6pt;
+    line-height: 1.6;
+  }
+  
+  .ProseMirror ul li p,
+  .ProseMirror ol li p {
+    margin-top: 0;
+    margin-bottom: 6pt;
+  }
+  
+  /* Images avec espacement */
+  .ProseMirror img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 18pt auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .ProseMirror img[src^="data:image/svg"] {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 12pt auto;
+  }
+  
+  /* Horizontal rules avec espacement */
+  .ProseMirror hr {
+    margin: 24pt 0;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    page-break-inside: avoid;
+  }
+  
+  /* Tables avec style premium */
+  .ProseMirror table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18pt 0;
+    page-break-inside: avoid;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .ProseMirror table th {
+    background-color: #335ACF;
+    color: white;
+    font-weight: 600;
+    padding: 10pt 12pt;
+    text-align: left;
+    border: 1px solid #2847A3;
+  }
+  
+  .ProseMirror table td {
+    padding: 10pt 12pt;
+    border: 1px solid #e5e7eb;
+    background-color: white;
+  }
+  
+  .ProseMirror table tr:nth-child(even) td {
+    background-color: #f9fafb;
+  }
+  
+  /* Citations et blocs */
+  .ProseMirror blockquote {
+    margin: 18pt 0;
+    padding: 12pt 18pt;
+    border-left: 4px solid #335ACF;
+    background-color: #f9fafb;
+    font-style: italic;
+    page-break-inside: avoid;
+  }
+  
+  /* Code blocks */
+  .ProseMirror pre {
+    margin: 18pt 0;
+    padding: 12pt;
+    background-color: #f3f4f6;
+    border-radius: 4px;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+  
+  .ProseMirror code {
+    background-color: #f3f4f6;
+    padding: 2pt 4pt;
+    border-radius: 3px;
+    font-size: 11pt;
+  }
+  
+  /* Strong et emphasis */
+  .ProseMirror strong {
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  
+  .ProseMirror em {
+    font-style: italic;
+  }
+  
+  /* Liens */
+  .ProseMirror a {
+    color: #335ACF;
+    text-decoration: underline;
+  }
+  
+  .ProseMirror a:hover {
+    color: #2847A3;
+  }
+  
+  /* Espacement pour éviter les coupures de page */
+  .ProseMirror h1,
+  .ProseMirror h2,
+  .ProseMirror h3,
+  .ProseMirror h4,
+  .ProseMirror h5,
+  .ProseMirror h6 {
+    page-break-after: avoid;
+  }
+  
+  .ProseMirror p,
+  .ProseMirror li {
+    orphans: 3;
+    widows: 3;
+  }
+  
+  /* Styles pour l'éditeur en mode édition */
+  .tiptap-editor {
+    background: #f9fafb;
+    padding: 24px;
+    border-radius: 12px;
+  }
+  
+  .tiptap-editor .ProseMirror {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .tiptap-editor .ProseMirror:focus {
+    border-color: #335ACF;
+    box-shadow: 0 0 0 3px rgba(51, 90, 207, 0.1);
+  }
+  
+  /* Responsive : ajuster les marges sur petits écrans */
+  @media (max-width: 768px) {
+    .ProseMirror {
+      padding: 15mm 20mm !important;
+      max-width: 100% !important;
+    }
+  }
+  
+  /* Responsive mobile pour l'éditeur */
+  @media (max-width: 640px) {
+    .tiptap-editor .toolbar {
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 8px;
+    }
+    
+    .tiptap-editor .toolbar button {
+      padding: 6px;
+      min-width: 32px;
+      height: 32px;
+    }
+    
+    .tiptap-editor .toolbar select {
+      font-size: 12px;
+      padding: 4px 8px;
+    }
+  }
+  
+  /* Impression : masquer le fond et les bordures */
+  @media print {
+    .tiptap-editor {
+      background: transparent;
+      padding: 0;
+    }
+    
+    .tiptap-editor .ProseMirror {
+      border: none;
+      box-shadow: none;
+      padding: 0;
+    }
+    
+    /* Styles pour l'impression des documents prévisualisés */
+    body {
+      background: white !important;
+    }
+    
+    /* Masquer les éléments de navigation dans le mode impression */
+    .preview-controls,
+    .preview-navigation {
+      display: none !important;
+    }
+    
+    /* Afficher toutes les pages en mode impression */
+    .preview-page {
+      page-break-after: always;
+      opacity: 1 !important;
+      display: block !important;
+      transform: scale(1) !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+    }
+    
+    .preview-page:last-child {
+      page-break-after: auto;
+    }
+    
+    /* Ajuster la taille pour l'impression */
+    .preview-page {
+      width: 210mm !important;
+      min-height: 297mm !important;
+    }
+  }
+  
+  /* Mobile-first responsive utilities */
+  @media (max-width: 640px) {
+    .mobile-hidden {
+      display: none;
+    }
+    
+    .mobile-full {
+      width: 100%;
+    }
+    
+    .mobile-stack {
+      flex-direction: column;
+    }
+  }
+  
+  /* Tablet optimizations */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .tablet-grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  
+  /* Responsive preview */
+  @media (max-width: 768px) {
+    .preview-container {
+      padding: 8px !important;
+    }
+    
+    .preview-page {
+      transform: scale(0.5) !important;
+      margin-bottom: 20px !important;
+    }
+    
+    .preview-controls {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+  }
+  
+  @media (max-width: 640px) {
+    .preview-page {
+      transform: scale(0.4) !important;
+    }
+  }
+}

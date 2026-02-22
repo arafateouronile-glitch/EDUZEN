@@ -27,6 +27,7 @@ import {
   BarChart3,
   HelpCircle,
   Shield,
+  ShieldCheck,
   Folder,
   Building2,
   Award,
@@ -41,8 +42,10 @@ import {
   Badge,
   X,
   ClipboardCheck,
+  Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { usePlatformAdmin } from '@/lib/hooks/use-platform-admin'
 import { getPortalRoot } from '@/lib/utils/dom-utils'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
@@ -81,6 +84,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
       { name: t('common.dashboard'), href: '/dashboard', icon: LayoutDashboard },
       { name: t('navigation.calendar'), href: '/dashboard/calendar', icon: Calendar },
       { name: t('common.messages'), href: '/dashboard/messages', icon: MessageSquare },
+      { name: 'Espace Partenaire', href: '/dashboard/affiliate', icon: Wallet },
     ],
   },
   {
@@ -218,6 +222,7 @@ interface MobileSidebarProps {
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname()
   const { logout, user } = useAuth()
+  const { isPlatformAdmin } = usePlatformAdmin()
   const vocab = useVocabulary() || getVocabulary('school')
   const t = useTranslations()
   const [mounted, setMounted] = useState(false)
@@ -492,6 +497,22 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
 
             {/* Footer */}
             <div className="p-4 border-t border-gray-200 space-y-2">
+              {/* Administration plateforme (visible uniquement pour les admins plateforme) */}
+              {isPlatformAdmin && (
+                <Link
+                  href="/super-admin"
+                  className={cn(
+                    'flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
+                    pathname?.startsWith('/super-admin')
+                      ? 'bg-purple-600 text-white'
+                      : 'text-purple-700 bg-purple-50 hover:bg-purple-100 active:bg-purple-200'
+                  )}
+                  onClick={onClose}
+                >
+                  <ShieldCheck className="h-5 w-5" />
+                  <span>Administration plateforme</span>
+                </Link>
+              )}
               {/* Masquer les paramètres pour les enseignants */}
               {user?.role !== 'teacher' && (
                 <Link

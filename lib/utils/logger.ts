@@ -1,20 +1,33 @@
 /**
  * Logger centralisé pour l'application Eduzen
- * 
- * Fournit une interface unifiée pour le logging avec :
- * - Niveaux de log (error, warn, info, debug)
- * - Support pour services externes (Sentry, LogRocket)
- * - Formatage cohérent
- * - Mode développement vs production
+ *
+ * Niveaux de log (error, warn, info, debug). Contrôle via LOG_LEVEL :
+ * - LOG_LEVEL=error | warn | info | debug (optionnel)
+ * - Défaut : production = warn, développement = debug
+ *
+ * Ex. en dev pour moins de bruit : LOG_LEVEL=info (masque les DEBUG)
  */
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug'
+
+const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  debug: 3,
+}
 
 interface LogContext {
   userId?: string
   organizationId?: string
   sessionId?: string
   [key: string]: unknown
+}
+
+function getEffectiveLogLevel(): LogLevel {
+  const env = process.env.LOG_LEVEL?.toLowerCase()
+  if (env === 'error' || env === 'warn' || env === 'info' || env === 'debug') return env
+  return process.env.NODE_ENV === 'production' ? 'warn' : 'debug'
 }
 
 function isValidSentryDsn(dsn: string | undefined): boolean {
@@ -44,6 +57,15 @@ class Logger {
   }
   private get sentryEnabled() {
     return this.isProduction && isValidSentryDsn(process.env.NEXT_PUBLIC_SENTRY_DSN)
+  }
+
+  /** Niveau de log effectif (env LOG_LEVEL ou défaut: prod=warn, dev=debug) */
+  private get logLevel(): LogLevel {
+    return getEffectiveLogLevel()
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    return LOG_LEVEL_ORDER[level] <= LOG_LEVEL_ORDER[this.logLevel]
   }
 
   /**
@@ -163,40 +185,35 @@ class Logger {
    * Log un avertissement
    */
   warn(message: string, context?: LogContext) {
+    if (!this.shouldLog('warn')) return
     const logData = {
       message,
       context,
       timestamp: new Date().toISOString(),
       level: 'warn' as LogLevel,
     }
-
-    if (this.isDevelopment) {
-      console.warn('⚠️ [WARN]', message, { context, timestamp: logData.timestamp })
-    }
+    console.warn('⚠️ [WARN]', message, { context, timestamp: logData.timestamp })
   }
 
   /**
    * Log une information
    */
   info(message: string, context?: LogContext) {
+    if (!this.shouldLog('info')) return
     const logData = {
       message,
       context,
       timestamp: new Date().toISOString(),
       level: 'info' as LogLevel,
     }
-
-    if (this.isDevelopment) {
-      console.info('ℹ️ [INFO]', message, { context, timestamp: logData.timestamp })
-    }
+    console.info('ℹ️ [INFO]', message, { context, timestamp: logData.timestamp })
   }
 
   /**
-   * Log pour le débogage (uniquement en développement)
+   * Log pour le débogage (filtré par LOG_LEVEL, défaut: debug en dev, ignoré en prod)
    */
   debug(message: string, context?: LogContext) {
-    if (!this.isDevelopment) return
-
+    if (!this.shouldLog('debug')) return
     console.debug('🐛 [DEBUG]', message, {
       context,
       timestamp: new Date().toISOString(),

@@ -32,11 +32,13 @@ export default function ChildrenPage() {
 
       if (!studentGuardians || studentGuardians.length === 0) return []
 
-      const { data: students } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('students')
         .select('*, classes(name)')
         .in('id', studentGuardians.map((sg) => sg.student_id).filter((id): id is string => id !== null))
         .eq('status', 'active')
+      const { data: students } = await q
 
       return students || []
     },

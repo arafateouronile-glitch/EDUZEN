@@ -140,7 +140,8 @@ export default function AttendanceHistoryPage() {
     queryFn: async () => {
       if (!user?.organization_id) return { data: [], total: 0 }
 
-      let query = supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      let query: any = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))', { count: 'exact' })
         .eq('organization_id', user.organization_id)
@@ -240,7 +241,8 @@ export default function AttendanceHistoryPage() {
       }
       
       // Récupérer tous les résultats sans pagination pour l'export
-      let query = supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      let query: any = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')
         .eq('organization_id', user.organization_id)

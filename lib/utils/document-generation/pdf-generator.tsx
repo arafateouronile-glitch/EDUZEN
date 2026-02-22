@@ -132,7 +132,7 @@ export async function generatePDF(
 }
 
 /**
- * Génère un PDF depuis HTML avec Puppeteer
+ * Génère un PDF depuis HTML avec Gotenberg (si GOTENBERG_URL) ou Puppeteer (fallback)
  */
 async function generatePDFFromHTML(
   template: DocumentTemplate,
@@ -140,14 +140,29 @@ async function generatePDFFromHTML(
   documentId?: string,
   organizationId?: string
 ): Promise<PDFGenerationResult> {
-  // Utiliser generateHTML pour bénéficier de toutes les fonctionnalités (API externes, boucles, conditions, etc.)
   const htmlResult = await generateHTML(template, variables, documentId, organizationId)
-  
-  // Le HTML généré contient déjà tout le document avec header/footer et styles
   const fullHTML = htmlResult.html
-  
-  // Configuration Puppeteer
-  // Puppeteer nécessite Chromium, ce qui peut poser problème dans certains environnements
+  const pageSize = template.page_size || 'A4'
+  const pageFormat = pageSize === 'A4' ? 'A4' : pageSize === 'Letter' ? 'Letter' : 'A4'
+
+  // Préférer Gotenberg en production/serverless (pas de Chromium à lancer)
+  const { isGotenbergConfigured, generatePDFWithGotenberg } = await import('@/lib/utils/gotenberg-pdf')
+  if (isGotenbergConfigured()) {
+    try {
+      const pdfBuffer = await generatePDFWithGotenberg(fullHTML, { format: pageFormat })
+      const pdfBlob = new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' })
+      const estimatedPageCount = Math.max(1, Math.ceil(pdfBuffer.length / 50000))
+      return {
+        blob: pdfBlob,
+        pageCount: htmlResult.pageCount || estimatedPageCount,
+      }
+    } catch (gotenbergError) {
+      logger.error('Gotenberg PDF failed, falling back to Puppeteer', gotenbergError)
+      // Fallback vers Puppeteer ci-dessous
+    }
+  }
+
+  // Fallback: Puppeteer (local ou si Gotenberg indisponible)
   let browser
   try {
     browser = await puppeteer.launch({
@@ -178,10 +193,6 @@ async function generatePDFFromHTML(
   
   try {
     const page = await browser.newPage()
-    
-    // Définir la taille de la page
-    const pageSize = template.page_size || 'A4'
-    const pageFormat = pageSize === 'A4' ? 'A4' : pageSize === 'Letter' ? 'Letter' : 'A4'
     
     // Charger le HTML
     await page.setContent(fullHTML, {

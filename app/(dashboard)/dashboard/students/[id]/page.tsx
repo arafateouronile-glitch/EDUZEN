@@ -34,10 +34,12 @@ export default function StudentDetailPage() {
   const { data: guardians } = useQuery({
     queryKey: ['student-guardians', studentId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('student_guardians')
         .select('*, guardians(*)')
         .eq('student_id', studentId)
+      const { data, error } = await q
       
       if (error) throw error
       return data?.map((sg: any) => sg.guardians).filter(Boolean) || []

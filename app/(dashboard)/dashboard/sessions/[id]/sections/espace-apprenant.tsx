@@ -217,12 +217,14 @@ export function EspaceApprenant({
     queryFn: async () => {
       if (!selectedStudent || !organizationId) return []
       
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const q: any = supabase
         .from('payments')
         .select('*, invoices(invoice_number, total_amount, status), students(first_name, last_name)')
         .eq('student_id', selectedStudent)
         .eq('organization_id', organizationId)
         .order('paid_at', { ascending: false })
+      const { data, error } = await q
       
       if (error) {
         logger.warn('Error fetching student payments', sanitizeError(error))
@@ -241,12 +243,14 @@ export function EspaceApprenant({
     queryFn: async () => {
       if (!selectedStudent || !sessionId) return []
       
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      const qAtt: any = supabase
         .from('attendance')
         .select('*, session_slots(date, start_time, end_time)')
         .eq('student_id', selectedStudent)
         .eq('session_id', sessionId)
         .order('created_at', { ascending: false })
+      const { data, error } = await qAtt
       
       if (error) {
         logger.warn('Error fetching student attendance', sanitizeError(error))
