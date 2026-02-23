@@ -59,3 +59,30 @@ Si **les trois** sont renseignés et que `VERCEL_DEPLOY_HOOK_URL` **n’est pas*
 4. **Vercel** → projet → **Deployments** : un nouveau déploiement doit apparaître après le run du workflow.
 
 Si le workflow ne se déclenche pas sur push, vérifier que la branche par défaut du repo est bien `main` et que les Actions ne sont pas désactivées (Settings → Actions → General).
+
+---
+
+## Toujours aucun changement dans Vercel ?
+
+### 1. Vérifier que le secret est bien ajouté
+
+Sans le secret **`VERCEL_DEPLOY_HOOK_URL`**, aucun appel n’est envoyé à Vercel.
+
+- **GitHub** → ton repo **EDUZEN** → **Settings** → **Secrets and variables** → **Actions**
+- Tu dois voir **VERCEL_DEPLOY_HOOK_URL** dans la liste. Si ce n’est pas le cas, crée-le (voir Option A ci‑dessus).
+
+### 2. Tester le Deploy Hook seul
+
+- **GitHub** → **Actions** → workflow **"Trigger Vercel Deploy"** → **Run workflow** → **Run workflow**
+- Regarder les logs :
+  - Si tu vois **"Secret VERCEL_DEPLOY_HOOK_URL manquant"** → ajouter le secret comme en Option A.
+  - Si tu vois **"HTTP 200"** et **"Deploy Hook envoyé"** → aller sur **Vercel** → **Deployments** : un nouveau déploiement doit apparaître dans 1–2 min.
+
+### 3. Vérifier le projet Vercel
+
+- Le Deploy Hook est lié à **un seul projet**. Vérifier que tu as créé le hook dans le bon projet (EDUZEN) et que tu regardes les déploiements de ce projet.
+
+### 4. Si le workflow "Deploy to Production" échoue avant le déploiement
+
+- **Actions** → ouvrir le dernier run de **Deploy to Production**
+- Si un step **Run all tests** ou **Build application** est en erreur, le déploiement n’est jamais exécuté. Corriger les tests ou le build, ou utiliser uniquement **Trigger Vercel Deploy** (workflow ci‑dessus) pour déclencher Vercel sans passer par les tests.

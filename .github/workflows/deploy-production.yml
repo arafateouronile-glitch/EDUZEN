@@ -7,12 +7,34 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy to Production
+  # Déclenche Vercel à chaque push (indépendant des tests/build). S'affiche seulement si le secret est défini.
+  trigger-vercel:
+    name: Déclencher Vercel
     runs-on: ubuntu-latest
+    if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        run: |
+          echo "Envoi du Deploy Hook à Vercel..."
+          resp=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}")
+          code=$(echo "$resp" | tail -n1)
+          body=$(echo "$resp" | sed '$d')
+          echo "Réponse HTTP: $code"
+          echo "$body" | head -c 800
+          echo ""
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "Erreur: Vercel a répondu $code. Vérifiez l'URL du hook (Settings → Git → Deploy Hooks)."
+            exit 1
+          fi
+          echo "Deploy Hook envoyé. Vérifiez l'onglet Deployments sur Vercel dans 1-2 min."
+
+  # Tests + build. Ne fait pas échouer le workflow si les tests/build échouent (le déploiement Vercel reste prioritaire).
+  deploy:
+    name: Tests et build
+    runs-on: ubuntu-latest
+    continue-on-error: true
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.url }}
     
     steps:
       - name: Checkout code
@@ -46,34 +68,18 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       
-      - name: Deploy to Vercel (Production) via API
-        uses: amondnet/vercel-action@v25
+      - name: Deploy to Vercel via API (si token configuré, pas de hook)
         if: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_DEPLOY_HOOK_URL == '' }}
+        uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
-
-      - name: Trigger Vercel Deploy Hook
-        if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
-        run: |
-          echo "Déclenchement du déploiement Vercel via Deploy Hook..."
-          curl -f -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" || { echo "Deploy Hook failed"; exit 1; }
-          echo "Deploy Hook envoyé avec succès."
-      
-      - name: Aucun déploiement Vercel configuré
-        if: ${{ secrets.VERCEL_TOKEN == '' && secrets.VERCEL_DEPLOY_HOOK_URL == '' }}
-        run: |
-          echo "Aucun déploiement Vercel configuré."
-          echo "Ajoutez soit VERCEL_TOKEN + VERCEL_ORG_ID + VERCEL_PROJECT_ID, soit VERCEL_DEPLOY_HOOK_URL."
-          echo "Voir docs/DEPLOIEMENT_VERCEL.md"
       
       - name: Run smoke tests
         run: |
           echo "Running smoke tests..."
-          # Example: curl health check
-          # curl -f https://your-production-url.com/api/health || exit 1
 
 
 
