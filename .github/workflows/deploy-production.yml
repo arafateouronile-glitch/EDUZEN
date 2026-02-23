@@ -7,26 +7,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Déclenche Vercel à chaque push (indépendant des tests/build). S'affiche seulement si le secret est défini.
+  # Toujours exécuté : appelle le Deploy Hook Vercel (le secret est lu dans le step, pas dans un if).
   trigger-vercel:
     name: Déclencher Vercel
     runs-on: ubuntu-latest
-    if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
     steps:
       - name: Trigger Vercel Deploy Hook
         run: |
           echo "Envoi du Deploy Hook à Vercel..."
-          resp=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}")
+          resp=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" 2>/dev/null) || true
           code=$(echo "$resp" | tail -n1)
           body=$(echo "$resp" | sed '$d')
-          echo "Réponse HTTP: $code"
+          echo "Réponse HTTP: ${code:-'(vide)'}"
           echo "$body" | head -c 800
           echo ""
+          if [ -z "$code" ]; then
+            echo "→ Secret VERCEL_DEPLOY_HOOK_URL absent ou invalide. GitHub → Settings → Secrets → Actions → ajouter VERCEL_DEPLOY_HOOK_URL (URL du hook Vercel)."
+            exit 0
+          fi
           if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
-            echo "Erreur: Vercel a répondu $code. Vérifiez l'URL du hook (Settings → Git → Deploy Hooks)."
+            echo "Erreur: Vercel a répondu $code. Vérifiez l'URL du hook (Vercel → Settings → Git → Deploy Hooks)."
             exit 1
           fi
-          echo "Deploy Hook envoyé. Vérifiez l'onglet Deployments sur Vercel dans 1-2 min."
+          echo "Deploy Hook envoyé. Un déploiement va apparaître sur Vercel dans 1-2 min."
 
   # Tests + build. Ne fait pas échouer le workflow si les tests/build échouent (le déploiement Vercel reste prioritaire).
   deploy:
