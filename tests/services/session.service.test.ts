@@ -19,9 +19,11 @@ const { mockSupabase } = vi.hoisted(() => {
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    not: vi.fn(),
+    is: vi.fn(),
   }
   
-  const chainableMethods = ['from', 'select', 'eq', 'gte', 'lte', 'ilike', 'order', 'insert', 'update', 'delete']
+  const chainableMethods = ['from', 'select', 'eq', 'gte', 'lte', 'ilike', 'order', 'insert', 'update', 'delete', 'not', 'is']
   chainableMethods.forEach((method) => {
     mock[method].mockImplementation(() => mock)
   })
@@ -46,7 +48,7 @@ describe('SessionService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    const chainableMethods = ['from', 'select', 'eq', 'gte', 'lte', 'ilike', 'order', 'insert', 'update', 'delete']
+    const chainableMethods = ['from', 'select', 'eq', 'gte', 'lte', 'ilike', 'order', 'insert', 'update', 'delete', 'not', 'is']
     chainableMethods.forEach((method) => {
       ;(mockSupabase as any)[method].mockImplementation(() => mockSupabase)
     })
@@ -79,10 +81,9 @@ describe('SessionService', () => {
         },
       ]
 
-      ;(mockSupabase as any).order.mockResolvedValue({
-        data: mockSessions,
-        error: null,
-      })
+      ;(mockSupabase as any).order
+        .mockResolvedValueOnce({ data: mockSessions, error: null })
+        .mockResolvedValueOnce({ data: [], error: null })
 
       const result = await service.getAllSessions(organizationId)
 
@@ -412,12 +413,15 @@ describe('SessionService', () => {
         delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
       }
-      const insertChain = {
-        insert: vi.fn().mockResolvedValue({ error: null }),
+      const sessionsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { formation_id: 'formation-1' }, error: null }),
       }
+      ;(mockSupabase as any).rpc = vi.fn().mockResolvedValue({ error: null })
       ;(mockSupabase as any).from
         .mockReturnValueOnce(deleteChain)
-        .mockReturnValueOnce(insertChain)
+        .mockReturnValueOnce(sessionsChain)
 
       const result = await service.updateSessionPrograms(sessionId, programIds, organizationId)
 
@@ -444,12 +448,15 @@ describe('SessionService', () => {
         delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ error: null }),
       }
-      const insertChain = {
-        insert: vi.fn().mockResolvedValue({ error: mockError }),
+      const sessionsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { formation_id: 'formation-1' }, error: null }),
       }
+      ;(mockSupabase as any).rpc = vi.fn().mockResolvedValue({ error: mockError })
       ;(mockSupabase as any).from
         .mockReturnValueOnce(deleteChain)
-        .mockReturnValueOnce(insertChain)
+        .mockReturnValueOnce(sessionsChain)
 
       await expect(
         service.updateSessionPrograms('session-1', ['prog-1'], 'org-1')

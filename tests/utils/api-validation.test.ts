@@ -319,7 +319,7 @@ describe('api-validation', () => {
       })
       const handler = vi.fn().mockResolvedValue(new Response('ok'))
       const res = await withBodyValidation(req, schema, handler)
-      expect(handler).toHaveBeenCalledWith(req, expect.objectContaining({ title: 'Hello' }))
+      expect(handler).toHaveBeenCalledWith(req, expect.objectContaining({ title: 'Hello' }), expect.anything())
       expect(res.status).toBe(200)
     })
 

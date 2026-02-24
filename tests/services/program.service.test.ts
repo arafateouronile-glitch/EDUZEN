@@ -362,11 +362,10 @@ describe('ProgramService', () => {
       ;(mockSupabase.from as any) = vi.fn(() => {
         fromCallCount++
         if (fromCallCount === 1) return programsChain
-        if (fromCallCount === 2) return formationsCountChain // formations count
-        if (fromCallCount === 3) return formationsIdsChain // formations ids pour sessions
-        if (fromCallCount === 4) return sessionsCountChain // sessions count
-        if (fromCallCount === 5) return formationsIdsChain // formations ids pour enrollments
-        if (fromCallCount === 6) return sessionsIdsChain // sessions ids
+        if (fromCallCount === 2) return formationsIdsChain // formations ids (Promise.all 1)
+        if (fromCallCount === 3) return formationsCountChain // formations count (Promise.all 2)
+        if (fromCallCount === 4) return sessionsIdsChain // sessions ids (Promise.all 1)
+        if (fromCallCount === 5) return sessionsCountChain // sessions count (Promise.all 2)
         return enrollmentsCountChain
       })
 
@@ -456,8 +455,8 @@ describe('ProgramService', () => {
       ;(mockSupabase.from as any) = vi.fn(() => {
         fromCalls++
         if (fromCalls === 1) return programsChain
-        if (fromCalls === 2) return formationsCountChain
-        return formationsIdsChain
+        if (fromCalls === 2) return formationsIdsChain // formationsResult (select id) reçoit l'erreur
+        return formationsCountChain
       })
 
       await expect(service.getGlobalStats('org-1')).rejects.toMatchObject({
@@ -481,16 +480,21 @@ describe('ProgramService', () => {
         select: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({ data: [{ id: 'f1' }], error: null }),
       }
+      const sessionsIdsChainError = {
+        select: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ data: null, error: { message: 'Sessions count failed' } }),
+      }
       const sessionsCountChain = {
         select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({ count: null, error: { message: 'Sessions count failed' } }),
+        in: vi.fn().mockResolvedValue({ count: 1, error: null }),
       }
       let fromCalls = 0
       ;(mockSupabase.from as any) = vi.fn(() => {
         fromCalls++
         if (fromCalls === 1) return programsChain
-        if (fromCalls === 2) return formationsCountChain
-        if (fromCalls === 3) return formationsIdsChain
+        if (fromCalls === 2) return formationsIdsChain
+        if (fromCalls === 3) return formationsCountChain
+        if (fromCalls === 4) return sessionsIdsChainError // sessionsResult (select id) reçoit l'erreur
         return sessionsCountChain
       })
 
@@ -531,11 +535,10 @@ describe('ProgramService', () => {
       ;(mockSupabase.from as any) = vi.fn(() => {
         fromCalls++
         if (fromCalls === 1) return programsChain
-        if (fromCalls === 2) return formationsCountChain
-        if (fromCalls === 3) return formationsIdsChain
-        if (fromCalls === 4) return sessionsCountChain
-        if (fromCalls === 5) return formationsIdsChain
-        if (fromCalls === 6) return sessionsIdsChain
+        if (fromCalls === 2) return formationsIdsChain
+        if (fromCalls === 3) return formationsCountChain
+        if (fromCalls === 4) return sessionsIdsChain
+        if (fromCalls === 5) return sessionsCountChain
         return enrollmentsCountChain
       })
 

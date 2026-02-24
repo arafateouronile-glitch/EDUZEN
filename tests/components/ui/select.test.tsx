@@ -4,7 +4,7 @@
 
 import * as React from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import {
   SelectField,
   SelectRoot,
@@ -159,7 +159,8 @@ describe('Select Radix API (SelectRoot, SelectTrigger, SelectValue, SelectConten
       </SelectRoot>
     )
     fireEvent.click(screen.getByText('Ouvrir'))
-    const option1 = screen.getByRole('option', { name: /option 1/i })
+    const portal = document.getElementById('eduzen-portal-root')
+    const option1 = within(portal!).getByRole('option', { name: /option 1/i, hidden: true })
     fireEvent.click(option1)
     expect(onValueChange).toHaveBeenCalledWith('opt1')
   })
@@ -175,7 +176,8 @@ describe('Select Radix API (SelectRoot, SelectTrigger, SelectValue, SelectConten
       </SelectRoot>
     )
     fireEvent.click(screen.getByText('Trigger'))
-    const selectedItem = screen.getByRole('option', { name: 'Selected' })
+    const portal = document.getElementById('eduzen-portal-root')
+    const selectedItem = within(portal!).getByRole('option', { name: 'Selected', hidden: true })
     expect(selectedItem).toHaveAttribute('aria-selected', 'true')
   })
 
