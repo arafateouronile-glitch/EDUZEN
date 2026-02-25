@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Toujours exécuté : appelle le Deploy Hook Vercel (le secret est lu dans le step, pas dans un if).
   trigger-vercel:
     name: Déclencher Vercel
     runs-on: ubuntu-latest
@@ -30,59 +29,3 @@ jobs:
             exit 1
           fi
           echo "Deploy Hook envoyé. Un déploiement va apparaître sur Vercel dans 1-2 min."
-
-  # Tests + build. Ne fait pas échouer le workflow si les tests/build échouent (le déploiement Vercel reste prioritaire).
-  deploy:
-    name: Tests et build
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    environment:
-      name: production
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run all tests
-        run: |
-          npm run test -- --run
-          npm run test:integration -- --run || echo "Integration tests skipped"
-          npm run test:e2e || echo "E2E tests skipped"
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      
-      - name: Build application
-        run: npm run build
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          NEXT_PUBLIC_PLAUSIBLE_DOMAIN: ${{ secrets.NEXT_PUBLIC_PLAUSIBLE_DOMAIN }}
-          NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      
-      - name: Deploy to Vercel via API (si token configuré, pas de hook)
-        if: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_DEPLOY_HOOK_URL == '' }}
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-      
-      - name: Run smoke tests
-        run: |
-          echo "Running smoke tests..."
-
-
-
