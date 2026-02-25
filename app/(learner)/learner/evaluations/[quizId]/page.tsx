@@ -38,6 +38,20 @@ interface Question {
   explanation?: string
 }
 
+/** Grade enrichi avec template, instance et session (requêtes jointes / manuelles) */
+type GradeEnriched = {
+  id: string
+  student_id?: string
+  subject?: string
+  template_id?: string
+  evaluation_instance_id?: string
+  evaluation_template?: { id: string; name?: string; description?: string; passing_score?: number; questions?: Question[] }
+  sessions?: { name?: string }
+  assessment_type?: string
+  feedback?: string
+  [key: string]: unknown
+}
+
 export default function LearnerQuizPage() {
   const params = useParams()
   const router = useRouter()
@@ -139,7 +153,7 @@ export default function LearnerQuizPage() {
         gradeId: data.id,
         studentId: data.student_id,
         subject: data.subject,
-        templateId: (data as any).template_id
+        templateId: (data as GradeEnriched).template_id
       })
       
       // Si on a un session_id, essayer de récupérer les infos de session séparément
@@ -172,13 +186,13 @@ export default function LearnerQuizPage() {
         })
       }
       
-      const templateId = instanceData?.template_id || (data as any).template_id
+      const templateId = instanceData?.template_id || (data as GradeEnriched).template_id
       
       if (templateId) {
         logger.info('[Learner Grade] Récupération du modèle d\'évaluation', { 
           templateId,
           fromInstance: !!instanceData,
-          fromGrade: !!(data as any).template_id
+          fromGrade: !!(data as GradeEnriched).template_id
         })
         
         // Récupérer le modèle
@@ -204,11 +218,11 @@ export default function LearnerQuizPage() {
               errorMessage: questionsError.message
             })
           } else if (questionsData) {
-            (templateData as any).questions = questionsData
+            (templateData as { questions?: Question[] }).questions = questionsData
           }
           
-          (data as any).evaluation_template = templateData
-          if (instanceData?.id) (data as any).evaluation_instance_id = instanceData.id
+          (data as GradeEnriched).evaluation_template = templateData as GradeEnriched['evaluation_template']
+          if (instanceData?.id) (data as GradeEnriched).evaluation_instance_id = instanceData.id
           logger.info('[Learner Grade] Modèle d\'évaluation récupéré', { 
             templateId: templateData.id,
             templateName: templateData.name,
@@ -231,7 +245,7 @@ export default function LearnerQuizPage() {
           gradeId: data.id,
           hasInstance: !!instanceData,
           instanceTemplateId: instanceData?.template_id,
-          gradeTemplateId: (data as any).template_id
+          gradeTemplateId: (data as GradeEnriched).template_id
         })
       }
       
@@ -245,7 +259,7 @@ export default function LearnerQuizPage() {
     queryKey: ['learner-evaluation-responses', quizId, studentId],
     queryFn: async () => {
       if (!supabase || !studentId || !grade) return null
-      const instanceId = (grade as any).evaluation_instance_id
+      const instanceId = (grade as GradeEnriched).evaluation_instance_id
       if (instanceId) {
         const { data: responses, error: responsesError } = await supabase
           .from('evaluation_responses')
@@ -364,7 +378,7 @@ export default function LearnerQuizPage() {
     const explanation = q.explanation || undefined
     const points = q.points || 1
     let options: string[] | undefined
-    let correct_answer: string | string[] = q.correct_answer as any
+    let correct_answer: string | string[] = q.correct_answer
 
     if (type === 'multiple_choice') {
       const rawOptions = q.options
@@ -408,7 +422,7 @@ export default function LearnerQuizPage() {
   }
 
   /** Évaluations satisfaction (pré/post formation) : uniquement étoiles + expression libre */
-  const isSatisfactionEvaluation = !!grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as any).assessment_type || '')
+  const isSatisfactionEvaluation = !!grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as GradeEnriched).assessment_type || '')
 
   const questions: Question[] = (() => {
     if (quiz) {
@@ -421,8 +435,8 @@ export default function LearnerQuizPage() {
     }
     if (lessonQuizFallback?.questions) return lessonQuizFallback.questions
     const templateQuestions =
-      gradeQuizMode && (grade as any)?.evaluation_template?.questions
-        ? (grade as any).evaluation_template.questions
+      gradeQuizMode && (grade as GradeEnriched)?.evaluation_template?.questions
+        ? (grade as GradeEnriched).evaluation_template!.questions
         : null
     if (templateQuestions) {
       const mapped = templateQuestions
@@ -444,7 +458,7 @@ export default function LearnerQuizPage() {
             question_type: q.question_type,
             type: q.type,
           })),
-          assessmentType: (grade as any)?.assessment_type,
+          assessmentType: (grade as GradeEnriched)?.assessment_type,
         })
       }
       
@@ -554,11 +568,11 @@ export default function LearnerQuizPage() {
     setIsSubmitting(true)
 
     try {
-      const instanceId = grade && (grade as any).evaluation_instance_id
+      const instanceId = grade && (grade as GradeEnriched).evaluation_instance_id
 
       // Soumission pour une évaluation (grade) avec modèle : enregistrer dans evaluation_responses
       if (gradeQuizMode && instanceId && studentId && supabase && questions.length > 0) {
-        const isSatisfactionSubmit = !!grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as any).assessment_type || '')
+        const isSatisfactionSubmit = !!grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as GradeEnriched).assessment_type || '')
         /** Valeurs d'étoiles envoyées au backend (pour afficher la moyenne même si l'API ne renvoie pas answer_rating) */
         const submittedStarValues: number[] = []
         const submittedRatingByQuestionId: Record<string, number> = {}
@@ -602,11 +616,11 @@ export default function LearnerQuizPage() {
         }
         const { error: rpcCorrectError } = await supabase.rpc('auto_correct_evaluation_responses', { p_instance_id: instanceId })
         if (rpcCorrectError) logger.warn('[Learner Quiz] auto_correct_evaluation_responses', { error: rpcCorrectError })
-        const { error: rpcGradeError } = await (supabase as any).rpc('update_grade_from_instance_for_learner', { p_instance_id: instanceId })
+        const { error: rpcGradeError } = await (supabase as { rpc: (fn: string, args: { p_instance_id: string }) => Promise<{ error: unknown }> }).rpc('update_grade_from_instance_for_learner', { p_instance_id: instanceId })
         if (rpcGradeError) logger.warn('[Learner Quiz] update_grade_from_instance_for_learner', { error: rpcGradeError })
         
         // Vérifier si c'est une évaluation satisfaction (pas de score, uniquement étoiles)
-        const isSatisfactionType = grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as any).assessment_type || '')
+        const isSatisfactionType = grade && ['pre_formation', 'hot', 'cold', 'manager', 'instructor', 'funder'].includes((grade as GradeEnriched).assessment_type || '')
         
         // Récupérer les réponses avec answer_rating pour les questions rating
         const { data: allResponsesRaw } = await supabase
@@ -688,7 +702,7 @@ export default function LearnerQuizPage() {
           setResults({
             score: percentage,
             total: Number(maxScore),
-            passed: percentage >= ((grade as any)?.evaluation_template?.passing_score ?? 70),
+            passed: percentage >= ((grade as GradeEnriched)?.evaluation_template?.passing_score ?? 70),
             answers: answerResults,
             isSatisfaction: false,
           })
@@ -742,7 +756,7 @@ export default function LearnerQuizPage() {
 
       if (studentId && supabase) {
         try {
-          await (supabase as any)
+          await (supabase as { from: (table: string) => { insert: (values: object) => Promise<{ error: unknown }> } })
             .from('lesson_quiz_responses')
             .insert({
               student_id: studentId,
@@ -849,7 +863,7 @@ export default function LearnerQuizPage() {
       : (hasScore && grade.max_score ? Math.round(((grade.score ?? 0) / grade.max_score) * 100) : null)
     
     // Vérifier si l'évaluation a un modèle avec des questions
-    const evaluationTemplate = (grade as any).evaluation_template
+    const evaluationTemplate = (grade as GradeEnriched).evaluation_template
     const hasQuestions = evaluationTemplate?.questions && Array.isArray(evaluationTemplate.questions) && evaluationTemplate.questions.length > 0
     const hasResponses = evaluationResponses && evaluationResponses.length > 0
     const canComplete = hasQuestions && !isCompleted && !hasResponses
@@ -887,10 +901,10 @@ export default function LearnerQuizPage() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900 mb-2">{grade.subject || 'Évaluation'}</h1>
               <div className="flex items-center gap-3 text-sm text-gray-500">
-                {(grade as any).sessions?.name && (
+                {(grade as GradeEnriched).sessions?.name && (
                   <span className="flex items-center gap-1">
                     <FileText className="h-4 w-4" />
-                    {(grade as any).sessions.name}
+                    {(grade as GradeEnriched).sessions!.name}
                   </span>
                 )}
                 {grade.assessment_type && (
@@ -1073,11 +1087,11 @@ export default function LearnerQuizPage() {
             </div>
           )}
 
-          {(grade as any).feedback && (
+          {(grade as GradeEnriched).feedback && (
             <div className="mb-4">
               <h3 className="font-semibold text-gray-900 mb-2">Commentaires du formateur</h3>
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{(grade as any).feedback}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{(grade as GradeEnriched).feedback}</p>
               </div>
             </div>
           )}
@@ -1178,7 +1192,7 @@ export default function LearnerQuizPage() {
             {isSatisfaction ? 'Merci pour votre retour !' : results.passed ? 'Félicitations !' : 'Quiz terminé'}
           </h1>
           <p className="text-gray-500 mb-6">
-            {quiz?.title || (grade as any)?.subject || 'Évaluation'}
+            {quiz?.title || (grade as GradeEnriched)?.subject || 'Évaluation'}
           </p>
 
           {isSatisfaction ? (

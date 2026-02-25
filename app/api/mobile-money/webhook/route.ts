@@ -111,7 +111,7 @@ export async function POST(
       provider: provider as MobileMoneyProvider,
       transaction_id: body.transaction_id || body.transactionId || body.id,
       status: mapWebhookStatus(provider, body.status || body.state),
-      amount: body.amount ? parseFloat(body.amount) : 0,
+      amount: body.amount != null ? Number(body.amount) : 0,
       currency: body.currency || 'XOF',
       phone_number: body.phone_number || body.phoneNumber || body.msisdn || body.subscriber?.msisdn,
       timestamp: body.timestamp || body.created_at || new Date().toISOString(),

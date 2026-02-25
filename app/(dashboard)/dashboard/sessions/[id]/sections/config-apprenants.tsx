@@ -108,7 +108,7 @@ export function ConfigApprenants({
     queryFn: async () => {
       if (!user?.organization_id) return []
       const { data, error } = await supabase
-        .from('funding_types' as any)
+        .from('funding_types')
         .select('id, name, code, description')
         .eq('organization_id', user.organization_id)
         .eq('is_active', true)
@@ -362,9 +362,9 @@ export function ConfigApprenants({
       })
       onCreateEnrollment()
     } catch (error) {
-      if (error instanceof Error || (error as any).errors) {
-        const zodErrors = (error as any).errors || []
-        const errorMessages = zodErrors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')
+      if (error instanceof Error || (error as { errors?: { path: (string | number)[]; message: string }[] }).errors) {
+        const zodErrors = (error as { errors: { path: (string | number)[]; message: string }[] }).errors || []
+        const errorMessages = zodErrors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
         addToast({
           type: 'error',
           title: 'Erreur de validation',
@@ -990,8 +990,8 @@ export function ConfigApprenants({
           <div className="space-y-2">
             {enrollments.map((enrollment) => {
               // Gérer différents formats de données
-              const student = 
-                (enrollment as any).students ||
+              const student =
+                (enrollment as EnrollmentWithRelations).students ??
                 null
               
               if (!student) {

@@ -47,10 +47,10 @@ export async function GET(
         canceled: 'canceled',
       }
 
-      const paymentStatus = payment.status || 'pending';
+      const paymentStatus: string = payment.status ?? 'pending'
       return NextResponse.json({
-        status: statusMap[paymentStatus] || paymentStatus,
-        amount: parseFloat(String(payment.amount)),
+        status: statusMap[paymentStatus] ?? paymentStatus,
+        amount: Number(payment.amount) || 0,
         currency: payment.currency,
         paid: paymentStatus === 'completed',
       })

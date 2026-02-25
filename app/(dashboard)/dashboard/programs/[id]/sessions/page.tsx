@@ -12,6 +12,7 @@ import { ArrowLeft, Plus, Calendar, Clock, MapPin, Users, X, UserPlus } from 'lu
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import type { SessionWithRelations } from '@/lib/types/query-types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Enrollment = TableRow<'enrollments'>
@@ -43,9 +44,9 @@ export default function ProgramSessionsPage() {
   })
 
   // Récupérer les sessions
-  const { data: sessions, isLoading, refetch } = useQuery({
+  const { data: sessions, isLoading, refetch } = useQuery<SessionWithRelations[]>({
     queryKey: ['program-sessions', programId],
-    queryFn: async () => {
+    queryFn: async (): Promise<SessionWithRelations[]> => {
       // Récupérer les formations du programme d'abord
       const { data: formations } = await supabase
         .from('formations')
@@ -66,7 +67,7 @@ export default function ProgramSessionsPage() {
       const { data, error } = await q
 
       if (error) throw error
-      return data || []
+      return (data ?? []) as SessionWithRelations[]
     },
   })
 
@@ -107,7 +108,7 @@ export default function ProgramSessionsPage() {
     queryFn: async () => {
       if (!user?.organization_id) return []
       const { data, error } = await supabase
-        .from('funding_types' as any)
+        .from('funding_types')
         .select('id, name, code, description')
         .eq('organization_id', user.organization_id)
         .eq('is_active', true)
@@ -211,14 +212,14 @@ export default function ProgramSessionsPage() {
 
   // Fonction pour ouvrir le formulaire d'inscription
   const handleEnrollStudent = (sessionId: string) => {
-    const session = sessions?.find((s: any) => s.id === sessionId)
+    const session = sessions?.find((s: SessionWithRelations) => s.id === sessionId)
     setSelectedSessionId(sessionId)
     setEnrollmentForm({
       student_id: '',
       enrollment_date: new Date().toISOString().split('T')[0],
       status: 'confirmed',
       payment_status: 'pending',
-      total_amount: (program?.formations?.[0] as any)?.price?.toString() || '0',
+      total_amount: program?.formations?.[0]?.price?.toString() ?? '0',
       paid_amount: '0',
       funding_type_id: '',
     })
@@ -318,7 +319,7 @@ export default function ProgramSessionsPage() {
         enrollment_date: new Date().toISOString().split('T')[0],
         status: 'confirmed',
         payment_status: 'pending',
-        total_amount: (program as any)?.price?.toString() || '0',
+        total_amount: (program as { price?: number } | null)?.price?.toString() ?? '0',
         paid_amount: '0',
         funding_type_id: '',
       })
@@ -515,13 +516,13 @@ export default function ProgramSessionsPage() {
             >
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Session:</strong> {sessions?.find((s: any) => s.id === selectedSessionId)?.name}
+                  <strong>Session:</strong> {sessions?.find((s: SessionWithRelations) => s.id === selectedSessionId)?.name}
                 </p>
                 <p className="text-sm text-blue-700 mt-1">
-                  {sessions?.find((s: any) => s.id === selectedSessionId) && (
+                  {sessions?.find((s: SessionWithRelations) => s.id === selectedSessionId) && (
                     <>
-                      {formatDate(sessions.find((s: any) => s.id === selectedSessionId)!.start_date)} -{' '}
-                      {formatDate(sessions.find((s: any) => s.id === selectedSessionId)!.end_date)}
+                      {formatDate(sessions.find((s: SessionWithRelations) => s.id === selectedSessionId)!.start_date)} -{' '}
+                      {formatDate(sessions.find((s: SessionWithRelations) => s.id === selectedSessionId)!.end_date)}
                     </>
                   )}
                 </p>
@@ -606,7 +607,7 @@ export default function ProgramSessionsPage() {
                 {program && (
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Montant total ({(program as any).currency || 'XOF'}) *
+                      Montant total ({program?.formations?.[0]?.currency ?? 'XOF'}) *
                     </label>
                     <input
                       type="number"
@@ -629,7 +630,7 @@ export default function ProgramSessionsPage() {
                 {program && (
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Montant payé ({(program as any).currency || 'XOF'})
+                      Montant payé ({(program as { currency?: string })?.currency ?? 'XOF'})
                     </label>
                     <input
                       type="number"
@@ -698,7 +699,7 @@ export default function ProgramSessionsPage() {
                   >
                     <option value="">Aucun (financement personnel)</option>
                     {fundingTypes && fundingTypes.length > 0 ? (
-                      fundingTypes.map((type: any) => (
+                      fundingTypes.map((type: TableRow<'funding_types'>) => (
                         <option key={type.id} value={type.id}>
                           {type.name} {type.code ? `(${type.code})` : ''}
                         </option>
@@ -771,7 +772,7 @@ export default function ProgramSessionsPage() {
             </div>
           ) : sessions && sessions.length > 0 ? (
             <div className="space-y-4">
-              {sessions.map((session) => (
+              {sessions.map((session: SessionWithRelations) => (
                 <div
                   key={session.id}
                   className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"

@@ -123,8 +123,8 @@ export function usePlatformAdmin(): UsePlatformAdminReturn {
     if (role === 'super_admin') return true
 
     // Check explicit permission first
-    if ((permissions as any)[permission] !== undefined) {
-      return (permissions as any)[permission] as boolean
+    if (permission in permissions && permissions[permission] !== undefined) {
+      return Boolean(permissions[permission])
     }
 
     // Fall back to default permissions for role

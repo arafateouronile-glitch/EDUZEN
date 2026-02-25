@@ -11,6 +11,9 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 const CRON_SECRET = process.env.CRON_SECRET
 const ALLOWED_IPS = process.env.CRON_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
 
+/** Document retourné par le select documents(id, name, file_url, type) */
+type SelectedDocument = { id: string; name: string | null; file_url: string | null; type: string | null } | null
+
 export async function GET(request: NextRequest) {
   return withCronSecurity(
     request,
@@ -49,7 +52,10 @@ export async function GET(request: NextRequest) {
 
     for (const scheduledSend of pending) {
       try {
-        const document = scheduledSend.documents as any
+        const rawDoc = scheduledSend.documents as SelectedDocument
+        const document = rawDoc
+          ? { name: rawDoc.name ?? '', file_url: rawDoc.file_url ?? undefined, type: rawDoc.type ?? undefined }
+          : { name: '', file_url: undefined, type: undefined }
         const recipients = await getRecipients(
           supabaseAdmin,
           scheduledSend.organization_id,
@@ -76,8 +82,9 @@ export async function GET(request: NextRequest) {
 
         for (const recipient of recipients) {
           if (scheduledSend.send_via && scheduledSend.send_via.includes('email') && recipient.email) {
+            const email = recipient.email
             const result = await sendDocumentByEmail(
-              recipient.email,
+              email,
               recipient.name,
               scheduledSend.subject || 'Document partagé',
               scheduledSend.message || '',
@@ -152,7 +159,7 @@ export async function GET(request: NextRequest) {
  * Récupère les destinataires en fonction du type et des IDs
  */
 async function getRecipients(
-  supabase: any,
+  supabase: Awaited<ReturnType<typeof createAdminClient>>,
   organizationId: string,
   recipientType: string,
   recipientIds: string[],
@@ -169,9 +176,9 @@ async function getRecipients(
         .in('id', recipientIds)
         .eq('organization_id', organizationId)
       
-      teachers?.forEach((t: any) => {
+      teachers?.forEach((t: { email?: string; full_name?: string; phone?: string }) => {
         if (t.email) {
-          recipients.push({ email: t.email, name: t.full_name, phone: t.phone })
+          recipients.push({ email: t.email, name: t.full_name ?? '', phone: t.phone })
         }
       })
     } else if (recipientType === 'student') {
@@ -181,11 +188,11 @@ async function getRecipients(
         .in('id', recipientIds)
         .eq('organization_id', organizationId)
       
-      students?.forEach((s: any) => {
+      students?.forEach((s: { email?: string; first_name?: string; last_name?: string; phone?: string; parent_phone?: string }) => {
         if (s.email) {
           recipients.push({ 
             email: s.email, 
-            name: `${s.first_name} ${s.last_name}`,
+            name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || 'Destinataire',
             phone: s.phone || s.parent_phone 
           })
         }
@@ -203,10 +210,10 @@ async function getRecipients(
         `)
         .eq('session_id', sessionId)
       
-      sessionTeachers?.forEach((st: any) => {
+      sessionTeachers?.forEach((st: { users?: { email?: string; full_name?: string; phone?: string } | null }) => {
         const t = st.users
         if (t?.email) {
-          recipients.push({ email: t.email, name: t.full_name, phone: t.phone })
+          recipients.push({ email: t.email, name: t.full_name ?? '', phone: t.phone })
         }
       })
     }
@@ -220,12 +227,12 @@ async function getRecipients(
         `)
         .eq('session_id', sessionId)
       
-      enrollments?.forEach((e: any) => {
+      enrollments?.forEach((e: { students?: { email?: string; first_name?: string; last_name?: string; phone?: string; parent_phone?: string } | null }) => {
         const s = e.students
         if (s?.email) {
           recipients.push({ 
             email: s.email, 
-            name: `${s.first_name} ${s.last_name}`,
+            name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || 'Destinataire',
             phone: s.phone || s.parent_phone 
           })
         }

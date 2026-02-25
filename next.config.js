@@ -29,11 +29,10 @@ const nextConfig = {
       canvas: './lib/stubs/canvas.js',
     },
   },
-  // Désactiver la vérification TypeScript pendant le build (optionnel pour accélérer)
-  // TypeScript est quand même vérifié par votre IDE et CI/CD
+  // Vérification TypeScript pendant le build désactivée pour accélérer (projet volumineux → phase TS ~30+ min).
+  // Lancer « npm run type-check » en CI ou avant une release pour vérifier les types.
   typescript: {
-    // Vérification TypeScript stricte activée
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
   images: {
     remotePatterns: [

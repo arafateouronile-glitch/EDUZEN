@@ -348,7 +348,7 @@ export function useSessionDetail(sessionId: string) {
     queryFn: async () => {
       if (!sessionId) return []
       const { data, error } = await supabase
-        .from('session_modules' as any)
+        .from('session_modules')
         .select('*')
         .eq('session_id', sessionId)
         .order('display_order', { ascending: true })
@@ -464,7 +464,8 @@ export function useSessionDetail(sessionId: string) {
 
       if (error) throw error
 
-      const attendanceData = (data as any[]) || []
+      type AttendanceRow = { status: string; student_id: string }
+      const attendanceData = (data as AttendanceRow[] | null) ?? []
       const stats = {
         total: attendanceData.length,
         present: attendanceData.filter((a) => a.status === 'present').length,
@@ -602,15 +603,17 @@ export function useSessionDetail(sessionId: string) {
         programIds = [program.id]
       }
 
+      type SessionRowExtended = typeof sessionData & { code?: string; manager1_id?: string; manager2_id?: string; inter_entreprise?: boolean; sous_traitance?: boolean; timezone?: string }
+      const s = sessionData as SessionRowExtended
       setFormData({
         name: sessionData.name || '',
         type: 'formation_professionnelle',
-        code: (sessionData as any).code || '',
-        manager1_id: (sessionData as any).manager1_id || user?.id || '',
-        manager2_id: (sessionData as any).manager2_id || '',
-        inter_entreprise: (sessionData as any).inter_entreprise ?? true,
-        sous_traitance: (sessionData as any).sous_traitance ?? false,
-        timezone: (sessionData as any).timezone || 'Europe/Paris',
+        code: s.code || '',
+        manager1_id: s.manager1_id || user?.id || '',
+        manager2_id: s.manager2_id || '',
+        inter_entreprise: s.inter_entreprise ?? true,
+        sous_traitance: s.sous_traitance ?? false,
+        timezone: s.timezone || 'Europe/Paris',
         formation_id: formation?.id || '',
         program_ids: programIds,
         start_date: sessionData.start_date?.split('T')[0] || '',
@@ -652,7 +655,7 @@ export function useSessionDetail(sessionId: string) {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
       // Si teacher_id a été modifié, invalider aussi les caches des sessions enseignants
-      if ((variables as any)?.teacher_id !== undefined) {
+      if ((variables as { teacher_id?: string })?.teacher_id !== undefined) {
         queryClient.invalidateQueries({ queryKey: ['teacher-dashboard-sessions'], exact: false })
         queryClient.invalidateQueries({ queryKey: ['teacher-session-ids'], exact: false })
         queryClient.invalidateQueries({ queryKey: ['teacher-sessions'], exact: false })
@@ -750,9 +753,9 @@ export function useSessionDetail(sessionId: string) {
 
         enrollmentSchema.parse(dataToValidate)
       } catch (error) {
-        if (error instanceof Error || (error as any).errors) {
-          const zodErrors = (error as any).errors || []
-          const errorMessages = zodErrors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')
+        if (error instanceof Error || (error as { errors?: { path: (string | number)[]; message: string }[] }).errors) {
+          const zodErrors = (error as { errors: { path: (string | number)[]; message: string }[] }).errors || []
+          const errorMessages = zodErrors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
           throw new Error(`Erreur de validation : ${errorMessages}`)
         }
         throw error
@@ -1221,15 +1224,15 @@ export function useSessionDetail(sessionId: string) {
                     .select('id, student_id, organization_id, subject')
                     .in('id', successful
                       .filter(r => r.status === 'fulfilled' && r.value?.id)
-                      .map(r => (r as any).value.id)
-                      .slice(0, 5) // Vérifier les 5 premières
-                    )
+                    .map(r => (r as PromiseFulfilledResult<{ id: string }>).value.id)
+                    .slice(0, 5) // Vérifier les 5 premières
+                  )
                   
                   if (dbError) {
                     logger.error('Erreur lors de la vérification en base', dbError, {
                       evaluationIds: successful
                         .filter(r => r.status === 'fulfilled' && r.value?.id)
-                        .map(r => (r as any).value.id),
+                        .map(r => (r as PromiseFulfilledResult<{ id: string }>).value.id),
                     })
                   } else {
                     logger.info('Vérification en base réussie', {
@@ -1514,9 +1517,9 @@ export function useSessionDetail(sessionId: string) {
       // Valider avec Zod
       sessionSchema.parse(dataToValidate)
     } catch (error) {
-      if (error instanceof Error || (error as any).errors) {
-        const zodErrors = (error as any).errors || []
-        const errorMessages = zodErrors.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')
+      if (error instanceof Error || (error as { errors?: { path: (string | number)[]; message: string }[] }).errors) {
+        const zodErrors = (error as { errors: { path: (string | number)[]; message: string }[] }).errors || []
+        const errorMessages = zodErrors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
         addToast({
           type: 'error',
           title: 'Erreur de validation',
@@ -1644,8 +1647,8 @@ export function useSessionDetail(sessionId: string) {
     sessionModules: sessionModules || [],
     refetchSessionModules,
     enrollments: enrollments as EnrollmentWithRelations[] | undefined,
-    payments: payments as any[] | undefined,
-    students: students as any[] | undefined,
+    payments: payments as (TableRow<'payments'>)[] | undefined,
+    students: students as (TableRow<'students'>)[] | undefined,
     attendanceStats,
     grades: grades as GradeWithRelations[] | undefined,
     gradesStats,

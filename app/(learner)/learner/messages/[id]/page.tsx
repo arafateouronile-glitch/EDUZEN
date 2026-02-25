@@ -390,7 +390,7 @@ export default function LearnerConversationPage() {
   useEffect(() => {
     const fetchAdminName = async () => {
       // Récupérer le nom de l'admin si c'est un utilisateur/admin
-      if (!otherParticipant || otherParticipant.type !== 'admin' || !otherParticipant.data?.id) return
+      if (!otherParticipant || (otherParticipant.type as string) !== 'admin' || !otherParticipant.data?.id) return
       
       // Si on a déjà un nom complet, ne rien faire
       if (otherParticipant.name && !otherParticipant.name.startsWith('Administrateur ') && !otherParticipant.name.startsWith('Utilisateur ')) return
@@ -401,7 +401,8 @@ export default function LearnerConversationPage() {
           .rpc('get_user_name', { p_user_id: otherParticipant.data.id })
         
         if (!error && userData) {
-          const userName = (userData as any).full_name || (userData as any).email
+          const u = userData as { full_name?: string | null; email?: string | null }
+          const userName = u.full_name || u.email
           if (userName) {
             setEnrichedOtherParticipant({
               ...otherParticipant,

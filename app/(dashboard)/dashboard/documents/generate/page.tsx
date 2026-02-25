@@ -39,6 +39,7 @@ import Link from 'next/link'
 import type { StudentWithRelations, SessionWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { DocumentType } from '@/lib/types/document-templates'
+import type { Json } from '@/types/database.types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { ContextualFAQ } from '@/components/knowledge-base/contextual-faq'
 
@@ -220,9 +221,8 @@ export default function GenerateDocumentPage() {
 
   // Mettre à jour le rôle utilisateur quand les données changent
   useEffect(() => {
-    if (currentUser) {
-      setUserRole((currentUser as any).role)
-    }
+    const role = currentUser && 'role' in currentUser ? (currentUser as { role: string | null }).role : null
+    setUserRole(role ?? null)
   }, [currentUser])
 
   // Récupérer l'organisation
@@ -280,10 +280,13 @@ export default function GenerateDocumentPage() {
   })
 
   // Session liée à la facture sélectionnée (pour récupérer les modules même sans sélectionner la session)
+  type InvoiceWithSession = InvoiceWithRelations & { session_id?: string; enrollments?: { session_id?: string } | Array<{ session_id?: string }> }
   const sessionIdFromInvoice = useMemo(() => {
     if (documentType !== 'facture' || !selectedInvoiceId || !invoices?.length) return null
-    const inv = invoices.find((i: any) => i.id === selectedInvoiceId) as any
-    return inv?.enrollments?.session_id ?? inv?.session_id ?? null
+    const inv = invoices.find((i) => i.id === selectedInvoiceId) as InvoiceWithSession | undefined
+    const enrollments = inv?.enrollments
+    const fromEnrollment = Array.isArray(enrollments) ? enrollments[0]?.session_id : (enrollments as { session_id?: string } | undefined)?.session_id
+    return fromEnrollment ?? inv?.session_id ?? null
   }, [documentType, selectedInvoiceId, invoices])
 
   const effectiveSessionId = selectedSessionId || sessionIdFromInvoice
@@ -293,7 +296,7 @@ export default function GenerateDocumentPage() {
     queryFn: async () => {
       if (!effectiveSessionId) return []
       const { data, error } = await supabase
-        .from('session_modules' as any)
+        .from('session_modules')
         .select('id, name, amount, currency, display_order')
         .eq('session_id', effectiveSessionId)
         .order('display_order', { ascending: true })
@@ -378,9 +381,8 @@ export default function GenerateDocumentPage() {
 
       if (selectedInvoiceId) {
         invoice = invoices?.find((i) => i.id === selectedInvoiceId) as InvoiceWithRelations | undefined
-        // Si une facture est sélectionnée, extraire l'étudiant depuis la facture si disponible
-        if (invoice && (invoice as any).students && !student) {
-          student = (invoice as any).students as StudentWithRelations
+        if (invoice && invoice.students && !student) {
+          student = invoice.students
         }
       }
 
@@ -508,7 +510,7 @@ export default function GenerateDocumentPage() {
         if (documentBlob && user?.organization_id && selectedTemplate) {
           try {
             // Déterminer l'ID de l'étudiant pour le document généré (avant l'upload)
-            const invoiceStudentId = invoice?.student_id || (invoice as any)?.students?.id
+            const invoiceStudentId = invoice?.student_id || invoice?.students?.id
             
             // 1. Uploader le document (PDF ou Word) dans Supabase Storage
             const storagePath = `documents/${user.organization_id}/${Date.now()}_${filename}`
@@ -529,7 +531,7 @@ export default function GenerateDocumentPage() {
                 filename: filename,
                 title: selectedTemplate.name || filename,
                 studentId: student?.id || invoiceStudentId,
-                student: student || (invoiceStudentId ? (invoice as any)?.students : undefined),
+                student: student || (invoiceStudentId ? invoice?.students : undefined),
               }
               setGeneratedDocument(docData)
               logger.debug('[Generate] Document généré stocké (upload échoué):', docData)
@@ -545,16 +547,28 @@ export default function GenerateDocumentPage() {
                 filename: filename,
                 title: selectedTemplate.name || filename,
                 studentId: student?.id || invoiceStudentId,
-                student: student || (invoiceStudentId ? (invoice as any)?.students : undefined),
+                student: student || (invoiceStudentId ? invoice?.students : undefined),
               }
               setGeneratedDocument(docData)
               logger.debug('[Generate] Document généré stocké (upload réussi):', docData)
               
               // 3. Sauvegarder dans generated_documents
-              const documentData: any = {
+              const documentData: {
+                organization_id: string
+                template_id: string
+                type: string
+                file_name: string
+                file_url: string
+                format: string
+                page_count?: number
+                metadata: Record<string, unknown>
+                generated_by: string
+                related_entity_type?: string
+                related_entity_id?: string
+              } = {
                 organization_id: user.organization_id,
                 template_id: selectedTemplate.id,
-                type: mapDocumentTypeToTemplateType(documentType) as any,
+                type: mapDocumentTypeToTemplateType(documentType),
                 file_name: filename,
                 file_url: urlData.publicUrl,
                 format: exportFormat,
@@ -627,10 +641,14 @@ export default function GenerateDocumentPage() {
                 delete documentData.related_entity_id
               }
               
-              // Sauvegarder le document
+              // Sauvegarder le document (type et metadata conformes à la table generated_documents)
               const { error: saveError } = await supabase
                 .from('generated_documents')
-                .insert(documentData)
+                .insert({
+                  ...documentData,
+                  type: documentData.type as DocumentType,
+                  metadata: documentData.metadata as Json,
+                })
 
               if (saveError) {
                 logger.error('Erreur lors de la sauvegarde du document:', saveError)
@@ -891,7 +909,7 @@ export default function GenerateDocumentPage() {
           organization_id: user.organization_id,
           sent_at: new Date().toISOString(),
           sent_by: user.id,
-        } as any)
+        })
 
       if (error) {
         logger.error('Erreur lors de l\'insertion dans learner_documents:', error)

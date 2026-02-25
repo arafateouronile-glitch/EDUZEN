@@ -28,23 +28,42 @@ export function useAuth() {
           const isSessionMissing =
             error?.name === 'AuthSessionMissingError' ||
             (error as { message?: string })?.message?.includes('Auth session missing')
-          if (!isSessionMissing) {
+          const isRateLimit = (error as { status?: number })?.status === 429
+          if (!isSessionMissing && !isRateLimit) {
             logger.error('Auth getUser error', error as Error)
+          }
+          if (isRateLimit) {
+            logger.warn('Auth rate limit (429), returning null for session')
           }
           return null
         }
         return user ? { user } : null
       }
 
+      const timeoutMs = 10000 // 10s pour éviter les faux timeouts (réseau lent, cold start)
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error('Session fetch timeout')), timeoutMs)
+      })
+
       try {
-        let result = await fetchSession()
-        // Après hard refresh, la session peut ne pas être réhydratée tout de suite : réessayer une fois
-        if (!result && typeof window !== 'undefined') {
-          await new Promise((r) => setTimeout(r, 400))
-          result = await fetchSession()
-        }
-        return result
+        const sessionPromise = (async () => {
+          let result = await fetchSession()
+          if (!result && typeof window !== 'undefined') {
+            await new Promise((r) => setTimeout(r, 400))
+            result = await fetchSession()
+          }
+          return result
+        })()
+        const result = await Promise.race([sessionPromise, timeoutPromise])
+        return result ?? null
       } catch (error) {
+        const err = error as Error
+        const isTimeout = err?.message === 'Session fetch timeout'
+        if (isTimeout) {
+          logger.debug(`Session fetch timed out after ${timeoutMs / 1000}s (réseau lent ou non connecté)`)
+        } else {
+          logger.warn('Session fetch failed', err)
+        }
         return null
       }
     },
@@ -97,7 +116,7 @@ export function useAuth() {
                 if (syncError) {
                   logger.error('Error syncing user:', syncError)
                   // Ne pas throw, on continue avec null pour éviter de bloquer l'app
-                } else if ((syncResult as any)?.success) {
+                } else if ((syncResult as { success?: boolean })?.success) {
                   logger.info('User synced successfully, refetching...', { syncResult })
                   
                   // Attendre un peu pour s'assurer que l'utilisateur est disponible
@@ -138,8 +157,30 @@ export function useAuth() {
               return null
             }
 
-            // Vérifier que l'utilisateur a un organization_id
-            if (!data.organization_id) {
+            // Récupération automatique de l'organisation si absente (ex: après récupération de compte)
+            if (!data.organization_id && session?.user?.id) {
+              try {
+                const { data: recoverResult, error: recoverError } = await supabase.rpc(
+                  'recover_user_organization',
+                  { p_user_id: session.user.id }
+                )
+                const result = recoverResult as { success?: boolean; organization_id?: string } | null
+                if (!recoverError && result?.success && result?.organization_id) {
+                  logger.info('Organization recovered from auth metadata', { organizationId: result.organization_id })
+                  const { data: refetched } = await supabase
+                    .from('users')
+                    .select('id, organization_id, email, full_name, phone, avatar_url, role, permissions, is_active, last_login_at, created_at, updated_at, theme_preference')
+                    .eq('id', session.user.id)
+                    .maybeSingle()
+                  if (refetched) {
+                    queryClient.invalidateQueries({ queryKey: ['user', session.user.id] })
+                    return refetched
+                  }
+                }
+              } catch (e) {
+                logger.warn('Recover organization failed', e as Error)
+              }
+            } else if (!data.organization_id) {
               logger.warn('User exists but has no organization_id')
             }
 
@@ -373,12 +414,13 @@ export function useAuth() {
       }
 
       // 3. Créer l'utilisateur dans la table users en utilisant une fonction SQL (bypass RLS)
-      let createdUser: any = null
-      let userError: any = null
+      type CreatedUserRow = { id: string; organization_id?: string; email?: string; full_name?: string; role?: string }
+      let createdUser: CreatedUserRow | null = null
+      let userError: { code?: string; message?: string } | null = null
       
       try {
-        // Essayer d'abord avec la fonction SQL
-        const { data: createdUserId, error: rpcUserError } = await (supabase as any).rpc(
+        // Essayer d'abord avec la fonction SQL (RPC peut être absent des types générés)
+        const { data: createdUserId, error: rpcUserError } = await (supabase as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: string | null; error: { code?: string; message?: string } | null }> }).rpc(
           'create_user_for_organization',
           {
             user_id: userId,
@@ -424,7 +466,11 @@ export function useAuth() {
           }
         }
       } catch (userErr) {
-        userError = userErr
+        userError = userErr && typeof userErr === 'object' && 'code' in userErr
+          ? (userErr as { code?: string; message?: string })
+          : userErr instanceof Error
+            ? { code: undefined, message: userErr.message }
+            : { code: undefined, message: String(userErr) }
       }
 
       if (userError) {
@@ -446,6 +492,15 @@ export function useAuth() {
 
       if (!createdUser?.organization_id) {
         throw new Error('Erreur : l\'utilisateur n\'a pas d\'organization_id')
+      }
+
+      // Stocker organization_id dans les métadonnées auth pour récupération future (connexion, sync)
+      try {
+        await supabase.auth.updateUser({
+          data: { organization_id: finalOrgId },
+        })
+      } catch (metaErr) {
+        logger.warn('Could not store organization_id in auth metadata (recovery may not work)', metaErr as Error)
       }
 
       // 4. Invalider les queries pour forcer le rechargement

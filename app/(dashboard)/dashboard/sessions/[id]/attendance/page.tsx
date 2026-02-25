@@ -51,7 +51,7 @@ export default function SessionAttendancePage() {
       const { data, error } = await q
       if (error) throw error
       // Mapper les résultats pour convertir null en undefined
-      return (data || []).map(enrollment => ({
+      return (data || []).map((enrollment: TableRow<'enrollments'> & { students?: TableRow<'students'> | null }) => ({
         ...enrollment,
         students: enrollment.students || undefined,
       })) as EnrollmentWithRelations[]

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { Database } from '@/types/database.types'
-import { ScheduledGenerationService } from '@/lib/services/scheduled-generation.service'
+import { ScheduledGenerationService, type ScheduledGenerationConfig } from '@/lib/services/scheduled-generation.service'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import { generateHTML } from '@/lib/utils/document-generation/html-generator'
@@ -88,17 +88,18 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const scheduledGenerationService = new ScheduledGenerationService(supabase)
-    const generation = await scheduledGenerationService.create({
+    const config: ScheduledGenerationConfig = {
       organization_id: user.organization_id,
       template_id: body.template_id,
       schedule_type: body.schedule_type,
-      schedule_config: body.schedule_config,
+      schedule_config: body.schedule_config ?? {},
       filter_criteria: body.filter_config || {},
-      format: body.format || 'PDF',
+      format: (body.format || 'PDF') as 'PDF' | 'DOCX' | 'HTML',
       send_email: body.send_email || false,
       email_recipients: body.email_recipients || [],
       enabled: body.is_active !== false,
-    })
+    }
+    const generation = await scheduledGenerationService.create(config)
 
     return NextResponse.json(generation)
   } catch (error) {

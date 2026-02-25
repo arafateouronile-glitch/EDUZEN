@@ -12,25 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Vercel Deploy Hook
-        if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
         run: |
           echo "Envoi du Deploy Hook à Vercel..."
-          resp=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}")
+          resp=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}" 2>/dev/null) || true
           code=$(echo "$resp" | tail -n1)
           body=$(echo "$resp" | sed '$d')
-          echo "HTTP $code"
+          echo "Réponse HTTP: ${code:-'(vide)'}"
           echo "$body" | head -c 500
-          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
-            echo "Erreur: Vercel a répondu $code"
+          echo ""
+          if [ -z "$code" ]; then
+            echo "→ Secret VERCEL_DEPLOY_HOOK_URL absent. GitHub → Settings → Secrets → Actions → ajouter VERCEL_DEPLOY_HOOK_URL."
             exit 1
           fi
-          echo ""
-          echo "Deploy Hook envoyé. Un déploiement devrait apparaître sur Vercel dans 1-2 min."
-
-      - name: Secret VERCEL_DEPLOY_HOOK_URL manquant
-        if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL == '' }}
-        run: |
-          echo "Le secret VERCEL_DEPLOY_HOOK_URL n'est pas défini."
-          echo "1. Vercel → Projet → Settings → Git → Deploy Hooks → Create Hook (branch: main)"
-          echo "2. GitHub → Repo → Settings → Secrets and variables → Actions → New secret: VERCEL_DEPLOY_HOOK_URL = URL du hook"
-          exit 1
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "→ Erreur Vercel: $code. Vérifiez l'URL du hook (Vercel → Deploy Hooks)."
+            exit 1
+          fi
+          echo "Deploy Hook envoyé. Vercel → Deployments : nouveau déploiement dans 1-2 min."

@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Récupérer l'organisation par son code (slug) - recherche insensible à la casse
   let { data: organization } = await supabase
     .from('organizations')
-    .select('name, code, logo_url')
+    .select('id, name, code, logo_url')
     .ilike('code', slug)
     .maybeSingle()
 
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!organization) {
     const { data: orgExact } = await supabase
       .from('organizations')
-      .select('name, code, logo_url')
+      .select('id, name, code, logo_url')
       .eq('code', slug)
       .maybeSingle()
     organization = orgExact || null
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!organization && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)) {
     const { data: orgById } = await supabase
       .from('organizations')
-      .select('name, code, logo_url')
+      .select('id, name, code, logo_url')
       .eq('id', slug)
       .maybeSingle()
     organization = orgById || null
@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { data: settings } = await supabase
     .from('public_catalog_settings')
     .select('meta_title, meta_description, meta_image_url, site_title')
-    .eq('organization_id', (organization as any).id)
+    .eq('organization_id', organization.id)
     .eq('is_enabled', true)
     .maybeSingle()
 
@@ -147,7 +147,7 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   }
 
   const { data: programsData } = await programsQuery.order('created_at', { ascending: false })
-  const programs = programsData || []
+  const programs = programsData ?? []
 
   // Filtrer les formations et sessions inactives
   const programsWithActiveContent = programs.map((program: any) => ({
@@ -201,9 +201,9 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
           primaryColor={primaryColor}
           stats={{
             courses: programsWithActiveContent.length,
-            learners: (catalogSettings as any)?.stats_trained_students ?? 1200,
-            certifications: (catalogSettings as any)?.stats_satisfaction_rate ?? 98,
-            successRate: (catalogSettings as any)?.stats_success_rate ?? 95
+            learners: (catalogSettings as { stats_trained_students?: number } | null)?.stats_trained_students ?? 1200,
+            certifications: (catalogSettings as { stats_satisfaction_rate?: number } | null)?.stats_satisfaction_rate ?? 98,
+            successRate: (catalogSettings as { stats_success_rate?: number } | null)?.stats_success_rate ?? 95
           }}
         />
 

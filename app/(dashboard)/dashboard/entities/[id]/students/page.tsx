@@ -604,7 +604,7 @@ function EntityStudentsPageContent() {
                   <Label htmlFor="relationship_type">Type de rattachement *</Label>
                   <Select
                     value={formData.relationship_type}
-                    onValueChange={(value) => setFormData({ ...formData, relationship_type: value as any })}
+                    onValueChange={(value) => setFormData({ ...formData, relationship_type: value as 'apprenticeship' | 'internship' | 'employment' | 'partnership' | 'sponsorship' | 'other' })}
                   >
                     <SelectTrigger>
                       <SelectValue />

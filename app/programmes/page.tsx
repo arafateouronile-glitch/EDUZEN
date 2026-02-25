@@ -57,7 +57,7 @@ export default async function ProgrammesPage({
   }
 
   const { data: programsData } = await programsQuery.order('created_at', { ascending: false })
-  const programs = programsData || []
+  const programs = programsData ?? []
 
   // Filtrer les formations et sessions inactives
   const programsWithActiveContent = programs.map((program: any) => ({

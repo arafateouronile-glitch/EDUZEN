@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/tooltip'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Separator } from '@/components/ui/separator'
+import type { AdminPermissions } from '@/types/super-admin.types'
 
 type NavItem = {
   name: string
@@ -251,7 +252,7 @@ export function SuperAdminSidebar() {
   }
 
   const renderNavItem = (item: NavItem, depth = 0) => {
-    const hasAccess = !item.permission || hasPermission(item.permission as any)
+    const hasAccess = !item.permission || hasPermission(item.permission as keyof AdminPermissions)
     if (!hasAccess) return null
 
     const isExpanded = expandedItems.includes(item.name)
@@ -261,7 +262,7 @@ export function SuperAdminSidebar() {
 
     // Filter children by permission
     const accessibleChildren = item.children?.filter(
-      (child) => !child.permission || hasPermission(child.permission as any)
+      (child) => !child.permission || hasPermission(child.permission as keyof AdminPermissions)
     )
 
     if (hasChildren && accessibleChildren?.length === 0) return null

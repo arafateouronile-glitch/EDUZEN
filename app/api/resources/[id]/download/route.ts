@@ -21,8 +21,12 @@ export async function GET(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // Récupérer la ressource
-    const { data: resource, error } = await (supabase as any)
+    // Table 'resources' absente des types générés Supabase ; chaîne typée manuellement
+    type ResourceRow = { id: string; external_url?: string | null; file_url?: string | null; [key: string]: unknown }
+    type ResourcesQuery = {
+      from(_: 'resources'): { select(_: string): { eq(_: string, _: string): { single(): Promise<{ data: ResourceRow | null; error: unknown }> } } }
+    }
+    const { data: resource, error } = await (supabase as unknown as ResourcesQuery)
       .from('resources')
       .select('*')
       .eq('id', resourceId)
@@ -32,6 +36,8 @@ export async function GET(
       return NextResponse.json({ error: 'Ressource non trouvée' }, { status: 404 })
     }
 
+    const res = resource
+
     // Enregistrer le téléchargement
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
     const userAgent = request.headers.get('user-agent') || undefined
@@ -40,13 +46,13 @@ export async function GET(
     await resourceLibraryService.recordDownload(resourceId, user.id, ipAddress, userAgent)
 
     // Si c'est une URL externe, rediriger
-    if ((resource as any).external_url) {
-      return NextResponse.redirect((resource as any).external_url)
+    if (res.external_url) {
+      return NextResponse.redirect(res.external_url)
     }
 
     // Si c'est un fichier, rediriger vers l'URL
-    if ((resource as any).file_url) {
-      return NextResponse.redirect((resource as any).file_url)
+    if (res.file_url) {
+      return NextResponse.redirect(res.file_url)
     }
 
     return NextResponse.json({ error: 'Aucun fichier disponible' }, { status: 404 })

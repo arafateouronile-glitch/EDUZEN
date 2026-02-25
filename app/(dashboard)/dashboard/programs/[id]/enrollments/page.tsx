@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Plus, Users, Calendar, DollarSign, Search, Filter, X } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import type { FormationWithRelations } from '@/lib/types/query-types'
+import type { FormationWithRelations, EnrollmentWithRelations } from '@/lib/types/query-types'
 
 type EnrollmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'failed'
 type PaymentStatus = 'pending' | 'partial' | 'paid' | 'overdue'
@@ -58,19 +58,33 @@ export default function ProgramEnrollmentsPage() {
     enabled: !!programId && !!user?.organization_id,
   })
 
+  // Liste des formations du programme (tableau, que formations soit un array ou { data } )
+  // Cast : getAllFormations retourne formations avec programs(id,name)|null, compatible à l'usage (id, price, currency)
+  const formationsList = (() => {
+    const formations = program?.formations
+    if (formations == null) return [] as FormationWithRelations[]
+    if (Array.isArray(formations)) return formations as FormationWithRelations[]
+    if (typeof formations === 'object' && 'data' in formations && Array.isArray((formations as { data: unknown[] }).data)) {
+      return (formations as unknown as { data: FormationWithRelations[] }).data
+    }
+    return [] as FormationWithRelations[]
+  })()
+
+  const firstFormation = formationsList[0]
+
   // Récupérer toutes les sessions de toutes les formations du programme
   const { data: sessions } = useQuery({
-    queryKey: ['program-sessions', programId],
+    queryKey: ['program-sessions', programId, formationsList.length],
     queryFn: async () => {
-      if (!program?.formations) return []
+      if (formationsList.length === 0) return []
       const allSessions = []
-      for (const formation of (program.formations as FormationWithRelations[]) || []) {
+      for (const formation of formationsList) {
         const formationSessions = await formationService.getSessionsByFormation(formation.id)
         allSessions.push(...formationSessions)
       }
       return allSessions
     },
-    enabled: !!program?.formations,
+    enabled: formationsList.length > 0,
   })
 
   // Récupérer les inscriptions
@@ -248,7 +262,7 @@ export default function ProgramEnrollmentsPage() {
         enrollment_date: new Date().toISOString().split('T')[0],
         status: 'confirmed',
         payment_status: 'pending',
-        total_amount: (program as any)?.price?.toString() || '0',
+        total_amount: firstFormation?.price?.toString() ?? '0',
         paid_amount: '0',
       })
     },
@@ -256,24 +270,24 @@ export default function ProgramEnrollmentsPage() {
 
   // Mettre à jour le montant total quand le programme change
   useEffect(() => {
-    if ((program as any)?.price && !newEnrollmentForm.total_amount) {
+    if (firstFormation?.price != null && !newEnrollmentForm.total_amount) {
       setNewEnrollmentForm((prev) => ({
         ...prev,
-        total_amount: (program as any).price.toString(),
+        total_amount: firstFormation.price.toString(),
       }))
     }
-  }, [(program as any)?.price])
+  }, [firstFormation?.price])
 
   // Statistiques
   const stats = enrollments
     ? {
         total: enrollments.length,
-        pending: enrollments.filter((e: any) => e.status === 'pending').length,
-        confirmed: enrollments.filter((e: any) => e.status === 'confirmed').length,
-        completed: enrollments.filter((e: any) => e.status === 'completed').length,
-        paid: enrollments.filter((e: any) => e.payment_status === 'paid').length,
-        totalAmount: enrollments.reduce((sum: number, e: any) => sum + (e.total_amount || 0), 0),
-        paidAmount: enrollments.reduce((sum: number, e: any) => sum + (e.paid_amount || 0), 0),
+        pending: enrollments.filter((e: EnrollmentWithRelations) => e.status === 'pending').length,
+        confirmed: enrollments.filter((e: EnrollmentWithRelations) => e.status === 'confirmed').length,
+        completed: enrollments.filter((e: EnrollmentWithRelations) => e.status === 'completed').length,
+        paid: enrollments.filter((e: EnrollmentWithRelations) => e.payment_status === 'paid').length,
+        totalAmount: enrollments.reduce((sum: number, e: EnrollmentWithRelations) => sum + (e.total_amount || 0), 0),
+        paidAmount: enrollments.reduce((sum: number, e: EnrollmentWithRelations) => sum + (e.paid_amount || 0), 0),
       }
     : null
 
@@ -369,7 +383,7 @@ export default function ProgramEnrollmentsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="text-lg font-bold">{formatCurrency(stats.totalAmount, (program as any).currency || 'XOF')}</div>
+                <div className="text-lg font-bold">{formatCurrency(stats.totalAmount, firstFormation?.currency ?? 'XOF')}</div>
                 <div className="text-sm text-muted-foreground">Total</div>
               </div>
             </CardContent>
@@ -377,7 +391,7 @@ export default function ProgramEnrollmentsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="text-lg font-bold">{formatCurrency(stats.paidAmount, (program as any).currency || 'XOF')}</div>
+                <div className="text-lg font-bold">{formatCurrency(stats.paidAmount, firstFormation?.currency ?? 'XOF')}</div>
                 <div className="text-sm text-muted-foreground">Payé</div>
               </div>
             </CardContent>
@@ -579,7 +593,7 @@ export default function ProgramEnrollmentsPage() {
                 {/* Montant total */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Montant total ({(program as any).currency || 'XOF'}) *
+                    Montant total ({firstFormation?.currency ?? 'XOF'}) *
                   </label>
                   <input
                     type="number"
@@ -600,7 +614,7 @@ export default function ProgramEnrollmentsPage() {
                 {/* Montant payé */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Montant payé ({(program as any).currency || 'XOF'})
+                    Montant payé ({firstFormation?.currency ?? 'XOF'})
                   </label>
                   <input
                     type="number"
@@ -685,7 +699,7 @@ export default function ProgramEnrollmentsPage() {
         <CardContent>
           {filteredEnrollments && filteredEnrollments.length > 0 ? (
             <div className="space-y-4">
-              {filteredEnrollments.map((enrollment: any) => {
+              {filteredEnrollments.map((enrollment: EnrollmentWithRelations) => {
                 const student = enrollment.students
                 const session = enrollment.sessions
 
@@ -720,14 +734,14 @@ export default function ProgramEnrollmentsPage() {
                           <div>
                             <span className="text-muted-foreground">Montant:</span>{' '}
                             <span className="font-medium">
-                              {formatCurrency(enrollment.total_amount || 0, (program as any).currency || 'XOF')}
+                              {formatCurrency(enrollment.total_amount || 0, firstFormation?.currency ?? 'XOF')}
                             </span>
                           </div>
                           {enrollment.paid_amount > 0 && (
                             <div>
                               <span className="text-muted-foreground">Payé:</span>{' '}
                               <span className="font-medium">
-                                {formatCurrency(enrollment.paid_amount, (program as any).currency || 'XOF')}
+                                {formatCurrency(enrollment.paid_amount, firstFormation?.currency ?? 'XOF')}
                               </span>
                             </div>
                           )}

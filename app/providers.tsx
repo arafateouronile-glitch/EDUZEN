@@ -26,9 +26,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             refetchOnMount: false,
             refetchOnReconnect: false,
             // Optimisation performance : retry seulement pour erreurs réseau
-            retry: (failureCount, error: any) => {
+            retry: (failureCount, error: unknown) => {
               // Ne pas retry pour les erreurs 4xx (client)
-              if (error?.status >= 400 && error?.status < 500) {
+              const err = error as { status?: number }
+              if (err?.status != null && err.status >= 400 && err.status < 500) {
                 return false
               }
               // Retry max 2 fois pour erreurs réseau

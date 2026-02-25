@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { Header } from '@/components/dashboard/header'
@@ -18,6 +18,20 @@ export default function DashboardClientLayout({
 }) {
   const pathname = usePathname()
   const { isLoading: authLoading } = useAuth()
+  const [authLoadingTimedOut, setAuthLoadingTimedOut] = useState(false)
+
+  // Si l'auth charge trop longtemps (ex. rate limit Supabase 429, réseau), afficher le contenu quand même
+  useEffect(() => {
+    if (!authLoading) {
+      setAuthLoadingTimedOut(false)
+      return
+    }
+    const t = setTimeout(() => {
+      setAuthLoadingTimedOut(true)
+      logger.debug('Dashboard layout: auth loading timeout, rendering content anyway')
+    }, 8000)
+    return () => clearTimeout(t)
+  }, [authLoading])
 
   // Gestion d'erreur globale pour les scripts externes (extensions de navigateur, iframe Cursor/Vercel)
   useEffect(() => {
@@ -102,7 +116,7 @@ export default function DashboardClientLayout({
     }
   }, [])
 
-  if (authLoading) {
+  if (authLoading && !authLoadingTimedOut) {
     return (
       <div className="min-h-screen bg-bg-gray-50 flex items-center justify-center">
         <div className="text-center">

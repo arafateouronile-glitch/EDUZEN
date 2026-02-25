@@ -8,32 +8,34 @@ import { CardTitle, Card, CardContent, CardHeader, CardDescription } from '@/com
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { 
-  Users, 
-  DollarSign, 
-  TrendingUp, 
-  AlertCircle, 
-  BookOpen, 
-  Calendar, 
-  Award, 
-  ExternalLink, 
-  ArrowUpRight, 
-  Sparkles, 
-  Activity, 
-  Plus, 
-  FileText, 
-  UserPlus, 
-  GraduationCap, 
-  CheckCircle2, 
-  Clock, 
-  ClipboardList, 
-  Mail, 
-  Phone, 
-  Target, 
-  Zap, 
-  RefreshCw 
+  Users,
+  DollarSign,
+  TrendingUp,
+  AlertCircle,
+  BookOpen,
+  Calendar,
+  Award,
+  ExternalLink,
+  ArrowUpRight,
+  Sparkles,
+  Activity,
+  Plus,
+  FileText,
+  UserPlus,
+  GraduationCap,
+  CheckCircle2,
+  Clock,
+  ClipboardList,
+  Mail,
+  Phone,
+  Target,
+  Zap,
+  RefreshCw,
+  Euro,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { AdminHero, type AdminHeroKPI } from '@/components/dashboard/admin-hero'
 import { formatCurrency, cn, formatDate } from '@/lib/utils'
 import { useVocabulary } from '@/lib/hooks/use-vocabulary'
 import type { TableRow } from '@/lib/types/supabase-helpers'
@@ -834,16 +836,6 @@ export default function DashboardPage() {
   const { user, isLoading: userLoading, session } = useAuth()
   const vocab = useVocabulary()
   const prefersReducedMotion = useReducedMotion()
-  const [currentDate, setCurrentDate] = useState<string>('')
-
-  useEffect(() => {
-    setCurrentDate(new Date().toLocaleDateString('fr-FR', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    }))
-  }, [])
 
   // Tous les hooks doivent être appelés AVANT les retours conditionnels
   // Récupérer les statistiques générales - ✅ OPTIMISÉ avec Promise.all
@@ -969,7 +961,7 @@ export default function DashboardPage() {
           amount: p.amount,
           paid_at: p.paid_at,
           created_at: p.created_at,
-          method: (p as any).payment_method,
+          method: p.payment_method,
         })),
       })
       
@@ -1342,8 +1334,24 @@ export default function DashboardPage() {
     },
   })
 
-  // Maintenant que tous les hooks sont appelés, on peut faire les retours conditionnels
-  // Afficher un loader pendant le chargement de l'utilisateur ou tant que la session est là mais pas encore l'utilisateur (ex. après Cmd+Shift+R)
+  const containerVariants = useMemo(() => ({
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  }), [])
+
+  const itemVariants = useMemo(() => ({
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
+    }
+  }), [])
+
+  // Retours conditionnels après tous les hooks
   const waitingForUser = userLoading || (session?.user && user == null)
   if (waitingForUser) {
     return (
@@ -1362,88 +1370,9 @@ export default function DashboardPage() {
     )
   }
 
-  // Si l'utilisateur est un enseignant, afficher le dashboard enseignant
   if (user?.role === 'teacher') {
     return <TeacherDashboard />
   }
-
-  // ✅ OPTIMISATION TBT: Mémoriser les calculs coûteux avec useMemo
-  const statCards = useMemo(() => [
-    {
-      title: `${vocab.students} actifs`,
-      value: stats?.studentsCount || 0,
-      icon: Users,
-      gradient: 'from-brand-blue to-brand-blue-dark',
-      bgColor: 'bg-brand-blue-ghost',
-      iconColor: 'text-brand-blue',
-      isNumber: true,
-      trend: '+12%',
-      link: '/dashboard/students'
-    },
-    {
-      title: 'Revenus du mois',
-      value: stats?.monthlyRevenue || 0,
-      icon: DollarSign,
-      gradient: 'from-brand-cyan to-brand-cyan-dark',
-      bgColor: 'bg-brand-cyan-ghost',
-      iconColor: 'text-brand-cyan',
-      isNumber: false,
-      trend: '+8%',
-      link: '/dashboard/financial-reports'
-    },
-    {
-      title: 'Taux de présence',
-      value: stats?.avgAttendance || 0,
-      icon: TrendingUp,
-      gradient: 'from-brand-blue via-brand-cyan to-brand-blue',
-      bgColor: 'bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost',
-      iconColor: 'text-brand-blue',
-      isNumber: false,
-      trend: '+5%',
-      link: '/dashboard/attendance'
-    },
-    {
-      title: 'Inscriptions',
-      value: stats?.totalEnrollments || 0,
-      icon: UserPlus,
-      gradient: 'from-brand-cyan to-brand-blue',
-      bgColor: 'bg-brand-cyan-ghost',
-      iconColor: 'text-brand-cyan',
-      isNumber: true,
-      trend: '+15%',
-      link: '/dashboard/students'
-    }
-  ], [vocab.students, stats?.studentsCount, stats?.monthlyRevenue, stats?.avgAttendance, stats?.totalEnrollments])
-
-  // ✅ OPTIMISATION TBT: Mémoriser les variants d'animation (objets constants)
-  const containerVariants = useMemo(() => ({
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  }), [])
-
-  const itemVariants = useMemo(() => ({
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
-    }
-  }), [])
-
-  // ✅ OPTIMISATION TBT: Mémoriser l'animation flottante
-  const floatingAnimation = useMemo(() => prefersReducedMotion 
-    ? {} 
-    : {
-        y: [-10, 10, -10],
-        transition: {
-          duration: 6,
-          repeat: Infinity,
-          ease: "easeInOut" as const
-        }
-      }, [prefersReducedMotion])
 
   return (
     <ErrorBoundary>
@@ -1456,320 +1385,50 @@ export default function DashboardPage() {
       {/* Animated background particles - effet subtil (optimisé pour performance) */}
       <ParticlesBackground />
 
-      {/* Hero Header Ultra-Premium avec gradient animé et glassmorphism */}
-      <motion.div
-        variants={prefersReducedMotion ? {} : itemVariants}
-        className="relative overflow-hidden rounded-[2rem] mb-8 shadow-[0_20px_80px_-20px_rgba(51,90,207,0.4)]"
-      >
-        {/* Gradient de fond animé avec shimmer et effet mesh - Optimisé pour performance */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-brand-blue via-brand-blue-light to-brand-cyan"
-          animate={{
-            backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          style={{ 
-            backgroundSize: '200% 200%',
-            willChange: prefersReducedMotion ? 'auto' : 'background-position'
-          }}
-        />
-
-        {/* Mesh gradient overlay pour plus de profondeur */}
-        <div className="absolute inset-0 opacity-40" style={{
-          backgroundImage: 'radial-gradient(at 40% 20%, rgba(255, 255, 255, 0.3) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(52, 185, 238, 0.4) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(39, 68, 114, 0.3) 0px, transparent 50%)',
-        }} />
-
-        {/* Radial overlay avec effet de profondeur amélioré */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-brand-cyan/30 via-transparent to-transparent" />
-
-        {/* Floating orbs avec effet de profondeur - Optimisé pour performance (réduit si prefersReducedMotion) */}
-        {!prefersReducedMotion && (
-          <>
-            <motion.div
-              animate={floatingAnimation}
-              className="absolute top-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl"
-              style={{
-                boxShadow: '0 0 80px 40px rgba(255, 255, 255, 0.1)',
-                willChange: 'transform',
-              }}
-            />
-            <motion.div
-              animate={{
-                ...floatingAnimation,
-                transition: { ...floatingAnimation.transition, delay: 0.5 }
-              }}
-              className="absolute bottom-10 left-10 w-40 h-40 bg-brand-cyan/10 rounded-full blur-3xl"
-              style={{
-                boxShadow: '0 0 80px 40px rgba(52, 185, 238, 0.15)',
-                willChange: 'transform',
-              }}
-            />
-
-            {/* Orbs additionnels pour plus de profondeur */}
-            <motion.div
-              animate={{
-                y: [15, -15, 15],
-                x: [10, -10, 10],
-                transition: {
-                  duration: 8,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }
-              }}
-              className="absolute top-1/2 left-1/2 w-64 h-64 bg-white/5 rounded-full blur-3xl"
-              style={{
-                willChange: 'transform',
-              }}
-            />
-          </>
-        )}
-
-        {/* Contenu */}
-        <div className="relative z-10 p-8 md:p-12">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex-1">
-              <motion.div
-                initial={prefersReducedMotion ? {} : { opacity: 0, transform: 'translateY(20px)' }}
-                animate={prefersReducedMotion ? {} : { opacity: 1, transform: 'translateY(0)' }}
-                transition={prefersReducedMotion ? {} : { delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                className="flex items-center gap-4 mb-3"
-                style={{ willChange: prefersReducedMotion ? 'auto' : 'transform, opacity' }}
-              >
-                <motion.div
-                  className="p-3 bg-white/15 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(255,255,255,0.1)] border border-white/20"
-                  whileHover={prefersReducedMotion ? {} : { scale: 1.15, rotate: 10 }}
-                  transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 400, damping: 10 }}
-                >
-                  <Sparkles className="h-7 w-7 text-white drop-shadow-lg" />
-                </motion.div>
-                <h1 className="text-4xl md:text-6xl font-display font-bold text-white tracking-tighter leading-none drop-shadow-2xl">
-                  Bonjour, {user?.full_name?.split(' ')[0] || 'Admin'} 👋
-                </h1>
-              </motion.div>
-
-              <motion.p
-                initial={prefersReducedMotion ? {} : { opacity: 0, transform: 'translateY(20px)' }}
-                animate={prefersReducedMotion ? {} : { opacity: 1, transform: 'translateY(0)' }}
-                transition={prefersReducedMotion ? {} : { delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                className="text-white/95 capitalize flex items-center gap-2.5 text-xl font-medium tracking-tight drop-shadow-lg"
-                style={{ willChange: prefersReducedMotion ? 'auto' : 'transform, opacity' }}
-              >
-                <Calendar className="h-5 w-5 drop-shadow-md" />
-                {currentDate}
-              </motion.p>
-
-              {/* Stats rapides dans le hero avec effets premium - ✅ OPTIMISATION TBT */}
-              <motion.div
-                initial={prefersReducedMotion ? {} : { opacity: 0, transform: 'translateY(20px)' }}
-                animate={prefersReducedMotion ? {} : { opacity: 1, transform: 'translateY(0)' }}
-                transition={prefersReducedMotion ? {} : { delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                className="flex flex-wrap items-center gap-4 mt-8"
-                style={{ willChange: prefersReducedMotion ? 'auto' : 'transform, opacity' }}
-              >
-                <motion.div
-                  className="group flex items-center gap-3 bg-white/15 backdrop-blur-xl rounded-full px-5 py-3 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_40px_rgba(255,255,255,0.2)]"
-                  whileHover={prefersReducedMotion ? {} : { scale: 1.08, transform: 'translateY(-3px)' }}
-                  transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 500, damping: 15 }}
-                  style={{ willChange: prefersReducedMotion ? 'auto' : 'transform' }}
-                >
-                  <motion.div
-                    className="p-1.5 bg-white/20 rounded-full"
-                    whileHover={prefersReducedMotion ? {} : { rotate: 360 }}
-                    transition={prefersReducedMotion ? {} : { duration: 0.6 }}
-                  >
-                    <Users className="h-5 w-5 text-white drop-shadow-md" />
-                  </motion.div>
-                  <span className="text-white font-bold text-lg tracking-tight drop-shadow-md">{stats?.studentsCount || 0}</span>
-                  <span className="text-white/90 text-sm font-semibold">apprenants</span>
-                </motion.div>
-                <motion.div
-                  className="group flex items-center gap-3 bg-white/15 backdrop-blur-xl rounded-full px-5 py-3 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_40px_rgba(255,255,255,0.2)]"
-                  whileHover={prefersReducedMotion ? {} : { scale: 1.08, transform: 'translateY(-3px)' }}
-                  transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 500, damping: 15 }}
-                  style={{ willChange: prefersReducedMotion ? 'auto' : 'transform' }}
-                >
-                  <motion.div
-                    className="p-1.5 bg-white/20 rounded-full"
-                    whileHover={prefersReducedMotion ? {} : { rotate: 360 }}
-                    transition={prefersReducedMotion ? {} : { duration: 0.6 }}
-                  >
-                    <GraduationCap className="h-5 w-5 text-white drop-shadow-md" />
-                  </motion.div>
-                  <span className="text-white font-bold text-lg tracking-tight drop-shadow-md">{stats?.activeFormationsCount || 0}</span>
-                  <span className="text-white/90 text-sm font-semibold">formations</span>
-                </motion.div>
-                <motion.div
-                  className="group flex items-center gap-3 bg-white/15 backdrop-blur-xl rounded-full px-5 py-3 border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_40px_rgba(255,255,255,0.2)]"
-                  whileHover={prefersReducedMotion ? {} : { scale: 1.08, transform: 'translateY(-3px)' }}
-                  transition={prefersReducedMotion ? {} : { type: "spring", stiffness: 500, damping: 15 }}
-                  style={{ willChange: prefersReducedMotion ? 'auto' : 'transform' }}
-                >
-                  <motion.div
-                    className="p-1.5 bg-white/20 rounded-full"
-                    whileHover={prefersReducedMotion ? {} : { rotate: 360 }}
-                    transition={prefersReducedMotion ? {} : { duration: 0.6 }}
-                  >
-                    <Target className="h-5 w-5 text-white drop-shadow-md" />
-                  </motion.div>
-                  <span className="text-white font-bold text-lg tracking-tight drop-shadow-md">{stats?.activeSessionsCount || 0}</span>
-                  <span className="text-white/90 text-sm font-semibold">sessions</span>
-                </motion.div>
-              </motion.div>
-            </div>
-
-            {/* Actions rapides dans le hero avec effets premium */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.6, duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-              className="flex items-center gap-4"
-            >
-              <Link href="/dashboard/students/new">
-                <motion.div
-                  whileHover={{ scale: 1.08, y: -5 }}
-                  whileTap={{ scale: 0.96 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                >
-                  <Button className="group relative overflow-hidden bg-white text-brand-blue hover:bg-white shadow-[0_20px_60px_-15px_rgba(255,255,255,0.4)] hover:shadow-[0_25px_70px_-15px_rgba(255,255,255,0.6)] transition-all duration-500 font-bold tracking-tight px-7 py-7 text-base border-2 border-white/50">
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-                      initial={{ x: '-100%' }}
-                      whileHover={{ x: '100%' }}
-                      transition={{ duration: 0.6 }}
-                    />
-                    <Plus className="h-5 w-5 mr-2 relative z-10" />
-                    <span className="relative z-10">Nouvel apprenant</span>
-                  </Button>
-                </motion.div>
-              </Link>
-              <Link href="/dashboard/payments/new">
-                <motion.div
-                  whileHover={{ scale: 1.08, y: -5 }}
-                  whileTap={{ scale: 0.96 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                >
-                  <Button className="group relative overflow-hidden bg-white/15 backdrop-blur-xl text-white border-2 border-white/40 hover:bg-white/25 hover:border-white/60 transition-all duration-500 font-bold tracking-tight px-7 py-7 text-base shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)]">
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                      initial={{ x: '-100%' }}
-                      whileHover={{ x: '100%' }}
-                      transition={{ duration: 0.6 }}
-                    />
-                    <FileText className="h-5 w-5 mr-2 relative z-10" />
-                    <span className="relative z-10">Facture</span>
-                  </Button>
-                </motion.div>
-              </Link>
-            </motion.div>
-          </div>
-        </div>
-      </motion.div>
+      {/* Admin Hero - Slim Page Header + KPI Bar */}
+      <AdminHero
+        userName={user?.full_name ?? undefined}
+        loadingKPIs={isLoadingStats}
+        kpis={[
+          {
+            label: 'CA du mois',
+            value: stats?.monthlyRevenue ? formatCurrency(stats.monthlyRevenue) : '—',
+            trend: 'up',
+            trendValue: '+8%',
+            icon: <Euro className="h-4 w-4" />,
+            accent: 'text-indigo-500',
+            accentColor: '#6366f1',
+            href: '/dashboard/financial-reports',
+          },
+          {
+            label: 'Apprenants actifs',
+            value: stats?.studentsCount ?? '—',
+            icon: <Users className="h-4 w-4" />,
+            accent: 'text-emerald-500',
+            accentColor: '#10b981',
+            href: '/dashboard/students',
+          },
+          {
+            label: 'Taux de présence',
+            value: stats?.avgAttendance ? `${stats.avgAttendance} %` : '—',
+            icon: <CheckCircle2 className="h-4 w-4" />,
+            accent: 'text-sky-500',
+            accentColor: '#0ea5e9',
+            badge: 'Qualiopi',
+          },
+          {
+            label: 'Impayés',
+            value: stats?.overdueAmount ? formatCurrency(stats.overdueAmount) : '—',
+            trend: (stats?.overdueAmount ?? 0) > 0 ? 'down' : 'neutral',
+            icon: <AlertCircle className="h-4 w-4" />,
+            accent: 'text-amber-500',
+            accentColor: '#f59e0b',
+          },
+        ] satisfies AdminHeroKPI[]}
+      />
 
       {/* Bento Grid Layout Principal avec animations améliorées */}
       <BentoGrid columns={4} gap="lg">
-        {isLoadingStats ? (
-          // Skeleton loaders pendant le chargement - ✅ FIX CLS: min-height fixe
-          Array.from({ length: 4 }).map((_, i) => (
-            <BentoCard key={`skeleton-${i}`} span={1}>
-              <div style={{ minHeight: '200px' }}>
-                <StatsCardSkeleton />
-              </div>
-            </BentoCard>
-          ))
-        ) : (
-          statCards.map((stat, index) => (
-          <BentoCard key={stat.title} span={1}>
-            <Link href={stat.link}>
-              <motion.div
-                initial={{ opacity: 0, transform: 'translateY(20px)' }}
-                animate={{ opacity: 1, transform: 'translateY(0)' }}
-                transition={{ delay: prefersReducedMotion ? 0 : 0.1 * index, duration: prefersReducedMotion ? 0 : 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                whileHover={prefersReducedMotion ? {} : { transform: 'translateY(-8px) scale(1.03)' }}
-                className="h-full"
-                style={{ willChange: prefersReducedMotion ? 'auto' : 'transform, opacity' }}
-              >
-                <GlassCard
-                  variant="premium"
-                  hoverable
-                  glow={index < 2}
-                  glowColor={index === 0 ? 'rgba(39, 68, 114, 0.4)' : 'rgba(52, 185, 238, 0.4)'}
-                  className="h-full p-8 group cursor-pointer relative overflow-hidden border-2 border-gray-100/50 hover:border-brand-blue/30 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_60px_-15px_rgba(51,90,207,0.3)]"
-                >
-                  {/* Gradient animé en background au survol */}
-                  <motion.div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{
-                      background: `linear-gradient(135deg, ${index === 0 ? 'rgba(39, 68, 114, 0.03)' : index === 1 ? 'rgba(52, 185, 238, 0.03)' : index === 2 ? 'rgba(39, 68, 114, 0.02)' : 'rgba(52, 185, 238, 0.02)'} 0%, transparent 100%)`
-                    }}
-                  />
-
-                  {/* Shine effect on hover - ✅ OPTIMISATION TBT: Utiliser transform au lieu de x/y */}
-                  <motion.div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100"
-                    initial={{ transform: 'translate(-100%, -100%)' }}
-                    whileHover={{ transform: 'translate(100%, 100%)' }}
-                    transition={{ duration: 0.8, ease: "easeInOut" }}
-                    style={{
-                      background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
-                      willChange: prefersReducedMotion ? 'auto' : 'transform, opacity',
-                    }}
-                  />
-
-                  <div className="relative z-10">
-                    <div className="flex flex-row items-center justify-between mb-6">
-                      <CardTitle className="text-sm font-bold text-gray-500 group-hover:text-brand-blue transition-colors tracking-tight uppercase">
-                        {stat.title}
-                      </CardTitle>
-                      <motion.div
-                        className={cn("p-4 rounded-2xl transition-all duration-500 shadow-lg group-hover:shadow-xl", stat.bgColor)}
-                        whileHover={{ rotate: 15, scale: 1.2 }}
-                        transition={{ type: "spring", stiffness: 600, damping: 15 }}
-                      >
-                        <stat.icon className={cn("h-6 w-6", stat.iconColor)} />
-                      </motion.div>
-                    </div>
-                    <div className="space-y-4">
-                      <motion.div
-                        className={cn("text-5xl font-bold tracking-tighter text-gray-900 font-display")}
-                        whileHover={{ scale: 1.05 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                      >
-                        {stat.isNumber ? (
-                          <AnimatedCounter value={typeof stat.value === 'number' ? stat.value : 0} />
-                        ) : stat.title === 'Revenus du mois' ? (
-                          formatCurrency(stat.value as number, stats?.currency || 'EUR')
-                        ) : (
-                          `${stat.value}%`
-                        )}
-                      </motion.div>
-                      {stat.trend && (
-                        <motion.div
-                          className="flex items-center gap-2 text-sm font-bold text-emerald-700 bg-gradient-to-r from-emerald-50 to-emerald-100 w-fit px-4 py-2 rounded-full shadow-md border border-emerald-200/50"
-                          whileHover={{ scale: 1.08, x: 3 }}
-                          transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                        >
-                          <motion.div
-                            animate={prefersReducedMotion ? {} : { y: [-2, 2, -2] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                          >
-                            <ArrowUpRight className="h-4 w-4" />
-                          </motion.div>
-                          <span className="tracking-tight">{stat.trend}</span>
-                        </motion.div>
-                      )}
-                    </div>
-                  </div>
-                </GlassCard>
-              </motion.div>
-            </Link>
-          </BentoCard>
-          ))
-        )}
 
         {/* Section Alertes avec effets premium */}
         {(stats?.overdueAmount || 0) > 0 && (

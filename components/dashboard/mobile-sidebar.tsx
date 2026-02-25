@@ -203,7 +203,7 @@ const filterNavigationByRole = (navigation: NavigationSection[], userRole: strin
         })
         .map(item => ({
           ...item,
-          children: item.children?.filter(child => {
+          children: item.children?.filter((child: NonNullable<NavigationItem['children']>[number]) => {
             if (child.allowedRoles && !child.allowedRoles.includes(userRole)) {
               return false
             }
@@ -469,13 +469,14 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                             </AnimatePresence>
                           </div>
                         )
-                      } else if (item.href) {
+                      } else if ('href' in item && item.href) {
                         // Menu simple sans sous-menu
-                        const isItemActive = isActive(item.href)
+                        const itemHref = item.href
+                        const isItemActive = isActive(itemHref)
                         return (
                           <Link
-                            key={item.href}
-                            href={item.href}
+                            key={itemHref}
+                            href={itemHref}
                             className={cn(
                               'flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
                               isItemActive

@@ -12,10 +12,18 @@ interface APIKeyData {
   is_active: boolean
 }
 
+export type APIMiddlewareResult = {
+  key: APIKeyData
+  organizationId: string
+  scopes: string[]
+  requestHeaders: Headers
+  rateLimit: { allowed: boolean; remaining: number; resetAt: Date }
+}
+
 /**
  * Middleware pour l'authentification et le rate limiting de l'API
  */
-export async function apiMiddleware(request: NextRequest) {
+export async function apiMiddleware(request: NextRequest): Promise<NextResponse | APIMiddlewareResult> {
   // Récupérer la clé API depuis les headers
   const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization')?.replace('Bearer ', '')
 
@@ -88,9 +96,9 @@ export async function apiMiddleware(request: NextRequest) {
   requestHeaders.set('x-api-scopes', JSON.stringify(key.scopes || []))
 
   return {
-    key: keyData,
+    key,
     organizationId: key.organization_id,
-    scopes: key.scopes || [],
+    scopes: key.scopes ?? [],
     requestHeaders,
     rateLimit,
   }

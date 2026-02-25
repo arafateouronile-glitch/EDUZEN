@@ -13,10 +13,11 @@ const maskApiKey = (key: string): string => {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { publishable_key, secret_key } = body
+    const body = (await request.json()) as { publishable_key?: string; secret_key?: string }
+    const publishableKey = body.publishable_key
+    const secretKey = body.secret_key
 
-    if (!publishable_key || !secret_key) {
+    if (!publishableKey || !secretKey) {
       return NextResponse.json({ error: 'Clés API requises' }, { status: 400 })
     }
 
@@ -27,8 +28,8 @@ export async function POST(request: NextRequest) {
     // 
     // Pour l'instant, on simule le test (validation du format des clés uniquement)
     // Vérifier le format des clés
-    const isValidPublishableKey = publishable_key.startsWith('pk_test_') || publishable_key.startsWith('pk_live_')
-    const isValidSecretKey = secret_key.startsWith('sk_test_') || secret_key.startsWith('sk_live_')
+    const isValidPublishableKey = publishableKey.startsWith('pk_test_') || publishableKey.startsWith('pk_live_')
+    const isValidSecretKey = secretKey.startsWith('sk_test_') || secretKey.startsWith('sk_live_')
 
     if (!isValidPublishableKey || !isValidSecretKey) {
       return NextResponse.json({ 
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
       account_id: 'acct_test_1234567890',
       country: 'FR',
       currency: 'eur',
-      test_mode: publishable_key.startsWith('pk_test_'),
+      test_mode: publishableKey.startsWith('pk_test_'),
     })
   } catch (error: unknown) {
     let publishableKey: string | undefined;
