@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Run ESLint
-        run: npm run lint
+        run: npx eslint . --ext .ts,.tsx,.js,.jsx --ignore-path .gitignore
 
   build:
     name: Build Check
