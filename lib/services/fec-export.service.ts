@@ -48,12 +48,20 @@ export interface FECExportOptions {
 
 /**
  * Service d'export FEC
+ * Client Supabase créé à la demande pour éviter d'exiger les env vars au build (Collecting page data).
  */
 export class FECExportService {
-  private supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  private _supabase: ReturnType<typeof createServerClient<Database>> | null = null
+
+  private getSupabase(): ReturnType<typeof createServerClient<Database>> {
+    if (!this._supabase) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      if (!url || !key) throw new Error('supabaseUrl is required')
+      this._supabase = createServerClient<Database>(url, key)
+    }
+    return this._supabase
+  }
 
   /**
    * Génère le fichier FEC au format texte
@@ -118,7 +126,7 @@ export class FECExportService {
     const entries: FECEntry[] = []
 
     // Récupérer les factures
-    let invoicesQuery = this.supabase
+    let invoicesQuery = this.getSupabase()
       .from('invoices')
       .select('*, students(id, first_name, last_name, student_number)')
       .eq('organization_id', options.organizationId)
@@ -211,7 +219,7 @@ export class FECExportService {
 
     // Récupérer les paiements si demandé
     if (options.includePayments) {
-      let paymentsQuery = this.supabase
+      let paymentsQuery = this.getSupabase()
         .from('payments')
         .select('*, invoices(invoice_number, issue_date, student_id, students(id, first_name, last_name))')
         .eq('organization_id', options.organizationId)
