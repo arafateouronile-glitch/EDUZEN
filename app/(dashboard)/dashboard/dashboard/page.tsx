@@ -69,13 +69,13 @@ export default function DashboardPage() {
       currentMonth.setDate(1)
       const today = new Date().toISOString().split('T')[0]
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const qSessionsOngoing: any = supabase
         .from('sessions')
         .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
         .eq('formations.organization_id', user.organization_id)
         .eq('status', 'ongoing')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const qSessionsCompleted: any = supabase
         .from('sessions')
         .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
@@ -359,7 +359,7 @@ export default function DashboardPage() {
       const sessionIds = sessions.map((s: any) => s.id)
 
       // Enfin, récupérer les inscriptions pour ces sessions
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('enrollments')
         .select('*, students(first_name, last_name), sessions(name, formations(name, programs(name)))')
@@ -385,7 +385,7 @@ export default function DashboardPage() {
       if (!user?.organization_id) return []
 
       const today = new Date().toISOString().split('T')[0]
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('sessions')
         .select('*, formations!inner(name, organization_id, programs(name))')

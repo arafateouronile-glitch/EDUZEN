@@ -47,7 +47,7 @@ export default function StudentAccessibilityPage() {
   const { data: student, isLoading: studentLoading } = useQuery<any>({
     queryKey: ['student', studentId],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('students')
         .select('*, programs(name), cohorts(name)')

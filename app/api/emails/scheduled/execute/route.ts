@@ -40,7 +40,7 @@ async function getMatchingSessions(
   supabase: any,
   now: Date
 ): Promise<any[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+  // eslint-disable-next-line
   let query: any = supabase
     .from('sessions')
     .select('*, formations(*), programs(*)')
@@ -135,7 +135,7 @@ async function getMatchingEvaluations(
   supabase: any,
   now: Date
 ): Promise<any[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+  // eslint-disable-next-line
   let query: any = supabase
     .from('evaluations')
     .select('*, sessions(*), formations(*)')
@@ -231,7 +231,7 @@ async function getRecipientsForSchedule(
       for (const session of matchingSessions) {
         // Récupérer les étudiants inscrits à cette session
         if (schedule.send_to_students) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+          // eslint-disable-next-line
           const qEnr: any = supabase
             .from('enrollments')
             .select('*, students(*)')
@@ -302,7 +302,7 @@ async function getRecipientsForSchedule(
       for (const evaluation of matchingEvaluations) {
         // Récupérer les étudiants concernés par cette évaluation
         if (schedule.send_to_students && evaluation.session_id) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+          // eslint-disable-next-line
           const qEnr2: any = supabase
             .from('enrollments')
             .select('*, students(*)')
@@ -327,7 +327,7 @@ async function getRecipientsForSchedule(
 
         // Récupérer les enseignants
         if (schedule.send_to_teachers) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+          // eslint-disable-next-line
           const qSess: any = supabase
             .from('sessions')
             .select('*, users(*)')

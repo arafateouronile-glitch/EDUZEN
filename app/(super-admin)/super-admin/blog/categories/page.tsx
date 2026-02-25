@@ -25,23 +25,6 @@ export default function BlogCategoriesPage() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
-  // Vérifier les permissions
-  if (!canManageBlog && !isSuperAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Accès restreint</CardTitle>
-            <CardDescription>
-              Vous n'avez pas les permissions nécessaires pour gérer les catégories.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
-  // Fetch categories
   const { data: categories, isLoading, refetch } = useQuery<BlogCategoryRow[]>({
     queryKey: ['blog-categories'],
     queryFn: async (): Promise<BlogCategoryRow[]> => {
@@ -107,6 +90,21 @@ export default function BlogCategoriesPage() {
         }
       )
     : { parents: [], children: {} }
+
+  if (!canManageBlog && !isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Accès restreint</CardTitle>
+            <CardDescription>
+              Vous n&apos;avez pas les permissions nécessaires pour gérer les catégories.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

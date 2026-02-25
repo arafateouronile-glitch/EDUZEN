@@ -30,23 +30,6 @@ export default function ReferralsPage() {
   const { canManageReferrals, isSuperAdmin } = usePlatformAdmin()
   const supabase = createClient()
 
-  // Vérifier les permissions
-  if (!canManageReferrals && !isSuperAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Accès restreint</CardTitle>
-            <CardDescription>
-              Vous n'avez pas les permissions nécessaires pour gérer les parrainages.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
-  // Fetch referrals
   const { data: referrals, isLoading, refetch } = useQuery({
     queryKey: ['referrals'],
     queryFn: async () => {
@@ -61,6 +44,21 @@ export default function ReferralsPage() {
     },
     staleTime: 1000 * 60 * 5,
   })
+
+  if (!canManageReferrals && !isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Accès restreint</CardTitle>
+            <CardDescription>
+              Vous n&apos;avez pas les permissions nécessaires pour gérer les parrainages.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

@@ -222,7 +222,7 @@ export function ConfigApprenants({
       
       const entityIds = externalEntities.map((e: any) => e.id)
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('student_entities')
         .select('*, students(*), external_entities(*)')

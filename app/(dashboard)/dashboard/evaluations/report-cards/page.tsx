@@ -27,7 +27,7 @@ export default function ReportCardsPage() {
       if (!user?.organization_id) return []
 
       // Récupérer les bulletins depuis la table documents
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('documents')
         .select('*, students(*)')

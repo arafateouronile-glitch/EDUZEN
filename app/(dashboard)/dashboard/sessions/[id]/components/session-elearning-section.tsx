@@ -201,7 +201,7 @@ export function SessionElearningSection({
         }
 
         // Récupérer la progression des leçons
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        // eslint-disable-next-line
         const qProgress: any = supabase
           .from('lesson_progress')
           .select('*, lessons(course_id)')
@@ -223,7 +223,7 @@ export function SessionElearningSection({
         }
 
         // Récupérer les scores des quiz
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        // eslint-disable-next-line
         const qQuiz: any = supabase
           .from('quiz_attempts')
           .select('*, quizzes(lesson_id, lessons(course_id))')

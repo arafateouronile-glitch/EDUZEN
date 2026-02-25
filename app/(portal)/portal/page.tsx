@@ -36,7 +36,7 @@ export default function PortalDashboardPage() {
 
       if (!studentGuardians || studentGuardians.length === 0) return []
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('students')
         .select('*, classes(name)')
@@ -55,7 +55,7 @@ export default function PortalDashboardPage() {
     queryFn: async () => {
       if (!user?.id || user?.role !== 'student') return null
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('students')
         .select('*, classes(name)')
@@ -113,7 +113,7 @@ export default function PortalDashboardPage() {
 
       if (studentIds.length === 0) return []
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('attendance')
         .select('*, students(first_name, last_name), classes(name)')

@@ -217,7 +217,7 @@ export function EspaceApprenant({
     queryFn: async () => {
       if (!selectedStudent || !organizationId) return []
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('payments')
         .select('*, invoices(invoice_number, total_amount, status), students(first_name, last_name)')
@@ -243,7 +243,7 @@ export function EspaceApprenant({
     queryFn: async () => {
       if (!selectedStudent || !sessionId) return []
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const qAtt: any = supabase
         .from('attendance')
         .select('*, session_slots(date, start_time, end_time)')

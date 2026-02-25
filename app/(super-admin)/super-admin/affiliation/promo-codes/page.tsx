@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { Percent, Plus, Copy, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Affiliate } from '@/types/super-admin.types'
@@ -54,7 +55,7 @@ export default function AffiliationPromoCodesPage() {
   const { data: promoCodes, isLoading } = useQuery({
     queryKey: ['promo-codes-affiliate'],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('promo_codes')
         .select('*, affiliates(id, email, full_name, company_name)')

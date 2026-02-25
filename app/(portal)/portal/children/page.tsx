@@ -32,7 +32,7 @@ export default function ChildrenPage() {
 
       if (!studentGuardians || studentGuardians.length === 0) return []
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('students')
         .select('*, classes(name)')

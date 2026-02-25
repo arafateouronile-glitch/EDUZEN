@@ -144,7 +144,7 @@ export default function AttendancePage() {
       // Récupérer les sessions à venir d'aujourd'hui
       const today = new Date().toISOString().split('T')[0]
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       let query: any = supabase
         .from('sessions')
         .select('*, formations!inner(*, programs(*))')
@@ -422,7 +422,7 @@ export default function AttendancePage() {
     queryFn: async () => {
       if (!user?.organization_id) return []
       
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       let query: any = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')
@@ -460,7 +460,7 @@ export default function AttendancePage() {
         0
       ).toISOString().split('T')[0]
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       let query: any = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')

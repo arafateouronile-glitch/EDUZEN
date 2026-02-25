@@ -23,23 +23,6 @@ export default function BlogTagsPage() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
-  // Vérifier les permissions
-  if (!canManageBlog && !isSuperAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Accès restreint</CardTitle>
-            <CardDescription>
-              Vous n'avez pas les permissions nécessaires pour gérer les tags.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
-  // Fetch tags
   const { data: tags, isLoading, refetch } = useQuery<BlogTag[]>({
     queryKey: ['blog-tags'],
     queryFn: async (): Promise<BlogTag[]> => {
@@ -68,6 +51,21 @@ export default function BlogTagsPage() {
       queryClient.invalidateQueries({ queryKey: ['blog-tags'] })
     },
   })
+
+  if (!canManageBlog && !isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Accès restreint</CardTitle>
+            <CardDescription>
+              Vous n&apos;avez pas les permissions nécessaires pour gérer les tags.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

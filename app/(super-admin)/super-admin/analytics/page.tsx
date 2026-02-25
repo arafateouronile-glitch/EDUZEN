@@ -29,23 +29,6 @@ export default function AnalyticsPage() {
   const { canViewRevenue, isSuperAdmin } = usePlatformAdmin()
   const supabase = createClient()
 
-  // Vérifier les permissions
-  if (!canViewRevenue && !isSuperAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Accès restreint</CardTitle>
-            <CardDescription>
-              Vous n'avez pas les permissions nécessaires pour accéder aux analytiques.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
-  // Fetch analytics data
   const { data: analytics, isLoading, refetch } = useQuery({
     queryKey: ['super-admin-analytics'],
     queryFn: async () => {
@@ -88,6 +71,21 @@ export default function AnalyticsPage() {
     },
     staleTime: 1000 * 60 * 5,
   })
+
+  if (!canViewRevenue && !isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Accès restreint</CardTitle>
+            <CardDescription>
+              Vous n&apos;avez pas les permissions nécessaires pour accéder aux analytiques.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

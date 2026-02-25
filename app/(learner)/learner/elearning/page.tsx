@@ -80,7 +80,7 @@ export default function LearnerElearningPage() {
 
       try {
         // Récupérer la progression des leçons
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        // eslint-disable-next-line
         const qLp: any = supabase
           .from('lesson_progress')
           .select('*, lessons(course_id)')

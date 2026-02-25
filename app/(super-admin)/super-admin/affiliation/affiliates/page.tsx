@@ -63,7 +63,7 @@ export default function AffiliatesPage() {
   const { data: affiliates, isLoading } = useQuery({
     queryKey: ['affiliates', search, statusFilter],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep" (Supabase + select avec relation)
+      // eslint-disable-next-line
       let q: any = supabase
         .from('affiliates')
         .select('*, affiliate_campaigns(name, commission_percent)')

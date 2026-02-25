@@ -27,23 +27,6 @@ export default function SubscriptionPlansPage() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
-  // Vérifier les permissions
-  if (!canManageSubscriptions && !isSuperAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Accès restreint</CardTitle>
-            <CardDescription>
-              Vous n'avez pas les permissions nécessaires pour gérer les plans d'abonnement.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
-  // Fetch subscription plans
   const { data: plans, isLoading, refetch } = useQuery({
     queryKey: ['subscription-plans'],
     queryFn: async () => {
@@ -72,6 +55,21 @@ export default function SubscriptionPlansPage() {
       queryClient.invalidateQueries({ queryKey: ['subscription-plans'] })
     },
   })
+
+  if (!canManageSubscriptions && !isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Accès restreint</CardTitle>
+            <CardDescription>
+              Vous n&apos;avez pas les permissions nécessaires pour gérer les plans d&apos;abonnement.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

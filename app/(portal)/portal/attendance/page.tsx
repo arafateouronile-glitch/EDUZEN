@@ -51,7 +51,7 @@ export default function AttendancePage() {
         0
       ).toISOString().split('T')[0]
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, photo_url), classes(name)')

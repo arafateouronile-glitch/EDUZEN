@@ -182,7 +182,7 @@ export default function DocumentTemplatePreviewPage() {
     queryKey: ['sessions', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('sessions')
         .select('*, formations(*)')
@@ -204,7 +204,7 @@ export default function DocumentTemplatePreviewPage() {
       const student = await studentService.getById(selectedStudentId)
       // Récupérer la session/classe
       if (student?.class_id) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        // eslint-disable-next-line
         const qSess: any = supabase
           .from('sessions')
           .select('*, formations(*)')

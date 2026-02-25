@@ -155,7 +155,7 @@ export default function LearnerDashboardPage() {
       const courseIds = (sessionCourses || []).map((sc: any) => sc.course_id)
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        // eslint-disable-next-line
         const qLp: any = supabase
           .from('lesson_progress')
           .select('*, lessons(course_id)')

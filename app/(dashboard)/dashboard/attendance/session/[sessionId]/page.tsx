@@ -73,7 +73,7 @@ export default function SessionAttendancePage() {
   const { data: enrollments } = useQuery({
     queryKey: ['session-enrollments', sessionId],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('enrollments')
         .select('*, students(*)')

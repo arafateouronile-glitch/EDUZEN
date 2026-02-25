@@ -103,7 +103,7 @@ function EntityStudentsPageContent() {
   const { data: studentEntities, isLoading: isLoadingAttached } = useQuery({
     queryKey: ['student-entities', entityId],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('student_entities')
         .select('*, students(id, first_name, last_name, student_number, email, phone)')

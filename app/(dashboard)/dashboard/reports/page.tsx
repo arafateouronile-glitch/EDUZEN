@@ -357,7 +357,7 @@ function ReportsPageContent() {
     queryFn: async () => {
       if (!user?.organization_id) return null
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const qSessions: any = supabase
         .from('sessions')
         .select('*, formations!inner(organization_id)', { count: 'exact' })

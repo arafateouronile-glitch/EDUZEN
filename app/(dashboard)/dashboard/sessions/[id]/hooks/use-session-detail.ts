@@ -420,7 +420,7 @@ export function useSessionDetail(sessionId: string) {
       if (invoiceIds.length === 0) return []
 
       // Récupérer les paiements liés à ces factures
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('payments')
         .select('*, students(*), invoices(*)')
@@ -496,7 +496,7 @@ export function useSessionDetail(sessionId: string) {
     queryKey: ['session-grades', sessionId],
     queryFn: async () => {
       if (!sessionId) return []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('grades')
         .select('*, students(*)')

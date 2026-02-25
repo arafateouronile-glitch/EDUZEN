@@ -100,6 +100,11 @@ function ProgramsPageContent() {
     refetchOnMount: true,      // Toujours refetch à l’arrivée sur la page pour afficher les graphiques
   })
 
+  const hasMore = programsResult?.hasMore ?? false
+  useMemo(() => {
+    if (hasMore) prefetchNextPage()
+  }, [hasMore, prefetchNextPage])
+
   if (!user?.organization_id) {
     return (
       <div className="p-6">
@@ -107,12 +112,6 @@ function ProgramsPageContent() {
       </div>
     )
   }
-
-  // Prefetch page suivante quand hasMore
-  const hasMore = programsResult?.hasMore ?? false
-  useMemo(() => {
-    if (hasMore) prefetchNextPage()
-  }, [hasMore, prefetchNextPage])
 
   return (
     <ProgramsContent

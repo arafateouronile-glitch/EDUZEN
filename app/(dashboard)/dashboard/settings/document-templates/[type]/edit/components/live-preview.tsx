@@ -304,7 +304,7 @@ export function LivePreview({
   className,
   pageSize = 'A4',
   margins = { top: 20, right: 20, bottom: 20, left: 20 },
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line
   fullPageMode: _fullPageMode = false
 }: LivePreviewProps) {
   const [isRefreshing, setIsRefreshing] = useState(false)

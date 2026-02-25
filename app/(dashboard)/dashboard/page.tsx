@@ -860,7 +860,7 @@ export default function DashboardPage() {
         organization_id: user.organization_id,
       })
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const qSessionsOngoing: any = supabase
         .from('sessions')
         .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
@@ -1265,7 +1265,7 @@ export default function DashboardPage() {
       if (!sessions || sessions.length === 0) return []
       const sessionIds = sessions.map(s => s.id)
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('enrollments')
         .select('*, students(first_name, last_name, photo_url), sessions(name, formations(name, programs(name)))')

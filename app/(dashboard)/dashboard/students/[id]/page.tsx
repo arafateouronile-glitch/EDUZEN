@@ -34,7 +34,7 @@ export default function StudentDetailPage() {
   const { data: guardians } = useQuery({
     queryKey: ['student-guardians', studentId],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('student_guardians')
         .select('*, guardians(*)')

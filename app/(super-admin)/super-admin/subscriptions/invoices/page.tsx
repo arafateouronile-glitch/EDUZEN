@@ -36,23 +36,6 @@ export default function InvoicesPage() {
   const { canManageInvoices, isSuperAdmin } = usePlatformAdmin()
   const supabase = createClient()
 
-  // Vérifier les permissions
-  if (!canManageInvoices && !isSuperAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Accès restreint</CardTitle>
-            <CardDescription>
-              Vous n'avez pas les permissions nécessaires pour gérer les factures.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
-  // Fetch invoices
   const { data: invoices, isLoading, refetch } = useQuery({
     queryKey: ['subscription-invoices'],
     queryFn: async () => {
@@ -67,6 +50,21 @@ export default function InvoicesPage() {
     },
     staleTime: 1000 * 60 * 5,
   })
+
+  if (!canManageInvoices && !isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Accès restreint</CardTitle>
+            <CardDescription>
+              Vous n&apos;avez pas les permissions nécessaires pour gérer les factures.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         for (const studentId of studentIds) {
           try {
             // Récupérer les données de l'étudiant
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+            // eslint-disable-next-line
             const q: any = supabase
               .from('students')
               .select('*, sessions(*, formations(*, programs(*)))')

@@ -34,23 +34,6 @@ export default function BlogCommentsPage() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
-  // Vérifier les permissions
-  if (!canModerateComments && !isSuperAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Accès restreint</CardTitle>
-            <CardDescription>
-              Vous n'avez pas les permissions nécessaires pour modérer les commentaires.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
-
-  // Fetch comments
   const { data: comments, isLoading, refetch } = useQuery<BlogComment[]>({
     queryKey: ['blog-comments'],
     queryFn: async (): Promise<BlogComment[]> => {
@@ -95,6 +78,21 @@ export default function BlogCommentsPage() {
       queryClient.invalidateQueries({ queryKey: ['blog-comments'] })
     },
   })
+
+  if (!canModerateComments && !isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Accès restreint</CardTitle>
+            <CardDescription>
+              Vous n&apos;avez pas les permissions nécessaires pour modérer les commentaires.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

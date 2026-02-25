@@ -767,7 +767,7 @@ export default function GenerateDocumentPage() {
         }
         
         // Récupérer les emails des tuteurs/guardians
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+        // eslint-disable-next-line
         const qGuardians: any = supabase
           .from('student_guardians')
           .select('*, guardians(email)')

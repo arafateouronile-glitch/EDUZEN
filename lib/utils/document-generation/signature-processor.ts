@@ -15,10 +15,10 @@ async function getSignatureService() {
   if (typeof window !== 'undefined') {
     // Côté client
     if (!signatureService) {
-      const module = await import('@/lib/services/signature.service')
+      const signatureModule = await import('@/lib/services/signature.service')
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
-      signatureService = new module.SignatureService(supabase)
+      signatureService = new signatureModule.SignatureService(supabase)
     }
     return signatureService
   } else {

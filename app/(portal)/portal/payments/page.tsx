@@ -50,7 +50,7 @@ export default function PaymentsPage() {
 
       if (studentIds.length === 0) return []
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const qInv: any = supabase
         .from('invoices')
         .select('*, students(first_name, last_name)')
@@ -92,7 +92,7 @@ export default function PaymentsPage() {
 
       if (studentIds.length === 0) return []
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const qPay: any = supabase
         .from('payments')
         .select('*, invoices(invoice_number), students(first_name, last_name)')

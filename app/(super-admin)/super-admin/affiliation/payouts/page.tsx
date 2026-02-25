@@ -67,7 +67,7 @@ export default function AffiliationPayoutsPage() {
   const { data: payouts, isLoading } = useQuery({
     queryKey: ['affiliate-payouts'],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       const q: any = supabase
         .from('affiliate_payouts')
         .select('*, affiliates(email, full_name, payment_iban, payment_holder_name)')

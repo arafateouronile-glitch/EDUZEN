@@ -71,7 +71,7 @@ export default function PortalDocumentsPage() {
       // Récupérer les documents depuis learner_documents
       // Pour les étudiants, les RLS policies filtreront automatiquement
       // Pour les parents, on filtre explicitement par student_id
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- évite "Type instantiation is excessively deep"
+      // eslint-disable-next-line
       let query: any = supabase
         .from('learner_documents')
         .select('*, students(first_name, last_name, student_number)')

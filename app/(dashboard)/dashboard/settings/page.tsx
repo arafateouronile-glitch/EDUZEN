@@ -52,11 +52,6 @@ export default function SettingsPage() {
     }
   }, [])
   
-  // Ne rien afficher si l'utilisateur est un enseignant
-  if (!authLoading && user?.role === 'teacher') {
-    return null
-  }
-  
   // Note: Debug logs removed for production
   useEffect(() => {
     if (authLoading) {
@@ -706,6 +701,10 @@ export default function SettingsPage() {
       student: 'Étudiant',
     }
     return roles[role] || role
+  }
+
+  if (!authLoading && user?.role === 'teacher') {
+    return null
   }
 
   return (
