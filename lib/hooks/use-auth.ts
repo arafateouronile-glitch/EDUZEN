@@ -538,11 +538,11 @@ export function useAuth() {
   // Déconnexion
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.auth.signOut({ scope: 'local' })
+      const { error } = await supabase.auth.signOut()
       if (error) throw error
       // Laisser le temps au client Supabase SSR d’écrire la suppression des cookies
       if (typeof window !== 'undefined') {
-        await new Promise((r) => setTimeout(r, 150))
+        await new Promise((r) => setTimeout(r, 200))
       }
     },
     onSuccess: () => {
@@ -584,26 +584,15 @@ export function useAuth() {
 
   const isLoading = sessionLoading || userLoading
 
-  // Déconnexion : signOut + redirection dans le même flux (avec timeout de sécurité)
-  const logout = async () => {
-    const redirect = () => {
-      if (typeof window !== 'undefined') {
-        window.location.replace('/auth/login')
-      } else {
-        router.push('/auth/login')
-      }
+  // Déconnexion : redirection vers la route serveur /auth/logout qui vide les cookies puis redirige vers /auth/login
+  const logout = () => {
+    queryClient.setQueryData(['session'], null)
+    queryClient.clear()
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/logout'
+    } else {
+      router.push('/auth/logout')
     }
-    try {
-      await Promise.race([
-        logoutMutation.mutateAsync(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('logout_timeout')), 3000)
-        ),
-      ])
-    } catch {
-      // Erreur ou timeout : on redirige quand même
-    }
-    redirect()
   }
 
   return {
