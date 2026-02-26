@@ -42,6 +42,7 @@ export default function DashboardClientLayout({
       const isExternalScript =
         filename.includes('frame.js') ||
         filename.includes('frame_start') ||
+        filename.includes('frame_ant') ||
         filename.includes('operationBanner') ||
         filename.includes('chrome-extension://') ||
         filename.includes('moz-extension://') ||
@@ -49,13 +50,12 @@ export default function DashboardClientLayout({
       const isKnownDomNoise =
         /removeChild.*not a child of this node/i.test(msg) ||
         /NotFoundError.*removeChild/i.test(msg) ||
+        /Failed to execute 'removeChild' on 'Node'/i.test(msg) ||
         /node to be removed is not a child/i.test(msg) ||
-        /frame_start|operationBanner/i.test(stack)
+        /frame_start|frame_ant|operationBanner/i.test(stack)
       if (isExternalScript || isKnownDomNoise) {
         event.preventDefault()
         event.stopPropagation()
-        if (process.env.NODE_ENV === 'production') return false
-        logger.warn('Erreur ignorée (script externe / iframe)', { message: event.message, filename: event.filename })
         return false
       }
     }

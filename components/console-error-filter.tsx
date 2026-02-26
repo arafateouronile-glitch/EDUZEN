@@ -27,6 +27,7 @@ export function ConsoleErrorFilter() {
       /The message port closed/i, // Erreur commune des extensions
       /Script loaded: operationBanner\.js/i, // Extension de bannière
       /removeChild.*not a child of this node/i, // Erreur DOM venant d'extensions/iframes
+      /Failed to execute 'removeChild' on 'Node'/i, // Message exact (frame_start / iframe)
       /NotFoundError.*removeChild|removeChild.*NotFoundError/i, // Uncaught NotFoundError (frame_start / iframe)
       /node to be removed is not a child/i, // Message alternatif removeChild
       /container has a non-static position.*scroll offset/i, // Framer Motion useScroll (html/body ont déjà position: relative)
