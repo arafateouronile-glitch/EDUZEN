@@ -41,18 +41,20 @@ jobs:
             echo "→ Créer le hook : Vercel → projet EDUZEN → Settings → Git → Deploy Hooks → Create Hook (Branch: main)"
             exit 0
           fi
+          echo "Envoi du Deploy Hook à Vercel..."
           echo "URL du hook (début): ${URL:0:50}..."
           resp=$(curl -s -w "\n%{http_code}" -X POST "$URL" 2>/dev/null) || true
           code=$(echo "$resp" | tail -n1)
           body=$(echo "$resp" | sed '$d')
-          echo "Réponse HTTP: $code"
-          echo "$body" | head -c 1000
+          echo "Réponse HTTP: ${code:-'(vide)'}"
+          echo "$body" | head -c 800
           echo ""
           if [ "$code" = "200" ] || [ "$code" = "201" ]; then
             echo "status=ok" >> $GITHUB_OUTPUT
             echo "Deploy Hook accepté. Vérifier dans 1-2 min : Vercel → Deployments"
           else
             echo "status=fail" >> $GITHUB_OUTPUT
+            echo "→ Erreur: Vercel a répondu $code. Vérifier l'URL du hook (Vercel → Settings → Git → Deploy Hooks)."
             echo "→ Si 401/403 : recréer le Deploy Hook sur Vercel et mettre à jour le secret."
             exit 1
           fi
