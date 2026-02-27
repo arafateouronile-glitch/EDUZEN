@@ -51,7 +51,11 @@ export default async function DashboardLayout({
   const pathname = h.get('x-pathname') ?? '/dashboard'
 
   const supabase = await createClient()
-  const { data: { user: authUser } } = await supabase.auth.getUser()
+  const { data: { user: authUser } } = await supabase.auth.getUser().catch(async (e: unknown) => {
+    const err = e as { code?: string }
+    if (err?.code === 'refresh_token_not_found') await supabase.auth.signOut()
+    return { data: { user: null } }
+  })
 
   if (!authUser) {
     redirect('/auth/login?redirect=' + encodeURIComponent(pathname))

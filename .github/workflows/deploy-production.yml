@@ -49,6 +49,7 @@ jobs:
           echo "Réponse HTTP: ${code:-'(vide)'}"
           echo "$body" | head -c 800
           echo ""
+
           if [ "$code" = "200" ] || [ "$code" = "201" ]; then
             echo "status=ok" >> $GITHUB_OUTPUT
             echo "Deploy Hook accepté. Vérifier dans 1-2 min : Vercel → Deployments"

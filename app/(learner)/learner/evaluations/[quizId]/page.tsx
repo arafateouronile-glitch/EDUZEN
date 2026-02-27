@@ -218,7 +218,7 @@ export default function LearnerQuizPage() {
               errorMessage: questionsError.message
             })
           } else if (questionsData) {
-            (templateData as { questions?: Question[] }).questions = questionsData
+            (templateData as { questions?: unknown }).questions = questionsData
           }
           
           (data as GradeEnriched).evaluation_template = templateData as GradeEnriched['evaluation_template']
@@ -616,7 +616,7 @@ export default function LearnerQuizPage() {
         }
         const { error: rpcCorrectError } = await supabase.rpc('auto_correct_evaluation_responses', { p_instance_id: instanceId })
         if (rpcCorrectError) logger.warn('[Learner Quiz] auto_correct_evaluation_responses', { error: rpcCorrectError })
-        const { error: rpcGradeError } = await (supabase as { rpc: (fn: string, args: { p_instance_id: string }) => Promise<{ error: unknown }> }).rpc('update_grade_from_instance_for_learner', { p_instance_id: instanceId })
+        const { error: rpcGradeError } = await (supabase as unknown as { rpc: (fn: string, args: { p_instance_id: string }) => Promise<{ error: unknown }> }).rpc('update_grade_from_instance_for_learner', { p_instance_id: instanceId })
         if (rpcGradeError) logger.warn('[Learner Quiz] update_grade_from_instance_for_learner', { error: rpcGradeError })
         
         // Vérifier si c'est une évaluation satisfaction (pas de score, uniquement étoiles)
@@ -756,7 +756,7 @@ export default function LearnerQuizPage() {
 
       if (studentId && supabase) {
         try {
-          await (supabase as { from: (table: string) => { insert: (values: object) => Promise<{ error: unknown }> } })
+          await (supabase as unknown as { from: (table: string) => { insert: (values: object) => Promise<{ error: unknown }> } })
             .from('lesson_quiz_responses')
             .insert({
               student_id: studentId,
@@ -1120,7 +1120,7 @@ export default function LearnerQuizPage() {
           {canComplete && (
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-900 font-medium mb-2">
-                Cette évaluation contient {evaluationTemplate.questions.length} question{evaluationTemplate.questions.length > 1 ? 's' : ''} à compléter.
+                Cette évaluation contient {evaluationTemplate.questions?.length ?? 0} question{(evaluationTemplate.questions?.length ?? 0) > 1 ? 's' : ''} à compléter.
               </p>
               <p className="text-sm text-blue-700 mb-3">
                 Cliquez sur le bouton ci-dessous pour lancer le quiz et enregistrer vos réponses.

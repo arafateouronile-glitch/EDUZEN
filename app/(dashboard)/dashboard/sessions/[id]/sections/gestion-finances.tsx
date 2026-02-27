@@ -379,18 +379,20 @@ export function GestionFinances({
       const student = (invoice.students ?? (invoice.enrollments as { students?: StudentWithRelations }[])?.[0]?.students) as StudentWithRelations | undefined
       const invoiceData = invoice as InvoiceWithRelations
 
-      let sessionModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+      let freshModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
       if (sessionData?.id) {
-        const { data: mods } = await supabase.from('session_modules' as any).select('id, name, amount, currency').eq('session_id', sessionData.id).order('display_order', { ascending: true })
-        sessionModules = (mods?.length ? mods : undefined) as Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+        const { data: mods, error: modsError } = await supabase.from('session_modules' as any).select('id, name, amount, currency').eq('session_id', sessionData.id).order('display_order', { ascending: true })
+        if (!modsError && mods?.length) freshModules = mods as unknown as Array<{ id: string; name: string; amount: number; currency: string }>
       }
+      // Fallback sur le prop sessionModules (déjà chargé par le hook parent)
+      const resolvedModules = freshModules ?? (sessionModules?.length ? sessionModules : undefined)
 
       const variables = extractDocumentVariables({
         student,
         organization: org as any,
         session: sessionData,
         invoice: invoiceData,
-        sessionModules,
+        sessionModules: resolvedModules,
         academicYear,
         language: 'fr',
         issueDate: invoice.issue_date,
@@ -412,7 +414,7 @@ export function GestionFinances({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
       // Télécharger le PDF
@@ -477,22 +479,23 @@ export function GestionFinances({
 
       const invoiceData = invoice as InvoiceWithRelations
 
-      let sessionModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+      let freshModules2: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
       if (sessionData?.id) {
-        const { data: mods } = await supabase
+        const { data: mods, error: modsError } = await supabase
           .from('session_modules' as any)
           .select('id, name, amount, currency')
           .eq('session_id', sessionData.id)
           .order('display_order', { ascending: true })
-        sessionModules = (mods?.length ? mods : undefined) as Array<{ id: string; name: string; amount: number; currency: string }> | undefined
+        if (!modsError && mods?.length) freshModules2 = mods as unknown as Array<{ id: string; name: string; amount: number; currency: string }>
       }
+      const resolvedModules2 = freshModules2 ?? (sessionModules?.length ? sessionModules : undefined)
 
       const variables = extractDocumentVariables({
         student,
         organization: org as any,
         session: sessionData,
         invoice: invoiceData,
-        sessionModules,
+        sessionModules: resolvedModules2,
         academicYear,
         language: 'fr',
         issueDate: invoice.issue_date,
@@ -514,7 +517,7 @@ export function GestionFinances({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
       return await response.blob()

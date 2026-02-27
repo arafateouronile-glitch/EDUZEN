@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     for (const scheduledSend of pending) {
       try {
-        const rawDoc = scheduledSend.documents as SelectedDocument
+        const rawDoc = scheduledSend.documents as unknown as SelectedDocument
         const document = rawDoc
           ? { name: rawDoc.name ?? '', file_url: rawDoc.file_url ?? undefined, type: rawDoc.type ?? undefined }
           : { name: '', file_url: undefined, type: undefined }
@@ -176,9 +176,9 @@ async function getRecipients(
         .in('id', recipientIds)
         .eq('organization_id', organizationId)
       
-      teachers?.forEach((t: { email?: string; full_name?: string; phone?: string }) => {
+      teachers?.forEach((t: { email: string; full_name: string; phone: string | null }) => {
         if (t.email) {
-          recipients.push({ email: t.email, name: t.full_name ?? '', phone: t.phone })
+          recipients.push({ email: t.email, name: t.full_name ?? '', phone: t.phone ?? undefined })
         }
       })
     } else if (recipientType === 'student') {
@@ -188,12 +188,13 @@ async function getRecipients(
         .in('id', recipientIds)
         .eq('organization_id', organizationId)
       
-      students?.forEach((s: { email?: string; first_name?: string; last_name?: string; phone?: string; parent_phone?: string }) => {
-        if (s.email) {
+      ;(students as unknown as Array<Record<string, unknown>>)?.forEach((s: Record<string, unknown>) => {
+        const email = s.email as string | undefined
+        if (email) {
           recipients.push({ 
-            email: s.email, 
-            name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || 'Destinataire',
-            phone: s.phone || s.parent_phone 
+            email, 
+            name: `${(s.first_name as string) ?? ''} ${(s.last_name as string) ?? ''}`.trim() || 'Destinataire',
+            phone: ((s.phone as string | null) || (s.parent_phone as string | null)) ?? undefined
           })
         }
       })
@@ -210,10 +211,10 @@ async function getRecipients(
         `)
         .eq('session_id', sessionId)
       
-      sessionTeachers?.forEach((st: { users?: { email?: string; full_name?: string; phone?: string } | null }) => {
+      sessionTeachers?.forEach((st: { teacher_id: string | null; users: { email: string; full_name: string; phone: string | null } | null }) => {
         const t = st.users
         if (t?.email) {
-          recipients.push({ email: t.email, name: t.full_name ?? '', phone: t.phone })
+          recipients.push({ email: t.email, name: t.full_name ?? '', phone: t.phone ?? undefined })
         }
       })
     }
@@ -227,13 +228,13 @@ async function getRecipients(
         `)
         .eq('session_id', sessionId)
       
-      enrollments?.forEach((e: { students?: { email?: string; first_name?: string; last_name?: string; phone?: string; parent_phone?: string } | null }) => {
+      ;(enrollments as unknown as Array<{ student_id: string | null; students: Record<string, unknown> | null }>)?.forEach((e: { student_id: string | null; students: Record<string, unknown> | null }) => {
         const s = e.students
-        if (s?.email) {
+        if (s && typeof s === 'object' && s !== null && s.email) {
           recipients.push({ 
-            email: s.email, 
-            name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || 'Destinataire',
-            phone: s.phone || s.parent_phone 
+            email: String(s.email), 
+            name: `${String(s.first_name ?? '')} ${String(s.last_name ?? '')}`.trim() || 'Destinataire',
+            phone: (s.phone as string) || (s.parent_phone as string) || undefined
           })
         }
       })

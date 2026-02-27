@@ -737,22 +737,22 @@ export default function ProgramEnrollmentsPage() {
                               {formatCurrency(enrollment.total_amount || 0, firstFormation?.currency ?? 'XOF')}
                             </span>
                           </div>
-                          {enrollment.paid_amount > 0 && (
+                          {(enrollment.paid_amount ?? 0) > 0 && (
                             <div>
                               <span className="text-muted-foreground">Payé:</span>{' '}
                               <span className="font-medium">
-                                {formatCurrency(enrollment.paid_amount, firstFormation?.currency ?? 'XOF')}
+                                {formatCurrency(enrollment.paid_amount ?? 0, firstFormation?.currency ?? 'XOF')}
                               </span>
                             </div>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(enrollment.status)}`}>
-                          {getStatusLabel(enrollment.status)}
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor((enrollment.status ?? 'pending') as EnrollmentStatus)}`}>
+                          {getStatusLabel((enrollment.status ?? 'pending') as EnrollmentStatus)}
                         </span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getPaymentStatusColor(enrollment.payment_status)}`}>
-                          {getPaymentStatusLabel(enrollment.payment_status)}
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getPaymentStatusColor((enrollment.payment_status ?? 'pending') as PaymentStatus)}`}>
+                          {getPaymentStatusLabel((enrollment.payment_status ?? 'pending') as PaymentStatus)}
                         </span>
                       </div>
                     </div>

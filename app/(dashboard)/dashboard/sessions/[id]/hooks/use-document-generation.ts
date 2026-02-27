@@ -193,7 +193,7 @@ export function useDocumentGeneration({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
       // Télécharger le PDF
@@ -373,7 +373,7 @@ export function useDocumentGeneration({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
       // Télécharger le PDF
@@ -564,7 +564,7 @@ export function useDocumentGeneration({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
       // Télécharger le PDF
@@ -741,7 +741,7 @@ export function useDocumentGeneration({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
       // Télécharger le PDF
@@ -906,7 +906,7 @@ export function useDocumentGeneration({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
       // Télécharger le PDF
@@ -1075,7 +1075,7 @@ export function useDocumentGeneration({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
 
       // Télécharger le PDF
@@ -2011,7 +2011,7 @@ export function useDocumentGeneration({
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-          throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+          throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
         }
 
         pdfBlob = await response.blob()
@@ -2250,7 +2250,7 @@ export function useDocumentGeneration({
         })
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-          throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+          throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
         }
         const blob = await response.blob()
         return {
@@ -2354,7 +2354,7 @@ export function useDocumentGeneration({
       })
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
-        throw new Error(errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
       }
       const blob = await response.blob()
       return {

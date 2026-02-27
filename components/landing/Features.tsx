@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useInView, useMotionValue, useTransform, useSpring } from '@/components/ui/motion'
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import {
   CreditCard,
   FileText,
@@ -96,6 +96,9 @@ const features = [
 function FeatureCard({ feature, index, isInView }: { feature: typeof features[0]; index: number; isInView: boolean }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [isHovered, setIsHovered] = useState(false)
+  const [canUseTilt, setCanUseTilt] = useState(false)
+  const frameRef = useRef<number | null>(null)
+  const lastMouseRef = useRef<{ x: number; y: number } | null>(null)
 
   const mouseX = useMotionValue(0)
   const mouseY = useMotionValue(0)
@@ -103,16 +106,52 @@ function FeatureCard({ feature, index, isInView }: { feature: typeof features[0]
   const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [6, -6]), { stiffness: 200, damping: 20 })
   const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-6, 6]), { stiffness: 200, damping: 20 })
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const hoverFineQuery = window.matchMedia('(hover: hover) and (pointer: fine)')
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+    const updateCanUseTilt = () => {
+      setCanUseTilt(hoverFineQuery.matches && !reducedMotionQuery.matches)
+    }
+
+    updateCanUseTilt()
+    hoverFineQuery.addEventListener('change', updateCanUseTilt)
+    reducedMotionQuery.addEventListener('change', updateCanUseTilt)
+
+    return () => {
+      hoverFineQuery.removeEventListener('change', updateCanUseTilt)
+      reducedMotionQuery.removeEventListener('change', updateCanUseTilt)
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+      }
+    }
+  }, [])
+
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return
-    const rect = cardRef.current.getBoundingClientRect()
-    mouseX.set((e.clientX - rect.left) / rect.width - 0.5)
-    mouseY.set((e.clientY - rect.top) / rect.height - 0.5)
-  }, [mouseX, mouseY])
+    if (!canUseTilt || !cardRef.current) return
+
+    lastMouseRef.current = { x: e.clientX, y: e.clientY }
+    if (frameRef.current !== null) return
+
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null
+      if (!cardRef.current || !lastMouseRef.current) return
+      const rect = cardRef.current.getBoundingClientRect()
+      mouseX.set((lastMouseRef.current.x - rect.left) / rect.width - 0.5)
+      mouseY.set((lastMouseRef.current.y - rect.top) / rect.height - 0.5)
+    })
+  }, [canUseTilt, mouseX, mouseY])
 
   const handleMouseLeave = useCallback(() => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current)
+      frameRef.current = null
+    }
     mouseX.set(0)
     mouseY.set(0)
+    lastMouseRef.current = null
     setIsHovered(false)
   }, [mouseX, mouseY])
 
@@ -129,12 +168,12 @@ function FeatureCard({ feature, index, isInView }: { feature: typeof features[0]
         ease: [0.16, 1, 0.3, 1],
       }}
       style={{
-        rotateX: isHovered ? rotateX : 0,
-        rotateY: isHovered ? rotateY : 0,
+        rotateX: isHovered && canUseTilt ? rotateX : 0,
+        rotateY: isHovered && canUseTilt ? rotateY : 0,
         transformPerspective: 1200,
       }}
       onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => setIsHovered(canUseTilt)}
       onMouseLeave={handleMouseLeave}
       className="relative group cursor-default"
     >

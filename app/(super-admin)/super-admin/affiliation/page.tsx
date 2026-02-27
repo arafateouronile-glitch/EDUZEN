@@ -183,7 +183,7 @@ export default function AffiliationDashboardPage() {
                     <RechartsXAxis
                       dataKey="name"
                       tick={{ fontSize: 11 }}
-                      tickFormatter={(v: string) => (v.length > 12 ? v.slice(0, 10) + '…' : v)}
+                      tickFormatter={(v: string | number) => (String(v).length > 12 ? String(v).slice(0, 10) + '…' : String(v))}
                     />
                     <RechartsYAxis
                       tick={{ fontSize: 11 }}
@@ -191,7 +191,7 @@ export default function AffiliationDashboardPage() {
                     />
                     <RechartsTooltip
                       formatter={(value: number) => [formatCurrency(value), 'MRR']}
-                      labelFormatter={(_, payload) => payload?.[0]?.payload?.name}
+                      labelFormatter={(_: unknown, payload: unknown) => (Array.isArray(payload) && payload[0] && typeof payload[0] === 'object' && payload[0] !== null && 'payload' in payload[0]) ? (payload[0] as { payload?: { name?: string } }).payload?.name : undefined}
                     />
                     <RechartsBar
                       dataKey="mrr"

@@ -283,7 +283,7 @@ export default function DocumentTemplatesPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ types: ['facture', 'devis', 'contrat', 'convocation'] }),
+        body: JSON.stringify({ types: ['convention', 'facture', 'devis', 'convocation', 'contrat', 'releve_notes', 'reglement_interieur', 'cgv', 'programme', 'certificat_realisation', 'attestation', 'livret_accueil', 'emargement'] }),
       })
       if (!response.ok) {
         const error = await response.json()
@@ -414,7 +414,7 @@ export default function DocumentTemplatesPage() {
             ) : (
               <>
                 <Wand2 className="h-4 w-4 mr-2" />
-                Réinitialiser Facture / Devis / Contrat / Convocation
+                Réinitialiser tous les modèles par défaut
               </>
             )}
           </Button>

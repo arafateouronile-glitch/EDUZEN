@@ -104,7 +104,7 @@ export async function GET() {
       totalClicks > 0 ? Math.round((totalConversions / totalClicks) * 1000) / 10 : 0
 
     const payload: AffiliatePortalData = {
-      affiliate: affiliate as AffiliatePortalData['affiliate'],
+      affiliate: affiliate as unknown as AffiliatePortalData['affiliate'],
       commissions: commList,
       promoCode: promo as { code: string; discount_value: number } | null,
       stats: {

@@ -357,7 +357,7 @@ export function EspaceApprenant({
     const studentPaymentsData = studentPayments || []
     
     // Calculer les stats de présence depuis les données détaillées
-    const presentCount = studentAttendanceDetailsData.filter(a => a.status === 'present' || a.status === 'late').length
+    const presentCount = studentAttendanceDetailsData.filter((a: { status?: string }) => a.status === 'present' || a.status === 'late').length
     const totalCount = studentAttendanceDetailsData.length
     const studentAttendance = totalCount > 0 
       ? { present: presentCount, total: totalCount }

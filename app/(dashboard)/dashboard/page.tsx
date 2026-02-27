@@ -850,203 +850,11 @@ export default function DashboardPage() {
     refetchOnMount: true, // Recharger les stats au montage (ex. après hard refresh quand org vient d’être dispo)
     queryFn: async () => {
       if (!user?.organization_id) return null
-
-      const currentMonth = new Date()
-      currentMonth.setDate(1)
-      const today = new Date().toISOString().split('T')[0]
-
-      logger.debug('📊 [DASHBOARD] Calcul des stats - PARALLEL', {
-        currentMonth: currentMonth.toISOString(),
-        organization_id: user.organization_id,
-      })
-
-      // eslint-disable-next-line
-      const qSessionsOngoing: any = supabase
-        .from('sessions')
-        .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
-        .eq('formations.organization_id', user.organization_id)
-        .eq('status', 'ongoing')
-
-      // ✅ Exécuter toutes les requêtes indépendantes en parallèle (13 requêtes)
-      const [
-        studentsResult,
-        paymentsResult,
-        overdueInvoicesResult,
-        attendanceResult,
-        teachersResult,
-        activeSessionsResult,
-        activeFormationsResult,
-        activeProgramsResult,
-        formationsResult,
-        completedSessionsResult
-      ] = await Promise.all([
-        // Nombre d'apprenants actifs
-        supabase
-          .from('students')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id)
-          .eq('status', 'active'),
-
-        // Revenus du mois - paiements complétés
-        supabase
-          .from('payments')
-          .select('amount, currency, paid_at, created_at, status, payment_method')
-          .eq('organization_id', user.organization_id)
-          .eq('status', 'completed')
-          .gte('created_at', currentMonth.toISOString()),
-
-        // Impayés (invoices seulement)
-        supabase
-          .from('invoices')
-          .select('total_amount, document_type')
-          .eq('organization_id', user.organization_id)
-          .eq('status', 'overdue')
-          .or('document_type.eq.invoice,document_type.is.null'),
-
-        // Taux de présence aujourd'hui
-        supabase
-          .from('attendance')
-          .select('status')
-          .eq('organization_id', user.organization_id)
-          .eq('date', today),
-
-        // Nombre d'enseignants actifs
-        supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id)
-          .eq('role', 'teacher')
-          .eq('is_active', true),
-
-        qSessionsOngoing,
-
-        // Formations actives
-        supabase
-          .from('formations')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id)
-          .eq('is_active', true),
-
-        // Programmes actifs
-        supabase
-          .from('programs')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id)
-          .eq('is_active', true),
-
-        // Formations (pour calculer enrollments)
-        supabase
-          .from('formations')
-          .select('id')
-          .eq('organization_id', user.organization_id),
-
-        // Sessions terminées
-        supabase
-          .from('sessions')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'completed')
-      ])
-
-      const studentsCount = studentsResult.count || 0
-      const { data: payments, error: paymentsError } = paymentsResult
-
-      if (paymentsError) {
-        logger.error('❌ [DASHBOARD] Erreur lors de la récupération des paiements:', paymentsError)
+      const res = await fetch('/api/dashboard/overview', { cache: 'no-store' })
+      if (!res.ok) {
+        throw new Error('Impossible de charger les statistiques du dashboard')
       }
-
-      const paymentsArray = (payments as Payment[]) || []
-      logger.debug('📊 [DASHBOARD] Paiements récupérés:', {
-        total: paymentsArray.length,
-        payments: paymentsArray.map((p) => ({
-          amount: p.amount,
-          paid_at: p.paid_at,
-          created_at: p.created_at,
-          method: p.payment_method,
-        })),
-      })
-      
-      // Filtrer pour ne garder que ceux avec paid_at dans le mois OU paid_at null
-      const monthlyPayments = paymentsArray.filter((p) => {
-        if (p.paid_at) {
-          return new Date(p.paid_at) >= currentMonth
-        }
-        // Si paid_at est null, utiliser created_at (si défini)
-        return p.created_at ? new Date(p.created_at) >= currentMonth : false
-      })
-      
-      logger.debug('📊 [DASHBOARD] Paiements du mois filtrés:', {
-        count: monthlyPayments.length,
-        payments: monthlyPayments.map((p) => ({
-          amount: p.amount,
-          paid_at: p.paid_at,
-          created_at: p.created_at,
-        })),
-      })
-      
-      const monthlyRevenue = monthlyPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-      logger.debug('💰 [DASHBOARD] Revenus du mois calculés:', {
-        monthlyRevenue,
-        currency: monthlyPayments[0]?.currency || 'EUR',
-      })
-
-      // ✅ Utiliser les résultats de Promise.all
-      const { data: overdueInvoices } = overdueInvoicesResult
-      const invoicesArray = (overdueInvoices as Invoice[]) || []
-      const overdueAmount = invoicesArray.reduce((sum, inv) => sum + Number(inv.total_amount), 0)
-
-      // Taux de présence moyen
-      const { data: attendance } = attendanceResult
-      const attendanceData = (attendance as AttendanceWithRelations[]) || []
-      const totalAttendance = attendanceData.length
-      const presentCount = attendanceData.filter((a) => a.status === 'present').length
-      const avgAttendance = totalAttendance > 0 ? (presentCount / totalAttendance) * 100 : 0
-
-      // Nombre d'enseignants actifs
-      const teachersCount = teachersResult.count || 0
-
-      // Sessions en cours
-      const activeSessionsCount = activeSessionsResult.count || 0
-
-      // ✅ Utiliser les résultats de Promise.all
-      const activeFormationsCount = activeFormationsResult.count || 0
-      const activeProgramsCount = activeProgramsResult.count || 0
-      const { data: formations } = formationsResult
-      const completedSessions = completedSessionsResult.count || 0
-
-      // Inscriptions totales - requêtes séquentielles nécessaires (dépendance)
-      let totalEnrollments = 0
-      if (formations && formations.length > 0) {
-        const formationIds = formations.map((f: { id: string }) => f.id)
-
-        // ✅ Ces 2 requêtes peuvent être parallélisées
-        const { data: sessions } = await supabase
-          .from('sessions')
-          .select('id')
-          .in('formation_id', formationIds)
-
-        if (sessions && sessions.length > 0) {
-          const sessionIds = sessions.map((s: { id: string }) => s.id)
-          const { count } = await supabase
-            .from('enrollments')
-            .select('*', { count: 'exact', head: true })
-            .in('session_id', sessionIds)
-          totalEnrollments = count || 0
-        }
-      }
-
-      return {
-        studentsCount: studentsCount || 0,
-        monthlyRevenue,
-        currency: monthlyPayments[0]?.currency || 'EUR',
-        overdueAmount,
-        avgAttendance: Math.round(avgAttendance),
-        teachersCount: teachersCount || 0,
-        activeSessionsCount: activeSessionsCount || 0,
-        activeFormationsCount: activeFormationsCount || 0,
-        activeProgramsCount: activeProgramsCount || 0,
-        totalEnrollments: totalEnrollments || 0,
-        completedSessions: completedSessions || 0,
-      }
+      return res.json()
     },
   })
 
@@ -1132,39 +940,16 @@ export default function DashboardPage() {
   // Récupérer les apprenants par classe
   const { data: studentsBySession } = useQuery({
     queryKey: ['students-by-class', user?.organization_id],
-    enabled: !!user?.organization_id && user?.role !== 'teacher',
+    enabled: !!user?.organization_id && user?.role !== 'teacher' && shouldLoadSecondaryData,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     queryFn: async () => {
       if (!user?.organization_id) return []
-
-      // Récupérer les classes avec le nombre d'étudiants
-      const { data: classes } = await supabase
-        .from('classes')
-        .select('id, name, code')
-        .eq('organization_id', user.organization_id)
-
-      if (!classes || classes.length === 0) return []
-
-      const classData = await Promise.all(
-        classes.map(async (classItem: any) => {
-          if (!user.organization_id) return null
-          const { count } = await supabase
-            .from('students')
-            .select('*', { count: 'exact', head: true })
-            .eq('class_id', classItem.id)
-            .eq('organization_id', user.organization_id)
-            .eq('status', 'active')
-
-          const displayName = classItem.name.length > 20 ? classItem.name.substring(0, 20) + '...' : classItem.name
-
-          return {
-            name: displayName,
-            students: count || 0,
-            fullLabel: `${classItem.code} - ${classItem.name}`
-          }
-        })
-      )
-
-      return classData.filter((c): c is NonNullable<typeof c> => c !== null && c.students > 0).slice(0, 10) // Limiter à 10 pour la lisibilité
+      const res = await fetch('/api/dashboard/students-distribution', { cache: 'no-store' })
+      if (!res.ok) return []
+      return res.json()
     },
   })
 
@@ -1242,46 +1027,9 @@ export default function DashboardPage() {
     },
   })
 
-  // Récupérer les inscriptions récentes
-  const { data: recentEnrollments } = useQuery({
-    queryKey: ['recent-enrollments', user?.organization_id],
-    enabled: !!user?.organization_id && user?.role !== 'teacher',
-    queryFn: async () => {
-      if (!user?.organization_id) return []
-
-      const { data: formations } = await supabase
-        .from('formations')
-        .select('id')
-        .eq('organization_id', user.organization_id)
-
-      if (!formations || formations.length === 0) return []
-      const formationIds = formations.map(f => f.id)
-
-      const { data: sessions } = await supabase
-        .from('sessions')
-        .select('id')
-        .in('formation_id', formationIds)
-
-      if (!sessions || sessions.length === 0) return []
-      const sessionIds = sessions.map(s => s.id)
-
-      // eslint-disable-next-line
-      const q: any = supabase
-        .from('enrollments')
-        .select('*, students(first_name, last_name, photo_url), sessions(name, formations(name, programs(name)))')
-        .in('session_id', sessionIds)
-        .order('created_at', { ascending: false })
-        .limit(5)
-      const { data, error } = await q
-
-      if (error) return []
-      return data || []
-    },
-  })
-
-  // Récupérer les top programmes
-  const { data: topPrograms } = useQuery({
-    queryKey: ['top-programs', user?.organization_id],
+  // Récupérer les données d'activité tertiaires (top programmes + inscriptions récentes)
+  const { data: activityInsights } = useQuery({
+    queryKey: ['dashboard-activity-insights', user?.organization_id],
     enabled: !!user?.organization_id && user?.role !== 'teacher' && shouldLoadTertiaryData,
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
@@ -1289,50 +1037,13 @@ export default function DashboardPage() {
     refetchOnMount: false,
     queryFn: async () => {
       if (!user?.organization_id) return []
-
-      const { data: programs } = await supabase
-        .from('programs')
-        .select('id, name, code, formations(id)')
-        .eq('organization_id', user.organization_id)
-        .eq('is_active', true)
-
-      if (!programs) return []
-
-      const programsWithStats = await Promise.all(
-        programs.map(async (program: any) => {
-          let totalEnrollments = 0
-          for (const formation of program.formations || []) {
-            const { data: sessions } = await supabase
-              .from('sessions')
-              .select('id')
-              .eq('formation_id', formation.id)
-            
-            const sessionIds = (sessions || []).map((s: any) => s.id).filter((id): id is string => !!id)
-            
-            if (sessionIds && sessionIds.length > 0) {
-              const { count } = await supabase
-                .from('enrollments')
-                .select('*', { count: 'exact', head: true })
-                .in('session_id', sessionIds)
-              totalEnrollments += count || 0
-            }
-          }
-
-          return {
-            id: program.id,
-            name: program.name,
-            code: program.code,
-            enrollments: totalEnrollments,
-          }
-        })
-      )
-
-      return programsWithStats
-        .filter(p => p.enrollments > 0)
-        .sort((a, b) => b.enrollments - a.enrollments)
-        .slice(0, 5)
+      const res = await fetch('/api/dashboard/activity-insights', { cache: 'no-store' })
+      if (!res.ok) return { topPrograms: [], recentEnrollments: [] }
+      return res.json()
     },
   })
+  const recentEnrollments = activityInsights?.recentEnrollments || []
+  const topPrograms = activityInsights?.topPrograms || []
 
   const containerVariants = useMemo(() => ({
     hidden: { opacity: 0 },

@@ -146,16 +146,16 @@ function ToolbarButton({ onClick, isActive, disabled, children, title, className
       disabled={disabled}
       title={title}
       className={cn(
-        'p-2 rounded-md transition-colors',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'flex items-center justify-center h-7 w-7 rounded transition-colors duration-100 flex-shrink-0',
+        'disabled:opacity-40 disabled:cursor-not-allowed',
         focusMode
           ? cn(
-              'text-gray-400 hover:bg-gray-800 hover:text-gray-200',
-              isActive && 'bg-purple-900/50 text-purple-300'
+              'text-gray-400 hover:bg-gray-700 hover:text-gray-200',
+              isActive && 'bg-blue-900/50 text-blue-300'
             )
           : cn(
-              'hover:bg-gray-100',
-              isActive && 'bg-purple-100 text-purple-700'
+              'text-[#444746] hover:bg-[#f1f3f4]',
+              isActive && 'bg-[#e8f0fe] text-[#1a73e8]'
             ),
         className
       )}
@@ -167,7 +167,7 @@ function ToolbarButton({ onClick, isActive, disabled, children, title, className
 
 // Composant Séparateur de Toolbar
 function ToolbarDivider({ focusMode }: { focusMode?: boolean }) {
-  return <div className={cn("w-px h-6 mx-1", focusMode ? "bg-gray-700" : "bg-gray-300")} />
+  return <div className={cn("w-px h-5 mx-1 flex-shrink-0", focusMode ? "bg-gray-700" : "bg-[#dadce0]")} />
 }
 
 // Composant Badge Variable (Chip) - Draggable
@@ -599,46 +599,51 @@ ${htmlContent}
 
   return (
     <div className={cn(
-      "flex h-screen bg-gray-200 transition-all duration-300",
-      isFocusMode && "fixed inset-0 z-50"
+      "flex h-screen transition-all duration-300",
+      isFocusMode ? "fixed inset-0 z-50 bg-gray-900" : "bg-[#f0f0f0]"
     )}>
       {/* Zone principale - Éditeur Full-Width */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header avec titre et actions */}
         <div className={cn(
-          "document-editor-header bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between no-print transition-all duration-300",
-          isFocusMode && "bg-gray-900 border-gray-800"
+          "document-editor-header px-4 py-2.5 flex items-center justify-between no-print transition-all duration-300 border-b",
+          isFocusMode ? "bg-gray-900 border-gray-800" : "bg-white border-[#e0e0e0]"
         )}>
-          <div>
-            <h1 className={cn(
-              "text-lg font-semibold transition-colors",
-              isFocusMode ? "text-white" : "text-gray-800"
-            )}>
-              Éditeur de document
-              {isFocusMode && <span className="ml-2 text-xs font-normal text-gray-400">(Mode Focus - Appuyez sur Esc pour quitter)</span>}
-            </h1>
-            {lastSaved && (
-              <p className={cn(
-                "text-xs transition-colors",
-                isFocusMode ? "text-gray-400" : "text-gray-500"
+          {/* Titre — style Google Docs */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex flex-col min-w-0">
+              <h1 className={cn(
+                "text-base font-medium truncate transition-colors leading-tight",
+                isFocusMode ? "text-white" : "text-[#202124]"
               )}>
-                Dernière sauvegarde : {lastSaved.toLocaleTimeString()}
-              </p>
-            )}
+                Éditeur de document
+              </h1>
+              <div className={cn(
+                "text-[11px] transition-colors leading-tight",
+                isFocusMode ? "text-gray-500" : "text-[#5f6368]"
+              )}>
+                {lastSaved
+                  ? `Sauvegardé à ${lastSaved.toLocaleTimeString()}`
+                  : isFocusMode
+                  ? 'Mode Focus — Esc pour quitter'
+                  : 'Non sauvegardé'
+                }
+              </div>
+            </div>
           </div>
-          
-          <div className="document-editor-actions flex items-center gap-2">
+
+          <div className="document-editor-actions flex items-center gap-1">
             {/* Export JSON */}
             <button
               type="button"
               onClick={handleExportJSON}
               title="Exporter en JSON"
               className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
-                isFocusMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-600 hover:bg-gray-100"
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded transition-colors",
+                isFocusMode ? "text-gray-400 hover:bg-gray-800" : "text-[#5f6368] hover:bg-[#f1f3f4]"
               )}
             >
-              <FileJson className="w-4 h-4" />
+              <FileJson className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">JSON</span>
             </button>
 
@@ -648,11 +653,11 @@ ${htmlContent}
               onClick={handleExportHTML}
               title="Exporter en HTML"
               className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
-                isFocusMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-600 hover:bg-gray-100"
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded transition-colors",
+                isFocusMode ? "text-gray-400 hover:bg-gray-800" : "text-[#5f6368] hover:bg-[#f1f3f4]"
               )}
             >
-              <FileCode className="w-4 h-4" />
+              <FileCode className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">HTML</span>
             </button>
 
@@ -662,18 +667,18 @@ ${htmlContent}
               onClick={handlePrint}
               title="Aperçu PDF / Imprimer"
               className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
-                isFocusMode ? "text-gray-300 hover:bg-gray-800" : "text-gray-600 hover:bg-gray-100"
+                "flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded transition-colors",
+                isFocusMode ? "text-gray-400 hover:bg-gray-800" : "text-[#5f6368] hover:bg-[#f1f3f4]"
               )}
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Aperçu</span>
             </button>
 
             {/* Séparateur */}
             <div className={cn(
-              "w-px h-6 mx-1",
-              isFocusMode ? "bg-gray-700" : "bg-gray-300"
+              "w-px h-5 mx-1",
+              isFocusMode ? "bg-gray-700" : "bg-[#dadce0]"
             )} />
 
             {/* Toggle Sidebar */}
@@ -682,7 +687,7 @@ ${htmlContent}
                 type="button"
                 onClick={() => setIsSidebarVisible(prev => !prev)}
                 title={isSidebarVisible ? "Masquer la sidebar" : "Afficher la sidebar"}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                className="flex items-center justify-center h-7 w-7 text-[#5f6368] hover:bg-[#f1f3f4] rounded transition-colors"
               >
                 {isSidebarVisible ? (
                   <PanelRightClose className="w-4 h-4" />
@@ -698,10 +703,10 @@ ${htmlContent}
               onClick={toggleFocusMode}
               title={isFocusMode ? "Quitter le mode Focus (Esc)" : "Mode Focus (F11)"}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors",
+                "flex items-center justify-center h-7 w-7 rounded transition-colors",
                 isFocusMode
-                  ? "text-purple-300 hover:bg-gray-800 bg-gray-800"
-                  : "text-gray-600 hover:bg-purple-50 hover:text-purple-600"
+                  ? "text-blue-400 hover:bg-gray-800 bg-gray-800/50"
+                  : "text-[#5f6368] hover:bg-[#f1f3f4]"
               )}
             >
               {isFocusMode ? (
@@ -709,28 +714,27 @@ ${htmlContent}
               ) : (
                 <Maximize2 className="w-4 h-4" />
               )}
-              <span className="hidden sm:inline">{isFocusMode ? 'Quitter' : 'Focus'}</span>
             </button>
 
-            {/* Bouton Enregistrer */}
+            {/* Bouton Enregistrer — style Google Docs */}
             <button
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[#1a73e8] text-white rounded hover:bg-[#1557b0] transition-colors disabled:opacity-50 ml-1"
             >
-              <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Enregistrement...' : 'Enregistrer le Modèle'}</span>
+              <Save className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{isSaving ? 'Enregistrement...' : 'Enregistrer'}</span>
             </button>
           </div>
         </div>
 
-        {/* Barre d'outils sticky */}
+        {/* Barre d'outils sticky — style Google Docs */}
         <div className={cn(
-          "document-editor-toolbar sticky top-0 z-10 border-b shadow-sm no-print transition-all duration-300",
-          isFocusMode ? "bg-gray-900 border-gray-800" : "bg-white border-gray-200"
+          "document-editor-toolbar sticky top-0 z-10 border-b no-print transition-all duration-300",
+          isFocusMode ? "bg-gray-900 border-gray-800" : "bg-[#f8f9fa] border-[#e0e0e0]"
         )}>
-          <div className="flex items-center gap-1 px-4 py-2 flex-wrap">
+          <div className="flex items-center gap-0.5 px-2 py-1 overflow-x-auto flex-nowrap min-h-[40px]">
             {/* Historique */}
             <ToolbarButton
               onClick={() => editor.chain().focus().undo().run()}
@@ -938,7 +942,7 @@ ${htmlContent}
         <div
           className={cn(
             "flex-1 overflow-y-auto overflow-x-auto transition-colors duration-300",
-            isFocusMode ? "bg-gray-800" : "bg-gray-100"
+            isFocusMode ? "bg-gray-900" : "bg-[#f0f0f0]"
           )}
           onDragOver={(e) => e.preventDefault()}
         >
@@ -949,12 +953,17 @@ ${htmlContent}
               className={cn(
                 "document-editor-page bg-white w-full h-full transition-all duration-300",
                 isFocusMode
-                  ? "shadow-2xl shadow-black/30 rounded-lg"
-                  : "shadow-lg rounded-lg border border-gray-200"
+                  ? "shadow-2xl shadow-black/40"
+                  : ""
               )}
+              style={{
+                boxShadow: isFocusMode
+                  ? '0 0 0 1px rgba(255,255,255,0.08), 0 25px 50px -12px rgba(0,0,0,0.5)'
+                  : '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+              }}
             >
-              {/* Zone d'édition - Padding léger pour ne pas coller aux bords */}
-              <div className="w-full h-full p-6 lg:p-8">
+              {/* Zone d'édition */}
+              <div className="w-full h-full p-8 lg:p-12">
                 <EditorContent editor={editor} />
               </div>
             </div>
@@ -975,12 +984,12 @@ ${htmlContent}
           isSidebarVisible && !isFocusMode ? "opacity-100" : "opacity-0"
         )}>
           {/* Header de la sidebar */}
-          <div className="px-4 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 shrink-0">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <Variable className="w-5 h-5 text-purple-600" />
+          <div className="px-3 py-3 border-b border-[#e0e0e0] bg-[#f8f9fa] shrink-0">
+            <h2 className="text-sm font-medium text-[#202124] flex items-center gap-2">
+              <Variable className="w-4 h-4 text-[#1a73e8]" />
               Variables
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-xs text-[#5f6368] mt-0.5">
               Glissez ou cliquez pour insérer
             </p>
           </div>
@@ -1010,14 +1019,10 @@ ${htmlContent}
           </div>
 
           {/* Footer de la sidebar */}
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 shrink-0">
-            <div className="flex items-start gap-2 text-xs text-gray-500">
-              <span className="text-lg">💡</span>
-              <div>
-                <p className="font-medium text-gray-600">Astuce</p>
-                <p>Les variables seront remplacées par leurs valeurs lors de la génération du document.</p>
-              </div>
-            </div>
+          <div className="px-3 py-2.5 border-t border-[#e0e0e0] bg-[#f8f9fa] shrink-0">
+            <p className="text-[11px] text-[#5f6368]">
+              Les variables seront remplacées par leurs valeurs lors de la génération du document.
+            </p>
           </div>
         </div>
       </div>

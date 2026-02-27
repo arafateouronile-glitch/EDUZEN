@@ -11,22 +11,54 @@ const MagneticButton = ({ children, className, ...props }: any) => {
   const ref = useRef<HTMLButtonElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+  const frameRef = useRef<number | null>(null);
+  const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  const [isMagneticEnabled, setIsMagneticEnabled] = useState(false);
 
   const springConfig = { damping: 15, stiffness: 150, mass: 0.1 };
   const springX = useSpring(x, springConfig);
   const springY = useSpring(y, springConfig);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hoverFine = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const update = () => setIsMagneticEnabled(hoverFine.matches && !reducedMotion.matches);
+    update();
+
+    hoverFine.addEventListener('change', update);
+    reducedMotion.addEventListener('change', update);
+
+    return () => {
+      hoverFine.removeEventListener('change', update);
+      reducedMotion.removeEventListener('change', update);
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    };
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!ref.current) return;
-    const { clientX, clientY } = e;
-    const { left, top, width, height } = ref.current.getBoundingClientRect();
-    const centerX = left + width / 2;
-    const centerY = top + height / 2;
-    x.set((clientX - centerX) * 0.2);
-    y.set((clientY - centerY) * 0.2);
+    if (!isMagneticEnabled || !ref.current) return;
+    pointerRef.current = { x: e.clientX, y: e.clientY };
+    if (frameRef.current !== null) return;
+
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      if (!ref.current || !pointerRef.current) return;
+      const { left, top, width, height } = ref.current.getBoundingClientRect();
+      const centerX = left + width / 2;
+      const centerY = top + height / 2;
+      x.set((pointerRef.current.x - centerX) * 0.2);
+      y.set((pointerRef.current.y - centerY) * 0.2);
+    });
   };
 
   const handleMouseLeave = () => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    pointerRef.current = null;
     x.set(0);
     y.set(0);
   };
@@ -202,7 +234,7 @@ export const Hero = memo(function Hero() {
                   </div>
 
                    {/* Reflet lumineux sur le verre */}
-                   <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform ease-in-out" />
+                   <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none transform translate-x-[-100%] group-hover:translate-x-[100%] ease-in-out" />
                 </div>
               </div>
             </motion.div>

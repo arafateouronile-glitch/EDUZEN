@@ -1,7 +1,7 @@
 'use client'
 
-import { motion, useScroll, useTransform, useSpring, useInView } from '@/components/ui/motion'
-import { useRef, useState, useEffect } from 'react'
+import { motion, useInView } from '@/components/ui/motion'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { UserPlus, Settings, Users, BarChart3, CheckCircle2, Zap, ArrowRight, Upload, FileText, Calendar, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -209,22 +209,39 @@ const steps = [
 
 export function HowItWorks() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const stepRefs = useRef<Array<HTMLDivElement | null>>([])
   const [activeStep, setActiveStep] = useState(0)
-  
-  // Optimisation: Détection du step actif
+
+  const setStepRef = useCallback((index: number, element: HTMLDivElement | null) => {
+    stepRefs.current[index] = element
+  }, [])
+
+  // Optimisation: observer natif au lieu d'un listener scroll + querySelectorAll à chaque frame.
   useEffect(() => {
-    const handleScroll = () => {
-      const stepElements = document.querySelectorAll('.step-text-section')
-      stepElements.forEach((el, index) => {
-        const rect = el.getBoundingClientRect()
-        // Point de déclenchement au tiers de l'écran pour une meilleure réactivité
-        if (rect.top >= 0 && rect.top <= window.innerHeight * 0.4) {
-          setActiveStep(index)
-        }
-      })
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+    if (typeof window === 'undefined') return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return
+          const indexAttr = (entry.target as HTMLElement).dataset.stepIndex
+          if (!indexAttr) return
+          const nextIndex = Number(indexAttr)
+          setActiveStep((prev) => (prev === nextIndex ? prev : nextIndex))
+        })
+      },
+      {
+        root: null,
+        rootMargin: '-35% 0px -45% 0px',
+        threshold: [0.1, 0.25, 0.5],
+      }
+    )
+
+    stepRefs.current.forEach((node) => {
+      if (node) observer.observe(node)
+    })
+
+    return () => observer.disconnect()
   }, [])
 
   return (
@@ -297,6 +314,8 @@ export function HowItWorks() {
             {steps.map((step, index) => (
               <div 
                 key={index} 
+                ref={(el) => setStepRef(index, el)}
+                data-step-index={index}
                 className={cn(
                   "step-text-section relative pl-12 lg:pl-16 min-h-[60vh] flex flex-col justify-center py-12 transition-all duration-500",
                   activeStep === index ? "opacity-100" : "opacity-30 blur-[1px]"

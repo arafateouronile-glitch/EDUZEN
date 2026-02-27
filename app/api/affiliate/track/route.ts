@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (error) {
-      logger.warn('[affiliate/track] insert click', error)
+      logger.warn('[affiliate/track] insert click', { error })
     }
 
     const maxAge = COOKIE_DAYS * 24 * 60 * 60

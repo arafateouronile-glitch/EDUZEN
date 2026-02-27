@@ -14,6 +14,7 @@ import { FeedbackButton } from '@/components/feedback/feedback-button'
 import { NotificationBadge } from '@/components/notifications/notification-badge'
 import { NotificationCenter } from '@/components/notifications/notification-center'
 import { LanguageSwitcher } from '@/components/i18n/language-switcher'
+import { useRouter } from 'next/navigation'
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -21,6 +22,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth()
+  const router = useRouter()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false)
@@ -130,6 +132,10 @@ export function Header({ onMenuClick }: HeaderProps) {
                     <div className="py-2">
                       <motion.button
                         whileHover={{ x: 4 }}
+                        onClick={() => {
+                          router.push('/dashboard/settings/profile')
+                          setIsUserMenuOpen(false)
+                        }}
                         className="w-full flex items-center px-4 py-2.5 text-sm text-text-secondary hover:bg-bg-gray-100 transition-colors duration-200"
                         type="button"
                       >

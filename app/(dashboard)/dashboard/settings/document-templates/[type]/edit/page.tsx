@@ -692,6 +692,12 @@ export default function DocumentTemplateEditPage() {
             template={template}
             onTemplateChange={handleTemplateChange}
             onEditorRefReady={handleEditorRefReady}
+            saveStatus={
+              isAutoSaving || saveMutation.isPending ? 'saving'
+              : saveMutation.isError ? 'error'
+              : hasChanges ? 'unsaved'
+              : 'saved'
+            }
           />
         </div>
 

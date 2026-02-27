@@ -188,7 +188,7 @@ export function AdminHero({
 
             <Button
               size="sm"
-              className="h-9 gap-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200/60 transition-all rounded-lg"
+              className="h-9 gap-1.5 text-sm bg-brand-blue hover:bg-brand-blue-dark text-white shadow-sm shadow-brand-blue/25 transition-all rounded-lg"
               asChild
             >
               <Link href="/dashboard/programs">

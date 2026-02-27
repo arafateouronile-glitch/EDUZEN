@@ -699,7 +699,7 @@ export default function ProgramSessionsPage() {
                   >
                     <option value="">Aucun (financement personnel)</option>
                     {fundingTypes && fundingTypes.length > 0 ? (
-                      fundingTypes.map((type: TableRow<'funding_types'>) => (
+                      fundingTypes.map((type: { id: string; name: string; code: string | null; description: string | null }) => (
                         <option key={type.id} value={type.id}>
                           {type.name} {type.code ? `(${type.code})` : ''}
                         </option>

@@ -224,17 +224,17 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10pt;">
         <thead>
-          <tr style="background-color: #F3F4F6;">
-            <th style="padding: 8px; text-align: left; border: 1px solid #E5E7EB; font-weight: bold;">Date</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #E5E7EB; font-weight: bold;">Heure</th>
-            <th style="padding: 8px; text-align: right; border: 1px solid #E5E7EB; font-weight: bold;">Lieu</th>
+          <tr>
+            <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Date</th>
+            <th style="padding: 5px 8px; text-align: center; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Heure</th>
+            <th style="padding: 5px 8px; text-align: right; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Lieu</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding: 8px; border: 1px solid #E5E7EB;">du {session_debut} au {session_fin}</td>
-            <td style="padding: 8px; text-align: center; border: 1px solid #E5E7EB;">en présentiel</td>
-            <td style="padding: 8px; text-align: right; border: 1px solid #E5E7EB;">en présentiel</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc;">du {session_debut} au {session_fin}</td>
+            <td style="padding: 5px 8px; text-align: center; border: 1px solid #cccccc;">en présentiel</td>
+            <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">en présentiel</td>
           </tr>
         </tbody>
       </table>
@@ -257,15 +257,15 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
       
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10pt;">
         <thead>
-          <tr style="background-color: #F3F4F6;">
-            <th style="padding: 8px; text-align: left; border: 1px solid #E5E7EB; font-weight: bold;">Description</th>
-            <th style="padding: 8px; text-align: right; border: 1px solid #E5E7EB; font-weight: bold;">Prix</th>
+          <tr>
+            <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Description</th>
+            <th style="padding: 5px 8px; text-align: right; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Prix</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding: 8px; border: 1px solid #E5E7EB;">Formation</td>
-            <td style="padding: 8px; text-align: right; border: 1px solid #E5E7EB;">{montant_ttc}€</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc;">Formation</td>
+            <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">{montant_ttc}€</td>
           </tr>
         </tbody>
       </table>
@@ -657,19 +657,19 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
       <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 8px; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 8pt;">
         <thead>
           <tr>
-            <th style="padding: 4px 6px; text-align: left; border: 1px solid #ccc; font-weight: bold;">Désignation</th>
-            <th style="padding: 4px 6px; text-align: center; border: 1px solid #ccc; font-weight: bold; width: 60px;">Quantité</th>
-            <th style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 90px;">Prix unitaire HT</th>
-            <th style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 90px;">Total HT</th>
+            <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Désignation</th>
+            <th style="padding: 5px 8px; text-align: center; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 60px;">Quantité</th>
+            <th style="padding: 5px 8px; text-align: right; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 90px;">Prix unitaire HT</th>
+            <th style="padding: 5px 8px; text-align: right; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 90px;">Total HT</th>
           </tr>
         </thead>
         <tbody>
           {FOR:modules}
           <tr>
-            <td style="padding: 4px 6px; border: 1px solid #ccc;">Formation<br/>{module_nom}</td>
-            <td style="padding: 4px 6px; text-align: center; border: 1px solid #ccc;">1</td>
-            <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">{module_prix_ht} €</td>
-            <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">{module_total_ht} €</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc;">Formation<br/>{module_nom}</td>
+            <td style="padding: 5px 8px; text-align: center; border: 1px solid #cccccc;">1</td>
+            <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">{module_prix_ht} €</td>
+            <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">{module_total_ht} €</td>
           </tr>
           {ENDFOR}
         </tbody>
@@ -682,16 +682,16 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
           <td style="width: 45%; border: 0;">
             <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 8pt;">
               <tr>
-                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;">Total HT</td>
-                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; width: 90px;">{montant_ht} €</td>
+                <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">Total HT</td>
+                <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc; width: 90px;">{montant_ht} €</td>
               </tr>
               <tr>
-                <td style="padding: 4px 6px; text-align: left; border: 1px solid #ccc; font-size: 7pt;">Prestations de formation en exonération de TVA, article 261-4-4a du CGI</td>
-                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc;"></td>
+                <td style="padding: 5px 8px; text-align: left; border: 1px solid #cccccc; font-size: 7pt;">Prestations de formation en exonération de TVA, article 261-4-4a du CGI</td>
+                <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;"></td>
               </tr>
               <tr>
-                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold;">Total TTC</td>
-                <td style="padding: 4px 6px; text-align: right; border: 1px solid #ccc; font-weight: bold;">{montant_ttc} €</td>
+                <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc; font-weight: bold;">Total TTC</td>
+                <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc; font-weight: bold;">{montant_ttc} €</td>
               </tr>
             </table>
           </td>
@@ -709,16 +709,16 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
       <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 0; border-collapse: collapse; font-family: 'Times New Roman', Times, serif; font-size: 7pt;">
         <thead>
           <tr>
-            <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold;">IBAN</th>
-            <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold; width: 120px;">BIC</th>
-            <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold; width: 50px;">Monnaie</th>
+            <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">IBAN</th>
+            <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 120px;">BIC</th>
+            <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 50px;">Monnaie</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding: 3px 5px; border: 1px solid #ccc;">{iban}</td>
-            <td style="padding: 3px 5px; border: 1px solid #ccc;">{bic}</td>
-            <td style="padding: 3px 5px; border: 1px solid #ccc;">EUR</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc;">{iban}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc;">{bic}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc;">EUR</td>
           </tr>
         </tbody>
       </table>
@@ -788,19 +788,19 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
         <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 4px; border-collapse: collapse; font-size: 8pt;">
           <thead>
             <tr>
-              <th style="padding: 3px 5px; text-align: left; border: 1px solid #ccc; font-weight: bold;">Désignation</th>
-              <th style="padding: 3px 5px; text-align: center; border: 1px solid #ccc; font-weight: bold; width: 40px;">Qté</th>
-              <th style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 70px;">Prix unit. HT</th>
-              <th style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold; width: 70px;">Total HT</th>
+              <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Désignation</th>
+              <th style="padding: 5px 8px; text-align: center; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 40px;">Qté</th>
+              <th style="padding: 5px 8px; text-align: right; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 70px;">Prix unit. HT</th>
+              <th style="padding: 5px 8px; text-align: right; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 70px;">Total HT</th>
             </tr>
           </thead>
           <tbody>
             {FOR:modules}
             <tr>
-              <td style="padding: 3px 5px; border: 1px solid #ccc;">Formation<br/>{module_nom}</td>
-              <td style="padding: 3px 5px; text-align: center; border: 1px solid #ccc;">{module_quantite}</td>
-              <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">{module_prix_ht} €</td>
-              <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc;">{module_total_ht} €</td>
+              <td style="padding: 5px 8px; border: 1px solid #cccccc;">Formation<br/>{module_nom}</td>
+              <td style="padding: 5px 8px; text-align: center; border: 1px solid #cccccc;">{module_quantite}</td>
+              <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">{module_prix_ht} €</td>
+              <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">{module_total_ht} €</td>
             </tr>
             {ENDFOR}
           </tbody>
@@ -813,16 +813,16 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
             <td style="width: 40%; border: 0;">
               <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; font-size: 8pt;">
                 <tr>
-                  <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc;">Total HT</td>
-                  <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc; width: 70px;">{montant_ht}</td>
+                  <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">Total HT</td>
+                  <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc; width: 70px;">{montant_ht}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc; font-size: 7pt;">TVA exonérée (art. 261 CGI)</td>
-                  <td style="padding: 2px 5px; text-align: right; border: 1px solid #ccc;">{tva}</td>
+                  <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc; font-size: 7pt;">TVA exonérée (art. 261 CGI)</td>
+                  <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">{tva}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold;">Total TTC</td>
-                  <td style="padding: 3px 5px; text-align: right; border: 1px solid #ccc; font-weight: bold;">{montant_ttc}</td>
+                  <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc; font-weight: bold;">Total TTC</td>
+                  <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc; font-weight: bold;">{montant_ttc}</td>
                 </tr>
               </table>
             </td>
@@ -1013,17 +1013,17 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
           <thead>
-            <tr style="background-color: #f0f0f0;">
-              <th style="border: 1px solid #000; padding: 5px; text-align: left;">Date</th>
-              <th style="border: 1px solid #000; padding: 5px; text-align: center;">Heure</th>
-              <th style="border: 1px solid #000; padding: 5px; text-align: left;">Lieu</th>
+            <tr>
+              <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Date</th>
+              <th style="padding: 5px 8px; text-align: center; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Heure</th>
+              <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Lieu</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td style="border: 1px solid #000; padding: 5px;">du {session_debut} au {session_fin}</td>
-              <td style="border: 1px solid #000; padding: 5px; text-align: center;">{formation_duree}</td>
-              <td style="border: 1px solid #000; padding: 5px;">{session_lieu}</td>
+              <td style="padding: 5px 8px; border: 1px solid #cccccc;">du {session_debut} au {session_fin}</td>
+              <td style="padding: 5px 8px; text-align: center; border: 1px solid #cccccc;">{formation_duree}</td>
+              <td style="padding: 5px 8px; border: 1px solid #cccccc;">{session_lieu}</td>
             </tr>
           </tbody>
         </table>
@@ -1044,19 +1044,19 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
           <thead>
-            <tr style="background-color: #f0f0f0;">
-              <th style="border: 1px solid #000; padding: 5px; text-align: left;">Description</th>
-              <th style="border: 1px solid #000; padding: 5px; text-align: right;">Prix</th>
+            <tr>
+              <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Description</th>
+              <th style="padding: 5px 8px; text-align: right; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Prix</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td style="border: 1px solid #000; padding: 5px;">{formation_nom}</td>
-              <td style="border: 1px solid #000; padding: 5px; text-align: right;">{montant_ht} €</td>
+              <td style="padding: 5px 8px; border: 1px solid #cccccc;">{formation_nom}</td>
+              <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc;">{montant_ht} €</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #000; padding: 5px; font-weight: bold;">TOTAL NET DE TAXES</td>
-              <td style="border: 1px solid #000; padding: 5px; text-align: right; font-weight: bold;">{montant_ht} €</td>
+              <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold;">TOTAL NET DE TAXES</td>
+              <td style="padding: 5px 8px; text-align: right; border: 1px solid #cccccc; font-weight: bold;">{montant_ht} €</td>
             </tr>
           </tbody>
         </table>
@@ -1363,31 +1363,31 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
       <table style="width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 10pt;">
         <thead>
-          <tr style="background-color: #1A1A1A; color: white;">
-            <th style="padding: 10px 12px; text-align: left; font-weight: bold;">Matière</th>
-            <th style="padding: 10px 12px; text-align: center; font-weight: bold; width: 70px;">Coeff.</th>
-            <th style="padding: 10px 12px; text-align: center; font-weight: bold; width: 80px;">Note /20</th>
-            <th style="padding: 10px 12px; text-align: left; font-weight: bold;">Appréciation</th>
+          <tr>
+            <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Matière</th>
+            <th style="padding: 5px 8px; text-align: center; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 70px;">Coeff.</th>
+            <th style="padding: 5px 8px; text-align: center; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold; width: 80px;">Note /20</th>
+            <th style="padding: 5px 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; font-weight: bold;">Appréciation</th>
           </tr>
         </thead>
         <tbody>
-          <tr style="border-bottom: 1px solid #E5E7EB; background-color: #FAFAFA;">
-            <td style="padding: 10px 12px; font-weight: 500;">{matiere_1}</td>
-            <td style="padding: 10px 12px; text-align: center;">{coef_1}</td>
-            <td style="padding: 10px 12px; text-align: center; font-weight: bold;">{note_1}</td>
-            <td style="padding: 10px 12px; font-size: 9pt; color: #666;">{appreciation_1}</td>
+          <tr>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: 500;">{matiere_1}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; text-align: center;">{coef_1}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; text-align: center; font-weight: bold;">{note_1}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt; color: #666;">{appreciation_1}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #E5E7EB;">
-            <td style="padding: 10px 12px; font-weight: 500;">{matiere_2}</td>
-            <td style="padding: 10px 12px; text-align: center;">{coef_2}</td>
-            <td style="padding: 10px 12px; text-align: center; font-weight: bold;">{note_2}</td>
-            <td style="padding: 10px 12px; font-size: 9pt; color: #666;">{appreciation_2}</td>
+          <tr>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: 500;">{matiere_2}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; text-align: center;">{coef_2}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; text-align: center; font-weight: bold;">{note_2}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt; color: #666;">{appreciation_2}</td>
           </tr>
-          <tr style="border-bottom: 1px solid #E5E7EB; background-color: #FAFAFA;">
-            <td style="padding: 10px 12px; font-weight: 500;">{matiere_3}</td>
-            <td style="padding: 10px 12px; text-align: center;">{coef_3}</td>
-            <td style="padding: 10px 12px; text-align: center; font-weight: bold;">{note_3}</td>
-            <td style="padding: 10px 12px; font-size: 9pt; color: #666;">{appreciation_3}</td>
+          <tr>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: 500;">{matiere_3}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; text-align: center;">{coef_3}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; text-align: center; font-weight: bold;">{note_3}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt; color: #666;">{appreciation_3}</td>
           </tr>
         </tbody>
       </table>
@@ -1873,32 +1873,32 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
         <tr>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; width: 40%; background-color: #f9fafb; font-size: 10pt;">Intitulé de la formation</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{formation_nom}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; width: 40%; background-color: #f2f2f2; font-size: 10pt;">Intitulé de la formation</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{formation_nom}</td>
         </tr>
         <tr>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Objectifs de la formation</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{formation_objectifs}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Objectifs de la formation</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{formation_objectifs}</td>
         </tr>
         <tr>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Nature de l'action</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">Action de formation</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Nature de l'action</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">Action de formation</td>
         </tr>
         <tr>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Durée totale</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{formation_duree}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Durée totale</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{formation_duree}</td>
         </tr>
         <tr>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Dates de réalisation</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">Du {session_debut} au {session_fin}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Dates de réalisation</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">Du {session_debut} au {session_fin}</td>
         </tr>
         <tr>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Lieu de formation</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{session_lieu}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Lieu de formation</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{session_lieu}</td>
         </tr>
         <tr>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 10pt;">Modalité</td>
-          <td style="padding: 10px; border: 1px solid #e5e7eb; font-size: 10pt;">{session_modalite}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 10pt;">Modalité</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{session_modalite}</td>
         </tr>
       </table>
 
@@ -1991,28 +1991,28 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
         </h2>
         <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
           <tr>
-            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; width: 35%; font-size: 10pt;">Raison sociale</td>
-            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_nom}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; background-color: #f2f2f2; font-weight: bold; width: 35%; font-size: 10pt;">Raison sociale</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{ecole_nom}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">Adresse</td>
-            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_adresse}, {ecole_code_postal} {ecole_ville}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; background-color: #f2f2f2; font-weight: bold; font-size: 10pt;">Adresse</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{ecole_adresse}, {ecole_code_postal} {ecole_ville}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">Téléphone</td>
-            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_telephone}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; background-color: #f2f2f2; font-weight: bold; font-size: 10pt;">Téléphone</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{ecole_telephone}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">Email</td>
-            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_email}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; background-color: #f2f2f2; font-weight: bold; font-size: 10pt;">Email</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{ecole_email}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">N° SIRET</td>
-            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_siret}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; background-color: #f2f2f2; font-weight: bold; font-size: 10pt;">N° SIRET</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{ecole_siret}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 12px; background-color: #f9fafb; font-weight: bold; font-size: 10pt;">N° déclaration d'activité</td>
-            <td style="padding: 8px 12px; font-size: 10pt;">{ecole_numero_declaration}</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; background-color: #f2f2f2; font-weight: bold; font-size: 10pt;">N° déclaration d'activité</td>
+            <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 10pt;">{ecole_numero_declaration}</td>
           </tr>
         </table>
       </div>
@@ -2095,22 +2095,22 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
         <tr>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; width: 30%; background-color: #f9fafb; font-size: 9pt;">Formation</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{formation_nom}</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; width: 15%; background-color: #f9fafb; font-size: 9pt;">Durée</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{formation_duree}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; width: 30%; background-color: #f2f2f2; font-size: 9pt;">Formation</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt;">{formation_nom}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; width: 15%; background-color: #f2f2f2; font-size: 9pt;">Durée</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt;">{formation_duree}</td>
         </tr>
         <tr>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 9pt;">Session</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{session_nom}</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 9pt;">Horaires</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{session_horaires}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 9pt;">Session</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt;">{session_nom}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 9pt;">Horaires</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt;">{session_horaires}</td>
         </tr>
         <tr>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 9pt;">Date</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{session_debut}</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold; background-color: #f9fafb; font-size: 9pt;">Lieu</td>
-          <td style="padding: 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{session_lieu}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 9pt;">Date</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt;">{session_debut}</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-weight: bold; background-color: #f2f2f2; font-size: 9pt;">Lieu</td>
+          <td style="padding: 5px 8px; border: 1px solid #cccccc; font-size: 9pt;">{session_lieu}</td>
         </tr>
       </table>
 
@@ -2120,70 +2120,70 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
 
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
-          <tr style="background-color: #335ACF; color: white;">
-            <th style="padding: 10px; border: 1px solid #335ACF; text-align: left; font-size: 9pt; width: 30%;">Nom et Prénom</th>
-            <th style="padding: 10px; border: 1px solid #335ACF; text-align: center; font-size: 9pt; width: 17.5%;">Matin<br/><span style="font-weight: normal; font-size: 8pt;">Arrivée</span></th>
-            <th style="padding: 10px; border: 1px solid #335ACF; text-align: center; font-size: 9pt; width: 17.5%;">Matin<br/><span style="font-weight: normal; font-size: 8pt;">Départ</span></th>
-            <th style="padding: 10px; border: 1px solid #335ACF; text-align: center; font-size: 9pt; width: 17.5%;">Après-midi<br/><span style="font-weight: normal; font-size: 8pt;">Arrivée</span></th>
-            <th style="padding: 10px; border: 1px solid #335ACF; text-align: center; font-size: 9pt; width: 17.5%;">Après-midi<br/><span style="font-weight: normal; font-size: 8pt;">Départ</span></th>
+          <tr>
+            <th style="padding: 5px 8px; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; text-align: left; font-size: 9pt; width: 30%; font-weight: bold;">Nom et Prénom</th>
+            <th style="padding: 5px 8px; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; text-align: center; font-size: 9pt; width: 17.5%; font-weight: bold;">Matin<br/><span style="font-weight: normal; font-size: 8pt;">Arrivée</span></th>
+            <th style="padding: 5px 8px; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; text-align: center; font-size: 9pt; width: 17.5%; font-weight: bold;">Matin<br/><span style="font-weight: normal; font-size: 8pt;">Départ</span></th>
+            <th style="padding: 5px 8px; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; text-align: center; font-size: 9pt; width: 17.5%; font-weight: bold;">Après-midi<br/><span style="font-weight: normal; font-size: 8pt;">Arrivée</span></th>
+            <th style="padding: 5px 8px; background-color: #f2f2f2; border: 1px solid #000000; border-bottom: 2px solid #333333; text-align: center; font-size: 9pt; width: 17.5%; font-weight: bold;">Après-midi<br/><span style="font-weight: normal; font-size: 8pt;">Départ</span></th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;">{eleve_prenom} {eleve_nom}</td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; font-size: 9pt;">{eleve_prenom} {eleve_nom}</td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
           </tr>
           <tr>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
           </tr>
           <tr>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
           </tr>
           <tr>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
           </tr>
           <tr>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
           </tr>
           <tr>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
           </tr>
           <tr>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
           </tr>
           <tr>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; font-size: 9pt;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; height: 40px;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
-            <td style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; font-size: 9pt;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center; height: 40px;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
+            <td style="padding: 12px 8px; border: 1px solid #cccccc; text-align: center;"></td>
           </tr>
         </tbody>
       </table>
@@ -2210,7 +2210,14 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
  * Convention et contrat partagent le même design (contrat de formation professionnelle).
  */
 export function getDefaultTemplateContent(type: DocumentType): DocumentTemplateDefault {
-  if (type === 'convention') {
+  // Alias pour compatibilité API/DB (quote -> devis, invoice -> facture)
+  const normalizedType: keyof typeof documentTemplateDefaults =
+    type === 'convention' ? 'convention'
+    : (type as string) === 'quote' ? 'devis'
+    : (type as string) === 'invoice' ? 'facture'
+    : (type as keyof typeof documentTemplateDefaults)
+
+  if (normalizedType === 'convention') {
     const contratDefault = documentTemplateDefaults['contrat']
     return {
       type: 'convention',
@@ -2220,7 +2227,9 @@ export function getDefaultTemplateContent(type: DocumentType): DocumentTemplateD
       footerContent: contratDefault.footerContent,
     }
   }
-  return documentTemplateDefaults[type]
+  const entry = documentTemplateDefaults[normalizedType]
+  if (!entry) return documentTemplateDefaults['devis'] // fallback sûr
+  return entry
 }
 
 /**

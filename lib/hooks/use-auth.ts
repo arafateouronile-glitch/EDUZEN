@@ -22,6 +22,7 @@ export function useAuth() {
   const { data: session, isLoading: sessionLoading } = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
+      const previousSession = queryClient.getQueryData<{ user: User } | null>(['session']) ?? null
       const fetchSession = async (): Promise<{ user: User } | null> => {
         const { data: { user }, error } = await supabase.auth.getUser()
         if (error) {
@@ -35,7 +36,7 @@ export function useAuth() {
           if (isRateLimit) {
             logger.warn('Auth rate limit (429), returning null for session')
           }
-          return null
+          return previousSession
         }
         return user ? { user } : null
       }
@@ -62,9 +63,9 @@ export function useAuth() {
         if (isTimeout) {
           logger.debug(`Session fetch timed out after ${timeoutMs / 1000}s (réseau lent ou non connecté)`)
         } else {
-          logger.warn('Session fetch failed', err)
+          logger.warn('Session fetch failed', { error: err })
         }
-        return null
+        return previousSession
       }
     },
     retry: false,
@@ -77,14 +78,17 @@ export function useAuth() {
   const { data: user, isLoading: userLoading } = useQuery<UserRow>({
     queryKey: ['user', session?.user?.id],
     queryFn: async (): Promise<UserRow> => {
+      const previousUser = (session?.user?.id
+        ? queryClient.getQueryData<UserRow>(['user', session.user.id])
+        : null) ?? null
       if (!session?.user?.id) {
         return null
       }
       
       try {
-        // Timeout de 3 secondes pour éviter les blocages
+        // Timeout plus large pour éviter les faux négatifs réseau/cold start
         const timeoutPromise = new Promise<UserRow>((_, reject) => {
-          setTimeout(() => reject(new Error('User fetch timeout')), 3000)
+          setTimeout(() => reject(new Error('User fetch timeout')), 10000)
         })
 
         const userPromise = supabase
@@ -115,7 +119,8 @@ export function useAuth() {
 
                 if (syncError) {
                   logger.error('Error syncing user:', syncError)
-                  // Ne pas throw, on continue avec null pour éviter de bloquer l'app
+                  // Conserver l'ancien user pour éviter les faux "déconnecté"
+                  return previousUser
                 } else if ((syncResult as { success?: boolean })?.success) {
                   logger.info('User synced successfully, refetching...', { syncResult })
                   
@@ -133,7 +138,7 @@ export function useAuth() {
                     logger.error('Error refetching synced user:', refetchError)
                     // Invalider le cache pour forcer un nouveau fetch
                     queryClient.invalidateQueries({ queryKey: ['user', session.user.id] })
-                    return null
+                    return previousUser
                   } else if (syncedUser) {
                     logger.info('Synced user retrieved successfully:', { id: syncedUser.id, email: syncedUser.email, hasOrg: !!syncedUser.organization_id })
                     // Retourner l'utilisateur synchronisé - React Query mettra à jour le cache automatiquement
@@ -142,19 +147,34 @@ export function useAuth() {
                     logger.warn('User sync succeeded but refetch returned null - invalidating cache and retrying...')
                     // Si le refetch retourne null, invalider le cache et laisser React Query refetch
                     queryClient.invalidateQueries({ queryKey: ['user', session.user.id] })
-                    return null
+                    return previousUser
                   }
                 }
               } catch (syncException) {
                 logger.error('Exception during user sync:', syncException)
+                return previousUser
               }
               
               // Si la synchronisation a échoué, retourner null
-              return null
+              return previousUser
             }
 
             if (!data) {
-              return null
+              // Évite l'état "connecté mais vide" : retenter brièvement avant d'abandonner
+              // (synchronisation différée, latence DB, RLS qui se stabilise après refresh token).
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                await new Promise((resolve) => setTimeout(resolve, 300 * attempt))
+                const { data: retryUser, error: retryError } = await supabase
+                  .from('users')
+                  .select('id, organization_id, email, full_name, phone, avatar_url, role, permissions, is_active, last_login_at, created_at, updated_at, theme_preference')
+                  .eq('id', session.user.id)
+                  .maybeSingle()
+
+                if (!retryError && retryUser) {
+                  return retryUser
+                }
+              }
+              return previousUser
             }
 
             // Récupération automatique de l'organisation si absente (ex: après récupération de compte)
@@ -178,7 +198,7 @@ export function useAuth() {
                   }
                 }
               } catch (e) {
-                logger.warn('Recover organization failed', e as Error)
+                logger.warn('Recover organization failed', { error: e })
               }
             } else if (!data.organization_id) {
               logger.warn('User exists but has no organization_id')
@@ -190,14 +210,14 @@ export function useAuth() {
         return (await Promise.race([userPromise, timeoutPromise])) as UserRow
       } catch (err) {
         // En cas d'erreur ou de timeout, retourner null pour ne pas bloquer
-        return null
+        return previousUser
       }
     },
     enabled: !!session?.user?.id && !sessionLoading,
-    retry: false,
+    retry: 2,
     refetchOnWindowFocus: false,
     refetchOnMount: true, // Récharger l'utilisateur (et organization_id) au montage après hard refresh
-    staleTime: 1000 * 60 * 5, // Cache pendant 5 minutes
+    staleTime: 1000 * 60 * 2, // Réduit les refetch fréquents tout en gardant une donnée fraîche
   })
 
   // Connexion
@@ -420,7 +440,7 @@ export function useAuth() {
       
       try {
         // Essayer d'abord avec la fonction SQL (RPC peut être absent des types générés)
-        const { data: createdUserId, error: rpcUserError } = await (supabase as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: string | null; error: { code?: string; message?: string } | null }> }).rpc(
+        const { data: createdUserId, error: rpcUserError } = await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: string | null; error: { code?: string; message?: string } | null }> }).rpc(
           'create_user_for_organization',
           {
             user_id: userId,
@@ -452,7 +472,7 @@ export function useAuth() {
             if (directUserError) {
               userError = directUserError
             } else {
-              createdUser = userData
+              createdUser = userData as CreatedUserRow
             }
           }
         } else if (createdUserId) {
@@ -500,7 +520,7 @@ export function useAuth() {
           data: { organization_id: finalOrgId },
         })
       } catch (metaErr) {
-        logger.warn('Could not store organization_id in auth metadata (recovery may not work)', metaErr as Error)
+        logger.warn('Could not store organization_id in auth metadata (recovery may not work)', { error: metaErr })
       }
 
       // 4. Invalider les queries pour forcer le rechargement
@@ -570,12 +590,23 @@ export function useAuth() {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event) => {
+    } = supabase.auth.onAuthStateChange(async (event) => {
       const { data: { user } } = await supabase.auth.getUser()
-      const sessionLike = user ? { user } : null
-      queryClient.setQueryData(['session'], sessionLike)
-      if (!user) {
+      if (user) {
+        queryClient.setQueryData(['session'], { user })
+        return
+      }
+
+      // Ne vider le cache qu'en cas de vraie déconnexion.
+      // Sur certains événements transitoires (dev/HMR/réseau), user peut être temporairement null.
+      if (event === 'SIGNED_OUT' || (event as string) === 'USER_DELETED') {
+        queryClient.setQueryData(['session'], null)
         queryClient.clear()
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+          window.location.href = '/auth/login?message=session_expired'
+        }
+      } else {
+        logger.warn('Auth state change returned null user on non-signout event; keeping previous auth cache', { event })
       }
     })
 

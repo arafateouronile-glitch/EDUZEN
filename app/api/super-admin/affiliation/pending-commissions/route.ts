@@ -74,19 +74,14 @@ export async function GET() {
       return NextResponse.json({ error: affError.message }, { status: 500 })
     }
 
-    const data: PendingCommissionRow[] = (affiliates || []).map((a: {
-      id: string
-      email: string
-      full_name: string | null
-      company_name: string | null
-      payment_iban: string | null
-    }) => {
-      const agg = byAffiliate.get(a.id) ?? { total: 0, count: 0 }
+    const data: PendingCommissionRow[] = (affiliates || []).map((a: unknown) => {
+      const x = a as { id: string; email: string; full_name: string | null; company_name: string | null; payment_iban: string | null }
+      const agg = byAffiliate.get(x.id) ?? { total: 0, count: 0 }
       return {
-        affiliate_id: a.id,
-        name: a.full_name || a.company_name || a.email || '—',
-        email: a.email,
-        iban: (a.payment_iban ?? '').replace(/\s/g, ''),
+        affiliate_id: x.id,
+        name: x.full_name || x.company_name || x.email || '—',
+        email: x.email,
+        iban: (x.payment_iban ?? '').replace(/\s/g, ''),
         total_amount: Math.round(agg.total * 100) / 100,
         count: agg.count,
       }

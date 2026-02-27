@@ -44,12 +44,15 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
   } = options
 
   const formation = (session as SessionWithRelations)?.formations
-  const formationName = formation?.name || ''
-  // Libellé pour la ligne unique (fallback) quand pas de session ni d'items détaillés : formation, programme ou "Formation"
-  const fallbackDesignation = formationName || (program as any)?.name || 'Formation'
+  const formationName = formation?.name || (program as any)?.name || session?.name || ''
+  const fallbackDesignation = formationName || 'Formation'
   const sessionDebut = session?.start_date ? new Date(session.start_date).toLocaleDateString('fr-FR') : ''
   const sessionFin = session?.end_date ? new Date(session.end_date).toLocaleDateString('fr-FR') : ''
-  const formationDuree = (formation as any)?.duration_hours ? `${(formation as any).duration_hours} heures` : ''
+  const formationDuree = (formation as any)?.duration_hours
+    ? `${(formation as any).duration_hours} heures`
+    : (program as any)?.duration_hours
+      ? `${(program as any).duration_hours} heures`
+      : ''
   const orgSettings = (organization as any)?.settings as Record<string, unknown> | undefined
   const orgCity = (organization as any)?.city ?? orgSettings?.city
   const orgPostalCode = (organization as any)?.postal_code ?? orgSettings?.postal_code
@@ -57,7 +60,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
   const orgDeclarationNumber = (organization as any)?.declaration_number ?? (organization as any)?.nda_number ?? orgSettings?.declaration_number ?? orgSettings?.nda_number
   const orgRepresentative = (organization as any)?.representative_name ?? orgSettings?.representative_name
   const orgRegion = (organization as any)?.region ?? (organization as any)?.administrative_region ?? orgSettings?.region
-  const sessionLieu = (session as any)?.location || (session as any)?.venue || ''
+  const sessionLieu = (session as any)?.location || (session as any)?.venue || (organization?.address ? `${organization.address}` : '')
   const formationContenu = ((session as SessionWithRelations)?.formations as any)?.content || (program as any)?.content || ''
 
   let montantHt: string
@@ -189,10 +192,8 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     session_date_fin: session?.end_date
       ? new Date(session.end_date).toLocaleDateString('fr-FR')
       : '',
-    formation_nom: (session as SessionWithRelations)?.formations?.name || '',
-    formation_duree: (session as SessionWithRelations)?.formations?.duration_hours
-      ? `${(session as SessionWithRelations).formations?.duration_hours} heures`
-      : '',
+    formation_nom: formationName,
+    formation_duree: formationDuree,
     formation_objectifs: ((session as SessionWithRelations)?.formations as any)?.objectives || (program as any)?.objectives || '',
     formation_public_concerne: ((session as SessionWithRelations)?.formations as any)?.target_audience || (program as any)?.target_audience || '',
     formation_prerequis: ((session as SessionWithRelations)?.formations as any)?.prerequisites || (program as any)?.prerequisites || '',

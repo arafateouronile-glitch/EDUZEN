@@ -455,7 +455,7 @@ async function handleAffiliateCommission(stripe: Stripe, invoice: Stripe.Invoice
       affiliate_id: affiliateId,
       stripe_customer_id: customerId,
       stripe_invoice_id: invoice.id,
-      stripe_charge_id: typeof invoice.charge === 'string' ? invoice.charge : invoice.charge?.id ?? null,
+      stripe_charge_id: (() => { const c = (invoice as { charge?: string | { id?: string } | null }).charge; return typeof c === 'string' ? c : c?.id ?? null })(),
       order_amount: amountPaid,
       commission_amount: commissionAmount,
       commission_percent: commissionPercent,
@@ -494,7 +494,7 @@ async function handleAffiliateCommission(stripe: Stripe, invoice: Stripe.Invoice
  */
 async function handleAffiliateCommissionRefund(charge: Stripe.Charge) {
   try {
-    const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice?.id
+    const invoiceId = (() => { const inv = (charge as { invoice?: string | { id?: string } | null }).invoice; return typeof inv === 'string' ? inv : inv?.id })()
     if (!invoiceId) return
 
     const supabase = createAdminClient()

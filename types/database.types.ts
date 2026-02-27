@@ -136,6 +136,288 @@ export type Database = {
           },
         ]
       }
+      affiliate_campaigns: {
+        Row: {
+          commission_percent: number
+          commission_type: string
+          cookie_days: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          commission_percent: number
+          commission_type?: string
+          cookie_days?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          commission_percent?: number
+          commission_type?: string
+          cookie_days?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      affiliate_commissions: {
+        Row: {
+          affiliate_id: string
+          commission_amount: number
+          commission_percent: number
+          created_at: string
+          currency: string
+          id: string
+          order_amount: number
+          status: string
+          stripe_charge_id: string | null
+          stripe_customer_id: string
+          stripe_invoice_id: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          commission_amount: number
+          commission_percent: number
+          created_at?: string
+          currency?: string
+          id?: string
+          order_amount: number
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_customer_id: string
+          stripe_invoice_id: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          commission_amount?: number
+          commission_percent?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          order_amount?: number
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_customer_id?: string
+          stripe_invoice_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_payouts: {
+        Row: {
+          affiliate_id: string
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          invoice_url: string | null
+          metadata: Json | null
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          reference: string | null
+          referral_ids: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_url?: string | null
+          metadata?: Json | null
+          paid_at?: string | null
+          period_end: string
+          period_start: string
+          reference?: string | null
+          referral_ids?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_url?: string | null
+          metadata?: Json | null
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          reference?: string | null
+          referral_ids?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_referrals: {
+        Row: {
+          affiliate_id: string
+          campaign_id: string | null
+          clicked_at: string
+          commission_amount: number
+          converted_at: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          mrr_contribution: number
+          organization_id: string | null
+          promo_code_used: string | null
+          subscription_id: string | null
+          type: string
+          updated_at: string
+          visitor_id: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          campaign_id?: string | null
+          clicked_at?: string
+          commission_amount?: number
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          mrr_contribution?: number
+          organization_id?: string | null
+          promo_code_used?: string | null
+          subscription_id?: string | null
+          type: string
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          campaign_id?: string | null
+          clicked_at?: string
+          commission_amount?: number
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          mrr_contribution?: number
+          organization_id?: string | null
+          promo_code_used?: string | null
+          subscription_id?: string | null
+          type?: string
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_referrals_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          campaign_id: string | null
+          commission_rate_override: number | null
+          company_name: string | null
+          cookie_days: number | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          metadata: Json | null
+          payment_bic: string | null
+          payment_holder_name: string | null
+          payment_iban: string | null
+          payment_notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          commission_rate_override?: number | null
+          company_name?: string | null
+          cookie_days?: number | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_bic?: string | null
+          payment_holder_name?: string | null
+          payment_iban?: string | null
+          payment_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          commission_rate_override?: number | null
+          company_name?: string | null
+          cookie_days?: number | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_bic?: string | null
+          payment_holder_name?: string | null
+          payment_iban?: string | null
+          payment_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_affiliates_campaign"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accessibility_accommodations: {
         Row: {
           accommodation_type: string
@@ -20922,6 +21204,7 @@ export type Database = {
         Returns: boolean
       }
       user_organization_id: { Args: never; Returns: string }
+      recover_user_organization: { Args: { p_user_id: string }; Returns: Json }
       validate_learner_access_token: {
         Args: { p_token: string }
         Returns: {

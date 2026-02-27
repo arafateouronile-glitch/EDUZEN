@@ -454,6 +454,13 @@ function replaceVariablesInHTML(html: string, variables: Record<string, any>): s
 export interface HTMLGenerationResult {
   html: string
   pageCount: number
+  headerHtml?: string
+  footerHtml?: string
+  margins: { top: number; right: number; bottom: number; left: number }
+  headerHeight: number
+  footerHeight: number
+  headerEnabled: boolean
+  footerEnabled: boolean
 }
 
 /**
@@ -506,85 +513,70 @@ export async function generateHTML(
   } else {
     logger.warn('[HTML Generator] Template content is null or undefined')
   }
-  
-  // Si le contenu est toujours vide, utiliser une chaîne vide par défaut
+
+  // Utiliser le template TEL QU'IL EST configuré dans la base de données.
+  // Fallback sur les modèles prédéfinis uniquement si le contenu DB est vide.
+  const rawType = (template.type ?? '').toString().toLowerCase()
+  const normalizedType: import('@/lib/types/document-templates').DocumentType =
+    rawType === 'quote' ? 'devis'
+    : rawType === 'invoice' ? 'facture'
+    : (rawType as import('@/lib/types/document-templates').DocumentType)
+
   if (!content || content.trim().length === 0) {
-    logger.warn('[HTML Generator] Template content is empty after extraction', {
-      template: {
-        id: template.id,
-        type: template.type,
-        name: template.name,
-      },
-    })
-    content = ''
+    try {
+      const { getDefaultTemplateContent } = await import('@/lib/utils/document-template-defaults')
+      const defaultForType = getDefaultTemplateContent(normalizedType)
+      if (defaultForType?.bodyContent?.trim()) {
+        content = defaultForType.bodyContent
+        logger.debug('[HTML Generator] Fallback sur template prédéfini (contenu DB vide)', { type: normalizedType })
+      }
+    } catch { /* ignore */ }
   }
-  
-  // Aplatir les variables imbriquées pour compatibilité (nécessaire pour générer l'en-tête/bas de page)
-  const flattenedVariablesForHeaderFooter = flattenVariables(variables)
-  
-  // Récupérer le layout global si disponible, sinon utiliser le template spécifique
+
+  // Header et footer : utiliser ceux du template en priorité
   let headerContent = (template.header as any)?.content || ''
-  // FORCER l'utilisation du footer propre avec uniquement les 3 lignes essentielles
-  // Ignorer complètement le footer du template en base de données pour éviter le contenu parasité
-  let footerContent = `
-    <div style="border-top: 1px solid #E5E7EB; padding: 12px 0 8px 0; margin-top: 25px; background-color: #FAFAFA;">
-      <p style="font-size: 9pt; color: #1A1A1A; margin: 0; text-align: center; font-weight: 500; line-height: 1.4;">
-        {ecole_nom} | {ecole_adresse} {ecole_ville} {ecole_code_postal} | Numéro SIRET: {ecole_siret}
-      </p>
-      <p style="font-size: 8pt; color: #666; margin: 4px 0 0 0; text-align: center; line-height: 1.3;">
-        Numéro de déclaration d'activité: {ecole_numero_declaration} <em>(auprès du préfet de région de: {ecole_region})</em>
-      </p>
-      <p style="font-size: 8pt; color: #888; font-style: italic; margin: 3px 0 0 0; text-align: center; line-height: 1.3;">
-        Cet enregistrement ne vaut pas l'agrément de l'État.
-      </p>
-    </div>
-  `
-  
-  let headerEnabled = template.header_enabled ?? true
-  let footerEnabled = template.footer_enabled ?? true
-  let headerHeight = (template.header as any)?.height || template.header_height || 30
-  let footerHeight = (template.footer as any)?.height || template.footer_height || 20
-  // Header uniquement sur la première page, footer sur toutes les pages
-  let headerRepeatOnAllPages = false
-  let footerRepeatOnAllPages = true
+  let footerContent = (template.footer as any)?.content || ''
 
-  // Sanitisation anti-XSS avant envoi à Gotenberg/Puppeteer (audit pré-lancement)
-  content = sanitizeDocumentTemplate(content)
-  headerContent = sanitizeDocumentTemplate(headerContent)
-  footerContent = sanitizeDocumentTemplate(footerContent)
-  
-  // Note: Le layout global est désactivé pour éviter les erreurs d'import côté client
-  // Cette fonctionnalité peut être réactivée si nécessaire en créant une API route dédiée
-  // if (organizationId && typeof window === 'undefined') {
-  //   try {
-  //     const module = await import('@/lib/services/global-document-layout.service')
-  //     const service = module.globalDocumentLayoutService
-  //     const globalLayout = await service.getActiveLayout(organizationId) as any
-  //     if (globalLayout) {
-  //       if (globalLayout.header_enabled && globalLayout.header_content) {
-  //         headerContent = globalLayout.header_content
-  //         headerEnabled = true
-  //         headerHeight = globalLayout.header_height
-  //         if (globalLayout.header_logo_url) {
-  //           headerContent = `<img src="${globalLayout.header_logo_url}" alt="Logo" style="max-height: 60px; margin-bottom: 10px;" />${headerContent}`
-  //         }
-  //         if (globalLayout.header_image_url) {
-  //           headerContent = `${headerContent}<img src="${globalLayout.header_image_url}" alt="Header Image" style="max-width: 100%; margin-top: 10px;" />`
-  //         }
-  //       }
-  //     }
-  //   } catch (error) {
-  //     logger.warn('Erreur lors de la récupération du layout global:', error)
-  //   }
-  // }
+  // Fallback sur les modèles prédéfinis si header/footer vides
+  if (!headerContent.trim() || !footerContent.trim()) {
+    try {
+      const { getDefaultTemplateContent } = await import('@/lib/utils/document-template-defaults')
+      const defaultForType = getDefaultTemplateContent(normalizedType)
+      if (!headerContent.trim() && defaultForType?.headerContent?.trim()) {
+        headerContent = defaultForType.headerContent
+      }
+      if (!footerContent.trim() && defaultForType?.footerContent?.trim()) {
+        footerContent = defaultForType.footerContent
+      }
+    } catch { /* ignore */ }
+  }
 
-  // Si l'en-tête est vide ou désactivé mais qu'on veut un en-tête par défaut, générer un en-tête professionnel
+  // Si toujours pas de footer, utiliser un footer par défaut avec variables
+  if (!footerContent.trim()) {
+    footerContent = `
+      <p style="font-size: 7pt; color: #1A1A1A; margin: 0; text-align: center; line-height: 1.3;">
+        {ecole_nom} | {ecole_adresse} {ecole_ville} {ecole_code_postal} | SIRET: {ecole_siret}
+      </p>
+      <p style="font-size: 6.5pt; color: #666; margin: 2px 0 0 0; text-align: center; line-height: 1.2;">
+        Déclaration d'activité: {ecole_numero_declaration} <em>(préfet de région: {ecole_region})</em> — Cet enregistrement ne vaut pas agrément de l'État.
+      </p>
+    `
+  }
+
+  // Utiliser les paramètres du template tels que configurés
+  const headerEnabled = template.header_enabled ?? true
+  const footerEnabled = template.footer_enabled ?? true
+  const headerHeight = (template.header as any)?.height || template.header_height || 30
+  const footerHeight = (template.footer as any)?.height || template.footer_height || 20
+  const templateMargins = template.margins || { top: 20, right: 20, bottom: 20, left: 20 }
+
+  // Si l'en-tête est vide mais activé, générer un en-tête professionnel
+  const flattenedVariablesForHeaderFooter = flattenVariables(variables)
   if (headerEnabled && (!headerContent || headerContent.trim().length === 0)) {
     headerContent = generateProfessionalHeader(flattenedVariablesForHeaderFooter)
   }
 
-  // Le footer est déjà défini proprement ci-dessus avec uniquement les 3 lignes essentielles
-  // Pas besoin de générer un footer par défaut
+  // Pas de sanitisation côté serveur (Puppeteer) : DOMPurify/JSDOM vide le HTML
 
   // Aplatir les variables imbriquées pour compatibilité
   const flattenedVariables = flattenVariables(variables)
@@ -719,7 +711,7 @@ export async function generateHTML(
   processedHeader = replaceVariablesInHTML(processedHeader, flattenedVariables)
   processedContent = replaceVariablesInHTML(processedContent, flattenedVariables)
   processedFooter = replaceVariablesInHTML(processedFooter, flattenedVariables)
-  
+
   // 10.5. Nettoyage final : supprimer toutes les balises {variable} restantes qui n'ont pas été remplacées
   // Cela garantit qu'aucune balise ne reste dans le document final
   const cleanRemainingTags = (html: string): string => {
@@ -743,404 +735,73 @@ export async function generateHTML(
   processedContent = processFormFields(processedContent, flattenedVariables)
   processedFooter = processFormFields(processedFooter, flattenedVariables)
   
-  // 12. FORCER le footer propre : reconstruire systématiquement avec uniquement les 3 lignes essentielles
-  // FAIRE CELA EN DERNIER pour éviter que tout traitement ultérieur n'ajoute du contenu indésirable
-  // Ignorer complètement tout contenu du template ou du globalLayout qui pourrait être parasité
-  processedFooter = `
-    <div style="padding: 12px 0 8px 0; margin-top: 25px; background-color: #FAFAFA; font-family: 'Times New Roman', Times, serif;">
-      <p style="font-size: 8pt; font-family: 'Times New Roman', Times, serif; color: #1A1A1A; margin: 0; text-align: center; font-weight: 500; line-height: 1.4;">
-        ${flattenedVariables.ecole_nom || flattenedVariables.organization_name || ''} | ${flattenedVariables.ecole_adresse || flattenedVariables.organization_address || ''} ${flattenedVariables.ecole_ville || ''} ${flattenedVariables.ecole_code_postal || ''} | Numéro SIRET: ${flattenedVariables.ecole_siret || ''}
-      </p>
-      <p style="font-size: 8pt; font-family: 'Times New Roman', Times, serif; color: #666; margin: 4px 0 0 0; text-align: center; line-height: 1.3;">
-        Numéro de déclaration d'activité: ${flattenedVariables.ecole_numero_declaration || ''} <em>(auprès du préfet de région de: ${flattenedVariables.ecole_region || ''})</em>
-      </p>
-      <p style="font-size: 8pt; font-family: 'Times New Roman', Times, serif; color: #888; font-style: italic; margin: 3px 0 0 0; text-align: center; line-height: 1.3;">
-        Cet enregistrement ne vaut pas l'agrément de l'État.
-      </p>
-    </div>
-  `
+  const fontSize = template.font_size || 10
 
-  // Construire le HTML complet avec styles optimisés pour PDF
-  const pageSize = (template.content as any)?.pageSize || template.page_size || 'A4'
-  // Marges fixes strictes : 20mm de chaque côté pour un rendu professionnel et symétrique
-  const defaultMargins = { top: 20, right: 20, bottom: 20, left: 20 }
-  const margins = template.margins || defaultMargins
-  
-  // S'assurer que toutes les marges sont définies (forcer à 20mm pour la symétrie)
-  const finalMargins = {
-    top: margins.top ?? defaultMargins.top,
-    right: 20, // Force 20mm à droite pour symétrie
-    bottom: margins.bottom ?? defaultMargins.bottom,
-    left: 20, // Force 20mm à gauche pour symétrie
-  }
-  
-  // Convertir les marges en pixels (1mm ≈ 3.78px à 96 DPI)
-  const marginTopPx = finalMargins.top * 3.78
-  const marginBottomPx = finalMargins.bottom * 3.78
-  const marginLeftPx = finalMargins.left * 3.78
-  const marginRightPx = finalMargins.right * 3.78
-  
-  // Convertir les hauteurs d'en-tête et de pied de page en pixels
-  const headerHeightPx = headerHeight * 3.78
-  const footerHeightPx = footerHeight * 3.78
-  
-  // Dimensions A4 en pixels (210mm x 297mm à 96 DPI)
-  const pageWidthPx = 794 // 210mm
-  const pageHeightPx = 1123 // 297mm
-  
-  // Largeur du conteneur central : A4 (210mm) - marges gauche (20mm) - marges droite (20mm) = 170mm
-  // En pixels : 170mm * 3.78 = 642.6px (arrondi à 643px pour précision)
-  // Cette largeur fixe garantit un centrage parfait avec margin: 0 auto
-  const contentWidthPx = Math.round(170 * 3.78) // 643px exactement
-  
-  // Calculer la hauteur disponible pour le contenu
-  // Si le header ne se répète pas sur toutes les pages, il n'occupe de l'espace que sur la première page
-  // Le header est dans la marge via @top-center, donc le contenu commence juste après (sans marge supplémentaire)
-  const contentTopPxFirstPage = headerEnabled ? headerHeightPx : marginTopPx
-  const contentBottomPx = footerEnabled ? (marginBottomPx + footerHeightPx + 5) : marginBottomPx
-  const contentHeightPx = pageHeightPx - contentTopPxFirstPage - contentBottomPx
-
-  const { APP_URLS } = await import('@/lib/config/app-config')
-  const pagedScriptUrl = `${APP_URLS.getBaseUrl()}/paged.polyfill.js`
-
-  const fullHTML = `
-<!DOCTYPE html>
+  // Tout dans le body : header + contenu + footer avec flexbox pour positionner le footer en bas
+  const fullHTML = `<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${template.name || 'Document'}</title>
-  <script src="${pagedScriptUrl}"></script>
-  <style>
-    /* Paged.js - Définition de la page physique A4 avec marges fixes strictes */
-    @page {
-      size: A4;
-      margin-top: ${finalMargins.top}mm;
-      margin-bottom: ${footerEnabled ? footerHeight + 5 : finalMargins.bottom}mm;
-      margin-left: ${finalMargins.left}mm;
-      margin-right: ${finalMargins.right}mm;
-      
-      /* Footer sur toutes les pages */
-      ${footerEnabled ? `@bottom-center {
-        content: element(footerEnv);
-      }` : ''}
-    }
-    @page:first {
-      margin-top: ${headerEnabled ? headerHeight : finalMargins.top}mm;
-      margin-bottom: ${footerEnabled ? footerHeight + 5 : finalMargins.bottom}mm;
-      margin-left: ${finalMargins.left}mm;
-      margin-right: ${finalMargins.right}mm;
-      
-      /* Header uniquement sur la première page */
-      ${headerEnabled ? `@top-center {
-        content: element(headerEnv);
-      }` : ''}
-      ${footerEnabled ? `@bottom-center {
-        content: element(footerEnv);
-      }` : ''}
-    }
-    
-    /* Style de l'En-tête HTML - Extrait du flux normal */
-    ${headerEnabled ? `.document-header {
-      position: running(headerEnv);
-      width: 100%;
-      background: #ffffff;
-      padding: 0;
-      margin: 0;
-      box-sizing: border-box;
-      font-size: ${(template.font_size || 10) * 0.85}pt;
-      line-height: 1.2;
-    }` : ''}
-    
-    /* Style du Pied de page HTML - Extrait du flux normal */
-    ${footerEnabled ? `.document-footer {
-      position: running(footerEnv);
-      width: 100%;
-      background: #ffffff;
-      padding: 5px 0;
-      margin: 0;
-      box-sizing: border-box;
-      font-size: ${(template.font_size || 10) * 0.85}pt;
-      line-height: 1.2;
-      text-align: center;
-      border-top: 1px solid #E5E7EB;
-    }` : ''}
-    
-    /* Le contenu principal */
-    .document-content {
-      font-family: 'Arial', sans-serif;
-      line-height: 1.5;
-      padding: 0;
-      margin: 0;
-      width: 100%;
-      box-sizing: border-box;
-      ${headerEnabled ? `margin-top: 0 !important;` : ''}
-    }
-    
-    /* Styles existants */
-    * {
-      box-sizing: border-box;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-      color-adjust: exact;
-    }
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 100% !important;
-      height: auto;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-      font-size: ${template.font_size || 10}pt;
-      line-height: 1.4;
-      color: #000;
-      background: #ffffff;
-      min-height: ${pageHeightPx}px;
-      margin: 0 !important;
-      padding: 0 !important;
-      box-sizing: border-box;
-    }
-    /* Conteneur principal : occupe toute la largeur disponible (les marges sont gérées par @page) */
-    .document-container {
-      width: 100%;
-      max-width: 100%;
-      min-height: ${pageHeightPx}px;
-      height: auto;
-      background: #ffffff;
-      position: relative;
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      overflow: visible;
-    }
-    .header * {
-      max-height: ${headerHeightPx - 10}px !important;
-      overflow: visible !important;
-    }
-    .header img {
-      max-height: ${headerHeightPx * 0.6}px !important;
-      width: auto !important;
-    }
-    /* Note: Le header sera visible uniquement sur la première page lors de la génération PDF
-       si repeatOnAllPages est false, car html2canvas capture le document en une seule fois */
-    .content {
-      position: relative;
-      top: auto;
-      bottom: auto;
-      width: 100%;
-      max-width: 100%;
-      min-height: ${contentHeightPx}px;
-      max-height: none;
-      background: #ffffff;
-      overflow: visible;
-      padding: 0 0 ${footerEnabled ? (footerHeightPx + marginBottomPx + 20) : 20}px 0;
-      margin-top: ${headerEnabled ? 0 : marginTopPx}px;
-      margin-left: 0;
-      margin-right: 0;
-      margin-bottom: 0;
-      box-sizing: border-box;
-      z-index: 1;
-    }
-    .footer * {
-      max-height: ${footerHeightPx - 10}px !important;
-      overflow: visible !important;
-    }
-    .footer img {
-      max-height: ${footerHeightPx * 0.6}px !important;
-      width: auto !important;
-    }
-    /* Styles pour les tableaux */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 6px 0;
-      table-layout: auto;
-      border-spacing: 0;
-      font-size: ${(template.font_size || 10) * 0.9}pt;
-    }
-    table th, table td {
-      padding: 4px 6px;
-      text-align: left;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      vertical-align: top;
-    }
-    /* Bordures par défaut uniquement si aucune bordure personnalisée n'est définie */
-    table th:not([data-border-top]):not([style*="border"]),
-    table td:not([data-border-top]):not([style*="border"]) {
-      border: 1px solid #000;
-    }
-    /* Respecter les bordures invisibles (none, 0px) */
-    table th[data-border-top="none"], table td[data-border-top="none"],
-    table th[data-border-top="0px"], table td[data-border-top="0px"],
-    table th[style*="border-top: none"], table td[style*="border-top: none"],
-    table th[style*="border-width: 0"], table td[style*="border-width: 0"],
-    table th[style*="border-style: none"], table td[style*="border-style: none"],
-    table th[style*="border-style: initial"], table td[style*="border-style: initial"] {
-      border-top: none !important;
-    }
-    table th[data-border-bottom="none"], table td[data-border-bottom="none"],
-    table th[data-border-bottom="0px"], table td[data-border-bottom="0px"] {
-      border-bottom: none !important;
-    }
-    table th[data-border-left="none"], table td[data-border-left="none"],
-    table th[data-border-left="0px"], table td[data-border-left="0px"] {
-      border-left: none !important;
-    }
-    table th[data-border-right="none"], table td[data-border-right="none"],
-    table th[data-border-right="0px"], table td[data-border-right="0px"] {
-      border-right: none !important;
-    }
-    /* Gérer les cellules avec toutes les bordures désactivées */
-    table th[style*="border-width: 0px"], table td[style*="border-width: 0px"],
-    table th[style*="border-width:0"], table td[style*="border-width:0"] {
-      border: none !important;
-    }
-    table th[style*="border: none"], table td[style*="border: none"],
-    table th[style*="border:none"], table td[style*="border:none"] {
-      border: none !important;
-    }
-    table th {
-      font-weight: bold;
-      font-size: ${(template.font_size || 10) * 0.9}pt;
-    }
-    /* Images */
-    img {
-      max-width: 100%;
-      height: auto;
-      display: block;
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: crisp-edges;
-    }
-    /* Préserver les flexbox */
-    [style*="display: flex"], [style*="display:flex"] {
-      display: flex !important;
-    }
-    /* Préserver les gradients et couleurs */
-    [style*="gradient"], [style*="background"] {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      color-adjust: exact !important;
-    }
-    /* Assurer que les bordures sont visibles (sauf si explicitement masquées) */
-    [style*="border"]:not([style*="border: none"]):not([style*="border-width: 0"]):not([style*="border-style: none"]):not([style*="border-style: initial"]) {
-      border-style: solid;
-    }
-    /* Préserver les espacements */
-    p, div, span {
-      margin: 0;
-      padding: 0;
-    }
-    p {
-      margin-bottom: 0.5em;
-      font-size: ${template.font_size || 10}pt;
-      line-height: 1.4;
-    }
-    h1 {
-      font-size: ${(template.font_size || 10) * 1.6}pt;
-      line-height: 1.3;
-      margin-bottom: 8px;
-      margin-top: 12px;
-    }
-    h2 {
-      font-size: ${(template.font_size || 10) * 1.4}pt;
-      line-height: 1.3;
-      margin-bottom: 6px;
-      margin-top: 10px;
-    }
-    h3 {
-      font-size: ${(template.font_size || 10) * 1.2}pt;
-      line-height: 1.3;
-      margin-bottom: 4px;
-      margin-top: 8px;
-    }
-    /* Surlignage - préserver les couleurs de fond du texte */
-    mark, mark[style] {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      color-adjust: exact !important;
-      padding: 0 2px;
-      border-radius: 2px;
-    }
-    /* Alignement justifié */
-    [style*="text-align: justify"], [style*="text-align:justify"] {
-      text-align: justify !important;
-      text-justify: inter-word;
-    }
-    /* Interligne personnalisée */
-    [style*="line-height"] {
-      line-height: inherit !important;
-    }
-    /* Cellules de tableau avec couleurs */
-    td[style*="background-color"], th[style*="background-color"],
-    td[data-background-color], th[data-background-color] {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      color-adjust: exact !important;
-    }
-    /* Bordures de cellules personnalisées */
-    td[style*="border-color"], th[style*="border-color"],
-    td[data-border-color], th[data-border-color] {
-      border-style: solid !important;
-    }
-    /* Retrait de paragraphe */
-    [style*="text-indent"] {
-      text-indent: inherit !important;
-    }
-    /* Marges de paragraphe */
-    [style*="margin-top"], [style*="margin-bottom"] {
-      margin-top: inherit !important;
-      margin-bottom: inherit !important;
-    }
-    /* Réduire les espacements généraux */
-    .header {
-      margin-bottom: 12px !important;
-    }
-    .footer {
-      padding-top: 12px !important;
-    }
-    /* Header uniquement sur la première page si repeatOnAllPages est false */
-    .header-first-page-only {
-      display: block !important;
-    }
-    /* Footer toujours visible sur toutes les pages */
-    .footer {
-      display: block !important;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>${template.name || 'Document'}</title>
+<style>
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body {
+    margin: 0; padding: 0; width: 100%;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: ${fontSize}pt; line-height: 1.4;
+    color: #000; background: #fff;
+  }
+  .page-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 1px);
+  }
+  .doc-header {
+    flex-shrink: 0;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #999;
+  }
+  .doc-content {
+    flex: 1;
+  }
+  .doc-footer {
+    flex-shrink: 0;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #999;
+  }
+  table { width: 100%; border-collapse: collapse; table-layout: auto; border-spacing: 0; }
+  table th, table td { padding: 4px 6px; text-align: left; vertical-align: top; }
+  img { max-width: 100%; height: auto; }
+  h1 { font-size: ${fontSize * 1.4}pt; margin: 0 0 8px 0; }
+  h2 { font-size: ${fontSize * 1.2}pt; margin: 0 0 6px 0; }
+  h3 { font-size: ${fontSize * 1.1}pt; margin: 0 0 4px 0; }
+  p { margin: 0 0 4px 0; }
+</style>
 </head>
 <body>
-  <div class="document-container" id="${documentId || `${template.type}-document`}">
-    ${headerEnabled ? `<header class="document-header">${processedHeader}</header>` : ''}
-    ${footerEnabled && processedFooter ? `<footer class="document-footer">${processedFooter}</footer>` : ''}
-    <main class="document-content">
-      <div class="content">
-        ${processedContent}
-      </div>
-    </main>
-  </div>
-  <script>
-    // Attendre que Paged.js ait fini le calcul du rendu
-    if (typeof window !== 'undefined' && window.PagedPolyfill) {
-      window.addEventListener('pagedjsReady', function() {
-        window.pagedjs_finished = true;
-      });
-    }
-  </script>
+<div class="page-wrapper">
+  ${headerEnabled && processedHeader ? `<div class="doc-header">${processedHeader}</div>` : ''}
+  <div class="doc-content">${processedContent}</div>
+  ${footerEnabled && processedFooter ? `<div class="doc-footer">${processedFooter}</div>` : ''}
+</div>
 </body>
-</html>
-  `.trim()
+</html>`.trim()
 
-    // Estimer le nombre de pages (approximatif)
     const pageCount = Math.max(1, Math.ceil(processedContent.length / 3000))
-
     logger.debug('[HTML Generator] HTML généré', { lengthKo: Math.round(fullHTML.length / 1024), pages: pageCount })
 
     return {
       html: fullHTML,
       pageCount,
+      headerHtml: processedHeader,
+      footerHtml: processedFooter,
+      margins: templateMargins,
+      headerHeight,
+      footerHeight,
+      headerEnabled,
+      footerEnabled,
     }
   } catch (error) {
     logger.error('[HTML Generator] ❌ ERREUR lors de la génération HTML:', error)

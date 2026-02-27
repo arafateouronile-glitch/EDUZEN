@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
-import { logger, sanitizeError } from '@/lib/utils/logger'
+import { logger } from '@/lib/utils/logger'
 import { createPage } from '@/lib/utils/puppeteer-pool'
 
 // Configuration de la route API
@@ -90,66 +90,21 @@ export async function POST(request: NextRequest) {
       page = await createPage()
       logger.debug('[PDF API] Page Puppeteer obtenue', { duration: `${Date.now() - puppeteerStartTime}ms` })
 
-    // Charger le HTML
     await page.setContent(html, {
-      waitUntil: 'load',
+      waitUntil: 'networkidle0',
     })
 
-    // Attendre que Paged.js ait fini le calcul du rendu
-    try {
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          let resolved = false
-          const doResolve = () => {
-            if (!resolved) {
-              resolved = true
-              resolve()
-            }
-          }
+    // Marges du template telles que configurées par l'utilisateur
+    const { margins } = htmlResult
 
-          if ((window as any).PagedPolyfill) {
-            if ((window as any).pagedjsReady) {
-              doResolve()
-              return
-            }
-            window.addEventListener('pagedjsReady', doResolve, { once: true })
-            setTimeout(doResolve, 3000)
-          } else {
-            let checkCount = 0
-            const maxChecks = 50
-            const checkPaged = setInterval(() => {
-              checkCount++
-              if ((window as any).PagedPolyfill) {
-                clearInterval(checkPaged)
-                if ((window as any).pagedjsReady) {
-                  doResolve()
-                } else {
-                  window.addEventListener('pagedjsReady', doResolve, { once: true })
-                  setTimeout(doResolve, 2000)
-                }
-              } else if (checkCount >= maxChecks) {
-                clearInterval(checkPaged)
-                doResolve()
-              }
-            }, 50)
-          }
-        })
-      })
-
-      await new Promise(resolve => setTimeout(resolve, 500))
-    } catch (error) {
-      logger.warn('Erreur lors de l\'attente de Paged.js, continuer quand même', { error: sanitizeError(error) })
-    }
-
-    // Générer le PDF
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
+        top: `${margins.top}mm`,
+        right: `${margins.right}mm`,
+        bottom: `${margins.bottom}mm`,
+        left: `${margins.left}mm`,
       },
     })
 
@@ -182,19 +137,22 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
       logger.error('[PDF API] Erreur Puppeteer:', error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const err = error instanceof Error ? error : new Error(String(error))
+      const errorMessage = err.message
       const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('Timeout')
-      const isExecutable = errorMessage.includes('executable') || errorMessage.includes('Chrome')
+      const isExecutable = errorMessage.includes('executable') || errorMessage.includes('Chrome') || errorMessage.includes('input directory')
+      const stack = err.stack ? err.stack.split('\n').slice(0, 8).join('\n') : undefined
 
       return NextResponse.json(
         {
           error: 'Impossible d\'utiliser Puppeteer',
           details: errorMessage,
+          stack: process.env.NODE_ENV === 'development' ? stack : undefined,
           type: isTimeout ? 'timeout' : isExecutable ? 'executable' : 'unknown',
           hint: isExecutable
-            ? 'Chrome/Chromium n\'est pas trouvé. Installez-le ou configurez PUPPETEER_EXECUTABLE_PATH.'
+            ? 'Sur Vercel: vérifier @sparticuz/chromium-min et mémoire de la fonction (1024 MB min).'
             : isTimeout
-            ? 'Le lancement de Chrome a pris trop de temps.'
+            ? 'Le lancement de Chrome a pris trop de temps (augmenter maxDuration ou mémoire).'
             : 'Vérifiez les logs serveur pour plus de détails.',
         },
         { status: 500 }
@@ -202,11 +160,12 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     logger.error('[PDF API] Erreur globale lors de la génération du PDF:', error)
+    const err = error instanceof Error ? error : new Error(String(error))
     return NextResponse.json(
       {
         error: 'Erreur lors de la génération du PDF',
-        details: error instanceof Error ? error.message : String(error),
-        type: error instanceof Error ? error.constructor.name : typeof error
+        details: err.message,
+        type: err instanceof Error ? err.constructor.name : typeof error,
       },
       { status: 500 }
     )

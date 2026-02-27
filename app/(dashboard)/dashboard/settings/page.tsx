@@ -16,7 +16,7 @@ import {
   Settings, Users, Shield, Bell, CreditCard, Globe, FileText,
   Layout, Code, Save, Building2, Mail, Phone, MapPin,
   Calendar, DollarSign, Languages, Moon, Sun, Key,
-  Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image, Award, Palette, X, Clock, Receipt, FileSignature
+  Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image, Award, Palette, X, Clock, Receipt, FileSignature, User
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -630,6 +630,7 @@ export default function SettingsPage() {
       label: 'Utilisateurs & Sécurité',
       color: 'purple-600',
       tabs: [
+        { id: 'profile', label: 'Mon profil', icon: User, href: '/dashboard/settings/profile' },
         { id: 'users', label: 'Utilisateurs', icon: Users, href: '/dashboard/settings/users' },
         { id: 'permissions', label: 'Permissions', icon: Shield },
         { id: 'security-page', label: 'Sécurité', icon: Key, href: '/dashboard/settings/security' },

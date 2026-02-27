@@ -27,7 +27,6 @@ import {
   HelpCircle,
   PlayCircle,
   Shield,
-  ShieldCheck,
   Folder,
   Building2,
   Award,
@@ -42,10 +41,8 @@ import {
   Globe,
   Badge,
   ClipboardCheck,
-  Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { usePlatformAdmin } from '@/lib/hooks/use-platform-admin'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { UsageIndicator } from '@/components/quota/usage-indicator'
 
@@ -85,7 +82,6 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
       { name: t('common.dashboard'), href: '/dashboard', icon: LayoutDashboard },
       { name: t('navigation.calendar'), href: '/dashboard/calendar', icon: Calendar },
       { name: t('common.messages'), href: '/dashboard/messages', icon: MessageSquare },
-      { name: 'Espace Partenaire', href: '/dashboard/affiliate', icon: Wallet },
     ],
   },
   {
@@ -225,7 +221,6 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { logout, user } = useAuth()
-  const { isPlatformAdmin } = usePlatformAdmin()
   const vocab = useVocabulary() || getVocabulary('school')
   const t = useTranslations()
   const [mounted, setMounted] = useState(false)
@@ -659,34 +654,6 @@ export function Sidebar() {
               ))}
             </nav>
 
-            {/* Lien Super Admin (visible uniquement pour les admins plateforme) */}
-            {mounted && isPlatformAdmin && (
-              <div className="px-4 pb-4">
-                <Link
-                  href="/super-admin"
-                  prefetch={true}
-                  onMouseEnter={() => router.prefetch('/super-admin')}
-                  className={cn(
-                    'group relative flex items-center px-4 py-3 text-sm font-semibold rounded-xl overflow-hidden',
-                    'transition-all duration-300',
-                    pathname === '/super-admin' || pathname?.startsWith('/super-admin/')
-                      ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xl shadow-purple-600/30'
-                      : 'text-gray-700 hover:bg-white hover:text-gray-900 hover:shadow-lg border border-purple-200/60'
-                  )}
-                >
-                  <motion.div
-                    className={cn(
-                      'p-1.5 rounded-lg mr-3 relative z-10',
-                      pathname === '/super-admin' || pathname?.startsWith('/super-admin/') ? 'bg-white/20' : 'bg-purple-100 group-hover:bg-purple-200'
-                    )}
-                  >
-                    <ShieldCheck className={cn('flex-shrink-0 h-4 w-4', pathname === '/super-admin' || pathname?.startsWith('/super-admin/') ? 'text-white' : 'text-purple-600')} />
-                  </motion.div>
-                  <span className="relative z-10 tracking-tight">Administration plateforme</span>
-                </Link>
-              </div>
-            )}
-            
             {/* Système (Paramètres & Déconnexion) Ultra-Premium */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}

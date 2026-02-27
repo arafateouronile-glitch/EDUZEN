@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Navbar } from '@/components/landing/Navbar'
 import { JsonLd } from '@/components/seo/JsonLd'
 
@@ -89,6 +89,49 @@ const Footer = dynamic(
   { loading: () => <div className="min-h-[200px] bg-gray-900" /> }
 )
 
+type DeferredSectionProps = {
+  children: React.ReactNode
+  fallback?: React.ReactNode
+  minHeightClassName?: string
+}
+
+function DeferredSection({
+  children,
+  fallback = <SectionSkeleton />,
+  minHeightClassName = 'min-h-[45vh]',
+}: DeferredSectionProps) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    if (!ref.current || typeof window === 'undefined') return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (!entry?.isIntersecting) return
+        setIsVisible(true)
+        observer.disconnect()
+      },
+      {
+        root: null,
+        // Précharge légèrement avant affichage pour éviter tout pop visuel
+        rootMargin: '500px 0px',
+        threshold: 0.01,
+      }
+    )
+
+    observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} className={minHeightClassName}>
+      {isVisible ? children : fallback}
+    </div>
+  )
+}
+
 export default function HomePage() {
   return (
     <ParallaxProvider>
@@ -102,48 +145,70 @@ export default function HomePage() {
         {/* Hero - SSR activé, critique pour LCP */}
         <Hero />
 
-        {/* Logo Cloud - bande défilante après le hero */}
-        <Suspense fallback={<SectionSkeleton />}>
-          <LogoCloud />
-        </Suspense>
+        {/* Sections below-the-fold rendues à l'approche viewport (qualité visuelle inchangée). */}
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <LogoCloud />
+          </Suspense>
+        </DeferredSection>
 
-        {/* Sections below-the-fold avec Suspense */}
-        <Suspense fallback={<SectionSkeleton />}>
-          <Features />
-        </Suspense>
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <Features />
+          </Suspense>
+        </DeferredSection>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <BentoShowcase />
-        </Suspense>
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <BentoShowcase />
+          </Suspense>
+        </DeferredSection>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <ProductShowcase />
-        </Suspense>
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <ProductShowcase />
+          </Suspense>
+        </DeferredSection>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <HowItWorks />
-        </Suspense>
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <HowItWorks />
+          </Suspense>
+        </DeferredSection>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <Testimonials />
-        </Suspense>
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <Testimonials />
+          </Suspense>
+        </DeferredSection>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <Pricing />
-        </Suspense>
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <Pricing />
+          </Suspense>
+        </DeferredSection>
 
-        {/* Logo Cloud - répétition avant FAQ pour renforcer la preuve sociale */}
-        <Suspense fallback={<SectionSkeleton />}>
-          <LogoCloud />
-        </Suspense>
+        {/* Répétition sociale avant FAQ */}
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <LogoCloud />
+          </Suspense>
+        </DeferredSection>
 
-        <Suspense fallback={<SectionSkeleton />}>
-          <FAQ />
-        </Suspense>
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <FAQ />
+          </Suspense>
+        </DeferredSection>
 
-        <Suspense fallback={<div className="min-h-[200px] bg-gray-900" />}>
-          <Footer />
-        </Suspense>
+        <DeferredSection
+          fallback={<div className="min-h-[200px] bg-gray-900" />}
+          minHeightClassName="min-h-[200px]"
+        >
+          <Suspense fallback={<div className="min-h-[200px] bg-gray-900" />}>
+            <Footer />
+          </Suspense>
+        </DeferredSection>
       </main>
     </ParallaxProvider>
   )

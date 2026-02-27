@@ -172,7 +172,7 @@ export default function PaymentsPage() {
             {unpaidInvoices.length > 0 && (
               <p className="text-sm text-muted-foreground mt-1">
                 Total: {formatCurrency(
-                  unpaidInvoices.reduce((sum, inv) => sum + Number(inv.total_amount) - Number((inv as any).paid_amount || 0), 0),
+                  unpaidInvoices.reduce((sum: number, inv: { total_amount?: unknown; paid_amount?: unknown }) => sum + Number(inv.total_amount) - Number(inv.paid_amount || 0), 0),
                   unpaidInvoices[0]?.currency || 'XOF'
                 )}
               </p>

@@ -32,7 +32,7 @@ const nextConfig = {
   // Vérification TypeScript pendant le build désactivée pour accélérer (projet volumineux → phase TS ~30+ min).
   // Lancer « npm run type-check » en CI ou avant une release pour vérifier les types.
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,

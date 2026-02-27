@@ -24,7 +24,7 @@ export async function GET(
     // Table 'resources' absente des types générés Supabase ; chaîne typée manuellement
     type ResourceRow = { id: string; external_url?: string | null; file_url?: string | null; [key: string]: unknown }
     type ResourcesQuery = {
-      from(_: 'resources'): { select(_: string): { eq(_: string, _: string): { single(): Promise<{ data: ResourceRow | null; error: unknown }> } } }
+      from(_table: 'resources'): { select(_cols: string): { eq(_key: string, _value: string): { single(): Promise<{ data: ResourceRow | null; error: unknown }> } } }
     }
     const { data: resource, error } = await (supabase as unknown as ResourcesQuery)
       .from('resources')

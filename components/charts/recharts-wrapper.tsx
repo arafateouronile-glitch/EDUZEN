@@ -24,12 +24,12 @@ export const RechartsLine = dynamic(
 export const RechartsBarChart = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.BarChart as any })),
   { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> }
-)
+) as React.ComponentType<{ children?: React.ReactNode; data?: unknown[]; margin?: { top?: number; right?: number; left?: number; bottom?: number }; [key: string]: unknown }>
 
 export const RechartsBar = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.Bar as any })),
   { ssr: false }
-)
+) as React.ComponentType<{ dataKey?: string; fill?: string; radius?: number[]; name?: string; [key: string]: unknown }>
 
 export const RechartsPieChart = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.PieChart as any })),
@@ -49,22 +49,22 @@ export const RechartsCell = dynamic(
 export const RechartsXAxis = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.XAxis as any })),
   { ssr: false }
-)
+) as React.ComponentType<{ dataKey?: string; tick?: { fontSize?: number }; tickFormatter?: (v: string | number) => string; [key: string]: unknown }>
 
 export const RechartsYAxis = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.YAxis as any })),
   { ssr: false }
-)
+) as React.ComponentType<{ tick?: { fontSize?: number }; tickFormatter?: (v: number) => string; [key: string]: unknown }>
 
 export const RechartsCartesianGrid = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.CartesianGrid as any })),
   { ssr: false }
-)
+) as React.ComponentType<{ strokeDasharray?: string; className?: string; [key: string]: unknown }>
 
 export const RechartsTooltip = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.Tooltip as any })),
   { ssr: false }
-)
+) as React.ComponentType<{ formatter?: (value: number) => string[]; labelFormatter?: (_: unknown, payload: unknown) => unknown; [key: string]: unknown }>
 
 export const RechartsLegend = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.Legend as any })),
@@ -79,12 +79,12 @@ export const RechartsResponsiveContainer = dynamic(
 export const RechartsArea = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.Area as any })),
   { ssr: false }
-)
+) as React.ComponentType<{ type?: string; dataKey?: string; stroke?: string; strokeWidth?: number; fill?: string; [key: string]: unknown }>
 
 export const RechartsAreaChart = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.AreaChart as any })),
   { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> }
-)
+) as React.ComponentType<{ children?: React.ReactNode; data?: unknown[]; margin?: { top?: number; right?: number; left?: number; bottom?: number }; [key: string]: unknown }>
 
 export const RechartsSector = dynamic(
   () => import('recharts').then((mod) => ({ default: mod.Sector as any })),

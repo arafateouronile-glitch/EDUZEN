@@ -12,12 +12,9 @@ export const defaultLocale = routing.defaultLocale as 'fr'
 const intlMiddleware = createMiddleware(routing)
 
 export async function middleware(req: NextRequest) {
-  // D'abord, gérer l'authentification Supabase
-  let response = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
-  })
+  // D'abord, générer la réponse i18n, puis la réutiliser partout (auth + headers)
+  // pour conserver les Set-Cookie Supabase (refresh tokens).
+  let response = intlMiddleware(req)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,11 +30,6 @@ export async function middleware(req: NextRequest) {
             value,
             ...options,
           })
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          })
           response.cookies.set({
             name,
             value,
@@ -50,11 +42,6 @@ export async function middleware(req: NextRequest) {
             value: '',
             ...options,
           })
-          response = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
-          })
           response.cookies.set({
             name,
             value: '',
@@ -65,7 +52,20 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  const { data: { user: authUser } } = await supabase.auth.getUser()
+  let authUser: { id: string } | null = null
+  let authCheckFailed = false
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    authUser = user
+  } catch (e: unknown) {
+    const err = e as { status?: number; code?: string }
+    if (err?.status === 400 || err?.code === 'refresh_token_not_found') {
+      await supabase.auth.signOut()
+    } else {
+      // Erreur transitoire (réseau, timeout, etc.) : ne pas considérer l'utilisateur comme déconnecté.
+      authCheckFailed = true
+    }
+  }
 
   // Routes protégées (nécessitent une authentification)
   const protectedRoutes = ['/dashboard', '/students', '/programs', '/payments', '/attendance']
@@ -78,7 +78,7 @@ export async function middleware(req: NextRequest) {
   const isAuthRoute = authRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
 
   // Si la route est protégée et l'utilisateur n'est pas connecté
-  if (isProtectedRoute && !authUser) {
+  if (isProtectedRoute && !authUser && !authCheckFailed) {
     // Pour les routes API, retourner une erreur au lieu de rediriger
     if (req.nextUrl.pathname.startsWith('/api')) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
@@ -172,8 +172,7 @@ export async function middleware(req: NextRequest) {
     }
   })
 
-  // Ensuite, appliquer le middleware next-intl
-  return intlMiddleware(req)
+  return response
 }
 
 export const config = {

@@ -79,36 +79,24 @@ export function BorderSelector({ editor, trigger }: BorderSelectorProps) {
   const [selectedSides, setSelectedSides] = useState<Set<BorderSide>>(new Set())
 
   // Appliquer un préréglage
+  // Helper — applique à tableCell ET tableHeader
+  const updateCellAttrs = (attrs: Record<string, unknown>) =>
+    editor.chain().focus()
+      .updateAttributes('tableCell', attrs)
+      .updateAttributes('tableHeader', attrs)
+      .run()
+
   const applyPreset = (preset: BorderPreset) => {
     const border = `${borderState.width} ${borderState.style} ${borderState.color}`
 
     switch (preset) {
       case 'none':
-        editor.chain().focus().updateAttributes('tableCell', {
-          borderTop: 'none',
-          borderBottom: 'none',
-          borderLeft: 'none',
-          borderRight: 'none',
-        }).run()
+        updateCellAttrs({ borderTop: 'none', borderBottom: 'none', borderLeft: 'none', borderRight: 'none' })
         break
       case 'box':
-        // Bordures extérieures seulement
-        editor.chain().focus().updateAttributes('tableCell', {
-          borderTop: border,
-          borderBottom: border,
-          borderLeft: border,
-          borderRight: border,
-        }).run()
-        break
       case 'all':
       case 'grid':
-        // Toutes les bordures
-        editor.chain().focus().updateAttributes('tableCell', {
-          borderTop: border,
-          borderBottom: border,
-          borderLeft: border,
-          borderRight: border,
-        }).run()
+        updateCellAttrs({ borderTop: border, borderBottom: border, borderLeft: border, borderRight: border })
         break
     }
     setIsOpen(false)
@@ -117,62 +105,25 @@ export function BorderSelector({ editor, trigger }: BorderSelectorProps) {
   // Appliquer une bordure individuelle
   const applyBorder = (side: BorderSide) => {
     const border = `${borderState.width} ${borderState.style} ${borderState.color}`
-
     switch (side) {
-      case 'top':
-        editor.chain().focus().updateAttributes('tableCell', { borderTop: border }).run()
-        break
-      case 'bottom':
-        editor.chain().focus().updateAttributes('tableCell', { borderBottom: border }).run()
-        break
-      case 'left':
-        editor.chain().focus().updateAttributes('tableCell', { borderLeft: border }).run()
-        break
-      case 'right':
-        editor.chain().focus().updateAttributes('tableCell', { borderRight: border }).run()
-        break
-      case 'horizontal':
-        editor.chain().focus().updateAttributes('tableCell', {
-          borderTop: border,
-          borderBottom: border,
-        }).run()
-        break
-      case 'vertical':
-        editor.chain().focus().updateAttributes('tableCell', {
-          borderLeft: border,
-          borderRight: border,
-        }).run()
-        break
+      case 'top':        updateCellAttrs({ borderTop: border }); break
+      case 'bottom':     updateCellAttrs({ borderBottom: border }); break
+      case 'left':       updateCellAttrs({ borderLeft: border }); break
+      case 'right':      updateCellAttrs({ borderRight: border }); break
+      case 'horizontal': updateCellAttrs({ borderTop: border, borderBottom: border }); break
+      case 'vertical':   updateCellAttrs({ borderLeft: border, borderRight: border }); break
     }
   }
 
   // Supprimer une bordure individuelle
   const removeBorder = (side: BorderSide) => {
     switch (side) {
-      case 'top':
-        editor.chain().focus().updateAttributes('tableCell', { borderTop: 'none' }).run()
-        break
-      case 'bottom':
-        editor.chain().focus().updateAttributes('tableCell', { borderBottom: 'none' }).run()
-        break
-      case 'left':
-        editor.chain().focus().updateAttributes('tableCell', { borderLeft: 'none' }).run()
-        break
-      case 'right':
-        editor.chain().focus().updateAttributes('tableCell', { borderRight: 'none' }).run()
-        break
-      case 'horizontal':
-        editor.chain().focus().updateAttributes('tableCell', {
-          borderTop: 'none',
-          borderBottom: 'none',
-        }).run()
-        break
-      case 'vertical':
-        editor.chain().focus().updateAttributes('tableCell', {
-          borderLeft: 'none',
-          borderRight: 'none',
-        }).run()
-        break
+      case 'top':        updateCellAttrs({ borderTop: 'none' }); break
+      case 'bottom':     updateCellAttrs({ borderBottom: 'none' }); break
+      case 'left':       updateCellAttrs({ borderLeft: 'none' }); break
+      case 'right':      updateCellAttrs({ borderRight: 'none' }); break
+      case 'horizontal': updateCellAttrs({ borderTop: 'none', borderBottom: 'none' }); break
+      case 'vertical':   updateCellAttrs({ borderLeft: 'none', borderRight: 'none' }); break
     }
   }
 

@@ -35,8 +35,10 @@ export function QualiopiComplianceScore() {
       }
     },
     enabled: !!user?.organization_id,
-    refetchOnMount: true,
-    staleTime: 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
     refetchInterval: 60000,
   })
 

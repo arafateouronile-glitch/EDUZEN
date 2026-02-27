@@ -33,17 +33,23 @@ const getLaunchOptions = async (): Promise<Record<string, unknown>> => {
 
   // Vercel : utiliser @sparticuz/chromium-min (binaire compatible serverless)
   if (isVercel) {
-    const chromium = await import('@sparticuz/chromium-min')
-    const chrom = chromium.default
-    const executablePath = await chrom.executablePath()
-    logger.debug('[Puppeteer Pool] Vercel: @sparticuz/chromium-min')
-    return {
-      executablePath,
-      args: [...(chrom.args || []), ...VERCEL_CHROME_ARGS],
-      headless: chrom.headless ?? true,
-      defaultViewport: chrom.defaultViewport ?? null,
-      timeout: 30000,
-      protocolTimeout: 180000,
+    try {
+      const chromium = await import('@sparticuz/chromium-min')
+      const chrom = chromium.default
+      const executablePath = await chrom.executablePath()
+      logger.debug('[Puppeteer Pool] Vercel: @sparticuz/chromium-min', { executablePath: executablePath?.slice(0, 50) })
+      return {
+        executablePath,
+        args: [...(chrom.args || []), ...VERCEL_CHROME_ARGS],
+        headless: chrom.headless ?? true,
+        defaultViewport: chrom.defaultViewport ?? null,
+        timeout: 30000,
+        protocolTimeout: 180000,
+      }
+    } catch (vercelError) {
+      const msg = vercelError instanceof Error ? vercelError.message : String(vercelError)
+      logger.error('[Puppeteer Pool] Vercel Chromium init failed', { error: msg })
+      throw new Error(`Chromium Vercel: ${msg}`)
     }
   }
 
