@@ -199,6 +199,12 @@ const navigation: NavSection[] = [
     title: 'Administration',
     items: [
       {
+        name: 'Support',
+        href: '/super-admin/support',
+        icon: MessageSquare,
+        permission: 'view_dashboard',
+      },
+      {
         name: 'Équipe',
         href: '/super-admin/team',
         icon: UserPlus,

@@ -833,9 +833,10 @@ function AnimatedCounter({ value, duration = 1500, className = '' }: { value: nu
 
 export default function DashboardPage() {
   const supabase = createClient()
-  const { user, isLoading: userLoading, session } = useAuth()
+  const { user, isLoading: userLoading, session, isAuthenticated } = useAuth()
   const vocab = useVocabulary()
   const prefersReducedMotion = useReducedMotion()
+  const canLoadAdminData = !!isAuthenticated && !!session?.user?.id && !!user?.organization_id && user?.role !== 'teacher'
 
   // Tous les hooks doivent être appelés AVANT les retours conditionnels
   // Récupérer les statistiques générales - ✅ OPTIMISÉ avec Promise.all
@@ -843,7 +844,7 @@ export default function DashboardPage() {
 
   const { data: stats, isLoading: isLoadingStats } = useQuery({
     queryKey: ['dashboard-stats', user?.organization_id],
-    enabled: !!user?.organization_id && user?.role !== 'teacher',
+    enabled: canLoadAdminData,
     staleTime: 2 * 60 * 1000, // Cache 2 minutes (données dashboard changent peu)
     gcTime: 10 * 60 * 1000, // Garder en cache 10 minutes
     refetchOnWindowFocus: false, // Ne pas refetch au focus
@@ -891,7 +892,7 @@ export default function DashboardPage() {
   // Récupérer l'évolution des revenus (6 derniers mois) — 1 requête au lieu de 12
   const { data: revenueData } = useQuery({
     queryKey: ['revenue-evolution', user?.organization_id],
-    enabled: !!user?.organization_id && user?.role !== 'teacher' && shouldLoadSecondaryData,
+    enabled: canLoadAdminData && shouldLoadSecondaryData,
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -940,7 +941,7 @@ export default function DashboardPage() {
   // Récupérer les apprenants par classe
   const { data: studentsBySession } = useQuery({
     queryKey: ['students-by-class', user?.organization_id],
-    enabled: !!user?.organization_id && user?.role !== 'teacher' && shouldLoadSecondaryData,
+    enabled: canLoadAdminData && shouldLoadSecondaryData,
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -956,7 +957,7 @@ export default function DashboardPage() {
   // Récupérer les statuts de factures
   const { data: invoiceStatus, isLoading: isLoadingInvoices } = useQuery({
     queryKey: ['invoice-status', user?.organization_id, 'v3'], // v3 pour forcer le rafraîchissement
-    enabled: !!user?.organization_id && user?.role !== 'teacher' && shouldLoadSecondaryData,
+    enabled: canLoadAdminData && shouldLoadSecondaryData,
     staleTime: 3 * 60 * 1000, // Cache 3 minutes
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -1030,7 +1031,7 @@ export default function DashboardPage() {
   // Récupérer les données d'activité tertiaires (top programmes + inscriptions récentes)
   const { data: activityInsights } = useQuery({
     queryKey: ['dashboard-activity-insights', user?.organization_id],
-    enabled: !!user?.organization_id && user?.role !== 'teacher' && shouldLoadTertiaryData,
+    enabled: canLoadAdminData && shouldLoadTertiaryData,
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,

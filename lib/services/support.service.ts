@@ -98,7 +98,7 @@ export class SupportService {
       .from('support_tickets')
       .select(`
         *,
-        user:users(id, full_name, email),
+        user:users!support_tickets_user_id_fkey(id, full_name, email),
         assigned_user:users!support_tickets_assigned_to_fkey(id, full_name, email),
         category:support_categories(*)
       `)
@@ -155,12 +155,44 @@ export class SupportService {
     return data || []
   }
 
+  /** Liste tous les tickets (toutes organisations). Réservé au super_admin (RLS). */
+  async getAllTicketsForSuperAdmin(filters?: {
+    organizationId?: string
+    status?: SupportTicket['status']
+    priority?: SupportTicket['priority']
+  }) {
+    let query = this.supabase
+      .from('support_tickets')
+      .select(`
+        *,
+        user:users!support_tickets_user_id_fkey(id, full_name, email),
+        assigned_user:users!support_tickets_assigned_to_fkey(id, full_name, email),
+        category:support_categories(*),
+        organization:organizations(id, name)
+      `)
+
+    if (filters?.organizationId) {
+      query = query.eq('organization_id', filters.organizationId)
+    }
+    if (filters?.status) {
+      query = query.eq('status', filters.status)
+    }
+    if (filters?.priority) {
+      query = query.eq('priority', filters.priority)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  }
+
   async getTicketById(id: string) {
     const { data, error } = await this.supabase
       .from('support_tickets')
       .select(`
         *,
-        user:users(id, full_name, email),
+        user:users!support_tickets_user_id_fkey(id, full_name, email),
         assigned_user:users!support_tickets_assigned_to_fkey(id, full_name, email),
         category:support_categories(*)
       `)
@@ -223,7 +255,7 @@ export class SupportService {
       .from('support_ticket_messages')
       .select(`
         *,
-        user:users(id, full_name, email)
+        user:users!support_ticket_messages_user_id_fkey(id, full_name, email)
       `)
       .eq('ticket_id', ticketId)
       .order('created_at', { ascending: true })
@@ -238,7 +270,7 @@ export class SupportService {
       .insert(message)
       .select(`
         *,
-        user:users(id, full_name, email)
+        user:users!support_ticket_messages_user_id_fkey(id, full_name, email)
       `)
       .single()
 
@@ -268,7 +300,7 @@ export class SupportService {
       .from('support_ticket_notes')
       .select(`
         *,
-        user:users(id, full_name, email)
+        user:users!support_ticket_notes_user_id_fkey(id, full_name, email)
       `)
       .eq('ticket_id', ticketId)
       .order('created_at', { ascending: false })
@@ -283,7 +315,7 @@ export class SupportService {
       .insert(note)
       .select(`
         *,
-        user:users(id, full_name, email)
+        user:users!support_ticket_notes_user_id_fkey(id, full_name, email)
       `)
       .single()
 

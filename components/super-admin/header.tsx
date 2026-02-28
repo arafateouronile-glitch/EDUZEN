@@ -64,6 +64,7 @@ const routeNames: Record<string, string> = {
   '/super-admin/blog/categories': 'Catégories',
   '/super-admin/blog/tags': 'Tags',
   '/super-admin/blog/comments': 'Commentaires',
+  '/super-admin/support': 'Support',
   '/super-admin/team': 'Équipe',
   '/super-admin/settings': 'Paramètres',
 }

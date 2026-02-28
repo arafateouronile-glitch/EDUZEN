@@ -45,6 +45,8 @@ export default function SupportPage() {
   const [newTicketDialogOpen, setNewTicketDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const [newTicketCategoryId, setNewTicketCategoryId] = useState<string>('')
+  const [newTicketPriority, setNewTicketPriority] = useState<string>('medium')
 
   // Récupérer les catégories
   const { data: categories = [] } = useQuery({
@@ -131,6 +133,8 @@ export default function SupportPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['support-tickets'] })
       setNewTicketDialogOpen(false)
+      setNewTicketCategoryId('')
+      setNewTicketPriority('medium')
     },
   })
 
@@ -138,10 +142,10 @@ export default function SupportPage() {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     const data = {
-      category_id: formData.get('category_id') as string || null,
+      category_id: newTicketCategoryId || null,
       subject: formData.get('subject') as string,
       description: formData.get('description') as string,
-      priority: formData.get('priority') as string || 'medium',
+      priority: newTicketPriority || 'medium',
       tags: (formData.get('tags') as string)?.split(',').map((t) => t.trim()).filter(Boolean) || [],
     }
 
@@ -240,18 +244,22 @@ export default function SupportPage() {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="category_id">Catégorie</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une catégorie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories?.map((cat: any) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <select
+                      id="category_id"
+                      name="category_id"
+                      value={newTicketCategoryId}
+                      onChange={(e) => setNewTicketCategoryId(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    >
+                      <option value="">
+                        {categories?.length ? 'Sélectionner une catégorie' : 'Aucune catégorie (exécutez les migrations)'}
+                      </option>
+                      {categories?.map((cat: any) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <Label htmlFor="subject">Sujet *</Label>
@@ -274,17 +282,18 @@ export default function SupportPage() {
                   </div>
                   <div>
                     <Label htmlFor="priority">Priorité</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Basse</SelectItem>
-                        <SelectItem value="medium">Moyenne</SelectItem>
-                        <SelectItem value="high">Élevée</SelectItem>
-                        <SelectItem value="urgent">Urgente</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <select
+                      id="priority"
+                      name="priority"
+                      value={newTicketPriority}
+                      onChange={(e) => setNewTicketPriority(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    >
+                      <option value="low">Basse</option>
+                      <option value="medium">Moyenne</option>
+                      <option value="high">Élevée</option>
+                      <option value="urgent">Urgente</option>
+                    </select>
                   </div>
                   <div>
                     <Label htmlFor="tags">Tags (séparés par des virgules)</Label>

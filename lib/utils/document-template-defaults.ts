@@ -629,6 +629,7 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
         <tr>
           <td style="width: 60%; vertical-align: top; border: 0;">
             <h1 style="margin: 0; font-size: 12pt; font-weight: bold; color: #000;">Facture n°{numero_facture}</h1>
+            {IF reference_devis}<p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Devis de référence : {reference_devis}</p>{ENDIF}
           </td>
           <td style="width: 40%; vertical-align: top; border: 0; text-align: right;">
             <p style="margin: 0; font-size: 8pt; color: #333;">Date de facture : {date_emission}</p>

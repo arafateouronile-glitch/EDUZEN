@@ -7,9 +7,10 @@
 import * as React from 'react'
 import { Document, Page, View, Text, Image, StyleSheet, pdf, renderToStream } from '@react-pdf/renderer'
 import type { DocumentTemplate, DocumentVariables, TemplateElement } from '@/lib/types/document-templates'
-import puppeteer from 'puppeteer'
 import { generateHTML } from './html-generator'
 import { logger } from '@/lib/utils/logger'
+
+const mmToInch = (mm: number) => `${(mm * 0.03937).toFixed(4)}`
 
 export interface PDFGenerationResult {
   blob: Blob
@@ -145,11 +146,18 @@ async function generatePDFFromHTML(
   const pageSize = template.page_size || 'A4'
   const pageFormat = pageSize === 'A4' ? 'A4' : pageSize === 'Letter' ? 'Letter' : 'A4'
 
-  // Préférer Gotenberg en production/serverless (pas de Chromium à lancer)
-  const { isGotenbergConfigured, generatePDFWithGotenberg } = await import('@/lib/utils/gotenberg-pdf')
+  // Gotenberg (moteur principal)
+  const { isGotenbergConfigured, htmlToPdf } = await import('@/lib/services/gotenberg.service')
   if (isGotenbergConfigured()) {
     try {
-      const pdfBuffer = await generatePDFWithGotenberg(fullHTML, { format: pageFormat })
+      const margins = template.margins || { top: 0, right: 0, bottom: 0, left: 0 }
+      const pdfBuffer = await htmlToPdf(fullHTML, {
+        format: pageFormat,
+        marginTop: mmToInch(margins.top),
+        marginBottom: mmToInch(margins.bottom),
+        marginLeft: mmToInch(margins.left),
+        marginRight: mmToInch(margins.right),
+      })
       const pdfBlob = new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' })
       const estimatedPageCount = Math.max(1, Math.ceil(pdfBuffer.length / 50000))
       return {
@@ -162,69 +170,41 @@ async function generatePDFFromHTML(
     }
   }
 
-  // Fallback: Puppeteer (local ou si Gotenberg indisponible)
-  let browser
+  // Puppeteer (fallback) — utilise le pool partagé
+  const { createPage } = await import('@/lib/utils/puppeteer-pool')
+  let page: Awaited<ReturnType<typeof createPage>> | null = null
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu',
-      ],
-      // Essayer d'utiliser le Chromium installé avec Puppeteer
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-    })
-  } catch (launchError) {
-    logger.error('Erreur lors du lancement de Puppeteer', launchError)
-    const errorMessage = launchError instanceof Error ? launchError.message : String(launchError)
-    const errorStack = launchError instanceof Error ? launchError.stack : undefined
-    logger.error('Stack trace Puppeteer', undefined, { stack: errorStack })
-    throw new Error(
-      `Impossible de lancer Puppeteer. Erreur: ${errorMessage}. ` +
-      `Veuillez vérifier que Chromium est correctement installé.`
-    )
-  }
-  
-  try {
-    const page = await browser.newPage()
-    
-    // Charger le HTML
-    await page.setContent(fullHTML, {
-      waitUntil: 'networkidle0',
-    })
-    
-    // Générer le PDF
+    page = await createPage()
+
+    await page.setContent(fullHTML, { waitUntil: 'networkidle0' })
+
+    const margins = template.margins || { top: 0, right: 0, bottom: 0, left: 0 }
     const pdfBuffer = await page.pdf({
       format: pageFormat,
       printBackground: true,
       margin: {
-        top: '0mm',
-        right: '0mm',
-        bottom: '0mm',
-        left: '0mm',
+        top: `${margins.top}mm`,
+        right: `${margins.right}mm`,
+        bottom: `${margins.bottom}mm`,
+        left: `${margins.left}mm`,
       },
       preferCSSPageSize: true,
     })
-    
-    // Créer un Blob à partir du buffer
+
     const pdfBlob = new Blob([pdfBuffer as BlobPart], { type: 'application/pdf' })
-    
-    // Estimer le nombre de pages (approximation basée sur la hauteur du contenu)
-    // Note: Pour un calcul précis, il faudrait générer le PDF deux fois ou utiliser une méthode différente
     const estimatedPageCount = Math.max(1, Math.ceil(pdfBuffer.length / 50000))
-    
     return {
       blob: pdfBlob,
       pageCount: htmlResult.pageCount || estimatedPageCount,
     }
+  } catch (puppeteerError) {
+    logger.error('Erreur Puppeteer (fallback)', puppeteerError)
+    const errorMessage = puppeteerError instanceof Error ? puppeteerError.message : String(puppeteerError)
+    throw new Error(`Impossible de générer le PDF: ${errorMessage}`)
   } finally {
-    await browser.close()
+    if (page) {
+      try { await page.close() } catch { /* ignorer */ }
+    }
   }
 }
 

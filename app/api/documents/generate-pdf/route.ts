@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import { logger } from '@/lib/utils/logger'
 import { createPage } from '@/lib/utils/puppeteer-pool'
+import { isGotenbergConfigured, htmlToPdf } from '@/lib/services/gotenberg.service'
+
+const mmToInch = (mm: number) => `${(mm * 0.03937).toFixed(4)}`
 
 // Configuration de la route API
 export const runtime = 'nodejs'
@@ -85,56 +88,87 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { margins } = htmlResult
+
+    // --- Gotenberg (moteur principal) ---
+    if (isGotenbergConfigured()) {
+      try {
+        const gotenbergStart = Date.now()
+        const pdfBuffer = await htmlToPdf(html, {
+          format: ((template as any).page_size === 'Letter' ? 'Letter' : 'A4') as 'A4' | 'Letter',
+          marginTop: mmToInch(margins.top),
+          marginBottom: mmToInch(margins.bottom),
+          marginLeft: mmToInch(margins.left),
+          marginRight: mmToInch(margins.right),
+        })
+
+        if (!pdfBuffer || pdfBuffer.length === 0) {
+          throw new Error('Gotenberg a retourné un PDF vide')
+        }
+
+        logger.info('[PDF API] PDF généré via Gotenberg', {
+          template: template.name || 'N/A',
+          duration: `${Date.now() - gotenbergStart}ms`,
+          size: `${Math.round(pdfBuffer.length / 1024)}KB`,
+        })
+
+        return new NextResponse(pdfBuffer as any, {
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${template.name || 'document'}.pdf"`,
+            'X-PDF-Engine': 'gotenberg',
+          },
+        })
+      } catch (gotenbergError) {
+        logger.warn('[PDF API] Gotenberg échoué, bascule vers Puppeteer', {
+          error: gotenbergError instanceof Error ? gotenbergError.message : String(gotenbergError),
+        })
+        // Fallback Puppeteer ci-dessous
+      }
+    }
+
+    // --- Puppeteer (fallback) ---
     const puppeteerStartTime = Date.now()
     try {
       page = await createPage()
       logger.debug('[PDF API] Page Puppeteer obtenue', { duration: `${Date.now() - puppeteerStartTime}ms` })
 
-    await page.setContent(html, {
-      waitUntil: 'networkidle0',
-    })
+      await page.setContent(html, {
+        waitUntil: 'networkidle0',
+      })
 
-    // Marges du template telles que configurées par l'utilisateur
-    const { margins } = htmlResult
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: `${margins.top}mm`,
+          right: `${margins.right}mm`,
+          bottom: `${margins.bottom}mm`,
+          left: `${margins.left}mm`,
+        },
+      })
 
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: `${margins.top}mm`,
-        right: `${margins.right}mm`,
-        bottom: `${margins.bottom}mm`,
-        left: `${margins.left}mm`,
-      },
-    })
+      await page.close()
+      page = null
 
-    // Fermer la page (pas le navigateur - il reste dans le pool)
-    await page.close()
-    page = null
+      if (!pdf || pdf.length === 0) {
+        logger.error('PDF généré est vide')
+        return NextResponse.json({ error: 'PDF généré est vide' }, { status: 500 })
+      }
 
-    if (!pdf || pdf.length === 0) {
-      logger.error('PDF généré est vide')
-      return NextResponse.json(
-        { error: 'PDF généré est vide' },
-        { status: 500 }
-      )
-    }
+      logger.info('[PDF API] PDF généré via Puppeteer (fallback)', {
+        template: template.name || 'N/A',
+        duration: `${Date.now() - startTime}ms`,
+        size: `${Math.round(pdf.length / 1024)}KB`,
+      })
 
-    const totalDuration = Date.now() - startTime
-    logger.info('[PDF API] PDF généré', {
-      template: template.name || 'N/A',
-      duration: `${totalDuration}ms`,
-      size: `${Math.round(pdf.length / 1024)}KB`
-    })
-
-    // Retourner le PDF
-    return new NextResponse(pdf as any, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${template.name || 'document'}.pdf"`,
-      },
-    })
-
+      return new NextResponse(pdf as any, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${template.name || 'document'}.pdf"`,
+          'X-PDF-Engine': 'puppeteer',
+        },
+      })
     } catch (error) {
       logger.error('[PDF API] Erreur Puppeteer:', error)
       const err = error instanceof Error ? error : new Error(String(error))
@@ -145,7 +179,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         {
-          error: 'Impossible d\'utiliser Puppeteer',
+          error: 'Impossible de générer le PDF',
           details: errorMessage,
           stack: process.env.NODE_ENV === 'development' ? stack : undefined,
           type: isTimeout ? 'timeout' : isExecutable ? 'executable' : 'unknown',

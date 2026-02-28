@@ -224,6 +224,12 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     // Facture
     numero_facture: invoice?.invoice_number || '',
     facture_numero: invoice?.invoice_number || '',
+    reference_devis: (() => {
+      const n = invoice?.notes
+      if (!n) return ''
+      const m = String(n).match(/Devis de référence\s*:\s*(.+)/)
+      return m ? m[1].trim() : ''
+    })(),
     facture_date_emission: invoice?.issue_date
       ? new Date(invoice.issue_date).toLocaleDateString('fr-FR')
       : '',

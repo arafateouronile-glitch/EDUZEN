@@ -23,6 +23,10 @@ export function useAuth() {
     queryKey: ['session'],
     queryFn: async () => {
       const previousSession = queryClient.getQueryData<{ user: User } | null>(['session']) ?? null
+      const fallbackToLocalSession = async (): Promise<{ user: User } | null> => {
+        const { data: { session: localSession } } = await supabase.auth.getSession()
+        return localSession?.user ? { user: localSession.user } : previousSession
+      }
       const fetchSession = async (): Promise<{ user: User } | null> => {
         const { data: { user }, error } = await supabase.auth.getUser()
         if (error) {
@@ -30,15 +34,29 @@ export function useAuth() {
             error?.name === 'AuthSessionMissingError' ||
             (error as { message?: string })?.message?.includes('Auth session missing')
           const isRateLimit = (error as { status?: number })?.status === 429
+          if (isSessionMissing) {
+            // Session réellement absente: ne pas conserver l'ancienne session en cache.
+            // Sinon on reste "connecté" côté UI alors que les routes serveur redirigent déjà.
+            return null
+          }
           if (!isSessionMissing && !isRateLimit) {
             logger.error('Auth getUser error', error as Error)
           }
           if (isRateLimit) {
-            logger.warn('Auth rate limit (429), returning null for session')
+            logger.warn('Auth rate limit (429), fallback to local session')
+            return fallbackToLocalSession()
           }
           return previousSession
         }
-        return user ? { user } : null
+        if (user) return { user }
+
+        // Cas transitoire observé multi-onglets:
+        // getUser() peut être momentanément vide alors que la session locale est valide.
+        const { data: { session: localSession } } = await supabase.auth.getSession()
+        if (localSession?.user) {
+          return { user: localSession.user }
+        }
+        return null
       }
 
       const timeoutMs = 10000 // 10s pour éviter les faux timeouts (réseau lent, cold start)
@@ -62,6 +80,7 @@ export function useAuth() {
         const isTimeout = err?.message === 'Session fetch timeout'
         if (isTimeout) {
           logger.debug(`Session fetch timed out after ${timeoutMs / 1000}s (réseau lent ou non connecté)`)
+          return fallbackToLocalSession()
         } else {
           logger.warn('Session fetch failed', { error: err })
         }
@@ -216,8 +235,9 @@ export function useAuth() {
     enabled: !!session?.user?.id && !sessionLoading,
     retry: 2,
     refetchOnWindowFocus: false,
-    refetchOnMount: true, // Récharger l'utilisateur (et organization_id) au montage après hard refresh
-    staleTime: 1000 * 60 * 2, // Réduit les refetch fréquents tout en gardant une donnée fraîche
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+    staleTime: 1000 * 60 * 2,
   })
 
   // Connexion
@@ -586,19 +606,20 @@ export function useAuth() {
     },
   })
 
-  // Écouter les changements d'auth et mettre à jour avec un utilisateur vérifié (getUser)
+  // Écouter les changements d'auth sans re-trigger getUser() (évite les Navigator Lock timeouts)
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        queryClient.setQueryData(['session'], { user })
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      const currentUser = currentSession?.user ?? null
+      if (currentUser) {
+        queryClient.setQueryData(['session'], { user: currentUser })
+        queryClient.invalidateQueries({ queryKey: ['user', currentUser.id], exact: true })
         return
       }
 
-      // Ne vider le cache qu'en cas de vraie déconnexion.
-      // Sur certains événements transitoires (dev/HMR/réseau), user peut être temporairement null.
+      // Ne jamais conserver un état auth ambigu:
+      // si Supabase ne fournit plus de session utilisateur, on purge l'état local.
       if (event === 'SIGNED_OUT' || (event as string) === 'USER_DELETED') {
         queryClient.setQueryData(['session'], null)
         queryClient.clear()
@@ -606,7 +627,11 @@ export function useAuth() {
           window.location.href = '/auth/login?message=session_expired'
         }
       } else {
-        logger.warn('Auth state change returned null user on non-signout event; keeping previous auth cache', { event })
+        queryClient.setQueryData(['session'], null)
+        queryClient.removeQueries({ queryKey: ['user'] })
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+          window.location.replace('/auth/logout?reason=session_sync_lost')
+        }
       }
     })
 
@@ -630,7 +655,7 @@ export function useAuth() {
     session,
     user,
     isLoading,
-    isAuthenticated: !!session,
+    isAuthenticated: !!session && !!user,
     login: loginMutation.mutate,
     register: registerMutation.mutate,
     logout,

@@ -27,6 +27,15 @@ import {
   History,
   ChevronRight,
   AlertCircle,
+  Bell,
+  FileText,
+  Star,
+  Award,
+  RefreshCw,
+  CreditCard,
+  FileCheck,
+  CheckCircle2,
+  Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -37,6 +46,29 @@ import type {
   CreateEmailScheduleInput,
   DocumentType,
 } from '@/lib/services/email-schedule.service'
+import {
+  PRESET_AUTOMATIONS,
+  PRESET_EMAIL_TYPES,
+  PRESET_CATEGORIES,
+  type PresetAutomation,
+} from '@/lib/constants/automation-presets'
+
+const PRESET_ICONS: Record<string, React.ElementType> = {
+  convocation_j14: FileText,
+  rappel_j7: Bell,
+  rappel_j3: Clock,
+  evaluation_post_formation: Star,
+  attestation_presence: FileCheck,
+  certificat_realisation: Award,
+  relance_evaluation: RefreshCw,
+  relance_paiement: CreditCard,
+}
+
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  avant: Calendar,
+  apres: CheckCircle2,
+  paiement: CreditCard,
+}
 
 export default function EmailSchedulesPage() {
   const { user } = useAuth()
@@ -167,8 +199,56 @@ export default function EmailSchedulesPage() {
     },
   })
 
+  // Mutation pour créer/activer un preset comme règle globale
+  const createPresetMutation = useMutation({
+    mutationFn: async (preset: PresetAutomation) => {
+      if (!user?.organization_id) throw new Error('Organisation manquante')
+      return emailScheduleService.createSchedule(user.organization_id, {
+        name: preset.name,
+        description: preset.description,
+        email_type: preset.email_type,
+        trigger_type: preset.trigger_type,
+        trigger_days: preset.trigger_days,
+        trigger_time: preset.trigger_time,
+        send_to_students: preset.send_to_students,
+        send_to_teachers: preset.send_to_teachers,
+        send_to_coordinators: preset.send_to_coordinators,
+        target_type: preset.target_type,
+        is_active: true,
+        // Pas de session_id → règle globale applicable à toutes les sessions
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-schedules'] })
+      addToast({
+        title: 'Règle créée',
+        description: 'La règle a été ajoutée et est active pour toutes les sessions.',
+        type: 'success',
+      })
+    },
+    onError: (error: Error) => {
+      addToast({ title: 'Erreur', description: error.message, type: 'error' })
+    },
+  })
+
+  const handleTogglePreset = (preset: PresetAutomation) => {
+    // Cherche une règle GLOBALE (sans session_id) pour ce preset
+    const existing = schedules?.find(
+      (s) => s.email_type === preset.email_type && !s.session_id
+    )
+    if (existing) {
+      toggleActiveMutation.mutate({ id: existing.id, isActive: !existing.is_active })
+    } else {
+      createPresetMutation.mutate(preset)
+    }
+  }
+
   const activeSchedules = schedules?.filter((s) => s.is_active) || []
   const inactiveSchedules = schedules?.filter((s) => !s.is_active) || []
+  // Règles custom = non-preset ou preset lié à une session spécifique
+  const customSchedules = schedules?.filter(
+    (s) => !PRESET_EMAIL_TYPES.has(s.email_type) || s.session_id
+  ) || []
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -238,19 +318,139 @@ export default function EmailSchedulesPage() {
 
       {/* Liste des règles */}
       {activeTab === 'schedules' && (
-        <div className="space-y-6">
+        <div className="space-y-8">
+
+          {/* ── Catalogue de modèles prédéfinis ───────────────────────────── */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-lg">
+                <Zap className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Modèles prédéfinis</h2>
+                <p className="text-sm text-gray-500">
+                  Activez des règles globales appliquées à toutes vos sessions en un clic.
+                </p>
+              </div>
+            </div>
+
+            {PRESET_CATEGORIES.map((category) => {
+              const presets = PRESET_AUTOMATIONS.filter((p) => p.category === category.key)
+              const CategoryIcon = CATEGORY_ICONS[category.key] ?? Calendar
+              return (
+                <div key={category.key} className="space-y-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500 flex items-center gap-1.5">
+                    <CategoryIcon className="h-3.5 w-3.5" />
+                    {category.label}
+                  </h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {presets.map((preset) => {
+                      const existing = schedules?.find(
+                        (s) => s.email_type === preset.email_type && !s.session_id
+                      )
+                      const isActive = existing?.is_active ?? false
+                      const isLoading =
+                        createPresetMutation.isPending || toggleActiveMutation.isPending
+                      const Icon = PRESET_ICONS[preset.email_type] ?? FileText
+                      const recipients = [
+                        preset.send_to_students && 'Étudiants',
+                        preset.send_to_teachers && 'Formateurs',
+                        preset.send_to_coordinators && 'Coordinateurs',
+                      ].filter(Boolean) as string[]
+                      const triggerLabel =
+                        preset.trigger_type === 'before_session_start'
+                          ? `${preset.trigger_days}j avant le début`
+                          : `${preset.trigger_days}j après la fin`
+
+                      return (
+                        <div
+                          key={preset.email_type}
+                          className={cn(
+                            'relative flex items-start gap-3 p-4 rounded-xl border transition-all duration-200',
+                            isActive
+                              ? 'bg-white border-brand-blue/25 shadow-sm'
+                              : 'bg-gray-50/60 border-gray-200 hover:bg-white hover:border-gray-300'
+                          )}
+                        >
+                          {isActive && (
+                            <div className="absolute top-0 left-0 w-1 h-full bg-brand-blue rounded-l-xl" />
+                          )}
+                          <div className={cn('p-2 rounded-lg shrink-0 mt-0.5', preset.colorClass)}>
+                            <Icon className={cn('h-4 w-4', preset.textColorClass)} />
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900 leading-tight">
+                                  {preset.name}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                                  {preset.description}
+                                </p>
+                              </div>
+                              <Switch
+                                checked={isActive}
+                                onCheckedChange={() => handleTogglePreset(preset)}
+                                disabled={isLoading}
+                                className="shrink-0 mt-0.5"
+                              />
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                <Clock className="h-3 w-3" />
+                                {triggerLabel} · {preset.trigger_time}
+                              </span>
+                              {recipients.map((label) => (
+                                <span
+                                  key={label}
+                                  className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full"
+                                >
+                                  <Users className="h-3 w-3" />
+                                  {label}
+                                </span>
+                              ))}
+                              {existing?.session_id && (
+                                <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                                  Spécifique à une session
+                                </span>
+                              )}
+                              {isActive && !existing?.session_id && (
+                                <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                                  Global · Actif
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Séparateur */}
+          <div className="border-t border-gray-200" />
+
+          {/* ── Toutes les règles configurées ─────────────────────────────── */}
           {schedulesLoading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Chargement des règles...</p>
+            <div className="text-center py-6">
+              <p className="text-gray-500 text-sm">Chargement des règles...</p>
             </div>
           ) : schedules && schedules.length > 0 ? (
-            <>
+            <div className="space-y-6">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Settings className="h-5 w-5 text-gray-500" />
+                Toutes les règles configurées ({schedules.length})
+              </h2>
+
               {activeSchedules.length > 0 && (
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Play className="h-5 w-5 text-green-600" />
-                    Règles actives ({activeSchedules.length})
-                  </h2>
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
+                    <Play className="h-4 w-4 text-green-600" />
+                    Actives ({activeSchedules.length})
+                  </h3>
                   <div className="grid gap-4">
                     {activeSchedules.map((schedule) => (
                       <ScheduleCard
@@ -280,11 +480,11 @@ export default function EmailSchedulesPage() {
               )}
 
               {inactiveSchedules.length > 0 && (
-                <div className="mt-8">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Pause className="h-5 w-5 text-gray-400" />
-                    Règles inactives ({inactiveSchedules.length})
-                  </h2>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
+                    <Pause className="h-4 w-4 text-gray-400" />
+                    Inactives ({inactiveSchedules.length})
+                  </h3>
                   <div className="grid gap-4">
                     {inactiveSchedules.map((schedule) => (
                       <ScheduleCard
@@ -312,27 +512,8 @@ export default function EmailSchedulesPage() {
                   </div>
                 </div>
               )}
-            </>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Aucune règle de planification
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Créez votre première règle pour automatiser l'envoi d'emails.
-                </p>
-                <Button
-                  onClick={() => setShowCreateForm(true)}
-                  className="bg-brand-blue hover:bg-brand-blue/90"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Créer une règle
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+            </div>
+          ) : null}
         </div>
       )}
 

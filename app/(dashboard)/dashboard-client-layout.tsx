@@ -17,10 +17,11 @@ export default function DashboardClientLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const { isLoading: authLoading } = useAuth()
+  const { isLoading: authLoading, session, user } = useAuth()
   const [authLoadingTimedOut, setAuthLoadingTimedOut] = useState(false)
 
-  // Si l'auth charge trop longtemps (ex. rate limit Supabase 429, réseau), afficher le contenu quand même
+  // Si l'auth charge trop longtemps, ne pas afficher un état semi-connecté.
+  // On reste en écran de chargement tant que l'état auth n'est pas résolu.
   useEffect(() => {
     if (!authLoading) {
       setAuthLoadingTimedOut(false)
@@ -28,10 +29,34 @@ export default function DashboardClientLayout({
     }
     const t = setTimeout(() => {
       setAuthLoadingTimedOut(true)
-      logger.debug('Dashboard layout: auth loading timeout, rendering content anyway')
+      logger.warn('Dashboard layout: auth loading timeout, evaluating session state before logout')
     }, 8000)
     return () => clearTimeout(t)
   }, [authLoading])
+
+  // Timeout auth: ne déconnecter que si aucune session n'est récupérable.
+  // Si une session existe, on continue d'attendre pour éviter les faux positifs.
+  useEffect(() => {
+    if (!authLoadingTimedOut) return
+    if (!session?.user) {
+      if (typeof window !== 'undefined') {
+        window.location.replace('/auth/logout?reason=auth_timeout_no_session')
+      }
+    } else {
+      logger.warn('Dashboard layout: auth timeout reached but session exists, keep waiting user profile')
+    }
+  }, [authLoadingTimedOut, session])
+
+  // Règle stricte anti "semi-connecté":
+  // si session auth existe mais profil applicatif absent, on quitte immédiatement le dashboard.
+  useEffect(() => {
+    if (authLoading) return
+    if (session?.user && !user) {
+      if (typeof window !== 'undefined') {
+        window.location.replace('/auth/logout?reason=profile_missing')
+      }
+    }
+  }, [authLoading, session, user])
 
   // Gestion d'erreur globale pour les scripts externes (extensions de navigateur, iframe Cursor/Vercel)
   useEffect(() => {
@@ -116,12 +141,14 @@ export default function DashboardClientLayout({
     }
   }, [])
 
-  if (authLoading && !authLoadingTimedOut) {
+  if (authLoading || authLoadingTimedOut || (session?.user && !user)) {
     return (
       <div className="min-h-screen bg-bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
+          <p className="mt-4 text-gray-600">
+            {authLoadingTimedOut ? 'Reconnexion en cours...' : 'Validation de votre session...'}
+          </p>
         </div>
       </div>
     )

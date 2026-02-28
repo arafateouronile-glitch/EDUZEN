@@ -79,34 +79,34 @@ export class InvoiceService {
   }
 
   /**
-   * Génère un numéro de facture unique
+   * Génère un numéro unique : devis (DEV-YYYY-NNN) ou facture (FAC-YYYY-NNN).
+   * Les devis et les factures ont des séquences séparées.
    */
   private async generateInvoiceNumber(organizationId: string, documentType: 'quote' | 'invoice' = 'invoice'): Promise<string> {
     const year = new Date().getFullYear().toString()
-    
-    // Trouver le dernier numéro pour cette organisation (TOUS types) pour l'année en cours
-    // Format recherché: ANNEE-NUMERO (ex: 2025-001)
-    const { data: lastInvoice } = await this.supabase
+    const prefix = documentType === 'quote' ? 'DEV' : 'FAC'
+    const pattern = `${prefix}-${year}-%`
+
+    const { data: lastDoc } = await this.supabase
       .from('invoices')
       .select('invoice_number')
       .eq('organization_id', organizationId)
-      .like('invoice_number', `${year}-%`)
+      .eq('document_type', documentType)
+      .like('invoice_number', pattern)
       .order('invoice_number', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     let sequence = 1
-    if (lastInvoice?.invoice_number) {
-      // Extraire le numéro de séquence du format ANNEE-NUMERO
-      const parts = lastInvoice.invoice_number.split('-')
-      if (parts.length >= 2 && parts[0] === year) {
-        const lastSequence = parseInt(parts[1] || '0', 10)
+    if (lastDoc?.invoice_number) {
+      const parts = lastDoc.invoice_number.split('-')
+      if (parts.length >= 3 && parts[0] === prefix && parts[1] === year) {
+        const lastSequence = parseInt(parts[2] || '0', 10)
         sequence = lastSequence + 1
       }
     }
 
-    // Format: ANNEE-NUMERO avec 3 chiffres (ex: 2025-001, 2025-002, etc.)
-    return `${year}-${String(sequence).padStart(3, '0')}`
+    return `${prefix}-${year}-${String(sequence).padStart(3, '0')}`
   }
 
   /**
@@ -190,10 +190,13 @@ export class InvoiceService {
         })
       }
 
-      logger.info('Facture créée avec succès', {
+      const docType = data?.document_type ?? invoice.document_type ?? 'invoice'
+      const label = docType === 'quote' ? 'Devis' : 'Facture'
+      logger.info(`${label} créé${docType === 'quote' ? '' : 'e'} avec succès`, {
         id: data?.id,
         organizationId: invoice.organization_id || undefined,
         invoiceNumber: data?.invoice_number,
+        documentType: docType,
       })
 
       return data
@@ -405,7 +408,7 @@ export class InvoiceService {
   }
 
   /**
-   * Transforme un devis en facture
+   * Transforme un devis en facture : nouveau numéro FAC + référence au devis dans les notes.
    */
   async convertQuoteToInvoice(quoteId: string) {
     try {
@@ -437,12 +440,23 @@ export class InvoiceService {
       )
     }
 
-    // Mettre à jour le devis pour en faire une facture
+    const orgId = quote.organization_id as string
+    if (!orgId) {
+      throw errorHandler.createValidationError('Le devis doit avoir une organisation.')
+    }
+    const newInvoiceNumber = await this.generateInvoiceNumber(orgId, 'invoice')
+    const quoteRef = `Devis de référence : ${quote.invoice_number}`
+    const updatedNotes = quote.notes?.trim()
+      ? `${quote.notes.trim()}\n${quoteRef}`
+      : quoteRef
+
     const { data, error } = await this.supabase
       .from('invoices')
       .update({
         document_type: 'invoice',
-        status: 'draft', // Facture créée en brouillon, à envoyer ensuite
+        invoice_number: newInvoiceNumber,
+        notes: updatedNotes,
+        status: 'draft',
         issue_date: quote.issue_date || new Date().toISOString().split('T')[0],
       })
       .eq('id', quoteId)
@@ -460,6 +474,8 @@ export class InvoiceService {
     logger.info('Devis converti en facture avec succès', {
       quoteId,
       invoiceId: data?.id,
+      ancienNumero: quote.invoice_number,
+      nouveauNumero: newInvoiceNumber,
     })
 
     return data
