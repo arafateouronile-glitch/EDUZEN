@@ -16,7 +16,7 @@ interface SelectContextValue {
 const SelectContext = React.createContext<SelectContextValue>({
   open: false,
   setOpen: () => {},
-  triggerRef: { current: null },
+  triggerRef: React.createRef<HTMLButtonElement>(),
 })
 
 interface SelectProps {
@@ -45,7 +45,7 @@ export function SelectTrigger({ children, className, ...props }: SelectTriggerPr
 
   return (
     <button
-      ref={triggerRef}
+      ref={triggerRef as React.Ref<HTMLButtonElement>}
       type="button"
       aria-expanded={open}
       aria-haspopup="listbox"

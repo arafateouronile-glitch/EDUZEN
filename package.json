@@ -31,7 +31,13 @@
     "db:generate:db": "supabase gen types typescript --db-url \"$DATABASE_URL\" > types/database.types.ts",
     "ws:server": "node websocket-server.js",
     "check-secrets": "node scripts/check-secrets.js",
-    "knip": "knip"
+    "knip": "knip",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -97,7 +103,7 @@
     "next-intl": "^4.6.1",
     "otplib": "^12.0.1",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^3.11.174",
+    "pdfjs-dist": "^4.10.38",
     "pizzip": "^3.2.0",
     "postcss": "^8.4.32",
     "puppeteer": "^24.36.0",
@@ -140,11 +146,13 @@
     "@vitest/ui": "^4.0.9",
     "dotenv": "^17.2.3",
     "eslint": "^8.56.0",
-    "eslint-config-next": "^14.0.4",
+    "eslint-config-next": "^15.5.12",
     "eslint-plugin-no-secrets": "^2.2.1",
     "eslint-plugin-security": "^3.0.1",
+    "husky": "^9.1.7",
     "jsdom": "^27.2.0",
     "knip": "^5.41.0",
+    "lint-staged": "^15.5.2",
     "tsx": "^4.21.0",
     "typescript": "^5.3.3",
     "vitest": "^4.0.9",
@@ -156,6 +164,7 @@
   },
   "overrides": {
     "tar": ">=7.5.8",
-    "canvas": "3.2.1"
+    "canvas": "3.2.1",
+    "dompurify": ">=3.3.2"
   }
 }

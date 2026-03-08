@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -7,6 +8,9 @@ type Conversation = TableRow<'conversations'>
 type Message = TableRow<'messages'>
 type ConversationParticipant = TableRow<'conversation_participants'>
 type Call = TableRow<'calls'>
+
+type UserDisplay = { id: string; full_name?: string | null; email?: string | null; avatar_url?: string | null }
+type StudentDisplay = { id: string; first_name?: string | null; last_name?: string | null; email?: string | null; student_number?: string | null }
 
 /**
  * Service de gestion de la messagerie
@@ -18,10 +22,9 @@ type Call = TableRow<'calls'>
  * - Support des utilisateurs et étudiants comme participants
  */
 export class MessagingService {
-  private supabase: SupabaseClient<any>
+  private supabase: SupabaseClient<Database>
 
-
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient?: SupabaseClient<Database>) {
 
     this.supabase = supabaseClient || createClient()
 
@@ -51,7 +54,7 @@ export class MessagingService {
       return []
     }
 
-    const conversationIds = participantConversations.map((p: any) => p.conversation_id)
+    const conversationIds = participantConversations.map((p) => p.conversation_id)
 
     // 2. Récupérer les conversations
     const { data: conversations, error: conversationsError } = await this.supabase
@@ -75,11 +78,11 @@ export class MessagingService {
       .in('conversation_id', conversationIds)
 
     // 4. Collecter tous les IDs uniques d'utilisateurs et d'étudiants
-    const userIds = [...new Set((allParticipants || []).filter(p => p.user_id).map(p => p.user_id))]
-    const studentIds = [...new Set((allParticipants || []).filter(p => p.student_id).map(p => p.student_id))]
+    const userIds = [...new Set((allParticipants || []).filter(p => p.user_id !== null).map(p => p.user_id as string))]
+    const studentIds = [...new Set((allParticipants || []).filter(p => p.student_id !== null).map(p => p.student_id as string))]
 
     // 5. Récupérer tous les utilisateurs en une seule requête (batch)
-    let usersMap: Record<string, any> = {}
+    let usersMap: Record<string, UserDisplay> = {}
     if (userIds.length > 0) {
       const { data: usersData } = await this.supabase
         .from('users')
@@ -90,7 +93,7 @@ export class MessagingService {
     }
 
     // 6. Récupérer tous les étudiants en une seule requête (batch)
-    let studentsMap: Record<string, any> = {}
+    let studentsMap: Record<string, StudentDisplay> = {}
     if (studentIds.length > 0) {
       const { data: studentsData } = await this.supabase
         .from('students')
@@ -114,8 +117,8 @@ export class MessagingService {
     const lastMessagesResults = await Promise.all(lastMessagesPromises)
 
     // 8. Collecter les IDs d'expéditeurs des derniers messages
-    const senderIds = [...new Set(lastMessagesResults.filter(r => r.data?.sender_id).map(r => r.data.sender_id))]
-    const studentSenderIds = [...new Set(lastMessagesResults.filter(r => r.data?.student_sender_id).map(r => r.data.student_sender_id))]
+    const senderIds = [...new Set(lastMessagesResults.filter(r => r.data?.sender_id).map(r => r.data!.sender_id as string))]
+    const studentSenderIds = [...new Set(lastMessagesResults.filter(r => r.data?.student_sender_id).map(r => r.data!.student_sender_id as string))]
 
     // 9. Récupérer les expéditeurs manquants
     if (senderIds.length > 0) {
@@ -178,7 +181,7 @@ export class MessagingService {
       return []
     }
 
-    const conversationIds = participantConversations.map((p: any) => p.conversation_id)
+    const conversationIds = participantConversations.map((p) => p.conversation_id)
 
     const { data: conversations, error: conversationsError } = await this.supabase
       .from('conversations')
@@ -195,14 +198,14 @@ export class MessagingService {
     }
 
     const enrichedConversations = await Promise.all(
-      conversations.map(async (conversation: any) => {
+      conversations.map(async (conversation: Conversation) => {
         const { data: participants } = await this.supabase
           .from('conversation_participants')
           .select('*')
           .eq('conversation_id', conversation.id)
 
         const enrichedParticipants = await Promise.all(
-          (participants || []).map(async (participant: any) => {
+          (participants || []).map(async (participant: ConversationParticipant) => {
             let user = null
             let student = null
 
@@ -293,7 +296,7 @@ export class MessagingService {
     if (participantsError) throw participantsError
 
     const enrichedParticipants = await Promise.all(
-      (participants || []).map(async (participant: any) => {
+      (participants || []).map(async (participant: ConversationParticipant) => {
         let user = null
         let student = null
 
@@ -354,7 +357,7 @@ export class MessagingService {
       .eq('organization_id', organizationId)
     
     if (!conversationsError && allDirectConversations && allDirectConversations.length > 0) {
-      const conversationIds = allDirectConversations.map((c: any) => c.id)
+      const conversationIds = allDirectConversations.map((c: { id: string }) => c.id)
       
       const { data: user1Participants, error: user1Error } = await this.supabase
         .from('conversation_participants')
@@ -363,7 +366,7 @@ export class MessagingService {
         .in('conversation_id', conversationIds)
       
       if (!user1Error && user1Participants && user1Participants.length > 0) {
-        const user1ConversationIds = user1Participants.map((p: any) => p.conversation_id)
+        const user1ConversationIds = user1Participants.map((p) => p.conversation_id)
         
         let participant2Query = this.supabase
           .from('conversation_participants')
@@ -486,16 +489,12 @@ export class MessagingService {
     role: string = 'member',
     studentId?: string | null
   ) {
-    const insertData: any = {
+    const insertData: TableInsert<'conversation_participants'> = {
       conversation_id: conversationId,
       role,
+      ...(userId ? { user_id: userId } : studentId ? { student_id: studentId } : {}),
     }
-    
-    if (userId) {
-      insertData.user_id = userId
-    } else if (studentId) {
-      insertData.student_id = studentId
-    } else {
+    if (!userId && !studentId) {
       throw new Error('Either userId or studentId must be provided')
     }
     
@@ -602,7 +601,7 @@ export class MessagingService {
     }
 
     const enrichedMessages = await Promise.all(
-      messages.map(async (message: any) => {
+      messages.map(async (message: Message) => {
         let sender = null
         let studentSender = null
         let replyTo = null

@@ -9,6 +9,11 @@ type ResourceCategory = TableRow<'resource_categories'>
 type ResourceCollection = TableRow<'resource_collections'>
 type ResourceComment = TableRow<'resource_comments'>
 type ResourceRating = TableRow<'resource_ratings'>
+type ResourceWithVisibility = EducationalResource & {
+  visibility_session_id?: string | null
+  visibility_formation_id?: string | null
+  visibility_program_id?: string | null
+}
 
 export class EducationalResourcesService {
   private supabase: SupabaseClient<Database>
@@ -118,7 +123,7 @@ export class EducationalResourcesService {
           error.code === 'PGRST200' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          (error as any).status === 400 ||
+          (error as { status?: number }).status === 400 ||
           error.code === '400' ||
           error.message?.includes('relation') ||
           error.message?.includes('relationship') ||
@@ -246,14 +251,15 @@ export class EducationalResourcesService {
       return resources.filter((r) => {
         const s = scope(r)
         if (s === 'all') return true
-        if (s === 'session' && (r as any).visibility_session_id && sessionIds.has((r as any).visibility_session_id)) return true
-        if (s === 'formation' && (r as any).visibility_formation_id && formationIds.has((r as any).visibility_formation_id)) return true
-        if (s === 'program' && (r as any).visibility_program_id && programIds.has((r as any).visibility_program_id)) return true
+        const res = r as ResourceWithVisibility
+        if (s === 'session' && res.visibility_session_id && sessionIds.has(res.visibility_session_id)) return true
+        if (s === 'formation' && res.visibility_formation_id && formationIds.has(res.visibility_formation_id)) return true
+        if (s === 'program' && res.visibility_program_id && programIds.has(res.visibility_program_id)) return true
         return false
       })
     } catch (err) {
       logger.warn('getResourcesVisibleForLearner fallback', { err })
-      return this.getResources(organizationId) as Promise<any[]>
+      return this.getResources(organizationId) as Promise<EducationalResource[]>
     }
   }
 
@@ -302,7 +308,7 @@ export class EducationalResourcesService {
 
     // Incrémenter le compteur (fonction RPC personnalisée - peut ne pas exister)
     try {
-      await (this.supabase as any).rpc('increment', {
+      await (this.supabase as unknown as { rpc: (name: string, params: Record<string, unknown>) => Promise<{ error: unknown }> }).rpc('increment', {
         table_name: 'educational_resources',
         column_name: 'favorite_count',
         row_id: resourceId,

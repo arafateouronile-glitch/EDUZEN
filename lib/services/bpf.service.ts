@@ -269,10 +269,7 @@ export class BPFService {
    * Mettre à jour un rapport
    */
   async updateReport(reportId: string, data: Partial<BPFReport>): Promise<BPFReport> {
-    const cleanData = { ...data }
-    delete (cleanData as any).id
-    delete (cleanData as any).created_at
-    delete (cleanData as any).updated_at
+    const { id: _id, created_at: _created_at, updated_at: _updated_at, ...cleanData } = data
 
     const { data: updated, error } = await this.supabase
       .from('bpf_reports')
@@ -394,14 +391,15 @@ export class BPFService {
   /**
    * Vérifier si une erreur est une erreur 404
    */
-  private is404Error(error: any): boolean {
+  private is404Error(error: unknown): boolean {
+    const e = error as { code?: string; status?: number; message?: string }
     return (
-      error?.code === 'PGRST116' ||
-      error?.code === '42P01' ||
-      error?.code === 'PGRST301' ||
-      error?.status === 404 ||
-      error?.message?.includes('relation') ||
-      error?.message?.includes('does not exist')
+      e?.code === 'PGRST116' ||
+      e?.code === '42P01' ||
+      e?.code === 'PGRST301' ||
+      e?.status === 404 ||
+      !!e?.message?.includes('relation') ||
+      !!e?.message?.includes('does not exist')
     )
   }
 
@@ -496,9 +494,10 @@ export class BPFService {
         return []
       }
 
-      return (data || []).map((item: any) => ({
+      type InconsistencyRow = { inconsistency_type?: string; severity?: string; description?: string; affected_count?: number; details?: unknown[] }
+      return (data || []).map((item: InconsistencyRow) => ({
         inconsistency_type: item.inconsistency_type,
-        severity: item.severity as 'critical' | 'warning' | 'info',
+        severity: (item.severity ?? 'info') as 'critical' | 'warning' | 'info',
         description: item.description,
         affected_count: item.affected_count,
         details: item.details || [],
