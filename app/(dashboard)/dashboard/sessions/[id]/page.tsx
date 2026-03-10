@@ -140,8 +140,8 @@ export default function SessionDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ['session-stats'] })
       addToast({ title: 'Session supprimée', description: 'La session a été supprimée.', type: 'success' })
       router.push('/dashboard/sessions')
-    } catch (err: any) {
-      addToast({ title: 'Erreur', description: err?.message || 'Impossible de supprimer la session.', type: 'error' })
+    } catch (err: unknown) {
+      addToast({ title: 'Erreur', description: err instanceof Error ? err.message : 'Impossible de supprimer la session.', type: 'error' })
       setIsDeleting(false)
     }
   }
@@ -149,7 +149,7 @@ export default function SessionDetailPage() {
   // Calculate session metrics
   const sessionMetrics = useMemo(() => {
     const enrollmentsCount = enrollments?.length || 0
-    const maxCapacity = (sessionData as any)?.max_participants || 20
+    const maxCapacity = (sessionData as { max_participants?: number })?.max_participants ?? 20
     const fillRate = Math.round((enrollmentsCount / maxCapacity) * 100)
 
     const startDate = sessionData?.start_date ? parseISO(sessionData.start_date) : null
@@ -469,7 +469,7 @@ export default function SessionDetailPage() {
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs font-mono text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
-                        {formData.code || (sessionData as any)?.internal_code || (sessionData as any)?.code || "SANS-CODE"}
+                        {formData.code || (sessionData as { internal_code?: string; code?: string })?.internal_code || (sessionData as { internal_code?: string; code?: string })?.code || "SANS-CODE"}
                       </span>
                       {formation && (
                         <>
@@ -673,9 +673,9 @@ export default function SessionDetailPage() {
                     onEnrollmentFormChange={(form) => {
                       setEnrollmentForm({
                         ...form,
-                        status: (form.status || 'pending') as any,
-                        payment_status: (form.payment_status || 'pending') as any,
-                        funding_type_id: form.funding_type_id || '',
+                        status: (form.status || 'pending') as 'pending' | 'confirmed' | 'cancelled' | 'completed',
+                        payment_status: (form.payment_status === 'refunded' ? 'paid' : (form.payment_status || 'pending')) as 'pending' | 'paid' | 'partial' | 'overdue',
+                        funding_type_id: (form as { funding_type_id?: string }).funding_type_id || '',
                       })
                     }}
                     onCreateEnrollment={() => createEnrollmentMutation.mutate()}
@@ -728,9 +728,9 @@ export default function SessionDetailPage() {
                   onEnrollmentFormChange={(form) => {
                     setEnrollmentForm({
                       ...form,
-                      status: (form.status || 'pending') as any,
-                      payment_status: (form.payment_status || 'pending') as any,
-                      funding_type_id: (form as any).funding_type_id || '',
+                      status: (form.status || 'pending') as 'pending' | 'confirmed' | 'cancelled' | 'completed',
+                      payment_status: (form.payment_status === 'refunded' ? 'paid' : (form.payment_status || 'pending')) as 'pending' | 'paid' | 'partial' | 'overdue',
+                      funding_type_id: (form as { funding_type_id?: string }).funding_type_id || '',
                     })
                   }}
                   onCreateEnrollment={() => createEnrollmentMutation.mutate()}
@@ -769,7 +769,7 @@ export default function SessionDetailPage() {
                     })
                     setShowEvaluationForm(true)
                   }}
-                  evaluationTemplates={evaluationTemplates}
+                  evaluationTemplates={evaluationTemplates as { id: string; name: string; subject?: string | null; assessment_type?: string | null; max_score?: number | null; description?: string | null }[]}
                   onTemplateChange={handleTemplateChange}
                   gradeInstanceMap={gradeInstanceMap}
                   onAttachTemplate={(gradeId, templateId) => attachTemplateToGradeMutation.mutate({ gradeId, templateId })}

@@ -80,8 +80,8 @@ async function getBlogPosts(categoryId?: string, search?: string, page: number =
       if (postTags && postTags.length > 0) {
         // La table blog_post_tags a probablement une colonne tag_id
         const tagIds = postTags
-          .map((pt: any) => pt.tag_id || pt.blog_tag_id)
-          .filter(Boolean)
+          .map((pt: { tag_id?: string; blog_tag_id?: string }) => pt.tag_id || pt.blog_tag_id)
+          .filter((id): id is string => typeof id === 'string')
         if (tagIds.length > 0) {
           const { data: tagsData } = await supabase
             .from('blog_tags')

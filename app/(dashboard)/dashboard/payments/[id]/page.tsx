@@ -44,11 +44,11 @@ export default function InvoiceDetailPage() {
   })
 
   // Récupérer les paiements
-  const { data: payments, refetch: refetchPayments } = useQuery({
+  const { data: payments, refetch: refetchPayments } = useQuery<Payment[]>({
     queryKey: ['payments', invoiceId],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return paymentService.getAll(user.organization_id, { invoiceId })
+      return paymentService.getAll(user.organization_id, { invoiceId }) as Promise<Payment[]>
     },
     enabled: !!invoiceId && !!user?.organization_id,
   })
@@ -123,8 +123,8 @@ export default function InvoiceDetailPage() {
   // Calculer remainingAmount (doit être fait avant les hooks useMutation)
   const totalPaid =
     payments
-      ?.filter((p: any) => p.status === 'completed')
-      .reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0
+      ?.filter((p: Payment) => p.status === 'completed')
+      .reduce((sum: number, p: Payment) => sum + Number(p.amount), 0) || 0
   const remainingAmount = invoice ? Number(invoice.total_amount) - totalPaid : 0
 
   const recordPaymentMutation = useMutation({
@@ -140,8 +140,8 @@ export default function InvoiceDetailPage() {
       // Recalculer remainingAmount dans la fonction pour être sûr
       const currentTotalPaid =
         payments
-          ?.filter((p: any) => p.status === 'completed')
-          .reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0
+          ?.filter((p: Payment) => p.status === 'completed')
+          .reduce((sum: number, p: Payment) => sum + Number(p.amount), 0) || 0
       const currentRemainingAmount = Number(invoice.total_amount) - currentTotalPaid
 
       if (amountNumber > currentRemainingAmount) {
@@ -197,11 +197,11 @@ export default function InvoiceDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur lors de lenregistrement du paiement',
-        description: error?.message || 'Veuillez vérifier les informations saisies.',
+        description: error instanceof Error ? error.message : 'Veuillez vérifier les informations saisies.',
       })
     },
   })
@@ -267,11 +267,11 @@ export default function InvoiceDetailPage() {
       refetch()
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur lors de la création de l\'avoir',
-        description: error?.message || 'Veuillez vérifier les informations saisies.',
+        description: error instanceof Error ? error.message : 'Veuillez vérifier les informations saisies.',
       })
     },
   })
@@ -384,7 +384,7 @@ export default function InvoiceDetailPage() {
 
       const variables = extractDocumentVariables({
         student,
-        organization: organization as any,
+        organization: organization as TableRow<'organizations'>,
         session: undefined,
         invoice: invoiceData,
         academicYear,
@@ -803,11 +803,11 @@ export default function InvoiceDetailPage() {
                     />
                   </div>
 
-                  {recordPaymentMutation.error && (
+                  {recordPaymentMutation.error != null && (
                     <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg text-sm">
                       {recordPaymentMutation.error instanceof Error
                         ? recordPaymentMutation.error.message
-                        : 'Une erreur est survenue'}
+                        : String((recordPaymentMutation.error as { message?: string })?.message ?? 'Une erreur est survenue')}
                     </div>
                   )}
 
@@ -897,11 +897,11 @@ export default function InvoiceDetailPage() {
                     />
                   </div>
 
-                  {createCreditNoteMutation.error && (
+                  {createCreditNoteMutation.error != null && (
                     <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg text-sm">
                       {createCreditNoteMutation.error instanceof Error
                         ? createCreditNoteMutation.error.message
-                        : 'Une erreur est survenue'}
+                        : String((createCreditNoteMutation.error as { message?: string })?.message ?? 'Une erreur est survenue')}
                     </div>
                   )}
 

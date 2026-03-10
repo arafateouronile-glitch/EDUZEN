@@ -10,6 +10,8 @@ import { secureSessionStorage, TTL } from '@/lib/utils/secure-storage'
 
 // Clé pour le stockage sécurisé de l'ID étudiant
 const LEARNER_STORAGE_KEY = 'learner_student_id'
+// Clé pour le token de session API (Bearer)
+const LEARNER_SESSION_TOKEN_KEY = 'learner_session_token'
 
 type StudentRow = TableRow<'students'> | null
 
@@ -125,8 +127,8 @@ export function useLearner() {
           
           // PostgREST peut retourner jsonb de différentes manières
           // Essayer d'abord sans .single(), puis avec si nécessaire
-          let rpcData: any = null
-          let rpcError: any = null
+          let rpcData: unknown = null
+          let rpcError: unknown = null
           
           // PostgREST retourne jsonb directement comme un objet (pas dans un tableau)
           // Donc on n'utilise PAS .single() pour les fonctions RPC qui retournent jsonb
@@ -170,12 +172,13 @@ export function useLearner() {
           }
           
           if (rpcError) {
+            const err = rpcError as { code?: string; message?: string; details?: string; hint?: string }
             logger.error('[useLearner] Error fetching student via RPC', rpcError as Error, { 
               studentId, 
-              rpcErrorCode: rpcError.code, 
-              rpcErrorMessage: rpcError.message,
-              rpcErrorDetails: rpcError.details,
-              rpcErrorHint: rpcError.hint
+              rpcErrorCode: err.code, 
+              rpcErrorMessage: err.message,
+              rpcErrorDetails: err.details,
+              rpcErrorHint: err.hint
             })
             return null
           }
@@ -231,16 +234,52 @@ export function useLearner() {
     staleTime: 1000 * 60 * 5, // Cache pendant 5 minutes
   })
 
+  // Token de session pour les appels API (contacts, conversations/start)
+  const [accessToken, setAccessToken] = useState<string | undefined>(() => {
+    if (typeof window !== 'undefined') {
+      return secureSessionStorage.get<string>(LEARNER_SESSION_TOKEN_KEY) ?? undefined
+    }
+    return undefined
+  })
+
+  const { data: sessionToken } = useQuery({
+    queryKey: ['learner-session-token', studentId],
+    queryFn: async (): Promise<string> => {
+      const res = await fetch('/api/learner/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? 'Session failed')
+      }
+      const data = (await res.json()) as { token?: string }
+      if (!data?.token) throw new Error('No token in response')
+      return data.token
+    },
+    enabled: !!studentId && typeof window !== 'undefined' && !accessToken,
+    retry: false,
+    staleTime: 1000 * 60 * 60 * 23, // 23h (token valide 24h)
+    refetchOnWindowFocus: false,
+  })
+
+  useEffect(() => {
+    if (!sessionToken || typeof window === 'undefined') return
+    secureSessionStorage.set(LEARNER_SESSION_TOKEN_KEY, sessionToken, { ttl: TTL.DAY })
+    setAccessToken(sessionToken)
+  }, [sessionToken])
+
   const isLoading = studentLoading
   const hasStudent = !!student && !!studentId
 
   return {
     student,
     studentId,
+    accessToken,
     isLoading,
     hasStudent,
     error: studentError,
-    // Helper pour récupérer l'organization_id facilement
     organizationId: student?.organization_id || null,
   }
 }

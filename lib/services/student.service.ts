@@ -13,6 +13,7 @@ import { QuotaService } from './quota.service'
 type Student = TableRow<'students'>
 type StudentInsert = TableInsert<'students'>
 type StudentUpdate = TableUpdate<'students'>
+type ClassRow = TableRow<'classes'>
 
 /**
  * Service de gestion des étudiants
@@ -82,18 +83,19 @@ export class StudentService {
 
       // Enrichir avec les données des classes si nécessaire
       const students = studentsData || []
-      const classIds = [...new Set(students.map((s: any) => s.class_id).filter(Boolean))]
+      const classIds = [...new Set(students.map((s: Student) => s.class_id).filter(Boolean))]
       
       let classesMap = new Map()
       if (classIds.length > 0) {
         try {
+          const ids = classIds.filter((id): id is string => id != null)
           const { data: classesData } = await this.supabase
             .from('classes')
             .select('id, name, level')
-            .in('id', classIds)
+            .in('id', ids)
           
           if (classesData) {
-            classesMap = new Map(classesData.map((c: any) => [c.id, c]))
+            classesMap = new Map(classesData.map((c) => [c.id, c]))
           }
         } catch (classError) {
           // Ignorer les erreurs de récupération des classes (table peut ne pas exister)
@@ -102,9 +104,9 @@ export class StudentService {
       }
 
       // Enrichir les étudiants avec les données des classes
-      const enrichedStudents = students.map((student: any) => ({
+      const enrichedStudents = students.map((student: Student) => ({
         ...student,
-        classes: student.class_id ? classesMap.get(student.class_id) || null : null
+        classes: student.class_id ? classesMap.get(student.class_id) ?? null : null
       }))
 
       return {
@@ -170,21 +172,21 @@ export class StudentService {
           return {
             ...student,
             classes: classData || null
-          } as Student & { classes: any }
+          } as Student & { classes: ClassRow | null }
         } catch (classError) {
           // Ignorer les erreurs de récupération des classes
           logger.warn('Erreur récupération classe pour enrichissement', { error: classError })
           return {
             ...student,
             classes: null
-          } as Student & { classes: any }
+          } as Student & { classes: ClassRow | null }
         }
       }
 
       return {
         ...student,
         classes: null
-      } as Student & { classes: any }
+      } as Student & { classes: ClassRow | null }
     } catch (error) {
       if (error instanceof AppError) {
         throw error

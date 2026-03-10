@@ -37,6 +37,10 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
+import type { TableRow, TableInsert } from '@/lib/types/supabase-helpers'
+
+type SecurityAudit = TableRow<'security_audits'>
+type SecurityAuditInsert = TableInsert<'security_audits'>
 
 export default function AuditsPage() {
   const { user } = useAuth()
@@ -67,8 +71,7 @@ export default function AuditsPage() {
     enabled: !!user?.organization_id,
   })
 
-  // Filtrer les audits
-  const filteredAudits = audits?.filter((audit: any) => {
+  const filteredAudits = audits?.filter((audit: SecurityAudit) => {
     if (searchQuery && !audit.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
         !audit.audit_id.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
@@ -84,7 +87,7 @@ export default function AuditsPage() {
         organization_id: user?.organization_id || '',
         start_date: new Date(newAudit.start_date).toISOString(),
         end_date: newAudit.end_date ? new Date(newAudit.end_date).toISOString() : undefined,
-      } as any),
+      } as SecurityAuditInsert),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-audits'] })
       setIsCreateDialogOpen(false)
@@ -265,7 +268,7 @@ export default function AuditsPage() {
       {/* Liste des audits */}
       {filteredAudits && filteredAudits.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
-          {filteredAudits.map((audit: any) => (
+          {filteredAudits.map((audit: SecurityAudit) => (
             <Card key={audit.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -274,7 +277,7 @@ export default function AuditsPage() {
                       <CardTitle className="text-lg">{audit.title}</CardTitle>
                       <Badge variant="outline">{audit.audit_id}</Badge>
                       <Badge>{audit.framework?.toUpperCase()}</Badge>
-                      <Badge className={statusColors[audit.status] || 'bg-gray-100 text-gray-800'}>
+                      <Badge className={statusColors[audit.status ?? ''] || 'bg-gray-100 text-gray-800'}>
                         {audit.status === 'scheduled' ? (
                           <Clock className="h-3 w-3 mr-1" />
                         ) : audit.status === 'completed' ? (
@@ -322,11 +325,11 @@ export default function AuditsPage() {
                         </Badge>
                       </div>
                     )}
-                    {audit.findings_count > 0 && (
+                    {(audit.findings_count ?? 0) > 0 && (
                       <div>
                         <span className="text-sm text-muted-foreground">Constatations: </span>
                         <Badge variant="outline">{audit.findings_count}</Badge>
-                        {audit.critical_findings_count > 0 && (
+                        {(audit.critical_findings_count ?? 0) > 0 && (
                           <Badge className="bg-red-100 text-red-800 ml-2">
                             {audit.critical_findings_count} critique(s)
                           </Badge>

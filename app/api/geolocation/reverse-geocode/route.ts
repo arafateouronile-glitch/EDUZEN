@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /**
- * API Route pour la géocodage inverse (coordonnées GPS -> adresse)
+ * API Route pour la géocodage inverse (coordonnées GPS -> adresse).
+ * Authentification requise pour éviter l'abus comme proxy vers Nominatim.
  */
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const latitude = searchParams.get('latitude')
     const longitude = searchParams.get('longitude')

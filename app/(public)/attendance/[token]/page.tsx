@@ -48,6 +48,7 @@ export default function AttendancePage() {
 
   useEffect(() => {
     loadAttendanceRequest()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load once when token is available
   }, [token])
 
   useEffect(() => {

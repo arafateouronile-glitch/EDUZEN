@@ -81,11 +81,11 @@ export function EnrollmentForm({ formation, onSuccess, onCancel }: EnrollmentFor
 
       reset()
       onSuccess?.()
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Erreur lors de l\'inscription:', error)
       addToast({
         title: 'Erreur',
-        description: error.message || 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.',
+        description: (error instanceof Error ? error.message : null) || 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.',
         type: 'error',
       })
     } finally {

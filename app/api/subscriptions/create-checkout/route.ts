@@ -68,10 +68,10 @@ export async function POST(request: NextRequest) {
     }
     
     // Déterminer le price_id Stripe selon la période
-    const planAny = plan as any
+    const planPrices = plan as { stripe_price_id_yearly?: string; stripe_price_id_monthly?: string; stripe_price_id?: string }
     const stripePriceId = billingPeriod === 'yearly'
-      ? (planAny.stripe_price_id_yearly || planAny.stripe_price_id) // Fallback sur l'ancien champ si nécessaire
-      : (planAny.stripe_price_id_monthly || planAny.stripe_price_id) // Fallback sur l'ancien champ si nécessaire
+      ? (planPrices.stripe_price_id_yearly || planPrices.stripe_price_id)
+      : (planPrices.stripe_price_id_monthly || planPrices.stripe_price_id)
     
     if (!stripePriceId) {
       return NextResponse.json(
@@ -155,10 +155,10 @@ export async function POST(request: NextRequest) {
       checkoutUrl: session.url,
       sessionId: session.id,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Erreur création checkout Stripe', error)
     return NextResponse.json(
-      { error: error.message || 'Erreur serveur' },
+      { error: (error instanceof Error ? error.message : null) || 'Erreur serveur' },
       { status: 500 }
     )
   }

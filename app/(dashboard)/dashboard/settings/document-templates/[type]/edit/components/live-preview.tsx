@@ -10,7 +10,7 @@ import { processConditionals } from '@/lib/utils/document-generation/conditional
 import { sanitizeDocumentTemplate } from '@/lib/utils/sanitize-html'
 
 // Données d'exemple pour la prévisualisation (style PDF réaliste)
-const SAMPLE_VARIABLES: Record<string, any> = {
+const SAMPLE_VARIABLES: Record<string, string | number> = {
   // Établissement
   ecole_nom: 'INSSI FORMATION',
   ecole_logo: '',
@@ -86,7 +86,7 @@ interface LivePreviewProps {
  * Remplace les variables dans du HTML et traite les conditions
  * Le contenu est sanitizé pour prévenir les attaques XSS
  */
-function replaceVariablesInHTML(html: string, variables: Record<string, any>): string {
+function replaceVariablesInHTML(html: string, variables: Record<string, unknown>): string {
   if (!html) return html
 
   // D'abord, traiter les conditions

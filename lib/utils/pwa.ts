@@ -24,7 +24,7 @@ export function isPWAInstalled(): boolean {
   
   // Vérifier si l'app est en mode standalone
   return window.matchMedia('(display-mode: standalone)').matches ||
-         (window.navigator as any).standalone === true ||
+         (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
          document.referrer.includes('android-app://')
 }
 

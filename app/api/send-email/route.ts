@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 import { logger, maskEmail, sanitizeError } from '@/lib/utils/logger'
+import { sendEmailBodySchema } from '@/lib/validations/schemas'
 
 /**
  * API Route pour envoyer des emails avec pièces jointes via Resend
@@ -28,22 +29,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // Récupérer les données de la requête
     const body = await request.json()
-    const { to, subject, message, attachmentUrl, attachmentName } = body
-
-    // Validation des champs requis
-    if (!to || !subject) {
-      logger.warn('Email send missing required fields', { hasTo: !!to, hasSubject: !!subject })
+    const parsed = sendEmailBodySchema.safeParse(body)
+    if (!parsed.success) {
+      const msg = parsed.error.flatten().formErrors[0] || parsed.error.message
       return NextResponse.json(
-        { error: 'Destinataire et objet sont requis' },
+        { error: 'Données invalides', details: msg },
         { status: 400 }
       )
     }
+    const { to, subject, message, attachmentUrl, attachmentName } = parsed.data
+    const toList = Array.isArray(to) ? to : [to]
+    const toFirst = toList[0]
+    const messageStr = message ?? ''
 
     // En dev/test sans Resend configuré : ne pas faire échouer l'appel (éviter 500)
     if (!process.env.RESEND_API_KEY) {
-      logger.info('send-email: mode test (RESEND_API_KEY absente)', { to: maskEmail(to), subject })
+      logger.info('send-email: mode test (RESEND_API_KEY absente)', { to: toFirst ? maskEmail(toFirst) : '', subject })
       return NextResponse.json({
         success: true,
         message: 'Mode test — email non envoyé',
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY)
 
     logger.info('Sending email via Resend', {
-      to: maskEmail(to),
+      to: toFirst ? maskEmail(toFirst) : '',
       subject,
       hasAttachment: !!attachmentUrl,
     })
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,
-      to: [to],
+      to: toList,
       subject: subject,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
@@ -107,7 +109,7 @@ export async function POST(request: NextRequest) {
           </div>
           <div style="background: white; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
             <div style="white-space: pre-wrap; line-height: 1.6;">
-              ${message.split('\n').map((line: string) => `<p style="margin: 10px 0;">${line}</p>`).join('')}
+              ${messageStr.split('\n').map((line: string) => `<p style="margin: 10px 0;">${line}</p>`).join('')}
             </div>
             ${attachments.length > 0 ? `
               <div style="margin-top: 30px; padding: 15px; background: #f5f5f5; border-left: 4px solid #667eea; border-radius: 4px;">
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       logger.error('Resend email send failed', error, {
-        to: maskEmail(to),
+        to: toFirst ? maskEmail(toFirst) : '',
         subject,
         errorName: error.name,
         errorMessage: error.message,
@@ -144,7 +146,7 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Email sent successfully via Resend', {
-      to: maskEmail(to),
+      to: toFirst ? maskEmail(toFirst) : '',
       emailId: data?.id,
       hasAttachment: attachments.length > 0,
     })

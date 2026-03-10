@@ -63,44 +63,46 @@ export async function POST(
     const bodyText = await req.text()
     const body = JSON.parse(bodyText)
 
-    // Valider la signature du webhook
+    // Valider la signature du webhook (obligatoire)
     const webhookSecret = process.env[`${provider.toUpperCase()}_WEBHOOK_SECRET`] || process.env.MOBILE_MONEY_WEBHOOK_SECRET
-    
-    if (webhookSecret) {
-      const validation = await validateWebhook(
-        req,
-        {
-          secret: webhookSecret,
-          signatureHeader: 'x-signature',
-          timestampHeader: 'x-timestamp',
-          nonceHeader: 'x-nonce',
-          maxAge: 300, // 5 minutes
-        },
-        bodyText
+
+    if (!webhookSecret) {
+      logger.warn('Webhook secret not configured, rejecting request', { provider })
+      return NextResponse.json(
+        { error: 'Webhook non configuré pour ce provider' },
+        { status: 503 }
       )
+    }
 
-      if (!validation.valid) {
-        logger.warn('Webhook signature validation failed', {
-          provider,
-          error: validation.error,
-          details: validation.details,
-        })
+    const validation = await validateWebhook(
+      req,
+      {
+        secret: webhookSecret,
+        signatureHeader: 'x-signature',
+        timestampHeader: 'x-timestamp',
+        nonceHeader: 'x-nonce',
+        maxAge: 300, // 5 minutes
+      },
+      bodyText
+    )
 
-        return NextResponse.json(
-          { error: validation.error || 'Signature invalide' },
-          { status: 401 }
-        )
-      }
-
-      logger.info('Webhook signature validated', {
+    if (!validation.valid) {
+      logger.warn('Webhook signature validation failed', {
         provider,
+        error: validation.error,
         details: validation.details,
       })
-    } else {
-      logger.warn('Webhook secret not configured, skipping signature validation', {
-        provider,
-      })
+
+      return NextResponse.json(
+        { error: validation.error || 'Signature invalide' },
+        { status: 401 }
+      )
     }
+
+    logger.info('Webhook signature validated', {
+      provider,
+      details: validation.details,
+    })
 
     // Extraire la signature si présente
     const signature = req.headers.get('x-signature') || 

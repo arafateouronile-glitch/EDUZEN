@@ -90,6 +90,7 @@ export function ElectronicAttendanceManager({
 
   useEffect(() => {
     loadSessions()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load when sessionId changes
   }, [sessionId])
 
   const loadSessions = async () => {

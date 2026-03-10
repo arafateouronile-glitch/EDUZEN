@@ -15,7 +15,7 @@ declare module '@tiptap/core' {
 }
 
 export interface VariableOptions {
-  HTMLAttributes: Record<string, any>
+  HTMLAttributes: Record<string, unknown>
 }
 
 /**

@@ -70,7 +70,9 @@ export default function CalendarPage() {
         logger.error('Erreur récupération sessions enseignant', sanitizeError(error))
         return []
       }
-      return data?.map((st: any) => st.session_id) || []
+      return (
+        data?.map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null) ?? []
+      )
     },
     enabled: !!user?.id && isTeacher,
   })
@@ -162,18 +164,14 @@ export default function CalendarPage() {
     queryFn: async () => {
       if (!user?.organization_id) return []
       const today = new Date().toISOString().split('T')[0]
-      const filters: any = {
+      const statusList: Array<'pending' | 'in_progress' | 'completed' | 'cancelled'> = ['pending', 'in_progress']
+      const filtersForApi = {
         startDate: today,
         endDate: today,
-        status: ['pending', 'in_progress'],
+        status: statusList,
+        ...(user?.role === 'learner' || user?.role === 'student' ? { createdBy: user.id } : {}),
       }
-      
-      // Pour les apprenants, filtrer uniquement les tâches qu'ils ont créées
-      if (user?.role === 'learner' || user?.role === 'student') {
-        filters.createdBy = user.id
-      }
-      
-      return calendarService.getTodos(user.organization_id, filters)
+      return calendarService.getTodos(user.organization_id, filtersForApi)
     },
     enabled: !!user?.organization_id,
   })

@@ -8,6 +8,7 @@
  */
 
 import { registerCustomBlots, TableBlot, FrameBlot } from './quill-custom-blots'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Fonction pour s'assurer que les blots sont enregistrés avant utilisation
 async function ensureBlotsRegistered() {
@@ -32,11 +33,11 @@ async function ensureBlotsRegistered() {
         throw new Error('Custom blots not found after registration')
       }
     } catch (importError) {
-      console.error('Custom blots not available:', importError)
+      logger.error('Custom blots not available', importError as Error)
       throw new Error('Custom blots are not registered. Please wait and try again.')
     }
   } catch (e) {
-    console.error('Error ensuring blots are registered:', e)
+    logger.error('Error ensuring blots are registered', e as Error)
     throw e
   }
 }
@@ -106,11 +107,11 @@ export async function insertTableWithProperties(quill: any, properties: TablePro
         const newIndex = Math.min(insertIndex + 2, length - 1)
         quill.setSelection(newIndex, 0, 'user')
       } catch (e) {
-        console.warn('Error setting selection after table insertion:', e)
+        logger.warn('Error setting selection after table insertion:', sanitizeError(e))
       }
     }, 100)
   } catch (error) {
-    console.error('Error inserting table with Custom Blot:', error)
+    logger.error('Error inserting table with Custom Blot:', error)
     throw error
   }
 }
@@ -172,11 +173,11 @@ export async function insertBorderedFrame(
         const newIndex = Math.min(insertIndex + 2, length - 1)
         quill.setSelection(newIndex, 0, 'user')
       } catch (e) {
-        console.warn('Error setting selection after frame insertion:', e)
+        logger.warn('Error setting selection after frame insertion:', sanitizeError(e))
       }
     }, 100)
   } catch (error) {
-    console.error('Error inserting frame with Custom Blot:', error)
+    logger.error('Error inserting frame with Custom Blot:', error)
     throw error
   }
 }
@@ -219,11 +220,11 @@ export async function insertFramedSection(
         const newIndex = Math.min(insertIndex + 2, length - 1)
         quill.setSelection(newIndex, 0, 'user')
       } catch (e) {
-        console.warn('Error setting selection after framed section insertion:', e)
+        logger.warn('Error setting selection after framed section insertion:', sanitizeError(e))
       }
     }, 100)
   } catch (error) {
-    console.error('Error inserting framed section with Custom Blot:', error)
+    logger.error('Error inserting framed section with Custom Blot:', error)
     throw error
   }
 }

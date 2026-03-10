@@ -82,14 +82,11 @@ export async function POST(request: NextRequest) {
         // Générer les documents pour chaque étudiant
         for (const studentId of studentIds) {
           try {
-            // Récupérer les données de l'étudiant
-            // eslint-disable-next-line
-            const q: any = supabase
+            const { data: student } = await supabase
               .from('students')
               .select('*, sessions(*, formations(*, programs(*)))')
               .eq('id', studentId)
               .single()
-            const { data: student } = await q
 
             if (!student) continue
 
@@ -97,8 +94,8 @@ export async function POST(request: NextRequest) {
             const variables = mapDataToVariables(
               template.type as 'invoice' | 'quote' | 'certificate' | 'contract' | 'report' | 'other',
               {
-                student: student as Record<string, unknown>,
-                session: student.sessions as Record<string, unknown> | Record<string, unknown>[] | null,
+                student: student as unknown as import('@/lib/types/query-types').StudentWithRelations,
+                session: student.sessions as unknown as Parameters<typeof mapDataToVariables>[1]['session'],
               }
             )
 
@@ -125,7 +122,7 @@ export async function POST(request: NextRequest) {
             const base64 = Buffer.from(arrayBuffer).toString('base64')
             const fileUrl = `data:application/${generation.format.toLowerCase()};base64,${base64}`
 
-            await (supabase as any)
+            await (supabase as unknown as { from: (table: string) => { insert: (data: unknown) => Promise<{ error: unknown }> } })
               .from('generated_documents')
               .insert({
                 organization_id: generation.organization_id,
@@ -136,7 +133,7 @@ export async function POST(request: NextRequest) {
                 format: generation.format,
                 related_entity_type: 'student',
                 related_entity_id: studentId,
-                metadata: variables as any,
+                metadata: variables as Record<string, unknown>,
               })
 
             // Envoyer par email si demandé

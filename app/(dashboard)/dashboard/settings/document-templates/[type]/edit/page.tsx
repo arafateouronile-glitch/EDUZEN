@@ -89,7 +89,7 @@ export default function DocumentTemplateEditPage() {
         try {
           const specificTemplate = await documentTemplateService.getTemplateById(templateIdParam)
           // Vérifier que le template correspond au type de document
-          if (specificTemplate.type === documentType) {
+          if (specificTemplate != null && specificTemplate.type === documentType) {
             return specificTemplate
           }
         } catch (error) {
@@ -174,7 +174,7 @@ export default function DocumentTemplateEditPage() {
       
       // Si aucun template par défaut mais qu'il existe d'autres templates, utiliser le premier
       if (!defaultTemplate && allTemplates.length > 0) {
-        const firstTemplate = allTemplates[0]
+        const firstTemplate = allTemplates[0]!
         // Vérifier si le template a du contenu significatif (au moins 50 caractères), sinon initialiser avec le contenu par défaut
         const html = (firstTemplate.content as any)?.html
         const elementsContent = firstTemplate.content?.elements?.[0]?.content
@@ -470,6 +470,7 @@ export default function DocumentTemplateEditPage() {
         autoSaveTimeoutRef.current = null
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- isAutoSaving derived, avoid loop
   }, [template, hasChanges, user?.organization_id, documentType, queryClient])
 
   const handleTemplateChange = (updates: Partial<DocumentTemplate>) => {
@@ -549,6 +550,7 @@ export default function DocumentTemplateEditPage() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSave/toggleDarkMode stable, keybindings
   }, [template, hasChanges, accordionValue, documentType, router])
 
   if (isLoading || !template) {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@/lib/hooks/use-auth'
+import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
 import { enterprisePortalService, type TrainingRequest } from '@/lib/services/enterprise-portal.service'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
@@ -25,19 +25,9 @@ import Link from 'next/link'
 type StatusFilter = TrainingRequest['status'] | 'all'
 
 export default function EnterpriseTrainingsPage() {
-  const { user } = useAuth()
+  const { company } = useEnterpriseCompany()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [page, setPage] = useState(1)
-
-  // Get company
-  const { data: company } = useQuery({
-    queryKey: ['enterprise-company', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null
-      return enterprisePortalService.getCompanyForManager(user.id)
-    },
-    enabled: !!user?.id,
-  })
 
   // Get training requests
   const { data: requestsData, isLoading } = useQuery({

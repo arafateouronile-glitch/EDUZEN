@@ -45,9 +45,10 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') as 'pending' | 'signed' | 'expired' | 'declined' | 'cancelled' | null
     const recipientType = searchParams.get('recipientType') as 'student' | 'funder' | 'teacher' | 'other' | null
 
-    const filters: any = {}
-    if (status) filters.status = status
-    if (recipientType) filters.recipientType = recipientType
+    type Filters = { status?: 'signed' | 'pending' | 'declined' | 'expired' | 'cancelled'; recipientType?: 'other' | 'student' | 'teacher' | 'funder' }
+    const filters: Filters = {}
+    if (status) filters.status = status as Filters['status']
+    if (recipientType) filters.recipientType = recipientType as Filters['recipientType']
 
     const signatureRequestService = new SignatureRequestService(supabase)
     const requests = await signatureRequestService.getSignatureRequestsByOrganization(

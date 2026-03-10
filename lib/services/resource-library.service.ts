@@ -1,15 +1,36 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
-// Types locaux pour les tables resource qui ne sont pas encore dans le schéma Supabase
-type Resource = any
-type ResourceCategory = any
-type ResourceCollection = any
+/** Client Supabase pour les tables resource (non encore dans Database). Un seul cast centralisé. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseClientWithResource = SupabaseClient<Database> & { from(table: string): any }
+
+/** Types locaux pour les tables resource qui ne sont pas encore dans le schéma Supabase */
+interface Resource {
+  id: string
+  [key: string]: unknown
+}
+interface ResourceCategory {
+  id: string
+  [key: string]: unknown
+}
+interface ResourceCollection {
+  id: string
+  [key: string]: unknown
+}
+
+/** Insert/update pour resources (tables non typées dans Database) */
+type ResourceInsert = Record<string, unknown>
+type ResourceUpdate = Record<string, unknown>
 
 export class ResourceLibraryService {
   private supabase: SupabaseClient<Database>
 
+  private get client(): SupabaseClientWithResource {
+    return this.supabase as SupabaseClientWithResource
+  }
 
   constructor(supabaseClient: SupabaseClient<Database>) {
     this.supabase = supabaseClient
@@ -17,48 +38,68 @@ export class ResourceLibraryService {
 
   // ========== CATEGORIES ==========
 
-  async getCategories(organizationId: string) {
-    const { data, error } = await (this.supabase as any)
-      .from('resource_categories')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .order('order_index', { ascending: true })
+  async getCategories(organizationId: string): Promise<ResourceCategory[] | null> {
+    try {
+      const { data, error } = await this.client
+        .from('resource_categories')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .order('order_index', { ascending: true })
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ResourceLibraryService.getCategories', error, { organizationId })
+      throw error
+    }
   }
 
   async createCategory(category: TableInsert<'resource_categories'>) {
-    const { data, error } = await (this.supabase as any)
-      .from('resource_categories')
-      .insert(category)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.client
+        .from('resource_categories')
+        .insert(category)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ResourceLibraryService.createCategory', error, { organizationId: (category as { organization_id?: string }).organization_id })
+      throw error
+    }
   }
 
   async updateCategory(id: string, updates: TableUpdate<'resource_categories'>) {
-    const { data, error } = await (this.supabase as any)
-      .from('resource_categories')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.client
+        .from('resource_categories')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ResourceLibraryService.updateCategory', error, { id })
+      throw error
+    }
   }
 
   async deleteCategory(id: string) {
-    const { error } = await (this.supabase as any)
-      .from('resource_categories')
-      .delete()
-      .eq('id', id)
+    try {
+      const { error } = await this.client
+        .from('resource_categories')
+        .delete()
+        .eq('id', id)
 
-    if (error) throw error
+      if (error) throw error
+    } catch (error) {
+      logger.error('ResourceLibraryService.deleteCategory', error, { id })
+      throw error
+    }
   }
 
   // ========== RESOURCES ==========
@@ -71,7 +112,8 @@ export class ResourceLibraryService {
     tags?: string[]
     isPublic?: boolean
   }) {
-    let query = (this.supabase as any)
+    try {
+    let query = this.client
       .from('resources')
       .select('*, author:users(id, full_name, email), category:resource_categories(*)')
       .eq('organization_id', organizationId)
@@ -105,10 +147,14 @@ export class ResourceLibraryService {
 
     if (error) throw error
     return data
+    } catch (error) {
+      logger.error('ResourceLibraryService.getResources', error, { organizationId })
+      throw error
+    }
   }
 
   async getResourceBySlug(slug: string, organizationId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resources')
       .select('*, author:users(id, full_name, email), category:resource_categories(*)')
       .eq('slug', slug)
@@ -125,8 +171,8 @@ export class ResourceLibraryService {
     return data
   }
 
-  async createResource(resource: any) {
-    const { data, error } = await (this.supabase as any)
+  async createResource(resource: ResourceInsert) {
+    const { data, error } = await this.client
       .from('resources')
       .insert(resource)
       .select()
@@ -136,8 +182,8 @@ export class ResourceLibraryService {
     return data
   }
 
-  async updateResource(id: string, updates: any) {
-    const { data, error } = await (this.supabase as any)
+  async updateResource(id: string, updates: ResourceUpdate) {
+    const { data, error } = await this.client
       .from('resources')
       .update(updates)
       .eq('id', id)
@@ -149,7 +195,7 @@ export class ResourceLibraryService {
   }
 
   async deleteResource(id: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.client
       .from('resources')
       .delete()
       .eq('id', id)
@@ -160,7 +206,7 @@ export class ResourceLibraryService {
   // ========== FAVORITES ==========
 
   async addToFavorites(userId: string, resourceId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_favorites')
       .insert({ user_id: userId, resource_id: resourceId })
       .select()
@@ -171,7 +217,7 @@ export class ResourceLibraryService {
   }
 
   async removeFromFavorites(userId: string, resourceId: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.client
       .from('resource_favorites')
       .delete()
       .eq('user_id', userId)
@@ -181,7 +227,7 @@ export class ResourceLibraryService {
   }
 
   async isFavorite(userId: string, resourceId: string): Promise<boolean> {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_favorites')
       .select('id')
       .eq('user_id', userId)
@@ -193,7 +239,7 @@ export class ResourceLibraryService {
   }
 
   async getUserFavorites(userId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_favorites')
       .select('*, resource:resources(*, category:resource_categories(*), author:users(id, full_name))')
       .eq('user_id', userId)
@@ -206,7 +252,7 @@ export class ResourceLibraryService {
   // ========== DOWNLOADS ==========
 
   async recordDownload(resourceId: string, userId: string, ipAddress?: string, userAgent?: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_downloads')
       .insert({
         resource_id: resourceId,
@@ -222,7 +268,7 @@ export class ResourceLibraryService {
   }
 
   async getUserDownloads(userId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_downloads')
       .select('*, resource:resources(*)')
       .eq('user_id', userId)
@@ -236,7 +282,7 @@ export class ResourceLibraryService {
   // ========== VIEWS ==========
 
   async recordView(resourceId: string, userId?: string, ipAddress?: string, userAgent?: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_views')
       .insert({
         resource_id: resourceId,
@@ -254,7 +300,7 @@ export class ResourceLibraryService {
   // ========== COMMENTS ==========
 
   async getResourceComments(resourceId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_comments')
       .select('*, user:users(id, full_name, email), replies:resource_comments!parent_id(*)')
       .eq('resource_id', resourceId)
@@ -266,7 +312,7 @@ export class ResourceLibraryService {
   }
 
   async createComment(comment: TableInsert<'resource_comments'>) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_comments')
       .insert(comment)
       .select('*, user:users(id, full_name, email)')
@@ -277,7 +323,7 @@ export class ResourceLibraryService {
   }
 
   async updateComment(id: string, updates: TableUpdate<'resource_comments'>) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_comments')
       .update(updates)
       .eq('id', id)
@@ -289,7 +335,7 @@ export class ResourceLibraryService {
   }
 
   async deleteComment(id: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.client
       .from('resource_comments')
       .delete()
       .eq('id', id)
@@ -300,7 +346,7 @@ export class ResourceLibraryService {
   // ========== RATINGS ==========
 
   async createRating(rating: TableInsert<'resource_ratings'>) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_ratings')
       .insert(rating)
       .select()
@@ -311,7 +357,7 @@ export class ResourceLibraryService {
   }
 
   async updateRating(id: string, updates: TableUpdate<'resource_ratings'>) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_ratings')
       .update(updates)
       .eq('id', id)
@@ -323,7 +369,7 @@ export class ResourceLibraryService {
   }
 
   async getResourceRatings(resourceId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_ratings')
       .select('*, user:users(id, full_name, email)')
       .eq('resource_id', resourceId)
@@ -334,7 +380,7 @@ export class ResourceLibraryService {
   }
 
   async getResourceRatingStats(resourceId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_ratings')
       .select('rating')
       .eq('resource_id', resourceId)
@@ -348,7 +394,7 @@ export class ResourceLibraryService {
     }
 
     if (data.length > 0) {
-      const ratings = data.map((r: any) => r.rating).filter(Boolean) as number[]
+      const ratings = data.map((r: { rating?: number | null }) => r.rating).filter((v): v is number => typeof v === 'number')
       stats.average = ratings.reduce((a, b) => a + b, 0) / ratings.length
 
       ratings.forEach((rating) => {
@@ -362,7 +408,7 @@ export class ResourceLibraryService {
   // ========== COLLECTIONS ==========
 
   async getCollections(organizationId: string, userId?: string) {
-    let query = (this.supabase as any)
+    let query = this.client
       .from('resource_collections')
       .select('*, user:users(id, full_name, email)')
       .eq('organization_id', organizationId)
@@ -380,7 +426,7 @@ export class ResourceLibraryService {
   }
 
   async getCollectionById(id: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_collections')
       .select('*, user:users(id, full_name, email), items:resource_collection_items(*, resource:resources(*))')
       .eq('id', id)
@@ -391,7 +437,7 @@ export class ResourceLibraryService {
   }
 
   async createCollection(collection: TableInsert<'resource_collections'>) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_collections')
       .insert(collection)
       .select()
@@ -402,7 +448,7 @@ export class ResourceLibraryService {
   }
 
   async updateCollection(id: string, updates: TableUpdate<'resource_collections'>) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_collections')
       .update(updates)
       .eq('id', id)
@@ -414,7 +460,7 @@ export class ResourceLibraryService {
   }
 
   async deleteCollection(id: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.client
       .from('resource_collections')
       .delete()
       .eq('id', id)
@@ -423,7 +469,7 @@ export class ResourceLibraryService {
   }
 
   async addResourceToCollection(collectionId: string, resourceId: string, orderIndex?: number) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resource_collection_items')
       .insert({
         collection_id: collectionId,
@@ -438,7 +484,7 @@ export class ResourceLibraryService {
   }
 
   async removeResourceFromCollection(collectionId: string, resourceId: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.client
       .from('resource_collection_items')
       .delete()
       .eq('collection_id', collectionId)
@@ -450,7 +496,7 @@ export class ResourceLibraryService {
   // ========== STATISTICS ==========
 
   async getPopularResources(organizationId: string, limit = 10) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resources')
       .select('*, author:users(id, full_name, email), category:resource_categories(*)')
       .eq('organization_id', organizationId)
@@ -462,7 +508,7 @@ export class ResourceLibraryService {
   }
 
   async getRecentResources(organizationId: string, limit = 10) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resources')
       .select('*, author:users(id, full_name, email), category:resource_categories(*)')
       .eq('organization_id', organizationId)
@@ -474,7 +520,7 @@ export class ResourceLibraryService {
   }
 
   async getResourcesByType(organizationId: string, resourceType: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('resources')
       .select('*, author:users(id, full_name, email), category:resource_categories(*)')
       .eq('organization_id', organizationId)

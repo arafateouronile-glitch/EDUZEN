@@ -271,7 +271,7 @@ export default function DocumentDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Étudiant</p>
                   <p className="font-medium">
-                    {(document.students as any).first_name} {(document.students as any).last_name}
+                    {(document.students as { first_name?: string; last_name?: string }).first_name} {(document.students as { first_name?: string; last_name?: string }).last_name}
                   </p>
                 </div>
               )}

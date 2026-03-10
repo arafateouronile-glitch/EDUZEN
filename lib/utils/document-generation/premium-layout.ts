@@ -516,7 +516,7 @@ export function generateSimpleTable(
   `
 }
 
-export default {
+const premiumLayout = {
   generatePremiumHeader,
   generatePremiumFooter,
   wrapWithPremiumLayout,
@@ -526,6 +526,7 @@ export default {
   generateArticle,
   generateSimpleTable,
 }
+export default premiumLayout
 
 
 

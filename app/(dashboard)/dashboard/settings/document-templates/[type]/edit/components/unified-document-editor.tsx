@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { RichTextEditor, type RichTextEditorRef } from '@/components/ui/rich-text-editor'
-import type { DocumentTemplate } from '@/lib/types/document-templates'
+import type { DocumentTemplate, HeaderConfig, FooterConfig } from '@/lib/types/document-templates'
 import { cn } from '@/lib/utils'
 import { convertTagsToVariableNodes, convertVariableNodesToTags } from '@/lib/utils/document-generation/template-converter'
 import { getDefaultTemplateContent } from '@/lib/utils/document-template-defaults'
@@ -106,19 +106,19 @@ export function UnifiedDocumentEditor({
 
   // États du contenu
   const [headerContent, setHeaderContent] = useState(() => {
-    const content = (template.header as any)?.content || ''
+    const content = (template.header as { content?: string })?.content || ''
     return convertTagsToVariableNodes(content)
   })
 
   const [bodyContent, setBodyContent] = useState(() => {
-    const html = (template.content as any)?.html
+    const html = (template.content as { html?: string })?.html
     const elementsContent = template.content?.elements?.[0]?.content
     const content = html || elementsContent || ''
     return convertTagsToVariableNodes(content)
   })
 
   const [footerContent, setFooterContent] = useState(() => {
-    const content = (template.footer as any)?.content || ''
+    const content = (template.footer as { content?: string })?.content || ''
     return convertTagsToVariableNodes(content)
   })
 
@@ -126,7 +126,7 @@ export function UnifiedDocumentEditor({
   useEffect(() => {
     if (!template.id || !template.type) return
 
-    const html = (template.content as any)?.html
+    const html = (template.content as { html?: string })?.html
     const elementsContent = template.content?.elements?.[0]?.content
     const currentContent = html || elementsContent || ''
 
@@ -149,16 +149,17 @@ export function UnifiedDocumentEditor({
             }],
           },
           header: {
-            ...(template.header as any),
+            ...template.header,
             content: defaultContent.headerContent,
-          },
+          } as HeaderConfig,
           footer: {
-            ...(template.footer as any),
+            ...template.footer,
             content: defaultContent.footerContent,
-          },
+          } as FooterConfig,
         })
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- init from template once, avoid loop with onTemplateChange
   }, [template.id, template.type])
 
   // Exposer la référence de l'éditeur actif
@@ -184,9 +185,9 @@ export function UnifiedDocumentEditor({
     const convertedContent = convertVariableNodesToTags(html)
     onTemplateChange({
       header: {
-        ...(template.header as any),
+        ...template.header,
         content: convertedContent,
-      },
+      } as HeaderConfig,
     })
   }, [template.header, onTemplateChange])
 
@@ -212,9 +213,9 @@ export function UnifiedDocumentEditor({
     const convertedContent = convertVariableNodesToTags(html)
     onTemplateChange({
       footer: {
-        ...(template.footer as any),
+        ...template.footer,
         content: convertedContent,
-      },
+      } as FooterConfig,
     })
   }, [template.footer, onTemplateChange])
 

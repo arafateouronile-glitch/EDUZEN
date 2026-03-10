@@ -63,13 +63,24 @@ export default function LearnerAccessPage() {
         }
 
         logger.info('Learner Access - Student validated successfully')
-        
-        // Sauvegarder l'ID dans le stockage sécurisé pour la persistance (24h)
+
+        const proofRes = await fetch('/api/learner/access-proof', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId }),
+          credentials: 'include',
+        })
+        if (!proofRes.ok) {
+          logger.error('Learner Access - access-proof failed', { status: proofRes.status })
+          setStatus('invalid')
+          setError('Impossible de sécuriser votre accès. Veuillez réessayer.')
+          return
+        }
+
         if (typeof window !== 'undefined') {
           secureSessionStorage.set('learner_student_id', studentId, { ttl: TTL.DAY })
         }
 
-        // Redirection vers l'espace apprenant
         setStatus('redirecting')
         router.replace('/learner')
 

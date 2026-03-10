@@ -91,21 +91,18 @@ export default function ProgramEnrollmentsPage() {
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
     queryKey: ['program-enrollments', programId, selectedSessionId],
     queryFn: async () => {
-      // eslint-disable-next-line
-      let query: any = supabase
+      let query = supabase
         .from('enrollments')
         .select('*, students(*), sessions(name, formations(name, programs(name)))')
         .order('enrollment_date', { ascending: false })
 
-      // Filtrer par session si une session est sélectionnée
       if (selectedSessionId) {
-        query = query.eq('session_id', selectedSessionId) // Utiliser session_id
+        query = query.eq('session_id', selectedSessionId)
       } else {
-        // Sinon, récupérer toutes les inscriptions pour toutes les sessions du programme
         if (sessions && sessions.length > 0) {
-          const sessionIds = (sessions || []).map((s: any) => s.id).filter((id): id is string => !!id)
-          if (sessionIds && sessionIds.length > 0) {
-            query = query.in('session_id', sessionIds) // Utiliser session_id
+          const sessionIds = (sessions || []).map((s: { id: string }) => s.id).filter((id): id is string => !!id)
+          if (sessionIds.length > 0) {
+            query = query.in('session_id', sessionIds)
           } else {
             return []
           }
@@ -139,7 +136,7 @@ export default function ProgramEnrollmentsPage() {
   })
 
   // Filtrer les inscriptions
-  const filteredEnrollments = enrollments?.filter((enrollment: any) => {
+  const filteredEnrollments = enrollments?.filter((enrollment) => {
     // Filtre de recherche
     if (searchTerm) {
       const student = enrollment.students
@@ -153,12 +150,12 @@ export default function ProgramEnrollmentsPage() {
     }
 
     // Filtre de statut
-    if (statusFilter !== 'all' && enrollment.status !== statusFilter) {
+    if (statusFilter !== 'all' && (enrollment as { status?: string | null }).status !== statusFilter) {
       return false
     }
 
     // Filtre de statut de paiement
-    if (paymentStatusFilter !== 'all' && enrollment.payment_status !== paymentStatusFilter) {
+    if (paymentStatusFilter !== 'all' && (enrollment as { payment_status?: string | null }).payment_status !== paymentStatusFilter) {
       return false
     }
 
@@ -276,18 +273,28 @@ export default function ProgramEnrollmentsPage() {
         total_amount: firstFormation.price.toString(),
       }))
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- set total once when firstFormation price is set
   }, [firstFormation?.price])
 
   // Statistiques
-  const stats = enrollments
+  type EnrRow = { status?: string | null; payment_status?: string | null; total_amount?: number | null; paid_amount?: number | null }
+  const stats: {
+    total: number
+    pending: number
+    confirmed: number
+    completed: number
+    paid: number
+    totalAmount: number
+    paidAmount: number
+  } | null = enrollments
     ? {
         total: enrollments.length,
-        pending: enrollments.filter((e: EnrollmentWithRelations) => e.status === 'pending').length,
-        confirmed: enrollments.filter((e: EnrollmentWithRelations) => e.status === 'confirmed').length,
-        completed: enrollments.filter((e: EnrollmentWithRelations) => e.status === 'completed').length,
-        paid: enrollments.filter((e: EnrollmentWithRelations) => e.payment_status === 'paid').length,
-        totalAmount: enrollments.reduce((sum: number, e: EnrollmentWithRelations) => sum + (e.total_amount || 0), 0),
-        paidAmount: enrollments.reduce((sum: number, e: EnrollmentWithRelations) => sum + (e.paid_amount || 0), 0),
+        pending: enrollments.filter((e: EnrRow) => e.status === 'pending').length,
+        confirmed: enrollments.filter((e: EnrRow) => e.status === 'confirmed').length,
+        completed: enrollments.filter((e: EnrRow) => e.status === 'completed').length,
+        paid: enrollments.filter((e: EnrRow) => e.payment_status === 'paid').length,
+        totalAmount: enrollments.reduce((sum: number, e: EnrRow) => sum + (Number(e.total_amount) || 0), 0),
+        paidAmount: enrollments.reduce((sum: number, e: EnrRow) => sum + (Number(e.paid_amount) || 0), 0),
       }
     : null
 
@@ -431,7 +438,7 @@ export default function ProgramEnrollmentsPage() {
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
               >
                 <option value="all">Toutes les sessions</option>
-                {sessions?.map((session: any) => (
+                {sessions?.map((session: { id: string; name?: string }) => (
                   <option key={session.id} value={session.id}>
                     {session.name}
                   </option>
@@ -539,11 +546,11 @@ export default function ProgramEnrollmentsPage() {
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
                   >
                     <option value="">Sélectionner une session</option>
-                    {sessions?.map((session: any) => (
-                      <option key={session.id} value={session.id}>
-                        {session.name} ({formatDate(session.start_date)} - {formatDate(session.end_date)})
-                      </option>
-                    ))}
+{sessions?.map((session: { id: string; name?: string; start_date?: string; end_date?: string }) => (
+                        <option key={session.id} value={session.id}>
+                          {session.name} ({formatDate(session.start_date)} - {formatDate(session.end_date)})
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -699,7 +706,7 @@ export default function ProgramEnrollmentsPage() {
         <CardContent>
           {filteredEnrollments && filteredEnrollments.length > 0 ? (
             <div className="space-y-4">
-              {filteredEnrollments.map((enrollment: EnrollmentWithRelations) => {
+              {filteredEnrollments.map((enrollment) => {
                 const student = enrollment.students
                 const session = enrollment.sessions
 

@@ -299,43 +299,42 @@ export function maskPhone(phone: string | null | undefined): string {
 /**
  * Sanitise un objet erreur pour éviter d'exposer des informations sensibles
  */
-export function sanitizeError(error: any): Record<string, any> {
+export function sanitizeError(error: unknown): Record<string, unknown> {
   if (!error) return {}
-
+  const e = error as { message?: unknown; code?: unknown; name?: unknown; stack?: unknown }
   return {
-    message: error.message,
-    code: error.code,
-    name: error.name,
-    // Ne pas inclure stack traces en production
-    ...(process.env.NODE_ENV === 'development' ? { stack: error.stack } : {}),
+    message: e.message,
+    code: e.code,
+    name: e.name,
+    ...(process.env.NODE_ENV === 'development' ? { stack: e.stack } : {}),
   }
 }
 
 /**
  * Sanitise un objet utilisateur pour les logs
  */
-export function sanitizeUser(user: any): Record<string, any> {
+export function sanitizeUser(user: unknown): Record<string, unknown> {
   if (!user) return {}
-
+  const u = user as { id?: string; email?: string; role?: unknown; organization_id?: string }
   return {
-    id: maskId(user.id),
-    email: maskEmail(user.email),
-    role: user.role,
-    organizationId: maskId(user.organization_id),
+    id: u.id != null ? maskId(u.id) : undefined,
+    email: u.email != null ? maskEmail(u.email) : undefined,
+    role: u.role,
+    organizationId: u.organization_id != null ? maskId(u.organization_id) : undefined,
   }
 }
 
 /**
  * Sanitise un objet étudiant pour les logs
  */
-export function sanitizeStudent(student: any): Record<string, any> {
+export function sanitizeStudent(student: unknown): Record<string, unknown> {
   if (!student) return {}
-
+  const s = student as { id?: string; email?: string; first_name?: string; last_name?: string }
   return {
-    id: maskId(student.id),
-    email: maskEmail(student.email),
-    firstName: student.first_name ? student.first_name.charAt(0) + '***' : '[NO_NAME]',
-    lastName: student.last_name ? student.last_name.charAt(0) + '***' : '[NO_NAME]',
+    id: s.id != null ? maskId(s.id) : undefined,
+    email: s.email != null ? maskEmail(s.email) : undefined,
+    firstName: s.first_name ? s.first_name.charAt(0) + '***' : '[NO_NAME]',
+    lastName: s.last_name ? s.last_name.charAt(0) + '***' : '[NO_NAME]',
   }
 }
 

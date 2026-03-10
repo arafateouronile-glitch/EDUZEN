@@ -99,7 +99,7 @@ export default function DocumentationPage() {
             Articles en vedette
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {featuredArticles.map((article: any) => (
+            {featuredArticles.map((article: { id: string; slug: string; title: string; excerpt?: string; view_count?: number; category: { slug: string; name: string } }) => (
               <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                 <Link href={`/dashboard/documentation/${article.category.slug}/${article.slug}`}>
                   <CardHeader>
@@ -128,7 +128,7 @@ export default function DocumentationPage() {
           </h2>
           {categories && categories.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {categories.map((category: any) => (
+              {(categories as Array<{ id: string; slug: string; name: string; description?: string; icon?: string }>).map((category) => (
                 <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                   <Link href={`/dashboard/documentation/category/${category.slug}`}>
                     <CardHeader>

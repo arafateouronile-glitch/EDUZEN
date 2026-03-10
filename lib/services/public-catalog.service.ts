@@ -276,7 +276,7 @@ export class PublicCatalogService {
     processedBy?: string,
     notes?: string
   ): Promise<PublicEnrollment> {
-    const updates: any = {
+    const updates: { status: string; processed_at: string; processed_by?: string; admin_notes?: string } = {
       status,
       processed_at: new Date().toISOString(),
     }

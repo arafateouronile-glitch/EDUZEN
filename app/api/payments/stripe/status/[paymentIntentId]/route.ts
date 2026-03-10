@@ -22,16 +22,27 @@ export async function GET(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
 
+      const { data: userRow, error: userError } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (userError || !userRow?.organization_id) {
+        return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+      }
+
       // NOTE: Vérification avec l'API Stripe réelle requise
       // Nécessite: npm install stripe et configuration de STRIPE_SECRET_KEY
       // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
       // const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
-      // 
+      //
       // Pour l'instant, récupérer depuis la base de données (fallback)
       const { data: payment, error } = await supabase
         .from('payments')
         .select('*')
         .eq('payment_provider_transaction_id', paymentIntentId)
+        .eq('organization_id', userRow.organization_id)
         .single()
 
       if (error || !payment) {

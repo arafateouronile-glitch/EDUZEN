@@ -61,7 +61,7 @@ export default function DocumentTemplatePreviewPage() {
         try {
           const specificTemplate = await documentTemplateService.getTemplateById(templateIdParam)
           // Vérifier que le template correspond au type de document
-          if (specificTemplate.type === documentType) {
+          if (specificTemplate && specificTemplate.type === documentType) {
             return specificTemplate
           }
         } catch (error) {
@@ -340,6 +340,7 @@ export default function DocumentTemplatePreviewPage() {
         setPreviewUrl(url)
       })
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- getVariables in scope, deps cover data
   }, [template, dataSource, selectedStudentId, selectedInvoiceId, selectedPaymentId, selectedSessionId, organization, students, invoices, payments, sessions])
 
   const generatePreview = async (template: DocumentTemplate, variables: DocumentVariables) => {

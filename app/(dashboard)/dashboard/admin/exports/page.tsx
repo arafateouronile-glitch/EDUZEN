@@ -295,8 +295,8 @@ function ExportsHistoryPageContent() {
                           <div className="flex items-center gap-1">
                             <User className="h-4 w-4" />
                             <span>
-                              {(export_ as any).users?.full_name || 
-                               (export_ as any).users?.email || 
+                              {export_.users?.full_name ?? 
+                               export_.users?.email ?? 
                                'Utilisateur inconnu'}
                             </span>
                           </div>

@@ -12,7 +12,29 @@ const saveBlob = (blob: Blob, filename: string) => {
   window.URL.revokeObjectURL(url);
 };
 
-export const generateProgramHTML = (program: any) => {
+export type ProgramExportInput = {
+  name: string
+  subtitle?: string
+  code?: string
+  category?: string
+  program_version?: string
+  version_date?: string
+  duration_hours?: number
+  duration_days?: number
+  price?: number
+  currency?: string
+  eligible_cpf?: boolean
+  cpf_code?: string
+  certification_issued?: boolean
+  description?: string
+  pedagogical_objectives?: string
+  learner_profile?: string
+  prerequisites?: string
+  training_content?: string
+  modalities?: string
+  certification_modalities?: string
+}
+export const generateProgramHTML = (program: ProgramExportInput) => {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
     return new Date(dateStr).toLocaleDateString('fr-FR');
@@ -91,7 +113,7 @@ export const generateProgramHTML = (program: any) => {
   `;
 };
 
-export const generateProgramDOCX = async (program: any) => {
+export const generateProgramDOCX = async (program: ProgramExportInput) => {
   const sections = [];
 
   // Header
@@ -189,7 +211,8 @@ export const generateProgramDOCX = async (program: any) => {
   if (program.prerequisites) sections.push(...createSection("Prérequis", program.prerequisites));
   if (program.training_content) sections.push(...createSection("Contenu de la Formation", program.training_content));
   if (program.modalities) sections.push(...createSection("Modalités Pédagogiques", program.modalities));
-  if (program.execution_follow_up) sections.push(...createSection("Suivi de l'exécution", program.execution_follow_up));
+  const execFollowUp = (program as unknown as { execution_follow_up?: string }).execution_follow_up
+  if (execFollowUp) sections.push(...createSection("Suivi de l'exécution", execFollowUp));
   if (program.certification_modalities) sections.push(...createSection("Modalités de Certification", program.certification_modalities));
 
   const doc = new Document({

@@ -172,7 +172,7 @@ describe('QuotaService', () => {
       })
     })
 
-    it('devrait retourner null si erreur non-fonction', async () => {
+    it('devrait utiliser le fallback si erreur RPC (ex: fonction absente)', async () => {
       mockSupabase.rpc.mockReturnValue({
         single: vi.fn().mockResolvedValue({
           data: null,
@@ -181,7 +181,12 @@ describe('QuotaService', () => {
       })
 
       const result = await service.getUsage('org-1')
-      expect(result).toBeNull()
+      // Le service utilise getUsageFallback en cas d'erreur RPC
+      expect(result).toMatchObject({
+        plan_name: null,
+        current_sessions_count: 0,
+        current_student_count: 0,
+      })
     })
 
     it('devrait retourner valeurs par défaut si pas de subscription', async () => {

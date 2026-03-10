@@ -70,7 +70,8 @@ const testimonials = [
 // Double the testimonials for infinite loop
 const infiniteTestimonials = [...testimonials, ...testimonials, ...testimonials]
 
-const TestimonialCard = ({ data, index }: { data: any, index: number }) => (
+type TestimonialData = { content: string; type?: string; author: string; role?: string }
+const TestimonialCard = ({ data, index }: { data: TestimonialData; index: number }) => (
   <div className="bg-white rounded-2xl p-6 shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-gray-100 hover:shadow-lg transition-shadow duration-300 w-full mb-6 break-inside-avoid">
     <div className="flex gap-1 mb-4">
       {[...Array(5)].map((_, i) => (
@@ -94,7 +95,7 @@ const TestimonialCard = ({ data, index }: { data: any, index: number }) => (
   </div>
 )
 
-const MovingColumn = ({ speed, testimonials, className }: { speed: number, testimonials: any[], className?: string }) => {
+const MovingColumn = ({ speed, testimonials, className }: { speed: number; testimonials: TestimonialData[]; className?: string }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   
   // Utilisation d'une animation CSS pure pour la fluidité (GPU)

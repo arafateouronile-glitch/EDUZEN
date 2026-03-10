@@ -60,11 +60,12 @@ export default async function ProgrammesPage({
   const programs = programsData ?? []
 
   // Filtrer les formations et sessions inactives
-  const programsWithActiveContent = programs.map((program: any) => ({
+  type ProgramRow = { formations?: Array<{ is_active?: boolean; sessions?: Array<{ status?: string }> }> } & Record<string, unknown>
+  const programsWithActiveContent = (programs as ProgramRow[]).map((program) => ({
     ...program,
-    formations: (program.formations || []).filter((f: any) => f.is_active).map((formation: any) => ({
+    formations: (program.formations || []).filter((f) => f.is_active).map((formation) => ({
       ...formation,
-      sessions: (formation.sessions || []).filter((s: any) => s.status === 'scheduled' || s.status === 'ongoing'),
+      sessions: (formation.sessions || []).filter((s) => s.status === 'scheduled' || s.status === 'ongoing'),
     })),
   }))
 
@@ -228,7 +229,7 @@ export default async function ProgrammesPage({
             </div>
 
             {programsWithActiveContent.length > 0 ? (
-              <PublicProgramsList programs={programsWithActiveContent} />
+              <PublicProgramsList programs={programsWithActiveContent as React.ComponentProps<typeof PublicProgramsList>['programs']} />
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-600 text-lg">

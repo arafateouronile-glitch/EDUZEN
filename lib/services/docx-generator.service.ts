@@ -65,13 +65,13 @@ class DocxGeneratorService {
 
       logger.info('DocxGenerator - Document généré avec succès')
       return outputBuffer as Buffer
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('DocxGenerator - Erreur lors de la génération', error, { error: sanitizeError(error) })
-      
+      const err = error as { properties?: { errors?: Array<{ message?: string }> } }
       // Gestion des erreurs spécifiques à docxtemplater
-      if (error.properties && error.properties.errors instanceof Array) {
-        const errorMessages = error.properties.errors
-          .map((e: any) => e.message)
+      if (err.properties?.errors && Array.isArray(err.properties.errors)) {
+        const errorMessages = err.properties.errors
+          .map((e) => e.message ?? '')
           .join(', ')
         throw new Error(`Erreur docxtemplater: ${errorMessages}`)
       }
@@ -110,8 +110,8 @@ class DocxGeneratorService {
    * Prépare les variables pour docxtemplater
    * Formate les dates, gère les tableaux, etc.
    */
-  private prepareVariables(variables: DocumentVariables): Record<string, any> {
-    const prepared: Record<string, any> = {}
+  private prepareVariables(variables: DocumentVariables): Record<string, unknown> {
+    const prepared: Record<string, unknown> = {}
     
     // Copier toutes les variables existantes
     for (const [key, value] of Object.entries(variables)) {

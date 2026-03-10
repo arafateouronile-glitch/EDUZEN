@@ -89,7 +89,7 @@ const GlassCardPremium = React.forwardRef<HTMLDivElement, GlassCardPremiumProps>
               }
             : undefined
         }
-        {...(props as any)}
+        {...(props as Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'>)}
       >
         {/* Glow effect animé */}
         {glow && (

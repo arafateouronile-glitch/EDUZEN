@@ -95,7 +95,7 @@ export class ABTestingService {
     testId: string,
     variant: Variant,
     conversionName: string,
-    properties?: Record<string, any>
+    properties?: Record<string, unknown>
   ): void {
     analytics.event.track('ab_test_conversion', {
       test_id: testId,
@@ -118,7 +118,7 @@ export class ABTestingService {
   trackImpression(
     testId: string,
     variant: Variant,
-    properties?: Record<string, any>
+    properties?: Record<string, unknown>
   ): void {
     analytics.event.track('ab_test_impression', {
       test_id: testId,

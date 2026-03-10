@@ -335,7 +335,7 @@ export default function AccessibilityPage() {
                 {config.partner_other && config.partner_other.length > 0 && (
                   <div className="pt-2 border-t">
                     <p className="text-sm font-medium mb-2">Autres partenaires</p>
-                    {config.partner_other.map((partner: any, idx: number) => (
+                    {config.partner_other.map((partner: { name?: string }, idx: number) => (
                       <p key={idx} className="text-sm text-muted-foreground">
                         • {partner.name}
                       </p>

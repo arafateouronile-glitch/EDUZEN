@@ -145,28 +145,29 @@ export function GestionConvocations({
   })
 
   // Charger tous les modèles (actifs et inactifs) comme dans la page des modèles de documents
-  const { data: allTemplates } = useQuery<DocumentTemplate[]>({
+  const { data: allTemplates } = useQuery({
     queryKey: ['document-templates', 'all', user?.organization_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<DocumentTemplate[]> => {
       if (!user?.organization_id) return []
-      // Récupérer tous les templates sans filtre isActive pour avoir tous les modèles comme dans /dashboard/settings/document-templates
-      return documentTemplateService.getAllTemplates(user.organization_id)
+      const list = await documentTemplateService.getAllTemplates(user.organization_id)
+      return list.filter((t): t is DocumentTemplate => t != null)
     },
     enabled: !!user?.organization_id,
   })
 
   // Filtrer les modèles de convocations (tous les modèles, pas seulement les actifs)
-  const convocationTemplates = allTemplates?.filter(template => template.type === 'convocation') || []
+  const convocationTemplates = (allTemplates ?? []).filter((template: DocumentTemplate) => template.type === 'convocation')
 
   // État pour le modèle sélectionné pour les convocations
   const [selectedConvocationTemplateId, setSelectedConvocationTemplateId] = useState<string | undefined>()
 
   // Récupérer les templates de documents (convocations) pour le dialog d'envoi en masse
-  const { data: documentTemplates } = useQuery<DocumentTemplate[]>({
+  const { data: documentTemplates } = useQuery({
     queryKey: ['document-templates', 'convocation', user?.organization_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<DocumentTemplate[]> => {
       if (!user?.organization_id) return []
-      return documentTemplateService.getTemplatesByType('convocation', user.organization_id)
+      const list = await documentTemplateService.getTemplatesByType('convocation', user.organization_id)
+      return list.filter((t): t is DocumentTemplate => t != null)
     },
     enabled: !!user?.organization_id && showBulkSendDialog,
   })
@@ -450,7 +451,7 @@ export function GestionConvocations({
                     <SelectContent className="rounded-xl z-[9999]">
                       <SelectItem value="">Modèle par défaut</SelectItem>
                       {convocationTemplates && convocationTemplates.length > 0 ? (
-                        convocationTemplates.map((template) => (
+                        convocationTemplates.map((template: DocumentTemplate) => (
                           <SelectItem key={template.id} value={template.id}>
                             {template.name}
                           </SelectItem>
@@ -863,7 +864,7 @@ export function GestionConvocations({
                 onValueChange={(value) => {
                   setSelectedDocumentTemplateId(value)
                   // Charger le template par défaut si disponible
-                  const template = documentTemplates?.find(t => t.id === value)
+                  const template = (documentTemplates ?? []).find((t: DocumentTemplate) => t.id === value)
                   if (template && template.is_default) {
                     // Le template par défaut sera utilisé automatiquement
                   }
@@ -874,7 +875,7 @@ export function GestionConvocations({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default">Modèle par défaut (système)</SelectItem>
-                  {documentTemplates?.map((template) => (
+                  {(documentTemplates ?? []).map((template: DocumentTemplate) => (
                     <SelectItem key={template.id} value={template.id}>
                       {template.name} {template.is_default && '(Par défaut)'}
                     </SelectItem>

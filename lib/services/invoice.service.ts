@@ -133,8 +133,8 @@ export class InvoiceService {
       }
 
       // Insertion avec retry sur collision de numéro (contrainte unique org+invoice_number)
-      let data: any = null
-      let error: any = null
+      let data: Invoice | null = null
+      let error: { code?: string; message?: string; details?: string } | null = null
       const maxAttempts = shouldAutoGenerateNumber ? 3 : 1
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         const res = await this.supabase

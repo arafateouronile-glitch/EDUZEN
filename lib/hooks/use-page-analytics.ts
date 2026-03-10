@@ -11,7 +11,7 @@ import { useAuth } from './use-auth'
 interface PageViewOptions {
   pageName?: string
   category?: string
-  additionalData?: Record<string, any>
+  additionalData?: Record<string, unknown>
 }
 
 /**
@@ -79,7 +79,7 @@ export function usePageAnalytics(options?: PageViewOptions) {
 export function useUserEventTracking() {
   const { user } = useAuth()
 
-  return (eventName: string, properties?: Record<string, any>) => {
+  return (eventName: string, properties?: Record<string, unknown>) => {
     analytics.event.track(eventName, {
       userId: user?.id,
       organizationId: user?.organization_id || undefined,
@@ -108,7 +108,7 @@ export function useUserEventTracking() {
 export function useConversionTracking() {
   const { user } = useAuth()
 
-  return (conversionName: string, properties?: Record<string, any>) => {
+  return (conversionName: string, properties?: Record<string, unknown>) => {
     analytics.conversion.track(conversionName, {
       userId: user?.id,
       organizationId: user?.organization_id || undefined,

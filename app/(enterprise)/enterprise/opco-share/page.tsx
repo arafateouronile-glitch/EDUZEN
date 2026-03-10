@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
 import { enterprisePortalService, type OpcoShareLink } from '@/lib/services/enterprise-portal.service'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
@@ -41,14 +42,7 @@ export default function OpcoSharePage() {
   })
 
   // Get company and manager
-  const { data: company } = useQuery({
-    queryKey: ['enterprise-company', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null
-      return enterprisePortalService.getCompanyForManager(user.id)
-    },
-    enabled: !!user?.id,
-  })
+  const { company } = useEnterpriseCompany()
 
   const { data: manager } = useQuery({
     queryKey: ['enterprise-manager', user?.id, company?.id],

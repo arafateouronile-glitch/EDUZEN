@@ -3,6 +3,7 @@ import { generateWordDocument } from '@/lib/services/auto-docx-generator.service
 import type { DocumentVariables, DocumentTemplate } from '@/lib/types/document-templates'
 import { createClient } from '@/lib/supabase/server'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { generateDocxBodySchema } from '@/lib/validations/schemas'
 
 // Configuration de la route API
 export const runtime = 'nodejs'
@@ -28,35 +29,41 @@ export async function POST(request: NextRequest) {
   logger.info('[Generate DOCX] 🚀 Début de la requête - Génération automatique')
   
   try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
     const body = await request.json()
-    const { templateId, variables, filename = 'document.docx' } = body as {
-      templateId?: string
-      variables: DocumentVariables
-      filename?: string
-    }
-
-    if (!variables) {
+    const parsed = generateDocxBodySchema.safeParse(body)
+    if (!parsed.success) {
+      const msg = parsed.error.flatten().formErrors[0] || parsed.error.message
       return NextResponse.json(
-        { error: 'Variables manquantes' },
+        { error: 'Données invalides', details: msg },
         { status: 400 }
       )
     }
-
-    if (!templateId) {
-      return NextResponse.json(
-        { error: 'templateId requis' },
-        { status: 400 }
-      )
-    }
+    const { templateId, variables, filename: rawFilename } = parsed.data
+    const filename = rawFilename.replace(/[^\w.\-]/g, '_')
 
     // Récupérer le template depuis la base de données
     logger.info('[Generate DOCX] 📋 Récupération du template', { templateId })
-    const supabase = await createClient()
-    
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single()
+    const userOrgId = userRow?.organization_id
+    if (!userOrgId) {
+      return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+    }
+
     const { data: template, error: templateError } = await supabase
       .from('document_templates')
       .select('*')
       .eq('id', templateId)
+      .eq('organization_id', userOrgId)
       .single()
     
     if (templateError || !template) {

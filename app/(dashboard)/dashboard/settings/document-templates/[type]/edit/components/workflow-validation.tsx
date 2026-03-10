@@ -355,9 +355,9 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
                 <Card key={workflow.id} className="p-4">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h4 className="font-semibold">{workflow.name}</h4>
-                      {workflow.description && (
-                        <p className="text-sm text-muted-foreground">{workflow.description}</p>
+                      <h4 className="font-semibold">{String(workflow.name ?? '')}</h4>
+                      {workflow.description != null && workflow.description !== '' && (
+                        <p className="text-sm text-muted-foreground">{String(workflow.description)}</p>
                       )}
                     </div>
                     <Button
@@ -382,11 +382,11 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
                 <Card key={instance.id} className="p-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-semibold">{(instance as any).workflow?.name || 'Workflow'}</h4>
+                      <h4 className="font-semibold">{String((instance as { workflow?: { name?: string } }).workflow?.name ?? 'Workflow')}</h4>
                       <p className="text-sm text-muted-foreground">
-                        Démarré le {formatDate(instance.started_at)}
+                        Démarré le {formatDate(instance.started_at as string | Date | null)}
                       </p>
-                      {getStatusBadge(instance.status)}
+                      {getStatusBadge(instance.status as string)}
                     </div>
                   </div>
                 </Card>
@@ -408,13 +408,13 @@ export function WorkflowValidation({ template, onClose }: WorkflowValidationProp
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-semibold">
-                          {(approval as any).instance?.template?.name || 'Template'}
+                          {String((approval as { instance?: { template?: { name?: string } } }).instance?.template?.name ?? 'Template')}
                         </h4>
                         <p className="text-sm text-muted-foreground">
-                          Étape: {(approval as any).step?.name || 'N/A'}
+                          Étape: {String((approval as { step?: { name?: string } }).step?.name ?? 'N/A')}
                         </p>
                       </div>
-                      {getStatusBadge(approval.status)}
+                      {getStatusBadge(approval.status as string)}
                     </div>
                     <div className="flex gap-2">
                       <Button

@@ -89,7 +89,7 @@ const bentoCards = [
   },
 ]
 
-function BentoCard({ card, index }: { card: any; index: number }) {
+function BentoCard({ card, index }: { card: { title: string; description: string; stat?: string; statLabel?: string; icon: React.ComponentType<{ className?: string }>; size?: string; gradient: string }; index: number }) {
   const isLarge = card.size === 'large'
   const Icon = card.icon
 
@@ -120,10 +120,10 @@ function BentoCard({ card, index }: { card: any; index: number }) {
           <div className="relative pt-6 border-t border-gray-100">
             <div className="flex items-end gap-2">
               <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan tracking-tighter">
-                {card.stat}
+                {card.stat ?? ''}
               </span>
               <span className="text-sm font-medium text-gray-400 mb-2 uppercase tracking-wide">
-                {card.statLabel}
+                {card.statLabel ?? ''}
               </span>
             </div>
           </div>

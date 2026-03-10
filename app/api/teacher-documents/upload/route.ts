@@ -84,12 +84,12 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(fileName)
     
     // Créer l'enregistrement dans la base de données
-    const insertData: any = {
+    const insertData: Record<string, unknown> = {
       organization_id: userData.organization_id,
       teacher_id: user.id,
       title,
       description: description || null,
-      document_type: document_type as any,
+      document_type: document_type as string,
       file_url: fileName,
       file_name: file.name,
       file_size: file.size,
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
     const { data: document, error: insertError } = await supabase
       .from('teacher_documents')
-      .insert(insertData)
+      .insert(insertData as never)
       .select()
       .single()
     
@@ -119,10 +119,10 @@ export async function POST(request: NextRequest) {
       success: true,
       document,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Erreur upload document enseignant', error)
     return NextResponse.json(
-      { error: error.message || 'Erreur serveur' },
+      { error: (error instanceof Error ? error.message : null) || 'Erreur serveur' },
       { status: 500 }
     )
   }

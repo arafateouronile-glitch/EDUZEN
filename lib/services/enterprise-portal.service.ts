@@ -236,39 +236,49 @@ class EnterprisePortalService {
   // =====================================================
 
   async getCompanyForManager(userId: string): Promise<Company | null> {
-    const supabase = this.getClient()
+    try {
+      const supabase = this.getClient()
 
-    const { data: manager } = await supabase
-      .from('company_managers')
-      .select('company_id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single()
+      const { data: manager } = await supabase
+        .from('company_managers')
+        .select('company_id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .maybeSingle()
 
-    if (!manager) return null
+      if (!manager) return null
 
-    const { data: company } = await supabase
-      .from('companies')
-      .select('*')
-      .eq('id', manager.company_id)
-      .eq('is_active', true)
-      .single()
+      const { data: company } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', manager.company_id)
+        .eq('is_active', true)
+        .single()
 
-    return company as Company | null
+      return company as Company | null
+    } catch (error) {
+      logger.error('EnterprisePortalService.getCompanyForManager', error, { userId })
+      throw error
+    }
   }
 
   async getManagerPermissions(userId: string, companyId: string): Promise<CompanyManager | null> {
-    const supabase = this.getClient()
+    try {
+      const supabase = this.getClient()
 
-    const { data } = await supabase
-      .from('company_managers')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('company_id', companyId)
-      .eq('is_active', true)
-      .single()
+      const { data } = await supabase
+        .from('company_managers')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle()
 
-    return data as CompanyManager | null
+      return data as CompanyManager | null
+    } catch (error) {
+      logger.error('EnterprisePortalService.getManagerPermissions', error, { userId, companyId })
+      throw error
+    }
   }
 
   // =====================================================

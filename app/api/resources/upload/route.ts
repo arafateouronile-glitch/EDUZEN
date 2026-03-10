@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createStorageClient } from '@supabase/supabase-js'
+import { createClient as createStorageClient, type SupabaseClient } from '@supabase/supabase-js'
 import { withRateLimit, uploadRateLimiter } from '@/app/api/_middleware/rate-limit'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import type { Database } from '@/types/database.types'
+
+/** Client Supabase dont .from() accepte un nom de table (ex. resources si non généré). */
+type FlexibleSupabase = Omit<SupabaseClient<Database>, 'from'> & { from(tableName: string): ReturnType<SupabaseClient<Database>['from']> }
 
 /**
  * API Route pour uploader une ressource vers Supabase Storage
@@ -19,21 +23,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single()
+    const userOrgId = userRow?.organization_id
+    if (!userOrgId) {
+      return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const organizationId = formData.get('organization_id') as string
+    const organizationIdRaw = formData.get('organization_id') as string
     const categoryId = formData.get('category_id') as string | null
     const title = formData.get('title') as string
     const description = formData.get('description') as string
     const resourceType = formData.get('resource_type') as string
     const tags = formData.get('tags') as string | null
 
-    if (!file || !organizationId || !title || !resourceType) {
+    if (!file || !title || !resourceType) {
       return NextResponse.json(
-        { error: 'Fichier, organisation, titre et type requis' },
+        { error: 'Fichier, titre et type requis' },
         { status: 400 }
       )
     }
+
+    // Sécurité cross-tenant : n'accepter que l'organisation de l'utilisateur
+    if (organizationIdRaw && organizationIdRaw !== userOrgId) {
+      return NextResponse.json(
+        { error: 'Vous ne pouvez pas uploader dans une autre organisation' },
+        { status: 403 }
+      )
+    }
+    const organizationId = userOrgId
 
     // Créer un client Supabase pour Storage
     const storageClient = createStorageClient(
@@ -76,7 +99,7 @@ export async function POST(request: NextRequest) {
       .replace(/(^-|-$)/g, '')
 
     // Créer l'enregistrement de la ressource
-    const { data: resource, error: resourceError } = await (supabase as any)
+    const { data: resource, error: resourceError } = await (supabase as FlexibleSupabase)
       .from('resources')
       .insert({
         organization_id: organizationId,
@@ -91,7 +114,7 @@ export async function POST(request: NextRequest) {
         file_type: file.type,
         author_id: user.id,
         tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-      })
+      } as never)
       .select()
       .single()
 

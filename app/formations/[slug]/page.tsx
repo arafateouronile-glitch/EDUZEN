@@ -9,16 +9,35 @@ import { notFound } from 'next/navigation'
 import { PublicFormationDetail } from '@/components/public/formation-detail'
 import { createClient } from '@/lib/supabase/server'
 
+const STATIC_PARAMS_LIMIT = 30
+
+/** Pré-rendre un ensemble de slugs au build pour améliorer le TTFB des formations les plus consultées. */
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('public_formations')
+      .select('slug')
+      .eq('is_public', true)
+      .not('published_at', 'is', null)
+      .limit(STATIC_PARAMS_LIMIT)
+    return (data ?? []).filter((row): row is { slug: string } => row.slug != null).map((row) => ({ slug: row.slug }))
+  } catch {
+    return []
+  }
+}
+
 interface PageProps {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params
   const supabase = await createClient()
   const { data: formation } = await supabase
     .from('public_formations')
     .select('*')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .eq('is_public', true)
     .not('published_at', 'is', null)
     .maybeSingle()
@@ -46,11 +65,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function FormationDetailPage({ params }: PageProps) {
+  const { slug } = await params
   const supabase = await createClient()
   const { data: formation } = await supabase
     .from('public_formations')
     .select('*')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .eq('is_public', true)
     .not('published_at', 'is', null)
     .maybeSingle()

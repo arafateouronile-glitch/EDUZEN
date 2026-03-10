@@ -33,9 +33,9 @@ export function TemplateSelector({
   const [showAll, setShowAll] = useState(false)
 
   // Récupérer tous les templates du type sélectionné (cache 5 min + garder les données précédentes pendant le chargement)
-  const { data: templates, isLoading, isFetching } = useQuery<DocumentTemplate[]>({
+  const { data: templates, isLoading, isFetching } = useQuery<(DocumentTemplate | null)[] | DocumentTemplate[]>({
     queryKey: ['document-templates-by-type', user?.organization_id, documentType],
-    queryFn: async (): Promise<DocumentTemplate[]> => {
+    queryFn: async (): Promise<(DocumentTemplate | null)[] | DocumentTemplate[]> => {
       if (!user?.organization_id || !documentType) return []
       try {
         return await documentTemplateService.getTemplatesByType(
@@ -52,7 +52,8 @@ export function TemplateSelector({
     placeholderData: (previousData) => previousData, // Garder l’affichage des modèles du type précédent pendant le chargement
   })
 
-  const templatesList: DocumentTemplate[] = Array.isArray(templates) ? templates : []
+  const templatesList: DocumentTemplate[] = (Array.isArray(templates) ? templates : [])
+    .filter((t): t is DocumentTemplate => t != null)
   const activeTemplates = templatesList.filter((t) => t.is_active)
   const defaultTemplate = activeTemplates.find((t) => t.is_default)
   const otherTemplates = activeTemplates.filter((t) => !t.is_default)

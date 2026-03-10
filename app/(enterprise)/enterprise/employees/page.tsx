@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@/lib/hooks/use-auth'
+import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
 import { enterprisePortalService, type CompanyEmployee } from '@/lib/services/enterprise-portal.service'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
@@ -28,21 +28,11 @@ import {
 import Link from 'next/link'
 
 export default function EnterpriseEmployeesPage() {
-  const { user } = useAuth()
+  const { company } = useEnterpriseCompany()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDepartment, setSelectedDepartment] = useState<string | undefined>()
   const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active')
   const [page, setPage] = useState(1)
-
-  // Get company
-  const { data: company } = useQuery({
-    queryKey: ['enterprise-company', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null
-      return enterprisePortalService.getCompanyForManager(user.id)
-    },
-    enabled: !!user?.id,
-  })
 
   // Get departments
   const { data: departments } = useQuery({

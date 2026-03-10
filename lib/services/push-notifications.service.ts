@@ -199,7 +199,7 @@ export class PushNotificationsService {
         device_id: deviceId,
         title: payload.title,
         body: payload.body,
-        data: payload.data as any,
+        data: payload.data != null ? (JSON.parse(JSON.stringify(payload.data)) as import('@/types/database.types').Json) : undefined,
         notification_type: payload.notificationType,
         priority: payload.priority || 'normal',
         sound: payload.sound || 'default',
@@ -297,7 +297,7 @@ export class PushNotificationsService {
       case 'announcement':
         return preferences.enable_announcements ?? true
       case 'compliance':
-        return (preferences as any).enable_compliance ?? true
+        return (preferences as { enable_compliance?: boolean }).enable_compliance ?? true
       default:
         return true
     }
@@ -442,7 +442,7 @@ export class PushNotificationsService {
     let failedCount = 0
 
     results.forEach((result) => {
-      if (result.status === 'fulfilled' && !(result.value as any)?.error) {
+      if (result.status === 'fulfilled' && !(result.value as { error?: unknown })?.error) {
         sentCount++
       } else {
         failedCount++

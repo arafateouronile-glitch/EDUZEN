@@ -57,7 +57,7 @@ interface GestionEvaluationsProps {
     assessment_type?: string | null
     max_score?: number | null
     description?: string | null
-    [key: string]: any
+    [key: string]: unknown
   }>
   onTemplateChange?: (templateId: string | undefined) => void
   /** Map grade_id -> template_id pour savoir quelles évaluations ont déjà un quiz côté apprenant */

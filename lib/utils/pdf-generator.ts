@@ -13,7 +13,7 @@ export interface DocumentTemplate {
     phone?: string
     email?: string
   }
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -554,7 +554,7 @@ export async function generatePDFBlobFromHTML(
   const totalPages = Math.ceil(imgHeight / pageHeight)
 
   // Fonction pour ajouter le footer sur une page
-  const addFooterToPage = (page: any, pageNum: number, totalPages: number) => {
+  const addFooterToPage = (page: jsPDF, pageNum: number, totalPages: number) => {
     if (footerCanvas) {
       try {
         const footerImgData = footerCanvas.toDataURL('image/png', 0.95)

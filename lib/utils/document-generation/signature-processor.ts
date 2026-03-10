@@ -8,9 +8,22 @@
 
 import { logger } from '@/lib/utils/logger'
 
-// Import conditionnel pour éviter les erreurs côté serveur
-// Le signatureService utilise createClient() côté client, donc on l'importe dynamiquement
-let signatureService: any = null
+/** Signature document retournée par getSignaturesByDocument */
+export interface DocumentSignatureRow {
+  signer_role?: string
+  signer_email?: string
+  signature_data?: string
+  signer_name?: string
+  signed_at?: string
+  comment?: string
+}
+
+/** Service de signatures (client ou serveur) */
+type SignatureServiceLike = {
+  getSignaturesByDocument: (documentId: string) => Promise<DocumentSignatureRow[]>
+}
+
+let signatureService: SignatureServiceLike | null = null
 async function getSignatureService() {
   if (typeof window !== 'undefined') {
     // Côté client
@@ -18,7 +31,7 @@ async function getSignatureService() {
       const signatureModule = await import('@/lib/services/signature.service')
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
-      signatureService = new signatureModule.SignatureService(supabase)
+      signatureService = new signatureModule.SignatureService(supabase) as SignatureServiceLike
     }
     return signatureService
   } else {
@@ -88,7 +101,7 @@ export interface SignatureField {
  */
 export async function processSignatures(
   html: string,
-  variables: Record<string, any> = {},
+  variables: Record<string, unknown> = {},
   documentId?: string
 ): Promise<string> {
   try {
@@ -102,12 +115,13 @@ export async function processSignatures(
       return html
     }
 
-    // Charger les signatures existantes si documentId est fourni
-    let existingSignatures: any[] = []
+    let existingSignatures: DocumentSignatureRow[] = []
     if (documentId) {
       try {
         const service = await getSignatureService()
-        existingSignatures = await service.getSignaturesByDocument(documentId)
+        if (service) {
+          existingSignatures = (await service.getSignaturesByDocument(documentId)) as DocumentSignatureRow[]
+        }
       } catch (error) {
         logger.warn('Erreur lors du chargement des signatures', {
           documentId,
@@ -169,9 +183,12 @@ function parseSignatureFieldAttributes(attributesString: string): SignatureField
     }
   }
 
+  const typeValue = attrs.type
+  const type: SignatureField['type'] =
+    typeValue === 'initials' || typeValue === 'date' || typeValue === 'text' ? typeValue : 'signature'
   return {
     id: attrs.id || `signature-${Date.now()}`,
-    type: (attrs.type as any) || 'signature',
+    type,
     label: attrs.label,
     required: attrs.required === 'true',
     signerRole: attrs['signer-role'],
@@ -185,7 +202,7 @@ function parseSignatureFieldAttributes(attributesString: string): SignatureField
 /**
  * Génère le HTML pour une zone de signature remplie
  */
-function generateSignedFieldHtml(signature: any, field: SignatureField): string {
+function generateSignedFieldHtml(signature: DocumentSignatureRow, field: SignatureField): string {
   const width = field.width || 200
   const height = field.height || 80
 
@@ -229,7 +246,7 @@ function generateSignedFieldHtml(signature: any, field: SignatureField): string 
           style="max-width: ${width}px; max-height: ${height}px; display: block;"
         />
         <p style="margin: 8px 0 0 0; font-size: 9pt; color: #047857; text-align: center;">
-          Signé par ${signature.signer_name || 'utilisateur'} le ${new Date(signature.signed_at).toLocaleDateString('fr-FR')}
+          Signé par ${signature.signer_name || 'utilisateur'} le ${new Date(signature.signed_at ?? '').toLocaleDateString('fr-FR')}
         </p>
       </div>
     </div>
@@ -239,7 +256,7 @@ function generateSignedFieldHtml(signature: any, field: SignatureField): string 
 /**
  * Génère le HTML pour une zone de signature vide
  */
-function generateEmptyFieldHtml(field: SignatureField, variables: Record<string, any>): string {
+function generateEmptyFieldHtml(field: SignatureField, variables: Record<string, unknown>): string {
   const width = field.width || 200
   const height = field.height || 80
 

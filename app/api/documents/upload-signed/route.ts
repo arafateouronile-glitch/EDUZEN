@@ -48,8 +48,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Vérifier que l'utilisateur a accès à l'organisation
-    const { data: membership, error: membershipError } = await (supabase as any)
+    // Vérifier que l'utilisateur a accès à l'organisation (table éventuellement hors schéma typé)
+    type SupabaseWithTable = Awaited<ReturnType<typeof createClient>> & { from(table: string): ReturnType<Awaited<ReturnType<typeof createClient>>['from']> }
+    const { data: membership, error: membershipError } = await (supabase as SupabaseWithTable)
       .from('user_organizations')
       .select('role')
       .eq('user_id', user.id)
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { error: appError.message },
-      { status: (appError as any).statusCode || 500 }
+      { status: (appError as { statusCode?: number }).statusCode || 500 }
     )
   }
 }

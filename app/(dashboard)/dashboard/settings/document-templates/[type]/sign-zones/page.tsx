@@ -26,7 +26,7 @@ const SignZonePicker = dynamic(() => import('@/components/sign/SignZonePicker').
 function toSignZones(raw: SignZoneTemplate[] | unknown): SignZone[] {
   if (!Array.isArray(raw)) return []
   return raw
-    .filter((z): z is SignZoneTemplate => z && typeof z === 'object' && typeof (z as any).id === 'string')
+    .filter((z): z is SignZoneTemplate => z != null && typeof z === 'object' && typeof (z as { id?: unknown }).id === 'string')
     .map((z) => ({
       id: z.id,
       page: z.page,
@@ -73,6 +73,7 @@ export default function SignZonesPage() {
     if (!template?.id) return
     const next = toSignZones(template.sign_zones ?? [])
     if (next.length > 0) setZones(next)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sync zones when template.id or sign_zones change
   }, [template?.id])
 
   const saveMutation = useMutation({

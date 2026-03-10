@@ -9,12 +9,19 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { qualiopiService } from '@/lib/services/qualiopi.service'
+import { qualiopiService, type QualiopiIndicator } from '@/lib/services/qualiopi.service'
 import {
   QUALIOPI_REFERENTIAL,
   type AuditorPortalData,
 } from '@/lib/services/auditor-portal.service'
 import { createClient } from '@/lib/supabase/client'
+
+/** Ligne de preuve automatisée (table compliance_evidence_automated) */
+interface ComplianceEvidenceRow {
+  indicator_number?: number
+  source?: string
+  [key: string]: unknown
+}
 import { AuditorPortal } from '@/components/auditor-portal/AuditorPortal'
 import { motion } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
@@ -60,37 +67,37 @@ export default function AuditPreviewPage() {
     enabled: !!user?.organization_id,
   })
 
-  // Récupérer les preuves automatisées
   const { data: evidence = [] } = useQuery({
     queryKey: ['compliance-evidence-preview', user?.organization_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<ComplianceEvidenceRow[]> => {
       if (!user?.organization_id) return []
-      const { data, error } = await (supabase as any)
-        .from('compliance_evidence_automated' as any)
+      const { data, error } = await (
+        supabase as { from: (table: string) => ReturnType<ReturnType<typeof createClient>['from']> }
+      )
+        .from('compliance_evidence_automated')
         .select('*')
         .eq('organization_id', user.organization_id)
         .eq('status', 'valid')
         .order('event_date', { ascending: false })
         .limit(500)
-
       if (error) return []
-      return (data || []) as any[]
+      return (data || []) as ComplianceEvidenceRow[]
     },
     enabled: !!user?.organization_id,
   })
 
-  // Construire les données au format AuditorPortalData
+  // Construire les données au format AuditorPortalData (cast evidence pour compatibilité)
   const portalData: AuditorPortalData | null = useMemo(() => {
     if (!organization || !user?.organization_id) return null
 
     // Enrichir les indicateurs avec les comptages de preuves
-    const enrichedIndicators = indicators.map((ind: any) => {
+    const enrichedIndicators = indicators.map((ind: QualiopiIndicator) => {
       const indNumber = parseInt(ind.indicator_code, 10)
       const indEvidence = evidence.filter(
-        (e: any) => e.indicator_number === indNumber
+        (e: ComplianceEvidenceRow) => e.indicator_number === indNumber
       )
       const autoEvidence = indEvidence.filter(
-        (e: any) => e.source === 'system' || e.source === 'automated_detection'
+        (e: ComplianceEvidenceRow) => e.source === 'system' || e.source === 'automated_detection'
       )
 
       return {
@@ -108,10 +115,10 @@ export default function AuditPreviewPage() {
 
     // Stats globales
     const compliantIndicators = indicators.filter(
-      (i: any) => i.status === 'compliant'
+      (i: QualiopiIndicator) => i.status === 'compliant'
     ).length
-    const autoEvidence = evidence.filter(
-      (e: any) => e.source === 'system' || e.source === 'automated_detection'
+    const autoEvidenceCount = evidence.filter(
+      (e: ComplianceEvidenceRow) => e.source === 'system' || e.source === 'automated_detection'
     )
 
     return {
@@ -133,7 +140,7 @@ export default function AuditPreviewPage() {
         total_evidence: evidence.length,
         auto_evidence_percentage:
           evidence.length > 0
-            ? Math.round((autoEvidence.length / evidence.length) * 100)
+            ? Math.round((autoEvidenceCount.length / evidence.length) * 100)
             : 0,
       },
       link: {
@@ -148,7 +155,7 @@ export default function AuditPreviewPage() {
           sampling_mode: true,
         },
       },
-    }
+    } as unknown as AuditorPortalData
   }, [organization, indicators, evidence, user?.organization_id])
 
   // Handlers pour la simulation (pas de vraie fonctionnalité en mode preview)

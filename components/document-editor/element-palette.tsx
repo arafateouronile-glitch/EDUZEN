@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, type ComponentType } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { GlassCard } from '@/components/ui/glass-card'
 import { 
-  Image, 
+  Image as ImageIcon, 
   FileSignature, 
   QrCode,
   Upload,
@@ -189,7 +189,7 @@ export function ElementPalette({ onInsert, onClose, onChartEditorOpen, onSignatu
     <GlassCard variant="premium" className="p-6 max-w-2xl">
       <div className="flex items-center justify-between mb-4">
         <CardTitle className="flex items-center gap-2">
-          <Image className="h-5 w-5 text-brand-blue" />
+          <ImageIcon className="h-5 w-5 text-brand-blue" aria-hidden />
           Palette d'éléments
         </CardTitle>
         <Button variant="outline" size="sm" onClick={onClose}>
@@ -204,6 +204,7 @@ export function ElementPalette({ onInsert, onClose, onChartEditorOpen, onSignatu
           <div className="grid grid-cols-6 gap-2">
             {(['image', 'signature', 'qrcode', 'barcode', 'link', 'divider', 'form'] as const).map((type) => {
               const Icon = elementIcons[type as keyof typeof elementIcons]
+              const IconComponent = Icon as ComponentType<{ className?: string }>
               return (
                 <motion.button
                   key={type}
@@ -217,7 +218,7 @@ export function ElementPalette({ onInsert, onClose, onChartEditorOpen, onSignatu
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Icon className="h-5 w-5" />
+                  <IconComponent className="h-5 w-5" />
                   <span className="text-xs capitalize">{type}</span>
                 </motion.button>
               )

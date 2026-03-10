@@ -43,7 +43,7 @@ export default function PortfoliosPage() {
         logger.error('Erreur récupération sessions enseignant', sanitizeError(error))
         return []
       }
-      return data?.map((st: any) => st.session_id) || []
+      return (data?.map((st) => st.session_id).filter((id): id is string => id != null)) ?? []
     },
     enabled: !!user?.id && isTeacher,
   })
@@ -74,7 +74,8 @@ export default function PortfoliosPage() {
         }
         // Filtrer les livrets qui ont une session assignée à l'enseignant OU qui n'ont pas de session (livrets indépendants)
         // Note: On garde les livrets sans session pour permettre à l'enseignant de voir ses propres livrets créés
-        query = query.or(`session_id.in.(${teacherSessionIds.join(',')}),session_id.is.null`)
+        const ids = teacherSessionIds.filter((id): id is string => typeof id === 'string')
+        query = query.or(`session_id.in.(${ids.join(',')}),session_id.is.null`)
       }
 
       const { data, error } = await query
@@ -90,8 +91,9 @@ export default function PortfoliosPage() {
       
       // Pour les enseignants, filtrer aussi côté client pour s'assurer que seuls les livrets des sessions assignées sont inclus
       if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
-        return (data || []).filter((p: any) => 
-          !p.session_id || teacherSessionIds.includes(p.session_id)
+        const ids = teacherSessionIds.filter((id): id is string => typeof id === 'string')
+        return (data || []).filter((p: { session_id?: string | null }) => 
+          !p.session_id || (typeof p.session_id === 'string' && ids.includes(p.session_id))
         )
       }
       
@@ -115,7 +117,8 @@ export default function PortfoliosPage() {
       
       // Filtrer par les sessions de l'enseignant si applicable
       if (isTeacher && teacherSessionIds && teacherSessionIds.length > 0) {
-        query = query.in('id', teacherSessionIds)
+        const ids = teacherSessionIds.filter((id): id is string => typeof id === 'string')
+        query = query.in('id', ids)
       } else if (isTeacher) {
         // Si l'enseignant n'a pas de sessions, retourner un tableau vide
         return []
@@ -148,15 +151,13 @@ export default function PortfoliosPage() {
   })
 
   // Filtrer les portfolios
-  const filteredPortfolios = portfolios?.filter((p: any) => {
+  const filteredPortfolios = portfolios?.filter((p) => {
     const matchesSearch = 
       p.student?.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.student?.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.template?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter
-    const matchesSession = sessionFilter === 'all' || p.session_id === sessionFilter
-    
+    const matchesStatus = statusFilter === 'all' || (p as { status?: string | null }).status === statusFilter
+    const matchesSession = sessionFilter === 'all' || (p as { session_id?: string | null }).session_id === sessionFilter
     return matchesSearch && matchesStatus && matchesSession
   })
 
@@ -173,9 +174,9 @@ export default function PortfoliosPage() {
 
   const stats = {
     total: portfolios?.length || 0,
-    draft: portfolios?.filter((p: any) => p.status === 'draft').length || 0,
-    inProgress: portfolios?.filter((p: any) => p.status === 'in_progress').length || 0,
-    completed: portfolios?.filter((p: any) => p.status === 'completed' || p.status === 'validated').length || 0,
+    draft: portfolios?.filter((p) => (p as { status?: string }).status === 'draft').length || 0,
+    inProgress: portfolios?.filter((p) => (p as { status?: string }).status === 'in_progress').length || 0,
+    completed: portfolios?.filter((p) => { const s = (p as { status?: string }).status; return s === 'completed' || s === 'validated'; }).length || 0,
   }
 
   const containerVariants = {
@@ -520,7 +521,7 @@ export default function PortfoliosPage() {
                 className="px-4 py-3 border-2 border-gray-200 hover:border-brand-blue/30 focus:border-brand-blue rounded-xl focus:ring-2 focus:ring-brand-blue/20 font-semibold text-gray-700 transition-all duration-300 shadow-sm h-12"
               >
                 <option value="all">Toutes les sessions</option>
-                {sessions?.map((s: any) => (
+                {sessions?.map((s: { id: string; name?: string }) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
@@ -599,7 +600,9 @@ export default function PortfoliosPage() {
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPortfolios?.map((portfolio: any, index: number) => (
+          {filteredPortfolios?.map((portfolio, index) => {
+            const p = portfolio as typeof portfolio & { progress_percentage?: number; updated_at?: string; is_visible_to_student?: boolean; pdf_url?: string; template?: { name?: string; primary_color?: string } }
+            return (
             <motion.div
               key={portfolio.id}
               initial={{ opacity: 0, y: 20 }}
@@ -624,7 +627,7 @@ export default function PortfoliosPage() {
                     <div className="flex items-center gap-3">
                       <motion.div
                         className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
-                        style={{ backgroundColor: portfolio.template?.primary_color || '#335ACF' }}
+                        style={{ backgroundColor: p.template?.primary_color || '#335ACF' }}
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         transition={{ type: "spring", stiffness: 400, damping: 10 }}
                       >
@@ -640,7 +643,7 @@ export default function PortfoliosPage() {
                       </div>
                     </div>
                     <motion.div whileHover={{ scale: 1.05 }}>
-                      {getStatusBadge(portfolio.status)}
+                        {getStatusBadge(portfolio.status ?? 'draft')}
                     </motion.div>
                   </div>
 
@@ -659,22 +662,22 @@ export default function PortfoliosPage() {
                         className="text-brand-blue"
                         whileHover={{ scale: 1.1 }}
                       >
-                        {Math.round(portfolio.progress_percentage || 0)}%
+                        {Math.round(p.progress_percentage ?? 0)}%
                       </motion.span>
                     </div>
                     <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
                       <motion.div
                         className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan shadow-lg"
                         initial={{ width: 0 }}
-                        animate={{ width: `${portfolio.progress_percentage || 0}%` }}
+                        animate={{ width: `${p.progress_percentage ?? 0}%` }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                       />
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between text-xs text-gray-500 font-medium mb-4">
-                    <span>Modifié le {formatDate(portfolio.updated_at)}</span>
-                    {portfolio.is_visible_to_student && (
+                    <span>Modifié le {formatDate(p.updated_at ?? '')}</span>
+                    {p.is_visible_to_student && (
                       <motion.span
                         className="flex items-center gap-1 text-green-600 font-bold"
                         whileHover={{ scale: 1.05 }}
@@ -692,7 +695,7 @@ export default function PortfoliosPage() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Link href={`/dashboard/evaluations/portfolios/${portfolio.id}`} className="block">
+                        <Link href={`/dashboard/evaluations/portfolios/${portfolio.id}`} className="block">
                         <Button variant="outline" size="sm" className="w-full border-2 hover:border-brand-blue hover:text-brand-blue font-bold">
                           <Edit className="h-4 w-4 mr-1" />
                           Modifier
@@ -709,12 +712,12 @@ export default function PortfoliosPage() {
                         </Button>
                       </Link>
                     </motion.div>
-                    {portfolio.pdf_url && (
+                    {p.pdf_url && (
                       <motion.div
                         whileHover={{ scale: 1.1, rotate: -5 }}
                         whileTap={{ scale: 0.95 }}
                       >
-                        <a href={portfolio.pdf_url} target="_blank" rel="noopener noreferrer">
+                        <a href={p.pdf_url} target="_blank" rel="noopener noreferrer">
                           <Button variant="ghost" size="sm" className="hover:bg-green-50 hover:text-green-600">
                             <Download className="h-4 w-4" />
                           </Button>
@@ -725,7 +728,7 @@ export default function PortfoliosPage() {
                 </div>
               </GlassCard>
             </motion.div>
-          ))}
+          )})}
         </div>
       )}
     </motion.div>

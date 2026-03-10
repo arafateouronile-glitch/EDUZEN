@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import type { Json } from '@/types/database.types'
 import { DEFAULT_PERMISSIONS_BY_ROLE } from '@/types/super-admin.types'
 import type { InviteAdminInput, PlatformAdminRole } from '@/types/super-admin.types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         role: role as PlatformAdminRole,
-        permissions: finalPermissions as any,
+        permissions: finalPermissions as unknown as Json,
         is_active: true,
         invited_by: currentAdmin.id,
         invited_at: new Date().toISOString(),

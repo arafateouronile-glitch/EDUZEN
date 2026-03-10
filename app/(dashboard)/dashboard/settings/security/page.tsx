@@ -614,7 +614,7 @@ function ActiveSessionsList() {
         </Button>
       </div>
       <div className="space-y-2">
-        {sessions.map((session: any) => (
+        {sessions.map((session: { id: string; device_name?: string; is_current?: boolean; device_type?: string; ip_address?: string; country?: string; last_activity_at?: string }) => (
           <div
             key={session.id}
             className="flex items-center justify-between p-4 border rounded-lg"
@@ -632,7 +632,7 @@ function ActiveSessionsList() {
                 {session.device_type} • {session.ip_address} • {session.country || 'Inconnu'}
               </p>
               <p className="text-xs text-muted-foreground">
-                Dernière activité: {new Date(session.last_activity_at).toLocaleString('fr-FR')}
+                Dernière activité: {new Date(session.last_activity_at ?? 0).toLocaleString('fr-FR')}
               </p>
             </div>
             {!session.is_current && (

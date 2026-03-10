@@ -302,6 +302,7 @@ export function Sidebar() {
     
     const expanded = getExpandedMenus()
     setExpandedMenus(expanded)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- getExpandedMenus reads from refs, sync on route
   }, [clientPathname, mounted])
 
   const toggleMenu = (menuName: string) => {

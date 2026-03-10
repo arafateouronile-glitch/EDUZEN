@@ -11,6 +11,27 @@ type ElectronicAttendanceSession = TableRow<'electronic_attendance_sessions'>
 type ElectronicAttendanceRequest = TableRow<'electronic_attendance_requests'>
 type ElectronicAttendanceSessionInsert = TableInsert<'electronic_attendance_sessions'>
 type ElectronicAttendanceRequestInsert = TableInsert<'electronic_attendance_requests'>
+type ElectronicAttendanceSessionUpdate = TableUpdate<'electronic_attendance_sessions'>
+type ElectronicAttendanceRequestUpdate = TableUpdate<'electronic_attendance_requests'>
+
+/** Ligne enrollment avec relation students (select students(id, first_name, last_name, email)) */
+type EnrollmentWithStudents = { students: StudentRef | null }
+type StudentRef = { id: string; first_name?: string; last_name?: string; email?: string }
+/** Session d'émargement avec champs utilisés côté service */
+type AttendanceSessionRef = {
+  status?: string
+  closes_at?: string | null
+  session_id?: string
+  date?: string | null
+  require_geolocation?: boolean
+  latitude?: number | null
+  longitude?: number | null
+  allowed_radius_meters?: number | null
+}
+/** Session avec relation session (name) pour affichage */
+type AttendanceSessionWithSessionName = { session?: { name?: string } | null; title?: string; date?: string }
+/** Request avec access_token (généré côté service) */
+type RequestWithAccessToken = ElectronicAttendanceRequest & { access_token?: string }
 
 export interface CreateAttendanceSessionParams {
   sessionId: string
@@ -76,9 +97,9 @@ export class ElectronicAttendanceService {
 
       if (enrollmentsError) throw enrollmentsError
 
-      const students = enrollments
-        ?.map((e: any) => e.students)
-        .filter((s: any) => s && s.email)
+      const students = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
+        .map((e) => e.students)
+        .filter((s): s is StudentRef => !!s && !!s.email)
 
       // Générer un QR code si activé
       let qrCodeData: string | null = null
@@ -172,13 +193,13 @@ export class ElectronicAttendanceService {
 
       if (enrollmentsError) throw enrollmentsError
 
-      const students = enrollments
-        ?.map((e: any) => e.students)
-        .filter((s: any) => s && s.email) || []
+      const students = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
+        .map((e) => e.students)
+        .filter((s): s is StudentRef => !!s && !!s.email)
 
       const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
 
-      const requests = students.map((student: any) => ({
+      const requests = students.map((student: StudentRef) => ({
         organization_id: attendanceSession.organization_id,
         attendance_session_id: attendanceSessionId,
         student_id: student.id,
@@ -200,7 +221,7 @@ export class ElectronicAttendanceService {
       // Mettre à jour le statut de la session
       const { error: updateError } = await this.supabase
         .from('electronic_attendance_sessions')
-        .update({ status: 'active' } as any)
+        .update({ status: 'active' } as ElectronicAttendanceSessionUpdate)
         .eq('id', attendanceSessionId)
 
       if (updateError) throw updateError
@@ -210,7 +231,7 @@ export class ElectronicAttendanceService {
         await this.sendAttendanceRequestEmails(
           createdRequests,
           attendanceSession,
-          (attendanceSession.session as any)?.name || attendanceSession.title
+          (attendanceSession.session as { name?: string } | null)?.name ?? attendanceSession.title
         )
       }
 
@@ -381,7 +402,7 @@ export class ElectronicAttendanceService {
       }
 
       // Vérifier si la session est encore ouverte
-      const session = data.attendance_session as any
+      const session = data.attendance_session as AttendanceSessionRef | null
       if (session?.status === 'closed') {
         throw errorHandler.createValidationError('La session d\'émargement est fermée', 'status')
       }
@@ -423,17 +444,17 @@ export class ElectronicAttendanceService {
         throw errorHandler.createValidationError('Cette demande a déjà été signée', 'status')
       }
 
-      const session = request.attendance_session as any
+      const session = request.attendance_session as AttendanceSessionRef | null
 
       // Valider la géolocalisation si requise
       let locationVerified = false
       if (session?.require_geolocation && location) {
         const validation = await this.validateAttendanceLocation(
-          session.latitude,
-          session.longitude,
+          session.latitude ?? null,
+          session.longitude ?? null,
           location.latitude,
           location.longitude,
-          session.allowed_radius_meters
+          session.allowed_radius_meters ?? 100
         )
 
         if (!validation.valid) {
@@ -460,7 +481,7 @@ export class ElectronicAttendanceService {
         location_verified: locationVerified,
       }
 
-      const attendance = await this.attendanceService.upsert(attendanceData as any)
+      const attendance = await this.attendanceService.upsert(attendanceData as Parameters<AttendanceService['upsert']>[0])
 
       // Mettre à jour la demande d'émargement
       const { data: updatedRequest, error: updateError } = await this.supabase
@@ -476,7 +497,7 @@ export class ElectronicAttendanceService {
           location_verified: locationVerified,
           ip_address: deviceInfo?.ipAddress || null,
           user_agent: deviceInfo?.userAgent || null,
-        } as any)
+        } as ElectronicAttendanceRequestUpdate)
         .eq('signature_token', token)
         .select()
         .single()
@@ -509,7 +530,7 @@ export class ElectronicAttendanceService {
     try {
       const { data, error } = await this.supabase
         .from('electronic_attendance_sessions')
-        .update({ status: 'closed' } as any)
+        .update({ status: 'closed' } as ElectronicAttendanceSessionUpdate)
         .eq('id', attendanceSessionId)
         .select()
         .single()
@@ -519,7 +540,7 @@ export class ElectronicAttendanceService {
       // Marquer les demandes non signées comme expirées
       await this.supabase
         .from('electronic_attendance_requests')
-        .update({ status: 'expired' } as any)
+        .update({ status: 'expired' } as ElectronicAttendanceRequestUpdate)
         .eq('attendance_session_id', attendanceSessionId)
         .eq('status', 'pending')
 
@@ -566,15 +587,15 @@ export class ElectronicAttendanceService {
         )
       }
 
-      const session = request.attendance_session as any
-      const token = (request as any).access_token ?? request.signature_token
+      const session = request.attendance_session as AttendanceSessionWithSessionName | null
+      const token = (request as RequestWithAccessToken).access_token ?? request.signature_token
       const attendanceUrl = this.generateAttendanceUrl(token)
 
       await this.sendAttendanceReminderEmail(
         request.student_email,
         request.student_name,
         session?.session?.name || session?.title || 'Formation',
-        session?.date,
+        session?.date ?? '',
         attendanceUrl
       )
 
@@ -584,7 +605,7 @@ export class ElectronicAttendanceService {
         .update({
           reminder_count: (request.reminder_count || 0) + 1,
           last_reminder_sent_at: new Date().toISOString(),
-        } as any)
+        } as ElectronicAttendanceRequestUpdate)
         .eq('id', requestId)
 
       logger.info('Rappel d\'émargement envoyé', { requestId })
@@ -678,7 +699,7 @@ export class ElectronicAttendanceService {
   ) {
     const results = await Promise.allSettled(
       requests.map(async (request) => {
-        const token = (request as any).access_token ?? request.signature_token
+        const token = (request as RequestWithAccessToken).access_token ?? request.signature_token
         const attendanceUrl = this.generateAttendanceUrl(token)
         return this.sendAttendanceRequestEmail(
           request.student_email,

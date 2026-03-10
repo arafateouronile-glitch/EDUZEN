@@ -45,7 +45,9 @@ export default function AttendanceHistoryPage() {
       }
       
       if (sessionTeachers && sessionTeachers.length > 0) {
-        return sessionTeachers.map((st: any) => st.session_id)
+        return sessionTeachers
+        .map((st: { session_id: string | null }) => st.session_id)
+        .filter((id): id is string => id != null)
       }
       
       // Fallback : récupérer via sessions.teacher_id
@@ -61,7 +63,7 @@ export default function AttendanceHistoryPage() {
         return []
       }
       
-      return (sessionsByTeacherId || []).map((s: any) => s.id)
+      return (sessionsByTeacherId || []).map((s: { id: string }) => s.id)
     },
     enabled: !!user?.id && isTeacher,
   })
@@ -140,8 +142,7 @@ export default function AttendanceHistoryPage() {
     queryFn: async () => {
       if (!user?.organization_id) return { data: [], total: 0 }
 
-      // eslint-disable-next-line
-      let query: any = supabase
+      let query = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))', { count: 'exact' })
         .eq('organization_id', user.organization_id)
@@ -241,8 +242,7 @@ export default function AttendanceHistoryPage() {
       }
       
       // Récupérer tous les résultats sans pagination pour l'export
-      // eslint-disable-next-line
-      let query: any = supabase
+      let query = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')
         .eq('organization_id', user.organization_id)
@@ -453,7 +453,7 @@ export default function AttendanceHistoryPage() {
               className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border-transparent focus:bg-white focus:border-brand-blue/20 focus:ring-4 focus:ring-brand-blue/10 transition-all outline-none text-sm"
             >
               <option value="">Toutes les sessions</option>
-              {allSessions?.map((session: any) => (
+              {allSessions?.map((session: { id: string; name: string }) => (
                 <option key={session.id} value={session.id}>
                   {session.name}
                 </option>
@@ -483,7 +483,7 @@ export default function AttendanceHistoryPage() {
         ) : attendanceData && attendanceData.data.length > 0 ? (
           <>
             <div className="divide-y divide-gray-100">
-              {attendanceData.data.map((attendance: any) => {
+              {attendanceData.data.map((attendance) => {
                 const student = attendance.students
                 const session = attendance.sessions
                 const formation = session?.formations

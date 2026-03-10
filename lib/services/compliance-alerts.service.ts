@@ -20,6 +20,7 @@ export class ComplianceAlertsService {
    * OPTIMIZED: Uses parallel processing to send notifications
    */
   async checkCriticalRisks(organizationId: string) {
+    try {
     logger.info('Starting critical risks check', {
       organizationId: maskId(organizationId),
     })
@@ -118,6 +119,10 @@ export class ComplianceAlertsService {
       alertsSent: successCount,
       criticalRisks: criticalRisks.length,
     }
+    } catch (error) {
+      logger.error('ComplianceAlertsService.checkCriticalRisks', error, { organizationId: maskId(organizationId) })
+      throw error
+    }
   }
 
   /**
@@ -125,6 +130,7 @@ export class ComplianceAlertsService {
    * OPTIMIZED: Uses parallel processing to send notifications
    */
   async checkCriticalIncidents(organizationId: string) {
+    try {
     logger.info('Starting critical incidents check', {
       organizationId: maskId(organizationId),
     })
@@ -201,6 +207,10 @@ export class ComplianceAlertsService {
       alertsSent: successCount,
       criticalIncidents: incidents.length,
     }
+    } catch (error) {
+      logger.error('ComplianceAlertsService.checkCriticalIncidents', error, { organizationId: maskId(organizationId) })
+      throw error
+    }
   }
 
   /**
@@ -208,6 +218,7 @@ export class ComplianceAlertsService {
    * OPTIMIZED: Uses parallel processing to send notifications
    */
   async checkNonCompliantControls(organizationId: string) {
+    try {
     logger.info('Starting non-compliant controls check', {
       organizationId: maskId(organizationId),
     })
@@ -277,6 +288,10 @@ export class ComplianceAlertsService {
     return {
       alertsSent: successCount,
       nonCompliantControls: controls.length,
+    }
+    } catch (error) {
+      logger.error('ComplianceAlertsService.checkNonCompliantControls', error, { organizationId: maskId(organizationId) })
+      throw error
     }
   }
 

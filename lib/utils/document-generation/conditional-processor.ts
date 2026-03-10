@@ -3,9 +3,7 @@
  * Supporte les syntaxes : {IF variable}...{ENDIF}, {IF variable}...{ELSE}...{ENDIF}
  */
 
-export interface DocumentVariables {
-  [key: string]: any
-}
+import type { DocumentVariables } from '@/lib/types/document-templates'
 
 /**
  * Traite les conditions IF/ELSE/ENDIF dans le HTML
@@ -82,7 +80,7 @@ export function processConditionals(html: string, variables: DocumentVariables):
         if (foundEnd && endPos > m.start) {
           const varName = m.varName
           const content = processed.substring(m.varEnd, endPos)
-          const value = variables[varName]
+          const value = (variables as Record<string, unknown>)[varName]
           const conditionValue = Boolean(value) && value !== '' && value !== 0 && value !== '0' && value !== null && value !== undefined
           
           if (conditionValue) {
@@ -128,8 +126,8 @@ export function processConditionals(html: string, variables: DocumentVariables):
       const pattern = /\{([a-zA-Z_][a-zA-Z0-9_]*)\s+&&\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+&&\s+([^}]+)\}/g
       
       processed = processed.replace(pattern, (match, var1, var2, content) => {
-        const val1 = variables[var1.trim()]
-        const val2 = variables[var2.trim()]
+        const val1 = (variables as Record<string, unknown>)[var1.trim()]
+        const val2 = (variables as Record<string, unknown>)[var2.trim()]
         const conditionValue = Boolean(val1) && val1 !== '' && Boolean(val2) && val2 !== ''
         
         if (conditionValue) {
@@ -175,8 +173,8 @@ function evaluateCondition(condition: string, variables: DocumentVariables): boo
   condition = condition.trim()
 
   // Vérifier si c'est une variable simple
-  if (variables.hasOwnProperty(condition)) {
-    const value = variables[condition]
+  if (Object.prototype.hasOwnProperty.call(variables, condition)) {
+    const value = (variables as Record<string, unknown>)[condition]
     // Considérer comme vrai si la valeur existe et n'est pas vide/false/0
     return Boolean(value) && value !== '' && value !== 0 && value !== '0'
   }
@@ -216,20 +214,21 @@ function evaluateCondition(condition: string, variables: DocumentVariables): boo
 /**
  * Récupère la valeur d'une variable ou retourne la valeur littérale
  */
-function getVariableValue(expression: string, variables: DocumentVariables): any {
+function getVariableValue(
+  expression: string,
+  variables: DocumentVariables
+): string | number | undefined {
   expression = expression.trim()
-  
-  // Si c'est une chaîne entre guillemets, retourner la valeur sans guillemets
-  if ((expression.startsWith('"') && expression.endsWith('"')) ||
-      (expression.startsWith("'") && expression.endsWith("'"))) {
+
+  if (
+    (expression.startsWith('"') && expression.endsWith('"')) ||
+    (expression.startsWith("'") && expression.endsWith("'"))
+  ) {
     return expression.slice(1, -1)
   }
-  
-  // Si c'est un nombre, retourner le nombre
-  if (!isNaN(Number(expression))) {
+  if (!Number.isNaN(Number(expression))) {
     return Number(expression)
   }
-  
-  // Sinon, chercher dans les variables
-  return variables[expression] ?? expression
+  const value = (variables as Record<string, string | number | undefined>)[expression]
+  return value !== undefined ? value : expression
 }

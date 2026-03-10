@@ -19,13 +19,14 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createAdminClient()
-    const supabaseUrl = (typeof process !== 'undefined' && process.env ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined) ?? ''
+    const env = typeof globalThis !== 'undefined' ? (globalThis as { process?: { env?: NodeJS.ProcessEnv } }).process?.env : undefined
+    const supabaseUrl = env?.NEXT_PUBLIC_SUPABASE_URL ?? ''
 
-    const { data: sig, error: sigErr } = await (supabase
-      .from('signatories' as any)
+    const { data: sig, error: sigErr } = await supabase
+      .from('signatories')
       .select('id, process_id, order_index, signed_at')
       .eq('token', token)
-      .maybeSingle() as any)
+      .maybeSingle()
 
     if (sigErr || !sig) {
       return NextResponse.json({ error: 'Lien invalide ou expiré' }, { status: 404 })
@@ -38,24 +39,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data: signingProcess, error: procErr } = await (supabase
-      .from('signing_processes' as any)
+    type ProcessRow = { status?: string; current_index?: number; document?: { file_url?: string } | null; intermediate_pdf_path?: string | null }
+    const { data: signingProcess, error: procErr } = await supabase
+      .from('signing_processes')
       .select('id, organization_id, document_id, status, current_index, intermediate_pdf_path, intermediate_pdf_url, document:documents(id, title, file_url)')
       .eq('id', sig.process_id)
-      .single() as any)
+      .single()
 
     if (procErr || !signingProcess) {
       return NextResponse.json({ error: 'Processus introuvable' }, { status: 404 })
     }
 
-    if ((signingProcess as any).status === 'completed') {
+    const proc = signingProcess as ProcessRow
+    if (proc.status === 'completed') {
       return NextResponse.json(
         { error: 'Processus déjà complété' },
         { status: 410 }
       )
     }
 
-    if ((signingProcess as any).current_index !== sig.order_index) {
+    if (proc.current_index !== sig.order_index) {
       return NextResponse.json(
         { error: 'Ce n\'est pas encore votre tour de signer' },
         { status: 403 }
@@ -65,8 +68,9 @@ export async function GET(request: NextRequest) {
     let path: string | null = null
 
     if (sig.order_index === 0) {
-      const doc = (signingProcess as any).document as { file_url?: string } | null
-      const fileUrl = doc?.file_url
+      const rawDoc = proc.document
+      const doc = Array.isArray(rawDoc) ? rawDoc[0] : rawDoc
+      const fileUrl = doc && typeof doc === 'object' && 'file_url' in doc ? (doc as { file_url?: string }).file_url : null
       if (!fileUrl || typeof fileUrl !== 'string') {
         return NextResponse.json(
           { error: 'Document sans fichier PDF' },
@@ -75,7 +79,7 @@ export async function GET(request: NextRequest) {
       }
       path = extractStoragePathFromPublicUrl(fileUrl, supabaseUrl)
     } else {
-      path = (signingProcess as any).intermediate_pdf_path
+      path = proc.intermediate_pdf_path ?? null
     }
 
     if (!path || typeof path !== 'string') {

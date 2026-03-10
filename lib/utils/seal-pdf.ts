@@ -5,7 +5,7 @@
  * Les champs texte (nom, email, IP, date) sont sanitizés pour éviter XSS/encodage dans le PDF.
  */
 
-import { PDFDocument, rgb } from 'pdf-lib'
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import { createHash } from 'crypto'
 import type { SignZone } from '@/lib/types/sign-zones'
 import { sanitizeForPDF } from '@/lib/utils/pdf-sanitizer'
@@ -139,7 +139,7 @@ export async function sealPdf(
       : `data:image/png;base64,${signatureDataUrl}`
   const img = await pdfDoc.embedPng(pngInput)
   // Utiliser la police standard Helvetica de pdf-lib
-  const font = await pdfDoc.embedStandardFont('Helvetica' as any)
+  const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica)
 
   const resolvedZone = resolveZone(options.zones ?? [], options.signZoneId)
   const lastPageNum = pages.length

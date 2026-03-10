@@ -29,7 +29,7 @@ jobs:
         run: npx eslint . --ext .ts,.tsx,.js,.jsx --ignore-path .gitignore
       
       - name: Run TypeScript check
-        run: npm run type-check || npx tsc --noEmit || true
+        run: npm run type-check
 
   test:
     name: Run Tests
@@ -48,16 +48,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Run unit tests
-        run: npm run test:unit || echo "No unit tests configured"
-      
-      - name: Run integration tests
-        run: npm run test:integration || echo "No integration tests configured"
+      - name: Run tests with coverage
+        run: npm run test -- --run --coverage
 
   build:
     name: Build Check
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - name: Checkout code
@@ -96,10 +92,10 @@ jobs:
         run: npm ci
       
       - name: Run npm audit
-        run: npm audit --audit-level=moderate || true
+        run: npm audit --audit-level=high
       
       - name: Check for secrets
-        run: npm run check-secrets || echo "Secrets check skipped"
+        run: npm run check-secrets
 
   pr-size:
     name: PR Size Check

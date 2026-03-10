@@ -84,13 +84,13 @@ export async function POST(request: NextRequest) {
         recipient_ids: recipient_ids || [],
         session_id: session_id || null,
         scheduled_at: scheduledDate.toISOString(),
-        subject: subject || `Document : ${(document as any).name || 'Document'}`,
+        subject: subject || `Document : ${(document as { name?: string }).name || 'Document'}`,
         message: message || '',
         send_via: send_via || ['email'],
         status: 'pending',
         metadata: {
           created_by: user.id,
-          document_name: (document as any).name || 'Document',
+          document_name: (document as { name?: string }).name || 'Document',
         },
       })
       .select()

@@ -100,13 +100,35 @@ export default function ELearningPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   } as const
 
+  type CourseItem = {
+    id: string
+    is_published?: boolean
+    published_at?: string | null
+    scores_enabled?: boolean
+    slug?: string
+    title?: string
+    thumbnail_url?: string | null
+    short_description?: string | null
+    estimated_duration_hours?: number | null
+    total_lessons?: number | null
+    total_students?: number | null
+    updated_at?: string | null
+    difficulty_level?: string | null
+  }
+  type EnrollmentItem = {
+    id: string
+    course?: { slug?: string; title?: string; thumbnail_url?: string | null }
+    progress_percentage?: number | null
+    enrollment_status?: string | null
+    last_accessed_at?: string | null
+  }
   const togglePublishMutation = useMutation({
-    mutationFn: async (course: any) => {
+    mutationFn: async (course: CourseItem) => {
       const nextPublished = !course.is_published
       return elearningService.updateCourse(course.id, {
         is_published: nextPublished,
         published_at: nextPublished ? new Date().toISOString() : null,
-      } as any)
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['elearning-courses'] })
@@ -117,20 +139,20 @@ export default function ELearningPage() {
         description: 'La séquence a été mise à jour.',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible de mettre à jour la visibilité.',
+        description: error instanceof Error ? error.message : 'Impossible de mettre à jour la visibilité.',
       })
     },
   })
 
   const toggleScoresMutation = useMutation({
-    mutationFn: async (course: any) => {
-      const current = (course as any).scores_enabled
+    mutationFn: async (course: CourseItem) => {
+      const current = course.scores_enabled
       const nextEnabled = current === false ? true : false
-      return elearningService.updateCourse(course.id, { scores_enabled: nextEnabled } as any)
+      return elearningService.updateCourse(course.id, { scores_enabled: nextEnabled })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['elearning-courses'] })
@@ -140,19 +162,19 @@ export default function ELearningPage() {
         description: 'Le paramètre de scoring a été mis à jour.',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
         description:
-          error?.message ||
+          error instanceof Error ? error.message :
           "Impossible de mettre à jour les scores (vérifie que la colonne 'scores_enabled' existe en base).",
       })
     },
   })
 
   const deleteCourseMutation = useMutation({
-    mutationFn: async (course: any) => {
+    mutationFn: async (course: CourseItem) => {
       await elearningService.deleteCourse(course.id)
     },
     onSuccess: () => {
@@ -164,11 +186,11 @@ export default function ELearningPage() {
         description: 'La séquence a été supprimée.',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible de supprimer la séquence.',
+        description: error instanceof Error ? error.message : 'Impossible de supprimer la séquence.',
       })
     },
   })
@@ -241,8 +263,8 @@ export default function ELearningPage() {
             </div>
           ) : allCourses && allCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {allCourses.map((course: any) => {
-                const scoresEnabled = (course as any).scores_enabled !== false
+              {(allCourses as CourseItem[]).map((course) => {
+                const scoresEnabled = course.scores_enabled !== false
                 return (
                   <GlassCard key={course.id} variant="default" hoverable className="p-0 overflow-hidden border-2 border-brand-blue/10 hover:border-brand-blue/30 bg-gradient-to-br from-white to-brand-blue-ghost/10 hover:shadow-lg transition-all duration-300">
                     <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-50 to-brand-blue-ghost/20">
@@ -524,7 +546,7 @@ export default function ELearningPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {featuredCourses.map((course: any, index: number) => (
+                  {(featuredCourses as CourseItem[]).map((course, index) => (
                     <motion.div
                       key={course.id}
                       initial={{ opacity: 0, scale: 0.95 }}
@@ -559,9 +581,9 @@ export default function ELearningPage() {
                             <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end">
                               <span className={cn(
                                 "px-2.5 py-1 rounded-lg text-xs font-semibold backdrop-blur-md border-2 shadow-sm",
-                                getDifficultyColor(course.difficulty_level)
+                                getDifficultyColor(course.difficulty_level ?? '')
                               )}>
-                                {getDifficultyLabel(course.difficulty_level)}
+                                {getDifficultyLabel(course.difficulty_level ?? '')}
                               </span>
                             </div>
                           </div>
@@ -619,7 +641,7 @@ export default function ELearningPage() {
                 </div>
               ) : allCourses && allCourses.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {allCourses.map((course: any, index: number) => (
+                  {(allCourses as CourseItem[]).map((course, index) => (
                     <motion.div
                       key={course.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -652,7 +674,7 @@ export default function ELearningPage() {
                                 course.difficulty_level === 'intermediate' ? "text-amber-700 border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100/50" :
                                 "text-rose-700 border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100/50"
                               )}>
-                                {getDifficultyLabel(course.difficulty_level)}
+                                {getDifficultyLabel(course.difficulty_level ?? '')}
                               </span>
                             </div>
                           </div>
@@ -712,10 +734,10 @@ export default function ELearningPage() {
           >
             {myEnrollments && myEnrollments.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myEnrollments.map((enrollment: any, index: number) => {
+                {(myEnrollments as EnrollmentItem[]).map((enrollment, index) => {
                   const course = enrollment.course
-                  const progress = Math.round(enrollment.progress_percentage || 0)
-                  
+                  const progress = Math.round(enrollment.progress_percentage ?? 0)
+                  if (!course) return null
                   return (
                     <motion.div
                       key={enrollment.id}
@@ -723,7 +745,7 @@ export default function ELearningPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <Link href={`/dashboard/elearning/courses/${course.slug}`}>
+                      <Link href={`/dashboard/elearning/courses/${course.slug ?? ''}`}>
                         <GlassCard
                           variant="default"
                           hoverable

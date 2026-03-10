@@ -17,8 +17,16 @@ const CSRF_HEADER_NAME = 'x-csrf-token'
 // Durée de validité du token (24 heures)
 const TOKEN_VALIDITY_MS = 24 * 60 * 60 * 1000
 
-// Secret pour signer les tokens (utiliser une variable d'environnement en production)
-const getSecret = () => process.env.CSRF_SECRET || process.env.NEXTAUTH_SECRET || 'default-csrf-secret-change-me'
+// Secret pour signer les tokens. En production, CSRF_SECRET ou NEXTAUTH_SECRET doit être défini.
+function getSecret(): string {
+  const secret = process.env.CSRF_SECRET || process.env.NEXTAUTH_SECRET
+  if (process.env.NODE_ENV === 'production') {
+    if (!secret || secret.length < 16) {
+      throw new Error('CSRF_SECRET or NEXTAUTH_SECRET must be set in production (min 16 characters)')
+    }
+  }
+  return secret || 'default-csrf-secret-change-me'
+}
 
 /**
  * Génère un token CSRF sécurisé

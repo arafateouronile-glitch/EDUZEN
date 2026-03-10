@@ -26,7 +26,7 @@ export default function EquipmentPage() {
   const [categoryFilter, setCategoryFilter] = useState<'mobility' | 'visual' | 'auditory' | 'ergonomic' | 'software' | 'other' | ''>('')
   const [statusFilter, setStatusFilter] = useState<'available' | 'in_use' | 'maintenance' | 'retired' | ''>('')
   const [showForm, setShowForm] = useState(false)
-  const [editingEquipment, setEditingEquipment] = useState<any>(null)
+  const [editingEquipment, setEditingEquipment] = useState<Awaited<ReturnType<typeof accessibilityService.getEquipment>>[number] | null>(null)
 
   // Query équipements
   const { data: equipment = [], isLoading } = useQuery({
@@ -81,7 +81,7 @@ export default function EquipmentPage() {
     { value: 'retired', label: 'Retiré' },
   ]
 
-  const handleEdit = (eq: any) => {
+  const handleEdit = (eq: Awaited<ReturnType<typeof accessibilityService.getEquipment>>[number]) => {
     setEditingEquipment(eq)
     setShowForm(true)
   }
@@ -309,7 +309,26 @@ export default function EquipmentPage() {
           <EquipmentForm
             organizationId={user.organization_id || ''}
             equipmentId={editingEquipment?.id}
-            initialData={editingEquipment}
+            initialData={
+              editingEquipment
+                ? {
+                    name: editingEquipment.name,
+                    category: editingEquipment.category ?? undefined,
+                    description: editingEquipment.description ?? undefined,
+                    location: editingEquipment.location ?? undefined,
+                    quantity_total: editingEquipment.quantity_total,
+                    quantity_available: editingEquipment.quantity_available,
+                    status: editingEquipment.status ?? undefined,
+                    purchase_date: editingEquipment.purchase_date ?? undefined,
+                    warranty_expiry_date: editingEquipment.warranty_expiry_date ?? undefined,
+                    maintenance_schedule: editingEquipment.maintenance_schedule ?? undefined,
+                    last_maintenance_date: editingEquipment.last_maintenance_date ?? undefined,
+                    next_maintenance_date: editingEquipment.next_maintenance_date ?? undefined,
+                    notes: editingEquipment.notes ?? undefined,
+                    metadata: editingEquipment.metadata as Record<string, unknown> | undefined,
+                  }
+                : undefined
+            }
             onSuccess={handleCloseForm}
             onCancel={handleCloseForm}
           />

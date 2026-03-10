@@ -516,7 +516,7 @@ export function SubscriptionsTable({
                         <div className="flex items-center gap-2">
                           <CreditCard className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm">
-                            {(subscription.payment_method as any)?.brand} •••• {(subscription.payment_method as any)?.last4}
+                            {(subscription.payment_method as { brand?: string; last4?: string })?.brand} •••• {(subscription.payment_method as { brand?: string; last4?: string })?.last4}
                           </span>
                         </div>
                       ) : (

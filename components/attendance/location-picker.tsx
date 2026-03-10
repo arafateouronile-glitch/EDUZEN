@@ -23,6 +23,7 @@ export function LocationPicker({ onLocationChange, required = false, sessionLoca
     if (required) {
       requestLocation()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run when required changes only
   }, [required])
 
   // Calculer la distance si on a la localisation de la session

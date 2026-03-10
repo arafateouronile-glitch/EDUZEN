@@ -3,25 +3,94 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
-// Types locaux pour les tables marketplace qui ne sont pas encore dans le schéma Supabase
-type MarketplaceTemplate = any
-type MarketplaceCategory = any
-type MarketplaceRating = any
+/** Client Supabase permettant d'appeler .from() sur des tables non encore dans Database (marketplace). Un seul cast centralisé. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseClientWithMarketplace = SupabaseClient<Database> & { from(table: string): any }
+
+/** Types locaux pour les tables marketplace qui ne sont pas encore dans le schéma Supabase */
+interface MarketplaceTemplate {
+  id: string
+  [key: string]: unknown
+}
+interface MarketplaceCategory {
+  id: string
+  [key: string]: unknown
+}
+interface MarketplaceRating {
+  id: string
+  [key: string]: unknown
+}
+
+/** Paramètres pour publier un template sur le marketplace */
+export interface MarketplaceTemplatePublishInput {
+  template_id?: string
+  category_id?: string
+  title?: string
+  description?: string
+  short_description?: string
+  is_free?: boolean
+  price?: number
+  author_id?: string
+  [key: string]: unknown
+}
+
+/** Mises à jour partielles d'un template marketplace */
+export interface MarketplaceTemplateUpdateInput {
+  status?: string
+  title?: string
+  description?: string
+  short_description?: string
+  is_free?: boolean
+  price?: number
+  is_featured?: boolean
+  is_verified?: boolean
+  [key: string]: unknown
+}
+
+/** Création d'un avis/rating */
+export interface MarketplaceRatingInsertInput {
+  marketplace_template_id: string
+  user_id: string
+  rating: number
+  review_text?: string
+  [key: string]: unknown
+}
+
+/** Création d'une collection */
+export interface MarketplaceCollectionInsertInput {
+  user_id: string
+  name: string
+  description?: string
+  is_public?: boolean
+  is_featured?: boolean
+  [key: string]: unknown
+}
+
+/** Création d'une transaction d'achat */
+export interface MarketplaceTransactionInsertInput {
+  marketplace_template_id: string
+  buyer_id: string
+  amount?: number
+  payment_status?: string
+  [key: string]: unknown
+}
 
 export class TemplateMarketplaceService {
   private supabase: SupabaseClient<Database>
 
+  /** Accès au client pour les tables marketplace (évite des casts dispersés). */
+  private get client(): SupabaseClientWithMarketplace {
+    return this.supabase as SupabaseClientWithMarketplace
+  }
 
   constructor(supabaseClient?: SupabaseClient<Database>) {
-
     this.supabase = supabaseClient || createClient()
-
   }
 
   // ========== CATEGORIES ==========
 
-  async getCategories() {
-    const { data, error } = await (this.supabase as any)
+  async getCategories(): Promise<MarketplaceCategory[] | null> {
+    const { data, error } = await this.client
       .from('marketplace_categories')
       .select('*')
       .eq('is_active', true)
@@ -44,7 +113,7 @@ export class TemplateMarketplaceService {
     authorId?: string
     sortBy?: 'popular' | 'recent' | 'rating' | 'downloads'
   }) {
-    let query = (this.supabase as any)
+    let query = this.client
       .from('marketplace_templates')
       .select(`
         *,
@@ -112,7 +181,7 @@ export class TemplateMarketplaceService {
   }
 
   async getTemplateBySlug(slug: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_templates')
       .select(`
         *,
@@ -127,14 +196,14 @@ export class TemplateMarketplaceService {
     if (error) throw error
 
     // Incrémenter le compteur de vues
-    const { data: template } = await (this.supabase as any)
+    const { data: template } = await this.client
       .from('marketplace_templates')
       .select('view_count')
       .eq('id', data.id)
       .single()
 
     if (template) {
-      await (this.supabase as any)
+      await this.client
         .from('marketplace_templates')
         .update({ view_count: (template.view_count || 0) + 1 })
         .eq('id', data.id)
@@ -143,8 +212,8 @@ export class TemplateMarketplaceService {
     return data
   }
 
-  async publishTemplate(template: any) {
-    const { data, error } = await (this.supabase as any)
+  async publishTemplate(template: MarketplaceTemplatePublishInput) {
+    const { data, error } = await this.client
       .from('marketplace_templates')
       .insert({
         ...template,
@@ -157,8 +226,8 @@ export class TemplateMarketplaceService {
     return data
   }
 
-  async updateTemplate(id: string, updates: any) {
-    const { data, error } = await (this.supabase as any)
+  async updateTemplate(id: string, updates: MarketplaceTemplateUpdateInput) {
+    const { data, error } = await this.client
       .from('marketplace_templates')
       .update(updates)
       .eq('id', id)
@@ -170,7 +239,7 @@ export class TemplateMarketplaceService {
   }
 
   async deleteTemplate(id: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.client
       .from('marketplace_templates')
       .delete()
       .eq('id', id)
@@ -182,7 +251,7 @@ export class TemplateMarketplaceService {
 
   async downloadTemplate(marketplaceTemplateId: string, userId: string, organizationId: string) {
     // Récupérer le template
-    const { data: marketplaceTemplate } = await (this.supabase as any)
+    const { data: marketplaceTemplate } = await this.client
       .from('marketplace_templates')
       .select('template_id, is_free, price')
       .eq('id', marketplaceTemplateId)
@@ -193,7 +262,7 @@ export class TemplateMarketplaceService {
     // Vérifier si c'est gratuit ou si l'utilisateur a payé
     if (!marketplaceTemplate.is_free) {
       // Vérifier si une transaction existe
-      const { data: transaction } = await (this.supabase as any)
+      const { data: transaction } = await this.client
         .from('marketplace_transactions')
         .select('id, payment_status')
         .eq('marketplace_template_id', marketplaceTemplateId)
@@ -207,7 +276,7 @@ export class TemplateMarketplaceService {
     }
 
     // Créer une copie du template pour l'utilisateur
-    const { data: originalTemplate } = await (this.supabase as any)
+    const { data: originalTemplate } = await this.client
       .from('document_templates')
       .select('*')
       .eq('id', marketplaceTemplate.template_id)
@@ -216,16 +285,15 @@ export class TemplateMarketplaceService {
     if (!originalTemplate) throw new Error('Template original non trouvé')
 
     // Créer une nouvelle instance du template
-    const { data: newTemplate, error: createError } = await (this.supabase as any)
+    const { data: newTemplate, error: createError } = await this.client
       .from('document_templates')
       .insert({
         organization_id: organizationId,
         name: `${originalTemplate.name} (Copie)`,
         type: originalTemplate.type,
-        header_content: originalTemplate.header_content,
-        body_content: originalTemplate.body_content,
-        footer_content: originalTemplate.footer_content,
-        variables: originalTemplate.variables,
+        content: originalTemplate.content,
+        header: originalTemplate.header ?? undefined,
+        footer: originalTemplate.footer ?? undefined,
         is_default: false,
       })
       .select()
@@ -234,7 +302,7 @@ export class TemplateMarketplaceService {
     if (createError) throw createError
 
     // Enregistrer le téléchargement
-    const { data: download, error: downloadError } = await (this.supabase as any)
+    const { data: download, error: downloadError } = await this.client
       .from('marketplace_downloads')
       .insert({
         marketplace_template_id: marketplaceTemplateId,
@@ -253,7 +321,7 @@ export class TemplateMarketplaceService {
   // ========== FAVORITES ==========
 
   async addToFavorites(marketplaceTemplateId: string, userId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_favorites')
       .insert({
         marketplace_template_id: marketplaceTemplateId,
@@ -265,14 +333,14 @@ export class TemplateMarketplaceService {
     if (error) throw error
 
     // Incrémenter le compteur
-    const { data: template } = await (this.supabase as any)
+    const { data: template } = await this.client
       .from('marketplace_templates')
       .select('favorite_count')
       .eq('id', marketplaceTemplateId)
       .single()
 
     if (template) {
-      await (this.supabase as any)
+      await this.client
         .from('marketplace_templates')
         .update({ favorite_count: (template.favorite_count || 0) + 1 })
         .eq('id', marketplaceTemplateId)
@@ -282,7 +350,7 @@ export class TemplateMarketplaceService {
   }
 
   async removeFromFavorites(marketplaceTemplateId: string, userId: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.client
       .from('marketplace_favorites')
       .delete()
       .eq('marketplace_template_id', marketplaceTemplateId)
@@ -291,14 +359,14 @@ export class TemplateMarketplaceService {
     if (error) throw error
 
     // Décrémenter le compteur
-    const { data: template } = await (this.supabase as any)
+    const { data: template } = await this.client
       .from('marketplace_templates')
       .select('favorite_count')
       .eq('id', marketplaceTemplateId)
       .single()
 
     if (template && template.favorite_count > 0) {
-      await (this.supabase as any)
+      await this.client
         .from('marketplace_templates')
         .update({ favorite_count: template.favorite_count - 1 })
         .eq('id', marketplaceTemplateId)
@@ -306,7 +374,7 @@ export class TemplateMarketplaceService {
   }
 
   async isFavorite(marketplaceTemplateId: string, userId: string): Promise<boolean> {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_favorites')
       .select('id')
       .eq('marketplace_template_id', marketplaceTemplateId)
@@ -318,7 +386,7 @@ export class TemplateMarketplaceService {
   }
 
   async getUserFavorites(userId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_favorites')
       .select('*, marketplace_template:marketplace_templates(*, category:marketplace_categories(*))')
       .eq('user_id', userId)
@@ -330,8 +398,8 @@ export class TemplateMarketplaceService {
 
   // ========== RATINGS ==========
 
-  async createRating(rating: any) {
-    const { data, error } = await (this.supabase as any)
+  async createRating(rating: MarketplaceRatingInsertInput) {
+    const { data, error } = await this.client
       .from('marketplace_ratings')
       .insert(rating)
       .select()
@@ -342,7 +410,7 @@ export class TemplateMarketplaceService {
   }
 
   async updateRating(id: string, rating: number, reviewText?: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_ratings')
       .update({ rating, review_text: reviewText })
       .eq('id', id)
@@ -354,7 +422,7 @@ export class TemplateMarketplaceService {
   }
 
   async getTemplateRatings(marketplaceTemplateId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_ratings')
       .select('*, user:users(id, full_name, email)')
       .eq('marketplace_template_id', marketplaceTemplateId)
@@ -365,7 +433,7 @@ export class TemplateMarketplaceService {
   }
 
   async getUserRating(marketplaceTemplateId: string, userId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_ratings')
       .select('*')
       .eq('marketplace_template_id', marketplaceTemplateId)
@@ -379,7 +447,7 @@ export class TemplateMarketplaceService {
   // ========== COLLECTIONS ==========
 
   async getCollections(filters?: { userId?: string; isPublic?: boolean; isFeatured?: boolean }) {
-    let query = (this.supabase as any)
+    let query = this.client
       .from('marketplace_collections')
       .select('*, user:users(id, full_name, email)')
       .eq('is_public', filters?.isPublic !== undefined ? filters.isPublic : true)
@@ -398,8 +466,8 @@ export class TemplateMarketplaceService {
     return data
   }
 
-  async createCollection(collection: any) {
-    const { data, error } = await (this.supabase as any)
+  async createCollection(collection: MarketplaceCollectionInsertInput) {
+    const { data, error } = await this.client
       .from('marketplace_collections')
       .insert(collection)
       .select()
@@ -410,7 +478,7 @@ export class TemplateMarketplaceService {
   }
 
   async addTemplateToCollection(collectionId: string, marketplaceTemplateId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_collection_templates')
       .insert({
         collection_id: collectionId,
@@ -431,7 +499,7 @@ export class TemplateMarketplaceService {
     reason: string,
     description?: string
   ) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_reports')
       .insert({
         marketplace_template_id: marketplaceTemplateId,
@@ -448,8 +516,8 @@ export class TemplateMarketplaceService {
 
   // ========== TRANSACTIONS ==========
 
-  async createTransaction(transaction: any) {
-    const { data, error } = await (this.supabase as any)
+  async createTransaction(transaction: MarketplaceTransactionInsertInput) {
+    const { data, error } = await this.client
       .from('marketplace_transactions')
       .insert(transaction)
       .select()
@@ -472,7 +540,7 @@ export class TemplateMarketplaceService {
       updates.payment_transaction_id = paymentTransactionId
     }
 
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.client
       .from('marketplace_transactions')
       .update(updates)
       .eq('id', transactionId)

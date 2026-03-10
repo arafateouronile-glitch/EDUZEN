@@ -220,11 +220,12 @@ export class TutorialVideosService {
     const progress = await this.getUserProgress(userId)
     const allVideos = await this.getVideos({ isPublished: true })
 
-    const progressArray = (progress || []) as any[]
-    const allVideosArray = (allVideos || []) as any[]
-    const completed = progressArray.filter((p: any) => p.is_completed).length || 0
+    type ProgressItem = { is_completed?: boolean; watched_seconds?: number }
+    const progressArray = (progress || []) as ProgressItem[]
+    const allVideosArray = (allVideos || []) as unknown[]
+    const completed = progressArray.filter((p) => p.is_completed).length || 0
     const total = allVideosArray.length || 0
-    const inProgress = progressArray.filter((p: any) => !p.is_completed && p.watched_seconds > 0).length || 0
+    const inProgress = progressArray.filter((p) => !p.is_completed && (p.watched_seconds ?? 0) > 0).length || 0
 
     return {
       completed,

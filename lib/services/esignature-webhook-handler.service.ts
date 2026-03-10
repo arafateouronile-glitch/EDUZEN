@@ -28,8 +28,8 @@ export interface SignatureWebhookEvent {
   signerName?: string
   signedAt?: string
   status?: string
-  metadata?: Record<string, any>
-  rawPayload?: any
+  metadata?: Record<string, unknown>
+  rawPayload?: unknown
 }
 
 export interface WebhookProcessingResult {
@@ -207,13 +207,16 @@ export class ESignatureWebhookHandlerService {
 
     const supabase = await createClient()
 
-    // Mettre à jour le statut du document
+    // Mettre à jour le statut du document (colonnes status/signed_at peuvent exister en BDD)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const docUpdate: any = {
+      updated_at: new Date().toISOString(),
+      status: 'signed',
+      signed_at: new Date().toISOString(),
+    }
     const { error: updateError } = await supabase
       .from('documents')
-      .update({
-        status: 'signed',
-        signed_at: new Date().toISOString(),
-      } as any)
+      .update(docUpdate)
       .eq('id', event.documentId)
 
     if (updateError) {
@@ -397,21 +400,24 @@ export class ESignatureWebhookHandlerService {
   /**
    * Parse le payload d'un webhook Yousign
    */
-  parseYousignWebhook(payload: any): SignatureWebhookEvent {
-    const eventType = this.mapYousignEventType(payload.event_name || payload.type)
-
+  parseYousignWebhook(payload: Record<string, unknown>): SignatureWebhookEvent {
+    const p = payload as Record<string, unknown> & {
+      signature_request?: { id?: string; metadata?: { documentId?: string }; signer?: { email?: string }; signed_at?: string; status?: string }
+      signer?: { email?: string; info?: { first_name?: string; last_name?: string }; signed_at?: string }
+    }
+    const eventType = this.mapYousignEventType((payload.event_name || payload.type) as string)
     return {
       provider: 'yousign',
       eventType,
-      signatureId: payload.signature_request?.id || payload.id,
-      documentId: payload.metadata?.documentId || payload.signature_request?.metadata?.documentId,
-      signerEmail: payload.signer?.email || payload.signature_request?.signer?.email,
-      signerName: payload.signer?.info?.first_name && payload.signer?.info?.last_name
-        ? `${payload.signer.info.first_name} ${payload.signer.info.last_name}`
+      signatureId: p.signature_request?.id || (payload.id as string),
+      documentId: (payload.metadata as Record<string, unknown>)?.documentId as string || p.signature_request?.metadata?.documentId,
+      signerEmail: p.signer?.email || p.signature_request?.signer?.email,
+      signerName: p.signer?.info?.first_name && p.signer?.info?.last_name
+        ? `${p.signer.info.first_name} ${p.signer.info.last_name}`
         : undefined,
-      signedAt: payload.signer?.signed_at || payload.signature_request?.signed_at,
-      status: payload.status || payload.signature_request?.status,
-      metadata: payload.metadata,
+      signedAt: p.signer?.signed_at || p.signature_request?.signed_at,
+      status: (payload.status as string) || p.signature_request?.status,
+      metadata: payload.metadata as Record<string, unknown>,
       rawPayload: payload,
     }
   }
@@ -419,21 +425,25 @@ export class ESignatureWebhookHandlerService {
   /**
    * Parse le payload d'un webhook DocuSign
    */
-  parseDocuSignWebhook(payload: any): SignatureWebhookEvent {
-    const eventType = this.mapDocuSignEventType(payload.event)
+  parseDocuSignWebhook(payload: Record<string, unknown>): SignatureWebhookEvent {
+    const eventType = this.mapDocuSignEventType(payload.event as string)
+    const data = (payload.data ?? {}) as Record<string, unknown>
+    const recipients = (data.recipients ?? {}) as Record<string, unknown>
+    const signers = Array.isArray(recipients.signers) ? recipients.signers : []
+    const firstSigner = (signers[0] ?? {}) as Record<string, unknown>
 
     return {
       provider: 'docusign',
       eventType,
-      signatureId: payload.envelopeId || payload.data?.envelopeId,
-      documentId: payload.envelopeSummary?.customFields?.textCustomFields?.find(
-        (f: any) => f.name === 'documentId'
+      signatureId: (payload.envelopeId as string) || (data.envelopeId as string),
+      documentId: ((payload.envelopeSummary as Record<string, unknown>)?.customFields as { textCustomFields?: Array<{ name?: string; value?: string }> })?.textCustomFields?.find(
+        (f) => f.name === 'documentId'
       )?.value,
-      signerEmail: payload.data?.recipients?.signers?.[0]?.email,
-      signerName: payload.data?.recipients?.signers?.[0]?.name,
-      signedAt: payload.data?.recipients?.signers?.[0]?.signedDateTime,
-      status: payload.data?.envelopeStatus || payload.status,
-      metadata: payload.data,
+      signerEmail: firstSigner.email as string | undefined,
+      signerName: firstSigner.name as string | undefined,
+      signedAt: firstSigner.signedDateTime as string | undefined,
+      status: (data.envelopeStatus ?? payload.status) as string | undefined,
+      metadata: data as Record<string, unknown>,
       rawPayload: payload,
     }
   }
@@ -441,21 +451,25 @@ export class ESignatureWebhookHandlerService {
   /**
    * Parse le payload d'un webhook HelloSign
    */
-  parseHelloSignWebhook(payload: any): SignatureWebhookEvent {
-    const eventType = this.mapHelloSignEventType(payload.event?.event_type)
+  parseHelloSignWebhook(payload: Record<string, unknown>): SignatureWebhookEvent {
+    const ev = (payload.event ?? {}) as Record<string, unknown>
+    const sr = (payload.signature_request ?? {}) as Record<string, unknown>
+    const sigs = Array.isArray(sr.signatures) ? sr.signatures : []
+    const firstSig = (sigs[0] ?? {}) as Record<string, unknown>
+    const eventType = this.mapHelloSignEventType(ev.event_type as string)
 
     return {
       provider: 'hellosign',
       eventType,
-      signatureId: payload.signature_request?.signature_request_id,
-      documentId: payload.signature_request?.metadata?.documentId,
-      signerEmail: payload.event?.event_metadata?.reported_for_signer_email,
-      signerName: payload.signature_request?.signatures?.[0]?.signer_name,
-      signedAt: payload.signature_request?.signatures?.[0]?.signed_at
-        ? new Date(payload.signature_request.signatures[0].signed_at * 1000).toISOString()
+      signatureId: sr.signature_request_id as string | undefined,
+      documentId: (sr.metadata as Record<string, unknown>)?.documentId as string | undefined,
+      signerEmail: (ev.event_metadata as Record<string, unknown>)?.reported_for_signer_email as string | undefined,
+      signerName: firstSig.signer_name as string | undefined,
+      signedAt: typeof firstSig.signed_at === 'number'
+        ? new Date(firstSig.signed_at * 1000).toISOString()
         : undefined,
-      status: payload.signature_request?.status,
-      metadata: payload.signature_request?.metadata,
+      status: sr.status as string | undefined,
+      metadata: sr.metadata as Record<string, unknown> | undefined,
       rawPayload: payload,
     }
   }

@@ -107,12 +107,12 @@ export function createPaginatedResponse<T>(
 export async function paginateQuery<T>(
   queryBuilder: {
     order: (column: string, options?: { ascending: boolean }) => {
-      range: (from: number, to: number) => Promise<{ data: T[] | null; error: any }>
+      range: (from: number, to: number) => Promise<{ data: T[] | null; error: unknown }>
     }
-    [key: string]: any
+    [key: string]: unknown
   },
   pagination: PaginationParams,
-  countQuery?: () => Promise<{ count: number | null; error: any }>
+  countQuery?: () => Promise<{ count: number | null; error: unknown }>
 ): Promise<PaginatedResponse<T>> {
   const offset = calculateOffset(pagination.page, pagination.pageSize)
   const from = offset

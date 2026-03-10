@@ -116,7 +116,7 @@ export class SigningProcessService {
       .order('order_index', { ascending: true })
 
     // Extraire le document du tableau retourné par Supabase
-    const documentArray = (process as any).document as Array<{ id: string; title: string; file_url: string | null }> | undefined
+    const documentArray = (process as { document?: Array<{ id: string; title: string; file_url: string | null }> }).document
     const document = documentArray && documentArray.length > 0 ? documentArray[0] : undefined
 
     return {

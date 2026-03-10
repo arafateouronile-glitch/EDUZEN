@@ -6,7 +6,10 @@
 /**
  * Traite les champs de formulaire dans le HTML et les rend interactifs
  */
-export function processFormFields(html: string, variables: Record<string, any> = {}): string {
+export function processFormFields(
+  html: string,
+  variables: Record<string, string | number | boolean | undefined> = {}
+): string {
   // Remplacer les variables dans les attributs data-* des champs
   let processedHTML = html
 
@@ -215,30 +218,26 @@ export function processFormFields(html: string, variables: Record<string, any> =
  * Extrait les valeurs des champs de formulaire depuis le HTML
  * Note: Cette fonction doit être utilisée uniquement côté client (navigateur)
  */
-export function extractFormFieldValues(html: string): Record<string, any> {
+export function extractFormFieldValues(html: string): Record<string, string | boolean> {
   if (typeof window === 'undefined') {
-    // Côté serveur, retourner un objet vide
     return {}
   }
-
-  const values: Record<string, any> = {}
+  const values: Record<string, string | boolean> = {}
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
-  
-  doc.querySelectorAll('.form-field-interactive').forEach((field: any) => {
+  doc.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('.form-field-interactive').forEach((field) => {
     const fieldName = field.getAttribute('name') || field.getAttribute('data-field-name')
     if (fieldName) {
-      if (field.type === 'checkbox') {
+      if (field instanceof HTMLInputElement && field.type === 'checkbox') {
         values[fieldName] = field.checked
-      } else if (field.type === 'radio') {
+      } else if (field instanceof HTMLInputElement && field.type === 'radio') {
         if (field.checked) {
           values[fieldName] = field.value
         }
       } else {
-        values[fieldName] = field.value
+        values[fieldName] = (field as HTMLInputElement | HTMLTextAreaElement).value
       }
     }
   })
-  
   return values
 }

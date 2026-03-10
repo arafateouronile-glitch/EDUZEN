@@ -35,7 +35,8 @@ export function ProgressChart({ data, timeRange = 14 }: ProgressChartProps) {
     return mockData
   }, [data, timeRange])
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  type TooltipPayloadItem = { value?: number; payload?: { date?: string } }
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayloadItem[] }) => {
     if (active && payload && payload.length) {
       return (
         <motion.div
@@ -43,15 +44,15 @@ export function ProgressChart({ data, timeRange = 14 }: ProgressChartProps) {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white/95 backdrop-blur-xl border border-gray-200 rounded-xl p-3 shadow-xl"
         >
-          <p className="text-sm font-semibold text-gray-900 mb-2">{payload[0].payload.date}</p>
+          <p className="text-sm font-semibold text-gray-900 mb-2">{payload[0]?.payload?.date ?? ''}</p>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-brand-blue" />
-              <span className="text-xs text-gray-600">Heures: {payload[0].value.toFixed(1)}h</span>
+              <span className="text-xs text-gray-600">Heures: {payload[0].value?.toFixed(1) ?? 0}h</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-purple-500" />
-              <span className="text-xs text-gray-600">Cours: {payload[1].value}</span>
+              <span className="text-xs text-gray-600">Cours: {payload[1]?.value ?? 0}</span>
             </div>
           </div>
         </motion.div>

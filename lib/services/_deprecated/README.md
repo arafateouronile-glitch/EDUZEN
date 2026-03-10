@@ -1,5 +1,7 @@
 # Services dépréciés (non utilisés)
 
+Ce dossier est **exclu du lint** (voir `ignorePatterns` dans `.eslintrc.json`).
+
 Ces services ont été déplacés ici car ils n’étaient pas importés par l’application (code mort potentiel). Ils sont conservés pour référence ou réactivation future.
 
 - **predictive-analytics.service.ts** – Prédictions (taux de réussite, abandon, alertes).

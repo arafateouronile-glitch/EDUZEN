@@ -5,6 +5,7 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 type UserFeedback = any
 type UserFeedbackInsert = any
@@ -42,27 +43,32 @@ export class FeedbackService {
    * Crée un nouveau feedback
    */
   async create(params: CreateFeedbackParams): Promise<UserFeedback> {
-    const { data, error } = await this.supabase
-      .from('user_feedback')
-      .insert({
-        organization_id: params.organizationId,
-        user_id: params.userId,
-        student_id: params.studentId,
-        feedback_type: params.feedbackType,
-        category: params.category,
-        title: params.title,
-        description: params.description,
-        page_url: params.pageUrl,
-        user_agent: params.userAgent,
-        screenshot_url: params.screenshotUrl,
-        priority: params.priority || 'medium',
-        status: 'pending',
-      })
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('user_feedback')
+        .insert({
+          organization_id: params.organizationId,
+          user_id: params.userId,
+          student_id: params.studentId,
+          feedback_type: params.feedbackType,
+          category: params.category,
+          title: params.title,
+          description: params.description,
+          page_url: params.pageUrl,
+          user_agent: params.userAgent,
+          screenshot_url: params.screenshotUrl,
+          priority: params.priority || 'medium',
+          status: 'pending',
+        })
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('FeedbackService.create', error, { organizationId: params.organizationId, title: params.title?.slice(0, 50) })
+      throw error
+    }
   }
 
   /**
@@ -80,46 +86,51 @@ export class FeedbackService {
       limit?: number
     }
   ) {
-    const page = filters?.page || 1
-    const limit = filters?.limit || 50
-    const offset = (page - 1) * limit
+    try {
+      const page = filters?.page || 1
+      const limit = filters?.limit || 50
+      const offset = (page - 1) * limit
 
-    let query = this.supabase
-      .from('user_feedback')
-      .select('*, users(id, full_name, email), students(id, first_name, last_name, email), assigned_user:users!assigned_to(id, full_name, email)', { count: 'exact' })
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false })
+      let query = this.supabase
+        .from('user_feedback')
+        .select('*, users(id, full_name, email), students(id, first_name, last_name, email), assigned_user:users!assigned_to(id, full_name, email)', { count: 'exact' })
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
 
-    if (filters?.userId) {
-      query = query.eq('user_id', filters.userId)
-    }
+      if (filters?.userId) {
+        query = query.eq('user_id', filters.userId)
+      }
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status)
-    }
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
 
-    if (filters?.feedbackType) {
-      query = query.eq('feedback_type', filters.feedbackType)
-    }
+      if (filters?.feedbackType) {
+        query = query.eq('feedback_type', filters.feedbackType)
+      }
 
-    if (filters?.priority) {
-      query = query.eq('priority', filters.priority)
-    }
+      if (filters?.priority) {
+        query = query.eq('priority', filters.priority)
+      }
 
-    if (filters?.assignedTo) {
-      query = query.eq('assigned_to', filters.assignedTo)
-    }
+      if (filters?.assignedTo) {
+        query = query.eq('assigned_to', filters.assignedTo)
+      }
 
-    const { data, error, count } = await query.range(offset, offset + limit - 1)
+      const { data, error, count } = await query.range(offset, offset + limit - 1)
 
-    if (error) throw error
+      if (error) throw error
 
-    return {
-      data: data || [],
-      total: count || 0,
-      page,
-      limit,
-      totalPages: Math.ceil((count || 0) / limit),
+      return {
+        data: data || [],
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+      }
+    } catch (error) {
+      logger.error('FeedbackService.getByOrganization', error, { organizationId })
+      throw error
     }
   }
 

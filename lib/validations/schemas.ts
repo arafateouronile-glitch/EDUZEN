@@ -305,6 +305,28 @@ export const enrollmentSchema = z.object({
   path: ['paid_amount'],
 })
 
+// Schémas API documents & email (audit P1 validation)
+export const generateDocxBodySchema = z.object({
+  templateId: z.string().min(1, 'templateId requis').max(100),
+  variables: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])),
+  filename: z.string().max(255).optional().default('document.docx'),
+})
+export const generateWordBodySchema = z.object({
+  template: z.object({
+    name: z.string(),
+    type: z.string(),
+  }).passthrough(),
+  variables: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])),
+  documentId: z.string().uuid().optional(),
+})
+export const sendEmailBodySchema = z.object({
+  to: z.union([z.string().email('Email destinataire invalide'), z.array(z.string().email())]),
+  subject: z.string().min(1, 'Objet requis').max(500),
+  message: z.string().max(50_000).optional(),
+  attachmentUrl: z.string().url().optional(),
+  attachmentName: z.string().max(255).optional(),
+})
+
 // Type helper pour extraire le type d'un schéma
 export type StudentFormData = z.infer<typeof studentSchema>
 export type StudentUpdateFormData = z.infer<typeof studentUpdateSchema>

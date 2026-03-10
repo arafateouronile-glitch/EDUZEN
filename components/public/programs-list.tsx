@@ -36,8 +36,9 @@ export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.prima
           (acc, formation) => acc + (formation.sessions?.length || 0),
           0
         ) || 0
-        const price = (program as any).price ?? (program as any).price_enterprise ?? program.formations?.[0]?.price
-        const currency = (program as any).currency || 'EUR'
+        const programExt = program as { price?: number; price_enterprise?: number; currency?: string; photo_url?: string }
+        const price = programExt.price ?? programExt.price_enterprise ?? program.formations?.[0]?.price
+        const currency = programExt.currency || 'EUR'
         const formatPrice = (value: number) => value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
         const currencySymbol = currency === 'EUR' ? '€' : currency === 'XOF' ? 'FCFA' : currency
 
@@ -62,9 +63,9 @@ export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.prima
               >
               {/* Image de couverture avec effet de zoom au survol */}
               <div className="relative h-56 w-full overflow-hidden">
-                {(program.public_image_url || (program as any).photo_url) ? (
+                {(program.public_image_url || programExt.photo_url) ? (
                   <Image
-                    src={(program.public_image_url || (program as any).photo_url) as string}
+                    src={(program.public_image_url || programExt.photo_url) as string}
                     alt={program.name}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

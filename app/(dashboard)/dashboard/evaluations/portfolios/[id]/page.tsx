@@ -23,6 +23,21 @@ import { motion } from '@/components/ui/motion'
 import { formatDate, cn } from '@/lib/utils'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
+type SectionWithFields = { id: string; title?: string; description?: string; fields?: TemplateField[] }
+type TemplateField = { id: string; type?: string; placeholder?: string; options?: string[]; label?: string; required?: boolean; min?: number; max?: number; description?: string; competencyLevels?: string[] }
+type PortfolioWithRelations = {
+  id: string
+  teacher_notes?: string | null
+  is_visible_to_student?: boolean
+  content?: Record<string, unknown>
+  template?: { name?: string; primary_color?: string; template_structure?: SectionWithFields[] }
+  student?: { first_name?: string; last_name?: string; email?: string; photo_url?: string }
+  session?: { name?: string; formations?: { name?: string } }
+  status?: string
+  progress_percentage?: number | null
+  [key: string]: unknown
+}
+
 export default function EditPortfolioPage() {
   const params = useParams()
   const router = useRouter()
@@ -32,21 +47,15 @@ export default function EditPortfolioPage() {
   const { addToast } = useToast()
   const portfolioId = params.id as string
 
-  const [formData, setFormData] = useState<Record<string, any>>({})
+  const [formData, setFormData] = useState<Record<string, unknown>>({})
   const [teacherNotes, setTeacherNotes] = useState('')
   const [isVisibleToStudent, setIsVisibleToStudent] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   // Récupérer le portfolio
-  const { data: portfolio, isLoading } = useQuery<{
-    id: string;
-    teacher_notes?: string | null;
-    is_visible_to_student?: boolean;
-    content?: Record<string, any>;
-    [key: string]: any;
-  } | null>({
+  const { data: portfolio, isLoading } = useQuery({
     queryKey: ['portfolio', portfolioId],
-    queryFn: async () => {
+    queryFn: async (): Promise<PortfolioWithRelations | null> => {
       const { data, error } = await supabase
         .from('learning_portfolios')
         .select(`
@@ -59,7 +68,7 @@ export default function EditPortfolioPage() {
         .single()
 
       if (error) throw error
-      return data as any
+      return data as unknown as PortfolioWithRelations | null
     },
     enabled: !!portfolioId,
   })
@@ -98,8 +107,9 @@ export default function EditPortfolioPage() {
   // Charger les entrées dans le formulaire
   useEffect(() => {
     if (entries && entries.length > 0) {
-      const entriesData: Record<string, any> = {}
-      entries.forEach((entry: any) => {
+      type PortfolioEntry = { section_id: string; field_id: string; value?: unknown; teacher_comment?: string | null }
+      const entriesData: Record<string, unknown> = {}
+      entries.forEach((entry: PortfolioEntry) => {
         const key = `${entry.section_id}.${entry.field_id}`
         entriesData[key] = entry.value
         if (entry.teacher_comment) {
@@ -112,10 +122,11 @@ export default function EditPortfolioPage() {
 
   // Mutation pour sauvegarder
   const saveMutation = useMutation({
-    mutationFn: async (data: { content: Record<string, any>, status: string }) => {
+    mutationFn: async (data: { content: Record<string, unknown>; status: string }) => {
       // Mettre à jour le portfolio
-      const { error: portfolioError } = await (supabase
-        .from('learning_portfolios') as any)
+      type TableChain = { from(table: string): { update(data: object): { eq(col: string, id: string): Promise<{ error: unknown }> } } }
+      const { error: portfolioError } = await (supabase as unknown as TableChain)
+        .from('learning_portfolios')
         .update({
           content: data.content,
           status: data.status,
@@ -129,11 +140,12 @@ export default function EditPortfolioPage() {
       if (portfolioError) throw portfolioError
 
       // Sauvegarder les entrées individuelles
-      const entriesToUpsert: any[] = []
-      const template = portfolio?.template
+      type SectionShape = { id: string; fields?: { id: string }[] }
+      const entriesToUpsert: { portfolio_id: string; section_id: string; field_id: string; value: unknown; teacher_comment: string | null; evaluated_by?: string; evaluated_at: string }[] = []
+      const template = portfolio?.template as { template_structure?: SectionShape[] } | undefined
 
-      template?.template_structure?.forEach((section: any) => {
-        section.fields?.forEach((field: any) => {
+      template?.template_structure?.forEach((section: SectionShape) => {
+        section.fields?.forEach((field: { id: string }) => {
           const key = `${section.id}.${field.id}`
           const value = data.content[key]
           if (value !== undefined) {
@@ -142,7 +154,7 @@ export default function EditPortfolioPage() {
               section_id: section.id,
               field_id: field.id,
               value: value,
-              teacher_comment: data.content[`${key}_comment`] || null,
+              teacher_comment: (data.content[`${key}_comment`] as string | undefined) ?? null,
               evaluated_by: user?.id,
               evaluated_at: new Date().toISOString(),
             })
@@ -151,8 +163,9 @@ export default function EditPortfolioPage() {
       })
 
       if (entriesToUpsert.length > 0) {
-        const { error: entriesError } = await (supabase
-          .from('learning_portfolio_entries') as any)
+        type UpsertChain = { from(table: string): { upsert(data: unknown[], opts: { onConflict: string }): Promise<{ error: unknown }> } }
+        const { error: entriesError } = await (supabase as unknown as UpsertChain)
+          .from('learning_portfolio_entries')
           .upsert(entriesToUpsert, { onConflict: 'portfolio_id,section_id,field_id' })
 
         if (entriesError) {
@@ -165,8 +178,8 @@ export default function EditPortfolioPage() {
       queryClient.invalidateQueries({ queryKey: ['portfolio-entries', portfolioId] })
       addToast({ type: 'success', title: 'Livret sauvegardé', description: 'Les modifications ont été enregistrées.' })
     },
-    onError: (error: any) => {
-      addToast({ type: 'error', title: 'Erreur', description: error.message || 'Impossible de sauvegarder.' })
+    onError: (error: unknown) => {
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Impossible de sauvegarder.' })
     },
   })
 
@@ -181,7 +194,7 @@ export default function EditPortfolioPage() {
     }
   }
 
-  const updateField = (sectionId: string, fieldId: string, value: any) => {
+  const updateField = (sectionId: string, fieldId: string, value: unknown) => {
     const key = `${sectionId}.${fieldId}`
     setFormData(prev => ({ ...prev, [key]: value }))
   }
@@ -191,8 +204,10 @@ export default function EditPortfolioPage() {
     return formData[key]
   }
 
+  const toInputValue = (v: unknown): string | number => (typeof v === 'string' || typeof v === 'number' ? v : '')
+
   // Rendu d'un champ selon son type
-  const renderField = (section: any, field: any) => {
+  const renderField = (section: SectionWithFields, field: TemplateField) => {
     const value = getFieldValue(section.id, field.id)
     const key = `${section.id}.${field.id}`
 
@@ -200,7 +215,7 @@ export default function EditPortfolioPage() {
       case 'text':
         return (
           <Input
-            value={value || ''}
+            value={toInputValue(value)}
             onChange={(e) => updateField(section.id, field.id, e.target.value)}
             placeholder={field.placeholder || ''}
           />
@@ -209,7 +224,7 @@ export default function EditPortfolioPage() {
       case 'textarea':
         return (
           <Textarea
-            value={value || ''}
+            value={toInputValue(value)}
             onChange={(e) => updateField(section.id, field.id, e.target.value)}
             placeholder={field.placeholder || ''}
             rows={4}
@@ -220,7 +235,7 @@ export default function EditPortfolioPage() {
         return (
           <Input
             type="number"
-            value={value || ''}
+            value={toInputValue(value)}
             onChange={(e) => updateField(section.id, field.id, parseFloat(e.target.value))}
             min={field.min}
             max={field.max}
@@ -230,7 +245,7 @@ export default function EditPortfolioPage() {
       case 'select':
         return (
           <select
-            value={value || ''}
+            value={toInputValue(value)}
             onChange={(e) => updateField(section.id, field.id, e.target.value)}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-blue"
           >
@@ -246,7 +261,7 @@ export default function EditPortfolioPage() {
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              checked={value || false}
+              checked={Boolean(value)}
               onChange={(e) => updateField(section.id, field.id, e.target.checked)}
               className="rounded"
             />
@@ -258,14 +273,14 @@ export default function EditPortfolioPage() {
         return (
           <Input
             type="date"
-            value={value || ''}
+            value={toInputValue(value)}
             onChange={(e) => updateField(section.id, field.id, e.target.value)}
           />
         )
 
       case 'rating':
-        const maxRating = field.max || 5
-        const minRating = field.min || 1
+        const maxRating = field.max ?? 5
+        const minRating = field.min ?? 1
         return (
           <div className="flex items-center gap-1">
             {Array.from({ length: maxRating - minRating + 1 }, (_, i) => i + minRating).map((rating) => (
@@ -275,14 +290,14 @@ export default function EditPortfolioPage() {
                 onClick={() => updateField(section.id, field.id, rating)}
                 className={cn(
                   'p-1 rounded transition-colors',
-                  (value || 0) >= rating ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'
+                  (Number(value) || 0) >= rating ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'
                 )}
               >
                 <Star className="h-6 w-6 fill-current" />
               </button>
             ))}
             <span className="ml-2 text-sm text-gray-600">
-              {value ? `${value}/${maxRating}` : 'Non noté'}
+              {value != null && value !== '' ? `${value}/${maxRating}` : 'Non noté'}
             </span>
           </div>
         )
@@ -334,7 +349,7 @@ export default function EditPortfolioPage() {
       default:
         return (
           <Input
-            value={value || ''}
+            value={toInputValue(value)}
             onChange={(e) => updateField(section.id, field.id, e.target.value)}
           />
         )
@@ -456,7 +471,7 @@ export default function EditPortfolioPage() {
 
       {/* Sections du livret */}
       <div className="space-y-6">
-        {template?.template_structure?.map((section: any, sectionIndex: number) => (
+        {template?.template_structure?.map((section: SectionWithFields, sectionIndex: number) => (
           <motion.div
             key={section.id}
             initial={{ opacity: 0, y: 20 }}
@@ -480,7 +495,7 @@ export default function EditPortfolioPage() {
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="space-y-6">
-                  {section.fields?.map((field: any) => (
+                  {section.fields?.map((field: TemplateField) => (
                     <div key={field.id}>
                       <Label className="flex items-center gap-2 mb-2">
                         {field.label}
@@ -493,7 +508,7 @@ export default function EditPortfolioPage() {
                         <div className="mt-2">
                           <Input
                             placeholder="Commentaire (optionnel)"
-                            value={formData[`${section.id}.${field.id}_comment`] || ''}
+                            value={toInputValue(formData[`${section.id}.${field.id}_comment`])}
                             onChange={(e) => {
                               const key = `${section.id}.${field.id}_comment`
                               setFormData(prev => ({ ...prev, [key]: e.target.value }))

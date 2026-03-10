@@ -1,5 +1,6 @@
 {
   "extends": "next/core-web-vitals",
+  "ignorePatterns": ["lib/services/_deprecated/**"],
   "rules": {
     "@next/next/no-img-element": "off",
     "react/no-unescaped-entities": "off",

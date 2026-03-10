@@ -11,6 +11,9 @@ const CRON_SECRET = process.env.CRON_SECRET
 const ALLOWED_IPS = process.env.CRON_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
 
 export async function GET(request: NextRequest) {
+  if (!CRON_SECRET) {
+    return NextResponse.json({ error: 'CRON_SECRET non configuré' }, { status: 503 })
+  }
   return withCronSecurity(
     request,
     async (req) => {
@@ -133,7 +136,7 @@ export async function GET(request: NextRequest) {
     {
       secret: CRON_SECRET,
       allowedIPs: ALLOWED_IPS,
-      requireSecret: !!CRON_SECRET,
+      requireSecret: true,
       logExecution: true,
     }
   )

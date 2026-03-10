@@ -18212,9 +18212,10 @@ export type Database = {
           is_read: boolean | null
           message_type: string | null
           read_at: string | null
+          student_id: string | null
           ticket_id: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           attachments?: Json | null
@@ -18225,9 +18226,10 @@ export type Database = {
           is_read?: boolean | null
           message_type?: string | null
           read_at?: string | null
+          student_id?: string | null
           ticket_id: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           attachments?: Json | null
@@ -18238,9 +18240,10 @@ export type Database = {
           is_read?: boolean | null
           message_type?: string | null
           read_at?: string | null
+          student_id?: string | null
           ticket_id?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -18340,11 +18343,12 @@ export type Database = {
           priority: string | null
           resolved_at: string | null
           status: string | null
+          student_id: string | null
           subject: string
           tags: string[] | null
           ticket_number: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           assigned_at?: string | null
@@ -18360,11 +18364,12 @@ export type Database = {
           priority?: string | null
           resolved_at?: string | null
           status?: string | null
+          student_id?: string | null
           subject: string
           tags?: string[] | null
-          ticket_number: string
+          ticket_number?: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           assigned_at?: string | null
@@ -18380,11 +18385,12 @@ export type Database = {
           priority?: string | null
           resolved_at?: string | null
           status?: string | null
+          student_id?: string | null
           subject?: string
           tags?: string[] | null
           ticket_number?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

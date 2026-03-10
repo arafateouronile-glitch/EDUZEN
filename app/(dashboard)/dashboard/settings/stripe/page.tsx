@@ -67,10 +67,10 @@ export default function StripeSettingsPage() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Erreur lors de la sauvegarde',
+        description: error instanceof Error ? error.message : 'Erreur lors de la sauvegarde',
         type: 'error',
       })
     },
@@ -102,10 +102,10 @@ export default function StripeSettingsPage() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur de connexion',
-        description: error.message || 'Impossible de se connecter à Stripe',
+        description: error instanceof Error ? error.message : 'Impossible de se connecter à Stripe',
         type: 'error',
       })
     },

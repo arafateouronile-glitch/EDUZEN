@@ -3,38 +3,35 @@
  * Permet de générer des tableaux à partir de données structurées
  */
 
+/** Ligne de tableau dynamique (objet clé-valeur) */
+type TableRow = Record<string, unknown>
+
 /**
  * Traite les tableaux dynamiques dans le contenu HTML
  * Remplace les patterns de tableaux dynamiques par du HTML généré
  */
 export function processDynamicTables(
   html: string,
-  variables: Record<string, any>
+  variables: Record<string, unknown>
 ): string {
   let result = html
 
-  // Pattern pour les tableaux dynamiques : {{#table variable_name}}
-  // Exemple : {{#table facture_items}}
   const tablePattern = /\{\{#table\s+(\w+)\}\}([\s\S]*?)\{\{\/table\}\}/g
 
-  result = result.replace(tablePattern, (match, variableName, tableTemplate) => {
+  result = result.replace(tablePattern, (_match, variableName, tableTemplate) => {
     const tableData = variables[variableName]
-
-    // Si la variable n'existe pas ou n'est pas un tableau, retourner le template vide
     if (!tableData || !Array.isArray(tableData)) {
       return ''
     }
-
-    // Si c'est une chaîne JSON, parser
-    let items: any[] = []
+    let items: TableRow[]
     if (typeof tableData === 'string') {
       try {
-        items = JSON.parse(tableData)
+        items = JSON.parse(tableData) as TableRow[]
       } catch {
         return ''
       }
     } else {
-      items = tableData
+      items = tableData as TableRow[]
     }
 
     // Générer les lignes du tableau
@@ -72,22 +69,18 @@ export function processDynamicTables(
     if (!arrayData || !Array.isArray(arrayData)) {
       return ''
     }
-
-    let items: any[] = []
+    let items: TableRow[]
     if (typeof arrayData === 'string') {
       try {
-        items = JSON.parse(arrayData)
+        items = JSON.parse(arrayData) as TableRow[]
       } catch {
         return ''
       }
     } else {
-      items = arrayData
+      items = arrayData as TableRow[]
     }
-
-    const rows = items.map((item, index) => {
+    const rows = items.map((item: TableRow, index: number) => {
       let row = itemTemplate
-
-      // Remplacer les variables dans le template
       if (typeof item === 'object' && item !== null) {
         Object.keys(item).forEach((key) => {
           const value = item[key] !== null && item[key] !== undefined ? String(item[key]) : ''

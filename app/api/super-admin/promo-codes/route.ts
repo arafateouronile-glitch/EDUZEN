@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as any)?.manage_promo_codes) {
+    const perms = admin?.permissions as Record<string, unknown> | null
+    if (!admin || !perms?.manage_promo_codes) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -80,7 +81,8 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as any)?.manage_promo_codes) {
+    const perms = admin?.permissions as Record<string, unknown> | null
+    if (!admin || !perms?.manage_promo_codes) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -103,8 +105,8 @@ export async function POST(request: NextRequest) {
         first_subscription_only: body.first_subscription_only ?? false,
         is_active: body.is_active ?? true,
         created_by: user.id,
-        metadata: (body.metadata || {}) as any,
-      })
+        metadata: (body.metadata || {}) as Record<string, unknown>,
+      } as never)
       .select()
       .single()
 

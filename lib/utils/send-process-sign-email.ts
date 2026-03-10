@@ -51,7 +51,7 @@ export async function sendProcessSignEmail(params: SendProcessSignEmailParams): 
       to: params.to,
       subject: `Signature requise : ${params.documentTitle}`,
       html,
-    } as any)
+    })
     if (error) {
       logger.error('Envoi process sign:', { to: params.to, error })
       return false

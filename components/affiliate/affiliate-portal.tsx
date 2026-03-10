@@ -27,7 +27,7 @@ import {
   Download,
   Mail,
   FileText,
-  Image,
+  Image as ImageIcon,
   Video,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -360,13 +360,13 @@ export function AffiliatePortal({ data }: { data: AffiliatePortalData }) {
             <div className="flex flex-wrap gap-3">
               <Button variant="outline" className="gap-2" asChild>
                 <a href={KIT_LOGO} target="_blank" rel="noopener noreferrer">
-                  <Image className="h-4 w-4" />
+                  <ImageIcon className="h-4 w-4" aria-hidden />
                   Logo
                 </a>
               </Button>
               <Button variant="outline" className="gap-2" asChild>
                 <a href={KIT_BANNERS} target="_blank" rel="noopener noreferrer">
-                  <Image className="h-4 w-4" />
+                  <ImageIcon className="h-4 w-4" aria-hidden />
                   Bannières
                 </a>
               </Button>

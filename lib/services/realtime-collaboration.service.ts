@@ -101,8 +101,9 @@ export class RealtimeCollaborationService {
         })
 
         // Gérer les erreurs de connexion
-        provider.on('connection-error', (event: any, provider: WebsocketProvider) => {
-          const errorMessage = event?.message || event?.error?.message || String(event)
+        provider.on('connection-error', (event: unknown, _provider: WebsocketProvider) => {
+          const e = event as { message?: string; error?: { message?: string } }
+          const errorMessage = e?.message || e?.error?.message || String(event)
           logger.warn('RealtimeCollaboration - Erreur de connexion WebSocket', { errorMessage })
           // Ne pas lancer d'erreur, laisser le système gérer silencieusement
         })
@@ -296,11 +297,11 @@ export class RealtimeCollaborationService {
 
     let content = ''
     if (section === 'header') {
-      content = (data.header as any)?.html || ''
+      content = (data.header as { html?: string } | null)?.html || ''
     } else if (section === 'body') {
-      content = (data.content as any)?.html || ''
+      content = (data.content as { html?: string } | null)?.html || ''
     } else if (section === 'footer') {
-      content = (data.footer as any)?.html || ''
+      content = (data.footer as { html?: string } | null)?.html || ''
     }
 
     // Convertir le HTML en XML pour Y.js

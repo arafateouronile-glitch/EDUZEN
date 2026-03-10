@@ -159,13 +159,12 @@ export class WordGeneratorService {
       await fs.writeFile(outputPath, buffer)
 
       logger.info('WordGeneratorService - Document généré avec succès', { outputPath })
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { properties?: { errors?: Array<{ message?: string }> } }
       logger.error('WordGeneratorService - Erreur lors de la génération', error, { error: sanitizeError(error) })
-      
-      // Gestion des erreurs spécifiques à docxtemplater
-      if (error.properties && error.properties.errors instanceof Array) {
-        const errorMessages = error.properties.errors
-          .map((e: any) => e.message)
+      if (err?.properties?.errors && Array.isArray(err.properties.errors)) {
+        const errorMessages = err.properties.errors
+          .map((e) => e?.message ?? '')
           .join(', ')
         throw new Error(`Erreur docxtemplater: ${errorMessages}`)
       }
@@ -178,8 +177,8 @@ export class WordGeneratorService {
    * Prépare les données pour docxtemplater
    * Formate les dates, gère les tableaux, etc.
    */
-  private prepareData(data: ConventionData): any {
-    const prepared: any = {
+  private prepareData(data: ConventionData): Record<string, unknown> {
+    const prepared: Record<string, unknown> = {
       // Informations de l'organisme
       organisme_nom: data.organisme.nom,
       organisme_adresse: data.organisme.adresse,

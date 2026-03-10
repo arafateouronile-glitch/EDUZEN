@@ -232,7 +232,7 @@ export function SendSignatureRequestDialog({
 
               <div>
                 <Label htmlFor="recipientType">Type de destinataire</Label>
-                <Select value={recipientType} onValueChange={(v) => setRecipientType(v as any)}>
+                <Select value={recipientType} onValueChange={(v) => setRecipientType(v as 'student' | 'funder' | 'teacher' | 'other')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

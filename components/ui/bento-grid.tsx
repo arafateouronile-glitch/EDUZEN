@@ -42,7 +42,7 @@ const BentoGrid = React.forwardRef<HTMLDivElement, BentoGridProps>(
 )
 BentoGrid.displayName = 'BentoGrid'
 
-export interface BentoCardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface BentoCardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   span?: 1 | 2 | 3 | 4
   rowSpan?: 1 | 2 | 3
   className?: string
@@ -74,7 +74,7 @@ const BentoCard = React.forwardRef<HTMLDivElement, BentoCardProps>(
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-        {...(props as any)}
+        {...(props as Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'>)}
       >
         {children}
       </motion.div>

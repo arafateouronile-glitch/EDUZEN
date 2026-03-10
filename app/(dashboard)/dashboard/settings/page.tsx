@@ -16,7 +16,7 @@ import {
   Settings, Users, Shield, Bell, CreditCard, Globe, FileText,
   Layout, Code, Save, Building2, Mail, Phone, MapPin,
   Calendar, DollarSign, Languages, Moon, Sun, Key,
-  Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image, Award, Palette, X, Clock, Receipt, FileSignature, User
+  Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image as ImageIcon, Award, Palette, X, Clock, Receipt, FileSignature, User
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -168,27 +168,34 @@ export default function SettingsPage() {
   // Mettre à jour le formulaire quand organization change
   useEffect(() => {
     if (organization) {
-      // Récupérer postal_code depuis settings si présent
-      const settings = ((organization as any).settings as any) || {}
+      type OrgFormSource = {
+        settings?: { postal_code?: string } | null
+        name?: string; code?: string; type?: string; country?: string; currency?: string
+        language?: string; address?: string; city?: string; phone?: string; email?: string
+        logo_url?: string; qualiopi_certificate_url?: string; stamp_url?: string; signature_url?: string
+        brand_color?: string; siret?: string; nda_number?: string
+      }
+      const o = organization as OrgFormSource
+      const settings = (o.settings && typeof o.settings === 'object' ? o.settings : {}) as { postal_code?: string }
       setOrgFormData({
-        name: (organization as any).name ?? '',
-        code: (organization as any).code ?? '',
-        type: (organization as any).type ?? '',
-        country: (organization as any).country ?? '',
-        currency: (organization as any).currency ?? 'EUR',
-        language: (organization as any).language ?? 'fr',
-        address: (organization as any).address ?? '',
-        city: (organization as any).city ?? '',
+        name: o.name ?? '',
+        code: o.code ?? '',
+        type: o.type ?? '',
+        country: o.country ?? '',
+        currency: o.currency ?? 'EUR',
+        language: o.language ?? 'fr',
+        address: o.address ?? '',
+        city: o.city ?? '',
         postal_code: settings.postal_code ?? '',
-        phone: (organization as any).phone ?? '',
-        email: (organization as any).email ?? '',
-        logo_url: (organization as any).logo_url ?? '',
-        qualiopi_certificate_url: (organization as any).qualiopi_certificate_url ?? '',
-        stamp_url: (organization as any).stamp_url ?? '',
-        signature_url: (organization as any).signature_url ?? '',
-        brand_color: (organization as any).brand_color ?? '#335ACF',
-        siret: (organization as any).siret ?? '',
-        nda_number: (organization as any).nda_number ?? '',
+        phone: o.phone ?? '',
+        email: o.email ?? '',
+        logo_url: o.logo_url ?? '',
+        qualiopi_certificate_url: o.qualiopi_certificate_url ?? '',
+        stamp_url: o.stamp_url ?? '',
+        signature_url: o.signature_url ?? '',
+        brand_color: o.brand_color ?? '#335ACF',
+        siret: o.siret ?? '',
+        nda_number: o.nda_number ?? '',
       })
     }
   }, [organization])
@@ -1334,7 +1341,7 @@ export default function SettingsPage() {
                             {/* Logo de l'organisation */}
                             <div className="space-y-2">
                               <Label className="flex items-center gap-2">
-                                <Image className="h-4 w-4" />
+                                <ImageIcon className="h-4 w-4" aria-hidden />
                                 Logo de l'organisation
                               </Label>
                               <div className="flex items-center gap-4">

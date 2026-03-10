@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { QUALIOPI_REFERENTIAL } from '@/lib/services/auditor-portal.service'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 const TOTAL_REFERENTIAL_INDICATORS = 32
 
@@ -124,7 +125,9 @@ export async function GET() {
     res.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=30')
     return res
   } catch (err) {
-    console.error('compliance-rate error', err)
+    logger.error('compliance-rate error', err instanceof Error ? err : new Error(String(err)), {
+      error: sanitizeError(err),
+    })
     return NextResponse.json({ error: 'Erreur serveur', score: 0 }, { status: 500 })
   }
 }

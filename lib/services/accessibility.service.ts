@@ -17,6 +17,9 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
+/** Erreur API / fetch avec status HTTP */
+type ApiErrorLike = { status?: number; message?: string }
+
 // =====================================================
 // INTERFACES
 // =====================================================
@@ -250,7 +253,7 @@ export class AccessibilityService {
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -262,7 +265,7 @@ export class AccessibilityService {
 
       return data
     } catch (err: unknown) {
-      if ((err as any)?.status === 404 || (err as any)?.message?.toLowerCase().includes('not found')) {
+      if ((err as ApiErrorLike)?.status === 404 || (err as ApiErrorLike)?.message?.toLowerCase().includes('not found')) {
         return null
       }
       throw err
@@ -280,11 +283,11 @@ export class AccessibilityService {
     const existing = await this.getConfiguration(organizationId)
 
     // Nettoyer les données pour la DB (supprimer id, timestamps)
-    const cleanData = { ...data }
-    delete (cleanData as any).id
-    delete (cleanData as any).created_at
-    delete (cleanData as any).updated_at
-    delete (cleanData as any).organization_id
+    const cleanData = { ...data } as Record<string, unknown>
+    delete cleanData.id
+    delete cleanData.created_at
+    delete cleanData.updated_at
+    delete cleanData.organization_id
 
     // Fonction utilitaire pour valider un UUID
     const isValidUUID = (str: string | null | undefined): boolean => {
@@ -294,8 +297,9 @@ export class AccessibilityService {
     }
 
     // Convertir les UUID invalides en null pour referent_user_id
-    if (cleanData.referent_user_id !== null && cleanData.referent_user_id !== undefined) {
-      if (cleanData.referent_user_id === '' || !isValidUUID(cleanData.referent_user_id)) {
+    const refUserId = cleanData.referent_user_id as string | null | undefined
+    if (refUserId !== null && refUserId !== undefined) {
+      if (refUserId === '' || !isValidUUID(refUserId)) {
         cleanData.referent_user_id = null
       }
     }
@@ -305,17 +309,17 @@ export class AccessibilityService {
       cleanData.referent_training_date = null
     }
     // Convertir les chaînes vides en null pour les autres champs optionnels
-    if ((cleanData as any).referent_training_certificate === '') {
-      (cleanData as any).referent_training_certificate = null
+    if (cleanData.referent_training_certificate === '') {
+      cleanData.referent_training_certificate = null
     }
-    if ((cleanData as any).accessibility_policy === '') {
-      (cleanData as any).accessibility_policy = null
+    if (cleanData.accessibility_policy === '') {
+      cleanData.accessibility_policy = null
     }
-    if ((cleanData as any).physical_accessibility_statement === '') {
-      (cleanData as any).physical_accessibility_statement = null
+    if (cleanData.physical_accessibility_statement === '') {
+      cleanData.physical_accessibility_statement = null
     }
-    if ((cleanData as any).digital_accessibility_statement === '') {
-      (cleanData as any).digital_accessibility_statement = null
+    if (cleanData.digital_accessibility_statement === '') {
+      cleanData.digital_accessibility_statement = null
     }
 
     if (existing) {
@@ -406,7 +410,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -418,7 +422,7 @@ export class AccessibilityService {
 
       return data || []
     } catch (err: unknown) {
-      if ((err as any)?.status === 404) {
+      if ((err as ApiErrorLike)?.status === 404) {
         return []
       }
       throw err
@@ -453,7 +457,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -465,7 +469,7 @@ export class AccessibilityService {
 
       return data || []
     } catch (err: unknown) {
-      if ((err as any)?.status === 404) {
+      if ((err as ApiErrorLike)?.status === 404) {
         return []
       }
       throw err
@@ -487,7 +491,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -498,7 +502,7 @@ export class AccessibilityService {
 
       return data
     } catch (err: unknown) {
-      if ((err as any)?.status === 404) {
+      if ((err as ApiErrorLike)?.status === 404) {
         return null
       }
       throw err
@@ -577,7 +581,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -589,7 +593,7 @@ export class AccessibilityService {
 
       return data || []
     } catch (err: unknown) {
-      if ((err as any)?.status === 404) {
+      if ((err as ApiErrorLike)?.status === 404) {
         return []
       }
       throw err
@@ -667,7 +671,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -679,7 +683,7 @@ export class AccessibilityService {
 
       return data || []
     } catch (err: unknown) {
-      if ((err as any)?.status === 404) {
+      if ((err as ApiErrorLike)?.status === 404) {
         return []
       }
       throw err
@@ -785,9 +789,9 @@ export class AccessibilityService {
 
     // Incrémenter la quantité disponible (sauf si perdu ou endommagé)
     if (condition !== 'lost' && condition !== 'damaged') {
-      const equipment = (assignment as any).accessibility_equipment
+      const equipment = (assignment as { accessibility_equipment?: { quantity_available?: number } }).accessibility_equipment
       await this.updateEquipment(assignment.equipment_id, {
-        quantity_available: equipment.quantity_available + 1,
+        quantity_available: (equipment?.quantity_available ?? 0) + 1,
         status: 'available',
       })
     }
@@ -808,7 +812,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -820,7 +824,7 @@ export class AccessibilityService {
 
       return data || []
     } catch (err: unknown) {
-      if ((err as any)?.status === 404) {
+      if ((err as ApiErrorLike)?.status === 404) {
         return []
       }
       throw err
@@ -851,7 +855,7 @@ export class AccessibilityService {
         if (
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.includes('relation') ||
           error.message?.includes('does not exist')
         ) {
@@ -863,7 +867,7 @@ export class AccessibilityService {
 
       return data || []
     } catch (err: unknown) {
-      if ((err as any)?.status === 404) {
+      if ((err as ApiErrorLike)?.status === 404) {
         return []
       }
       throw err
@@ -1010,7 +1014,7 @@ export class AccessibilityService {
         const is404Error =
           error.code === 'PGRST116' ||
           error.code === '42883' ||
-          (error as any).status === 404 ||
+          (error as ApiErrorLike).status === 404 ||
           error.message?.toLowerCase().includes('function') ||
           error.message?.toLowerCase().includes('does not exist')
 
@@ -1025,7 +1029,7 @@ export class AccessibilityService {
 
       return data || 0
     } catch (err: unknown) {
-      if ((err as any)?.status === 404 || (err as any)?.message?.toLowerCase().includes('not found')) {
+      if ((err as ApiErrorLike)?.status === 404 || (err as ApiErrorLike)?.message?.toLowerCase().includes('not found')) {
         return 0
       }
       throw err

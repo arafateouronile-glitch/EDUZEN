@@ -5,7 +5,9 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 type Student = TableRow<'students'>
 type Session = TableRow<'sessions'>
@@ -18,14 +20,13 @@ export interface SearchResult {
   title: string
   description?: string
   url: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export class SearchService {
-  private supabase: SupabaseClient<any>
+  private supabase: SupabaseClient<Database>
 
-
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient?: SupabaseClient<Database>) {
 
     this.supabase = supabaseClient || createClient()
 
@@ -39,29 +40,32 @@ export class SearchService {
     organizationId: string,
     userId?: string
   ): Promise<SearchResult[]> {
-    if (!query || query.trim().length < 2) {
-      return []
+    try {
+      if (!query || query.trim().length < 2) {
+        return []
+      }
+
+      const searchTerm = query.trim().toLowerCase()
+      const results: SearchResult[] = []
+
+      const [students, sessions, documents, conversations] = await Promise.all([
+        this.searchStudents(searchTerm, organizationId),
+        this.searchSessions(searchTerm, organizationId),
+        this.searchDocuments(searchTerm, organizationId),
+        userId ? this.searchConversations(searchTerm, organizationId, userId) : Promise.resolve([]),
+      ])
+
+      results.push(...students, ...sessions, ...documents, ...conversations)
+
+      return results.sort((a, b) => {
+        const aStarts = a.title.toLowerCase().startsWith(searchTerm) ? 1 : 0
+        const bStarts = b.title.toLowerCase().startsWith(searchTerm) ? 1 : 0
+        return bStarts - aStarts
+      })
+    } catch (error) {
+      logger.error('SearchService.searchGlobal', error, { organizationId, query: query?.slice(0, 50) })
+      throw error
     }
-
-    const searchTerm = query.trim().toLowerCase()
-    const results: SearchResult[] = []
-
-    // Recherche en parallèle dans tous les types
-    const [students, sessions, documents, conversations] = await Promise.all([
-      this.searchStudents(searchTerm, organizationId),
-      this.searchSessions(searchTerm, organizationId),
-      this.searchDocuments(searchTerm, organizationId),
-      userId ? this.searchConversations(searchTerm, organizationId, userId) : Promise.resolve([]),
-    ])
-
-    results.push(...students, ...sessions, ...documents, ...conversations)
-
-    // Trier par pertinence (titre qui commence par la requête > contient la requête)
-    return results.sort((a, b) => {
-      const aStarts = a.title.toLowerCase().startsWith(searchTerm) ? 1 : 0
-      const bStarts = b.title.toLowerCase().startsWith(searchTerm) ? 1 : 0
-      return bStarts - aStarts
-    })
   }
 
   /**
@@ -71,18 +75,19 @@ export class SearchService {
     searchTerm: string,
     organizationId: string
   ): Promise<SearchResult[]> {
-    const { data, error } = await this.supabase
-      .from('students')
-      .select('id, first_name, last_name, student_number, email')
-      .eq('organization_id', organizationId)
-      .or(
-        `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,student_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`
-      )
-      .limit(10)
+    try {
+      const { data, error } = await this.supabase
+        .from('students')
+        .select('id, first_name, last_name, student_number, email')
+        .eq('organization_id', organizationId)
+        .or(
+          `first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,student_number.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`
+        )
+        .limit(10)
 
-    if (error || !data) return []
+      if (error || !data) return []
 
-    return (data as any[]).map((student: any) => ({
+      return (data as Pick<Student, 'id' | 'first_name' | 'last_name' | 'student_number' | 'email'>[]).map((student) => ({
       type: 'student' as const,
       id: student.id,
       title: `${student.first_name || ''} ${student.last_name || ''}`.trim() || student.student_number || 'Étudiant',
@@ -93,6 +98,10 @@ export class SearchService {
         email: student.email,
       },
     }))
+    } catch (error) {
+      logger.error('SearchService.searchStudents', error, { organizationId, searchTerm: searchTerm.slice(0, 50) })
+      return []
+    }
   }
 
   /**
@@ -102,28 +111,33 @@ export class SearchService {
     searchTerm: string,
     organizationId: string
   ): Promise<SearchResult[]> {
-    const { data, error } = await this.supabase
-      .from('sessions')
-      .select('id, name, start_date, end_date')
-      .eq('organization_id', organizationId)
-      .ilike('name', `%${searchTerm}%`)
-      .limit(10)
+    try {
+      const { data, error } = await this.supabase
+        .from('sessions')
+        .select('id, name, start_date, end_date')
+        .eq('organization_id', organizationId)
+        .ilike('name', `%${searchTerm}%`)
+        .limit(10)
 
-    if (error || !data) return []
+      if (error || !data) return []
 
-    return (data as any[]).map((session: any) => ({
-      type: 'session' as const,
-      id: session.id,
-      title: session.name || 'Session',
-      description: session.start_date
-        ? `Du ${new Date(session.start_date).toLocaleDateString('fr-FR')}`
-        : undefined,
-      url: `/dashboard/sessions/${session.id}`,
-      metadata: {
-        start_date: session.start_date,
-        end_date: session.end_date,
-      },
-    }))
+      return (data as Pick<Session, 'id' | 'name' | 'start_date' | 'end_date'>[]).map((session) => ({
+        type: 'session' as const,
+        id: session.id,
+        title: session.name || 'Session',
+        description: session.start_date
+          ? `Du ${new Date(session.start_date).toLocaleDateString('fr-FR')}`
+          : undefined,
+        url: `/dashboard/sessions/${session.id}`,
+        metadata: {
+          start_date: session.start_date,
+          end_date: session.end_date,
+        },
+      }))
+    } catch (error) {
+      logger.error('SearchService.searchSessions', error, { organizationId, searchTerm: searchTerm.slice(0, 50) })
+      return []
+    }
   }
 
   /**
@@ -133,26 +147,32 @@ export class SearchService {
     searchTerm: string,
     organizationId: string
   ): Promise<SearchResult[]> {
-    const { data, error } = await this.supabase
-      .from('documents')
-      .select('id, title, type, created_at')
-      .eq('organization_id', organizationId)
-      .ilike('title', `%${searchTerm}%`)
-      .limit(10)
+    try {
+      const { data, error } = await this.supabase
+        .from('documents')
+        .select('id, title, type, created_at')
+        .eq('organization_id', organizationId)
+        .ilike('title', `%${searchTerm}%`)
+        .limit(10)
 
-    if (error || !data) return []
+      if (error || !data) return []
 
-    return (data as any[]).map((doc: any) => ({
-      type: 'document' as const,
-      id: doc.id,
-      title: doc.title || 'Document',
-      description: doc.type || undefined,
-      url: `/dashboard/documents`,
-      metadata: {
-        type: doc.type,
-        created_at: doc.created_at,
-      },
-    }))
+      type DocSearchRow = { id: string; title?: string; type?: string; created_at?: string }
+      return (data as DocSearchRow[]).map((doc) => ({
+        type: 'document' as const,
+        id: doc.id,
+        title: doc.title || 'Document',
+        description: doc.type || undefined,
+        url: `/dashboard/documents`,
+        metadata: {
+          type: doc.type,
+          created_at: doc.created_at,
+        },
+      }))
+    } catch (error) {
+      logger.error('SearchService.searchDocuments', error, { organizationId, searchTerm: searchTerm.slice(0, 50) })
+      return []
+    }
   }
 
   /**
@@ -163,38 +183,41 @@ export class SearchService {
     organizationId: string,
     userId: string
   ): Promise<SearchResult[]> {
-    // Rechercher dans les conversations où l'utilisateur est participant
-    const { data: conversations, error } = await this.supabase
-      .from('conversations')
-      .select('id, name, conversation_type')
-      .eq('organization_id', organizationId)
-      .ilike('name', `%${searchTerm}%`)
-      .limit(5)
+    try {
+      const { data: conversations, error } = await this.supabase
+        .from('conversations')
+        .select('id, name, conversation_type')
+        .eq('organization_id', organizationId)
+        .ilike('name', `%${searchTerm}%`)
+        .limit(5)
 
-    if (error || !conversations) return []
+      if (error || !conversations) return []
 
-    // Vérifier que l'utilisateur est participant
-    const conversationIds = conversations.map((c) => c.id)
-    const { data: participants } = await this.supabase
-      .from('conversation_participants')
-      .select('conversation_id')
-      .in('conversation_id', conversationIds)
-      .eq('user_id', userId)
+      const conversationIds = conversations.map((c) => c.id)
+      const { data: participants } = await this.supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .in('conversation_id', conversationIds)
+        .eq('user_id', userId)
 
-    const userConversationIds = new Set(participants?.map((p) => p.conversation_id) || [])
+      const userConversationIds = new Set(participants?.map((p) => p.conversation_id) || [])
 
-    return conversations
-      .filter((conv) => userConversationIds.has(conv.id))
-      .map((conv: any) => ({
-        type: 'message' as const,
-        id: conv.id,
-        title: conv.name || 'Conversation',
-        description: conv.conversation_type === 'group' ? 'Groupe' : 'Direct',
-        url: `/dashboard/messages/${conv.id}`,
-        metadata: {
-          conversation_type: conv.conversation_type,
-        },
-      }))
+      return conversations
+        .filter((conv) => userConversationIds.has(conv.id))
+        .map((conv: { id: string; name: string | null; conversation_type: string | null }) => ({
+          type: 'message' as const,
+          id: conv.id,
+          title: conv.name ?? 'Conversation',
+          description: conv.conversation_type === 'group' ? 'Groupe' : 'Direct',
+          url: `/dashboard/messages/${conv.id}`,
+          metadata: {
+            conversation_type: conv.conversation_type,
+          },
+        }))
+    } catch (error) {
+      logger.error('SearchService.searchConversations', error, { organizationId, userId, searchTerm: searchTerm.slice(0, 50) })
+      return []
+    }
   }
 }
 

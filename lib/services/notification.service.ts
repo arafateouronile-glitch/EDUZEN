@@ -26,7 +26,7 @@ export interface Notification {
   type: NotificationType
   title: string
   message: string
-  data: Record<string, any>
+  data: Record<string, unknown>
   link?: string
   read_at?: string
   created_at: string
@@ -39,7 +39,7 @@ export interface CreateNotificationParams {
   type: NotificationType
   title: string
   message: string
-  data?: Record<string, any>
+  data?: Record<string, unknown>
   link?: string
   expires_at?: string
 }
@@ -102,7 +102,7 @@ export class NotificationService {
     type: NotificationType,
     title: string,
     message: string,
-    data?: Record<string, any>,
+    data?: Record<string, unknown>,
     link?: string
   ): Promise<Notification[]> {
     try {
@@ -188,7 +188,8 @@ export class NotificationService {
         user_id,
         options,
       })
-      throw error
+      // Retourner [] pour ne pas bloquer l'UI (table absente, RLS, etc.)
+      return []
     }
   }
 

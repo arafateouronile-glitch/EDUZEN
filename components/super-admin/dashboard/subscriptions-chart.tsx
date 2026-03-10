@@ -37,9 +37,11 @@ export function SubscriptionsChart({
 }: SubscriptionsChartProps) {
   const total = data.reduce((sum, item) => sum + item.value, 0)
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  type TooltipPayloadItem = { payload?: { value?: number; name?: string; color?: string } }
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayloadItem[] }) => {
     if (active && payload && payload.length) {
-      const item = payload[0].payload
+      const item = payload[0]?.payload
+      if (item == null || item.value == null) return null
       const percentage = ((item.value / total) * 100).toFixed(1)
       return (
         <div className="rounded-lg border bg-card p-3 shadow-lg">
@@ -59,10 +61,10 @@ export function SubscriptionsChart({
     return null
   }
 
-  const renderCustomLegend = ({ payload }: any) => {
+  const renderCustomLegend = ({ payload }: { payload?: Array<{ color?: string; value?: string }> }) => {
     return (
       <div className="flex flex-wrap justify-center gap-4 mt-4">
-        {payload.map((entry: any, index: number) => (
+        {(payload ?? []).map((entry: { color?: string; value?: string }, index: number) => (
           <div key={index} className="flex items-center gap-2">
             <div
               className="h-3 w-3 rounded-full"

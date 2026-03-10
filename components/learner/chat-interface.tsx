@@ -147,7 +147,7 @@ export function ChatInterface({ conversationId, participant, onBack }: ChatInter
 
     await supabase
       .from('messages')
-      .update({ read_at: new Date().toISOString() } as any)
+      .update({ read_at: new Date().toISOString() } as never)
       .in('id', unreadMessages)
   }, [messages, user?.id, supabase])
 

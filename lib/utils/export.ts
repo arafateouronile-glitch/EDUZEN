@@ -22,7 +22,7 @@ export interface ExportOptions {
  * @param data - Données à exporter
  * @param options - Options d'export (filename, sheetName, format, entityType, organizationId, userId)
  */
-export async function exportData<T extends Record<string, any>>(
+export async function exportData<T extends Record<string, unknown>>(
   data: T[],
   options: ExportOptions & {
     entityType?: 'students' | 'documents' | 'payments' | 'other'
@@ -77,16 +77,16 @@ export async function exportData<T extends Record<string, any>>(
         recordCount: data.length,
       })
       // Si result est null, la table n'existe pas - c'est OK, on continue
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ne pas bloquer l'export si l'enregistrement de l'historique échoue
-      // Le service gère déjà les erreurs de table manquante, mais on garde cette sécurité
-      if (error?.code === 'PGRST205' || error?.message?.includes('Could not find the table')) {
+      const err = error as { code?: string; message?: string }
+      if (err?.code === 'PGRST205' || err?.message?.includes('Could not find the table')) {
         // Table n'existe pas encore - ignorer silencieusement
         return
       }
       // Pour les autres erreurs, logger en mode debug uniquement
       if (process.env.NODE_ENV === 'development') {
-        logger.debug('Erreur lors de l\'enregistrement de l\'historique d\'export:', error)
+        logger.debug('Erreur lors de l\'enregistrement de l\'historique d\'export:', err)
       }
     }
   }
@@ -94,10 +94,22 @@ export async function exportData<T extends Record<string, any>>(
 
 // Les fonctions exportToExcel et exportToCSV sont maintenant importées depuis excel-export.ts
 
+interface StudentExportRow {
+  student_number?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  email?: string | null
+  phone?: string | null
+  date_of_birth?: string | null
+  status?: string | null
+  enrollment_date?: string | null
+  classes?: { name?: string | null; level?: string | null } | null
+}
+
 /**
  * Prépare les données d'étudiants pour l'export
  */
-export function prepareStudentsExport(students: any[]) {
+export function prepareStudentsExport(students: StudentExportRow[]) {
   return students.map((student) => ({
     'Numéro': student.student_number || '',
     'Prénom': student.first_name || '',
@@ -112,10 +124,18 @@ export function prepareStudentsExport(students: any[]) {
   }))
 }
 
+interface DocumentExportRow {
+  title?: string | null
+  type?: string | null
+  created_at?: string | null
+  file_url?: string | null
+  students?: { first_name?: string | null; last_name?: string | null } | null
+}
+
 /**
  * Prépare les données de documents pour l'export
  */
-export function prepareDocumentsExport(documents: any[]) {
+export function prepareDocumentsExport(documents: DocumentExportRow[]) {
   return documents.map((doc) => ({
     'Titre': doc.title || '',
     'Type': doc.type || '',
@@ -127,10 +147,20 @@ export function prepareDocumentsExport(documents: any[]) {
   }))
 }
 
+interface PaymentExportRow {
+  id?: string | null
+  amount?: number | string | null
+  currency?: string | null
+  status?: string | null
+  payment_method?: string | null
+  paid_at?: string | null
+  description?: string | null
+}
+
 /**
  * Prépare les données de paiements pour l'export
  */
-export function preparePaymentsExport(payments: any[]) {
+export function preparePaymentsExport(payments: PaymentExportRow[]) {
   return payments.map((payment) => ({
     'ID': payment.id || '',
     'Montant': payment.amount || '',

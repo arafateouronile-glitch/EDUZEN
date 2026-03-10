@@ -55,15 +55,13 @@ export default function AffiliationPromoCodesPage() {
   const { data: promoCodes, isLoading } = useQuery({
     queryKey: ['promo-codes-affiliate'],
     queryFn: async () => {
-      // eslint-disable-next-line
-      const q: any = supabase
+      const { data, error } = await supabase
         .from('promo_codes')
         .select('*, affiliates(id, email, full_name, company_name)')
         .not('affiliate_id', 'is', null)
         .order('created_at', { ascending: false })
-      const { data, error } = await q
       if (error) throw error
-      return (data || []) as Array<{
+      return (data || []) as unknown as Array<{
         id: string
         code: string
         discount_type: string

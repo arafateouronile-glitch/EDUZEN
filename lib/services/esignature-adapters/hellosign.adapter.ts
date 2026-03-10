@@ -48,8 +48,8 @@ export interface HelloSignSignatureResponse {
   details_url: string
   cc_email_addresses: string[]
   signing_redirect_url: string | null
-  custom_fields: any[]
-  response_data: any[]
+  custom_fields: unknown[]
+  response_data: unknown[]
   signatures: Array<{
     signature_id: string
     signer_email_address: string

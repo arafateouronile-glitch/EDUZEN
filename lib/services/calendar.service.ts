@@ -305,18 +305,16 @@ class CalendarService {
     endDate: string,
     userId?: string
   ): Promise<CalendarEvent[]> {
-    // Désactiver temporairement l'appel RPC car il retourne toujours une erreur 400
-    // Utiliser directement le fallback manuel qui fonctionne correctement
-    logger.warn('CalendarService - Utilisation du fallback getCalendarEventsManual (RPC désactivé temporairement)', {
+    // RPC désactivé : utiliser le fallback manuel (comportement normal)
+    logger.debug('CalendarService - getCalendarEventsManual (RPC désactivé)', {
       organizationId,
       startDate,
       endDate,
       userId,
     })
     const result = await this.getCalendarEventsManual(organizationId, startDate, endDate, userId)
-    logger.warn('CalendarService - Résultat fallback', {
+    logger.debug('CalendarService - Résultat fallback', {
       eventCount: result.length,
-      events: result.map((e) => ({ type: e.event_type, title: e.title, id: e.event_id })),
     })
     return result
     
@@ -390,6 +388,274 @@ class CalendarService {
     */
   }
 
+  /** Convertit un CalendarTodo en CalendarEvent */
+  private mapTodoToEvent(todo: CalendarTodo): CalendarEvent {
+    return {
+      event_id: todo.id,
+      event_type: 'todo',
+      title: todo.title,
+      description: todo.description,
+      start_date: todo.start_date || todo.due_date,
+      start_time: todo.start_time,
+      end_date: todo.due_date,
+      end_time: todo.due_time,
+      all_day: todo.all_day,
+      status: todo.status,
+      color: todo.color,
+      category: todo.category,
+      priority: todo.priority,
+      linked_id: todo.linked_session_id || todo.linked_formation_id || null,
+    }
+  }
+
+  /** Récupère les événements TODOs pour la période (gestion teacher / learner / admin). */
+  private async fetchTodoEventsForPeriod(
+    organizationId: string,
+    startDate: string,
+    endDate: string,
+    userId?: string
+  ): Promise<CalendarEvent[]> {
+    const todosFilter = { startDate, endDate }
+    if (!userId) {
+      const todos = await this.getTodos(organizationId, todosFilter)
+      return todos.map((t) => this.mapTodoToEvent(t))
+    }
+    const { data: userData } = await this.supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (userData?.role === 'teacher') {
+      const { data: teacherSessions } = await this.supabase
+        .from('session_teachers')
+        .select('session_id')
+        .eq('teacher_id', userId)
+      const sessionIds = (teacherSessions || []).map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
+      const allTodos = await this.getTodos(organizationId, todosFilter)
+      const filtered = sessionIds.length > 0
+        ? allTodos.filter((t) => !t.linked_session_id || sessionIds.includes(t.linked_session_id))
+        : allTodos.filter((t) => !t.linked_session_id)
+      return filtered.map((t) => this.mapTodoToEvent(t))
+    }
+    if (userData?.role === 'learner' || userData?.role === 'student') {
+      const todos = await this.getTodos(organizationId, { ...todosFilter, createdBy: userId })
+      return todos.map((t) => this.mapTodoToEvent(t))
+    }
+    const todos = await this.getTodos(organizationId, todosFilter)
+    return todos.map((t) => this.mapTodoToEvent(t))
+  }
+
+  /** Session brute avec relation formations (pour mapping). */
+  private mapSessionToEvent(session: {
+    id: string
+    name: string | null
+    start_date: string | null
+    end_date: string | null
+    start_time: string | null
+    end_time: string | null
+    location: string | null
+    status: string | null
+    formation_id: string | null
+    formations?: { name?: string | null } | null
+  }): CalendarEvent {
+    const startDate = session.start_date
+      ? typeof session.start_date === 'string'
+        ? session.start_date.split('T')[0]
+        : new Date(session.start_date).toISOString().split('T')[0]
+      : ''
+    const endDate = session.end_date
+      ? typeof session.end_date === 'string'
+        ? session.end_date.split('T')[0]
+        : new Date(session.end_date).toISOString().split('T')[0]
+      : startDate
+    const descriptionParts: string[] = []
+    if (session.start_time) {
+      const timeStr = session.start_time.slice(0, 5)
+      const endTimeStr = session.end_time ? session.end_time.slice(0, 5) : null
+      descriptionParts.push(endTimeStr ? `🕐 ${timeStr} - ${endTimeStr}` : `🕐 ${timeStr}`)
+    }
+    if (session.location) descriptionParts.push(`📍 ${session.location}`)
+    if (session.formations?.name) descriptionParts.push(`📚 ${session.formations.name}`)
+    return {
+      event_id: session.id,
+      event_type: 'session',
+      title: session.name || '',
+      description: descriptionParts.length > 0 ? descriptionParts.join(' • ') : null,
+      start_date: startDate,
+      start_time: session.start_time,
+      end_date: endDate,
+      end_time: session.end_time,
+      all_day: false,
+      status: session.status || '',
+      color: '#10B981',
+      category: 'session',
+      priority: 'medium',
+      linked_id: session.formation_id,
+      location: session.location || null,
+      formation_name: session.formations?.name || null,
+    }
+  }
+
+  /** Récupère les événements Sessions pour la période (filtre enseignant si userId). */
+  private async fetchSessionEventsForPeriod(
+    organizationId: string,
+    startDate: string,
+    endDate: string,
+    userId?: string
+  ): Promise<CalendarEvent[]> {
+    type SessionRow = {
+      id: string
+      name: string | null
+      start_date: string | null
+      end_date: string | null
+      start_time: string | null
+      end_time: string | null
+      location: string | null
+      status: string | null
+      formation_id: string | null
+      formations?: { id?: string; name?: string | null; organization_id?: string } | null
+    }
+    let sessions: SessionRow[] = []
+    if (userId) {
+      const { data: userData } = await this.supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle()
+      if (userData?.role === 'teacher') {
+        const { data: teacherSessions } = await this.supabase
+          .from('session_teachers')
+          .select('session_id')
+          .eq('teacher_id', userId)
+        let sessionIds: string[] = (teacherSessions || []).map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
+        if (sessionIds.length === 0) {
+          const { data: byTeacher } = await this.supabase
+            .from('sessions')
+            .select('id')
+            .eq('teacher_id', userId)
+          sessionIds = (byTeacher || []).map((s: { id: string }) => s.id).filter(Boolean)
+        }
+        if (sessionIds.length > 0) {
+          const { data: sessionsData, error } = await this.supabase
+            .from('sessions')
+            .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations(id, name, organization_id)')
+            .in('id', sessionIds)
+          if (error) throw error
+          sessions = (sessionsData || []).filter(
+            (s: SessionRow) => s.formations?.organization_id === organizationId
+          )
+        }
+      } else {
+        const { data: sessionsData, error } = await this.supabase
+          .from('sessions')
+          .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations!inner(id, name, organization_id)')
+          .eq('formations.organization_id', organizationId)
+        if (error) throw error
+        sessions = sessionsData || []
+      }
+    } else {
+      const { data: sessionsData, error } = await this.supabase
+        .from('sessions')
+        .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations!inner(id, name, organization_id)')
+        .eq('formations.organization_id', organizationId)
+      if (error) throw error
+      sessions = sessionsData || []
+    }
+    const rangeStart = new Date(startDate)
+    const rangeEnd = new Date(endDate)
+    const overlapping = sessions.filter((session) => {
+      if (!session.start_date) return false
+      const sessionStart = new Date(session.start_date)
+      const sessionEnd = session.end_date ? new Date(session.end_date) : null
+      return (
+        (sessionStart >= rangeStart && sessionStart <= rangeEnd) ||
+        (sessionEnd && sessionEnd >= rangeStart && sessionEnd <= rangeEnd) ||
+        (sessionStart <= rangeStart && (!sessionEnd || sessionEnd >= rangeStart)) ||
+        (sessionStart <= rangeStart && sessionEnd && sessionEnd >= rangeEnd)
+      )
+    })
+    return overlapping.map((s) => this.mapSessionToEvent(s))
+  }
+
+  /** Récupère les événements Formations pour la période (filtre enseignant si userId). */
+  private async fetchFormationEventsForPeriod(
+    organizationId: string,
+    startDate: string,
+    endDate: string,
+    userId?: string
+  ): Promise<CalendarEvent[]> {
+    let formationsQuery = this.supabase
+      .from('formations')
+      .select('*, sessions(id, start_date, end_date)')
+      .eq('organization_id', organizationId)
+    if (userId) {
+      const { data: userData } = await this.supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle()
+      if (userData?.role === 'teacher') {
+        const { data: teacherSessions } = await this.supabase
+          .from('session_teachers')
+          .select('session_id')
+          .eq('teacher_id', userId)
+        if (!teacherSessions?.length) return []
+        const sessionIds = teacherSessions.map((st: { session_id: string | null }) => st.session_id).filter((id): id is string => id != null)
+        const { data: sessionsData } = await this.supabase
+          .from('sessions')
+          .select('formation_id')
+          .in('id', sessionIds)
+        if (!sessionsData?.length) return []
+        const formationIds = [...new Set(sessionsData.map((s: { formation_id: string | null }) => s.formation_id).filter(Boolean) as string[])]
+        if (formationIds.length === 0) return []
+        formationsQuery = formationsQuery.in('id', formationIds)
+      }
+    }
+    const { data: formations, error } = await formationsQuery
+    if (error) throw error
+    if (!formations?.length) return []
+    const rangeStart = new Date(startDate)
+    const rangeEnd = new Date(endDate)
+    const formationsWithDates = formations
+      .map((formation) => {
+        const sessions = (formation.sessions as Array<{ id: string; start_date: string; end_date: string | null }>) || []
+        if (!sessions.length) return null
+        const sessionDates = sessions
+          .filter((s) => s.start_date)
+          .map((s) => ({ start: new Date(s.start_date), end: s.end_date ? new Date(s.end_date) : null }))
+        if (!sessionDates.length) return null
+        const formationStart = new Date(Math.min(...sessionDates.map((d) => d.start.getTime())))
+        const ends = sessionDates.map((d) => d.end).filter((d): d is Date => d !== null)
+        const formationEnd = ends.length > 0 ? new Date(Math.max(...ends.map((d) => d.getTime()))) : null
+        return { formation, start_date: formationStart, end_date: formationEnd }
+      })
+      .filter((f): f is NonNullable<typeof f> => f !== null)
+    const overlapping = formationsWithDates.filter(
+      ({ start_date, end_date }) =>
+        (start_date >= rangeStart && start_date <= rangeEnd) ||
+        (end_date && end_date >= rangeStart && end_date <= rangeEnd) ||
+        (start_date <= rangeStart && (!end_date || end_date >= rangeStart)) ||
+        (start_date <= rangeStart && end_date && end_date >= rangeEnd)
+    )
+    return overlapping.map(({ formation, start_date, end_date }) => ({
+      event_id: formation.id,
+      event_type: 'formation' as const,
+      title: formation.name,
+      description: formation.description,
+      start_date: start_date.toISOString().split('T')[0],
+      start_time: null,
+      end_date: end_date ? end_date.toISOString().split('T')[0] : start_date.toISOString().split('T')[0],
+      end_time: null,
+      all_day: true,
+      status: formation.is_active ? 'active' : 'inactive',
+      color: '#8B5CF6',
+      category: 'formation',
+      priority: 'medium',
+      linked_id: formation.program_id,
+    }))
+  }
+
   /**
    * Fallback si la fonction RPC n'existe pas
    */
@@ -400,502 +666,21 @@ class CalendarService {
     userId?: string
   ): Promise<CalendarEvent[]> {
     const events: CalendarEvent[] = []
-
-    // Récupérer les TODOs
-    // Pour les enseignants, filtrer uniquement les TODOs liés à leurs sessions assignées
     try {
-      let todosFilter: any = { startDate, endDate }
-      
-      // Si c'est un enseignant, récupérer ses sessions assignées et filtrer les TODOs
-      if (userId) {
-        const { data: userData } = await this.supabase
-          .from('users')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle()
-
-        if (userData?.role === 'teacher') {
-          // Récupérer les IDs des sessions assignées à cet enseignant
-          const { data: teacherSessions } = await this.supabase
-            .from('session_teachers')
-            .select('session_id')
-            .eq('teacher_id', userId)
-
-          if (teacherSessions && teacherSessions.length > 0) {
-            const sessionIds = teacherSessions.map((st: any) => st.session_id)
-            // Récupérer tous les TODOs et filtrer côté client pour ne garder que ceux liés aux sessions
-            const allTodos = await this.getTodos(organizationId, todosFilter)
-            const filteredTodos = allTodos.filter((todo) => {
-              // Garder les TODOs sans session liée (tâches générales) OU ceux liés aux sessions de l'enseignant
-              return !todo.linked_session_id || sessionIds.includes(todo.linked_session_id)
-            })
-            todosFilter = { ...todosFilter, todos: filteredTodos }
-            events.push(
-              ...filteredTodos.map((todo) => ({
-                event_id: todo.id,
-                event_type: 'todo' as const,
-                title: todo.title,
-                description: todo.description,
-                start_date: todo.start_date || todo.due_date,
-                start_time: todo.start_time,
-                end_date: todo.due_date,
-                end_time: todo.due_time,
-                all_day: todo.all_day,
-                status: todo.status,
-                color: todo.color,
-                category: todo.category,
-                priority: todo.priority,
-                linked_id: todo.linked_session_id || todo.linked_formation_id || null,
-              }))
-            )
-          } else {
-            // Si l'enseignant n'a pas de sessions, ne montrer que les TODOs sans session liée
-            const allTodos = await this.getTodos(organizationId, todosFilter)
-            const filteredTodos = allTodos.filter((todo) => !todo.linked_session_id)
-            events.push(
-              ...filteredTodos.map((todo) => ({
-                event_id: todo.id,
-                event_type: 'todo' as const,
-                title: todo.title,
-                description: todo.description,
-                start_date: todo.start_date || todo.due_date,
-                start_time: todo.start_time,
-                end_date: todo.due_date,
-                end_time: todo.due_time,
-                all_day: todo.all_day,
-                status: todo.status,
-                color: todo.color,
-                category: todo.category,
-                priority: todo.priority,
-                linked_id: todo.linked_session_id || todo.linked_formation_id || null,
-              }))
-            )
-          }
-        } else if (userData?.role === 'learner' || userData?.role === 'student') {
-          // Pour les apprenants, ne montrer que les TODOs qu'ils ont créés eux-mêmes
-          const todos = await this.getTodos(organizationId, { ...todosFilter, createdBy: userId })
-          events.push(
-            ...todos.map((todo) => ({
-              event_id: todo.id,
-              event_type: 'todo' as const,
-              title: todo.title,
-              description: todo.description,
-              start_date: todo.start_date || todo.due_date,
-              start_time: todo.start_time,
-              end_date: todo.due_date,
-              end_time: todo.due_time,
-              all_day: todo.all_day,
-              status: todo.status,
-              color: todo.color,
-              category: todo.category,
-              priority: todo.priority,
-              linked_id: todo.linked_session_id || todo.linked_formation_id || null,
-            }))
-          )
-        } else {
-          // Pour les autres rôles (admin, etc.), récupérer tous les TODOs normalement
-          const todos = await this.getTodos(organizationId, todosFilter)
-          events.push(
-            ...todos.map((todo) => ({
-              event_id: todo.id,
-              event_type: 'todo' as const,
-              title: todo.title,
-              description: todo.description,
-              start_date: todo.start_date || todo.due_date,
-              start_time: todo.start_time,
-              end_date: todo.due_date,
-              end_time: todo.due_time,
-              all_day: todo.all_day,
-              status: todo.status,
-              color: todo.color,
-              category: todo.category,
-              priority: todo.priority,
-              linked_id: todo.linked_session_id || todo.linked_formation_id || null,
-            }))
-          )
-        }
-      } else {
-        // Pas d'userId, récupérer tous les TODOs
-        const todos = await this.getTodos(organizationId, todosFilter)
-        events.push(
-          ...todos.map((todo) => ({
-            event_id: todo.id,
-            event_type: 'todo' as const,
-            title: todo.title,
-            description: todo.description,
-            start_date: todo.start_date || todo.due_date,
-            start_time: todo.start_time,
-            end_date: todo.due_date,
-            end_time: todo.due_time,
-            all_day: todo.all_day,
-            status: todo.status,
-            color: todo.color,
-            category: todo.category,
-            priority: todo.priority,
-            linked_id: todo.linked_session_id || todo.linked_formation_id || null,
-          }))
-        )
-      }
-    } catch (e) {
-      // Table may not exist yet
+      events.push(...(await this.fetchTodoEventsForPeriod(organizationId, startDate, endDate, userId)))
+    } catch {
+      // Table calendar_todos may not exist yet
     }
-
-    // Récupérer les Sessions
-    // Inclure les sessions qui chevauchent la période demandée
-    // Si userId est fourni et que l'utilisateur est un enseignant, filtrer par session_teachers
     try {
-      let sessions: any[] | null | undefined = undefined
-      
-      // Si userId est fourni, vérifier si c'est un enseignant et filtrer ses sessions assignées
-      if (userId) {
-        const { data: userData } = await this.supabase
-          .from('users')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle()
-
-        if (userData?.role === 'teacher') {
-          logger.warn('CalendarService - Filtrage sessions pour enseignant', { userId })
-          
-          // Récupérer les IDs des sessions assignées à cet enseignant depuis session_teachers
-          const { data: teacherSessions, error: teacherSessionsError } = await this.supabase
-            .from('session_teachers')
-            .select('session_id')
-            .eq('teacher_id', userId)
-
-          if (teacherSessionsError) {
-            logger.error('CalendarService - Erreur récupération session_teachers', teacherSessionsError)
-          }
-
-          logger.warn('CalendarService - Sessions assignées à l\'enseignant (session_teachers)', { 
-            count: teacherSessions?.length || 0,
-            teacherSessions: teacherSessions,
-            sessionIds: teacherSessions?.map((st: any) => st.session_id),
-            isArray: Array.isArray(teacherSessions),
-            truthy: !!teacherSessions,
-          })
-
-          // Si session_teachers est vide, essayer de récupérer via sessions.teacher_id (fallback)
-          let sessionIds: string[] = []
-          
-          if (teacherSessions && Array.isArray(teacherSessions) && teacherSessions.length > 0) {
-            sessionIds = teacherSessions.map((st: any) => st.session_id).filter(Boolean)
-            logger.warn('CalendarService - Session IDs depuis session_teachers', { 
-              sessionIds,
-              count: sessionIds.length 
-            })
-          } else {
-            // Fallback : récupérer les sessions où teacher_id est directement défini
-            logger.debug('CalendarService - session_teachers vide, utilisation du fallback via sessions.teacher_id')
-            const { data: sessionsByTeacherId, error: sessionsByTeacherIdError } = await this.supabase
-              .from('sessions')
-              .select('id')
-              .eq('teacher_id', userId)
-            
-            if (sessionsByTeacherIdError) {
-              logger.error('CalendarService - Erreur récupération sessions via teacher_id', sessionsByTeacherIdError)
-            } else {
-              sessionIds = (sessionsByTeacherId || []).map((s: any) => s.id).filter(Boolean)
-              logger.warn('CalendarService - Session IDs depuis sessions.teacher_id', {
-                sessionIds,
-                count: sessionIds.length
-              })
-            }
-          }
-
-          if (sessionIds.length > 0) {
-            // Récupérer les sessions directement par leurs IDs, puis vérifier l'organization_id via formations
-            const { data: sessionsData, error: sessionsError } = await this.supabase
-              .from('sessions')
-              .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations(id, name, organization_id)')
-              .in('id', sessionIds)
-            
-            if (sessionsError) {
-              logger.error('CalendarService - Erreur récupération sessions par IDs', sessionsError)
-              throw sessionsError
-            }
-            
-            logger.warn('CalendarService - Sessions récupérées par IDs', {
-              count: sessionsData?.length || 0,
-              sessions: sessionsData?.map((s: any) => ({ 
-                id: s.id, 
-                name: s.name, 
-                start_date: s.start_date,
-                formation_org_id: s.formations?.organization_id,
-                expected_org_id: organizationId
-              }))
-            })
-            
-            // Filtrer côté client pour ne garder que les sessions de l'organisation
-            sessions = (sessionsData || []).filter((s: any) => {
-              const orgId = s.formations?.organization_id
-              const matches = orgId === organizationId
-              if (!matches) {
-                logger.warn('CalendarService - Session filtrée (mauvaise organisation)', {
-                  sessionId: s.id,
-                  sessionOrgId: orgId,
-                  expectedOrgId: organizationId,
-                })
-              }
-              return matches
-            })
-            
-            logger.warn('CalendarService - Sessions filtrées par organisation', {
-              count: sessions.length,
-              sessions: sessions.map((s: any) => ({ id: s.id, name: s.name, start_date: s.start_date }))
-            })
-          } else {
-            logger.warn('CalendarService - Enseignant sans sessions assignées (ni session_teachers ni sessions.teacher_id), sessions vides')
-            sessions = []
-          }
-        } else {
-          // Utilisateur non-enseignant, continuer normalement
-          logger.warn('CalendarService - Utilisateur non-enseignant, récupération de toutes les sessions')
-          // Les sessions n'ont pas directement organization_id, il faut passer par formations
-          const { data: sessionsData, error: sessionsError } = await this.supabase
-            .from('sessions')
-            .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations!inner(id, name, organization_id)')
-            .eq('formations.organization_id', organizationId)
-          
-          if (sessionsError) {
-            logger.error('CalendarService - Erreur récupération sessions', sessionsError)
-            throw sessionsError
-          }
-          sessions = sessionsData || []
-        }
-      } else {
-        // Pas d'userId, récupérer toutes les sessions de l'organisation
-        const { data: sessionsData, error: sessionsError } = await this.supabase
-          .from('sessions')
-          .select('id, name, start_date, end_date, start_time, end_time, location, status, formation_id, formations!inner(id, name, organization_id)')
-          .eq('formations.organization_id', organizationId)
-        
-        if (sessionsError) {
-          logger.error('CalendarService - Erreur récupération sessions', sessionsError)
-          throw sessionsError
-        }
-        sessions = sessionsData || []
-      }
-
-
-      if (sessions) {
-        // Filtrer pour ne garder que celles qui ont une date de début et qui chevauchent vraiment la période
-        const rangeStart = new Date(startDate)
-        const rangeEnd = new Date(endDate)
-
-        const overlappingSessions = sessions.filter((session: any) => {
-          // Ignorer les sessions sans date de début
-          if (!session.start_date) return false
-
-          const sessionStart = new Date(session.start_date)
-          const sessionEnd = session.end_date ? new Date(session.end_date) : null
-
-          return (
-            // Session commence dans la période
-            (sessionStart >= rangeStart && sessionStart <= rangeEnd) ||
-            // Session se termine dans la période
-            (sessionEnd && sessionEnd >= rangeStart && sessionEnd <= rangeEnd) ||
-            // Session en cours (commencée avant et pas encore terminée)
-            (sessionStart <= rangeStart && (!sessionEnd || sessionEnd >= rangeStart)) ||
-            // Session qui englobe toute la période
-            (sessionStart <= rangeStart && sessionEnd && sessionEnd >= rangeEnd)
-          )
-        })
-
-        logger.warn('CalendarService - Sessions qui chevauchent la période', { 
-          count: overlappingSessions.length,
-          sessions: overlappingSessions.map((s: any) => ({ id: s.id, name: s.name, start_date: s.start_date }))
-        })
-        
-        const sessionEvents = overlappingSessions.map((session: any) => {
-          // S'assurer que start_date est au format YYYY-MM-DD
-          const startDate = session.start_date
-            ? typeof session.start_date === 'string'
-              ? session.start_date.split('T')[0]
-              : new Date(session.start_date).toISOString().split('T')[0]
-            : null
-          const endDate = session.end_date
-            ? typeof session.end_date === 'string'
-              ? session.end_date.split('T')[0]
-              : new Date(session.end_date).toISOString().split('T')[0]
-            : null
-
-          // Construire la description avec les informations de lieu et d'heures
-          const descriptionParts: string[] = []
-          if (session.start_time) {
-            const timeStr = session.start_time.slice(0, 5) // Format HH:MM
-            const endTimeStr = session.end_time ? session.end_time.slice(0, 5) : null
-            if (endTimeStr) {
-              descriptionParts.push(`🕐 ${timeStr} - ${endTimeStr}`)
-            } else {
-              descriptionParts.push(`🕐 ${timeStr}`)
-            }
-          }
-          if (session.location) {
-            descriptionParts.push(`📍 ${session.location}`)
-          }
-          if (session.formations?.name) {
-            descriptionParts.push(`📚 ${session.formations.name}`)
-          }
-
-          return {
-            event_id: session.id,
-            event_type: 'session' as const,
-            title: session.name,
-            description: descriptionParts.length > 0 ? descriptionParts.join(' • ') : null,
-            start_date: startDate || '',
-            start_time: session.start_time,
-            end_date: endDate || startDate || '',
-            end_time: session.end_time,
-            all_day: false,
-            status: session.status,
-            color: '#10B981',
-            category: 'session',
-            priority: 'medium',
-            linked_id: session.formation_id,
-            location: session.location || null,
-            formation_name: session.formations?.name || null,
-          }
-        })
-        
-        logger.warn('CalendarService - Événements sessions créés', { 
-          count: sessionEvents.length,
-          events: sessionEvents.map((e) => ({ id: e.event_id, title: e.title, start_date: e.start_date }))
-        })
-        
-        events.push(...sessionEvents)
-      }
-    } catch (e) {
+      events.push(...(await this.fetchSessionEventsForPeriod(organizationId, startDate, endDate, userId)))
+    } catch {
       // Session fetch error - continue with other events
     }
-
-    // Récupérer les Formations
-    // Les formations n'ont pas de dates directes, on utilise les dates min/max de leurs sessions
-    // Pour les enseignants, filtrer par les formations des sessions où ils sont assignés
     try {
-      let formationsQuery = this.supabase
-        .from('formations')
-        .select('*, sessions(id, start_date, end_date)')
-        .eq('organization_id', organizationId)
-
-      // Si userId est fourni, vérifier si c'est un enseignant et filtrer ses formations
-      if (userId) {
-        const { data: userData } = await this.supabase
-          .from('users')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle()
-
-        if (userData?.role === 'teacher') {
-          // Récupérer les IDs des sessions assignées à cet enseignant
-          const { data: teacherSessions } = await this.supabase
-            .from('session_teachers')
-            .select('session_id')
-            .eq('teacher_id', userId)
-
-          if (teacherSessions && teacherSessions.length > 0) {
-            const sessionIds = teacherSessions.map((st: any) => st.session_id)
-            // Récupérer les formation_id des sessions assignées
-            const { data: sessionsData } = await this.supabase
-              .from('sessions')
-              .select('formation_id')
-              .in('id', sessionIds)
-
-            if (sessionsData && sessionsData.length > 0) {
-              const formationIds = [...new Set(sessionsData.map((s: any) => s.formation_id).filter((id): id is string => !!id))]
-              if (formationIds.length > 0) {
-                formationsQuery = formationsQuery.in('id', formationIds)
-              } else {
-                // Si aucune formation trouvée, ne pas afficher de formations
-                // Retourner les événements déjà collectés (TODOs et sessions)
-                return events
-              }
-            } else {
-              // Si aucune session trouvée, ne pas afficher de formations
-              return events
-            }
-          } else {
-            // Si l'enseignant n'a pas de sessions assignées, ne pas afficher de formations
-            // Retourner les événements déjà collectés (TODOs et sessions)
-            return events
-          }
-        }
-      }
-
-      // Récupérer les formations
-      const { data: formations, error: formationsError } = await formationsQuery
-
-      if (formationsError) {
-        throw formationsError
-      }
-
-      if (formations) {
-        const rangeStart = new Date(startDate)
-        const rangeEnd = new Date(endDate)
-
-        // Pour chaque formation, calculer les dates min/max de ses sessions
-        const formationsWithDates = formations
-          .map((formation) => {
-            const sessions = (formation.sessions as Array<{ id: string; start_date: string; end_date: string | null }>) || []
-            if (sessions.length === 0) return null
-
-            const sessionDates = sessions
-              .filter((s) => s.start_date)
-              .map((s) => ({
-                start: new Date(s.start_date),
-                end: s.end_date ? new Date(s.end_date) : null,
-              }))
-
-            if (sessionDates.length === 0) return null
-
-            const formationStart = new Date(Math.min(...sessionDates.map((d) => d.start.getTime())))
-            const formationEndDates = sessionDates.map((d) => d.end).filter((d): d is Date => d !== null)
-            const formationEnd = formationEndDates.length > 0 ? new Date(Math.max(...formationEndDates.map((d) => d.getTime()))) : null
-
-            return {
-              formation,
-              start_date: formationStart,
-              end_date: formationEnd,
-            }
-          })
-          .filter((f): f is NonNullable<typeof f> => f !== null)
-
-        // Filtrer pour ne garder que celles qui chevauchent vraiment la période
-        const overlappingFormations = formationsWithDates.filter(({ start_date, end_date }) => {
-          return (
-            // Formation commence dans la période
-            (start_date >= rangeStart && start_date <= rangeEnd) ||
-            // Formation se termine dans la période
-            (end_date && end_date >= rangeStart && end_date <= rangeEnd) ||
-            // Formation en cours (commencée avant et pas encore terminée)
-            (start_date <= rangeStart && (!end_date || end_date >= rangeStart)) ||
-            // Formation qui englobe toute la période
-            (start_date <= rangeStart && end_date && end_date >= rangeEnd)
-          )
-        })
-
-        const formationEvents = overlappingFormations.map(({ formation, start_date, end_date }) => ({
-          event_id: formation.id,
-          event_type: 'formation' as const,
-          title: formation.name,
-          description: formation.description,
-          start_date: start_date.toISOString().split('T')[0],
-          start_time: null,
-          end_date: end_date ? end_date.toISOString().split('T')[0] : start_date.toISOString().split('T')[0],
-          end_time: null,
-          all_day: true,
-          status: formation.is_active ? 'active' : 'inactive',
-          color: '#8B5CF6',
-          category: 'formation',
-          priority: 'medium',
-          linked_id: formation.program_id,
-        }))
-        events.push(...formationEvents)
-      }
-    } catch (e) {
+      events.push(...(await this.fetchFormationEventsForPeriod(organizationId, startDate, endDate, userId)))
+    } catch {
       // Formation fetch error - continue with collected events
     }
-
     return events
   }
 

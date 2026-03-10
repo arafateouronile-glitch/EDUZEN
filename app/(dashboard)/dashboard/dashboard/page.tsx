@@ -48,7 +48,7 @@ type Payment = TableRow<'payments'>
 type Invoice = TableRow<'invoices'>
 
 export default function DashboardPage() {
-  const supabase = createClient() as any // Cast pour éviter les erreurs de types
+  const supabase = createClient()
   const { user } = useAuth()
   const { addToast } = useToast()
 
@@ -69,17 +69,15 @@ export default function DashboardPage() {
       currentMonth.setDate(1)
       const today = new Date().toISOString().split('T')[0]
 
-      // eslint-disable-next-line
-      const qSessionsOngoing: any = supabase
+      const qSessionsOngoing = supabase
         .from('sessions')
         .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
-        .eq('formations.organization_id', user.organization_id)
+        .eq('formations.organization_id', orgId)
         .eq('status', 'ongoing')
-      // eslint-disable-next-line
-      const qSessionsCompleted: any = supabase
+      const qSessionsCompleted = supabase
         .from('sessions')
         .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
-        .eq('formations.organization_id', user.organization_id)
+        .eq('formations.organization_id', orgId)
         .eq('status', 'completed')
 
       // Paralléliser toutes les requêtes indépendantes
@@ -106,7 +104,7 @@ export default function DashboardPage() {
         supabase
           .from('payments')
           .select('amount, currency, paid_at')
-          .eq('organization_id', user.organization_id)
+          .eq('organization_id', orgId)
           .eq('status', 'completed')
           .gte('paid_at', currentMonth.toISOString()),
 
@@ -114,7 +112,7 @@ export default function DashboardPage() {
         supabase
           .from('invoices')
           .select('total_amount, document_type')
-          .eq('organization_id', user.organization_id)
+          .eq('organization_id', orgId)
           .eq('status', 'overdue')
           .or('document_type.eq.invoice,document_type.is.null'),
 
@@ -122,14 +120,14 @@ export default function DashboardPage() {
         supabase
           .from('attendance')
           .select('status')
-          .eq('organization_id', user.organization_id)
+          .eq('organization_id', orgId)
           .eq('date', today),
 
         // Nombre d'enseignants actifs
         supabase
           .from('users')
           .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id)
+          .eq('organization_id', orgId)
           .eq('role', 'teacher')
           .eq('is_active', true),
 
@@ -140,21 +138,21 @@ export default function DashboardPage() {
         supabase
           .from('formations')
           .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id)
+          .eq('organization_id', orgId)
           .eq('is_active', true),
 
         // Programmes actifs
         supabase
           .from('programs')
           .select('*', { count: 'exact', head: true })
-          .eq('organization_id', user.organization_id)
+          .eq('organization_id', orgId)
           .eq('is_active', true),
 
         // Formations pour calculer les inscriptions
         supabase
           .from('formations')
           .select('id')
-          .eq('organization_id', user.organization_id),
+          .eq('organization_id', orgId),
 
         // Sessions terminées (q typé any pour éviter "Type instantiation is excessively deep")
         qSessionsCompleted,
@@ -183,14 +181,14 @@ export default function DashboardPage() {
       // Calculer les inscriptions totales (requête séparée car dépend de formations)
       let totalEnrollments = 0
       if (formationsResult.data && formationsResult.data.length > 0) {
-        const formationIds = formationsResult.data.map((f: any) => f.id)
+        const formationIds = formationsResult.data.map((f: { id: string }) => f.id)
         const { data: sessions } = await supabase
           .from('sessions')
           .select('id')
           .in('formation_id', formationIds)
 
         if (sessions && sessions.length > 0) {
-          const sessionIds = sessions.map((s: any) => s.id)
+          const sessionIds = (sessions as { id: string }[]).map((s) => s.id)
           const { count } = await supabase
             .from('enrollments')
             .select('*', { count: 'exact', head: true })
@@ -266,15 +264,16 @@ export default function DashboardPage() {
 
       if (!sessions) return []
 
+      type SessionWithFormation = { id: string; name?: string; formations?: { name?: string; programs?: { name?: string } } | null }
       const sessionData = await Promise.all(
-        sessions.map(async (session: any) => {
+        (sessions as SessionWithFormation[]).map(async (session) => {
           const { count } = await supabase
             .from('students')
             .select('*', { count: 'exact', head: true })
-            .eq('class_id', session.id) // class_id stocke maintenant l'ID de session
+            .eq('class_id', session.id)
             .eq('status', 'active')
 
-          const formationName = session.formations?.name || ''
+          const formationName = session.formations?.name ?? ''
           const programName = session.formations?.programs?.name
           const displayName = programName 
             ? `${session.name} - ${formationName} (${programName})`
@@ -346,7 +345,7 @@ export default function DashboardPage() {
 
       if (!formations || formations.length === 0) return []
 
-      const formationIds = formations.map((f: any) => f.id)
+      const formationIds = formations.map((f: { id: string }) => f.id)
 
       // Ensuite, récupérer les sessions de ces formations
       const { data: sessions } = await supabase
@@ -356,17 +355,14 @@ export default function DashboardPage() {
 
       if (!sessions || sessions.length === 0) return []
 
-      const sessionIds = sessions.map((s: any) => s.id)
+      const sessionIds = sessions.map((s: { id: string }) => s.id)
 
-      // Enfin, récupérer les inscriptions pour ces sessions
-      // eslint-disable-next-line
-      const q: any = supabase
+      const { data, error } = await supabase
         .from('enrollments')
         .select('*, students(first_name, last_name), sessions(name, formations(name, programs(name)))')
         .in('session_id', sessionIds)
         .order('created_at', { ascending: false })
         .limit(5)
-      const { data, error } = await q
 
       if (error) {
         logger.error('Erreur lors de la récupération des inscriptions:', error)
@@ -385,8 +381,7 @@ export default function DashboardPage() {
       if (!user?.organization_id) return []
 
       const today = new Date().toISOString().split('T')[0]
-      // eslint-disable-next-line
-      const q: any = supabase
+      const { data: sessions } = await supabase
         .from('sessions')
         .select('*, formations!inner(name, organization_id, programs(name))')
         .eq('formations.organization_id', user.organization_id)
@@ -394,16 +389,15 @@ export default function DashboardPage() {
         .in('status', ['planned', 'ongoing'])
         .order('start_date', { ascending: true })
         .limit(5)
-      const { data: sessions } = await q
 
-      return (sessions || []).map((session: any) => ({
+      return (sessions || []).map((session) => ({
         id: session.id,
-        name: session.name,
-        formation: session.formations?.name || '',
-        program: session.formations?.programs?.name || '',
-        start_date: session.start_date,
-        end_date: session.end_date,
-        status: session.status,
+        name: session.name ?? '',
+        formation: (session.formations as { name?: string } | null)?.name ?? '',
+        program: (session.formations as { programs?: { name?: string } } | null)?.programs?.name ?? '',
+        start_date: session.start_date ?? '',
+        end_date: session.end_date ?? '',
+        status: session.status ?? '',
       }))
     },
     enabled: !!user?.organization_id,
@@ -426,7 +420,7 @@ export default function DashboardPage() {
 
       // Pour chaque programme, compter les inscriptions via ses formations
       const programsWithStats = await Promise.all(
-        programs.map(async (program: any) => {
+        programs.map(async (program: { id: string; name?: string; code?: string; formations?: Array<{ id: string }> }) => {
           let totalEnrollments = 0
           
           // Pour chaque formation, récupérer ses sessions et leurs inscriptions
@@ -436,7 +430,7 @@ export default function DashboardPage() {
               .select('id')
               .eq('formation_id', formation.id)
             
-            const sessionIds = (sessions || []).map((s: any) => s.id).filter((id: any): id is string => !!id)
+            const sessionIds = (sessions || []).map((s: { id: string }) => s.id).filter((id): id is string => !!id)
             
             if (sessionIds && sessionIds.length > 0) {
               const { count, error: enrollmentsError } = await supabase
@@ -452,7 +446,7 @@ export default function DashboardPage() {
           return {
             id: program.id,
             name: program.name,
-            code: program.code,
+            code: (program as { code?: string }).code ?? '',
             enrollments: totalEnrollments,
           }
         })
@@ -560,9 +554,9 @@ export default function DashboardPage() {
                       totalStudents: stats.studentsCount || 0,
                       activeSessions: stats.activeSessionsCount || 0,
                       monthlyRevenue: stats.monthlyRevenue || 0,
-                      pendingInvoices: (stats as any).pendingInvoices || 0,
+                      pendingInvoices: (stats as { pendingInvoices?: number }).pendingInvoices || 0,
                       attendanceRate: stats.avgAttendance,
-                      completedPayments: (stats as any).completedPayments || 0,
+                      completedPayments: (stats as { completedPayments?: number }).completedPayments || 0,
                     },
                     generatedAt: new Date().toISOString(),
                   },
@@ -805,7 +799,7 @@ export default function DashboardPage() {
             
             {upcomingEvents && upcomingEvents.length > 0 ? (
               <div className="space-y-4">
-                {upcomingEvents.map((event: any, index: number) => (
+                {upcomingEvents.map((event: { id: string; name?: string; program?: string; formation?: string; start_date?: string; status?: string }, index: number) => (
                   <motion.div
                     key={event.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -825,7 +819,7 @@ export default function DashboardPage() {
                           {event.program && `${event.program} - `}{event.formation}
                         </p>
                         <p className="text-white/40 text-xs font-light mt-1" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 300 }}>
-                          {new Date(event.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                          {event.start_date ? new Date(event.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}
                         </p>
                       </div>
                     </div>

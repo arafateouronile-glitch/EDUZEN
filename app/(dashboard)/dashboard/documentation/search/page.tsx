@@ -86,7 +86,7 @@ export default function DocumentationSearchPage() {
 
           {searchResults.results && searchResults.results.length > 0 ? (
             <div className="space-y-4">
-              {searchResults.results.map((article: any) => (
+              {searchResults.results.map((article: { id: string; slug: string; title: string; excerpt?: string; view_count?: number; category: { slug: string; name: string } }) => (
                 <Card key={article.id} className="hover:shadow-lg transition-shadow">
                   <Link href={`/dashboard/documentation/${article.category.slug}/${article.slug}`}>
                     <CardContent className="pt-6">

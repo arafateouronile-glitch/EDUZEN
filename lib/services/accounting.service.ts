@@ -12,6 +12,7 @@ import type {
   SyncResult,
 } from './accounting/accounting.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import type { Json } from '@/types/database.types'
 import { InvoiceService } from './invoice.service'
 import { PaymentService } from './payment.service'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
@@ -21,6 +22,9 @@ type EntityMapping = TableRow<'accounting_entity_mappings'>
 type SyncLog = TableRow<'accounting_sync_logs'>
 type AccountingIntegrationInsert = TableInsert<'accounting_integrations'>
 type AccountingIntegrationUpdate = TableUpdate<'accounting_integrations'>
+
+/** Facture avec relation students (retour de getById avec select students) */
+type InvoiceWithStudents = { students?: { first_name?: string; last_name?: string } | null }
 
 export class AccountingService {
   private supabase: SupabaseClient<any>
@@ -132,7 +136,7 @@ export class AccountingService {
       metadata: {
         ...(config.metadata as Record<string, unknown> || {}),
         company_info: companyInfo.data,
-      } as any,
+      } as unknown as Json,
     }
 
     return this.upsertConfig(organizationId, provider, updates)
@@ -213,9 +217,10 @@ export class AccountingService {
       currency: invoice.currency,
       status: invoice.status || '',
       student_id: invoice.student_id,
-      student_name: (invoice as any).students
-        ? `${(invoice as any).students.first_name} ${(invoice as any).students.last_name}`
-        : undefined,
+      student_name: (() => {
+        const s = (invoice as InvoiceWithStudents).students
+        return s ? `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || undefined : undefined
+      })(),
       items: invoice.items as Array<{ description: string; quantity: number; unit_price: number; total: number }>,
     }
 
@@ -432,9 +437,10 @@ export class AccountingService {
           currency: invoice.currency,
           status: invoice.status || '',
           student_id: invoice.student_id,
-          student_name: (invoice as any).students
-            ? `${(invoice as any).students.first_name} ${(invoice as any).students.last_name}`
-            : undefined,
+          student_name: (() => {
+            const s = (invoice as InvoiceWithStudents).students
+            return s ? `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || undefined : undefined
+          })(),
           items: invoice.items as Array<{
             description: string
             quantity: number
@@ -607,7 +613,7 @@ export class AccountingService {
       records_created: result.records_created,
       records_updated: result.records_updated,
       records_skipped: result.records_skipped,
-      error_message: result.errors?.map((e: any) => e.error).join('; ') || undefined,
+      error_message: result.errors?.map((e) => e.error).join('; ') || undefined,
       sync_data: result as SyncResult,
       completed_at: new Date().toISOString(),
       duration_ms: duration,
@@ -619,7 +625,7 @@ export class AccountingService {
       .update({
         last_sync_at: new Date().toISOString(),
         last_sync_status: result.success && result.records_failed === 0 ? 'success' : result.records_failed > 0 ? 'partial' : 'failed',
-        last_sync_error: result.errors?.map((e: any) => e.error).join('; ') || undefined,
+        last_sync_error: result.errors?.map((e) => e.error).join('; ') || undefined,
       })
       .eq('id', integrationId)
   }

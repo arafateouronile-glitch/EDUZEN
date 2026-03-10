@@ -130,7 +130,7 @@ function EntitiesPageContent() {
       if (error) throw error
       
       const counts: Record<string, number> = {}
-      data?.forEach((se: any) => {
+      data?.forEach((se: { entity_id: string }) => {
         counts[se.entity_id] = (counts[se.entity_id] || 0) + 1
       })
       
@@ -144,7 +144,7 @@ function EntitiesPageContent() {
     mutationFn: async (data: typeof formData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         organization_id: user.organization_id,
         name: data.name,
         type: data.type,
@@ -170,13 +170,13 @@ function EntitiesPageContent() {
       if (editingEntity) {
         const { error } = await supabase
           .from('external_entities')
-          .update(payload)
+          .update(payload as never)
           .eq('id', editingEntity.id)
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('external_entities')
-          .insert(payload)
+          .insert(payload as never)
         if (error) throw error
       }
     },
@@ -190,10 +190,10 @@ function EntitiesPageContent() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Une erreur est survenue',
+        description: (error instanceof Error ? error.message : null) || 'Une erreur est survenue',
         type: 'error',
       })
     },
@@ -216,10 +216,10 @@ function EntitiesPageContent() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Une erreur est survenue',
+        description: (error instanceof Error ? error.message : null) || 'Une erreur est survenue',
         type: 'error',
       })
     },
@@ -598,7 +598,7 @@ function EntitiesPageContent() {
                     <SelectTrigger className="bg-gray-50/50 border-gray-200 focus:ring-brand-blue/20 focus:border-brand-blue">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent portal={false}>
                       <SelectItem value="company">Entreprise</SelectItem>
                       <SelectItem value="organization">Organisme</SelectItem>
                       <SelectItem value="institution">Établissement</SelectItem>
@@ -718,7 +718,7 @@ function EntitiesPageContent() {
                     <SelectTrigger className="bg-gray-50/50 border-gray-200 focus:ring-brand-blue/20 focus:border-brand-blue">
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent portal={false}>
                       <SelectItem value="1-10">1-10 salariés</SelectItem>
                       <SelectItem value="11-50">11-50 salariés</SelectItem>
                       <SelectItem value="51-250">51-250 salariés</SelectItem>

@@ -44,7 +44,7 @@ import {
   List,
   ListOrdered,
   Link2,
-  Image,
+  Image as ImageIcon,
   Code,
   Quote,
   Heading1,
@@ -303,7 +303,7 @@ export function BlogPostEditor({
                       <Link2 className="h-4 w-4" />
                     </Button>
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Image className="h-4 w-4" />
+                      <ImageIcon className="h-4 w-4" aria-hidden />
                     </Button>
                   </div>
                   <div className="flex items-center gap-0.5 ml-auto">

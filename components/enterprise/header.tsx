@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Bell, Menu, X, ChevronDown, Building2, User, Settings, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Company, CompanyManager } from '@/lib/services/enterprise-portal.service'
+import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
 
 interface EnterpriseHeaderProps {
   onMenuClick?: () => void
@@ -17,29 +18,30 @@ export function EnterpriseHeader({ onMenuClick }: EnterpriseHeaderProps) {
   const { user, logout } = useAuth()
   const supabase = createClient()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const { company: contextCompany } = useEnterpriseCompany()
 
-  // Fetch company and manager info
+  // Fetch company and manager info (pour le nom du manager quand il est bien manager)
   const { data: managerData } = useQuery({
     queryKey: ['company-manager', user?.id],
     queryFn: async () => {
       if (!user?.id) return null
 
-      const { data: manager } = await (supabase
-        .from('company_managers' as any)
+      const { data: manager } = await supabase
+        .from('company_managers')
         .select(`
           *,
           company:companies (*)
         `)
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .single() as any)
+        .maybeSingle()
 
       return manager as (CompanyManager & { company: Company }) | null
     },
     enabled: !!user?.id,
   })
 
-  const companyName = managerData?.company?.name || 'Mon Entreprise'
+  const companyName = contextCompany?.name || managerData?.company?.name || 'Mon Entreprise'
   const managerName = managerData ? `${managerData.first_name} ${managerData.last_name}` : user?.email || ''
   const managerRole = managerData?.role || 'manager'
 

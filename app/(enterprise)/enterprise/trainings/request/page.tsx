@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
 import { createClient } from '@/lib/supabase/client'
 import { enterprisePortalService, type TrainingRequest } from '@/lib/services/enterprise-portal.service'
 import { GlassCard } from '@/components/ui/glass-card'
@@ -25,6 +26,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import Link from 'next/link'
+import { logger } from '@/lib/utils/logger'
 
 type RequestType = TrainingRequest['request_type']
 type FundingType = 'company' | 'opco' | 'cpf' | 'mixed'
@@ -53,14 +55,7 @@ export default function TrainingRequestPage() {
   })
 
   // Get company and manager
-  const { data: company } = useQuery({
-    queryKey: ['enterprise-company', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null
-      return enterprisePortalService.getCompanyForManager(user.id)
-    },
-    enabled: !!user?.id,
-  })
+  const { company } = useEnterpriseCompany()
 
   const { data: manager } = useQuery({
     queryKey: ['enterprise-manager', user?.id, company?.id],
@@ -124,7 +119,7 @@ export default function TrainingRequestPage() {
       toast.error('Erreur', {
         description: 'Impossible d\'envoyer la demande. Veuillez réessayer.',
       })
-      console.error('Error submitting training request:', error)
+      logger.error('Error submitting training request', error instanceof Error ? error : new Error(String(error)), {})
     },
   })
 
@@ -400,7 +395,7 @@ export default function TrainingRequestPage() {
               Sélectionnez les collaborateurs qui suivront cette formation
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {employeesData.employees.map((emp: any) => (
+              {employeesData.employees.map((emp: { id: string; student?: { first_name?: string; last_name?: string }; department?: string }) => (
                 <label
                   key={emp.id}
                   className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${

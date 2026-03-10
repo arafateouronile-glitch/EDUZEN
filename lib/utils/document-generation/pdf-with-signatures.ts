@@ -9,7 +9,7 @@ import { logger } from '@/lib/utils/logger'
 
 export interface PDFSignatureOptions {
   documentId?: string
-  variables?: Record<string, any>
+  variables?: Record<string, unknown>
   filename?: string
   orientation?: 'portrait' | 'landscape'
   format?: 'a4' | 'letter' | [number, number]

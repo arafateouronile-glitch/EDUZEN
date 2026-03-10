@@ -280,9 +280,10 @@ export class ErrorHandler {
   /**
    * Gère les erreurs Supabase
    */
-  private handleSupabaseError(error: any, context: AppErrorContext): AppError {
-    const code = error.code || error.status
-    const message = error.message || 'Erreur Supabase'
+  private handleSupabaseError(error: unknown, context: AppErrorContext): AppError {
+    const e = error as { code?: string; status?: number; message?: string } | null
+    const code = e?.code ?? e?.status
+    const message = (e?.message ?? 'Erreur Supabase') as string
 
     // Si un code d'erreur est fourni dans le contexte, l'utiliser en priorité
     let errorCode = context.code || ErrorCode.DB_QUERY_ERROR
@@ -345,11 +346,12 @@ export class ErrorHandler {
   /**
    * Vérifie si une erreur est une erreur Supabase
    */
-  private isSupabaseError(error: any): boolean {
+  private isSupabaseError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false
+    const e = error as { code?: string; status?: number; message?: string }
     return (
-      error &&
-      (error.code || error.status || error.message) &&
-      (typeof error.code === 'string' || typeof error.status === 'number')
+      Boolean(e.code ?? e.status ?? e.message) &&
+      (typeof e.code === 'string' || typeof e.status === 'number')
     )
   }
 

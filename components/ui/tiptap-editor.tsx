@@ -783,6 +783,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       if (externalFontFamily && externalFontFamily !== fontFamily) {
         setFontFamily(externalFontFamily)
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fontFamily is target state, omit to avoid loop
     }, [externalFontFamily])
 
     // Reflect font from selection
@@ -801,6 +802,7 @@ export const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         editor.off('selectionUpdate', updateFontFamily)
         editor.off('transaction', updateFontFamily)
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fontFamily is derived state from selection
     }, [editor, externalFontFamily])
 
     // Reflect fontSize from selection

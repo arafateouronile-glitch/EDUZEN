@@ -71,11 +71,11 @@ export default function CPFCatalogSyncPage() {
       setSelectedFile(null)
       setUploadProgress(0)
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur de synchronisation',
-        description: error.message || 'Une erreur est survenue lors de la synchronisation.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la synchronisation.',
       })
     },
   })
@@ -96,11 +96,11 @@ export default function CPFCatalogSyncPage() {
       })
       queryClient.invalidateQueries({ queryKey: ['cpf-catalog-sync-history'] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur de synchronisation',
-        description: error.message || 'Une erreur est survenue lors de la synchronisation.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la synchronisation.',
       })
     },
   })
@@ -378,29 +378,31 @@ export default function CPFCatalogSyncPage() {
             </div>
           ) : syncHistory && syncHistory.length > 0 ? (
             <div className="space-y-4">
-              {syncHistory.map((sync: any) => (
-                <GlassCard key={sync.id} className="p-4">
+              {syncHistory.map((sync) => {
+                const s = sync as { id: string; sync_method: string; sync_type?: string; started_at?: string; completed_at?: string; sync_status?: string; records_total?: number; records_created?: number; records_updated?: number; records_failed?: number; error_message?: string }
+                return (
+                <GlassCard key={s.id} className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3">
-                        {getMethodIcon(sync.sync_method)}
+                        {getMethodIcon(s.sync_method)}
                         <div>
                           <h3 className="font-semibold">
-                            Synchronisation {sync.sync_type === 'full' ? 'complète' : 'incrémentale'} ({sync.sync_method.toUpperCase()})
+                            Synchronisation {s.sync_type === 'full' ? 'complète' : 'incrémentale'} ({s.sync_method.toUpperCase()})
                           </h3>
                           <p className="text-sm text-gray-500">
-                            {formatDate(sync.started_at)}
+                            {formatDate(s.started_at ?? '')}
                           </p>
                         </div>
-                        {getStatusBadge(sync.sync_status)}
+                        {getStatusBadge(s.sync_status ?? '')}
                       </div>
 
-                      {sync.completed_at && (
+                      {s.completed_at && s.started_at && (
                         <div className="text-sm text-gray-600">
                           <p>
                             Durée: {Math.round(
-                              (new Date(sync.completed_at).getTime() -
-                                new Date(sync.started_at).getTime()) /
+                              (new Date(s.completed_at).getTime() -
+                                new Date(s.started_at).getTime()) /
                                 1000 / 60
                             )}{' '}
                             minutes
@@ -408,40 +410,40 @@ export default function CPFCatalogSyncPage() {
                         </div>
                       )}
 
-                      {(sync.records_total > 0 || sync.records_created > 0 || sync.records_updated > 0) && (
+                      {((s.records_total ?? 0) > 0 || (s.records_created ?? 0) > 0 || (s.records_updated ?? 0) > 0) && (
                         <div className="flex gap-4 text-sm text-gray-600">
-                          {sync.records_total > 0 && (
-                            <span>Total: {sync.records_total}</span>
+                          {(s.records_total ?? 0) > 0 && (
+                            <span>Total: {s.records_total}</span>
                           )}
-                          {sync.records_created > 0 && (
+                          {(s.records_created ?? 0) > 0 && (
                             <span className="text-green-600">
-                              Créés: {sync.records_created}
+                              Créés: {s.records_created}
                             </span>
                           )}
-                          {sync.records_updated > 0 && (
+                          {(s.records_updated ?? 0) > 0 && (
                             <span className="text-blue-600">
-                              Mis à jour: {sync.records_updated}
+                              Mis à jour: {s.records_updated}
                             </span>
                           )}
-                          {sync.records_failed > 0 && (
+                          {(s.records_failed ?? 0) > 0 && (
                             <span className="text-red-600">
-                              Échoués: {sync.records_failed}
+                              Échoués: {s.records_failed}
                             </span>
                           )}
                         </div>
                       )}
 
-                      {sync.error_message && (
+                      {s.error_message && (
                         <div className="p-3 bg-red-50 rounded-lg border border-red-200">
                           <p className="text-sm text-red-800 font-medium">
-                            Erreur: {sync.error_message}
+                            Erreur: {s.error_message}
                           </p>
                         </div>
                       )}
                     </div>
                   </div>
                 </GlassCard>
-              ))}
+              )})}
             </div>
           ) : (
             <GlassCard className="p-12 text-center">

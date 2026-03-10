@@ -42,6 +42,7 @@ export default function SignaturePage() {
 
   useEffect(() => {
     loadSignatureRequest()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load once when token is available
   }, [token])
 
   const loadSignatureRequest = async () => {

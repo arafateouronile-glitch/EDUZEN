@@ -220,11 +220,11 @@ export const TinyMCEEditor = forwardRef<TinyMCEEditorRef, TinyMCEEditorProps>(
             paste_strip_class_attributes: 'none',
             invalid_elements: '',
             extended_valid_elements: 'span[class|style|contenteditable],div[class|style|contenteditable],table[class|style|border|cellpadding|cellspacing],td[class|style],th[class|style],tr[class|style]',
-            setup: (editor: any) => {
+            setup: (editor: { ui: { registry: { addMenuButton: (id: string, spec: { text: string; fetch: (cb: (items: unknown[]) => void) => void }) => void } }; insertContent: (content: string) => void; execCommand: (cmd: string, ui: boolean, value: unknown) => boolean }) => {
               // Ajouter un bouton personnalisé pour les variables
               editor.ui.registry.addMenuButton('variables', {
                 text: 'Variables',
-                fetch: (callback: any) => {
+                fetch: (callback: (items: unknown[]) => void) => {
                   const items = [
                     {
                       type: 'menuitem',
@@ -262,7 +262,7 @@ export const TinyMCEEditor = forwardRef<TinyMCEEditorRef, TinyMCEEditorProps>(
               // Ajouter un bouton personnalisé pour les tableaux avancés
               editor.ui.registry.addMenuButton('advanced-table', {
                 text: 'Tableau avancé',
-                fetch: (callback: any) => {
+                fetch: (callback: (items: unknown[]) => void) => {
                   const items = [
                     {
                       type: 'menuitem',
@@ -293,7 +293,7 @@ export const TinyMCEEditor = forwardRef<TinyMCEEditorRef, TinyMCEEditorProps>(
               // Ajouter un bouton personnalisé pour les cadres
               editor.ui.registry.addMenuButton('frames', {
                 text: 'Cadres',
-                fetch: (callback: any) => {
+                fetch: (callback: (items: unknown[]) => void) => {
                   const items = [
                     {
                       type: 'menuitem',

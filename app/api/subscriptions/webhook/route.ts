@@ -17,7 +17,6 @@ const getStripe = () => {
   })
 }
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || ''
 
 function escapeHtml(s: string): string {
   return String(s)
@@ -40,6 +39,15 @@ function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  if (!webhookSecret || webhookSecret.length === 0) {
+    logger.error('Subscriptions webhook: STRIPE_WEBHOOK_SECRET non configuré')
+    return NextResponse.json(
+      { error: 'Webhook non configuré' },
+      { status: 503 }
+    )
+  }
+
   const body = await request.text()
   const signature = request.headers.get('stripe-signature')
 

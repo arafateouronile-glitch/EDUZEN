@@ -40,6 +40,12 @@
       "destination": "/api/:path*"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/diploma-expiry-alerts",
+      "schedule": "0 8 * * *"
+    }
+  ],
   "functions": {
     "app/api/documents/generate-pdf/route.ts": {
       "maxDuration": 60,

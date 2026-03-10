@@ -94,7 +94,7 @@ export default function GenerateDocumentPage() {
   const queryClient = useQueryClient()
 
   // Récupérer les élèves - Filtrés par session si une session est sélectionnée
-  const { data: students } = useQuery<Array<{ id: string; first_name?: string; last_name?: string; student_number?: string; [key: string]: any }>>({
+  const { data: students } = useQuery<Array<{ id: string; first_name?: string; last_name?: string; student_number?: string; [key: string]: unknown }>>({
     queryKey: ['students', user?.organization_id, selectedSessionId],
     queryFn: async () => {
       if (!user?.organization_id) return []
@@ -181,11 +181,11 @@ export default function GenerateDocumentPage() {
               .in('id', studentIds)
             
             if (studentsData) {
-              const studentsMap = new Map((studentsData as Array<{ id: string; [key: string]: any }>).map(s => [s.id, s]))
-              return (invoicesData as Array<{ id: string; student_id?: string; [key: string]: any }>).map(inv => ({
+              const studentsMap = new Map((studentsData as Array<{ id: string; [key: string]: unknown }>).map(s => [s.id, s]))
+              return (invoicesData as Array<{ id: string; student_id?: string; [key: string]: unknown }>).map(inv => ({
                 ...inv,
                 students: inv.student_id ? studentsMap.get(inv.student_id) || null : null
-              })) as Array<{ id: string; students?: { id: string; [key: string]: any } | null; student_id?: string; [key: string]: any }>
+              })) as Array<{ id: string; students?: { id: string; [key: string]: unknown } | null; student_id?: string; [key: string]: unknown }>
             }
           }
         }

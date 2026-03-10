@@ -23,7 +23,7 @@ export async function DELETE(
     // Récupérer le document pour vérifier les permissions
     const { data: document, error: docError } = await supabase
       .from('teacher_documents')
-      .select('teacher_id, file_url')
+      .select('teacher_id, file_url, organization_id')
       .eq('id', documentId)
       .single()
     
@@ -34,18 +34,31 @@ export async function DELETE(
       )
     }
     
-    // Vérifier que l'utilisateur est le propriétaire du document
     const { data: userData } = await supabase
       .from('users')
-      .select('role')
+      .select('role, organization_id')
       .eq('id', user.id)
       .single()
     
-    if (document.teacher_id !== user.id && userData?.role !== 'admin' && userData?.role !== 'secretary') {
-      return NextResponse.json(
-        { error: 'Accès non autorisé' },
-        { status: 403 }
-      )
+    const userOrgId = userData?.organization_id
+    if (!userOrgId) {
+      return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+    }
+    
+    // Sécurité cross-tenant : admin/secretary ne peuvent supprimer que dans leur organisation
+    if (document.teacher_id !== user.id) {
+      if (userData?.role !== 'admin' && userData?.role !== 'secretary') {
+        return NextResponse.json(
+          { error: 'Accès non autorisé' },
+          { status: 403 }
+        )
+      }
+      if (document.organization_id !== userOrgId) {
+        return NextResponse.json(
+          { error: 'Accès non autorisé (document d\'une autre organisation)' },
+          { status: 403 }
+        )
+      }
     }
     
     // Supprimer le fichier du storage
@@ -70,10 +83,10 @@ export async function DELETE(
     }
     
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Erreur suppression document enseignant', error)
     return NextResponse.json(
-      { error: error.message || 'Erreur serveur' },
+      { error: error instanceof Error ? error.message : 'Erreur serveur' },
       { status: 500 }
     )
   }

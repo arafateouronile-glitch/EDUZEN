@@ -63,8 +63,7 @@ export default function AffiliatesPage() {
   const { data: affiliates, isLoading } = useQuery({
     queryKey: ['affiliates', search, statusFilter],
     queryFn: async () => {
-      // eslint-disable-next-line
-      let q: any = supabase
+      let q = supabase
         .from('affiliates')
         .select('*, affiliate_campaigns(name, commission_percent)')
         .order('created_at', { ascending: false })

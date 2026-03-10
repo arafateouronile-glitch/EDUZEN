@@ -153,7 +153,7 @@ export async function generateAttestationHTML(data: {
   const template = generateAttestationTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     certifies: t.certifies,
@@ -309,7 +309,7 @@ export async function generateCertificateHTML(data: {
   const template = generateCertificateTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     certifies: t.certifies,
@@ -517,7 +517,7 @@ export async function generateInvoiceHTML(data: {
   const template = generateInvoiceTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     organization_name: data.organization.name,
@@ -697,7 +697,7 @@ export async function generateReceiptHTML(data: {
   const template = generateReceiptTemplate(data)
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     receipt_number_label: t.receiptNumber,
@@ -1087,7 +1087,7 @@ export async function generateConventionHTML(data: {
   const t = texts[lang]
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     between: t.between,
@@ -1189,27 +1189,26 @@ export async function generateConventionHTML(data: {
           contentIsString: typeof template.content === 'string',
           contentIsObject: typeof template.content === 'object',
           contentHtmlExists: typeof template.content === 'object' ? !!template.content?.html : false,
-          contentHtmlLength: typeof template.content === 'object' && template.content?.html 
-            ? template.content.html.length 
-            : typeof template.content === 'string' 
-              ? template.content.length 
-              : 0
+          contentHtmlLength: (() => {
+            const content = template.content as string | { html?: string }
+            if (typeof content === 'string') return content.length
+            return (content && typeof content.html === 'string') ? content.html.length : 0
+          })()
         })
         
         // Vérifier que le template a du contenu valide
         // Le contenu peut être dans content.html ou content.elements
         let hasValidContent = false
-        if (typeof template.content === 'string') {
-          hasValidContent = template.content.trim().length > 0
-        } else if (typeof template.content === 'object' && template.content) {
-          // Vérifier content.html
-          if (template.content.html && typeof template.content.html === 'string' && template.content.html.trim().length > 0) {
+        const contentForValidation = template.content as string | { html?: string; elements?: Array<{ content?: string; html?: string }> }
+        if (typeof contentForValidation === 'string') {
+          hasValidContent = contentForValidation.trim().length > 0
+        } else if (typeof contentForValidation === 'object' && contentForValidation) {
+          const contentObj = contentForValidation
+          if (contentObj.html && typeof contentObj.html === 'string' && contentObj.html.trim().length > 0) {
             hasValidContent = true
           }
-          // Vérifier content.elements
-          else if (template.content.elements && Array.isArray(template.content.elements) && template.content.elements.length > 0) {
-            // Vérifier si au moins un élément a du contenu
-            hasValidContent = template.content.elements.some((el: any) => {
+          else if (contentObj.elements && Array.isArray(contentObj.elements) && contentObj.elements.length > 0) {
+            hasValidContent = contentObj.elements.some((el) => {
               return (el.content && typeof el.content === 'string' && el.content.trim().length > 0) ||
                      (el.html && typeof el.html === 'string' && el.html.trim().length > 0)
             })
@@ -1219,8 +1218,8 @@ export async function generateConventionHTML(data: {
         logger.info('[generateConventionHTML] Validation du contenu', {
           hasValidContent,
           contentType: typeof template.content,
-          hasContentHtml: typeof template.content === 'object' ? !!template.content?.html : false,
-          contentHtmlLength: typeof template.content === 'object' && template.content?.html ? template.content.html.length : 0,
+          hasContentHtml: typeof template.content === 'object' ? !!(template.content as { html?: string })?.html : false,
+          contentHtmlLength: typeof template.content === 'object' && template.content && 'html' in template.content && typeof (template.content as { html?: string }).html === 'string' ? (template.content as { html: string }).html.length : 0,
           hasElements: typeof template.content === 'object' ? !!template.content?.elements : false,
           elementsCount: typeof template.content === 'object' && Array.isArray(template.content?.elements) ? template.content.elements.length : 0
         })
@@ -1806,7 +1805,7 @@ export async function generateSessionReportHTML(data: {
     ? t.averagePercentage 
     : t.averageGrade
   
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organization_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
@@ -2321,7 +2320,7 @@ export async function generateContractHTML(data: {
   const remaining = data.enrollment.total_amount - data.enrollment.paid_amount
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     between: t.between,
@@ -2440,27 +2439,25 @@ export async function generateContractHTML(data: {
           contentIsString: typeof template.content === 'string',
           contentIsObject: typeof template.content === 'object',
           contentHtmlExists: typeof template.content === 'object' ? !!template.content?.html : false,
-          contentHtmlLength: typeof template.content === 'object' && template.content?.html 
-            ? template.content.html.length 
-            : typeof template.content === 'string' 
-              ? template.content.length 
-              : 0
+          contentHtmlLength: (() => {
+            const content = template.content as string | { html?: string }
+            if (typeof content === 'string') return content.length
+            return (content && typeof content.html === 'string') ? content.html.length : 0
+          })()
         })
         
         // Vérifier que le template a du contenu valide
-        // Le contenu peut être dans content.html ou content.elements
         let hasValidContent = false
-        if (typeof template.content === 'string') {
-          hasValidContent = template.content.trim().length > 0
-        } else if (typeof template.content === 'object' && template.content) {
-          // Vérifier content.html
-          if (template.content.html && typeof template.content.html === 'string' && template.content.html.trim().length > 0) {
+        const contentForValidationContract = template.content as string | { html?: string; elements?: Array<{ content?: string; html?: string }> }
+        if (typeof contentForValidationContract === 'string') {
+          hasValidContent = contentForValidationContract.trim().length > 0
+        } else if (typeof contentForValidationContract === 'object' && contentForValidationContract) {
+          const contentObj = contentForValidationContract
+          if (contentObj.html && typeof contentObj.html === 'string' && contentObj.html.trim().length > 0) {
             hasValidContent = true
           }
-          // Vérifier content.elements
-          else if (template.content.elements && Array.isArray(template.content.elements) && template.content.elements.length > 0) {
-            // Vérifier si au moins un élément a du contenu
-            hasValidContent = template.content.elements.some((el: any) => {
+          else if (contentObj.elements && Array.isArray(contentObj.elements) && contentObj.elements.length > 0) {
+            hasValidContent = contentObj.elements.some((el) => {
               return (el.content && typeof el.content === 'string' && el.content.trim().length > 0) ||
                      (el.html && typeof el.html === 'string' && el.html.trim().length > 0)
             })
@@ -2470,8 +2467,8 @@ export async function generateContractHTML(data: {
         logger.info('[generateContractHTML] Validation du contenu', {
           hasValidContent,
           contentType: typeof template.content,
-          hasContentHtml: typeof template.content === 'object' ? !!template.content?.html : false,
-          contentHtmlLength: typeof template.content === 'object' && template.content?.html ? template.content.html.length : 0,
+          hasContentHtml: typeof template.content === 'object' ? !!(template.content as { html?: string })?.html : false,
+          contentHtmlLength: typeof template.content === 'object' && template.content && 'html' in template.content && typeof (template.content as { html?: string }).html === 'string' ? (template.content as { html: string }).html.length : 0,
           hasElements: typeof template.content === 'object' ? !!template.content?.elements : false,
           elementsCount: typeof template.content === 'object' && Array.isArray(template.content?.elements) ? template.content.elements.length : 0
         })
@@ -2742,7 +2739,7 @@ export async function generateConvocationHTML(data: {
   }[lang]
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     organization_name: data.organization.name,
@@ -2988,7 +2985,7 @@ export async function generateProgramHTML(data: {
   }[lang]
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
@@ -3146,7 +3143,7 @@ export async function generateTermsHTML(data: {
   }[lang]
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
@@ -3289,7 +3286,7 @@ export async function generatePrivacyPolicyHTML(data: {
   }[lang]
   
   // Préparer les variables pour le système de balises
-  const variables: any = {
+  const variables: Record<string, unknown> = {
     organisation_logo: data.organization.logo_url || '',
     title: t.title,
     subtitle: t.subtitle,
@@ -3312,10 +3309,12 @@ export async function generatePrivacyPolicyHTML(data: {
       const templateService = new DocumentTemplateService(createClient())
       // Récupérer tous les templates et chercher celui qui correspond à la politique de confidentialité
       const allTemplates = await templateService.getAllTemplates(data.organizationId, { type: 'attestation' })
-      const privacyTemplate = allTemplates.find(t => 
-        t.name?.toLowerCase().includes('confidentialité') || 
-        t.name?.toLowerCase().includes('privacy') ||
-        t.name?.toLowerCase().includes('rgpd')
+      const privacyTemplate = allTemplates.find(t =>
+        t != null && (
+          t.name?.toLowerCase().includes('confidentialité') ||
+          t.name?.toLowerCase().includes('privacy') ||
+          t.name?.toLowerCase().includes('rgpd')
+        )
       )
       
       if (privacyTemplate) {
@@ -3360,10 +3359,10 @@ export async function processTemplateWithTags(
   }
   
   // Créer un template minimal pour le système de génération HTML
-  const template: any = {
+  const template: DocumentTemplate = {
     id: documentId || 'temp',
     name: 'Template',
-    type: 'convention', // Type par défaut
+    type: 'convention',
     content: {
       pageSize: 'A4',
       margins: {
@@ -3374,15 +3373,23 @@ export async function processTemplateWithTags(
       },
       elements: [
         {
+          id: 'html-block',
           type: 'html',
+          position: { x: 0, y: 0 },
           html: templateContent,
         },
       ],
-    } as any,
+    },
     header: null,
-    footer: null,
     header_enabled: false,
+    header_height: 0,
+    footer: null,
     footer_enabled: false,
+    footer_height: 0,
+    is_default: false,
+    is_active: true,
+    page_size: 'A4',
+    margins: { top: 20, right: 20, bottom: 20, left: 20 },
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     organization_id: organizationId || '',

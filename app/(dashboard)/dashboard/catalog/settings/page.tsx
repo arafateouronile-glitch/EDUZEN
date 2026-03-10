@@ -37,7 +37,7 @@ export default function CatalogSettingsPage() {
   })
 
   // Récupérer l'organisation pour pré-remplir les données
-  const { data: organization } = useQuery<Record<string, any> | null>({
+  const { data: organization } = useQuery<Record<string, unknown> | null>({
     queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
@@ -47,17 +47,17 @@ export default function CatalogSettingsPage() {
         .eq('id', user.organization_id)
         .maybeSingle()
       if (error) throw error
-      return data as Record<string, any> | null
+      return data as Record<string, unknown> | null
     },
     enabled: !!user?.organization_id,
   })
 
   // Récupérer les settings existants
-  const { data: settings, isLoading } = useQuery<Record<string, any> | null>({
+  const { data: settings, isLoading } = useQuery<Record<string, unknown> | null>({
     queryKey: ['public-catalog-settings', user?.organization_id],
     queryFn: async () => {
       const result = await publicCatalogSettingsService.getSettings(user?.organization_id!)
-      return result as Record<string, any> | null
+      return result as Record<string, unknown> | null
     },
     enabled: !!user?.organization_id,
   })
@@ -65,53 +65,46 @@ export default function CatalogSettingsPage() {
   // Initialiser le formulaire avec les données existantes et les données de l'organisation
   useEffect(() => {
     if (settings || organization) {
+      const s = settings as Partial<PublicCatalogSettingsFormData> | null | undefined
+      const o = organization as { name?: string; logo_url?: string; email?: string; phone?: string; address?: string } | null | undefined
       setFormData({
-        is_enabled: settings?.is_enabled ?? false,
-        // Informations de base - pré-remplies depuis l'organisation
-        site_title: settings?.site_title ?? organization?.name ?? undefined,
-        site_description: settings?.site_description ?? undefined,
-        site_keywords: settings?.site_keywords ?? undefined,
-        // Couleurs
-        primary_color: settings?.primary_color ?? '#274472',
-        secondary_color: settings?.secondary_color ?? undefined,
-        accent_color: settings?.accent_color ?? undefined,
-        background_color: settings?.background_color ?? '#ffffff',
-        text_color: settings?.text_color ?? '#000000',
-        // Logo - pré-rempli depuis l'organisation
-        logo_url: settings?.logo_url ?? organization?.logo_url ?? undefined,
-        favicon_url: settings?.favicon_url ?? undefined,
-        cover_image_url: settings?.cover_image_url ?? undefined,
-        footer_image_url: settings?.footer_image_url ?? undefined,
-        // Hero - pré-rempli avec le nom de l'organisation
-        hero_title: settings?.hero_title ?? organization?.name ?? undefined,
-        hero_subtitle: settings?.hero_subtitle ?? undefined,
-        hero_description: settings?.hero_description ?? undefined,
-        hero_button_text: settings?.hero_button_text ?? 'Découvrir nos formations',
-        hero_button_link: settings?.hero_button_link ?? '/programmes',
-        // À propos
-        about_title: settings?.about_title ?? undefined,
-        about_content: settings?.about_content ?? undefined,
-        about_image_url: settings?.about_image_url ?? undefined,
-        // Contact - pré-rempli depuis l'organisation
-        contact_email: settings?.contact_email ?? organization?.email ?? undefined,
-        contact_phone: settings?.contact_phone ?? organization?.phone ?? undefined,
-        contact_address: settings?.contact_address ?? organization?.address ?? undefined,
-        show_contact_form: settings?.show_contact_form ?? true,
-        // Footer
-        footer_text: settings?.footer_text ?? undefined,
-        footer_links: settings?.footer_links as any ?? undefined,
-        social_links: settings?.social_links as any ?? undefined,
-        // SEO
-        google_analytics_id: settings?.google_analytics_id ?? undefined,
-        google_tag_manager_id: settings?.google_tag_manager_id ?? undefined,
-        meta_title: settings?.meta_title ?? organization?.name ?? undefined,
-        meta_description: settings?.meta_description ?? undefined,
-        meta_image_url: settings?.meta_image_url ?? organization?.logo_url ?? undefined,
-        custom_domain: settings?.custom_domain ?? undefined,
-        // Statistiques
-        stats_trained_students: settings?.stats_trained_students ?? 1200,
-        stats_satisfaction_rate: settings?.stats_satisfaction_rate ?? 98,
-        stats_success_rate: settings?.stats_success_rate ?? 95,
+        is_enabled: Boolean(s?.is_enabled ?? false),
+        site_title: (s?.site_title ?? o?.name ?? undefined) as string | undefined,
+        site_description: (s?.site_description ?? undefined) as string | undefined,
+        site_keywords: (Array.isArray(s?.site_keywords) ? s.site_keywords : undefined) as string[] | undefined,
+        primary_color: (s?.primary_color ?? '#274472') as string,
+        secondary_color: (s?.secondary_color ?? undefined) as string | undefined,
+        accent_color: (s?.accent_color ?? undefined) as string | undefined,
+        background_color: (s?.background_color ?? '#ffffff') as string,
+        text_color: (s?.text_color ?? '#000000') as string,
+        logo_url: (s?.logo_url ?? o?.logo_url ?? undefined) as string | undefined,
+        favicon_url: (s?.favicon_url ?? undefined) as string | undefined,
+        cover_image_url: (s?.cover_image_url ?? undefined) as string | undefined,
+        footer_image_url: (s?.footer_image_url ?? undefined) as string | undefined,
+        hero_title: (s?.hero_title ?? o?.name ?? undefined) as string | undefined,
+        hero_subtitle: (s?.hero_subtitle ?? undefined) as string | undefined,
+        hero_description: (s?.hero_description ?? undefined) as string | undefined,
+        hero_button_text: (s?.hero_button_text ?? 'Découvrir nos formations') as string,
+        hero_button_link: (s?.hero_button_link ?? '/programmes') as string,
+        about_title: (s?.about_title ?? undefined) as string | undefined,
+        about_content: (s?.about_content ?? undefined) as string | undefined,
+        about_image_url: (s?.about_image_url ?? undefined) as string | undefined,
+        contact_email: (s?.contact_email ?? o?.email ?? undefined) as string | undefined,
+        contact_phone: (s?.contact_phone ?? o?.phone ?? undefined) as string | undefined,
+        contact_address: (s?.contact_address ?? o?.address ?? undefined) as string | undefined,
+        show_contact_form: Boolean(s?.show_contact_form ?? true),
+        footer_text: (s?.footer_text ?? undefined) as string | undefined,
+        footer_links: (s?.footer_links ?? undefined) as PublicCatalogSettingsFormData['footer_links'],
+        social_links: (s?.social_links ?? undefined) as PublicCatalogSettingsFormData['social_links'],
+        google_analytics_id: (s?.google_analytics_id ?? undefined) as string | undefined,
+        google_tag_manager_id: (s?.google_tag_manager_id ?? undefined) as string | undefined,
+        meta_title: (s?.meta_title ?? o?.name ?? undefined) as string | undefined,
+        meta_description: (s?.meta_description ?? undefined) as string | undefined,
+        meta_image_url: (s?.meta_image_url ?? o?.logo_url ?? undefined) as string | undefined,
+        custom_domain: (s?.custom_domain ?? undefined) as string | undefined,
+        stats_trained_students: Number(s?.stats_trained_students ?? 1200),
+        stats_satisfaction_rate: Number(s?.stats_satisfaction_rate ?? 98),
+        stats_success_rate: Number(s?.stats_success_rate ?? 95),
       })
     }
   }, [settings, organization])
@@ -130,10 +123,10 @@ export default function CatalogSettingsPage() {
       })
       queryClient.invalidateQueries({ queryKey: ['public-catalog-settings'] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Une erreur est survenue lors de la sauvegarde.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la sauvegarde.',
         type: 'error',
       })
     },
@@ -162,10 +155,10 @@ export default function CatalogSettingsPage() {
         .getPublicUrl(fileName)
 
       setFormData((prev) => ({ ...prev, [field]: publicUrl }))
-    } catch (error: any) {
+    } catch (error: unknown) {
       addToast({
         title: 'Erreur d\'upload',
-        description: error.message || 'Erreur lors de l\'upload de l\'image',
+        description: error instanceof Error ? error.message : 'Erreur lors de l\'upload de l\'image',
         type: 'error',
       })
     }

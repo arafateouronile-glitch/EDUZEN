@@ -1,6 +1,7 @@
 /**
  * Helpers pour insérer des tableaux et des cadres dans Quill
  */
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export interface TableProperties {
   rows: number
@@ -64,14 +65,14 @@ function disableQuillObserver(quill: any): (() => void) | null {
               observer._disabled = wasDisabled
             }
           } catch (e) {
-            console.warn('Error reconnecting Quill MutationObserver:', e)
+            logger.warn('Error reconnecting Quill MutationObserver:', sanitizeError(e))
             try {
               // Fallback : réinitialiser l'observer
               if (observer) {
                 observer._disabled = false
               }
             } catch (e2) {
-              console.warn('Error resetting observer state:', e2)
+              logger.warn('Error resetting observer state:', sanitizeError(e2))
             }
           }
         }, 150)
@@ -79,7 +80,7 @@ function disableQuillObserver(quill: any): (() => void) | null {
     }
   } catch (e) {
     // Si on ne peut pas désactiver l'observer, continuer quand même
-    console.warn('Could not disable Quill MutationObserver:', e)
+    logger.warn('Could not disable Quill MutationObserver:', sanitizeError(e))
   }
   return null
 }
@@ -102,7 +103,7 @@ export function insertTableWithProperties(quill: any, properties: TablePropertie
         // Cela évite les problèmes avec substring
       }
     } catch (err) {
-      console.warn('Could not get Quill length:', err)
+      logger.warn('Could not get Quill length:', sanitizeError(err))
     }
   }
 
@@ -211,7 +212,7 @@ export function insertTableWithProperties(quill: any, properties: TablePropertie
         }
       } catch (e) {
         // Si getLine échoue, insérer à la fin
-        console.warn('Could not get line for insertion, inserting at end')
+        logger.warn('Could not get line for insertion, inserting at end')
       }
     }
     
@@ -261,7 +262,7 @@ export function insertTableWithProperties(quill: any, properties: TablePropertie
         const inputEvent = new Event('input', { bubbles: true, cancelable: true })
         editorElement.dispatchEvent(inputEvent)
       } catch (e) {
-        console.warn('Error dispatching input event:', e)
+        logger.warn('Error dispatching input event:', sanitizeError(e))
       }
     })
     
@@ -298,7 +299,7 @@ export function insertTableWithProperties(quill: any, properties: TablePropertie
                     editorElement.dispatchEvent(inputEvent)
                   }
                 } catch (e) {
-                  console.warn('Error dispatching input event:', e)
+                  logger.warn('Error dispatching input event:', sanitizeError(e))
                 }
               })
               
@@ -328,7 +329,7 @@ export function insertTableWithProperties(quill: any, properties: TablePropertie
               const inputEvent = new Event('input', { bubbles: true, cancelable: true })
               editorElement.dispatchEvent(inputEvent)
             } catch (e) {
-              console.warn('Error dispatching input event:', e)
+              logger.warn('Error dispatching input event:', sanitizeError(e))
             }
           })
         }
@@ -346,7 +347,7 @@ export function insertTableWithProperties(quill: any, properties: TablePropertie
               const inputEvent = new Event('input', { bubbles: true, cancelable: true })
               editorElement.dispatchEvent(inputEvent)
             } catch (e) {
-              console.warn('Error dispatching input event:', e)
+              logger.warn('Error dispatching input event:', sanitizeError(e))
             }
           })
           
@@ -354,7 +355,7 @@ export function insertTableWithProperties(quill: any, properties: TablePropertie
           // Cela cause l'erreur "substring is not a function"
         }
       } catch (finalError) {
-        console.error('All table insertion methods failed:', finalError)
+        logger.error('All table insertion methods failed:', finalError)
       }
     }
   }
@@ -414,7 +415,7 @@ export function insertTable(quill: any, rows: number = 3, cols: number = 3) {
           insertNode = line.domNode
         }
       } catch (e) {
-        console.warn('Could not get line for insertion, inserting at end')
+        logger.warn('Could not get line for insertion, inserting at end')
       }
     }
     
@@ -461,7 +462,7 @@ export function insertTable(quill: any, rows: number = 3, cols: number = 3) {
         const inputEvent = new Event('input', { bubbles: true, cancelable: true })
         editorElement.dispatchEvent(inputEvent)
       } catch (e) {
-        console.warn('Error dispatching input event:', e)
+        logger.warn('Error dispatching input event:', sanitizeError(e))
       }
     })
     
@@ -553,14 +554,14 @@ export function insertTable(quill: any, rows: number = 3, cols: number = 3) {
                 const inputEvent = new Event('input', { bubbles: true, cancelable: true })
                 editorElement.dispatchEvent(inputEvent)
               } catch (e) {
-                console.warn('Error dispatching input event:', e)
+                logger.warn('Error dispatching input event:', sanitizeError(e))
               }
             })
           }
         }
       }
     } catch (domError) {
-      console.error('Error inserting table via DOM:', domError)
+      logger.error('Error inserting table via DOM:', domError)
       // Méthode 3 : Fallback simple avec innerHTML
       try {
         const editorElement = quill.root
@@ -574,12 +575,12 @@ export function insertTable(quill: any, rows: number = 3, cols: number = 3) {
               const inputEvent = new Event('input', { bubbles: true, cancelable: true })
               editorElement.dispatchEvent(inputEvent)
             } catch (e) {
-              console.warn('Error dispatching input event:', e)
+              logger.warn('Error dispatching input event:', sanitizeError(e))
             }
           })
         }
       } catch (finalError) {
-        console.error('All table insertion methods failed:', finalError)
+        logger.error('All table insertion methods failed:', finalError)
       }
     }
   }
@@ -626,7 +627,7 @@ export function insertBorderedFrame(quill: any, borderStyle: 'solid' | 'dashed' 
         }
       }
     } catch (err) {
-      console.warn('Error setting selection after frame insertion:', err)
+      logger.warn('Error setting selection after frame insertion:', sanitizeError(err))
     }
   } catch (error) {
     // Fallback : Insertion directe via DOM (méthode simplifiée)
@@ -657,11 +658,11 @@ export function insertBorderedFrame(quill: any, borderStyle: 'solid' | 'dashed' 
           const inputEvent = new Event('input', { bubbles: true, cancelable: true })
           editorElement.dispatchEvent(inputEvent)
         } catch (e) {
-          console.warn('Error dispatching input event:', e)
+          logger.warn('Error dispatching input event:', sanitizeError(e))
         }
       })
     } catch (finalError) {
-      console.error('All frame insertion methods failed:', finalError)
+      logger.error('All frame insertion methods failed:', finalError)
     }
   }
 }
@@ -703,7 +704,7 @@ export function insertFramedSection(quill: any, title: string = 'Titre de la sec
           insertNode = line.domNode
         }
       } catch (e) {
-        console.warn('Could not get line for insertion, inserting at end')
+        logger.warn('Could not get line for insertion, inserting at end')
       }
     }
     
@@ -737,7 +738,7 @@ export function insertFramedSection(quill: any, title: string = 'Titre de la sec
           const inputEvent = new Event('input', { bubbles: true, cancelable: true })
           editorElement.dispatchEvent(inputEvent)
         } catch (e) {
-          console.warn('Error dispatching input event:', e)
+          logger.warn('Error dispatching input event:', sanitizeError(e))
         }
       })
     }
@@ -787,7 +788,7 @@ export function insertFramedSection(quill: any, title: string = 'Titre de la sec
                     const inputEvent = new Event('input', { bubbles: true, cancelable: true })
                     editorElement.dispatchEvent(inputEvent)
                   } catch (e) {
-                    console.warn('Error dispatching input event:', e)
+                    logger.warn('Error dispatching input event:', sanitizeError(e))
                   }
                 })
               }
@@ -831,7 +832,7 @@ export function insertFramedSection(quill: any, title: string = 'Titre de la sec
                 const inputEvent = new Event('input', { bubbles: true, cancelable: true })
                 editorElement.dispatchEvent(inputEvent)
               } catch (e) {
-                console.warn('Error dispatching input event:', e)
+                logger.warn('Error dispatching input event:', sanitizeError(e))
               }
             })
           }
@@ -858,12 +859,12 @@ export function insertFramedSection(quill: any, title: string = 'Titre de la sec
               const inputEvent = new Event('input', { bubbles: true, cancelable: true })
               editorElement.dispatchEvent(inputEvent)
             } catch (e) {
-              console.warn('Error dispatching input event:', e)
+              logger.warn('Error dispatching input event:', sanitizeError(e))
             }
           })
         }
       } catch (finalError) {
-        console.error('All framed section insertion methods failed:', finalError)
+        logger.error('All framed section insertion methods failed:', finalError)
       }
     }
   }
@@ -923,7 +924,7 @@ export function insertAdminTable(quill: any, headers: string[] = ['Champ', 'Vale
           insertNode = line.domNode
         }
       } catch (e) {
-        console.warn('Could not get line for insertion, inserting at end')
+        logger.warn('Could not get line for insertion, inserting at end')
       }
     }
     
@@ -974,7 +975,7 @@ export function insertAdminTable(quill: any, headers: string[] = ['Champ', 'Vale
         const inputEvent = new Event('input', { bubbles: true, cancelable: true })
         editorElement.dispatchEvent(inputEvent)
       } catch (e) {
-        console.warn('Error dispatching input event:', e)
+        logger.warn('Error dispatching input event:', sanitizeError(e))
       }
     })
     
@@ -1023,7 +1024,7 @@ export function insertAdminTable(quill: any, headers: string[] = ['Champ', 'Vale
                     const inputEvent = new Event('input', { bubbles: true, cancelable: true })
                     editorElement.dispatchEvent(inputEvent)
                   } catch (e) {
-                    console.warn('Error dispatching input event:', e)
+                    logger.warn('Error dispatching input event:', sanitizeError(e))
                   }
                 })
               }
@@ -1070,7 +1071,7 @@ export function insertAdminTable(quill: any, headers: string[] = ['Champ', 'Vale
                 const inputEvent = new Event('input', { bubbles: true, cancelable: true })
                 editorElement.dispatchEvent(inputEvent)
               } catch (e) {
-                console.warn('Error dispatching input event:', e)
+                logger.warn('Error dispatching input event:', sanitizeError(e))
               }
             })
           }
@@ -1097,12 +1098,12 @@ export function insertAdminTable(quill: any, headers: string[] = ['Champ', 'Vale
               const inputEvent = new Event('input', { bubbles: true, cancelable: true })
               editorElement.dispatchEvent(inputEvent)
             } catch (e) {
-              console.warn('Error dispatching input event:', e)
+              logger.warn('Error dispatching input event:', sanitizeError(e))
             }
           })
         }
       } catch (finalError) {
-        console.error('All admin table insertion methods failed:', finalError)
+        logger.error('All admin table insertion methods failed:', finalError)
       }
     }
   }

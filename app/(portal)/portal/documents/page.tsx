@@ -71,8 +71,7 @@ export default function PortalDocumentsPage() {
       // Récupérer les documents depuis learner_documents
       // Pour les étudiants, les RLS policies filtreront automatiquement
       // Pour les parents, on filtre explicitement par student_id
-      // eslint-disable-next-line
-      let query: any = supabase
+      let query = supabase
         .from('learner_documents')
         .select('*, students(first_name, last_name, student_number)')
         .order('sent_at', { ascending: false })
@@ -132,7 +131,7 @@ export default function PortalDocumentsPage() {
   }
 
   // Télécharger un document
-  const handleDownload = async (doc: any) => {
+  const handleDownload = async (doc: { id: string; file_url: string; title?: string }) => {
     try {
       // Télécharger le fichier
       const response = await fetch(doc.file_url)
@@ -158,7 +157,7 @@ export default function PortalDocumentsPage() {
   }
 
   // Ouvrir le document dans un nouvel onglet
-  const handlePreview = async (document: any) => {
+  const handlePreview = async (document: { id: string; file_url: string }) => {
     setPreviewUrl(document.file_url)
     window.open(document.file_url, '_blank')
     
@@ -202,14 +201,16 @@ export default function PortalDocumentsPage() {
 
       {documents && documents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {documents.map((doc: any) => (
-            <Card key={doc.id} className="hover:shadow-lg transition-shadow">
+          {documents.map((doc) => {
+            const d = doc as { id: string; title?: string; type?: string | null; file_url?: string; sent_at?: string; students?: { first_name?: string; last_name?: string }; description?: string }
+            return (
+            <Card key={d.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg mb-2">{doc.title}</CardTitle>
+                    <CardTitle className="text-lg mb-2">{d.title ?? ''}</CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      {getTypeLabel(doc.type)}
+                      {getTypeLabel(d.type ?? null)}
                     </p>
                   </div>
                   <FileText className="h-5 w-5 text-primary flex-shrink-0 ml-2" />
@@ -217,25 +218,25 @@ export default function PortalDocumentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {doc.students && (
+                  {d.students && (
                     <div className="text-sm">
                       <p className="text-muted-foreground">Apprenant</p>
                       <p className="font-medium">
-                        {doc.students.first_name} {doc.students.last_name}
+                        {d.students.first_name ?? ''} {d.students.last_name ?? ''}
                       </p>
                     </div>
                   )}
                   
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4 mr-2" />
-                    {formatDate(doc.sent_at)}
+                    {formatDate(d.sent_at ?? '')}
                   </div>
 
                   <div className="flex gap-2 pt-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handlePreview(doc)}
+                      onClick={() => handlePreview({ id: d.id, file_url: d.file_url ?? '' })}
                       className="flex-1"
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -244,7 +245,7 @@ export default function PortalDocumentsPage() {
                     <Button
                       variant="default"
                       size="sm"
-                      onClick={() => handleDownload(doc)}
+                      onClick={() => handleDownload({ id: d.id, file_url: d.file_url ?? '', title: d.title })}
                       className="flex-1"
                     >
                       <Download className="h-4 w-4 mr-2" />
@@ -252,15 +253,15 @@ export default function PortalDocumentsPage() {
                     </Button>
                   </div>
 
-                  {doc.description && (
+                  {d.description && (
                     <p className="text-sm text-muted-foreground mt-2">
-                      {doc.description}
+                      {d.description}
                     </p>
                   )}
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       ) : (
         <Card>

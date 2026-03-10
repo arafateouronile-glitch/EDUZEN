@@ -86,8 +86,8 @@ export async function sendSignedPdfEmails(params: SendSignedPdfParams): Promise<
         subject: `Votre document signé : ${params.documentTitle}`,
         html,
         attachments: [{ filename: params.signedFilename, content }],
-      } as any)
-      if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as any)) {
+      })
+      if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as { statusCode?: number; message?: string })) {
         logger.warn('Domaine From non vérifié chez Resend, nouvel essai avec onboarding@resend.dev')
         const retry = await resend.emails.send({
           from: RESEND_SANDBOX_FROM,
@@ -95,7 +95,7 @@ export async function sendSignedPdfEmails(params: SendSignedPdfParams): Promise<
           subject: `Votre document signé : ${params.documentTitle}`,
           html,
           attachments: [{ filename: params.signedFilename, content }],
-        } as any)
+        })
         error = retry.error ?? null
       }
       if (error) logger.error('Envoi signé PDF:', { to, name, error })
@@ -158,8 +158,8 @@ export async function sendSignedPdfToRecipients(params: {
         subject: `Convention signée : ${params.documentTitle}`,
         html,
         attachments: [{ filename: params.signedFilename, content }],
-      } as any)
-      if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as any)) {
+      })
+      if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as { statusCode?: number; message?: string })) {
         logger.warn('Domaine From non vérifié chez Resend, nouvel essai avec onboarding@resend.dev')
         const retry = await resend.emails.send({
           from: RESEND_SANDBOX_FROM,
@@ -167,7 +167,7 @@ export async function sendSignedPdfToRecipients(params: {
           subject: `Convention signée : ${params.documentTitle}`,
           html,
           attachments: [{ filename: params.signedFilename, content }],
-        } as any)
+        })
         error = retry.error ?? null
       }
       if (error) logger.error('Envoi signé PDF (cascade):', { to, error })

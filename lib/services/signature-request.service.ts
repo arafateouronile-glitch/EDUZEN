@@ -429,8 +429,7 @@ export class SignatureRequestService {
     const url = `${baseUrl.replace(/\/$/, '')}/sign/${token}`
 
     if (typeof window === 'undefined' && (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1'))) {
-      // eslint-disable-next-line no-console
-      console.warn(
+      logger.warn(
         '[Signature] Lien généré en localhost : le destinataire ne pourra pas ouvrir le lien depuis un autre appareil. ' +
           'Définissez NEXT_PUBLIC_APP_URL (ex. URL ngrok) dans .env.local pour des liens accessibles.'
       )

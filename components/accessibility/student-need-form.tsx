@@ -85,16 +85,16 @@ export function StudentNeedForm({ studentId, organizationId, onSuccess, onCancel
       })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible d\'enregistrer la déclaration.',
+        description: error instanceof Error ? error.message : 'Impossible d\'enregistrer la déclaration.',
       })
     },
   })
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 

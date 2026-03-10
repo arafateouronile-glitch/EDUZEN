@@ -52,7 +52,15 @@ export default function SessionAttendancePage() {
         logger.warn('Erreur récupération séance', sanitizeError(error))
         return null
       }
-      return data as any
+      if (!data) return null
+      return {
+        id: data.id,
+        time_slot: data.time_slot,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        location: data.location ?? undefined,
+        date: data.date,
+      }
     },
     enabled: !!slotId,
   })
@@ -73,14 +81,12 @@ export default function SessionAttendancePage() {
   const { data: enrollments } = useQuery({
     queryKey: ['session-enrollments', sessionId],
     queryFn: async () => {
-      // eslint-disable-next-line
-      const q: any = supabase
+      const { data, error } = await supabase
         .from('enrollments')
         .select('*, students(*)')
-        .eq('session_id', sessionId) // Utiliser session_id au lieu de program_session_id
+        .eq('session_id', sessionId)
         .in('status', ['confirmed', 'completed'])
         .order('students(last_name)', { ascending: true })
-      const { data, error } = await q
       if (error) throw error
       return data || []
     },
@@ -105,18 +111,21 @@ export default function SessionAttendancePage() {
   // Initialiser avec les données existantes
   useEffect(() => {
     if (existingAttendance && enrollments) {
-      const initial: Record<string, any> = {}
-      existingAttendance.forEach((att: any) => {
-        initial[att.student_id] = {
-          status: att.status,
-          lateMinutes: att.late_minutes,
-          notes: att.notes || '',
+      type AttState = { status: AttendanceStatus; lateMinutes: number; notes: string }
+      const initial: Record<string, AttState> = {}
+      existingAttendance.forEach((att) => {
+        const sid = att.student_id
+        if (sid) {
+          initial[sid] = {
+            status: (att.status ?? 'present') as AttendanceStatus,
+            lateMinutes: att.late_minutes ?? 0,
+            notes: att.notes ?? '',
+          }
         }
       })
-      // Ajouter les étudiants non encore émarginés
-      enrollments.forEach((enrollment: any) => {
-        const studentId = enrollment.student_id
-        if (!initial[studentId]) {
+      enrollments.forEach((enrollment) => {
+        const studentId = enrollment.student_id ?? ''
+        if (studentId && !initial[studentId]) {
           initial[studentId] = {
             status: 'present' as AttendanceStatus,
             lateMinutes: 0,
@@ -126,10 +135,11 @@ export default function SessionAttendancePage() {
       })
       setAttendance(initial)
     } else if (enrollments) {
-      // Initialiser tous les étudiants comme présents par défaut
-      const initial: Record<string, any> = {}
-      enrollments.forEach((enrollment: any) => {
-        initial[enrollment.student_id] = {
+      type AttState = { status: AttendanceStatus; lateMinutes: number; notes: string }
+      const initial: Record<string, AttState> = {}
+      enrollments.forEach((enrollment) => {
+        const studentId = enrollment.student_id ?? ''
+        if (studentId) initial[studentId] = {
           status: 'present' as AttendanceStatus,
           lateMinutes: 0,
           notes: '',
@@ -142,7 +152,7 @@ export default function SessionAttendancePage() {
   const updateAttendance = (
     studentId: string,
     field: 'status' | 'lateMinutes' | 'notes' | 'latitude' | 'longitude' | 'location_accuracy',
-    value: any
+    value: AttendanceStatus | number | string
   ) => {
     setAttendance((prev) => ({
       ...prev,
@@ -158,14 +168,14 @@ export default function SessionAttendancePage() {
       if (!user?.organization_id || !enrollments) throw new Error('Données manquantes')
 
       // Préparer les enregistrements
-      const records = enrollments.map((enrollment: any) => ({
-        student_id: enrollment.student_id,
-        session_id: sessionId, // Utiliser session_id au lieu de program_session_id
+      const records = enrollments.map((enrollment) => ({
+        student_id: enrollment.student_id ?? '',
+        session_id: enrollment.session_id ?? sessionId,
         date: date,
-        status: attendance[enrollment.student_id]?.status || 'present',
-        late_minutes: attendance[enrollment.student_id]?.lateMinutes || 0,
+        status: attendance[enrollment.student_id ?? '']?.status || 'present',
+        late_minutes: attendance[enrollment.student_id ?? '']?.lateMinutes || 0,
         teacher_id: user.id,
-        notes: attendance[enrollment.student_id]?.notes || undefined,
+        notes: attendance[enrollment.student_id ?? '']?.notes || undefined,
       }))
 
       return attendanceService.markMultiple(user.organization_id, records)
@@ -216,7 +226,7 @@ export default function SessionAttendancePage() {
     }
   }
 
-  const students = enrollments?.map((e: any) => e.students).filter(Boolean) || []
+  const students = enrollments?.map((e) => e.students).filter((s): s is NonNullable<typeof s> => s != null) ?? []
   const stats = students.length > 0
     ? {
         total: students.length,
@@ -318,7 +328,7 @@ export default function SessionAttendancePage() {
         <CardContent>
           {students.length > 0 ? (
             <div className="space-y-4">
-              {students.map((student: any) => {
+              {students.map((student) => {
                 const studentAttendance = attendance[student.id] || {
                   status: 'present' as AttendanceStatus,
                   lateMinutes: 0,
@@ -334,21 +344,21 @@ export default function SessionAttendancePage() {
                       {student.photo_url ? (
                         <img
                           src={student.photo_url}
-                          alt={`${student.first_name} ${student.last_name}`}
+                          alt={`${student.first_name ?? ''} ${student.last_name ?? ''}`}
                           className="h-12 w-12 rounded-full object-cover"
                         />
                       ) : (
                         <div className="h-12 w-12 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
-                          {student.first_name.charAt(0)}{student.last_name.charAt(0)}
+                          {(student.first_name ?? '').charAt(0)}{(student.last_name ?? '').charAt(0)}
                         </div>
                       )}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold truncate">
-                        {student.first_name} {student.last_name}
+                        {student.first_name ?? ''} {student.last_name ?? ''}
                       </h3>
-                      <p className="text-sm text-muted-foreground">{student.student_number}</p>
+                      <p className="text-sm text-muted-foreground">{student.student_number ?? ''}</p>
                       {session?.require_location_for_attendance && (
                         <div className="mt-2">
                           <LocationPicker
@@ -487,7 +497,7 @@ function SessionSignaturesHistory({ sessionId, organizationId }: { sessionId: st
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {signatures.map((signature: any) => (
+          {signatures.map((signature) => (
             <div
               key={signature.id}
               className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"

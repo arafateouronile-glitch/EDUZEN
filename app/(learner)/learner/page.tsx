@@ -496,6 +496,7 @@ export default function LearnerDashboardPage() {
     certificates: certificates?.length || 0,
       totalHours,
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- studentId used for logging only
   }, [enrollments, courseEnrollments, certificates, attendanceRecords])
 
   // Sessions à venir

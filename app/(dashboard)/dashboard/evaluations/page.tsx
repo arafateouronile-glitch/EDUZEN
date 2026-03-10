@@ -101,7 +101,7 @@ export default function EvaluationsPage() {
         logger.error('Erreur récupération sessions enseignant', error)
         return []
       }
-      return data?.map((st: any) => st.session_id) || []
+      return (data ?? []).map((st: { session_id: string | null }) => st.session_id ?? '') || []
     },
     enabled: !!user?.id && isTeacher,
   })
@@ -155,8 +155,8 @@ export default function EvaluationsPage() {
         if (enrollmentsError) throw enrollmentsError
         
         // Extraire les étudiants uniques
-        const uniqueStudents = new Map()
-        enrollments?.forEach((e: any) => {
+        const uniqueStudents = new Map<string, { id: string; first_name?: string; last_name?: string; student_number?: string }>()
+        ;(enrollments ?? []).forEach((e: { student_id: string | null; students: { id: string; first_name: string; last_name: string; student_number: string; status: string | null; } | null }) => {
           const student = e.students
           if (student && student.status === 'active' && !uniqueStudents.has(student.id)) {
             uniqueStudents.set(student.id, {
@@ -280,7 +280,7 @@ export default function EvaluationsPage() {
   const createMutation = useMutation({
     mutationFn: async (data: EvaluationFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
-      return (evaluationService.create as any)(user.organization_id as string, {
+      return evaluationService.create(user.organization_id, {
         ...data,
         session_id: data.session_id || null,
         max_score: data.max_score ? parseFloat(data.max_score) : null,
@@ -288,7 +288,7 @@ export default function EvaluationsPage() {
         notes: data.notes || null,
         graded_at: data.graded_at || new Date().toISOString(),
         teacher_id: user.id,
-      })
+      } as unknown as Parameters<typeof evaluationService.create>[1])
     },
     onSuccess: async () => {
       setShowCreateModal(false)
@@ -303,14 +303,14 @@ export default function EvaluationsPage() {
   const updateMutation = useMutation({
     mutationFn: async (data: EvaluationFormData) => {
       if (!editingEvaluation) throw new Error('Aucune évaluation sélectionnée')
-      return (evaluationService.update as any)(editingEvaluation.id, {
+      return evaluationService.update(editingEvaluation.id, {
         ...data,
         session_id: data.session_id || null,
         max_score: data.max_score ? parseFloat(data.max_score) : null,
         score: parseFloat(data.score),
         notes: data.notes || null,
         graded_at: data.graded_at || new Date().toISOString(),
-      })
+      } as unknown as Parameters<typeof evaluationService.update>[1])
     },
     onSuccess: async () => {
       setEditingEvaluation(null)
@@ -376,7 +376,7 @@ export default function EvaluationsPage() {
         'Note': grade.score,
         'Note max': grade.max_score || '',
         'Pourcentage': grade.percentage ? `${grade.percentage}%` : '',
-        'Formateur': (grade as any).users?.full_name || '',
+        'Formateur': (grade as GradeWithRelations & { users?: { full_name?: string } }).users?.full_name || '',
         'Notes': grade.notes || '',
       }))
 
@@ -660,7 +660,7 @@ export default function EvaluationsPage() {
                       className="w-full px-3 py-2 rounded-lg bg-gray-50 border-transparent focus:bg-white focus:border-brand-blue/20 focus:ring-2 focus:ring-brand-blue/10 outline-none text-sm transition-all"
                     >
                       <option value="all">Toutes</option>
-                      {(sessions as any[])?.map((session) => (
+                      {sessions?.map((session: { id: string; name: string }) => (
                         <option key={session.id} value={session.id}>{session.name}</option>
                       ))}
                     </select>
@@ -832,7 +832,7 @@ export default function EvaluationsPage() {
                         required
                       >
                         <option value="">Sélectionner un étudiant</option>
-                        {(students as any[])?.map((student) => (
+                        {(students as Array<{ id: string; first_name?: string; last_name?: string; student_number?: string }> | undefined)?.map((student) => (
                           <option key={student.id} value={student.id}>
                             {student.first_name} {student.last_name} ({student.student_number})
                           </option>
@@ -848,7 +848,7 @@ export default function EvaluationsPage() {
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue outline-none transition-all"
                       >
                         <option value="">Aucune session</option>
-                        {(sessions as any[])?.map((session) => (
+                        {sessions?.map((session: { id: string; name: string }) => (
                           <option key={session.id} value={session.id}>
                             {session.name}
                           </option>

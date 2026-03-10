@@ -34,12 +34,12 @@ export function ConsoleErrorFilter() {
     ]
 
     // Fonction pour vérifier si une erreur doit être filtrée
-    const shouldFilter = (args: any[]): boolean => {
+    const shouldFilter = (args: unknown[]): boolean => {
       const message = args
-        .map((arg) => {
+        .map((arg: unknown) => {
           if (typeof arg === 'string') return arg
-          if (arg?.message) return arg.message
-          if (arg?.stack) return arg.stack
+          if (arg != null && typeof arg === 'object' && 'message' in arg) return String((arg as { message?: unknown }).message)
+          if (arg != null && typeof arg === 'object' && 'stack' in arg) return String((arg as { stack?: unknown }).stack)
           return String(arg)
         })
         .join(' ')
@@ -56,7 +56,7 @@ export function ConsoleErrorFilter() {
     }
 
     // Override console.warn
-    console.warn = (...args: any[]) => {
+    console.warn = (...args: unknown[]) => {
       if (!shouldFilter(args)) {
         originalWarn.apply(console, args)
       }

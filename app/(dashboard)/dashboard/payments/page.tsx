@@ -178,8 +178,9 @@ function PaymentsPageContent() {
           status: statusFilter !== 'all' ? (statusFilter as Invoice['status']) : undefined,
           documentType: documentTypeFilter !== 'all' ? documentTypeFilter : undefined,
         })
-      } catch (error: any) {
-        if (error?.code === 'PGRST116' || error?.code === '42P01') return []
+      } catch (error: unknown) {
+        const err = error as { code?: string }
+        if (err?.code === 'PGRST116' || err?.code === '42P01') return []
         throw error
       }
     },
@@ -187,13 +188,13 @@ function PaymentsPageContent() {
     retry: false,
   })
 
-  // Filtrer selon l'onglet actif
-  const filteredInvoices = invoices?.filter((inv: any) => {
-    if (activeTab === 'quotes') {
-      return (inv as any).document_type === 'quote'
-    } else if (activeTab === 'invoices') {
-      return (inv as any).document_type === 'invoice' || !(inv as any).document_type
-    }
+  type InvRow = { document_type?: string; status?: string; total_amount?: number; paid_amount?: number }
+  type ChargeRow = { id: string; amount?: number; payment_status?: string; category_id?: string; charge_date?: string; description?: string; currency?: string; vendor?: string; notes?: string; charge_categories?: { name?: string }; sessions?: { name?: string; start_date?: string } }
+  type SessionOption = { id: string; name?: string; start_date?: string; end_date?: string }
+  const filteredInvoices = invoices?.filter((inv) => {
+    const row = inv as InvRow
+    if (activeTab === 'quotes') return row.document_type === 'quote'
+    if (activeTab === 'invoices') return row.document_type === 'invoice' || !row.document_type
     return true
   }) || []
 
@@ -204,8 +205,9 @@ function PaymentsPageContent() {
       if (!user?.organization_id) return []
       try {
         return await invoiceService.getOverdue(user.organization_id)
-      } catch (error: any) {
-        if (error?.code === 'PGRST116' || error?.code === '42P01') return []
+      } catch (error: unknown) {
+        const err = error as { code?: string }
+        if (err?.code === 'PGRST116' || err?.code === '42P01') return []
         throw error
       }
     },
@@ -368,20 +370,23 @@ function PaymentsPageContent() {
   }
 
   // Filtrer uniquement les factures
-  const invoicesOnly = invoices?.filter((inv: any) => 
-    (inv as any).document_type === 'invoice' || !(inv as any).document_type
+  const invoicesOnly = invoices?.filter((inv) => 
+    (inv as InvRow).document_type === 'invoice' || !(inv as InvRow).document_type
   ) || []
 
-  const totalPaid = invoicesOnly.filter((inv: any) => inv.status === 'paid')
-    .reduce((sum: number, inv: any) => sum + Number(inv.total_amount), 0) || 0
-  const totalOverdue = overdueInvoices?.reduce(
-    (sum: number, inv: any) => sum + Number(inv.total_amount) - Number(inv.paid_amount || 0),
+  const totalPaid = invoicesOnly
+    .filter((inv) => (inv as InvRow).status === 'paid')
+    .reduce<number>((sum, inv) => sum + Number((inv as InvRow).total_amount ?? 0), 0) || 0
+  const totalOverdue = (overdueInvoices ?? []).reduce<number>(
+    (sum, inv) => sum + Number((inv as InvRow).total_amount ?? 0) - Number((inv as InvRow).paid_amount ?? 0),
     0
   ) || 0
-  const totalPending = invoicesOnly.filter((inv: any) => ['sent', 'partial'].includes(inv.status))
-    .reduce((sum: number, inv: any) => {
-      const paidAmount = inv.paid_amount || 0
-      return sum + Number(inv.total_amount) - Number(paidAmount)
+  const totalPending = invoicesOnly
+    .filter((inv) => ['sent', 'partial'].includes((inv as InvRow).status ?? ''))
+    .reduce<number>((sum, inv) => {
+      const row = inv as InvRow
+      const paidAmount = row.paid_amount ?? 0
+      return sum + Number(row.total_amount ?? 0) - Number(paidAmount)
     }, 0) || 0
 
   /* Pas d'animation d'entrée au niveau page : évite le décalage à la navigation */
@@ -658,7 +663,7 @@ function PaymentsPageContent() {
                     </label>
                     <select
                       value={documentTypeFilter}
-                      onChange={(e) => setDocumentTypeFilter(e.target.value as any)}
+                      onChange={(e) => setDocumentTypeFilter((e.target.value || 'all') as 'all' | 'quote' | 'invoice')}
                       className="w-full px-4 py-3 rounded-xl bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 outline-none text-sm font-medium transition-all shadow-sm"
                     >
                       <option value="all">Tous les types</option>
@@ -845,7 +850,7 @@ function PaymentsPageContent() {
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                             <AnimatePresence mode="popLayout">
                               {invoicesForStatus.map((invoice, index) => {
-                                const isQuote = (invoice as any).document_type === 'quote'
+                                const isQuote = (invoice as InvRow).document_type === 'quote'
                                 const student = invoice.students
                                 return (
                                   <motion.div
@@ -1008,23 +1013,24 @@ function PaymentsPageContent() {
           {/* Statistiques des charges */}
           {(() => {
             const chargesArray = allCharges || []
-            const totalCharges = chargesArray.reduce((sum: number, c: any) => sum + Number(c.amount), 0)
-            const paidCharges = chargesArray.filter((c: any) => c.payment_status === 'paid')
-            const totalPaidCharges = paidCharges.reduce((sum: number, c: any) => sum + Number(c.amount), 0)
-            const pendingCharges = chargesArray.filter((c: any) => c.payment_status === 'pending')
-            const totalPendingCharges = pendingCharges.reduce((sum: number, c: any) => sum + Number(c.amount), 0)
-            const cancelledCharges = chargesArray.filter((c: any) => c.payment_status === 'cancelled')
-            const totalCancelledCharges = cancelledCharges.reduce((sum: number, c: any) => sum + Number(c.amount), 0)
+            const totalCharges = chargesArray.reduce<number>((sum, c) => sum + Number((c as ChargeRow).amount ?? 0), 0)
+            const paidCharges = chargesArray.filter((c) => (c as ChargeRow).payment_status === 'paid')
+            const totalPaidCharges = paidCharges.reduce<number>((sum, c) => sum + Number((c as ChargeRow).amount ?? 0), 0)
+            const pendingCharges = chargesArray.filter((c) => (c as ChargeRow).payment_status === 'pending')
+            const totalPendingCharges = pendingCharges.reduce<number>((sum, c) => sum + Number((c as ChargeRow).amount ?? 0), 0)
+            const cancelledCharges = chargesArray.filter((c) => (c as ChargeRow).payment_status === 'cancelled')
+            const totalCancelledCharges = cancelledCharges.reduce<number>((sum, c) => sum + Number((c as ChargeRow).amount ?? 0), 0)
 
             // Grouper par catégorie
             const byCategory: Record<string, { name: string; amount: number; count: number }> = {}
-            chargesArray.forEach((c: any) => {
-              const catId = c.category_id || 'uncategorized'
-              const catName = c.charge_categories?.name || 'Non catégorisé'
+            chargesArray.forEach((c) => {
+              const row = c as ChargeRow
+              const catId = row.category_id || 'uncategorized'
+              const catName = row.charge_categories?.name || 'Non catégorisé'
               if (!byCategory[catId]) {
                 byCategory[catId] = { name: catName, amount: 0, count: 0 }
               }
-              byCategory[catId].amount += Number(c.amount)
+              byCategory[catId].amount += Number(row.amount ?? 0)
               byCategory[catId].count += 1
             })
 
@@ -1037,11 +1043,12 @@ function PaymentsPageContent() {
 
             // Grouper par mois
             const byMonth: Record<string, number> = {}
-            chargesArray.forEach((c: any) => {
-              if (c.charge_date) {
-                const date = new Date(c.charge_date)
+            chargesArray.forEach((c) => {
+              const row = c as ChargeRow
+              if (row.charge_date) {
+                const date = new Date(row.charge_date)
                 const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-                byMonth[monthKey] = (byMonth[monthKey] || 0) + Number(c.amount)
+                byMonth[monthKey] = (byMonth[monthKey] || 0) + Number(row.amount ?? 0)
               }
             })
 
@@ -1207,7 +1214,7 @@ function PaymentsPageContent() {
                             className="w-full px-4 py-2 rounded-lg bg-white border focus:ring-2 focus:ring-brand-blue focus:border-transparent"
                           >
                             <option value="">Sélectionner une session</option>
-                            {sessions?.map((session: any) => (
+                            {sessions?.map((session: SessionOption) => (
                               <option key={session.id} value={session.id}>
                                 {session.name} ({session.start_date ? new Date(session.start_date).toLocaleDateString('fr-FR') : 'N/A'})
                               </option>
@@ -1410,9 +1417,10 @@ function PaymentsPageContent() {
                                 </Button>
                               </div>
                               <div className="space-y-2">
-                                {allCharges.map((charge: any) => {
-                                  const session = charge.sessions
-                                  const category = charge.charge_categories
+                                {allCharges.map((charge) => {
+                                  const ch = charge as ChargeRow
+                                  const session = ch.sessions
+                                  const category = ch.charge_categories
                                   const statusColors = {
                                     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
                                     paid: 'bg-green-100 text-green-800 border-green-200',
@@ -1420,7 +1428,7 @@ function PaymentsPageContent() {
                                   }
                                   return (
                                     <motion.div
-                                      key={charge.id}
+                                      key={ch.id}
                                       initial={{ opacity: 0, y: 10 }}
                                       animate={{ opacity: 1, y: 0 }}
                                       className="border rounded-xl p-4 bg-white hover:shadow-md transition-all duration-200"
@@ -1428,15 +1436,15 @@ function PaymentsPageContent() {
                                       <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2 mb-2">
-                                            <h5 className="font-semibold text-gray-900">{charge.description}</h5>
+                                            <h5 className="font-semibold text-gray-900">{ch.description ?? ''}</h5>
                                             <span
                                               className={`px-2 py-1 rounded-lg text-xs font-medium border ${
-                                                statusColors[charge.payment_status as keyof typeof statusColors] || statusColors.pending
+                                                statusColors[ch.payment_status as keyof typeof statusColors] || statusColors.pending
                                               }`}
                                             >
-                                              {charge.payment_status === 'pending'
+                                              {ch.payment_status === 'pending'
                                                 ? 'En attente'
-                                                : charge.payment_status === 'paid'
+                                                : ch.payment_status === 'paid'
                                                 ? 'Payé'
                                                 : 'Annulé'}
                                             </span>
@@ -1445,7 +1453,7 @@ function PaymentsPageContent() {
                                             <div>
                                               <span className="font-medium">Montant:</span>{' '}
                                               <span className="font-bold text-gray-900">
-                                                {formatCurrency(Number(charge.amount), charge.currency || 'EUR')}
+                                                {formatCurrency(Number(ch.amount ?? 0), ch.currency || 'EUR')}
                                               </span>
                                             </div>
                                             {session && (
@@ -1460,23 +1468,23 @@ function PaymentsPageContent() {
                                                 <span className="text-gray-900">{category.name}</span>
                                               </div>
                                             )}
-                                            {charge.charge_date && (
+                                            {ch.charge_date && (
                                               <div>
                                                 <span className="font-medium">Date:</span>{' '}
-                                                <span className="text-gray-900">{formatDate(charge.charge_date)}</span>
+                                                <span className="text-gray-900">{formatDate(ch.charge_date)}</span>
                                               </div>
                                             )}
                                           </div>
-                                          {charge.vendor && (
+                                          {ch.vendor && (
                                             <div className="mt-2 text-sm text-gray-600">
                                               <span className="font-medium">Fournisseur:</span>{' '}
-                                              <span className="text-gray-900">{charge.vendor}</span>
+                                              <span className="text-gray-900">{ch.vendor}</span>
                                             </div>
                                           )}
-                                          {charge.notes && (
+                                          {ch.notes && (
                                             <div className="mt-2 text-sm text-gray-600">
                                               <span className="font-medium">Notes:</span>{' '}
-                                              <span className="text-gray-900">{charge.notes}</span>
+                                              <span className="text-gray-900">{ch.notes}</span>
                                             </div>
                                           )}
                                         </div>

@@ -54,35 +54,50 @@ export class SupportService {
   }
 
   async createCategory(category: TableInsert<'support_categories'>) {
-    const { data, error } = await this.supabase
-      .from('support_categories')
-      .insert(category)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('support_categories')
+        .insert(category)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('SupportService.createCategory', error, { organizationId: category.organization_id ?? undefined })
+      throw error
+    }
   }
 
   async updateCategory(id: string, updates: TableUpdate<'support_categories'>) {
-    const { data, error } = await this.supabase
-      .from('support_categories')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('support_categories')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('SupportService.updateCategory', error, { id })
+      throw error
+    }
   }
 
   async deleteCategory(id: string) {
-    const { error } = await this.supabase
-      .from('support_categories')
-      .delete()
-      .eq('id', id)
+    try {
+      const { error } = await this.supabase
+        .from('support_categories')
+        .delete()
+        .eq('id', id)
 
-    if (error) throw error
+      if (error) throw error
+    } catch (error) {
+      logger.error('SupportService.deleteCategory', error, { id })
+      throw error
+    }
   }
 
   // ========== TICKETS ==========
@@ -94,6 +109,7 @@ export class SupportService {
     categoryId?: string
     assignedTo?: string
   }) {
+    try {
     let query = this.supabase
       .from('support_tickets')
       .select(`
@@ -153,6 +169,10 @@ export class SupportService {
       throw error
     }
     return data || []
+    } catch (error) {
+      logger.error('SupportService.getTickets', error, { organizationId })
+      throw error
+    }
   }
 
   /** Liste tous les tickets (toutes organisations). Réservé au super_admin (RLS). */
@@ -437,7 +457,8 @@ export class SupportService {
 
     if (error) throw error
 
-    const ticketsData = (data || []) as any[]
+    type TicketStatsRow = Pick<SupportTicket, 'status' | 'priority' | 'created_at' | 'resolved_at' | 'first_response_at'>
+    const ticketsData: TicketStatsRow[] = (data || []) as TicketStatsRow[]
 
     const stats = {
       total: ticketsData.length,
@@ -465,7 +486,7 @@ export class SupportService {
     let resolutionCount = 0
     let resolvedCount = 0
 
-    ticketsData.forEach((ticket: any) => {
+    ticketsData.forEach((ticket: TicketStatsRow) => {
       // Par statut
       if (ticket.status && ticket.status in stats.byStatus) {
         stats.byStatus[ticket.status as keyof typeof stats.byStatus]++

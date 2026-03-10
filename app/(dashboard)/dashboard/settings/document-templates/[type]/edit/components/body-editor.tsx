@@ -56,7 +56,7 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
   const editorRef = useRef<RichTextEditorRef>(null)
   const isSyncingFromTemplateRef = useRef(false) // Pour éviter les boucles lors de la synchronisation
   const [bodyContent, setBodyContent] = useState(() => {
-    const html = (template.content as any)?.html
+    const html = (template.content as { html?: string })?.html
     const elementsContent = template.content?.elements?.[0]?.content
     const rawContent = html || elementsContent || ''
     // Convertir les balises {variable} en nodes TipTap lors du chargement initial
@@ -67,7 +67,7 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
   useEffect(() => {
     if (!template.id || !template.type) return
     
-    const html = (template.content as any)?.html
+    const html = (template.content as { html?: string })?.html
     const elementsContent = template.content?.elements?.[0]?.content
     const currentContent = html || elementsContent || ''
     const trimmedContent = currentContent.trim()
@@ -294,11 +294,9 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
   }
 
   // Extraire le contenu du header et footer pour la prévisualisation
-  const headerContent = (template.header as any)?.content || ''
-  const footerContent = (template.footer as any)?.content || ''
-  
-  // Extraire les paramètres de page
-  const pageSize = (template.content as any)?.pageSize || template.page_size || 'A4'
+  const headerContent = (template.header as { content?: string })?.content || ''
+  const footerContent = (template.footer as { content?: string })?.content || ''
+  const pageSize = (template.content as { pageSize?: string })?.pageSize || template.page_size || 'A4'
   const margins = template.margins || { top: 20, right: 20, bottom: 20, left: 20 }
 
   return (

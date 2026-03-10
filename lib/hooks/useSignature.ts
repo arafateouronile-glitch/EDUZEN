@@ -96,7 +96,7 @@ export function useSignature(options: UseSignatureOptions) {
    */
   const generatePDF = useCallback(async (
     htmlContent: string,
-    variables: Record<string, any>,
+    variables: Record<string, unknown>,
     filename: string = 'document.pdf'
   ) => {
     try {
@@ -126,7 +126,7 @@ export function useSignature(options: UseSignatureOptions) {
    */
   const generateAndUploadPDF = useCallback(async (
     htmlContent: string,
-    variables: Record<string, any>,
+    variables: Record<string, unknown>,
     filename: string = 'document.pdf'
   ) => {
     try {

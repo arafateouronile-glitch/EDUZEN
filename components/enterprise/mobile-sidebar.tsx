@@ -15,9 +15,11 @@ import {
   LogOut,
   Building2,
   Share2,
+  ShieldCheck,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
 
 const navigation = [
   { name: 'Tableau de bord', href: '/enterprise', icon: LayoutDashboard },
@@ -27,6 +29,7 @@ const navigation = [
   { name: 'Facturation', href: '/enterprise/billing', icon: CreditCard },
   { name: 'Statistiques', href: '/enterprise/analytics', icon: BarChart3 },
   { name: 'Partage OPCO', href: '/enterprise/opco-share', icon: Share2 },
+  { name: 'Diplômes & habilitations', href: '/enterprise/compliance', icon: ShieldCheck },
 ]
 
 const secondaryNavigation = [
@@ -41,6 +44,7 @@ interface MobileSidebarProps {
 export function EnterpriseMobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname()
   const { logout } = useAuth()
+  const { entityQueryString } = useEnterpriseCompany()
 
   if (!isOpen) return null
 
@@ -83,11 +87,12 @@ export function EnterpriseMobileSidebar({ isOpen, onClose }: MobileSidebarProps)
           <nav className="flex-1 overflow-y-auto px-2 py-4">
             <div className="space-y-1">
               {navigation.map((item) => {
+                const href = `${item.href}${entityQueryString}`
                 const isActive = pathname === item.href || (item.href !== '/enterprise' && pathname?.startsWith(item.href))
                 return (
                   <Link
                     key={item.name}
-                    href={item.href}
+                    href={href}
                     onClick={onClose}
                     className={cn(
                       'group flex items-center px-3 py-3 text-sm font-medium rounded-lg',
@@ -111,11 +116,12 @@ export function EnterpriseMobileSidebar({ isOpen, onClose }: MobileSidebarProps)
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="space-y-1">
                 {secondaryNavigation.map((item) => {
+                  const href = `${item.href}${entityQueryString}`
                   const isActive = pathname === item.href || pathname?.startsWith(item.href)
                   return (
                     <Link
                       key={item.name}
-                      href={item.href}
+                      href={href}
                       onClick={onClose}
                       className={cn(
                         'group flex items-center px-3 py-3 text-sm font-medium rounded-lg',

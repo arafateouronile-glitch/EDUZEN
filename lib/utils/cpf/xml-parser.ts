@@ -89,51 +89,55 @@ export function parseEDOFXML(xmlContent: string): EDOFParsedData {
   }
 }
 
+/** Structure possible du JSON parsé depuis le XML EDOF */
+type XmlParsed = {
+  catalogue?: Record<string, unknown>
+  actions?: { action?: unknown }
+  action?: unknown
+  formations?: { formation?: unknown }
+  organisme?: Record<string, unknown>
+  [key: string]: unknown
+}
+
 /**
  * Extrait les formations depuis l'objet JSON parsé
  * Gère plusieurs formats XML possibles
  */
-function extractTrainings(data: any): EDOFTraining[] {
+function extractTrainings(data: Record<string, unknown>): EDOFTraining[] {
+  const d = data as XmlParsed
   const trainings: EDOFTraining[] = []
 
-  // Format 1: data.catalogue.actions.action (format standard EDOF)
-  if (data.catalogue?.actions?.action) {
-    const actions = Array.isArray(data.catalogue.actions.action)
-      ? data.catalogue.actions.action
-      : [data.catalogue.actions.action]
+  const rawActions = d.catalogue && typeof d.catalogue === 'object' && 'actions' in d.catalogue
+    ? (d.catalogue as Record<string, unknown>).actions as { action?: unknown } | undefined
+    : d.actions
+  const rawAction = rawActions?.action
 
+  // Format 1 & 2: catalogue.actions.action ou actions.action
+  if (rawAction) {
+    const actions = Array.isArray(rawAction) ? rawAction : [rawAction]
     for (const action of actions) {
-      trainings.push(parseAction(action))
+      trainings.push(parseAction((action ?? {}) as Record<string, unknown>))
     }
+    return trainings
   }
-  // Format 2: data.actions.action
-  else if (data.actions?.action) {
-    const actions = Array.isArray(data.actions.action)
-      ? data.actions.action
-      : [data.actions.action]
 
+  // Format 3 & 4: data.action (array ou single)
+  if (d.action) {
+    const actions = Array.isArray(d.action) ? d.action : [d.action]
     for (const action of actions) {
-      trainings.push(parseAction(action))
+      trainings.push(parseAction((action ?? {}) as Record<string, unknown>))
     }
+    return trainings
   }
-  // Format 3: data.action (array direct)
-  else if (Array.isArray(data.action)) {
-    for (const action of data.action) {
-      trainings.push(parseAction(action))
-    }
-  }
-  // Format 4: data.action (single object)
-  else if (data.action) {
-    trainings.push(parseAction(data.action))
-  }
-  // Format 5: data.formations.formation (format alternatif)
-  else if (data.formations?.formation) {
-    const formations = Array.isArray(data.formations.formation)
-      ? data.formations.formation
-      : [data.formations.formation]
 
+  // Format 5: data.formations.formation
+  const rawFormations = d.formations && typeof d.formations === 'object' && 'formation' in d.formations
+    ? (d.formations as Record<string, unknown>).formation
+    : undefined
+  if (rawFormations) {
+    const formations = Array.isArray(rawFormations) ? rawFormations : [rawFormations]
     for (const formation of formations) {
-      trainings.push(parseFormation(formation))
+      trainings.push(parseFormation((formation ?? {}) as Record<string, unknown>))
     }
   }
 
@@ -143,42 +147,31 @@ function extractTrainings(data: any): EDOFTraining[] {
 /**
  * Parse une action de formation au format EDOF standard
  */
-function parseAction(action: any): EDOFTraining {
+function parseAction(action: Record<string, unknown>): EDOFTraining {
+  const duree = action.duree as Record<string, unknown> | undefined
+  const tarif = action.tarif as Record<string, unknown> | undefined
+  const modalites = action.modalites as Record<string, unknown> | undefined
+  const rncp = action.rncp as Record<string, unknown> | undefined
   return {
-    // Identifiants
-    actionCode: action['@_code'] || action.code || action.numeroAction,
-    rncpCode: action.rncp?.code || action.codeRNCP || action.rncpCode,
-    
-    // Informations générales
-    title: action.intitule || action.titre || action.libelle || action.title || '',
-    description: action.description || action.descriptif || action.presentation,
-    objectives: action.objectifs || action.objectifsPedagogiques,
-    prerequisites: action.prerequis || action.preRequis,
-    
-    // Durée et modalités
-    durationHours: parseNumber(action.duree?.heures || action.dureeHeures || action.durationHours),
-    durationDays: parseNumber(action.duree?.jours || action.dureeJours || action.durationDays),
-    modality: action.modalite || action.modalites?.enseignement || action.modality,
-    location: action.lieu || action.lieuFormation || action.location,
-    
-    // Prix et financement
-    price: parseNumber(action.tarif?.ttc || action.prix || action.price || action.montant),
-    currency: action.tarif?.devise || action.currency || 'EUR',
-    cpfFundingRate: parseNumber(action.tauxFinancementCPF || action.fundingRate || 100),
-    
-    // Certification
-    certificationLevel: action.niveau || action.niveauCertification || action.certificationLevel,
-    certificationType: action.typeCertification || action.certificationType,
-    
-    // Public et effectifs
-    targetAudience: action.publicVise || action.public || action.targetAudience,
-    maxLearners: parseNumber(action.effectifMax || action.maxLearners || action.nbStagiairesMax),
-    
-    // Dates
-    eligibilityStartDate: action.dateDebutEligibilite || action.eligibilityStartDate,
-    eligibilityEndDate: action.dateFinEligibilite || action.eligibilityEndDate,
-    
-    // Métadonnées (conserver toutes les données originales pour référence)
+    actionCode: (action['@_code'] ?? action.code ?? action.numeroAction) as string | undefined,
+    rncpCode: (rncp?.code ?? action.codeRNCP ?? action.rncpCode) as string | undefined,
+    title: (action.intitule ?? action.titre ?? action.libelle ?? action.title ?? '') as string,
+    description: (action.description ?? action.descriptif ?? action.presentation) as string | undefined,
+    objectives: (action.objectifs ?? action.objectifsPedagogiques) as string | undefined,
+    prerequisites: (action.prerequis ?? action.preRequis) as string | undefined,
+    durationHours: parseNumber(duree?.heures ?? action.dureeHeures ?? action.durationHours),
+    durationDays: parseNumber(duree?.jours ?? action.dureeJours ?? action.durationDays),
+    modality: (action.modalite ?? modalites?.enseignement ?? action.modality) as string | undefined,
+    location: (action.lieu ?? action.lieuFormation ?? action.location) as string | undefined,
+    price: parseNumber(tarif?.ttc ?? action.prix ?? action.price ?? action.montant),
+    currency: (tarif?.devise ?? action.currency ?? 'EUR') as string,
+    cpfFundingRate: parseNumber(action.tauxFinancementCPF ?? action.fundingRate ?? 100),
+    certificationLevel: (action.niveau ?? action.niveauCertification ?? action.certificationLevel) as string | undefined,
+    certificationType: (action.typeCertification ?? action.certificationType) as string | undefined,
+    targetAudience: (action.publicVise ?? action.public ?? action.targetAudience) as string | undefined,
+    maxLearners: parseNumber(action.effectifMax ?? action.maxLearners ?? action.nbStagiairesMax),
+    eligibilityStartDate: (action.dateDebutEligibilite ?? action.eligibilityStartDate) as string | undefined,
+    eligibilityEndDate: (action.dateFinEligibilite ?? action.eligibilityEndDate) as string | undefined,
     metadata: action,
   }
 }
@@ -186,14 +179,16 @@ function parseAction(action: any): EDOFTraining {
 /**
  * Parse une formation au format alternatif
  */
-function parseFormation(formation: any): EDOFTraining {
+function parseFormation(formation: Record<string, unknown>): EDOFTraining {
+  const duree = formation.duree as Record<string, unknown> | undefined
+  const heures = duree && typeof duree === 'object' && 'heures' in duree ? (duree as Record<string, unknown>).heures : formation.heures
   return {
-    actionCode: formation.code || formation.id,
-    title: formation.titre || formation.nom || formation.title || '',
-    description: formation.description || formation.descriptif,
-    durationHours: parseNumber(formation.duree || formation.heures),
-    price: parseNumber(formation.prix || formation.tarif),
-    currency: formation.devise || 'EUR',
+    actionCode: (formation.code ?? formation.id) as string | undefined,
+    title: (formation.titre ?? formation.nom ?? formation.title ?? '') as string,
+    description: (formation.description ?? formation.descriptif) as string | undefined,
+    durationHours: parseNumber(heures ?? formation.duree),
+    price: parseNumber(formation.prix ?? formation.tarif),
+    currency: (formation.devise ?? 'EUR') as string,
     metadata: formation,
   }
 }
@@ -201,19 +196,21 @@ function parseFormation(formation: any): EDOFTraining {
 /**
  * Extrait les métadonnées du fichier XML
  */
-function extractMetadata(data: any): EDOFParsedData['metadata'] {
+function extractMetadata(data: Record<string, unknown>): EDOFParsedData['metadata'] {
+  const cat = data.catalogue as Record<string, unknown> | undefined
+  const org = data.organisme as Record<string, unknown> | undefined
   return {
-    providerName: data.catalogue?.['@_organisme'] || data.organisme?.nom || data.providerName,
-    siretNumber: data.catalogue?.['@_siret'] || data.organisme?.siret || data.siretNumber,
-    exportDate: data.catalogue?.['@_dateExport'] || data.dateExport || data.exportDate,
-    version: data.catalogue?.['@_version'] || data.version || '1.0',
+    providerName: (cat?.['@_organisme'] ?? org?.nom ?? data.providerName) as string | undefined,
+    siretNumber: (cat?.['@_siret'] ?? org?.siret ?? data.siretNumber) as string | undefined,
+    exportDate: (cat?.['@_dateExport'] ?? data.dateExport ?? data.exportDate) as string | undefined,
+    version: (cat?.['@_version'] ?? data.version ?? '1.0') as string,
   }
 }
 
 /**
  * Parse un nombre depuis une chaîne ou un nombre
  */
-function parseNumber(value: any): number | undefined {
+function parseNumber(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '') {
     return undefined
   }

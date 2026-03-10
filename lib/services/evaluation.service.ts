@@ -93,7 +93,7 @@ class EvaluationService {
     const { data, error } = await query
 
     // Si erreur de relation, essayer sans les jointures complexes
-    if (error && (error.code === 'PGRST116' || error.message?.includes('relationship') || error.message?.includes('Could not find') || (error as any).status === 400)) {
+    if (error && (error.code === 'PGRST116' || error.message?.includes('relationship') || error.message?.includes('Could not find') || (error as { status?: number }).status === 400)) {
       let simpleQuery = this.supabase
         .from('grades')
         .select('*')
@@ -157,7 +157,7 @@ class EvaluationService {
 
       if (error) {
         // Si erreur de relation, essayer sans les jointures complexes
-        if (error.code === 'PGRST116' || error.message?.includes('relationship') || error.message?.includes('Could not find') || (error as any).status === 400) {
+        if (error.code === 'PGRST116' || error.message?.includes('relationship') || error.message?.includes('Could not find') || (error as { status?: number }).status === 400) {
           const { data: simpleData, error: simpleError } = await this.supabase
             .from('grades')
             .select('*')
@@ -185,7 +185,7 @@ class EvaluationService {
     // Préserver assessment_type explicitement avant le spread
     const assessmentType = evaluation.assessment_type
     
-    const insertData: any = {
+    const insertData: Record<string, unknown> = {
       ...evaluation,
       organization_id: organizationId,
       // Préserver assessment_type explicitement (au cas où le spread l'écraserait)
@@ -220,7 +220,7 @@ class EvaluationService {
       'other',
     ]
     
-    if (insertData.assessment_type && !validAssessmentTypes.includes(insertData.assessment_type)) {
+    if (insertData.assessment_type && !validAssessmentTypes.includes(insertData.assessment_type as string)) {
       logger.error('EvaluationService - assessment_type invalide', new Error('Invalid assessment_type'), {
         received: insertData.assessment_type,
         validTypes: validAssessmentTypes,
@@ -233,7 +233,7 @@ class EvaluationService {
     // Insérer sans select pour éviter les erreurs 400
     const { data: insertedData, error: insertError } = await this.supabase
       .from('grades')
-      .insert(insertData)
+      .insert(insertData as GradeInsert)
       .select('id, subject, score, max_score, percentage, organization_id, session_id, student_id, teacher_id, assessment_type, notes, graded_at, created_at')
       .single()
 
@@ -256,7 +256,7 @@ class EvaluationService {
     evaluation: Omit<GradeInsert, 'organization_id' | 'created_at' | 'updated_at' | 'is_makeup' | 'original_grade_id' | 'percentage'>
   ) {
     // Préparer les données d'insertion
-    const insertData: any = {
+    const insertData: Record<string, unknown> = {
       ...evaluation,
       organization_id: organizationId,
       // Ne pas inclure percentage - c'est une colonne générée
@@ -279,7 +279,7 @@ class EvaluationService {
     // Insérer sans select pour éviter les erreurs 400
     const { data: insertedData, error: insertError } = await this.supabase
       .from('grades')
-      .insert(insertData)
+      .insert(insertData as GradeInsert)
       .select('id, subject, score, max_score, percentage, organization_id, session_id, student_id, teacher_id, assessment_type, notes, graded_at, created_at')
       .single()
 
@@ -334,7 +334,7 @@ class EvaluationService {
    */
   async update(id: string, updates: Omit<GradeUpdate, 'percentage'>) {
     // Préparer les données de mise à jour
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       ...updates,
       // Ne pas inclure percentage - c'est une colonne générée calculée automatiquement
       updated_at: new Date().toISOString(),
@@ -353,7 +353,7 @@ class EvaluationService {
     // Mettre à jour sans jointure
     const { data: updatedData, error: updateError } = await this.supabase
       .from('grades')
-      .update(updateData)
+      .update(updateData as GradeUpdate)
       .eq('id', id)
       .select('id, subject, score, max_score, percentage, organization_id, session_id, student_id, teacher_id, assessment_type, notes, graded_at, created_at, updated_at')
       .single()
@@ -440,7 +440,7 @@ class EvaluationService {
    */
   async createBulk(organizationId: string, evaluations: Omit<GradeInsert, 'organization_id' | 'created_at' | 'updated_at' | 'percentage'>[]) {
     const evaluationsWithOrg = evaluations.map((evaluation) => {
-      const insertData: any = {
+      const insertData: Record<string, unknown> = {
         ...evaluation,
         organization_id: organizationId,
         // Ne pas inclure percentage - c'est une colonne générée
@@ -463,7 +463,7 @@ class EvaluationService {
     // Insérer d'abord sans jointure
     const { data: insertedData, error: insertError } = await this.supabase
       .from('grades')
-      .insert(evaluationsWithOrg)
+      .insert(evaluationsWithOrg as GradeInsert[])
       .select('*')
 
     if (insertError) throw insertError

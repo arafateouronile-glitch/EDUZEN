@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       .eq('id', document_id)
       .single()
 
-    if (!doc || (doc as any).organization_id !== u.organization_id) {
+    if (!doc || (doc as { organization_id?: string }).organization_id !== u.organization_id) {
       return NextResponse.json({ error: 'Document introuvable ou hors organisation' }, { status: 404 })
     }
 

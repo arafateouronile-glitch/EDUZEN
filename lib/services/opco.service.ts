@@ -138,7 +138,7 @@ export class OPCOService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||
@@ -157,16 +157,21 @@ export class OPCOService {
    * Créer ou mettre à jour une configuration OPCO
    */
   async upsertConfiguration(config: Partial<OPCOConfiguration>): Promise<OPCOConfiguration> {
-    const { data, error } = await this.supabase
-      .from('opco_configurations')
-      .upsert(config, {
-        onConflict: 'organization_id,opco_code',
-      })
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('opco_configurations')
+        .upsert(config, {
+          onConflict: 'organization_id,opco_code',
+        })
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('OPCOService.upsertConfiguration', error, { organizationId: config?.organization_id })
+      throw error
+    }
   }
 
   /**
@@ -196,7 +201,7 @@ export class OPCOService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||
@@ -215,24 +220,26 @@ export class OPCOService {
    * Créer une convention OPCO
    */
   async createConvention(convention: Partial<OPCOConvention>): Promise<OPCOConvention> {
-    // Générer un numéro de convention si non fourni
-    if (!convention.convention_number) {
-      convention.convention_number = `CONV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+    try {
+      if (!convention.convention_number) {
+        convention.convention_number = `CONV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+      }
+      if (convention.max_funding_amount) {
+        convention.remaining_funding_amount = convention.max_funding_amount - (convention.used_funding_amount || 0)
+      }
+
+      const { data, error } = await this.supabase
+        .from('opco_conventions')
+        .insert(convention)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('OPCOService.createConvention', error, { organizationId: convention?.organization_id })
+      throw error
     }
-
-    // Calculer le montant restant si max_funding_amount est défini
-    if (convention.max_funding_amount) {
-      convention.remaining_funding_amount = convention.max_funding_amount - (convention.used_funding_amount || 0)
-    }
-
-    const { data, error } = await this.supabase
-      .from('opco_conventions')
-      .insert(convention)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
   }
 
   /**
@@ -274,7 +281,7 @@ export class OPCOService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||
@@ -293,14 +300,19 @@ export class OPCOService {
    * Créer une déclaration OPCO
    */
   async createDeclaration(declaration: Partial<OPCODeclaration>): Promise<OPCODeclaration> {
-    const { data, error } = await this.supabase
-      .from('opco_declarations')
-      .insert(declaration)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('opco_declarations')
+        .insert(declaration)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('OPCOService.createDeclaration', error, { organizationId: declaration?.organization_id })
+      throw error
+    }
   }
 
   /**
@@ -416,7 +428,7 @@ export class OPCOService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||

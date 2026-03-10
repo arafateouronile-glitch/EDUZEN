@@ -128,6 +128,7 @@ export function BPFAuditModal({
     if (open) {
       fetchData()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData is stable, re-run on open/page
   }, [open, page])
 
   const fetchData = async () => {

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 type SecurityPolicy = TableRow<'security_policies'>
 type SecurityControl = TableRow<'security_controls'>
@@ -26,46 +27,61 @@ export class ComplianceService {
   // ========== SECURITY POLICIES ==========
 
   async getPolicies(organizationId: string, filters?: { status?: string; category?: string }) {
-    let query = this.supabase
-      .from('security_policies')
-      .select('*, approved_by_user:users!security_policies_approved_by_fkey(id, full_name, email)')
-      .or(`organization_id.eq.${organizationId},organization_id.is.null`)
+    try {
+      let query = this.supabase
+        .from('security_policies')
+        .select('*, approved_by_user:users!security_policies_approved_by_fkey(id, full_name, email)')
+        .or(`organization_id.eq.${organizationId},organization_id.is.null`)
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status)
+      if (filters?.status) {
+        query = query.eq('status', filters.status)
+      }
+
+      if (filters?.category) {
+        query = query.eq('category', filters.category)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ComplianceService.getPolicies', error, { organizationId, filters })
+      throw error
     }
-
-    if (filters?.category) {
-      query = query.eq('category', filters.category)
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false })
-
-    if (error) throw error
-    return data
   }
 
   async createPolicy(policy: TableInsert<'security_policies'>) {
-    const { data, error } = await this.supabase
-      .from('security_policies')
-      .insert(policy)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('security_policies')
+        .insert(policy)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ComplianceService.createPolicy', error, { organizationId: policy.organization_id ?? undefined })
+      throw error
+    }
   }
 
   async updatePolicy(policyId: string, updates: TableUpdate<'security_policies'>) {
-    const { data, error } = await this.supabase
-      .from('security_policies')
-      .update(updates)
-      .eq('id', policyId)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('security_policies')
+        .update(updates)
+        .eq('id', policyId)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ComplianceService.updatePolicy', error, { policyId })
+      throw error
+    }
   }
 
   async approvePolicy(policyId: string, userId: string) {
@@ -80,46 +96,62 @@ export class ComplianceService {
   // ========== SECURITY CONTROLS ==========
 
   async getControls(organizationId: string, filters?: { framework?: string; status?: string }) {
-    let query = this.supabase
-      .from('security_controls')
-      .select('*')
-      .eq('organization_id', organizationId)
+    try {
+      let query = this.supabase
+        .from('security_controls')
+        .select('*')
+        .eq('organization_id', organizationId)
 
-    if (filters?.framework) {
-      query = query.eq('framework', filters.framework)
-    }
+      if (filters?.framework) {
+        query = query.eq('framework', filters.framework)
+      }
 
-    if (filters?.status) {
-      query = query.eq('implementation_status', filters.status)
+    const implementationStatus = typeof filters?.status === 'string' ? filters.status : undefined
+    if (implementationStatus) {
+      query = query.eq('implementation_status', implementationStatus)
     }
 
     const { data, error } = await query.order('control_id', { ascending: true })
 
     if (error) throw error
     return data
+    } catch (error) {
+      logger.error('ComplianceService.getControls', error, { organizationId, filters })
+      throw error
+    }
   }
 
   async createControl(control: TableInsert<'security_controls'>) {
-    const { data, error } = await this.supabase
-      .from('security_controls')
-      .insert(control)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('security_controls')
+        .insert(control)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ComplianceService.createControl', error, { organizationId: control.organization_id ?? undefined })
+      throw error
+    }
   }
 
   async updateControl(controlId: string, updates: TableUpdate<'security_controls'>) {
-    const { data, error } = await this.supabase
-      .from('security_controls')
-      .update(updates)
-      .eq('id', controlId)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('security_controls')
+        .update(updates)
+        .eq('id', controlId)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ComplianceService.updateControl', error, { controlId })
+      throw error
+    }
   }
 
   async getControlComplianceStats(organizationId: string, framework?: string) {
@@ -146,25 +178,35 @@ export class ComplianceService {
   // ========== COMPLIANCE EVIDENCE ==========
 
   async getEvidence(controlId: string) {
-    const { data, error } = await this.supabase
-      .from('compliance_evidence')
-      .select('*, collected_by_user:users!compliance_evidence_collected_by_fkey(id, full_name, email), verified_by_user:users!compliance_evidence_verified_by_fkey(id, full_name, email)')
-      .eq('control_id', controlId)
-      .order('collected_at', { ascending: false })
+    try {
+      const { data, error } = await this.supabase
+        .from('compliance_evidence')
+        .select('*, collected_by_user:users!compliance_evidence_collected_by_fkey(id, full_name, email), verified_by_user:users!compliance_evidence_verified_by_fkey(id, full_name, email)')
+        .eq('control_id', controlId)
+        .order('collected_at', { ascending: false })
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ComplianceService.getEvidence', error, { controlId })
+      throw error
+    }
   }
 
   async createEvidence(evidence: TableInsert<'compliance_evidence'>) {
-    const { data, error } = await this.supabase
-      .from('compliance_evidence')
-      .insert(evidence)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('compliance_evidence')
+        .insert(evidence)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ComplianceService.createEvidence', error, { controlId: evidence.control_id })
+      throw error
+    }
   }
 
   async verifyEvidence(evidenceId: string, userId: string) {
@@ -515,12 +557,12 @@ export class ComplianceService {
           ? audits.reduce((sum, a) => sum + (a.compliance_percentage || 0), 0) / audits.length
           : 0,
       },
-      recommendations: this.generateRecommendations(stats as any, criticalRisks, openIncidents),
+      recommendations: this.generateRecommendations(stats, criticalRisks, openIncidents),
     }
   }
 
   private generateRecommendations(
-    stats: any,
+    stats: { compliance_percentage: number; not_implemented: number },
     criticalRisks: RiskAssessment[],
     openIncidents: SecurityIncident[]
   ): string[] {

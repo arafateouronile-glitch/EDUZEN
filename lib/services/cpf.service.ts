@@ -224,7 +224,7 @@ export class CPFService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||
@@ -284,7 +284,7 @@ export class CPFService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||
@@ -378,7 +378,7 @@ export class CPFService {
       syncType?: 'full' | 'incremental'
       createdBy?: string
     }
-  ): Promise<{ syncId: string; result: any }> {
+  ): Promise<{ syncId: string; result: unknown }> {
     const config = await this.getConfiguration(organizationId)
     if (!config || !config.is_active) {
       throw new Error('Configuration CPF non active')
@@ -424,7 +424,7 @@ export class CPFService {
       syncType?: 'full' | 'incremental'
       createdBy?: string
     }
-  ): Promise<{ syncId: string; result: any }> {
+  ): Promise<{ syncId: string; result: unknown }> {
     const config = await this.getConfiguration(organizationId)
     if (!config || !config.is_active) {
       throw new Error('Configuration CPF non active')
@@ -478,15 +478,15 @@ export class CPFService {
           message: 'Synchronisation démarrée (à implémenter)',
         },
       }
-    } catch (error: any) {
-      // En cas d'erreur, mettre à jour le log
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
       await this.supabase
         .from('cpf_catalog_sync')
         .update({
           sync_status: 'failed',
           completed_at: new Date().toISOString(),
-          error_message: error.message,
-          error_details: { error: error.toString() },
+          error_message: message,
+          error_details: { error: String(error) },
         })
         .eq('id', syncLog.id)
 

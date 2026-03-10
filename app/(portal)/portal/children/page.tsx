@@ -32,13 +32,11 @@ export default function ChildrenPage() {
 
       if (!studentGuardians || studentGuardians.length === 0) return []
 
-      // eslint-disable-next-line
-      const q: any = supabase
+      const { data: students } = await supabase
         .from('students')
         .select('*, classes(name)')
         .in('id', studentGuardians.map((sg) => sg.student_id).filter((id): id is string => id !== null))
         .eq('status', 'active')
-      const { data: students } = await q
 
       return students || []
     },
@@ -86,7 +84,7 @@ export default function ChildrenPage() {
                       {child.first_name} {child.last_name}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      {((child as any).classes as { name: string } | undefined)?.name || 'Non assigné'}
+                      {(child as { classes?: { name?: string } }).classes?.name || 'Non assigné'}
                     </p>
                   </div>
                 </div>

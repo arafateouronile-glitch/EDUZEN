@@ -196,11 +196,12 @@ export async function PUT(request: NextRequest) {
     
     // Construire les URLs complètes
     const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
-    const tokens = (data || []).map((item: any) => ({
+    type TokenRow = { student_id?: string; student_name?: string; token?: string; access_url?: string }
+    const tokens = (data || []).map((item: TokenRow) => ({
       studentId: item.student_id,
       studentName: item.student_name,
       token: item.token,
-      accessUrl: `${baseUrl}${item.access_url}`
+      accessUrl: `${baseUrl}${item.access_url ?? ''}`
     }))
     
     return NextResponse.json({
@@ -209,17 +210,18 @@ export async function PUT(request: NextRequest) {
       tokens
     })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { message?: string; constructor?: { name?: string } }
     logger.error('Bulk token generation failed with exception', error, {
       error: sanitizeError(error),
-      errorType: error?.constructor?.name,
+      errorType: err?.constructor?.name,
     })
 
     return NextResponse.json(
       {
         error: 'Erreur interne du serveur',
-        details: error?.message || 'Erreur inconnue',
-        type: error?.constructor?.name
+        details: err?.message ?? 'Erreur inconnue',
+        type: err?.constructor?.name
       },
       { status: 500 }
     )

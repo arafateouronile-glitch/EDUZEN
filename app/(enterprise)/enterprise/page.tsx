@@ -1,8 +1,8 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { createClient } from '@/lib/supabase/client'
+import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
 import { enterprisePortalService, type CompanyKPIs, type EmployeeProgress } from '@/lib/services/enterprise-portal.service'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -24,24 +24,19 @@ import {
   Plus,
   Download,
   Share2,
+  Loader2,
+  Shield,
 } from 'lucide-react'
 import Link from 'next/link'
 import { SkillsEvolutionChart } from '@/components/enterprise/skills-evolution-chart'
 import { EmployeeTrackingTable } from '@/components/enterprise/employee-tracking-table'
+import { useToast } from '@/components/ui/toast'
 
 export default function EnterprisePortalPage() {
   const { user } = useAuth()
-  const supabase = createClient()
-
-  // Get company for current user
-  const { data: company, isLoading: isLoadingCompany } = useQuery({
-    queryKey: ['enterprise-company', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null
-      return enterprisePortalService.getCompanyForManager(user.id)
-    },
-    enabled: !!user?.id,
-  })
+  const queryClient = useQueryClient()
+  const { company, isLoading: isLoadingCompany, entityQueryString } = useEnterpriseCompany()
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
 
   // Get KPIs
   const { data: kpis, isLoading: isLoadingKPIs } = useQuery({
@@ -83,6 +78,19 @@ export default function EnterprisePortalPage() {
     enabled: !!company?.id,
   })
 
+  // Stats validité des diplômes / habilitations
+  const { data: diplomaStats } = useQuery({
+    queryKey: ['enterprise-compliance-stats', company?.id],
+    queryFn: async () => {
+      if (!company?.id) return { total: 0, expired: 0, warning: 0, valid: 0 }
+      const res = await fetch(`/api/enterprise/compliance?company_id=${company.id}`)
+      if (!res.ok) return { total: 0, expired: 0, warning: 0, valid: 0 }
+      const json = await res.json()
+      return json.stats ?? { total: 0, expired: 0, warning: 0, valid: 0 }
+    },
+    enabled: !!company?.id,
+  })
+
   const isLoading = isLoadingCompany || isLoadingKPIs
 
   if (isLoading) {
@@ -91,13 +99,7 @@ export default function EnterprisePortalPage() {
 
   if (!company) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <AlertCircle className="w-16 h-16 text-gray-400 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Aucune entreprise associée</h2>
-        <p className="text-gray-600 max-w-md">
-          Votre compte n'est pas encore associé à une entreprise. Veuillez contacter l'organisme de formation pour obtenir l'accès à votre espace entreprise.
-        </p>
-      </div>
+      <NoCompanyView isAdmin={isAdmin} onAssociateSuccess={() => queryClient.invalidateQueries({ queryKey: ['enterprise-company', user?.id] })} />
     )
   }
 
@@ -114,7 +116,7 @@ export default function EnterprisePortalPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Link href="/enterprise/trainings/request">
+          <Link href={`/enterprise/trainings/request${entityQueryString}`}>
             <Button className="bg-[#274472] hover:bg-[#1e3a5f]">
               <Plus className="w-4 h-4 mr-2" />
               Demander une formation
@@ -175,7 +177,7 @@ export default function EnterprisePortalPage() {
                     Progression et présence en temps réel
                   </p>
                 </div>
-                <Link href="/enterprise/employees">
+                <Link href={`/enterprise/employees${entityQueryString}`}>
                   <Button variant="outline" size="sm">
                     Voir tout
                     <ChevronRight className="w-4 h-4 ml-1" />
@@ -230,23 +232,73 @@ export default function EnterprisePortalPage() {
             </div>
           </GlassCard>
 
+          {/* Validité des diplômes */}
+          <GlassCard variant="default" className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-[#274472]" />
+                Validité des diplômes
+              </h3>
+              <Link href={`/enterprise/compliance${entityQueryString}`}>
+                <Button variant="ghost" size="sm" className="text-[#274472]">
+                  Gérer
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Habilitations et certifications des collaborateurs
+            </p>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Total enregistrés</span>
+                <span className="font-semibold">{diplomaStats?.total ?? 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-emerald-600">Valides</span>
+                <span className="font-semibold text-emerald-700">{diplomaStats?.valid ?? 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-amber-600">À renouveler (&lt; 6 mois)</span>
+                <span className="font-semibold text-amber-700">{diplomaStats?.warning ?? 0}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-red-600">Expirés</span>
+                <span className="font-semibold text-red-700">{diplomaStats?.expired ?? 0}</span>
+              </div>
+            </div>
+            {(diplomaStats?.expired ?? 0) > 0 && (
+              <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-100">
+                <p className="text-sm text-red-700 font-medium">
+                  {(diplomaStats?.expired ?? 0)} habilitation(s) expirée(s) — action requise
+                </p>
+              </div>
+            )}
+          </GlassCard>
+
           {/* Quick Actions */}
           <GlassCard variant="default" className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
             <div className="space-y-2">
-              <Link href="/enterprise/employees/new" className="block">
+              <Link href={`/enterprise/compliance${entityQueryString}`} className="block">
+                <Button variant="outline" className="w-full justify-start">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Gérer les diplômes & habilitations
+                </Button>
+              </Link>
+              <Link href={`/enterprise/employees/new${entityQueryString}`} className="block">
                 <Button variant="outline" className="w-full justify-start">
                   <Plus className="w-4 h-4 mr-2" />
                   Inscrire un collaborateur
                 </Button>
               </Link>
-              <Link href="/enterprise/documents" className="block">
+              <Link href={`/enterprise/documents${entityQueryString}`} className="block">
                 <Button variant="outline" className="w-full justify-start">
                   <Download className="w-4 h-4 mr-2" />
                   Télécharger les documents
                 </Button>
               </Link>
-              <Link href="/enterprise/opco-share" className="block">
+              <Link href={`/enterprise/opco-share${entityQueryString}`} className="block">
                 <Button variant="outline" className="w-full justify-start">
                   <Share2 className="w-4 h-4 mr-2" />
                   Partager avec mon OPCO
@@ -268,7 +320,7 @@ export default function EnterprisePortalPage() {
               Progression moyenne des collaborateurs sur 12 mois
             </p>
           </div>
-          <Link href="/enterprise/analytics">
+          <Link href={`/enterprise/analytics${entityQueryString}`}>
             <Button variant="outline" size="sm">
               Statistiques détaillées
               <ChevronRight className="w-4 h-4 ml-1" />
@@ -286,7 +338,7 @@ export default function EnterprisePortalPage() {
             <h3 className="text-lg font-semibold text-gray-900">
               Facturation récente
             </h3>
-            <Link href="/enterprise/billing">
+            <Link href={`/enterprise/billing${entityQueryString}`}>
               <Button variant="ghost" size="sm">
                 Voir tout
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -295,7 +347,7 @@ export default function EnterprisePortalPage() {
           </div>
           <div className="space-y-3">
             {invoicesData?.invoices && invoicesData.invoices.length > 0 ? (
-              invoicesData.invoices.slice(0, 5).map((invoice: any) => (
+              (invoicesData.invoices as Array<{ id: string; invoice_number?: string; total_amount?: number; currency?: string; status?: string; student?: { first_name?: string; last_name?: string } }>).slice(0, 5).map((invoice) => (
                 <div
                   key={invoice.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -315,9 +367,9 @@ export default function EnterprisePortalPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-gray-900">
-                      {formatCurrency(invoice.total_amount, invoice.currency)}
+                      {formatCurrency(invoice.total_amount ?? 0, invoice.currency ?? 'EUR')}
                     </p>
-                    <InvoiceStatusBadge status={invoice.status} />
+                    <InvoiceStatusBadge status={invoice.status ?? 'pending'} />
                   </div>
                 </div>
               ))
@@ -345,7 +397,7 @@ export default function EnterprisePortalPage() {
             <h3 className="text-lg font-semibold text-gray-900">
               Documents à télécharger
             </h3>
-            <Link href="/enterprise/documents">
+            <Link href={`/enterprise/documents${entityQueryString}`}>
               <Button variant="ghost" size="sm">
                 Voir tout
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -356,7 +408,7 @@ export default function EnterprisePortalPage() {
             Certificats de réalisation et attestations d'assiduité pour vos remboursements OPCO.
           </p>
           <div className="space-y-2">
-            <Link href="/enterprise/documents?type=certificate">
+            <Link href={`/enterprise/documents?type=certificate${entityQueryString ? entityQueryString.replace('?', '&') : ''}`}>
               <Button variant="outline" className="w-full justify-between">
                 <span className="flex items-center">
                   <FileText className="w-4 h-4 mr-2" />
@@ -365,7 +417,7 @@ export default function EnterprisePortalPage() {
                 <Download className="w-4 h-4" />
               </Button>
             </Link>
-            <Link href="/enterprise/documents?type=attestation">
+            <Link href={`/enterprise/documents?type=attestation${entityQueryString ? entityQueryString.replace('?', '&') : ''}`}>
               <Button variant="outline" className="w-full justify-between">
                 <span className="flex items-center">
                   <FileText className="w-4 h-4 mr-2" />
@@ -374,7 +426,7 @@ export default function EnterprisePortalPage() {
                 <Download className="w-4 h-4" />
               </Button>
             </Link>
-            <Link href="/enterprise/documents?type=convention">
+            <Link href={`/enterprise/documents?type=convention${entityQueryString ? entityQueryString.replace('?', '&') : ''}`}>
               <Button variant="outline" className="w-full justify-between">
                 <span className="flex items-center">
                   <FileText className="w-4 h-4 mr-2" />
@@ -385,7 +437,7 @@ export default function EnterprisePortalPage() {
             </Link>
           </div>
           <div className="mt-4 pt-4 border-t border-gray-200">
-            <Link href="/enterprise/opco-share">
+            <Link href={`/enterprise/opco-share${entityQueryString}`}>
               <Button className="w-full bg-[#274472] hover:bg-[#1e3a5f]">
                 <Share2 className="w-4 h-4 mr-2" />
                 Partager avec mon OPCO
@@ -470,6 +522,66 @@ function DashboardSkeleton() {
           <Skeleton className="h-44 rounded-xl" />
         </div>
       </div>
+    </div>
+  )
+}
+
+// Vue « Aucune entreprise associée » avec option d’association pour les admins
+function NoCompanyView({
+  isAdmin,
+  onAssociateSuccess,
+}: {
+  isAdmin: boolean
+  onAssociateSuccess: () => void
+}) {
+  const { addToast } = useToast()
+  const associateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/enterprise/associate', { method: 'POST' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error((body as { error?: string })?.error || 'Erreur lors de l\'association')
+      }
+      return res.json() as Promise<{ company: { id: string; name: string }; success: boolean }>
+    },
+    onSuccess: () => {
+      addToast({ title: 'Entreprise créée', description: 'Vous avez accès au portail entreprise.', type: 'success' })
+      onAssociateSuccess()
+    },
+    onError: (err: Error) => {
+      addToast({ title: 'Erreur', description: err.message, type: 'error' })
+    },
+  })
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+      <AlertCircle className="w-16 h-16 text-gray-400 mb-4" />
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Aucune entreprise associée</h2>
+      <p className="text-gray-600 max-w-md mb-6">
+        Votre compte n'est pas encore associé à une entreprise.
+        {isAdmin
+          ? ' En tant qu\'administrateur, vous pouvez créer une entreprise et accéder au portail.'
+          : ' Veuillez contacter l\'organisme de formation pour obtenir l\'accès à votre espace entreprise.'}
+      </p>
+      {isAdmin && (
+        <Button
+          onClick={() => associateMutation.mutate()}
+          disabled={associateMutation.isPending}
+          className="bg-[#274472] hover:bg-[#1e3a5f]"
+        >
+          {associateMutation.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden />
+              Création en cours...
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4 mr-2" />
+              Créer une entreprise et accéder au portail
+            </>
+          )}
+        </Button>
+      )}
     </div>
   )
 }

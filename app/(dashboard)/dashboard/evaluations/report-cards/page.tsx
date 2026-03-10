@@ -27,8 +27,7 @@ export default function ReportCardsPage() {
       if (!user?.organization_id) return []
 
       // Récupérer les bulletins depuis la table documents
-      // eslint-disable-next-line
-      const q: any = supabase
+      const q = supabase
         .from('documents')
         .select('*, students(*)')
         .eq('organization_id', user.organization_id)
@@ -83,7 +82,7 @@ export default function ReportCardsPage() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {reportCards.map((reportCard: any) => (
+          {(reportCards as Array<{ id: string; title?: string; created_at?: string; students?: { first_name?: string; last_name?: string; student_number?: string } | null }>).map((reportCard) => (
             <Card key={reportCard.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -104,7 +103,7 @@ export default function ReportCardsPage() {
                     <span className="font-medium">Élève:</span>{' '}
                     {reportCard.students?.first_name} {reportCard.students?.last_name}
                   </p>
-                  {reportCard.students?.student_number && (
+                  {reportCard.students?.student_number != null && reportCard.students.student_number !== '' && (
                     <p>
                       <span className="font-medium">Numéro d'élève:</span>{' '}
                       {reportCard.students.student_number}
@@ -112,9 +111,9 @@ export default function ReportCardsPage() {
                   )}
                   <p>
                     <span className="font-medium">Date de création:</span>{' '}
-                    {new Date(reportCard.created_at).toLocaleDateString('fr-FR')}
+                    {new Date(reportCard.created_at ?? '').toLocaleDateString('fr-FR')}
                   </p>
-                  {reportCard.title && (
+                  {reportCard.title != null && reportCard.title !== '' && (
                     <p>
                       <span className="font-medium">Titre:</span> {reportCard.title}
                     </p>

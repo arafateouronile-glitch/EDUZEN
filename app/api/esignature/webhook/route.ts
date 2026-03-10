@@ -22,45 +22,46 @@ export async function POST(request: NextRequest) {
       // Détecter le provider depuis le header ou le body
       const provider = req.headers.get('x-provider') || body.provider || 'unknown'
 
-      // Valider la signature du webhook
-      const webhookSecret = process.env[`${provider.toUpperCase()}_WEBHOOK_SECRET`] || 
+      // Exiger un secret configuré pour éviter les webhooks forgés (audit P0 2026-02-28)
+      const webhookSecret = process.env[`${provider.toUpperCase()}_WEBHOOK_SECRET`] ||
                            process.env.ESIGNATURE_WEBHOOK_SECRET
 
-      if (webhookSecret) {
-        const validation = await validateWebhook(
-          req,
-          {
-            secret: webhookSecret,
-            signatureHeader: 'x-signature',
-            timestampHeader: 'x-timestamp',
-            nonceHeader: 'x-nonce',
-            maxAge: 300, // 5 minutes
-          },
-          bodyText
+      if (!webhookSecret || webhookSecret.length === 0) {
+        logger.warn('E-signature webhook rejected: secret not configured', { provider })
+        return NextResponse.json(
+          { error: 'Webhook non configuré' },
+          { status: 503 }
         )
+      }
 
-        if (!validation.valid) {
-          logger.warn('E-signature webhook signature validation failed', {
-            provider,
-            error: validation.error,
-            details: validation.details,
-          })
+      const validation = await validateWebhook(
+        req,
+        {
+          secret: webhookSecret,
+          signatureHeader: 'x-signature',
+          timestampHeader: 'x-timestamp',
+          nonceHeader: 'x-nonce',
+          maxAge: 300, // 5 minutes
+        },
+        bodyText
+      )
 
-          return NextResponse.json(
-            { error: validation.error || 'Signature invalide' },
-            { status: 401 }
-          )
-        }
-
-        logger.info('E-signature webhook signature validated', {
+      if (!validation.valid) {
+        logger.warn('E-signature webhook signature validation failed', {
           provider,
+          error: validation.error,
           details: validation.details,
         })
-      } else {
-        logger.warn('E-signature webhook secret not configured, skipping signature validation', {
-          provider,
-        })
+        return NextResponse.json(
+          { error: validation.error || 'Signature invalide' },
+          { status: 401 }
+        )
       }
+
+      logger.info('E-signature webhook signature validated', {
+        provider,
+        details: validation.details,
+      })
 
       // Traiter le webhook selon le type d'événement
       const eventType = body.event || body.type || 'unknown'

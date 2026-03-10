@@ -108,11 +108,12 @@ export async function POST(request: NextRequest) {
           logger.info(`Created default template for type: ${type}`, { templateId: newTemplate.id })
         } else {
           // Mettre à jour le premier template (le plus récent ou le par défaut)
-          const templateToUpdate = existingTemplates.find(t => t.is_default) || existingTemplates[0]
+          const templateToUpdate = existingTemplates.find((t) => t != null && t.is_default) ?? existingTemplates[0]
+          if (!templateToUpdate) continue
 
           logger.info(`Updating template ${templateToUpdate.id} for type ${type}`, {
-            currentHeaderHeight: (templateToUpdate.header as any)?.height || templateToUpdate.header_height,
-            currentFooterHeight: (templateToUpdate.footer as any)?.height || templateToUpdate.footer_height,
+            currentHeaderHeight: (templateToUpdate.header as { height?: number } | null)?.height ?? templateToUpdate.header_height,
+            currentFooterHeight: (templateToUpdate.footer as { height?: number } | null)?.height ?? templateToUpdate.footer_height,
             newHeaderHeight: 22,
             newFooterHeight: 12,
           })

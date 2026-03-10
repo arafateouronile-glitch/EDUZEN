@@ -1,0 +1,18 @@
+
+> eduzen@1.0.1 ts:errors
+> NODE_OPTIONS='--max-old-space-size=8192' npx tsc --noEmit --pretty false 2>&1 | tee typescript-errors.txt
+
+app/api/learner/contacts/route.ts(43,30): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+app/api/learner/conversations/start/route.ts(91,30): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+app/api/learner/conversations/start/route.ts(124,9): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(values: { avatar_url?: string | null | undefined; conversation_type?: string | null | undefined; created_at?: string | undefined; created_by?: string | null | undefined; description?: string | null | undefined; ... 6 more ...; updated_at?: string | undefined; }, options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Type 'string | null' is not assignable to type 'string'.
+      Type 'null' is not assignable to type 'string'.
+  Overload 2 of 2, '(values: { avatar_url?: string | null | undefined; conversation_type?: string | null | undefined; created_at?: string | undefined; created_by?: string | null | undefined; description?: string | null | undefined; ... 6 more ...; updated_at?: string | undefined; }[], options?: { ...; } | undefined): PostgrestFilterBuilder<...>', gave the following error.
+    Object literal may only specify known properties, and 'organization_id' does not exist in type '{ avatar_url?: string | null | undefined; conversation_type?: string | null | undefined; created_at?: string | undefined; created_by?: string | null | undefined; description?: string | null | undefined; ... 6 more ...; updated_at?: string | undefined; }[]'.
+components/ui/select-shadcn.tsx(48,7): error TS2322: Type 'RefObject<HTMLButtonElement | null>' is not assignable to type 'LegacyRef<HTMLButtonElement> | undefined'.
+  Type 'RefObject<HTMLButtonElement | null>' is not assignable to type 'RefObject<HTMLButtonElement>'.
+    Type 'HTMLButtonElement | null' is not assignable to type 'HTMLButtonElement'.
+      Type 'null' is not assignable to type 'HTMLButtonElement'.

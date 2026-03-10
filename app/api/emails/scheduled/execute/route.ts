@@ -11,7 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
-// Clé secrète pour sécuriser l'endpoint (à configurer dans les variables d'environnement)
+// Clé secrète pour sécuriser l'endpoint (obligatoire en production)
 const CRON_SECRET = process.env.CRON_SECRET || process.env.EMAIL_SCHEDULE_SECRET
 
 /**
@@ -428,12 +428,17 @@ function replaceTemplateVariables(
 
 export async function POST(request: NextRequest) {
   try {
-    // Vérifier la clé secrète (si configurée)
-    if (CRON_SECRET) {
-      const authHeader = request.headers.get('authorization')
-      if (authHeader !== `Bearer ${CRON_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+    // Exiger CRON_SECRET pour éviter l'exécution non autorisée (audit P0 2026-02-28)
+    if (!CRON_SECRET || CRON_SECRET.length === 0) {
+      logger.error('[emails/scheduled/execute] CRON_SECRET non configuré')
+      return NextResponse.json(
+        { error: 'Endpoint désactivé : CRON_SECRET manquant' },
+        { status: 503 }
+      )
+    }
+    const authHeader = request.headers.get('authorization')
+    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const supabase = await createClient()

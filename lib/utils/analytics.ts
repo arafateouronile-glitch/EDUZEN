@@ -78,7 +78,7 @@ export const analytics = {
       category?: string
       userId?: string
       organizationId?: string
-      [key: string]: any
+      [key: string]: unknown
     }) => {
       const { path, title, category, userId, organizationId, ...rest } = data
       trackAnalyticsEvent('page_view' as AnalyticsEvent, {

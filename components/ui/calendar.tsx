@@ -11,7 +11,7 @@ export interface CalendarProps {
   mode?: string
   onSelect?: (date: Date | undefined) => void
   onChange?: (date: Date) => void
-  locale?: any
+  locale?: Intl.Locale | Record<string, unknown>
   disabled?: (date: Date) => boolean
   initialFocus?: boolean
   className?: string

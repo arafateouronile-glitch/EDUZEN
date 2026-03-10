@@ -67,7 +67,7 @@ export class ELearningService {
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          (error as any).status === 400 ||
+          (error as { status?: number }).status === 400 ||
           error.code === '400' ||
           error.message?.includes('relation') ||
           error.message?.includes('relationship') ||
@@ -124,8 +124,8 @@ export class ELearningService {
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          (error as any).status === 400 ||
-          (error as any).status === 409 ||
+          (error as { status?: number }).status === 400 ||
+          (error as { status?: number }).status === 409 ||
           error.code === '400' ||
           error.code === '409' ||
           error.message?.includes('relation') ||
@@ -197,21 +197,26 @@ export class ELearningService {
   // ========== SECTIONS ==========
 
   async getCourseSections(courseId: string) {
-    const { data, error } = await this.supabase
-      .from('course_sections')
-      .select('*')
-      .eq('course_id', courseId)
-      .order('order_index', { ascending: true })
+    try {
+      const { data, error } = await this.supabase
+        .from('course_sections')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('order_index', { ascending: true })
 
-    if (error) {
-      // 409 Conflict peut survenir (RLS, cache schéma Supabase) : ne pas faire planter l'UI
-      if ((error as any).code === '409' || (error as any).status === 409) {
-        logger.warn('ELearningService - course_sections 409, retour tableau vide', { courseId })
-        return []
+      if (error) {
+        // 409 Conflict peut survenir (RLS, cache schéma Supabase) : ne pas faire planter l'UI
+        if ((error as { code?: string; status?: number }).code === '409' || (error as { code?: string; status?: number }).status === 409) {
+          logger.warn('ELearningService - course_sections 409, retour tableau vide', { courseId })
+          return []
+        }
+        throw error
       }
+      return data ?? []
+    } catch (error) {
+      logger.error('ELearningService.getCourseSections', error, { courseId })
       throw error
     }
-    return data ?? []
   }
 
   async createSection(section: TableInsert<'course_sections'>) {
@@ -223,12 +228,14 @@ export class ELearningService {
 
     if (error) {
       // 409 = conflit UNIQUE(course_id, order_index) : réessayer avec le prochain order_index libre
-      if ((error as any).code === '23505' || (error as any).status === 409) {
+      const err = error as { code?: string; status?: number }
+      if (err.code === '23505' || err.status === 409) {
         const existing = await this.getCourseSections(section.course_id)
+        type SectionRow = { order_index?: number | null }
         const nextOrder =
           existing.length === 0
             ? 0
-            : Math.max(...existing.map((s: any) => Number(s.order_index ?? 0))) + 1
+            : Math.max(...existing.map((s: SectionRow) => Number(s.order_index ?? 0))) + 1
         const retry = await this.supabase
           .from('course_sections')
           .insert({ ...section, order_index: nextOrder })
@@ -274,25 +281,35 @@ export class ELearningService {
   // ========== LESSONS ==========
 
   async getCourseLessons(courseId: string) {
-    const { data, error } = await this.supabase
-      .from('lessons')
-      .select('*')
-      .eq('course_id', courseId)
-      .order('order_index', { ascending: true })
+    try {
+      const { data, error } = await this.supabase
+        .from('lessons')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('order_index', { ascending: true })
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ELearningService.getCourseLessons', error, { courseId })
+      throw error
+    }
   }
 
   async getLessonById(id: string) {
-    const { data, error } = await this.supabase
-      .from('lessons')
-      .select('*, course:courses(*), section:course_sections(*)')
-      .eq('id', id)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('lessons')
+        .select('*, course:courses(*), section:course_sections(*)')
+        .eq('id', id)
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ELearningService.getLessonById', error, { id })
+      throw error
+    }
   }
 
   async getLessonBySlug(slug: string, courseId: string) {
@@ -405,7 +422,7 @@ export class ELearningService {
           error.code === 'PGRST116' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          (error as any).status === 400 ||
+          (error as { status?: number }).status === 400 ||
           error.code === '400' ||
           error.message?.includes('relation') ||
           error.message?.includes('relationship') ||
@@ -440,17 +457,22 @@ export class ELearningService {
   }
 
   async getCourseEnrollments(courseId: string) {
-    const { data, error } = await this.supabase
-      .from('course_enrollments')
-      .select(`
-        *,
-        student:users(id, full_name, email)
-      `)
-      .eq('course_id', courseId)
-      .order('enrolled_at', { ascending: false })
+    try {
+      const { data, error } = await this.supabase
+        .from('course_enrollments')
+        .select(`
+          *,
+          student:users(id, full_name, email)
+        `)
+        .eq('course_id', courseId)
+        .order('enrolled_at', { ascending: false })
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ELearningService.getCourseEnrollments', error, { courseId })
+      throw error
+    }
   }
 
   async updateEnrollment(id: string, updates: TableUpdate<'course_enrollments'>) {
@@ -743,7 +765,7 @@ export class ELearningService {
         student_id: studentId,
         enrollment_id: enrollment.id,
         certificate_number: '', // Sera remplacé par le trigger
-      } as any)
+      } as TableInsert<'course_certificates'>)
       .select()
       .single()
 

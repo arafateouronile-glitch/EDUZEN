@@ -31,9 +31,10 @@ export class GlobalDocumentLayoutService {
       }
 
       return data
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Si la table n'existe pas, retourner null silencieusement
-      if (error?.code === 'PGRST116' || error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      const err = error as { code?: string; message?: string }
+      if (err?.code === 'PGRST116' || err?.code === '42P01' || err?.message?.includes('does not exist')) {
         return null
       }
       throw error

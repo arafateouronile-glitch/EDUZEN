@@ -39,8 +39,19 @@ export async function GET(request: NextRequest) {
         return createUnauthorizedResponse()
       }
 
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single()
+      const userOrgId = userRow?.organization_id
+      if (!userOrgId) {
+        return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+      }
+
       const query = data.q as string
-      const organizationId = data.organization_id as string | undefined
+      // Sécurité cross-tenant : ignorer organization_id du client, utiliser celui de l'utilisateur
+      const organizationId = userOrgId
 
       const documentationService = new DocumentationService(supabase)
       const results = await documentationService.searchArticles(query, organizationId)

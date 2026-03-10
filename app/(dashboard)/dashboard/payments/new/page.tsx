@@ -118,13 +118,13 @@ export default function NewInvoicePage() {
           status: data.status || 'draft',
           items: [],
           notes: data.notes || null,
-        } as any) // Type assertion nécessaire car document_type n'est pas encore dans les types générés
+        } as Parameters<typeof invoiceService.create>[0] & { document_type?: 'quote' | 'invoice' })
       }
     },
     onSuccess: (result) => {
       if (invoiceType === 'bulk') {
         router.push('/dashboard/payments')
-      } else {
+      } else if (result?.id) {
         router.push(`/dashboard/payments/${result.id}`)
       }
     },
@@ -270,7 +270,7 @@ export default function NewInvoicePage() {
                     }`}
                   >
                     <option value="">Sélectionner un élève</option>
-                    {students?.map((student: any) => (
+                    {students?.map((student: { id: string; first_name?: string; last_name?: string; student_number?: string }) => (
                       <option key={student.id} value={student.id}>
                         {student.first_name} {student.last_name} ({student.student_number})
                       </option>

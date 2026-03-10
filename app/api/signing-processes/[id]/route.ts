@@ -34,7 +34,7 @@ export async function GET(
     if (!process) {
       return NextResponse.json({ error: 'Processus introuvable' }, { status: 404 })
     }
-    if ((process as any).organization_id !== u.organization_id) {
+    if ((process as { organization_id?: string }).organization_id !== u.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 

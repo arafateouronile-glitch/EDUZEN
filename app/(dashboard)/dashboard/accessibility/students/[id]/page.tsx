@@ -32,6 +32,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import type { Accommodation } from '@/lib/services/accessibility.service'
+import type { TableRow } from '@/lib/types/supabase-helpers'
+
+type StudentWithProgramCohort = TableRow<'students'> & { programs?: { name: string } | null; cohorts?: { name: string } | null }
 
 export default function StudentAccessibilityPage() {
   const params = useParams()
@@ -41,21 +45,19 @@ export default function StudentAccessibilityPage() {
 
   const [showNeedForm, setShowNeedForm] = useState(false)
   const [showAccommodationForm, setShowAccommodationForm] = useState(false)
-  const [editingAccommodation, setEditingAccommodation] = useState<any>(null)
+  const [editingAccommodation, setEditingAccommodation] = useState<Accommodation | null>(null)
 
   // Query étudiant
-  const { data: student, isLoading: studentLoading } = useQuery<any>({
+  const { data: student, isLoading: studentLoading } = useQuery({
     queryKey: ['student', studentId],
-    queryFn: async () => {
-      // eslint-disable-next-line
-      const q: any = supabase
+    queryFn: async (): Promise<StudentWithProgramCohort | null> => {
+      const { data, error } = await supabase
         .from('students')
         .select('*, programs(name), cohorts(name)')
         .eq('id', studentId)
         .single()
-      const { data, error } = await q
       if (error) throw error
-      return data
+      return data as unknown as StudentWithProgramCohort | null
     },
     enabled: !!studentId,
   })
@@ -86,7 +88,7 @@ export default function StudentAccessibilityPage() {
     },
   })
 
-  const handleEditAccommodation = (accommodation: any) => {
+  const handleEditAccommodation = (accommodation: Accommodation) => {
     setEditingAccommodation(accommodation)
     setShowAccommodationForm(true)
   }
@@ -426,7 +428,7 @@ export default function StudentAccessibilityPage() {
             studentId={studentId}
             studentNeedId={need?.id}
             accommodationId={editingAccommodation?.id}
-            initialData={editingAccommodation}
+            initialData={editingAccommodation as unknown as Record<string, unknown> | undefined}
             onSuccess={handleCloseAccommodationForm}
             onCancel={handleCloseAccommodationForm}
           />

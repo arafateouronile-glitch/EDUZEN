@@ -77,7 +77,21 @@
       "Bash(PATH=\"/usr/local/bin:$PATH\" npm run lint:*)",
       "Bash(pnpm exec tsc:*)",
       "Bash(/usr/bin/env npm run type-check)",
-      "Bash(npx next build:*)"
+      "Bash(npx next build:*)",
+      "Bash(npx next lint)",
+      "Bash(npx next lint --quiet)",
+      "Bash(npx --yes lucide-react@latest --version)",
+      "Bash(npm run ts:errors)",
+      "Bash(npm show pdfjs-dist versions --json)",
+      "Bash(NODE_OPTIONS='--max-old-space-size=8192' npx tsc --noEmit --pretty false)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(grep '\"\"version\"\"')",
+      "Bash(git add components/ui/select-shadcn.tsx lib/services/bpf.service.ts lib/services/educational-resources.service.ts lib/services/messaging.service.ts package.json package-lock.json)",
+      "Bash(git commit:*)",
+      "Bash(printf 'npx lint-staged --config .lintstagedrc.json\\\\n')",
+      "Bash(git add .lintstagedrc.json .husky/pre-commit)",
+      "Bash(git push origin main)",
+      "Bash(ls app/\\\\\\(enterprise\\\\\\)/enterprise/)"
     ],
     "additionalDirectories": [
       "/Users/arafatetoure/Documents/EDUZEN/app/api/opco-access",

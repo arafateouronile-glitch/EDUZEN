@@ -183,11 +183,11 @@ export default function BPFDetailPage() {
         description: 'Les métriques BPF ont été mises à jour avec succès.',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible de recalculer le rapport.',
+        description: (error instanceof Error ? error.message : null) || 'Impossible de recalculer le rapport.',
       })
     },
   })
@@ -205,11 +205,11 @@ export default function BPFDetailPage() {
         description: 'Votre BPF a été marqué comme soumis.',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible de soumettre le rapport.',
+        description: (error instanceof Error ? error.message : null) || 'Impossible de soumettre le rapport.',
       })
     },
   })

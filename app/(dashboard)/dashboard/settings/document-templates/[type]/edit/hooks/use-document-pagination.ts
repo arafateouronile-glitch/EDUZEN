@@ -102,6 +102,7 @@ function calculateElementHeight(element: TemplateElement): number {
     qrcode: element.size?.height || 60,
     barcode: element.size?.height || 30,
     variable: 20,
+    html: element.size?.height || 100,
   }
 
   const baseHeight = defaultHeights[element.type] || 30

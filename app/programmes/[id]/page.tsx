@@ -39,9 +39,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
-  const organizationName = (program.organizations as any)?.name || 'Organisme de Formation'
+  const organizationName = (program.organizations as { name?: string } | null)?.name || 'Organisme de Formation'
 
-  const imageUrl = (program as any).public_image_url || (program as any).photo_url
+  const programImages = program as { public_image_url?: string; photo_url?: string }
+  const imageUrl = programImages.public_image_url || programImages.photo_url
   return {
     title: `${program.name} | ${organizationName}`,
     description: program.public_description || program.description || '',
@@ -78,7 +79,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  const organization = (program.organizations as any) || null
+  const organization = (program.organizations as { id: string; name?: string; logo_url?: string; code?: string; email?: string; phone?: string; address?: string } | null) || null
 
   if (!organization) {
     notFound()
@@ -96,13 +97,16 @@ export default async function ProgramDetailPage({ params }: PageProps) {
   const programWithActiveContent = {
     ...program,
     formations: (program.formations || [])
-      .filter((f: any) => f.is_active)
-      .map((formation: any) => ({
-        ...formation,
-        sessions: (formation.sessions || []).filter(
-          (s: any) => s.status === 'scheduled' || s.status === 'ongoing'
-        ),
-      })),
+      .filter((f) => (f as { is_active?: boolean }).is_active)
+      .map((formation) => {
+        const f = formation as { sessions?: Array<{ status?: string }>; [key: string]: unknown }
+        return {
+          ...f,
+          sessions: (f.sessions || []).filter(
+            (s) => (s as { status?: string }).status === 'scheduled' || (s as { status?: string }).status === 'ongoing'
+          ),
+        }
+      }),
   }
 
   // Utiliser les valeurs des settings ou celles par défaut
@@ -113,23 +117,23 @@ export default async function ProgramDetailPage({ params }: PageProps) {
     <>
       <CatalogStyles primaryColor={primaryColor} />
       <CatalogNavbar 
-        organizationName={organization.name}
+        organizationName={organization.name ?? ''}
         logoUrl={logoUrl}
         primaryColor={primaryColor}
       />
       <div className="min-h-screen bg-white">
         <PublicProgramDetail 
-          program={programWithActiveContent} 
+          program={programWithActiveContent as Parameters<typeof PublicProgramDetail>[0]['program']} 
           primaryColor={primaryColor}
-          organizationCode={organization.code || undefined}
+          organizationCode={organization.code ?? undefined}
         />
       </div>
       <CatalogFooter
-        organizationName={organization.name}
+        organizationName={organization.name ?? ''}
         footerContent={catalogSettings?.footer_text}
-        contactEmail={catalogSettings?.contact_email || organization.email}
-        contactPhone={catalogSettings?.contact_phone || organization.phone}
-        contactAddress={catalogSettings?.contact_address || organization.address}
+        contactEmail={catalogSettings?.contact_email ?? organization.email ?? undefined}
+        contactPhone={catalogSettings?.contact_phone ?? organization.phone ?? undefined}
+        contactAddress={catalogSettings?.contact_address ?? organization.address ?? undefined}
         primaryColor={primaryColor}
       />
     </>

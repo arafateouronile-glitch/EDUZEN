@@ -115,7 +115,7 @@ export default function ClassAttendancePage() {
   const updateAttendance = (
     studentId: string,
     field: 'status' | 'lateMinutes' | 'notes',
-    value: any
+    value: string | number
   ) => {
     setAttendance((prev) => ({
       ...prev,

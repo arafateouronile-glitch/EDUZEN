@@ -13,37 +13,38 @@ import { useEffect, useState } from 'react'
 
 export default function HealthDashboardPage() {
   const supabase = createClient()
-  const [performanceStats, setPerformanceStats] = useState<Record<string, any>>({})
+  type PerfStat = { count: number; avg: number; median: number; p95: number; p99: number }
+  const [performanceStats, setPerformanceStats] = useState<Record<string, PerfStat>>({})
 
   // Récupérer les statistiques de performance
   useEffect(() => {
-    const stats: Record<string, any> = {}
+    const stats: Record<string, PerfStat> = {}
     const metricGroups = performanceMonitor.getMetricsByGroup()
-    
-    for (const [name, metrics] of Object.entries(metricGroups)) {
+
+    for (const [name] of Object.entries(metricGroups)) {
       const stat = performanceMonitor.getStats(name)
       if (stat) {
         stats[name] = stat
       }
     }
-    
+
     setPerformanceStats(stats)
-    
+
     // Rafraîchir toutes les 30 secondes
     const interval = setInterval(() => {
-      const updatedStats: Record<string, any> = {}
+      const updatedStats: Record<string, PerfStat> = {}
       const updatedGroups = performanceMonitor.getMetricsByGroup()
-      
-      for (const [name, metrics] of Object.entries(updatedGroups)) {
+
+      for (const [name] of Object.entries(updatedGroups)) {
         const stat = performanceMonitor.getStats(name)
         if (stat) {
           updatedStats[name] = stat
         }
       }
-      
+
       setPerformanceStats(updatedStats)
     }, 30000)
-    
+
     return () => clearInterval(interval)
   }, [])
 

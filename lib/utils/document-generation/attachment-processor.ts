@@ -7,7 +7,7 @@
  */
 export async function processAttachments(
   html: string,
-  variables: Record<string, any> = {},
+  variables: Record<string, unknown> = {},
   documentId?: string
 ): Promise<string> {
   // Pour l'instant, retourner le HTML tel quel

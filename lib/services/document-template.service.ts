@@ -249,8 +249,9 @@ export class DocumentTemplateService {
     if (updates.page_size !== undefined) updateData.page_size = updates.page_size
     if (updates.margins !== undefined) updateData.margins = updates.margins
     if (updates.is_default !== undefined) updateData.is_default = updates.is_default
-    if ((updates as any).is_active !== undefined) updateData.is_active = (updates as any).is_active
-    if ((updates as any).sign_zones !== undefined) updateData.sign_zones = (updates as any).sign_zones
+    const updatesExt = updates as { is_active?: boolean; sign_zones?: unknown }
+    if (updatesExt.is_active !== undefined) updateData.is_active = updatesExt.is_active
+    if (updatesExt.sign_zones !== undefined) updateData.sign_zones = updatesExt.sign_zones
 
     const { data, error } = await this.supabase
       .from('document_templates')
@@ -397,6 +398,7 @@ export class DocumentTemplateService {
   async createTemplateVersion(templateId: string, name?: string, description?: string) {
     try {
       const template = await this.getTemplateById(templateId)
+      if (!template) return null
 
       // Obtenir le prochain numéro de version
       const versions = await this.getTemplateVersions(templateId)
@@ -486,7 +488,8 @@ export class DocumentTemplateService {
    */
   async duplicateTemplate(id: string, newName?: string) {
     const template = await this.getTemplateById(id)
-    
+    if (!template) throw new Error('Template non trouvé')
+
     const { data, error } = await this.supabase
       .from('document_templates')
       .insert({
@@ -517,6 +520,7 @@ export class DocumentTemplateService {
    */
   async setAsDefault(id: string, organizationId: string) {
     const template = await this.getTemplateById(id)
+    if (!template) throw new Error('Template non trouvé')
 
     // Désactiver les autres templates par défaut du même type
     await this.supabase
@@ -535,6 +539,7 @@ export class DocumentTemplateService {
    */
   async copyHeaderFooter(targetId: string, input: CopyHeaderFooterInput) {
     const sourceTemplate = await this.getTemplateById(input.sourceTemplateId)
+    if (!sourceTemplate) throw new Error('Template source non trouvé')
 
     const updates: Partial<UpdateTemplateInput> = { id: targetId }
 

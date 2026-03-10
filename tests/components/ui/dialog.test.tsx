@@ -41,16 +41,24 @@ vi.mock('@radix-ui/react-dialog', () => ({
       {children}
     </button>
   ),
-  Title: React.forwardRef(({ children, className, ...props }: any, ref: any) => (
-    <h2 ref={ref} className={className} {...props}>
-      {children}
-    </h2>
-  )),
-  Description: React.forwardRef(({ children, className, ...props }: any, ref: any) => (
-    <p ref={ref} className={className} {...props}>
-      {children}
-    </p>
-  )),
+  Title: (() => {
+    const C = React.forwardRef(({ children, className, ...props }: any, ref: any) => (
+      <h2 ref={ref} className={className} {...props}>
+        {children}
+      </h2>
+    ))
+    C.displayName = 'DialogTitle'
+    return C
+  })(),
+  Description: (() => {
+    const C = React.forwardRef(({ children, className, ...props }: any, ref: any) => (
+      <p ref={ref} className={className} {...props}>
+        {children}
+      </p>
+    ))
+    C.displayName = 'DialogDescription'
+    return C
+  })(),
 }))
 
 describe('Dialog Component', () => {

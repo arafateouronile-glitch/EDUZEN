@@ -7,8 +7,9 @@ import {
   type ValidationSchema,
 } from "@/lib/utils/api-validation";
 import { logger, maskId } from "@/lib/utils/logger";
+import { withDistributedRateLimit } from "@/lib/utils/rate-limiter-distributed";
 
-export async function POST(request: NextRequest) {
+async function postCreateUser(request: NextRequest) {
   // Schéma de validation pour la création d'utilisateur
   const schema: ValidationSchema = {
     email: {
@@ -95,10 +96,10 @@ export async function POST(request: NextRequest) {
             get(name: string) {
               return request.cookies.get(name)?.value;
             },
-            set(name: string, value: string, options: any) {
+            set(name: string, value: string, _options?: unknown) {
               // Les cookies seront gérés par le middleware
             },
-            remove(name: string, options: any) {
+            remove(name: string, _options?: unknown) {
               // Les cookies seront gérés par le middleware
             },
           },
@@ -130,10 +131,10 @@ export async function POST(request: NextRequest) {
         is_active,
       } = validatedData;
 
-      // Vérifier que l'utilisateur a les permissions pour créer des utilisateurs
+      // Vérifier que l'utilisateur a les permissions et appartient à l'organisation cible
       const { data: currentUser } = await supabase
         .from("users")
-        .select("role")
+        .select("role, organization_id")
         .eq("id", user.id)
         .single();
 
@@ -143,6 +144,14 @@ export async function POST(request: NextRequest) {
       ) {
         return NextResponse.json(
           { error: "Permission refusée" },
+          { status: 403 },
+        );
+      }
+
+      // Un admin ne peut créer des utilisateurs que dans sa propre organisation (sauf super_admin)
+      if (currentUser.role !== "super_admin" && currentUser.organization_id !== organization_id) {
+        return NextResponse.json(
+          { error: "Vous ne pouvez créer des utilisateurs que dans votre organisation" },
           { status: 403 },
         );
       }
@@ -369,17 +378,18 @@ export async function POST(request: NextRequest) {
           ? "Utilisateur créé avec succès. Un email de confirmation a été envoyé."
           : "Utilisateur créé avec succès",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string; errors?: unknown; details?: unknown; hint?: string; status?: number }
       logger.error("User Create - Creation failed", error as Error, {
         errorDetails: error,
       });
 
       // Si c'est une erreur de validation, retourner 400
-      if (error?.code === 'VALIDATION_ERROR' || error?.message?.includes('validation')) {
+      if (err?.code === 'VALIDATION_ERROR' || (typeof err?.message === 'string' && err.message.includes('validation'))) {
         return NextResponse.json(
           {
-            error: error.message || "Erreur de validation des données",
-            details: error.errors || error.details,
+            error: err?.message ?? "Erreur de validation des données",
+            details: err?.errors ?? err?.details,
           },
           { status: 400 },
         );
@@ -393,10 +403,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: errorMessage,
-          details: error?.code || error?.hint || null,
+          details: err?.code ?? err?.hint ?? null,
         },
-        { status: error?.status || 500 },
+        { status: err?.status ?? 500 },
       );
     }
   });
+}
+
+export async function POST(request: NextRequest) {
+  return withDistributedRateLimit(request, 'auth', (req) =>
+    postCreateUser(req as NextRequest)
+  );
 }

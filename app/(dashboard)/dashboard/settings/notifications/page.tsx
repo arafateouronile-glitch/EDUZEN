@@ -30,6 +30,7 @@ import {
   CalendarCheck
 } from 'lucide-react'
 import Link from 'next/link'
+import type { Json } from '@/types/database.types'
 
 type NotificationSettings = {
   reminder_enabled: boolean
@@ -83,27 +84,30 @@ export default function NotificationsSettingsPage() {
 
   const isPremium = ['premium', 'enterprise'].includes(organization?.subscription_tier || '')
 
+  type OrgSettingsShape = {
+    notifications?: { reminder_enabled?: boolean; reminder_hours_before?: number; email_enabled?: boolean; whatsapp_enabled?: boolean; sms_enabled?: boolean; whatsapp?: { account_sid?: string; auth_token?: string; from_number?: string } }
+    whatsapp?: { account_sid?: string; auth_token?: string; from_number?: string }
+  }
+
   // Charger les paramètres existants
   useEffect(() => {
-    if (organization?.settings) {
-      const orgSettings = organization.settings as any
-      const notifications = orgSettings.notifications || {}
-      
-      setSettings({
-        reminder_enabled: notifications.reminder_enabled !== false,
-        reminder_hours_before: notifications.reminder_hours_before || 24,
-        email_enabled: notifications.email_enabled !== false,
-        whatsapp_enabled: notifications.whatsapp_enabled || false,
-        sms_enabled: notifications.sms_enabled || false,
+    const orgSettings = organization?.settings as OrgSettingsShape | null | undefined
+    if (!orgSettings || typeof orgSettings !== 'object') return
+    const notifications = orgSettings.notifications ?? {}
+    setSettings({
+      reminder_enabled: notifications.reminder_enabled !== false,
+      reminder_hours_before: Number(notifications.reminder_hours_before) || 24,
+      email_enabled: notifications.email_enabled !== false,
+      whatsapp_enabled: Boolean(notifications.whatsapp_enabled),
+      sms_enabled: Boolean(notifications.sms_enabled),
+    })
+    const wa = orgSettings.whatsapp ?? notifications.whatsapp
+    if (wa && typeof wa === 'object') {
+      setWhatsappConfig({
+        account_sid: wa.account_sid ?? '',
+        auth_token: wa.auth_token ? '••••••••' : '',
+        from_number: wa.from_number ?? '',
       })
-
-      if (orgSettings.whatsapp) {
-        setWhatsappConfig({
-          account_sid: orgSettings.whatsapp.account_sid || '',
-          auth_token: orgSettings.whatsapp.auth_token ? '••••••••' : '',
-          from_number: orgSettings.whatsapp.from_number || '',
-        })
-      }
     }
   }, [organization])
 
@@ -112,9 +116,10 @@ export default function NotificationsSettingsPage() {
     mutationFn: async () => {
       if (!user?.organization_id) throw new Error('Organization non trouvée')
 
-      const currentSettings = (organization?.settings as any) || {}
-      
-      const newSettings = {
+      const currentSettings = (organization?.settings as Record<string, unknown>) ?? {}
+      const currentWhatsapp = currentSettings.whatsapp && typeof currentSettings.whatsapp === 'object' ? currentSettings.whatsapp as Record<string, string> : {}
+
+      const newSettings: Record<string, unknown> = {
         ...currentSettings,
         notifications: {
           ...settings,
@@ -129,9 +134,8 @@ export default function NotificationsSettingsPage() {
           from_number: whatsappConfig.from_number,
         }
       } else if (whatsappConfig.account_sid && whatsappConfig.auth_token === '••••••••') {
-        // Garder l'ancien token si non modifié
         newSettings.whatsapp = {
-          ...currentSettings.whatsapp,
+          ...currentWhatsapp,
           account_sid: whatsappConfig.account_sid,
           from_number: whatsappConfig.from_number,
         }
@@ -139,7 +143,7 @@ export default function NotificationsSettingsPage() {
 
       const { error } = await supabase
         .from('organizations')
-        .update({ settings: newSettings })
+        .update({ settings: newSettings as Json })
         .eq('id', user.organization_id)
 
       if (error) throw error
@@ -457,7 +461,7 @@ export default function NotificationsSettingsPage() {
 
             {recentNotifications && recentNotifications.length > 0 ? (
               <div className="space-y-3">
-                {recentNotifications.map((notif: any) => (
+                {recentNotifications.map((notif) => (
                   <div 
                     key={notif.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -472,7 +476,7 @@ export default function NotificationsSettingsPage() {
                       )}
                       <div>
                         <p className="text-sm font-medium text-gray-900">
-                          {(notif.metadata as any)?.recipient_name || 'Destinataire'}
+                          {(notif.metadata as Record<string, unknown>)?.recipient_name as string || 'Destinataire'}
                         </p>
                         <p className="text-xs text-gray-500">
                           {notif.subject || notif.message?.substring(0, 50)}...

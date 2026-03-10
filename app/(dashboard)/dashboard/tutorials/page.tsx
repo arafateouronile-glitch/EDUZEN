@@ -160,7 +160,7 @@ export default function TutorialsPage() {
                 >
                   Tous les modules
                 </button>
-                {modules?.map((module: any) => (
+                {modules?.map((module) => (
                   <button
                     key={module.id}
                     onClick={() => setSelectedModule(module.id)}
@@ -170,7 +170,7 @@ export default function TutorialsPage() {
                         : 'hover:bg-gray-100'
                     }`}
                   >
-                    {module.name}
+                    {module.name ?? ''}
                   </button>
                 ))}
               </div>
@@ -182,14 +182,16 @@ export default function TutorialsPage() {
         <div className="lg:col-span-3">
           {videos && videos.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {videos.map((video: any) => (
+              {videos.map((video) => {
+                const v = video as { id: string; title?: string; description?: string; difficulty_level?: string; duration_seconds?: number; module?: { name?: string; slug?: string }; view_count?: number; slug?: string }
+                return (
                 <Card key={video.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-lg mb-2">{video.title}</CardTitle>
+                        <CardTitle className="text-lg mb-2">{v.title ?? ''}</CardTitle>
                         <CardDescription className="line-clamp-2">
-                          {video.description}
+                          {v.description ?? ''}
                         </CardDescription>
                       </div>
                     </div>
@@ -198,26 +200,26 @@ export default function TutorialsPage() {
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge
-                          className={difficultyColors[video.difficulty_level] || 'bg-gray-100 text-gray-800'}
+                          className={difficultyColors[v.difficulty_level ?? ''] || 'bg-gray-100 text-gray-800'}
                         >
-                          {difficultyLabels[video.difficulty_level] || video.difficulty_level}
+                          {(difficultyLabels[v.difficulty_level ?? ''] ?? '') || (v.difficulty_level ?? '')}
                         </Badge>
-                        {video.duration_seconds && (
+                        {v.duration_seconds != null && v.duration_seconds > 0 && (
                           <span className="text-sm text-muted-foreground flex items-center gap-1">
                             <Clock className="h-4 w-4" />
-                            {formatDuration(video.duration_seconds)}
+                            {formatDuration(v.duration_seconds)}
                           </span>
                         )}
-                        {video.module && (
-                          <Badge variant="outline">{video.module.name}</Badge>
+                        {v.module && (
+                          <Badge variant="outline">{v.module.name ?? ''}</Badge>
                         )}
                       </div>
                       <div className="flex items-center justify-between pt-2">
                         <div className="text-sm text-muted-foreground">
-                          {video.view_count || 0} vues
+                          {(v.view_count ?? 0)} vues
                         </div>
                         <Link
-                          href={`/dashboard/tutorials/${video.module?.slug}/${video.slug}`}
+                          href={`/dashboard/tutorials/${v.module?.slug ?? ''}/${v.slug ?? video.id}`}
                         >
                           <Button>
                             <PlayCircle className="h-4 w-4 mr-2" />
@@ -228,7 +230,7 @@ export default function TutorialsPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              )})}
             </div>
           ) : (
             <Card>

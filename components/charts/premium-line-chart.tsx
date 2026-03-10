@@ -26,7 +26,7 @@ interface PremiumLineChartProps {
   strokeWidth?: number
   className?: string
   variant?: 'default' | 'glass' | 'dark'
-  valueFormatter?: (val: any) => string
+  valueFormatter?: (val: number | string) => string
 }
 
 export function PremiumLineChart({
@@ -67,7 +67,7 @@ export function PremiumLineChart({
           />
           
           <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider text-center">
-            {((payload[0] as any).payload as any)?.[xAxisKey]}
+            {payload[0] && 'payload' in payload[0] ? String((payload[0].payload as Record<string, unknown>)?.[xAxisKey] ?? '') : null}
           </p>
           
           <div className="flex items-center justify-center gap-2">

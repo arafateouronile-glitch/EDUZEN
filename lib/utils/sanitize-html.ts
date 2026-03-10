@@ -194,6 +194,21 @@ export function sanitizeUserContent(dirty: string | null | undefined): string {
 }
 
 /**
+ * Échappe les caractères HTML pour insertion sécurisée dans du HTML (anti-XSS).
+ * À utiliser pour toute variable utilisateur insérée dans un template HTML.
+ */
+export function escapeHtml(value: string | null | undefined): string {
+  if (value == null) return ''
+  const s = String(value)
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
  * Strips all HTML tags, returning plain text only
  */
 export function stripHTML(dirty: string | null | undefined): string {

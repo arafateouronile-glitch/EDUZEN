@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { SignDocumentPdfViewer } from '@/components/sign/SignDocumentPdfViewer'
 import { cn } from '@/lib/utils'
+import { logger } from '@/lib/utils/logger'
 
 type SignType = 'signature' | 'attendance' | 'process'
 type SignData = {
@@ -122,7 +123,7 @@ export default function SignPage() {
         if (!res.ok) {
           const msg = json?.error ?? 'Erreur serveur'
           if (attempt < MAX_ATTEMPTS) {
-            console.warn(`Tentative ${attempt} échouée, nouvelle tentative dans 2s...`)
+            logger.warn(`Tentative ${attempt} échouée, nouvelle tentative dans 2s...`, { attempt })
             await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
             return submitSignature(data, attempt + 1, onAttempt)
           }
@@ -131,7 +132,7 @@ export default function SignPage() {
         return { success: true, alreadySigned: !!json?.alreadySigned }
       } catch (err) {
         if (attempt < MAX_ATTEMPTS) {
-          console.warn(`Tentative ${attempt} échouée, nouvelle tentative dans 2s...`)
+          logger.warn(`Tentative ${attempt} échouée, nouvelle tentative dans 2s...`, { attempt })
           await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
           return submitSignature(data, attempt + 1, onAttempt)
         }

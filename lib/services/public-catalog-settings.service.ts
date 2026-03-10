@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 type PublicCatalogSettings = TableRow<'public_catalog_settings'>
 type PublicCatalogSettingsInsert = TableInsert<'public_catalog_settings'>
@@ -72,14 +73,19 @@ export class PublicCatalogSettingsService {
    * Récupère les paramètres du catalogue pour une organisation
    */
   async getSettings(organizationId: string): Promise<PublicCatalogSettings | null> {
-    const { data, error } = await this.supabase
-      .from('public_catalog_settings')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .maybeSingle()
+    try {
+      const { data, error } = await this.supabase
+        .from('public_catalog_settings')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .maybeSingle()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('PublicCatalogSettingsService.getSettings', error, { organizationId })
+      throw error
+    }
   }
 
   /**
@@ -89,33 +95,35 @@ export class PublicCatalogSettingsService {
     organizationId: string,
     settings: FlexibleInsert<'public_catalog_settings'> | FlexibleUpdate<'public_catalog_settings'>
   ): Promise<PublicCatalogSettings> {
-    // Vérifier si des settings existent déjà
-    const existing = await this.getSettings(organizationId)
+    try {
+      const existing = await this.getSettings(organizationId)
 
-    if (existing) {
-      // Mise à jour
-      const { data, error } = await this.supabase
-        .from('public_catalog_settings')
-        .update(settings as PublicCatalogSettingsUpdate)
-        .eq('organization_id', organizationId)
-        .select()
-        .single()
+      if (existing) {
+        const { data, error } = await this.supabase
+          .from('public_catalog_settings')
+          .update(settings as PublicCatalogSettingsUpdate)
+          .eq('organization_id', organizationId)
+          .select()
+          .single()
 
-      if (error) throw error
-      return data
-    } else {
-      // Création
-      const { data, error } = await this.supabase
-        .from('public_catalog_settings')
-        .insert({
-          organization_id: organizationId,
-          ...settings,
-        } as PublicCatalogSettingsInsert)
-        .select()
-        .single()
+        if (error) throw error
+        return data
+      } else {
+        const { data, error } = await this.supabase
+          .from('public_catalog_settings')
+          .insert({
+            organization_id: organizationId,
+            ...settings,
+          } as PublicCatalogSettingsInsert)
+          .select()
+          .single()
 
-      if (error) throw error
-      return data
+        if (error) throw error
+        return data
+      }
+    } catch (error) {
+      logger.error('PublicCatalogSettingsService.upsertSettings', error, { organizationId })
+      throw error
     }
   }
 

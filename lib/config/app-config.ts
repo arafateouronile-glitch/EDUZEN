@@ -4,6 +4,7 @@
  * Ce fichier centralise toutes les valeurs de configuration qui étaient hardcodées
  * pour faciliter la maintenance et permettre la personnalisation.
  */
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Couleurs de marque EDUZEN
@@ -94,9 +95,8 @@ export const SECURITY_CONFIG = {
       // Côté client : utiliser une clé par défaut (le chiffrement se fera côté serveur via API)
       // Côté serveur en développement : utiliser une clé par défaut avec avertissement
       if (isServer) {
-        console.warn(
-          '⚠️  ATTENTION: Utilisation d\'une clé de chiffrement par défaut. ' +
-          'Configurez TEMPLATE_ENCRYPTION_KEY pour la production.'
+        logger.warn(
+          'ATTENTION: Utilisation d\'une clé de chiffrement par défaut. Configurez TEMPLATE_ENCRYPTION_KEY pour la production.'
         )
       }
       

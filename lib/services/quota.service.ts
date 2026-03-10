@@ -8,7 +8,7 @@ export interface OrganizationUsage {
   max_sessions_per_month: number | null
   current_sessions_count: number
   subscription_status: string | null
-  features: Record<string, any> | null
+  features: Record<string, unknown> | null
 }
 
 export interface QuotaCheckResult {
@@ -40,11 +40,8 @@ export class QuotaService {
         .single()
 
       if (error) {
-        // Si la fonction n'existe pas encore, utiliser une requête directe
-        if (error.code === '42883' || error.message?.includes('function')) {
-          return this.getUsageFallback(organizationId)
-        }
-        throw error
+        // RPC absent (42883) ou autre erreur (permissions, schéma) : utiliser le fallback
+        return this.getUsageFallback(organizationId)
       }
 
       return data as OrganizationUsage
@@ -245,7 +242,7 @@ export class QuotaService {
   async getCurrentPlan(organizationId: string): Promise<{
     planId: string
     planName: string
-    features: Record<string, any>
+    features: Record<string, unknown>
   } | null> {
     try {
       const usage = await this.getUsage(organizationId)
@@ -264,12 +261,13 @@ export class QuotaService {
         return null
       }
 
-      const plansAny = subscription.plans as any
-      const planData = Array.isArray(plansAny) ? plansAny[0] : plansAny
+      type PlanRow = { name?: string; features?: Record<string, unknown> }
+      const plansRaw = subscription.plans as PlanRow | PlanRow[] | null
+      const planData = Array.isArray(plansRaw) ? plansRaw[0] : plansRaw
       return {
         planId: subscription.plan_id,
-        planName: planData?.name || plansAny?.name || null,
-        features: planData?.features || plansAny?.features || {},
+        planName: (planData?.name ?? (plansRaw && !Array.isArray(plansRaw) ? plansRaw.name : null) ?? null) ?? '',
+        features: planData?.features ?? (plansRaw && !Array.isArray(plansRaw) ? plansRaw.features : undefined) ?? {},
       }
     } catch (error) {
       logger.error('QuotaService - Erreur récupération plan', error, {

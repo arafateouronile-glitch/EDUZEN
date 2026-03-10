@@ -25,7 +25,7 @@ type ScheduledNotification = {
   scheduled_at: string
   sent_at?: string
   status: 'pending' | 'sent' | 'failed' | 'cancelled'
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 type NotificationPreferences = {
@@ -34,6 +34,19 @@ type NotificationPreferences = {
   whatsapp_enabled: boolean
   email_enabled: boolean
   sms_enabled: boolean
+}
+
+type SessionWithRelations = {
+  id: string
+  name?: string
+  start_date?: string
+  start_time?: string
+  end_time?: string
+  location?: string
+  room?: string
+  formations?: { name?: string } | null
+  session_teachers?: Array<{ users?: { id?: string; email?: string; full_name?: string; phone?: string } | null }>
+  enrollments?: Array<{ students?: { id?: string; first_name?: string; last_name?: string; email?: string; phone?: string; parent_phone?: string } | null }>
 }
 
 export class NotificationSchedulerService {
@@ -62,7 +75,8 @@ export class NotificationSchedulerService {
 
     if (!org) return
 
-    const settings = (org.settings as any) || {}
+    type OrgNotificationSettings = { notifications?: { whatsapp_enabled?: boolean; email_enabled?: boolean; reminder_hours_before?: number } }
+    const settings = (org.settings as OrgNotificationSettings | null) ?? {}
     const isPremium = ['premium', 'enterprise'].includes(org.subscription_tier || '')
     
     // WhatsApp uniquement pour les abonnements premium
@@ -106,43 +120,43 @@ export class NotificationSchedulerService {
       .lt('start_date', dayAfter.toISOString().split('T')[0])
       .eq('status', 'active')
     
-    const upcomingSessions = (upcomingSessionsData || []) as any[]
+    const upcomingSessions = (upcomingSessionsData || []) as unknown as SessionWithRelations[]
 
     if (!upcomingSessions?.length) return
 
     for (const session of upcomingSessions) {
       // Créer les rappels pour les enseignants
       for (const teacherAssignment of (session.session_teachers || [])) {
-        const teacher = (teacherAssignment as any).users
+        const teacher = teacherAssignment.users
         if (!teacher) continue
 
         await this.createReminder({
           organizationId,
           recipientType: 'teacher',
-          recipientId: teacher.id,
-          recipientName: teacher.full_name,
-          recipientEmail: teacher.email,
-          recipientPhone: teacher.phone,
+          recipientId: teacher.id ?? '',
+          recipientName: teacher.full_name ?? '',
+          recipientEmail: teacher.email ?? undefined,
+          recipientPhone: teacher.phone ?? undefined,
           session,
-          whatsappEnabled,
+          whatsappEnabled: whatsappEnabled ?? false,
           emailEnabled,
         })
       }
 
       // Créer les rappels pour les apprenants
       for (const enrollment of (session.enrollments || [])) {
-        const student = (enrollment as any).students
+        const student = enrollment.students
         if (!student) continue
 
         await this.createReminder({
           organizationId,
           recipientType: 'student',
-          recipientId: student.id,
-          recipientName: `${student.first_name} ${student.last_name}`,
-          recipientEmail: student.email,
-          recipientPhone: student.phone || student.parent_phone,
+          recipientId: student.id ?? '',
+          recipientName: `${student.first_name ?? ''} ${student.last_name ?? ''}`,
+          recipientEmail: student.email ?? undefined,
+          recipientPhone: student.phone ?? student.parent_phone ?? undefined,
           session,
-          whatsappEnabled,
+          whatsappEnabled: whatsappEnabled ?? false,
           emailEnabled,
         })
       }
@@ -159,15 +173,15 @@ export class NotificationSchedulerService {
     recipientName: string
     recipientEmail?: string
     recipientPhone?: string
-    session: any
+    session: SessionWithRelations
     whatsappEnabled: boolean
     emailEnabled: boolean
   }): Promise<void> {
     const supabaseAdmin = createAdminClient()
     const { session } = params
-    const formation = (session.formations as any)
+    const formation = session.formations
 
-    const formattedDate = new Date(session.start_date).toLocaleDateString('fr-FR', {
+    const formattedDate = new Date(session.start_date ?? '').toLocaleDateString('fr-FR', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -250,8 +264,8 @@ export class NotificationSchedulerService {
       .eq('id', organizationId)
       .single()
 
-    const settings = (org?.settings as any) || {}
-    const whatsappConfig = settings.whatsapp || {}
+    const settings = (org?.settings as Record<string, unknown>) || {}
+    const whatsappConfig = (settings.whatsapp || {}) as { account_sid?: string; auth_token?: string; from_number?: string }
 
     if (!whatsappConfig.account_sid || !whatsappConfig.auth_token) {
       logger.warn('NotificationScheduler - WhatsApp not configured for organization', { organizationId })
@@ -306,12 +320,12 @@ export class NotificationSchedulerService {
 
     for (const notification of pending) {
       let success = false
-      const metadata = (notification.metadata as any) || {}
+      const metadata = (notification.metadata as Record<string, unknown>) || {}
 
       try {
         if (notification.type === 'whatsapp') {
           success = await this.sendWhatsApp(
-            metadata.phone,
+            typeof metadata.phone === 'string' ? metadata.phone : '',
             notification.message,
             notification.organization_id
           )

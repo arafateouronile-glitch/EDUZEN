@@ -1,5 +1,6 @@
 'use client'
 
+import type { SVGProps } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Settings, 
@@ -270,7 +271,7 @@ export function SessionSidebar({
 }
 
 // Helper icon
-function FolderOpen(props: any) {
+function FolderOpen(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

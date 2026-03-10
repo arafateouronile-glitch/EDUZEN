@@ -66,7 +66,7 @@ export default function LearnerPlanningPage() {
             error.code === '42P01' ||
             error.code === 'PGRST301' ||
             error.code === '42P17' ||
-            (error as any).status === 400 ||
+            (error as { status?: number }).status === 400 ||
             error.code === '400' ||
             error.message?.includes('relation') ||
             error.message?.includes('relationship') ||
@@ -87,7 +87,7 @@ export default function LearnerPlanningPage() {
         }
 
         return data || []
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Unexpected error fetching enrollments', sanitizeError(error), {
           studentId: maskId(studentId),
         })
@@ -99,7 +99,16 @@ export default function LearnerPlanningPage() {
     refetchOnMount: true,
   })
 
-  const sessions = enrollments || []
+  const sessions = useMemo(() => enrollments || [], [enrollments])
+
+  type CalendarEvent = {
+    id?: string
+    sessions?: { start_date?: string; end_date?: string; session_slots?: Array<{ date?: string; start_time?: string; end_time?: string; location?: string; id?: string }>; name?: string; is_remote?: boolean; start_time?: string; end_time?: string; location?: string; formations?: { name?: string } }
+    slot?: { id?: string; start_time?: string; end_time?: string; location?: string }
+    isStart?: boolean
+    isEnd?: boolean
+    displayDate?: Date
+  }
 
   // Générer le calendrier
   const monthStart = startOfMonth(currentDate)
@@ -108,15 +117,13 @@ export default function LearnerPlanningPage() {
 
   // Créer une map des événements par jour (incluant les créneaux horaires)
   const eventsByDate = useMemo(() => {
-    const map: Record<string, any[]> = {}
-    
-    sessions?.forEach((enrollment: any) => {
+    const map: Record<string, CalendarEvent[]> = {}
+    const sessionsList = (sessions ?? []) as Array<CalendarEvent & { sessions?: CalendarEvent['sessions']; slot?: CalendarEvent['slot'] }>
+    sessionsList.forEach((enrollment) => {
       const session = enrollment.sessions
       if (!session?.start_date) return
-      
-      // Si la session a des créneaux (session_slots), utiliser ceux-ci
       if (session.session_slots && session.session_slots.length > 0) {
-        session.session_slots.forEach((slot: any) => {
+        session.session_slots.forEach((slot: { date?: string; start_time?: string; end_time?: string; location?: string; id?: string }) => {
           if (!slot.date) return
           const slotDate = parseISO(slot.date)
           const key = format(slotDate, 'yyyy-MM-dd')
@@ -147,6 +154,7 @@ export default function LearnerPlanningPage() {
     })
     
     return map
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sessions from enrollments query
   }, [sessions])
 
   // Événements du jour sélectionné
@@ -157,21 +165,21 @@ export default function LearnerPlanningPage() {
   // Prochains événements (avec créneaux horaires)
   const upcomingEvents = useMemo(() => {
     const today = new Date()
-    const events: any[] = []
-    
-    sessions?.forEach((enrollment: any) => {
+    const events: CalendarEvent[] = []
+    const sessionsList = (sessions ?? []) as Array<CalendarEvent & { sessions?: CalendarEvent['sessions']; slot?: CalendarEvent['slot'] }>
+    sessionsList.forEach((enrollment) => {
       const session = enrollment.sessions
       if (!session) return
       
       // Si la session a des créneaux, créer un événement pour chaque créneau futur
       if (session.session_slots && session.session_slots.length > 0) {
-        session.session_slots.forEach((slot: any) => {
+        session.session_slots.forEach((slot: { date?: string; start_time?: string; end_time?: string; location?: string; id?: string }) => {
           if (!slot.date) return
           const slotDate = parseISO(slot.date)
           if (slotDate >= today) {
             events.push({
               ...enrollment,
-              slot: slot,
+              slot,
               displayDate: slotDate,
             })
           }
@@ -189,8 +197,9 @@ export default function LearnerPlanningPage() {
     })
     
     return events
-      .sort((a: any, b: any) => a.displayDate.getTime() - b.displayDate.getTime())
+      .sort((a, b) => ((a as { displayDate: Date }).displayDate?.getTime() ?? 0) - ((b as { displayDate: Date }).displayDate?.getTime() ?? 0))
       .slice(0, 5)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sessions from enrollments query
   }, [sessions])
 
   const containerVariants = {
@@ -371,7 +380,7 @@ export default function LearnerPlanningPage() {
                 </h3>
                 {selectedDayEvents.length > 0 ? (
                   <div className="space-y-3">
-                    {selectedDayEvents.map((enrollment: any, index: number) => {
+                    {selectedDayEvents.map((enrollment: CalendarEvent & { slot?: { id?: string; start_time?: string; end_time?: string; location?: string } }, index: number) => {
                       const session = enrollment.sessions
                       const slot = enrollment.slot
                       return (
@@ -408,7 +417,7 @@ export default function LearnerPlanningPage() {
                                 {(enrollment.slot?.location || session?.location) && (
                                   <span className="flex items-center gap-1">
                                     <MapPin className="h-4 w-4" />
-                                    {enrollment.slot?.location || session.location}
+                                    {enrollment.slot?.location || session?.location}
                                   </span>
                                 )}
                               </div>
@@ -451,7 +460,7 @@ export default function LearnerPlanningPage() {
               </div>
             ) : upcomingEvents.length > 0 ? (
               <div className="relative space-y-3">
-                {upcomingEvents.map((enrollment: any, index: number) => {
+                {upcomingEvents.map((enrollment: CalendarEvent & { displayDate?: Date; slot?: { id?: string; start_time?: string; end_time?: string; location?: string } }, index: number) => {
                   const session = enrollment.sessions
                   const displayDate = enrollment.displayDate || (session?.start_date ? parseISO(session.start_date) : null)
                   const slot = enrollment.slot
@@ -477,8 +486,8 @@ export default function LearnerPlanningPage() {
                         {(slot?.start_time || session?.start_time) && (
                           <span className="flex items-center gap-1.5 bg-white/80 px-2 py-1 rounded-lg">
                             <Clock className="h-3 w-3 text-blue-500" />
-                            {slot?.start_time || session.start_time}
-                            {(slot?.end_time || session?.end_time) && ` - ${slot?.end_time || session.end_time}`}
+                            {slot?.start_time || session?.start_time}
+                            {(slot?.end_time || session?.end_time) && ` - ${slot?.end_time || session?.end_time}`}
                           </span>
                         )}
                       </div>

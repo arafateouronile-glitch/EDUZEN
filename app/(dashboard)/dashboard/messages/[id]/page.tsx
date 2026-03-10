@@ -174,9 +174,10 @@ export default function ConversationPage() {
   const getOtherParticipant = () => {
     if (!conversation?.participants) return null
     
+    type Participant = { user_id?: string; student_id?: string; student?: { first_name?: string; last_name?: string; email?: string; student_number?: string }; user?: { full_name?: string; email?: string } }
     const otherParticipant = conversation.participants.find(
-      (p: any) => p.user_id !== user?.id && p.student_id
-    )
+      (p) => (p as Participant).user_id !== user?.id && (p as Participant).student_id
+    ) as Participant | undefined
     
     if (otherParticipant?.student) {
       return {
@@ -189,8 +190,8 @@ export default function ConversationPage() {
     }
     
     const otherUserParticipant = conversation.participants.find(
-      (p: any) => p.user_id !== user?.id && p.user
-    )
+      (p) => (p as Participant).user_id !== user?.id && (p as Participant).user
+    ) as Participant | undefined
     
     if (otherUserParticipant?.user) {
       return {
@@ -300,21 +301,22 @@ export default function ConversationPage() {
               </div>
             )}
             
-            {messages.map((message: any) => {
-              const isOwnMessage = message.sender_id === user?.id
+            {messages.map((message) => {
+              const msg = message as { id: string; sender_id?: string; sender?: { full_name?: string; email?: string }; student_sender?: { first_name?: string; last_name?: string; email?: string; student_number?: string }; content?: string; created_at?: string; attachments?: unknown }
+              const isOwnMessage = msg.sender_id === user?.id
               
               // Déterminer le nom de l'expéditeur avec priorité : sender (admin) > student_sender (étudiant)
-              let senderName = 'Expéditeur inconnu'
-              if (message.sender) {
-                senderName = message.sender.full_name || message.sender.email || 'Expéditeur inconnu'
-              } else if (message.student_sender) {
-                const studentName = `${message.student_sender.first_name || ''} ${message.student_sender.last_name || ''}`.trim()
-                senderName = studentName || message.student_sender.email || (message.student_sender.student_number ? `Candidat ${message.student_sender.student_number}` : 'Expéditeur inconnu')
+              let senderName: string = 'Expéditeur inconnu'
+              if (msg.sender) {
+                senderName = msg.sender.full_name || msg.sender.email || 'Expéditeur inconnu'
+              } else if (msg.student_sender) {
+                const studentName = `${msg.student_sender.first_name || ''} ${msg.student_sender.last_name || ''}`.trim()
+                senderName = studentName || msg.student_sender.email || (msg.student_sender.student_number ? `Candidat ${msg.student_sender.student_number}` : 'Expéditeur inconnu')
               }
               
               return (
                 <div
-                  key={message.id}
+                  key={msg.id}
                   className={`flex items-start gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                 >
                   {!isOwnMessage && <div className="w-8" />}
@@ -331,18 +333,18 @@ export default function ConversationPage() {
                           {senderName}
                         </p>
                       )}
-                      {message.attachments && Array.isArray(message.attachments) && message.attachments.length > 0 && (
+                      {Boolean(msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0) ? (
                         <div className="mb-2">
-                          <MessageAttachmentViewer attachments={message.attachments} />
+                          <MessageAttachmentViewer attachments={(Array.isArray(msg.attachments) ? msg.attachments : []) as { url?: string; path?: string; filename: string; type: string; size?: number }[]} />
                         </div>
-                      )}
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      ) : null}
+                      <p className="text-sm whitespace-pre-wrap">{String(msg.content ?? '')}</p>
                       <p
                         className={`text-xs mt-1 ${
                           isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
                         }`}
                       >
-                        {formatRelativeTime(message.created_at)}
+                        {formatRelativeTime(msg.created_at ?? '')}
                       </p>
                     </div>
                     {isOwnMessage && (
@@ -363,7 +365,7 @@ export default function ConversationPage() {
                               e.preventDefault()
                               e.stopPropagation()
                               if (confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) {
-                                deleteMessageMutation.mutate(message.id)
+                                deleteMessageMutation.mutate(msg.id)
                               }
                             }}
                             disabled={deleteMessageMutation.isPending}

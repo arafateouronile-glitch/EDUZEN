@@ -2,7 +2,14 @@
  * Générateur HTML pour documents
  */
 
-import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
+import type {
+  DocumentContent,
+  DocumentTemplate,
+  DocumentVariables,
+  HeaderConfig,
+  FooterConfig,
+  TemplateElement,
+} from '@/lib/types/document-templates'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { evaluateConditionalContent } from './conditional-processor'
 import { processLoops } from './loop-processor'
@@ -15,7 +22,7 @@ import { processSignatures } from './signature-processor'
 import { processAttachments } from './attachment-processor'
 import { processFormFields } from './form-field-processor'
 import { enrichVariablesWithExternalData } from './api-integration-processor'
-import { sanitizeDocumentTemplate } from '@/lib/utils/sanitize-html'
+import { sanitizeDocumentTemplate, escapeHtml } from '@/lib/utils/sanitize-html'
 // Note: getGlobalDocumentLayout est importé dynamiquement pour éviter les erreurs côté client
 
 /**
@@ -25,14 +32,18 @@ import { sanitizeDocumentTemplate } from '@/lib/utils/sanitize-html'
  * - Logo à droite
  * - Ligne de séparation en bas (2px solid noir)
  */
-function generateProfessionalHeader(variables: Record<string, any>): string {
-  const orgName = variables.ecole_nom || variables.organization_name || ''
-  const orgAddress = variables.ecole_adresse || variables.organization_address || ''
-  const orgPostalCode = variables.ecole_code_postal || ''
-  const orgCity = variables.ecole_ville || ''
-  const orgEmail = variables.ecole_email || variables.organization_email || ''
-  const orgPhone = variables.ecole_telephone || variables.organization_phone || ''
-  const orgLogo = variables.ecole_logo || variables.organization_logo || ''
+/** Map de variables (DocumentVariables ou sortie de flattenVariables) */
+type VariablesMap = Record<string, string | number | boolean | undefined>
+
+function generateProfessionalHeader(variables: VariablesMap): string {
+  const str = (v: string | number | boolean | undefined) => String(v ?? '')
+  const orgName = escapeHtml(str(variables.ecole_nom || variables.organization_name))
+  const orgAddress = escapeHtml(str(variables.ecole_adresse || variables.organization_address))
+  const orgPostalCode = escapeHtml(str(variables.ecole_code_postal))
+  const orgCity = escapeHtml(str(variables.ecole_ville))
+  const orgEmail = escapeHtml(str(variables.ecole_email || variables.organization_email))
+  const orgPhone = escapeHtml(str(variables.ecole_telephone || variables.organization_phone))
+  const orgLogo = str(variables.ecole_logo || variables.organization_logo)
 
   return `
     <div style="display: flex; justify-content: space-between; align-items: flex-start; padding: 0 0 15px 0; border-bottom: 2px solid #1A1A1A; margin-bottom: 20px;">
@@ -45,7 +56,7 @@ function generateProfessionalHeader(variables: Record<string, any>): string {
       </div>
       ${orgLogo ? `
       <div style="text-align: right; min-width: 100px;">
-        <img src="${orgLogo}" alt="Logo" style="max-height: 55px; max-width: 140px; object-fit: contain;" />
+        <img src="${escapeHtml(orgLogo)}" alt="Logo" style="max-height: 55px; max-width: 140px; object-fit: contain;" />
       </div>
       ` : ''}
     </div>
@@ -60,7 +71,7 @@ function generateProfessionalHeader(variables: Record<string, any>): string {
  * - Mention légale en italique
  * - Pagination à droite
  */
-function generateProfessionalFooter(variables: Record<string, any>, pageNumber?: number, totalPages?: number): string {
+function generateProfessionalFooter(variables: VariablesMap, pageNumber?: number, totalPages?: number): string {
   const orgName = variables.ecole_nom || variables.organization_name || ''
   const orgAddress = variables.ecole_adresse || variables.organization_address || ''
   const orgCity = variables.ecole_ville || ''
@@ -165,7 +176,7 @@ async function convertImageUrlToBase64(imageUrl: string): Promise<string | null>
 
 // Fonction pour traiter les logos (doit être appelée AVANT replaceVariablesInHTML)
 // NOTE: Cette fonction est maintenant asynchrone pour convertir les URLs en base64
-async function processLogos(html: string, variables: Record<string, any>): Promise<string> {
+async function processLogos(html: string, variables: VariablesMap): Promise<string> {
   if (!html || typeof html !== 'string') {
     return html
   }
@@ -355,7 +366,7 @@ async function processLogos(html: string, variables: Record<string, any>): Promi
 }
 
 // Fonction pour remplacer les variables dans le HTML
-function replaceVariablesInHTML(html: string, variables: Record<string, any>): string {
+function replaceVariablesInHTML(html: string, variables: VariablesMap): string {
   // Note: Les conditionnels sont déjà traités dans generateHTML avant l'appel à cette fonction
   let result = html
   
@@ -484,21 +495,20 @@ export async function generateHTML(
     if (typeof template.content === 'string') {
       content = template.content
     } else {
-      const contentData = template.content as any
+      const contentData = template.content as DocumentContent
       logger.debug('[HTML Generator] Template content structure:', {
         hasHtml: !!contentData.html,
         htmlLength: contentData.html?.length || 0,
         hasElements: !!contentData.elements,
         elementsCount: contentData.elements?.length || 0,
       })
-      
+
       if (contentData.html) {
         content = contentData.html
-      } else if (contentData.elements && Array.isArray(contentData.elements) && contentData.elements.length > 0) {
-        // Si le contenu est dans les éléments, extraire le HTML de chaque élément
-        // Le contenu peut être dans el.content ou el.html selon la structure du template
+      } else if (contentData.elements?.length) {
+        type ElementWithContent = TemplateElement & { html?: string; text?: string; value?: string }
         content = contentData.elements
-          .map((el: any) => {
+          .map((el: ElementWithContent) => {
             return el.content || el.html || el.text || el.value || ''
           })
           .filter((c: string) => c && c.trim())
@@ -533,9 +543,9 @@ export async function generateHTML(
     } catch { /* ignore */ }
   }
 
-  // Header et footer : utiliser ceux du template en priorité
-  let headerContent = (template.header as any)?.content || ''
-  let footerContent = (template.footer as any)?.content || ''
+  type HeaderFooterWithContent = (HeaderConfig | FooterConfig) & { content?: string }
+  let headerContent = (template.header as HeaderFooterWithContent | null)?.content || ''
+  let footerContent = (template.footer as HeaderFooterWithContent | null)?.content || ''
 
   // Fallback sur les modèles prédéfinis si header/footer vides
   if (!headerContent.trim() || !footerContent.trim()) {
@@ -566,8 +576,8 @@ export async function generateHTML(
   // Utiliser les paramètres du template tels que configurés
   const headerEnabled = template.header_enabled ?? true
   const footerEnabled = template.footer_enabled ?? true
-  const headerHeight = (template.header as any)?.height || template.header_height || 30
-  const footerHeight = (template.footer as any)?.height || template.footer_height || 20
+  const headerHeight = (template.header as HeaderFooterWithContent | null)?.height ?? template.header_height ?? 30
+  const footerHeight = (template.footer as HeaderFooterWithContent | null)?.height ?? template.footer_height ?? 20
   const templateMargins = template.margins || { top: 20, right: 20, bottom: 20, left: 20 }
 
   // Si l'en-tête est vide mais activé, générer un en-tête professionnel
@@ -815,7 +825,7 @@ export async function generateHTML(
       id: template?.id,
       type: template?.type,
       name: template?.name,
-      headerLength: template?.header ? (typeof (template.header as any) === 'string' ? (template.header as any).length : JSON.stringify(template.header as any).length) : 0,
+      headerLength: template?.header ? JSON.stringify(template.header).length : 0,
     })
     logger.error('[HTML Generator] Variables keys:', Object.keys(variables || {}).slice(0, 20))
     throw error

@@ -82,6 +82,7 @@ export function useNotifications(options?: {
     return () => {
       unsubscribe()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- notificationService ref stable, subscribe on user change
   }, [user?.id, queryClient, addToast])
 
   // Marquer une notification comme lue
@@ -170,6 +171,7 @@ export function useUnreadNotificationsCount() {
     })
 
     return unsubscribe
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- notificationService ref stable
   }, [user?.id, queryClient])
 
   return count

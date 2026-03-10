@@ -45,20 +45,20 @@ export default function CPFPage() {
     queryFn: async () => {
       try {
         return await cpfService.getEligibleTrainings(user!.organization_id!)
-      } catch (error: any) {
-        // Si la table n'existe pas encore ou erreur 404, retourner un tableau vide
+      } catch (error: unknown) {
+        const err = error as { code?: string; status?: number; message?: string }
         if (
-          error?.code === 'PGRST116' ||
-          error?.code === '42P01' ||
-          error?.code === 'PGRST301' ||
-          error?.status === 404 ||
-          error?.code === '404' ||
-          error?.message?.includes('relation') ||
-          error?.message?.includes('relationship') ||
-          error?.message?.includes('does not exist') ||
-          error?.message?.includes('schema cache')
+          err?.code === 'PGRST116' ||
+          err?.code === '42P01' ||
+          err?.code === 'PGRST301' ||
+          err?.status === 404 ||
+          err?.code === '404' ||
+          err?.message?.includes('relation') ||
+          err?.message?.includes('relationship') ||
+          err?.message?.includes('does not exist') ||
+          err?.message?.includes('schema cache')
         ) {
-          logger.warn('Error fetching CPF eligible trainings:', error?.message)
+          logger.warn('Error fetching CPF eligible trainings:', { message: err?.message })
           return []
         }
         throw error
@@ -74,20 +74,20 @@ export default function CPFPage() {
     queryFn: async () => {
       try {
         return await cpfService.getEnrollments(user!.organization_id!)
-      } catch (error: any) {
-        // Si la table n'existe pas encore ou erreur 404, retourner un tableau vide
+      } catch (error: unknown) {
+        const err = error as { code?: string; status?: number; message?: string }
         if (
-          error?.code === 'PGRST116' ||
-          error?.code === '42P01' ||
-          error?.code === 'PGRST301' ||
-          error?.status === 404 ||
-          error?.code === '404' ||
-          error?.message?.includes('relation') ||
-          error?.message?.includes('relationship') ||
-          error?.message?.includes('does not exist') ||
-          error?.message?.includes('schema cache')
+          err?.code === 'PGRST116' ||
+          err?.code === '42P01' ||
+          err?.code === 'PGRST301' ||
+          err?.status === 404 ||
+          err?.code === '404' ||
+          err?.message?.includes('relation') ||
+          err?.message?.includes('relationship') ||
+          err?.message?.includes('does not exist') ||
+          err?.message?.includes('schema cache')
         ) {
-          logger.warn('Error fetching CPF enrollments:', error?.message)
+          logger.warn('Error fetching CPF enrollments:', { message: err?.message })
           return []
         }
         throw error

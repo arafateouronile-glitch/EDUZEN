@@ -65,9 +65,9 @@ export default function IncidentsPage() {
   })
 
   // Filtrer les incidents
-  const filteredIncidents = incidents?.filter((incident: any) => {
-    if (searchQuery && !incident.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !incident.incident_id.toLowerCase().includes(searchQuery.toLowerCase())) {
+  const filteredIncidents = incidents?.filter((incident: { title?: string; incident_id?: string }) => {
+    if (searchQuery && !incident.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !incident.incident_id?.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
     return true
@@ -81,7 +81,7 @@ export default function IncidentsPage() {
         organization_id: user?.organization_id || '',
         reported_by: user?.id || '',
         detected_at: new Date(newIncident.detected_at).toISOString(),
-      } as any),
+      } as Parameters<typeof complianceService.createIncident>[0]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-incidents'] })
       setIsCreateDialogOpen(false)
@@ -267,7 +267,7 @@ export default function IncidentsPage() {
       {/* Liste des incidents */}
       {filteredIncidents && filteredIncidents.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
-          {filteredIncidents.map((incident: any) => (
+          {filteredIncidents.map((incident) => (
             <Card key={incident.id} className={incident.severity === 'critical' ? 'border-red-200' : ''}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -285,7 +285,7 @@ export default function IncidentsPage() {
                           ? 'Moyenne'
                           : 'Faible'}
                       </Badge>
-                      <Badge className={statusColors[incident.status] || 'bg-gray-100 text-gray-800'}>
+                      <Badge className={statusColors[incident.status ?? ''] || 'bg-gray-100 text-gray-800'}>
                         {incident.status === 'open' ? (
                           <Clock className="h-3 w-3 mr-1" />
                         ) : incident.status === 'resolved' ? (
@@ -316,14 +316,14 @@ export default function IncidentsPage() {
                     <div>
                       <span className="text-sm text-muted-foreground">Catégorie: </span>
                       <Badge variant="outline">
-                        {categoryLabels[incident.category] || incident.category}
+                        {(categoryLabels[incident.category ?? ''] || incident.category) ?? ''}
                       </Badge>
                     </div>
                     <div>
                       <span className="text-sm text-muted-foreground">Détecté le: </span>
                       <span className="text-sm">{formatDate(incident.detected_at)}</span>
                     </div>
-                    {incident.data_breach && (
+                    {(incident as { data_breach?: boolean | null }).data_breach && (
                       <Badge className="bg-red-100 text-red-800">
                         Violation de données
                       </Badge>
@@ -334,11 +334,11 @@ export default function IncidentsPage() {
                       </Badge>
                     )}
                   </div>
-                  {incident.assigned_to_user && (
+                  {(incident as { assigned_to_user?: { full_name?: string | null; email?: string | null } | null }).assigned_to_user && (
                     <div>
                       <span className="text-sm text-muted-foreground">Assigné à: </span>
                       <span className="text-sm">
-                        {incident.assigned_to_user.full_name || incident.assigned_to_user.email}
+                        {((incident as { assigned_to_user?: { full_name?: string | null; email?: string | null } }).assigned_to_user?.full_name ?? (incident as { assigned_to_user?: { email?: string | null } }).assigned_to_user?.email) ?? ''}
                       </span>
                     </div>
                   )}

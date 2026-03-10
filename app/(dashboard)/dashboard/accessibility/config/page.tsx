@@ -103,23 +103,24 @@ export default function AccessibilityConfigPage() {
       })
       router.push('/dashboard/accessibility')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const err = error as { code?: string; message?: string; details?: unknown; hint?: string }
       logger.error('[AccessibilityConfig] Erreur complète:', error)
       logger.error('[AccessibilityConfig] Détails:', {
-        code: error?.code,
-        message: error?.message,
-        details: error?.details,
-        hint: error?.hint,
+        code: err?.code,
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
       })
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || error?.details || 'Impossible de sauvegarder la configuration.',
+        description: err?.message ?? (err?.details != null ? String(err.details) : null) ?? 'Impossible de sauvegarder la configuration.',
       })
     },
   })
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -133,7 +134,7 @@ export default function AccessibilityConfigPage() {
 
     setFormData((prev) => ({
       ...prev,
-      partner_other: [...(prev.partner_other as any[]), newPartner],
+      partner_other: [...(Array.isArray(prev.partner_other) ? prev.partner_other : []), newPartner],
     }))
 
     setNewPartnerName('')
@@ -143,7 +144,7 @@ export default function AccessibilityConfigPage() {
   const handleRemovePartner = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      partner_other: (prev.partner_other as any[]).filter((_, i) => i !== index),
+      partner_other: (Array.isArray(prev.partner_other) ? prev.partner_other : []).filter((_, i) => i !== index),
     }))
   }
 
@@ -349,9 +350,9 @@ export default function AccessibilityConfigPage() {
               <Label className="mb-3 block">Autres partenaires</Label>
 
               {/* Liste des partenaires existants */}
-              {formData.partner_other && (formData.partner_other as any[]).length > 0 && (
+              {formData.partner_other && Array.isArray(formData.partner_other) && formData.partner_other.length > 0 && (
                 <div className="space-y-2 mb-4">
-                  {(formData.partner_other as any[]).map((partner: any, index: number) => (
+                  {formData.partner_other.map((partner: { name?: string; contact?: string }, index: number) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <p className="font-medium text-sm">{partner.name}</p>

@@ -41,7 +41,7 @@ export default function FundingTypesPage() {
     queryFn: async () => {
       if (!user?.organization_id) return []
       const { data, error } = await supabase
-        .from('funding_types' as any)
+        .from('funding_types')
         .select('*')
         .eq('organization_id', user.organization_id)
         .order('display_order', { ascending: true })
@@ -57,7 +57,7 @@ export default function FundingTypesPage() {
     mutationFn: async (data: typeof formData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
       const { data: result, error } = await supabase
-        .from('funding_types' as any)
+        .from('funding_types')
         .insert({
           ...data,
           bpf_category: data.bpf_category || null,
@@ -93,7 +93,7 @@ export default function FundingTypesPage() {
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
       const { data: result, error } = await supabase
-        .from('funding_types' as any)
+        .from('funding_types')
         .update({
           ...data,
           bpf_category: data.bpf_category || null,
@@ -130,7 +130,7 @@ export default function FundingTypesPage() {
     mutationFn: async (id: string) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
       const { error } = await supabase
-        .from('funding_types' as any)
+        .from('funding_types')
         .delete()
         .eq('id', id)
         .eq('organization_id', user.organization_id)
@@ -167,7 +167,7 @@ export default function FundingTypesPage() {
     setEditingId(null)
   }
 
-  const handleEdit = (type: any) => {
+  const handleEdit = (type: { id: string; name?: string; code?: string | null; description?: string | null; is_active?: boolean | null; requires_documentation?: boolean | null; requires_approval?: boolean | null; display_order?: number | null; bpf_category?: string | null }) => {
     setFormData({
       name: type.name || '',
       code: type.code || '',
@@ -352,7 +352,7 @@ export default function FundingTypesPage() {
         </Card>
       ) : fundingTypes && fundingTypes.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {fundingTypes.map((type: any) => (
+          {fundingTypes.map((type) => (
             <GlassCard key={type.id} className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">

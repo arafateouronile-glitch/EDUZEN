@@ -28,7 +28,7 @@ type ProgramCatalog = {
   is_active?: boolean
   description?: string | null
   public_description?: string | null
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export default function CatalogPage() {

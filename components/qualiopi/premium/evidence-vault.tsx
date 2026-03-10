@@ -36,7 +36,7 @@ type EvidenceType =
   | 'certificate'
   | 'system_generated'
 
-interface Evidence {
+export interface Evidence {
   id: string
   title: string
   indicator_number: number

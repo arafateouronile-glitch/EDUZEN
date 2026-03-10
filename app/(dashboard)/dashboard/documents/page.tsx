@@ -21,11 +21,13 @@ import { formatDate, cn } from '@/lib/utils'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import type { DocumentWithRelations, StudentWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import type { Database } from '@/types/database.types'
 import { SkeletonList } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Document = TableRow<'documents'>
+type DocForAction = DocumentWithRelations | (TableRow<'documents'> & { students?: StudentWithRelations | null })
 
 export default function DocumentsPage() {
   const { user } = useAuth()
@@ -39,10 +41,10 @@ export default function DocumentsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [previewDocument, setPreviewDocument] = useState<DocumentWithRelations | null>(null)
+  const [previewDocument, setPreviewDocument] = useState<DocForAction | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [showEmailModal, setShowEmailModal] = useState(false)
-  const [selectedDocument, setSelectedDocument] = useState<DocumentWithRelations | null>(null)
+  const [selectedDocument, setSelectedDocument] = useState<DocForAction | null>(null)
   const [emailForm, setEmailForm] = useState({
     to: '',
     subject: '',
@@ -167,9 +169,9 @@ export default function DocumentsPage() {
         created_at?: string
       }> = []
       
-      for (const session of (sessions as Array<{ id: string; [key: string]: any }>)) {
-        // Récupérer les inscriptions à cette session
-        const sessionId = (session as { id: string }).id
+      type SessionRow = { id: string; name?: string; status?: string; end_date?: string }
+      for (const session of (sessions as SessionRow[])) {
+        const sessionId = session.id
         const enrollmentsResult = await supabase
           .from('enrollments')
           .select(`
@@ -191,55 +193,56 @@ export default function DocumentsPage() {
         if (!enrollments || enrollments.length === 0) continue
         
         // Pour chaque étudiant, créer les documents attendus
-        for (const enrollment of (enrollments as Array<{ students?: any; [key: string]: any }>)) {
-          const student = enrollment.students as any
+        type EnrollmentWithStudent = { student_id: string; students?: { id: string; first_name?: string; last_name?: string; student_number?: string } | null }
+        for (const enrollment of (enrollments as EnrollmentWithStudent[])) {
+          const student = enrollment.students
           if (!student) continue
           
           // Vérifier si un certificat existe déjà pour cet étudiant et cette session
           const existingCert = (documents as DocumentWithRelations[])?.find(
             (doc) => doc.type === 'certificate' && 
                      doc.student_id === student.id &&
-                     (doc as any).session_id === session.id
+                     (doc as DocumentWithRelations & { session_id?: string }).session_id === session.id
           )
           
           // Certificat de formation (pour les sessions terminées ou en cours)
           expectedDocs.push({
             id: `expected-cert-${session.id}-${student.id}`,
-            title: `Certificat de formation - ${student.first_name} ${student.last_name}`,
+            title: `Certificat de formation - ${student.first_name ?? ''} ${student.last_name ?? ''}`,
             type: 'certificate',
             student_id: student.id,
             student: {
-              first_name: student.first_name,
-              last_name: student.last_name,
-              student_number: student.student_number,
+              first_name: student.first_name ?? '',
+              last_name: student.last_name ?? '',
+              student_number: student.student_number ?? '',
             },
             session_id: session.id,
-            session_name: session.name,
+            session_name: session.name ?? '',
             isGenerated: !!existingCert,
             document_id: existingCert?.id || undefined,
             created_at: existingCert?.created_at || undefined,
           })
           
           // Attestation de scolarité (pour les sessions en cours)
-          if (session.status === 'ongoing' || new Date(session.end_date) >= new Date()) {
+          if (session.status === 'ongoing' || (session.end_date && new Date(session.end_date) >= new Date())) {
             const existingAttestation = (documents as DocumentWithRelations[])?.find(
               (doc) => doc.type === 'attestation' && 
                        doc.student_id === student.id &&
-                       (doc as any).session_id === session.id
+                       (doc as DocumentWithRelations & { session_id?: string }).session_id === session.id
             )
             
             expectedDocs.push({
               id: `expected-attest-${session.id}-${student.id}`,
-              title: `Attestation de scolarité - ${student.first_name} ${student.last_name}`,
+              title: `Attestation de scolarité - ${student.first_name ?? ''} ${student.last_name ?? ''}`,
               type: 'attestation',
               student_id: student.id,
               student: {
-                first_name: student.first_name,
-                last_name: student.last_name,
-                student_number: student.student_number,
+                first_name: student.first_name ?? '',
+                last_name: student.last_name ?? '',
+                student_number: student.student_number ?? '',
               },
               session_id: session.id,
-              session_name: session.name,
+              session_name: session.name ?? '',
               isGenerated: !!existingAttestation,
               document_id: existingAttestation?.id || undefined,
               created_at: existingAttestation?.created_at || undefined,
@@ -254,14 +257,14 @@ export default function DocumentsPage() {
   })
   
   // Combiner les documents existants et attendus
+  type DocItem = { type?: string; isExpected?: boolean; file_path?: string; uploaded_by?: string }
   const allDocuments = [
-    ...(documents || []).map((doc: any) => ({ ...doc, isExpected: false })),
-    ...(expectedDocuments || []).map((doc: any) => ({ ...doc, isExpected: true })),
+    ...(documents || []).map((doc) => ({ ...doc, isExpected: false })),
+    ...(expectedDocuments || []).map((doc: DocItem) => ({ ...doc, isExpected: true })),
   ]
   
-  // Filtrer selon le typeFilter
   const filteredDocuments = typeFilter !== 'all' 
-    ? allDocuments.filter((doc: any) => doc.type === typeFilter)
+    ? allDocuments.filter((doc: DocItem) => doc.type === typeFilter)
     : allDocuments
 
   // Récupérer les étudiants pour le formulaire d'upload
@@ -354,12 +357,12 @@ export default function DocumentsPage() {
   }
 
   // Fonction pour prévisualiser un document
-  const handlePreview = (document: any) => {
+  const handlePreview = (document: DocForAction) => {
     setPreviewDocument(document)
   }
 
   // Fonction pour ouvrir le modal d'envoi par email
-  const handleOpenEmailModal = (document: any) => {
+  const handleOpenEmailModal = (document: DocForAction) => {
     setSelectedDocument(document)
 
     // Pré-remplir l'email si l'étudiant est lié
@@ -414,32 +417,30 @@ export default function DocumentsPage() {
 
   // Mutation pour envoyer le document vers l'espace apprenant
   const sendToLearnerSpaceMutation = useMutation({
-    mutationFn: async (document: any) => {
+    mutationFn: async (document: DocForAction) => {
       if (!document.student_id) {
         throw new Error('Ce document n\'est pas lié à un étudiant')
       }
 
-      // Créer une notification pour l'étudiant
-      const { error } = await supabase
-        .from('learner_documents')
-        .insert({
-          student_id: document.student_id,
-          document_id: document.id,
-          title: document.title,
-          file_url: document.file_url,
-          type: document.type,
-          organization_id: user?.organization_id,
-          sent_at: new Date().toISOString(),
-        } as any)
+      const insertRow: Database['public']['Tables']['learner_documents']['Insert'] = {
+        student_id: document.student_id ?? '',
+        document_id: document.id,
+        title: document.title,
+        file_url: document.file_url,
+        type: document.type,
+        organization_id: user?.organization_id ?? '',
+        sent_at: new Date().toISOString(),
+      }
+      const { error } = await supabase.from('learner_documents').insert(insertRow)
 
       if (error) throw error
     },
     onSuccess: () => {
       alert('Document envoyé dans l\'espace apprenant avec succès !')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       logger.error('Erreur lors de l\'envoi vers l\'espace apprenant:', error)
-      alert(error.message || 'Erreur lors de l\'envoi vers l\'espace apprenant')
+      alert(error instanceof Error ? error.message : 'Erreur lors de l\'envoi vers l\'espace apprenant')
     },
   })
 
@@ -456,9 +457,9 @@ export default function DocumentsPage() {
   // Calculer les statistiques
   const stats = {
     total: documents.length,
-    generated: documents.filter((d: any) => d.file_path).length,
-    toGenerate: expectedDocuments?.filter((d: any) => !d.isGenerated).length || 0,
-    uploaded: documents.filter((d: any) => d.uploaded_by).length,
+    generated: documents.filter((d: Record<string, unknown>) => d.file_path).length,
+    toGenerate: expectedDocuments?.filter((d: { isGenerated?: boolean }) => !d.isGenerated).length || 0,
+    uploaded: documents.filter((d: Record<string, unknown>) => d.uploaded_by).length,
   }
 
   const containerVariants = {
@@ -500,9 +501,9 @@ export default function DocumentsPage() {
                 <span className="px-3 py-1 bg-gradient-to-r from-brand-blue-ghost to-brand-cyan-ghost text-brand-blue rounded-full text-sm font-medium border border-brand-blue/20">
                   {filteredDocuments?.length || 0} total
                 </span>
-                {expectedDocuments && expectedDocuments.filter((d: any) => !d.isGenerated).length > 0 && (
+                {expectedDocuments && expectedDocuments.filter((d: { isGenerated?: boolean }) => !d.isGenerated).length > 0 && (
                   <span className="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full text-sm font-bold border border-amber-600 shadow-md">
-                    {expectedDocuments.filter((d: any) => !d.isGenerated).length} à générer
+                    {expectedDocuments.filter((d: { isGenerated?: boolean }) => !d.isGenerated).length} à générer
                   </span>
                 )}
               </div>
@@ -692,7 +693,7 @@ export default function DocumentsPage() {
         ) : documents && documents.length > 0 ? (
           <GlassCard variant="default" className="overflow-hidden p-0 border-2 border-brand-blue/10 bg-gradient-to-br from-white to-brand-blue-ghost/5">
             <div className="divide-y divide-brand-blue/10">
-              {documents.map((document: any) => {
+              {documents.map((document) => {
                 const TypeIcon = getTypeIcon(document.type)
                 return (
                   <motion.div

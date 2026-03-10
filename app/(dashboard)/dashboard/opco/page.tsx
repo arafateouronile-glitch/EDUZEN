@@ -50,18 +50,18 @@ export default function OPCOPage() {
     queryFn: async () => {
       try {
         return await opcoService.getConventions(user!.organization_id!)
-      } catch (error: any) {
-        // La gestion d'erreur est déjà faite dans le service, mais on double la vérification ici
+      } catch (error: unknown) {
+        const err = error as { code?: string; status?: number; message?: string }
         if (
-          error?.code === 'PGRST116' ||
-          error?.code === '42P01' ||
-          error?.code === 'PGRST301' ||
-          error?.status === 404 ||
-          error?.code === '404' ||
-          error?.message?.includes('relation') ||
-          error?.message?.includes('relationship') ||
-          error?.message?.includes('does not exist') ||
-          error?.message?.includes('schema cache')
+          err?.code === 'PGRST116' ||
+          err?.code === '42P01' ||
+          err?.code === 'PGRST301' ||
+          err?.status === 404 ||
+          err?.code === '404' ||
+          err?.message?.includes('relation') ||
+          err?.message?.includes('relationship') ||
+          err?.message?.includes('does not exist') ||
+          err?.message?.includes('schema cache')
         ) {
           return []
         }
@@ -78,18 +78,18 @@ export default function OPCOPage() {
     queryFn: async () => {
       try {
         return await opcoService.getDeclarations(user!.organization_id!)
-      } catch (error: any) {
-        // La gestion d'erreur est déjà faite dans le service, mais on double la vérification ici
+      } catch (error: unknown) {
+        const err = error as { code?: string; status?: number; message?: string }
         if (
-          error?.code === 'PGRST116' ||
-          error?.code === '42P01' ||
-          error?.code === 'PGRST301' ||
-          error?.status === 404 ||
-          error?.code === '404' ||
-          error?.message?.includes('relation') ||
-          error?.message?.includes('relationship') ||
-          error?.message?.includes('does not exist') ||
-          error?.message?.includes('schema cache')
+          err?.code === 'PGRST116' ||
+          err?.code === '42P01' ||
+          err?.code === 'PGRST301' ||
+          err?.status === 404 ||
+          err?.code === '404' ||
+          err?.message?.includes('relation') ||
+          err?.message?.includes('relationship') ||
+          err?.message?.includes('does not exist') ||
+          err?.message?.includes('schema cache')
         ) {
           return []
         }
@@ -106,18 +106,18 @@ export default function OPCOPage() {
     queryFn: async () => {
       try {
         return await opcoService.getFundingRequests(user!.organization_id!)
-      } catch (error: any) {
-        // La gestion d'erreur est déjà faite dans le service, mais on double la vérification ici
+      } catch (error: unknown) {
+        const err = error as { code?: string; status?: number; message?: string }
         if (
-          error?.code === 'PGRST116' ||
-          error?.code === '42P01' ||
-          error?.code === 'PGRST301' ||
-          error?.status === 404 ||
-          error?.code === '404' ||
-          error?.message?.includes('relation') ||
-          error?.message?.includes('relationship') ||
-          error?.message?.includes('does not exist') ||
-          error?.message?.includes('schema cache')
+          err?.code === 'PGRST116' ||
+          err?.code === '42P01' ||
+          err?.code === 'PGRST301' ||
+          err?.status === 404 ||
+          err?.code === '404' ||
+          err?.message?.includes('relation') ||
+          err?.message?.includes('relationship') ||
+          err?.message?.includes('does not exist') ||
+          err?.message?.includes('schema cache')
         ) {
           return []
         }

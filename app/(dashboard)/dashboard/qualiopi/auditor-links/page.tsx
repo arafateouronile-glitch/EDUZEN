@@ -287,7 +287,7 @@ export default function AuditorLinksPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Mode échantillonnage</p>
                 <p className="text-2xl font-bold">
-                  {links.filter((l) => (l.permissions as any)?.sampling_mode).length}
+                  {links.filter((l) => (l.permissions as unknown as Record<string, unknown>)?.sampling_mode).length}
                 </p>
               </div>
               <Sparkles className="h-8 w-8 text-amber-500" />
@@ -569,7 +569,7 @@ export default function AuditorLinksPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          {(link.permissions as any)?.sampling_mode && (
+                          {Boolean((link.permissions as unknown as Record<string, unknown>)?.sampling_mode) && (
                             <Badge
                               variant="outline"
                               className="bg-amber-50 text-amber-700 text-xs"
@@ -578,7 +578,7 @@ export default function AuditorLinksPage() {
                               Échantillonnage
                             </Badge>
                           )}
-                          {(link.permissions as any)?.export_pdf && (
+                          {Boolean((link.permissions as unknown as Record<string, unknown>)?.export_pdf) && (
                             <Badge variant="outline" className="text-xs">
                               Export PDF
                             </Badge>

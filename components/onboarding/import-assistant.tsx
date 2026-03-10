@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { importService, type ImportMapping, type ImportResult } from '@/lib/services/import.service'
+import { importService, type ImportMapping, type ImportResult, type StudentImportRow } from '@/lib/services/import.service'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -24,6 +24,9 @@ import { logger } from '@/lib/utils/logger'
 
 type ImportStep = 'upload' | 'mapping' | 'validation' | 'result'
 
+/** Mapping avec possibilité de "Non mappé" (targetField vide) */
+type MappingEntry = { sourceColumn: string; targetField: keyof StudentImportRow | ''; confidence: number }
+
 export function ImportAssistant() {
   const { user } = useAuth()
   const { addToast } = useToast()
@@ -32,8 +35,8 @@ export function ImportAssistant() {
   const [step, setStep] = useState<ImportStep>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [headers, setHeaders] = useState<string[]>([])
-  const [rows, setRows] = useState<Record<string, any>[]>([])
-  const [mapping, setMapping] = useState<ImportMapping[]>([])
+  const [rows, setRows] = useState<Record<string, unknown>[]>([])
+  const [mapping, setMapping] = useState<MappingEntry[]>([])
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
 
   // Parse le fichier
@@ -64,12 +67,12 @@ export function ImportAssistant() {
     }
   }
 
-  // Mise à jour du mapping
-  const updateMapping = (sourceColumn: string, targetField: keyof import('@/lib/services/import.service').StudentImportRow | '') => {
+  // Mise à jour du mapping (targetField peut être '' pour "Non mappé")
+  const updateMapping = (sourceColumn: string, targetField: keyof StudentImportRow | '') => {
     setMapping((prev) =>
       prev.map((m) =>
         m.sourceColumn === sourceColumn
-          ? { ...m, targetField: targetField as any, confidence: targetField ? 1 : 0 }
+          ? { ...m, targetField, confidence: targetField ? 1 : 0 }
           : m
       )
     )
@@ -80,8 +83,8 @@ export function ImportAssistant() {
     mutationFn: async () => {
       if (!user?.organization_id) throw new Error('Organisation non trouvée')
 
-      // Filtrer les mappings valides
-      const validMapping = mapping.filter((m) => m.targetField)
+      // Filtrer les mappings valides (avec champ cible renseigné)
+      const validMapping = mapping.filter((m): m is ImportMapping => Boolean(m.targetField))
 
       const result = await importService.importStudents(
         user.organization_id,
@@ -136,7 +139,7 @@ export function ImportAssistant() {
     }
   }
 
-  const targetFields: Array<{ value: keyof import('@/lib/services/import.service').StudentImportRow; label: string }> = [
+  const targetFields: Array<{ value: keyof StudentImportRow; label: string }> = [
     { value: 'first_name', label: 'Prénom' },
     { value: 'last_name', label: 'Nom' },
     { value: 'email', label: 'Email' },
@@ -224,7 +227,7 @@ export function ImportAssistant() {
                       <div className="font-medium">{header}</div>
                       <select
                         value={currentMapping?.targetField || ''}
-                        onChange={(e) => updateMapping(header, e.target.value as any)}
+                        onChange={(e) => updateMapping(header, (e.target.value || '') as keyof StudentImportRow | '')}
                         className="px-3 py-2 border rounded-md"
                       >
                         <option value="">-- Non mappé --</option>

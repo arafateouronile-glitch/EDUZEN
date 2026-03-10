@@ -150,11 +150,13 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   const programs = programsData ?? []
 
   // Filtrer les formations et sessions inactives
-  const programsWithActiveContent = programs.map((program: any) => ({
+  type FormationRow = { is_active?: boolean; sessions?: Array<{ status?: string }> }
+  type ProgramRow = { formations?: FormationRow[] } & Record<string, unknown>
+  const programsWithActiveContent = (programs as ProgramRow[]).map((program) => ({
     ...program,
-    formations: (program.formations || []).filter((f: any) => f.is_active).map((formation: any) => ({
+    formations: (program.formations || []).filter((f) => f.is_active).map((formation) => ({
       ...formation,
-      sessions: (formation.sessions || []).filter((s: any) => s.status === 'scheduled' || s.status === 'ongoing'),
+      sessions: (formation.sessions || []).filter((s: { status?: string }) => s.status === 'scheduled' || s.status === 'ongoing'),
     })),
   }))
 
@@ -245,7 +247,7 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
             </div>
 
             {programsWithActiveContent.length > 0 ? (
-              <PublicProgramsList programs={programsWithActiveContent} primaryColor={primaryColor} />
+              <PublicProgramsList programs={programsWithActiveContent as Parameters<typeof PublicProgramsList>[0]['programs']} primaryColor={primaryColor} />
             ) : (
               <div className="text-center py-24">
                 <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 mb-8 shadow-lg">

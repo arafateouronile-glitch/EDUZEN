@@ -107,7 +107,7 @@ export class QualiopiService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||
@@ -193,7 +193,7 @@ export class QualiopiService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('does not exist') ||
@@ -220,7 +220,7 @@ export class QualiopiService {
     if (error) {
       if (
         error.code === '42P01' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('does not exist')
@@ -321,9 +321,9 @@ export class QualiopiService {
           error.code === 'PGRST116' ||
           error.code === '42883' ||
           error.code === 'PGRST301' ||
-          (error as any).status === 404 ||
+          (error as { status?: number }).status === 404 ||
           error.code === '404' ||
-          String((error as any).status) === '404' ||
+          String((error as { status?: number }).status) === '404' ||
           String(error.code) === '404' ||
           error.message?.toLowerCase().includes('function') ||
           error.message?.toLowerCase().includes('does not exist') ||
@@ -434,7 +434,7 @@ export class QualiopiService {
         error.code === 'PGRST116' ||
         error.code === '42P01' ||
         error.code === 'PGRST301' ||
-        (error as any).status === 404 ||
+        (error as { status?: number }).status === 404 ||
         error.code === '404' ||
         error.message?.includes('relation') ||
         error.message?.includes('relationship') ||

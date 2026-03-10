@@ -270,7 +270,7 @@ export function WatermarkEditor({ onInsert, onClose }: WatermarkEditorProps) {
             <Label>Position</Label>
             <select
               value={options.position}
-              onChange={(e) => setOptions({ ...options, position: e.target.value as any })}
+              onChange={(e) => setOptions({ ...options, position: e.target.value as 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' })}
               className="mt-1 w-full px-3 py-2 border rounded-lg"
             >
               <option value="center">Centre</option>

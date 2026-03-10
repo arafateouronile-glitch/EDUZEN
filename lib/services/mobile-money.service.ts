@@ -31,7 +31,7 @@ export class MobileMoneyService {
     mtn_mobile_money: new MTNAdapter(),
     orange_money: new OrangeAdapter(),
     moov_money: new AirtelAdapter(),
-  } as any
+  } as Partial<Record<MobileMoneyProvider, MobileMoneyAdapter>> & Record<string, MobileMoneyAdapter>
 
   /**
    * Récupère la configuration pour un opérateur
@@ -167,8 +167,8 @@ export class MobileMoneyService {
       currency: currency || invoice.currency,
       phone_number: phoneNumber,
       status: 'initiated',
-      request_data: request as any,
-      response_data: response.data as any,
+      request_data: request as unknown as MobileMoneyTransactionInsert['request_data'],
+      response_data: response.data as unknown as MobileMoneyTransactionInsert['response_data'],
       initiated_at: new Date().toISOString(),
     })
 
@@ -213,7 +213,7 @@ export class MobileMoneyService {
     // Mettre à jour la transaction
     await this.updateTransaction(transaction.id, {
       status: statusResponse.status,
-      response_data: statusResponse.data as any,
+      response_data: statusResponse.data as unknown as MobileMoneyTransactionUpdate['response_data'],
       ...(statusResponse.status === 'completed' && { completed_at: new Date().toISOString() }),
       ...(statusResponse.status === 'failed' && {
         failed_at: new Date().toISOString(),
@@ -282,8 +282,8 @@ export class MobileMoneyService {
     await this.updateTransaction(transaction.id, {
       status: statusResponse.status,
       webhook_received: true,
-      webhook_data: payload as any,
-      response_data: statusResponse.data as any,
+      webhook_data: payload as unknown as MobileMoneyTransactionUpdate['webhook_data'],
+      response_data: statusResponse.data as unknown as MobileMoneyTransactionUpdate['response_data'],
       ...(statusResponse.status === 'completed' && { completed_at: new Date().toISOString() }),
       ...(statusResponse.status === 'failed' && {
         failed_at: new Date().toISOString(),

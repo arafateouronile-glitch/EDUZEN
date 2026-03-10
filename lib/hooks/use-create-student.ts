@@ -28,7 +28,7 @@ export function useCreateStudent() {
 
       // 1. Créer le tuteur
       const { data: guardian, error: guardianError } = await supabase
-        .from('guardians' as any)
+        .from('guardians')
         .insert({
           organization_id: user.organization_id,
           first_name: data.guardian_first_name,
@@ -38,7 +38,7 @@ export function useCreateStudent() {
           phone_secondary: data.guardian_phone_secondary || null,
           email: data.guardian_email || null,
           address: data.guardian_address || null,
-        })
+        } as import('@/types/database.types').Database['public']['Tables']['guardians']['Insert'])
         .select()
         .single()
 
@@ -137,7 +137,7 @@ export function useCreateStudent() {
         .from('student_guardians')
         .insert({
           student_id: student.id,
-          guardian_id: (guardian as any).id,
+          guardian_id: (guardian as { id: string }).id,
           is_primary: true,
         })
 
@@ -157,7 +157,7 @@ export function useCreateStudent() {
             payment_status: 'pending',
             total_amount: 0,
             paid_amount: 0,
-          } as any)
+          })
 
         if (enrollmentError) {
           // Ne pas faire échouer la création de l'élève si l'inscription échoue

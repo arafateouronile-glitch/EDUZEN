@@ -34,15 +34,13 @@ export default function StudentDetailPage() {
   const { data: guardians } = useQuery({
     queryKey: ['student-guardians', studentId],
     queryFn: async () => {
-      // eslint-disable-next-line
-      const q: any = supabase
+      const { data, error } = await supabase
         .from('student_guardians')
         .select('*, guardians(*)')
         .eq('student_id', studentId)
-      const { data, error } = await q
-      
       if (error) throw error
-      return data?.map((sg: any) => sg.guardians).filter(Boolean) || []
+      type Row = { guardians?: unknown }
+      return (data as Row[] | null)?.map((sg) => sg.guardians).filter(Boolean) || []
     },
     enabled: !!studentId,
   })
@@ -375,7 +373,7 @@ export default function StudentDetailPage() {
             <CardContent>
               {studentInvoices && studentInvoices.length > 0 ? (
                 <div className="space-y-3">
-                  {(studentInvoices as any[]).slice(0, 5).map((invoice: any) => (
+                  {(studentInvoices as Array<{ id: string; invoice_number?: string; document_type?: string; status?: string; issue_date?: string; due_date?: string; total_amount?: string | number; currency?: string }>).slice(0, 5).map((invoice) => (
                     <div
                       key={invoice.id}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -450,7 +448,7 @@ export default function StudentDetailPage() {
             <CardContent>
               {studentPayments && studentPayments.length > 0 ? (
                 <div className="space-y-3">
-                  {(studentPayments as any[]).slice(0, 5).map((payment: any) => (
+                  {(studentPayments as Array<{ id: string; amount?: string | number; currency?: string; payment_method?: string; payment_provider?: string; paid_at?: string; status?: string; invoices?: { invoice_number?: string } }>).slice(0, 5).map((payment) => (
                     <div
                       key={payment.id}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -469,7 +467,7 @@ export default function StudentDetailPage() {
                         </p>
                         {payment.invoices && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            Facture: {(payment.invoices as any).invoice_number || 'N/A'}
+                            Facture: {payment.invoices?.invoice_number ?? 'N/A'}
                           </p>
                         )}
                       </div>
@@ -507,7 +505,7 @@ export default function StudentDetailPage() {
             <CardContent>
               {guardians && guardians.length > 0 ? (
                 <div className="space-y-4">
-                  {guardians.map((guardian: any) => (
+                  {(guardians as Array<{ id: string; first_name?: string; last_name?: string; relationship?: string; phone_primary?: string; email?: string }>).map((guardian) => (
                     <div key={guardian.id} className="p-4 border rounded-lg">
                       <p className="font-semibold">
                         {guardian.first_name} {guardian.last_name}

@@ -12,6 +12,26 @@ import { ShareButton } from '@/components/blog/share-button'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { sanitizeBlogContent } from '@/lib/utils/sanitize-html'
 
+const BLOG_STATIC_PARAMS_LIMIT = 20
+
+/** Pré-rendre les derniers articles publiés au build pour améliorer le TTFB et le SEO. */
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  try {
+    const supabase = await createClient()
+    const now = new Date().toISOString()
+    const { data } = await supabase
+      .from('blog_posts')
+      .select('slug')
+      .eq('status', 'published')
+      .or(`published_at.is.null,published_at.lte.${now}`)
+      .order('published_at', { ascending: false })
+      .limit(BLOG_STATIC_PARAMS_LIMIT)
+    return (data ?? []).map((row) => ({ slug: row.slug }))
+  } catch {
+    return []
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()

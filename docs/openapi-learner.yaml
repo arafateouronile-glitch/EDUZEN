@@ -1,0 +1,278 @@
+# API Learner — OpenAPI 3.0
+# Documentation des routes d'accès apprenant (messagerie, session).
+# Base URL: selon déploiement (ex. https://app.eduzen.fr)
+
+openapi: 3.0.3
+info:
+  title: API Learner EDUZEN
+  description: |
+    Routes réservées aux apprenants (espace learner).
+    Authentification par token obtenu via `POST /api/learner/session` (échange `studentId` → token).
+    Les autres routes exigent `Authorization: Bearer <token>` ou header `x-learner-access-token`.
+  version: 1.0.0
+
+servers:
+  - url: /api/learner
+    description: Chemin de base API learner
+
+tags:
+  - name: session
+    description: Échange studentId → token de session
+  - name: contacts
+    description: Liste des contacts (formateurs, admin, secrétaires)
+  - name: conversations
+    description: Démarrer une conversation
+  - name: access-token
+    description: Validation d'un token d'accès (lien magique)
+  - name: data
+    description: Données espace apprenant (profil, inscriptions, cours, documents)
+
+paths:
+  /session:
+    post:
+      tags: [session]
+      summary: Obtenir un token de session
+      description: |
+        Échange un `studentId` (ex. issu du lien /learner/access/[id]) contre un token signé.
+        Rate limit 10 requêtes / heure / IP.
+      operationId: createLearnerSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId]
+              properties:
+                studentId:
+                  type: string
+                  description: UUID de l'apprenant (students.id)
+      responses:
+        '200':
+          description: Token créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  expiresIn: { type: integer, description: Durée de validité en secondes (24h) }
+        '400':
+          description: Body JSON invalide ou studentId manquant
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '403':
+          description: Compte apprenant non actif
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '404':
+          description: Apprenant non trouvé
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '429':
+          description: Trop de tentatives (rate limit)
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+
+  /contacts:
+    get:
+      tags: [contacts]
+      summary: Liste des contacts messagerie
+      description: Retourne les utilisateurs avec lesquels l'apprenant peut échanger (formateurs, admin, secrétaires de son organisme).
+      operationId: getLearnerContacts
+      security:
+        - bearerLearner: []
+      responses:
+        '200':
+          description: Liste des contacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    full_name: { type: string }
+                    email: { type: string }
+                    role: { type: string }
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '404':
+          description: Apprenant ou organisation introuvable
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+
+  /conversations/start:
+    post:
+      tags: [conversations]
+      summary: Démarrer une conversation
+      description: Crée une conversation directe avec un contact et optionnellement envoie un premier message.
+      operationId: startLearnerConversation
+      security:
+        - bearerLearner: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipientUserId]
+              properties:
+                recipientUserId:
+                  type: string
+                  description: UUID de l'utilisateur contact (users.id)
+                firstMessage:
+                  type: string
+                  description: Premier message optionnel
+      responses:
+        '200':
+          description: Conversation créée (ou existante) avec premier message si fourni
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversationId: { type: string }
+                  created: { type: boolean }
+        '400':
+          description: Body invalide ou recipientUserId manquant
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '403':
+          description: Utilisateur cible hors organisation ou rôle non autorisé
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '404':
+          description: Apprenant ou destinataire non trouvé
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+
+  /access-token/validate:
+    get:
+      tags: [access-token]
+      summary: Valider un token d'accès (lien magique)
+      description: |
+        Endpoint public (sans auth). Valide un token d'accès apprenant (ex. issu d'un lien /learner/access/[token]).
+        Utilisé pour vérifier qu'un lien est valide avant de rediriger vers l'espace learner.
+      operationId: validateLearnerAccessToken
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+          description: Token d'accès à valider
+      responses:
+        '200':
+          description: Token valide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid: { type: boolean, example: true }
+                  student:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      firstName: { type: string }
+                      lastName: { type: string }
+                      email: { type: string }
+                      sessionId: { type: string, nullable: true }
+                      organizationId: { type: string }
+        '400':
+          description: Paramètre token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  valid: { type: boolean, example: false }
+        '401':
+          description: Token invalide ou expiré
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid: { type: boolean, example: false }
+                  error: { type: string }
+        '500':
+          description: Erreur serveur ou configuration manquante
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string }, valid: { type: boolean } } }
+
+  /data:
+    get:
+      tags: [data]
+      summary: Récupérer les données de l'espace apprenant
+      description: |
+        Retourne les données selon le type demandé (profil, inscriptions, cours, documents).
+        Authentification par Bearer token (POST /session) ou par query `access_token` (lien magique).
+      operationId: getLearnerData
+      security:
+        - bearerLearner: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [student, enrollments, courses, documents]
+          description: Type de données à récupérer
+        - name: access_token
+          in: query
+          required: false
+          schema: { type: string }
+          description: Token d'accès direct (alternatif au Bearer pour liens magiques)
+      responses:
+        '200':
+          description: Données demandées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: {}
+                description: Structure selon type (student, enrollments, courses, documents)
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '404':
+          description: Apprenant ou ressource introuvable
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+
+components:
+  securitySchemes:
+    bearerLearner:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token obtenu via POST /api/learner/session (ou token RPC). Alternatif header `x-learner-access-token`.

@@ -354,7 +354,9 @@ describe('NotificationService', () => {
       }
       mockSupabase.from.mockReturnValue(queryBuilder)
 
-      await expect(service.getByUser(userId)).rejects.toThrow('Query failed')
+      // Le service retourne [] en cas d'erreur pour ne pas bloquer l'UI
+      const result = await service.getByUser(userId)
+      expect(result).toEqual([])
     })
   })
 

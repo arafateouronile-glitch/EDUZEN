@@ -66,12 +66,12 @@ export async function POST(request: NextRequest) {
         'Content-Disposition': `attachment; filename="convention-${data.stagiaire?.nom || 'document'}.docx"`,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[API] Erreur lors de la génération Word:', error)
     return NextResponse.json(
       { 
         error: 'Erreur lors de la génération du document Word',
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
       },
       { status: 500 }
     )

@@ -24,6 +24,41 @@ import { logger } from '@/lib/utils/logger'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 
+/** Client admin avec .from(table: string) pour tables éventuellement absentes du schéma typé */
+type AdminClient = ReturnType<typeof createAdminClient>
+type AdminDbAnyTable = Omit<AdminClient, 'from'> & {
+  from(table: string): ReturnType<AdminClient['from']>
+}
+
+/** Zone de signature (metadata ou template sign_zones) */
+interface SignZoneRaw {
+  id?: string
+  page?: number
+  x?: number
+  y?: number
+  w?: number
+  h?: number
+  label?: string
+}
+
+/** Types pour les lignes retournées par les selects (éviter SelectQueryError) */
+type SignatoryRow = { id: string; process_id: string; email?: string | null; name?: string | null; order_index: number; signed_at: string | null }
+type ProcessRow = {
+  id: string
+  organization_id: string
+  document_id: string
+  status: string
+  current_index: number | null
+  intermediate_pdf_path: string | null
+  intermediate_pdf_url?: string | null
+  document?: { id?: string; title?: string; file_url?: string; type?: string; metadata?: unknown; template_id?: string } | null
+}
+
+/** Résolu par token (signature ou attendance) — pas process */
+type ResolvedByToken =
+  | { type: 'signature'; sig: Record<string, unknown>; att: null }
+  | { type: 'attendance'; sig: null; att: Record<string, unknown> }
+
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -105,6 +140,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminClient()
+    const db = supabase as AdminDbAnyTable
     const t = token.trim()
 
     const resolveByUuid = async () => {
@@ -166,27 +202,29 @@ export async function POST(request: NextRequest) {
 
     const byUuid = await resolveByUuid()
     const byLegacy = await resolveByLegacy()
-    if (byUuid.type) resolved = byUuid as any
-    else if (byLegacy.type) resolved = byLegacy as any
+    if (byUuid.type) resolved = byUuid as ResolvedByToken
+    else if (byLegacy.type) resolved = byLegacy as ResolvedByToken
     else {
       if (isUuid(t)) {
-        const { data: sig } = await (supabase as any)
+        const { data: sigRaw } = await db
           .from('signatories')
           .select('id, process_id, email, name, order_index, signed_at')
           .eq('token', t)
           .maybeSingle()
+        const sig = sigRaw as SignatoryRow | null
         if (sig && !sig.signed_at) {
-          const { data: proc } = await (supabase as any)
+          const { data: procRaw } = await db
             .from('signing_processes')
             .select(
               'id, organization_id, document_id, status, current_index, intermediate_pdf_path, document:documents(id, title, file_url, type, metadata, template_id)'
             )
             .eq('id', sig.process_id)
             .single()
+          const proc = procRaw as ProcessRow | null
           if (
             proc &&
             proc.status !== 'completed' &&
-            (proc.current_index as number) === sig.order_index
+            (proc.current_index ?? 0) === sig.order_index
           ) {
             resolved = { type: 'process', process: proc, signatory: sig }
           } else resolved = { type: null, sig: null, att: null }
@@ -226,12 +264,12 @@ export async function POST(request: NextRequest) {
       const signerName = (sig.name as string) ?? 'Signataire'
       const orderIndex = sig.order_index as number
       const signatoryId = sig.id as string
-      const allSignatories = await (supabase as any)
+      const allSignatories = await db
         .from('signatories')
         .select('id, order_index')
         .eq('process_id', procId)
         .order('order_index', { ascending: true })
-      const list = (allSignatories.data ?? []) as Array<{ order_index: number }>
+      const list = (allSignatories.data ?? []) as unknown as Array<{ order_index: number }>
       const isLast = orderIndex === list.length - 1
 
       const bucket = 'documents'
@@ -280,9 +318,9 @@ export async function POST(request: NextRequest) {
       const metaZones = Array.isArray(docMeta.sign_zones) ? docMeta.sign_zones : null
       let zones: Array<{ id: string; page: number; x: number; y: number; w: number; h: number; label?: string }> | undefined
       if (metaZones?.length) {
-        zones = metaZones
-          .filter((z: any) => z && typeof z === 'object' && typeof z.id === 'string')
-          .map((z: any) => ({
+        zones = (metaZones as SignZoneRaw[])
+          .filter((z): z is SignZoneRaw & { id: string } => !!z && typeof z === 'object' && typeof z.id === 'string')
+          .map((z) => ({
             id: String(z.id),
             page: Number(z.page) || 1,
             x: Number(z.x) ?? 0,
@@ -293,7 +331,7 @@ export async function POST(request: NextRequest) {
           }))
       } else {
         const templateType = documentTypeToTemplateType(docType)
-        const { data: tpl } = await (supabase as any)
+        const { data: tpl } = await db
           .from('document_templates')
           .select('sign_zones')
           .eq('organization_id', orgIdP)
@@ -301,18 +339,18 @@ export async function POST(request: NextRequest) {
           .order('is_default', { ascending: false })
           .limit(1)
           .maybeSingle()
-        const raw = (tpl?.sign_zones ?? []) as Array<Record<string, unknown>>
+        const raw = ((tpl as { sign_zones?: unknown } | null)?.sign_zones ?? []) as SignZoneRaw[]
         if (Array.isArray(raw) && raw.length > 0) {
           zones = raw
-            .filter((z): z is Record<string, unknown> => !!z && typeof z === 'object' && typeof (z as any).id === 'string')
+            .filter((z): z is SignZoneRaw & { id: string } => !!z && typeof z === 'object' && typeof z.id === 'string')
             .map((z) => ({
-              id: String((z as any).id),
-              page: Number((z as any).page) || 1,
-              x: Number((z as any).x) ?? 0,
-              y: Number((z as any).y) ?? 0,
-              w: Number((z as any).w) ?? 0.15,
-              h: Number((z as any).h) ?? 0.05,
-              label: (z as any).label,
+              id: String(z.id),
+              page: Number(z.page) || 1,
+              x: Number(z.x) ?? 0,
+              y: Number(z.y) ?? 0,
+              w: Number(z.w) ?? 0.15,
+              h: Number(z.h) ?? 0.05,
+              label: z.label,
             }))
         }
       }
@@ -322,12 +360,13 @@ export async function POST(request: NextRequest) {
       const safeSignerEmail = sanitizeForPDF(signerEmail, 100)
 
       let orgSignatureDataUrlP: string | undefined
-      const { data: orgRowP } = await (supabase as any)
+      const { data: orgRowP } = await db
         .from('organizations')
         .select('signature_url, stamp_url')
         .eq('id', orgIdP)
         .maybeSingle()
-      const orgImageUrlP = (orgRowP?.signature_url as string) || (orgRowP?.stamp_url as string)
+      const orgRowPCast = orgRowP as { signature_url?: string; stamp_url?: string } | null
+      const orgImageUrlP = (orgRowPCast?.signature_url as string) || (orgRowPCast?.stamp_url as string)
       if (orgImageUrlP?.trim()) {
         try {
           const imgRes = await fetch(orgImageUrlP.trim())
@@ -370,7 +409,7 @@ export async function POST(request: NextRequest) {
           )
         }
         const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(finalPath)
-        await (supabase as any)
+        await db
           .from('documents')
           .update({
             signed_file_path: finalPath,
@@ -378,27 +417,27 @@ export async function POST(request: NextRequest) {
             status: 'signed',
             signed_at: signedAt,
             updated_at: signedAt,
-          })
+          } as never)
           .eq('id', docId)
           .eq('organization_id', orgIdP)
 
-        await (supabase as any)
+        await db
           .from('signatories')
-          .update({ signed_at: signedAt, signature_data: signatureData.trim() })
+          .update({ signed_at: signedAt, signature_data: signatureData.trim() } as never)
           .eq('id', signatoryId)
 
-        await (supabase as any)
+        await db
           .from('signing_processes')
           .update({
             status: 'completed',
-            current_index: proc.current_index as number,
+            current_index: proc.current_index ?? 0,
             intermediate_pdf_path: null,
             intermediate_pdf_url: null,
             updated_at: signedAt,
-          })
+          } as never)
           .eq('id', procId)
 
-        const { error: evErr } = await (supabase as any)
+        const { error: evErr } = await db
           .from('digital_evidence')
           .insert({
             organization_id: orgIdP,
@@ -408,7 +447,7 @@ export async function POST(request: NextRequest) {
             signature_data: signatureData.trim(),
             metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash },
             integrity_hash: pdfHash,
-          })
+          } as never)
         if (evErr) {
           logger.error('digital_evidence process:', evErr)
           return NextResponse.json(
@@ -420,14 +459,14 @@ export async function POST(request: NextRequest) {
         const { SigningProcessService } = await import('@/lib/services/signing-process.service')
         const svc = new SigningProcessService(supabase)
         const docTitle = (doc.title as string) ?? 'Document'
-        const { data: adminUser } = await (supabase as any)
+        const { data: adminUser } = await db
           .from('users')
           .select('email')
           .eq('organization_id', orgIdP)
           .in('role', ['admin', 'secretary'])
           .limit(1)
           .maybeSingle()
-        const adminEmail = (adminUser?.email as string) ?? ''
+        const adminEmail = ((adminUser as { email?: string } | null)?.email as string) ?? ''
         await svc.sendFinalToAll(procId, sealed, docTitle, adminEmail)
 
         return NextResponse.json({
@@ -452,12 +491,12 @@ export async function POST(request: NextRequest) {
       }
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(intermPath)
 
-      await (supabase as any)
+      await db
         .from('signatories')
-        .update({ signed_at: signedAt, signature_data: signatureData.trim() })
+        .update({ signed_at: signedAt, signature_data: signatureData.trim() } as never)
         .eq('id', signatoryId)
 
-      await (supabase as any)
+      await db
         .from('signing_processes')
         .update({
           status: 'partially_signed',
@@ -465,20 +504,19 @@ export async function POST(request: NextRequest) {
           intermediate_pdf_path: intermPath,
           intermediate_pdf_url: urlData.publicUrl,
           updated_at: signedAt,
-        })
+        } as never)
         .eq('id', procId)
 
-      const { error: evErr } = await (supabase as any)
-        .from('digital_evidence')
-        .insert({
-          organization_id: orgIdP,
-          request_type: 'process',
-          request_id: procId,
-          signer_email: signerEmail,
-          signature_data: signatureData.trim(),
-          metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash },
-          integrity_hash: pdfHash,
-        })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: evErr } = await (db as any).from('digital_evidence').insert({
+        organization_id: orgIdP,
+        request_type: 'process',
+        request_id: procId,
+        signer_email: signerEmail,
+        signature_data: signatureData.trim(),
+        metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash },
+        integrity_hash: pdfHash,
+      })
       if (evErr) {
         logger.error('digital_evidence process:', evErr)
         return NextResponse.json(
@@ -512,14 +550,14 @@ export async function POST(request: NextRequest) {
       const signerName = (resolved.sig.recipient_name as string) ?? 'Signataire'
       let signerId = resolved.sig.requester_id as string | null
       if (!signerId) {
-        const { data: fallbackUser } = await (supabase as any)
+        const { data: fallbackUser } = await db
           .from('users')
           .select('id')
           .eq('organization_id', orgId)
           .in('role', ['admin', 'secretary'])
           .limit(1)
           .maybeSingle()
-        signerId = fallbackUser?.id ?? null
+        signerId = (fallbackUser as { id?: string } | null)?.id ?? null
       }
       if (!signerId) {
         logger.error('Aucun utilisateur requester ou admin trouvé pour document_signatures', { orgId })
@@ -529,7 +567,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const { data: docRow, error: docErr } = await (supabase as any)
+      const { data: docRow, error: docErr } = await db
         .from('documents')
         .select('id, title, file_url, organization_id, type, metadata, template_id')
         .eq('id', docId)
@@ -543,28 +581,29 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const fileUrl = docRow.file_url as string | null
-      const docTitle = (docRow?.title as string) ?? 'Document'
-      const docType = (docRow?.type as string) ?? 'convention'
-      const docMeta = (docRow?.metadata as Record<string, unknown>) ?? {}
+      const docRowCast = docRow as unknown as { id: string; file_url?: string; title?: string; type?: string; metadata?: unknown; template_id?: string }
+      const fileUrl = docRowCast.file_url as string | null
+      const docTitle = (docRowCast?.title as string) ?? 'Document'
+      const docType = (docRowCast?.type as string) ?? 'convention'
+      const docMeta = (docRowCast?.metadata as Record<string, unknown>) ?? {}
       const metaZones = Array.isArray(docMeta.sign_zones) ? docMeta.sign_zones : null
 
       let zones: Array<{ id: string; page: number; x: number; y: number; w: number; h: number; label?: string }> | undefined
       if (metaZones && metaZones.length > 0) {
-        zones = metaZones
-          .filter((z): z is Record<string, unknown> => z && typeof z === 'object' && typeof (z as any).id === 'string')
+        zones = (metaZones as SignZoneRaw[])
+          .filter((z): z is SignZoneRaw & { id: string } => !!z && typeof z === 'object' && typeof z.id === 'string')
           .map((z) => ({
-            id: String((z as any).id),
-            page: Number((z as any).page) || 1,
-            x: Number((z as any).x) ?? 0,
-            y: Number((z as any).y) ?? 0,
-            w: Number((z as any).w) ?? 0.15,
-            h: Number((z as any).h) ?? 0.05,
-            label: (z as any).label as string | undefined,
+            id: String(z.id),
+            page: Number(z.page) || 1,
+            x: Number(z.x) ?? 0,
+            y: Number(z.y) ?? 0,
+            w: Number(z.w) ?? 0.15,
+            h: Number(z.h) ?? 0.05,
+            label: z.label,
           }))
       } else {
         const templateType = documentTypeToTemplateType(docType)
-        const { data: tpl } = await (supabase as any)
+        const { data: tpl } = await db
           .from('document_templates')
           .select('sign_zones')
           .eq('organization_id', orgId)
@@ -572,18 +611,18 @@ export async function POST(request: NextRequest) {
           .order('is_default', { ascending: false })
           .limit(1)
           .maybeSingle()
-        const raw = (tpl?.sign_zones ?? []) as Array<Record<string, unknown>>
+        const raw = ((tpl as { sign_zones?: unknown } | null)?.sign_zones ?? []) as SignZoneRaw[]
         if (Array.isArray(raw) && raw.length > 0) {
           zones = raw
-            .filter((z): z is Record<string, unknown> => z && typeof z === 'object' && typeof (z as any).id === 'string')
+            .filter((z): z is SignZoneRaw & { id: string } => !!z && typeof z === 'object' && typeof z.id === 'string')
             .map((z) => ({
-              id: String((z as any).id),
-              page: Number((z as any).page) || 1,
-              x: Number((z as any).x) ?? 0,
-              y: Number((z as any).y) ?? 0,
-              w: Number((z as any).w) ?? 0.15,
-              h: Number((z as any).h) ?? 0.05,
-              label: (z as any).label as string | undefined,
+              id: String(z.id),
+              page: Number(z.page) || 1,
+              x: Number(z.x) ?? 0,
+              y: Number(z.y) ?? 0,
+              w: Number(z.w) ?? 0.15,
+              h: Number(z.h) ?? 0.05,
+              label: z.label,
             }))
         }
       }
@@ -601,12 +640,13 @@ export async function POST(request: NextRequest) {
             const safeSignerEmail = sanitizeForPDF(signerEmail, 100)
 
             let orgSignatureDataUrl: string | undefined
-            const { data: orgRow } = await (supabase as any)
+            const { data: orgRow } = await db
               .from('organizations')
               .select('signature_url, stamp_url')
               .eq('id', orgId)
               .maybeSingle()
-            const orgImageUrl = (orgRow?.signature_url as string) || (orgRow?.stamp_url as string)
+            const orgRowCast = orgRow as { signature_url?: string; stamp_url?: string } | null
+            const orgImageUrl = (orgRowCast?.signature_url as string) || (orgRowCast?.stamp_url as string)
             if (orgImageUrl?.trim()) {
               try {
                 const imgRes = await fetch(orgImageUrl.trim())
@@ -658,9 +698,8 @@ export async function POST(request: NextRequest) {
               .from('documents')
               .getPublicUrl(signedPath)
 
-            const { error: docUpdErr } = await (supabase as any)
-              .from('documents')
-              .update({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error: docUpdErr } = await (db as any).from('documents').update({
                 signed_file_path: signedPath,
                 signed_file_url: urlData.publicUrl,
                 status: 'signed',
@@ -686,23 +725,20 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const { data: docSig, error: sigErr } = await (supabase as any)
-        .from('document_signatures')
-        .insert({
-          organization_id: orgId,
-          document_id: docId,
-          signer_id: signerId,
-          signature_data: signatureData.trim(),
-          signature_type: 'handwritten',
-          signer_name: signerName,
-          signer_email: signerEmail,
-          status: 'signed',
-          is_valid: true,
-          ip_address: metadata.ip ?? null,
-          user_agent: metadata.user_agent ?? null,
-        })
-        .select('id')
-        .single()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: docSig, error: sigErr } = await (db as any).from('document_signatures').insert({
+        organization_id: orgId,
+        document_id: docId,
+        signer_id: signerId,
+        signature_data: signatureData.trim(),
+        signature_type: 'handwritten',
+        signer_name: signerName,
+        signer_email: signerEmail,
+        status: 'signed',
+        is_valid: true,
+        ip_address: metadata.ip ?? null,
+        user_agent: metadata.user_agent ?? null,
+      }).select('id').single()
 
       if (sigErr) {
         logger.error('Erreur création document_signatures:', sigErr)
@@ -712,14 +748,13 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const { error: updErr } = await (supabase as any)
-        .from('signature_requests')
-        .update({
-          status: 'signed',
-          signature_id: docSig.id,
-          signed_at: new Date().toISOString(),
-        })
-        .eq('id', resolved.sig.id)
+      const docSigId = (docSig as { id: string }).id
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: updErr } = await (db as any).from('signature_requests').update({
+        status: 'signed',
+        signature_id: docSigId,
+        signed_at: new Date().toISOString(),
+      }).eq('id', resolved.sig.id)
 
       if (updErr) {
         logger.error('Erreur mise à jour signature_requests:', updErr)
@@ -733,17 +768,16 @@ export async function POST(request: NextRequest) {
         ...metadata,
         ...(pdfIntegrityHash ? { pdf_integrity_hash: pdfIntegrityHash } : {}),
       }
-      const { error: evErr } = await (supabase as any)
-        .from('digital_evidence')
-        .insert({
-          organization_id: orgId,
-          request_type: 'signature',
-          request_id: resolved.sig.id,
-          signer_email: signerEmail,
-          signature_data: signatureData.trim(),
-          metadata: evidenceMeta,
-          integrity_hash: integrityHash,
-        })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: evErr } = await (db as any).from('digital_evidence').insert({
+        organization_id: orgId,
+        request_type: 'signature',
+        request_id: resolved.sig.id,
+        signer_email: signerEmail,
+        signature_data: signatureData.trim(),
+        metadata: evidenceMeta,
+        integrity_hash: integrityHash,
+      })
       if (evErr) {
         logger.error('Erreur insertion digital_evidence (signature):', evErr)
         return NextResponse.json(
@@ -756,29 +790,29 @@ export async function POST(request: NextRequest) {
         // Email apprenant (signataire) : priorité recipient_email, sinon students si recipient_id
         let learnerEmail = (resolved.sig.recipient_email as string)?.trim() ?? ''
         if (!learnerEmail && resolved.sig.recipient_id) {
-          const { data: studentRow } = await (supabase as any)
+          const { data: studentRow } = await db
             .from('students')
             .select('email')
             .eq('id', resolved.sig.recipient_id)
             .maybeSingle()
-          learnerEmail = (studentRow?.email as string)?.trim() ?? ''
+          learnerEmail = ((studentRow as { email?: string } | null)?.email as string)?.trim() ?? ''
         }
         // Email OF (admin / secrétaire) pour recevoir aussi une copie
-        const { data: reqUser } = await (supabase as any)
+        const { data: reqUser } = await db
           .from('users')
           .select('email')
           .eq('id', signerId)
           .maybeSingle()
-        let adminEmail = (reqUser?.email as string)?.trim() ?? ''
+        let adminEmail = ((reqUser as { email?: string } | null)?.email as string)?.trim() ?? ''
         if (!adminEmail) {
-          const { data: adminRow } = await (supabase as any)
+          const { data: adminRow } = await db
             .from('users')
             .select('email')
             .eq('organization_id', orgId)
             .in('role', ['admin', 'secretary'])
             .limit(1)
             .maybeSingle()
-          adminEmail = (adminRow?.email as string)?.trim() ?? ''
+          adminEmail = ((adminRow as { email?: string } | null)?.email as string)?.trim() ?? ''
         }
         // Envoi à l'apprenant ET à l'OF (deux emails distincts si les adresses diffèrent)
         await sendSignedPdfEmails({
@@ -808,17 +842,16 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      const { error: evErr } = await (supabase as any)
-        .from('digital_evidence')
-        .insert({
-          organization_id: orgId,
-          request_type: 'attendance',
-          request_id: resolved.att.id,
-          signer_email: signerEmail,
-          signature_data: signatureData.trim(),
-          metadata,
-          integrity_hash: integrityHash,
-        })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: evErr } = await (db as any).from('digital_evidence').insert({
+        organization_id: orgId,
+        request_type: 'attendance',
+        request_id: resolved.att.id,
+        signer_email: signerEmail,
+        signature_data: signatureData.trim(),
+        metadata,
+        integrity_hash: integrityHash,
+      })
       if (evErr) {
         logger.error('Erreur insertion digital_evidence (attendance):', evErr)
         return NextResponse.json(
@@ -841,17 +874,14 @@ export async function POST(request: NextRequest) {
 
       // Insert sans colonnes géoloc : la table attendance peut ne pas les avoir (migration 20241202000026).
       // La géoloc est enregistrée dans electronic_attendance_requests.
-      const { data: attRow, error: attInsErr } = await (supabase as any)
-        .from('attendance')
-        .insert({
-          organization_id: orgId,
-          student_id: resolved.att.student_id,
-          session_id: sessionId ?? null,
-          date: date ?? new Date().toISOString().slice(0, 10),
-          status: 'present',
-        })
-        .select('id')
-        .single()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: attRow, error: attInsErr } = await (db as any).from('attendance').insert({
+        organization_id: orgId,
+        student_id: resolved.att.student_id,
+        session_id: sessionId ?? null,
+        date: date ?? new Date().toISOString().slice(0, 10),
+        status: 'present',
+      }).select('id').single()
 
       if (attInsErr) {
         logger.error('Erreur création attendance:', attInsErr)
@@ -861,21 +891,20 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const { error: attUpdErr } = await (supabase as any)
-        .from('electronic_attendance_requests')
-        .update({
-          status: 'signed',
-          signature_data: signatureData.trim(),
-          signed_at: new Date().toISOString(),
-          attendance_id: attRow.id,
-          latitude: geolocation?.lat ?? null,
-          longitude: geolocation?.lng ?? null,
-          location_accuracy: geolocation?.accuracy ?? null,
-          location_verified: !!geolocation,
-          ip_address: metadata.ip ?? null,
-          user_agent: metadata.user_agent ?? null,
-        })
-        .eq('id', resolved.att.id)
+      const attRowId = (attRow as { id: string }).id
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: attUpdErr } = await (db as any).from('electronic_attendance_requests').update({
+        status: 'signed',
+        signature_data: signatureData.trim(),
+        signed_at: new Date().toISOString(),
+        attendance_id: attRowId,
+        latitude: geolocation?.lat ?? null,
+        longitude: geolocation?.lng ?? null,
+        location_accuracy: geolocation?.accuracy ?? null,
+        location_verified: !!geolocation,
+        ip_address: metadata.ip ?? null,
+        user_agent: metadata.user_agent ?? null,
+      }).eq('id', resolved.att.id)
 
       if (attUpdErr) {
         logger.error('Erreur mise à jour electronic_attendance_requests:', attUpdErr)

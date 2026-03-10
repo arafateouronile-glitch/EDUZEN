@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { DocumentType, DocumentVariables } from '@/lib/types/document-templates'
+import { logger } from '@/lib/utils/logger'
 
 type ScheduledGeneration = any
 type ScheduledGenerationInsert = any
@@ -45,56 +46,71 @@ export class ScheduledGenerationService {
    * Crée une nouvelle génération programmée
    */
   async create(config: ScheduledGenerationConfig): Promise<ScheduledGeneration> {
-    const { data, error } = await (this.supabase as any)
-      .from('scheduled_generations')
-      .insert({
-        template_id: config.template_id,
-        organization_id: config.organization_id,
-        schedule_type: config.schedule_type,
-        schedule_config: config.schedule_config,
-        filter_criteria: config.filter_criteria || {},
-        format: config.format,
-        send_email: config.send_email || false,
-        email_recipients: config.email_recipients || [],
-        enabled: config.enabled,
-        variables: config.variables || {},
-      } as ScheduledGenerationInsert)
-      .select()
-      .single()
+    try {
+      const { data, error } = await (this.supabase as any)
+        .from('scheduled_generations')
+        .insert({
+          template_id: config.template_id,
+          organization_id: config.organization_id,
+          schedule_type: config.schedule_type,
+          schedule_config: config.schedule_config,
+          filter_criteria: config.filter_criteria || {},
+          format: config.format,
+          send_email: config.send_email || false,
+          email_recipients: config.email_recipients || [],
+          enabled: config.enabled,
+          variables: config.variables || {},
+        } as ScheduledGenerationInsert)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ScheduledGenerationService.create', error, { organizationId: config.organization_id })
+      throw error
+    }
   }
 
   /**
    * Récupère toutes les générations programmées d'une organisation
    */
   async getAll(organizationId: string): Promise<ScheduledGeneration[]> {
-    const { data, error } = await (this.supabase as any)
-      .from('scheduled_generations')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await (this.supabase as any)
+        .from('scheduled_generations')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
 
-    if (error) throw error
-    return data || []
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      logger.error('ScheduledGenerationService.getAll', error, { organizationId })
+      throw error
+    }
   }
 
   /**
    * Récupère une génération programmée par ID
    */
   async getById(id: string): Promise<ScheduledGeneration | null> {
-    const { data, error } = await (this.supabase as any)
-      .from('scheduled_generations')
-      .select('*')
-      .eq('id', id)
-      .single()
+    try {
+      const { data, error } = await (this.supabase as any)
+        .from('scheduled_generations')
+        .select('*')
+        .eq('id', id)
+        .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') return null
+      if (error) {
+        if (error.code === 'PGRST116') return null
+        throw error
+      }
+      return data
+    } catch (error) {
+      logger.error('ScheduledGenerationService.getById', error, { id })
       throw error
     }
-    return data
   }
 
   /**
@@ -104,18 +120,23 @@ export class ScheduledGenerationService {
     id: string,
     updates: Partial<ScheduledGenerationConfig>
   ): Promise<ScheduledGeneration> {
-    const { data, error } = await (this.supabase as any)
-      .from('scheduled_generations')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      } as ScheduledGenerationUpdate)
-      .eq('id', id)
-      .select()
-      .single()
+    try {
+      const { data, error } = await (this.supabase as any)
+        .from('scheduled_generations')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        } as ScheduledGenerationUpdate)
+        .eq('id', id)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ScheduledGenerationService.update', error, { id })
+      throw error
+    }
   }
 
   /**

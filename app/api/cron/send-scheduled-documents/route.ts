@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
     {
       secret: CRON_SECRET,
       allowedIPs: ALLOWED_IPS,
-      requireSecret: !!CRON_SECRET,
+      requireSecret: true,
       logExecution: true,
     }
   )

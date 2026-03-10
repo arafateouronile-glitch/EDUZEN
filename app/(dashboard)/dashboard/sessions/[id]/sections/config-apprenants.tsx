@@ -195,7 +195,7 @@ export function ConfigApprenants({
     enabled: !!user?.organization_id,
   })
 
-  const allStudents = allStudentsResult?.data || []
+  const allStudents = useMemo(() => allStudentsResult?.data || [], [allStudentsResult?.data])
 
   // Récupérer les entités externes (entreprises/organismes)
   const { data: externalEntities } = useQuery({
@@ -220,15 +220,12 @@ export function ConfigApprenants({
     queryFn: async () => {
       if (!user?.organization_id || !externalEntities || externalEntities.length === 0) return []
       
-      const entityIds = externalEntities.map((e: any) => e.id)
-      
-      // eslint-disable-next-line
-      const q: any = supabase
+      const entityIds = externalEntities.map((e: { id: string }) => e.id)
+      const { data, error } = await supabase
         .from('student_entities')
         .select('*, students(*), external_entities(*)')
         .in('entity_id', entityIds)
         .eq('is_current', true)
-      const { data, error } = await q
       
       if (error) throw error
       return data || []
@@ -282,9 +279,9 @@ export function ConfigApprenants({
   const getStudentsForEntity = (entityId: string) => {
     if (!studentEntities) return []
     return studentEntities
-      .filter((se: any) => se.entity_id === entityId && se.students)
-      .map((se: any) => se.students)
-      .filter((s: any) => !enrolledStudentIds.has(s.id))
+      .filter((se: { entity_id: string; students?: unknown }) => se.entity_id === entityId && se.students)
+      .map((se: { students?: { id: string } }) => se.students)
+      .filter((s): s is { id: string } => s != null && !enrolledStudentIds.has(s.id))
   }
 
   // Filtrer les entités externes
@@ -295,21 +292,22 @@ export function ConfigApprenants({
     let filtered = externalEntities
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      filtered = externalEntities.filter(
-        (entity: any) =>
-          entity.name?.toLowerCase().includes(query) ||
-          entity.code?.toLowerCase().includes(query) ||
-          entity.siret?.toLowerCase().includes(query) ||
-          entity.email?.toLowerCase().includes(query) ||
-          entity.activity_sector?.toLowerCase().includes(query)
-      )
+      filtered = externalEntities.filter((entity) => {
+        const e = entity as { name?: string | null; code?: string | null; siret?: string | null; email?: string | null; activity_sector?: string | null }
+        return e.name?.toLowerCase().includes(query) ||
+          e.code?.toLowerCase().includes(query) ||
+          e.siret?.toLowerCase().includes(query) ||
+          e.email?.toLowerCase().includes(query) ||
+          e.activity_sector?.toLowerCase().includes(query)
+      })
     }
-    
-    // Filtrer pour ne garder que celles qui ont des apprenants disponibles
-    return filtered.filter((entity: any) => {
-      const students = getStudentsForEntity(entity.id)
+    return filtered.filter((entity) => {
+      const id = (entity as { id?: string }).id
+      if (!id) return false
+      const students = getStudentsForEntity(id)
       return students.length > 0
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- getStudentsForEntity reads from state, deps sufficient
   }, [externalEntities, searchQuery, studentEntities, enrolledStudentIds])
 
   // Candidats non encore inscrits (pour les boutons d'inscription)
@@ -678,8 +676,9 @@ export function ConfigApprenants({
           </div>
 
           <div className="space-y-4">
-            {filteredEntities.map((entity: any) => {
-              const entityStudents = getStudentsForEntity(entity.id)
+            {filteredEntities.map((entity) => {
+              const e = entity as { id: string; name?: string | null; code?: string | null; type?: string | null; siret?: string | null; email?: string | null; phone?: string | null; address?: string | null }
+              const entityStudents = getStudentsForEntity(e.id)
               const getTypeLabel = (type: string) => {
                 const labels: Record<string, string> = {
                   company: 'Entreprise',
@@ -693,7 +692,7 @@ export function ConfigApprenants({
 
               return (
                 <motion.div
-                  key={entity.id}
+                  key={e.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="p-4 rounded-lg border border-orange-200 bg-orange-50/30"
@@ -705,35 +704,35 @@ export function ConfigApprenants({
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-semibold text-gray-900">{entity.name}</p>
+                          <p className="font-semibold text-gray-900">{e.name ?? ''}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant="outline" className="text-xs">
-                              {getTypeLabel(entity.type)}
+                              {getTypeLabel(e.type ?? '')}
                             </Badge>
-                            {entity.siret && (
-                              <span className="text-xs text-gray-500">SIRET: {entity.siret}</span>
+                            {e.siret && (
+                              <span className="text-xs text-gray-500">SIRET: {e.siret}</span>
                             )}
                           </div>
                         </div>
                       </div>
-                      {(entity.email || entity.phone || entity.address) && (
+                      {(e.email || e.phone || e.address) && (
                         <div className="mt-2 space-y-1 text-xs text-gray-600">
-                          {entity.email && (
+                          {e.email && (
                             <div className="flex items-center gap-1">
                               <Mail className="h-3 w-3" />
-                              {entity.email}
+                              {e.email}
                             </div>
                           )}
-                          {entity.phone && (
+                          {e.phone && (
                             <div className="flex items-center gap-1">
                               <Phone className="h-3 w-3" />
-                              {entity.phone}
+                              {e.phone}
                             </div>
                           )}
-                          {entity.address && (
+                          {e.address && (
                             <div className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
-                              {entity.address}
+                              {e.address}
                             </div>
                           )}
                         </div>
@@ -743,33 +742,35 @@ export function ConfigApprenants({
 
                   {/* Apprenants rattachés à cette entité */}
                   {(() => {
-                    const entityStudents = getStudentsForEntity(entity.id)
+                    const entityStudents = getStudentsForEntity(e.id)
                     return entityStudents.length > 0 ? (
                       <div className="mt-3 pt-3 border-t border-orange-200">
                         <p className="text-xs font-medium text-gray-700 mb-2">
                           {entityStudents.length} apprenant{entityStudents.length > 1 ? 's' : ''} rattaché{entityStudents.length > 1 ? 's' : ''}
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {entityStudents.map((student: any) => (
+                          {entityStudents.map((student) => {
+                            const s = student as { id: string; first_name?: string | null; last_name?: string | null; student_number?: string | null }
+                            return (
                             <div
-                              key={student.id}
+                              key={s.id}
                               className="p-2 rounded border border-gray-200 bg-white hover:border-brand-blue-300 transition-colors"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-gray-900 truncate">
-                                    {student.first_name} {student.last_name}
+                                    {s.first_name ?? ''} {s.last_name ?? ''}
                                   </p>
-                                  {student.student_number && (
+                                  {s.student_number && (
                                     <p className="text-xs text-gray-500 font-mono">
-                                      #{student.student_number}
+                                      #{s.student_number}
                                     </p>
                                   )}
                                 </div>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleEnrollCandidate(student.id)}
+                                  onClick={() => handleEnrollCandidate(s.id)}
                                   disabled={createEnrollmentMutation.isPending}
                                   className="ml-2 flex-shrink-0"
                                 >
@@ -778,7 +779,7 @@ export function ConfigApprenants({
                                 </Button>
                               </div>
                             </div>
-                          ))}
+                          )})}
                         </div>
                       </div>
                     ) : (
@@ -1281,11 +1282,13 @@ export function ConfigApprenants({
                   >
                     <option value="">Aucun (financement personnel)</option>
                     {fundingTypes && fundingTypes.length > 0 ? (
-                      fundingTypes.map((type: any) => (
-                        <option key={type.id} value={type.id}>
-                          {type.name} {type.code ? `(${type.code})` : ''}
+                      fundingTypes.map((type) => {
+                        const ft = type as { id?: string; name?: string; code?: string }
+                        return (
+                        <option key={ft.id} value={ft.id ?? ''}>
+                          {ft.name ?? ''} {ft.code ? `(${ft.code})` : ''}
                         </option>
-                      ))
+                      )})
                     ) : (
                       <option value="" disabled>
                         Aucun type de financement disponible

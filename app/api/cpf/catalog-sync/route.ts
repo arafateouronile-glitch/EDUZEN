@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { Database } from '@/types/database.types'
 import { parseEDOFXML, validateTraining, type EDOFTraining } from '@/lib/utils/cpf/xml-parser'
 import { createHash } from 'crypto'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+
+/** Table cpf_configurations non présente dans les types générés */
+type CpfConfigRow = { id: string; is_active: boolean }
+type DbWithCpf = Database & {
+  public: { Tables: { cpf_configurations: { Row: CpfConfigRow; Insert: Record<string, unknown>; Update: Record<string, unknown> } } }
+}
 
 export const runtime = 'nodejs'
 export const maxDuration = 300 // 5 minutes pour le traitement XML
@@ -53,14 +61,15 @@ export async function POST(request: NextRequest) {
     const organizationId = userData.organization_id
 
     // Vérifier la configuration CPF
-    // Note: cpf_configurations n'existe pas dans les types Supabase générés
-    const { data: config, error: configError } = await (supabase as any)
+    const supabaseCpf = supabase as SupabaseClient<DbWithCpf>
+    const { data: config, error: configError } = await supabaseCpf
       .from('cpf_configurations')
       .select('*')
       .eq('organization_id', organizationId)
       .single()
 
-    if (configError || !config || !(config as any).is_active) {
+    const cpfConfig = config as CpfConfigRow | null
+    if (configError || !cpfConfig?.is_active) {
       return NextResponse.json(
         { error: 'Configuration CPF non active ou introuvable' },
         { status: 400 }
@@ -257,12 +266,10 @@ export async function POST(request: NextRequest) {
       .eq('id', syncId)
 
     // Mettre à jour la date de dernière synchronisation dans la config
-    await (supabase as any)
+    await supabaseCpf
       .from('cpf_configurations')
-      .update({
-        last_sync_date: new Date().toISOString(),
-      })
-      .eq('id', (config as any).id)
+      .update({ last_sync_date: new Date().toISOString() } as never)
+      .eq('id', cpfConfig.id)
 
     return NextResponse.json({
       success: true,

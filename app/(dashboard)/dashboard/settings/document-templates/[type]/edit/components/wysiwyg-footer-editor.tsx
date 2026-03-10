@@ -24,7 +24,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
   const editorRef = useRef<RichTextEditorRef>(null)
   const isSyncingFromTemplateRef = useRef(false)
   const [footerContent, setFooterContent] = useState(() => {
-    const content = (template.footer as any)?.content
+    const content = (template.footer as { content?: string })?.content
     const rawContent = content || ''
     // Convertir les balises {variable} en nodes TipTap lors du chargement initial
     return convertTagsToVariableNodes(rawContent)
@@ -104,7 +104,7 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
       return
     }
     
-    const content = (template.footer as any)?.content || ''
+    const content = (template.footer as { content?: string })?.content || ''
     // Convertir le contenu du template en nodes TipTap pour la comparaison
     const convertedTemplateContent = convertTagsToVariableNodes(content)
     
@@ -168,9 +168,10 @@ export function WysiwygFooterEditor({ template, onTemplateChange, onEditorRefRea
                 type="footer"
                 value={footer.layout || 'complete'}
                 onChange={(layout) => {
-                  const layoutConfig = generateFooterLayout(layout as any)
+                  type FooterLayoutType = FooterConfig['layout']
+                  const layoutConfig = generateFooterLayout(layout as FooterLayoutType)
                   handleUpdateFooter({
-                    layout: layout as any,
+                    layout: layout as FooterLayoutType,
                     ...layoutConfig,
                   })
                 }}

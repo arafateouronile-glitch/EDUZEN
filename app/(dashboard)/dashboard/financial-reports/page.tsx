@@ -66,7 +66,7 @@ export default function FinancialReportsPage() {
           </Card>
         ) : (
           <div className="grid gap-3">
-            {reports?.map((report: any) => (
+            {reports?.map((report: { id: string; name?: string; description?: string; period?: string; created_at?: string; format?: string; size?: string }) => (
               <Card key={report.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3 pt-4">
                   <div className="flex items-center justify-between">

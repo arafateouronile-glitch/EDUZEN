@@ -69,6 +69,8 @@ interface SessionModule {
   currency: string
 }
 
+type InvoiceRow = { id?: string; enrollment_id?: string; document_type?: string; _optimistic?: boolean; payments?: Array<{ status?: string; amount?: number }>; total_amount?: number; amount?: number; tax_amount?: number; invoice_number?: string; currency?: string }
+
 interface GestionFinancesProps {
   enrollments?: EnrollmentWithRelations[]
   payments?: Payment[]
@@ -78,13 +80,15 @@ interface GestionFinancesProps {
   sessionModules?: SessionModule[]
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
+type TooltipPayloadItem = { name?: string; value?: number; fill?: string }
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: TooltipPayloadItem[] }) => {
+  const p = payload?.[0]
+  if (active && p != null) {
     return (
       <div className="bg-white/90 backdrop-blur-md border border-gray-100 p-3 rounded-xl shadow-xl z-50">
-        <p className="font-semibold text-gray-800 text-sm mb-1">{payload[0].name}</p>
-        <p className="text-sm font-bold" style={{ color: payload[0].fill }}>
-          {payload[0].value} étudiant{payload[0].value > 1 ? 's' : ''}
+        <p className="font-semibold text-gray-800 text-sm mb-1">{p.name}</p>
+        <p className="text-sm font-bold" style={{ color: p.fill }}>
+          {p.value} étudiant{(p.value ?? 0) > 1 ? 's' : ''}
         </p>
       </div>
     );
@@ -120,7 +124,7 @@ export function GestionFinances({
   const [editingCharge, setEditingCharge] = useState<SessionChargeWithCategory | null>(null)
 
   type EmailPreviewState = {
-    invoice: any
+    invoice: InvoiceWithRelations
     type: 'invoice' | 'quote'
     to: string
     subject: string
@@ -133,7 +137,7 @@ export function GestionFinances({
   const [emailPreview, setEmailPreview] = useState<EmailPreviewState | null>(null)
 
   const [signatureRequestDialog, setSignatureRequestDialog] = useState<{
-    invoice: any
+    invoice: InvoiceWithRelations
     type: 'invoice' | 'quote'
   } | null>(null)
 
@@ -161,10 +165,10 @@ export function GestionFinances({
   })
 
   // Filtrer les modèles de factures
-  const invoiceTemplates = allTemplates?.filter(template => template.type === 'facture') || []
+  const invoiceTemplates = allTemplates?.filter((t): t is NonNullable<typeof t> => t != null && t.type === 'facture') || []
 
   // Filtrer les modèles de devis
-  const quoteTemplates = allTemplates?.filter(template => template.type === 'devis') || []
+  const quoteTemplates = allTemplates?.filter((t): t is NonNullable<typeof t> => t != null && t.type === 'devis') || []
 
   // Récupérer les factures et devis liés aux inscriptions de cette session uniquement
   const enrollmentIds = enrollments.map((e) => e.id).filter(Boolean) as string[]
@@ -184,7 +188,7 @@ export function GestionFinances({
         .in('enrollment_id', enrollmentIds)
         .order('issue_date', { ascending: false })
       if (error) throw error
-      return (data || []) as any[]
+      return (data || []) as unknown as InvoiceWithRelations[]
     },
     enabled: !!user?.organization_id && enrollmentIds.length > 0,
     staleTime: 60 * 1000, // 1 min (invalidate après création facture/devis)
@@ -332,7 +336,7 @@ export function GestionFinances({
   // Map pour stocker le templateId associé à chaque facture/devis (clé: invoice.id, valeur: templateId)
   const [invoiceTemplateMap, setInvoiceTemplateMap] = useState<Map<string, string>>(new Map())
   // Fonction pour télécharger une facture ou un devis
-  const handleDownloadDocument = async (invoice: any, type: 'invoice' | 'quote', templateId?: string) => {
+  const handleDownloadDocument = async (invoice: InvoiceWithRelations, type: 'invoice' | 'quote', templateId?: string) => {
     if (!org || !invoice || !user?.organization_id) {
       addToast({
         type: 'error',
@@ -381,7 +385,7 @@ export function GestionFinances({
 
       let freshModules: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
       if (sessionData?.id) {
-        const { data: mods, error: modsError } = await supabase.from('session_modules' as any).select('id, name, amount, currency').eq('session_id', sessionData.id).order('display_order', { ascending: true })
+        const { data: mods, error: modsError } = await supabase.from('session_modules').select('id, name, amount, currency').eq('session_id', sessionData.id).order('display_order', { ascending: true })
         if (!modsError && mods?.length) freshModules = mods as unknown as Array<{ id: string; name: string; amount: number; currency: string }>
       }
       // Fallback sur le prop sessionModules (déjà chargé par le hook parent)
@@ -389,13 +393,13 @@ export function GestionFinances({
 
       const variables = extractDocumentVariables({
         student,
-        organization: org as any,
+        organization: org ?? undefined,
         session: sessionData,
         invoice: invoiceData,
         sessionModules: resolvedModules,
         academicYear,
         language: 'fr',
-        issueDate: invoice.issue_date,
+        issueDate: invoice.issue_date ?? undefined,
       })
 
       // Utiliser l'API pour générer le PDF
@@ -447,7 +451,7 @@ export function GestionFinances({
   }
 
   // Génère un PDF Blob (sans téléchargement) pour prévisualisation / envoi email
-  const generatePdfBlobForEmail = async (invoice: any, type: 'invoice' | 'quote', templateId?: string): Promise<Blob> => {
+  const generatePdfBlobForEmail = async (invoice: InvoiceWithRelations, type: 'invoice' | 'quote', templateId?: string): Promise<Blob> => {
     if (!org || !invoice || !user?.organization_id) throw new Error('Données manquantes pour la génération du document.')
 
     const student = (invoice.students ?? (invoice.enrollments as { students?: StudentWithRelations }[])?.[0]?.students) as (StudentWithRelations & { email?: string | null }) | undefined
@@ -482,7 +486,7 @@ export function GestionFinances({
       let freshModules2: Array<{ id: string; name: string; amount: number; currency: string }> | undefined
       if (sessionData?.id) {
         const { data: mods, error: modsError } = await supabase
-          .from('session_modules' as any)
+          .from('session_modules')
           .select('id, name, amount, currency')
           .eq('session_id', sessionData.id)
           .order('display_order', { ascending: true })
@@ -492,13 +496,13 @@ export function GestionFinances({
 
       const variables = extractDocumentVariables({
         student,
-        organization: org as any,
+        organization: org ?? undefined,
         session: sessionData,
         invoice: invoiceData,
         sessionModules: resolvedModules2,
         academicYear,
         language: 'fr',
-        issueDate: invoice.issue_date,
+        issueDate: invoice.issue_date ?? undefined,
       })
 
       // Utiliser l'API pour générer le PDF
@@ -528,7 +532,7 @@ export function GestionFinances({
   }
 
   // Ouvrir la fenêtre d'édition avant envoi
-  const handleSendDocumentByEmail = async (invoice: any, type: 'invoice' | 'quote') => {
+  const handleSendDocumentByEmail = async (invoice: InvoiceWithRelations, type: 'invoice' | 'quote') => {
     if (!org || !invoice) {
       addToast({ type: 'error', title: 'Erreur', description: 'Données manquantes pour l’envoi du document.' })
       return
@@ -547,7 +551,7 @@ export function GestionFinances({
     const filenameSafe = String(invoiceNumber).replace(/[^\w.-]+/g, '_')
     const filename = `${docLabel.toLowerCase()}_${filenameSafe}.pdf`
 
-    const orgName = (org as any)?.name || 'EDUZEN'
+    const orgName = (org as { name?: string } | null)?.name ?? 'EDUZEN'
     const sessionName = sessionData?.name ? ` – ${sessionData.name}` : ''
     const subject = `${docLabel} ${invoiceNumber}${sessionName} (${orgName})`
 
@@ -686,14 +690,14 @@ export function GestionFinances({
       setInvoiceFormTemplateId(undefined)
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
-    onError: (error: any, _vars, ctx) => {
+    onError: (error: unknown, _vars: unknown, ctx: { previous?: unknown } | undefined) => {
       if (ctx?.previous != null) {
         queryClient.setQueryData(['session-invoices', sessionId, enrollmentIds], ctx.previous)
       }
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Erreur lors de la création de la facture.',
+        description: error instanceof Error ? error.message : 'Erreur lors de la création de la facture.',
       })
     },
   })
@@ -767,14 +771,14 @@ export function GestionFinances({
       setQuoteFormTemplateId(undefined)
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
-    onError: (error: any, _vars, ctx) => {
+    onError: (error: unknown, _vars: unknown, ctx: { previous?: unknown } | undefined) => {
       if (ctx?.previous != null) {
         queryClient.setQueryData(['session-invoices', sessionId, enrollmentIds], ctx.previous)
       }
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Erreur lors de la création du devis.',
+        description: error instanceof Error ? error.message : 'Erreur lors de la création du devis.',
       })
     },
   })
@@ -795,11 +799,11 @@ export function GestionFinances({
       })
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Erreur lors de la conversion du devis en facture.',
+        description: error instanceof Error ? error.message : 'Erreur lors de la conversion du devis en facture.',
       })
     },
     onSettled: () => {
@@ -845,9 +849,9 @@ export function GestionFinances({
         const newPaidAmount = currentPaid + amountNumber
 
         // Calculer le total dynamique: facture > devis > modules session
-        const enrollmentInvoices = invoices?.filter((inv: any) => inv.enrollment_id === selectedEnrollmentId) || []
-        const invoicesList = enrollmentInvoices.filter((inv: any) => inv.document_type === 'invoice' && !inv?._optimistic)
-        const quotesList = enrollmentInvoices.filter((inv: any) => inv.document_type === 'quote' && !inv?._optimistic)
+        const enrollmentInvoices = invoices?.filter((inv) => (inv as InvoiceRow).enrollment_id === selectedEnrollmentId) || []
+        const invoicesList = enrollmentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice' && !(inv as InvoiceRow)?._optimistic)
+        const quotesList = enrollmentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote' && !(inv as InvoiceRow)?._optimistic)
 
         let totalAmount = 0
         if (invoicesList.length > 0) {
@@ -898,21 +902,21 @@ export function GestionFinances({
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Erreur lors de l\'enregistrement du paiement.',
+        description: error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement du paiement.',
       })
     },
   })
 
   // Obtenir les factures et devis pour une inscription (enrollment)
   const getInvoicesForEnrollment = (enrollmentId: string) => {
-    return invoices?.filter((inv: any) => inv.enrollment_id === enrollmentId) || []
+    return invoices?.filter((inv) => (inv as InvoiceRow).enrollment_id === enrollmentId) || []
   }
 
-  const getInvoiceTotal = (inv: any) => {
+  const getInvoiceTotal = (inv: InvoiceRow) => {
     const totalAmount = inv?.total_amount != null ? Number(inv.total_amount) : null
     if (totalAmount != null && !Number.isNaN(totalAmount)) return totalAmount
     const amount = inv?.amount != null ? Number(inv.amount) : 0
@@ -920,14 +924,14 @@ export function GestionFinances({
     return (Number.isNaN(amount) ? 0 : amount) + (Number.isNaN(tax) ? 0 : tax)
   }
 
-  const getInvoicePaid = (inv: any) => {
+  const getInvoicePaid = (inv: InvoiceRow) => {
     const payments = Array.isArray(inv?.payments) ? inv.payments : []
     return payments
-      .filter((p: any) => p?.status === 'completed')
-      .reduce((sum: number, p: any) => sum + Number(p?.amount || 0), 0)
+      .filter((p: { status?: string }) => p?.status === 'completed')
+      .reduce((sum: number, p: { amount?: number }) => sum + Number(p?.amount || 0), 0)
   }
 
-  const getInvoiceRemaining = (inv: any) => {
+  const getInvoiceRemaining = (inv: InvoiceRow) => {
     const remaining = getInvoiceTotal(inv) - getInvoicePaid(inv)
     return remaining > 0 ? remaining : 0
   }
@@ -941,19 +945,19 @@ export function GestionFinances({
   // 3. Par défaut → total des modules de la session
   const getEnrollmentDisplayTotal = (enrollmentId: string) => {
     const enrollmentInvoices = getInvoicesForEnrollment(enrollmentId)
-    const invoicesList = enrollmentInvoices.filter((inv: any) => inv.document_type === 'invoice' && !inv?._optimistic)
-    const quotesList = enrollmentInvoices.filter((inv: any) => inv.document_type === 'quote' && !inv?._optimistic)
+    const invoicesList = enrollmentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice' && !(inv as InvoiceRow)?._optimistic)
+    const quotesList = enrollmentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote' && !(inv as InvoiceRow)?._optimistic)
 
     // Priorité 1: Facture
     if (invoicesList.length > 0) {
       // Prendre le total de la facture la plus récente
-      return getInvoiceTotal(invoicesList[0])
+      return getInvoiceTotal(invoicesList[0] as InvoiceRow)
     }
 
     // Priorité 2: Devis
     if (quotesList.length > 0) {
       // Prendre le total du devis le plus récent
-      return getInvoiceTotal(quotesList[0])
+      return getInvoiceTotal(quotesList[0] as InvoiceRow)
     }
 
     // Priorité 3: Total des modules de la session
@@ -1025,11 +1029,11 @@ export function GestionFinances({
       refetchCharges()
       queryClient.invalidateQueries({ queryKey: ['session-charges-summary', sessionId] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Erreur lors de la création de la charge.',
+        description: error instanceof Error ? error.message : 'Erreur lors de la création de la charge.',
       })
     },
   })
@@ -1081,11 +1085,11 @@ export function GestionFinances({
       refetchCharges()
       queryClient.invalidateQueries({ queryKey: ['session-charges-summary', sessionId] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Erreur lors de la mise à jour de la charge.',
+        description: error instanceof Error ? error.message : 'Erreur lors de la mise à jour de la charge.',
       })
     },
   })
@@ -1104,11 +1108,11 @@ export function GestionFinances({
       refetchCharges()
       queryClient.invalidateQueries({ queryKey: ['session-charges-summary', sessionId] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Erreur lors de la suppression de la charge.',
+        description: error instanceof Error ? error.message : 'Erreur lors de la suppression de la charge.',
       })
     },
   })
@@ -1405,8 +1409,8 @@ export function GestionFinances({
                           <SelectItem value="">Modèle par défaut</SelectItem>
                           {invoiceTemplates && invoiceTemplates.length > 0 ? (
                             invoiceTemplates.map((template) => (
-                              <SelectItem key={template.id} value={template.id}>
-                                {template.name}
+                              <SelectItem key={template?.id ?? ''} value={template?.id ?? ''}>
+                                {template?.name ?? ''}
                               </SelectItem>
                             ))
                           ) : (
@@ -1432,8 +1436,8 @@ export function GestionFinances({
                           <SelectItem value="">Modèle par défaut</SelectItem>
                           {quoteTemplates && quoteTemplates.length > 0 ? (
                             quoteTemplates.map((template) => (
-                              <SelectItem key={template.id} value={template.id}>
-                                {template.name}
+                              <SelectItem key={template?.id ?? ''} value={template?.id ?? ''}>
+                                {template?.name ?? ''}
                               </SelectItem>
                             ))
                           ) : (
@@ -1472,8 +1476,8 @@ export function GestionFinances({
                     const paid = Number(enrollment.paid_amount || 0)
                     const remaining = total - paid
                     const studentInvoices = enrollment.id ? getInvoicesForEnrollment(enrollment.id) : []
-                    const studentInvoicesList = studentInvoices.filter((inv: any) => inv.document_type === 'invoice')
-                    const studentQuotesList = studentInvoices.filter((inv: any) => inv.document_type === 'quote')
+                    const studentInvoicesList = studentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice')
+                    const studentQuotesList = studentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote')
 
                     return (
                       <motion.div 
@@ -1523,7 +1527,7 @@ export function GestionFinances({
                         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pl-14">
                           <div className="flex flex-wrap gap-2">
                             {/* Devis */}
-                            {studentQuotesList.map((quote: any) => (
+                            {studentQuotesList.map((quote: InvoiceWithRelations) => (
                               <div key={quote.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
                                 <FileText className="h-3 w-3 text-gray-500 mr-1.5" />
                                 <span className="text-xs font-medium text-gray-700 mr-2">{quote.invoice_number || 'Brouillon'}</span>
@@ -1589,7 +1593,7 @@ export function GestionFinances({
                             ))}
                             
                             {/* Factures */}
-                            {studentInvoicesList.map((invoice: any) => (
+                            {studentInvoicesList.map((invoice: InvoiceWithRelations) => (
                               <div key={invoice.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
                                 <Receipt className="h-3 w-3 text-brand-blue mr-1.5" />
                                 <span className="text-xs font-medium text-gray-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
@@ -1689,8 +1693,8 @@ export function GestionFinances({
                               onClick={() => {
                                 setSelectedEnrollmentId(enrollment.id)
                                 const defaultInvoice =
-                                  (studentInvoicesList || []).find((inv: any) => !inv?._optimistic && getInvoiceRemaining(inv) > 0) ||
-                                  (studentInvoicesList || []).find((inv: any) => !inv?._optimistic) ||
+                                  (studentInvoicesList || []).find((inv) => !(inv as InvoiceRow)?._optimistic && getInvoiceRemaining(inv as InvoiceRow) > 0) ||
+                                  (studentInvoicesList || []).find((inv) => !(inv as InvoiceRow)?._optimistic) ||
                                   null
                                 setSelectedPaymentInvoiceId(defaultInvoice?.id || null)
                                 setShowQuoteForm(false)
@@ -1698,8 +1702,8 @@ export function GestionFinances({
                                 setShowChargeForm(false)
                                 setPaymentForm({
                                   ...paymentForm,
-                                  currency: defaultInvoice?.currency || paymentForm.currency,
-                                  amount: defaultInvoice ? String(getInvoiceRemaining(defaultInvoice)) : (remaining > 0 ? String(remaining) : '0'),
+                                  currency: (defaultInvoice as InvoiceRow | null)?.currency || paymentForm.currency,
+                                  amount: defaultInvoice ? String(getInvoiceRemaining(defaultInvoice as InvoiceRow)) : (remaining > 0 ? String(remaining) : '0'),
                                 })
                                 setShowPaymentForm(true)
                               }}
@@ -1738,7 +1742,7 @@ export function GestionFinances({
                 </div>
                 <div className="divide-y divide-gray-100/70">
                   {payments.slice(0, 10).map((payment, index) => {
-                    const student = (payment as any).students
+                    const student = (payment as { students?: StudentWithRelations }).students
                     return (
                       <motion.div
                         key={payment.id}
@@ -1835,7 +1839,7 @@ export function GestionFinances({
                       <RechartsLegend
                         verticalAlign="bottom"
                         height={50}
-                        formatter={(value: any) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
+                        formatter={(value: unknown) => <span className="text-xs font-medium text-gray-600 ml-1">{String(value)}</span>}
                         {...({} as any)}
                       />
                     </RechartsPieChart>
@@ -2296,7 +2300,7 @@ export function GestionFinances({
           {selectedEnrollmentId && (() => {
             const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
             const studentInvoices = selectedEnrollmentId ? getInvoicesForEnrollment(selectedEnrollmentId) : []
-            const studentInvoiceList = studentInvoices.filter((inv: any) => inv.document_type === 'invoice' && !inv?._optimistic)
+            const studentInvoiceList = studentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice' && !(inv as InvoiceRow)?._optimistic)
             if (studentInvoiceList.length === 0) {
               return (
                 <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -2307,9 +2311,9 @@ export function GestionFinances({
               )
             }
             const selected = selectedPaymentInvoiceId
-              ? studentInvoiceList.find((inv: any) => inv.id === selectedPaymentInvoiceId)
+              ? studentInvoiceList.find((inv) => (inv as InvoiceRow).id === selectedPaymentInvoiceId)
               : null
-            const remaining = selected ? getInvoiceRemaining(selected) : null
+            const remaining = selected ? getInvoiceRemaining(selected as InvoiceRow) : null
             return (
               <>
                 <div className="mb-4">
@@ -2320,25 +2324,26 @@ export function GestionFinances({
                     onChange={(e) => {
                       const nextId = e.target.value || null
                       setSelectedPaymentInvoiceId(nextId)
-                      const nextInv = nextId ? studentInvoiceList.find((inv: any) => inv.id === nextId) : null
+                      const nextInv = nextId ? studentInvoiceList.find((inv) => (inv as InvoiceRow).id === nextId) : null
                       if (nextInv) {
                         setPaymentForm({
                           ...paymentForm,
-                          currency: nextInv.currency || paymentForm.currency,
-                          amount: String(getInvoiceRemaining(nextInv)),
+                          currency: (nextInv as InvoiceRow).currency || paymentForm.currency,
+                          amount: String(getInvoiceRemaining(nextInv as InvoiceRow)),
                         })
                       }
                     }}
                     className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="">Sélectionner une facture</option>
-                    {studentInvoiceList.map((inv: any) => {
-                      const total = getInvoiceTotal(inv)
-                      const paid = getInvoicePaid(inv)
+                    {studentInvoiceList.map((inv) => {
+                      const row = inv as InvoiceRow
+                      const total = getInvoiceTotal(row)
+                      const paid = getInvoicePaid(row)
                       const rem = Math.max(total - paid, 0)
                       return (
-                        <option key={inv.id} value={inv.id}>
-                          {inv.invoice_number} — Total {formatCurrency(total, inv.currency || 'EUR')} — Reste {formatCurrency(rem, inv.currency || 'EUR')}
+                        <option key={row.id} value={row.id}>
+                          {row.invoice_number} — Total {formatCurrency(total, row.currency || 'EUR')} — Reste {formatCurrency(rem, row.currency || 'EUR')}
                         </option>
                       )
                     })}
@@ -2466,7 +2471,7 @@ export function GestionFinances({
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              createInvoiceMutation.mutate()
+              createInvoiceMutation.mutate(undefined)
             }}
             className="space-y-4"
           >
@@ -2610,7 +2615,7 @@ export function GestionFinances({
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              createQuoteMutation.mutate()
+              createQuoteMutation.mutate(undefined)
             }}
             className="space-y-4"
           >

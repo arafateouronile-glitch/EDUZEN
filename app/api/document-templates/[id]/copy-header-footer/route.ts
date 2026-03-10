@@ -30,6 +30,9 @@ export async function POST(
       .eq('id', user.id)
       .single()
 
+    if (!targetTemplate) {
+      return NextResponse.json({ error: 'Template non trouvé' }, { status: 404 })
+    }
     if (userData?.organization_id !== targetTemplate.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
@@ -41,6 +44,9 @@ export async function POST(
       return NextResponse.json({ error: 'Données utilisateur non trouvées' }, { status: 404 })
     }
     const sourceTemplate = await documentTemplateService.getTemplateById(body.sourceTemplateId)
+    if (!sourceTemplate) {
+      return NextResponse.json({ error: 'Template source non trouvé' }, { status: 404 })
+    }
     if (userData.organization_id !== sourceTemplate.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé au template source' }, { status: 403 })
     }

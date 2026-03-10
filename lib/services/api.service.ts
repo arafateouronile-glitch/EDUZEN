@@ -5,10 +5,63 @@ import crypto from 'crypto'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
-// Types locaux pour les tables API qui ne sont pas encore dans le schéma Supabase
-type APIKey = any
-type Webhook = any
-type WebhookDelivery = any
+// Types locaux pour les tables API (api_keys, webhooks, etc.) non présentes dans database.types
+interface APIKeyRow {
+  id: string
+  organization_id: string
+  key_hash?: string
+  rate_limit_per_minute?: number
+  rate_limit_per_hour?: number
+  rate_limit_per_day?: number
+  [key: string]: unknown
+}
+interface WebhookRow {
+  id: string
+  url: string
+  secret?: string
+  events?: string[]
+  is_active?: boolean
+  success_count?: number
+  failure_count?: number
+  timeout_seconds?: number
+  [key: string]: unknown
+}
+interface WebhookDeliveryRow {
+  id: string
+  webhook_id: string
+  event_type: string
+  event_data?: Record<string, unknown>
+  status?: string
+  attempt_number?: number
+  max_attempts?: number
+  [key: string]: unknown
+}
+interface APIKeyUpdate {
+  is_active?: boolean
+  name?: string
+  description?: string
+  [key: string]: unknown
+}
+interface WebhookInsert {
+  organization_id: string
+  url: string
+  events: string[]
+  description?: string
+  [key: string]: unknown
+}
+interface WebhookUpdate {
+  url?: string
+  events?: string[]
+  is_active?: boolean
+  description?: string
+  [key: string]: unknown
+}
+interface QuotaUpdate {
+  requests_per_minute?: number
+  requests_per_hour?: number
+  requests_per_day?: number
+  [key: string]: unknown
+}
 
 export class APIService {
   private supabase: SupabaseClient<Database>
@@ -36,7 +89,7 @@ export class APIService {
   /**
    * Vérifie une clé API
    */
-  async verifyAPIKey(apiKey: string): Promise<APIKey | null> {
+  async verifyAPIKey(apiKey: string): Promise<APIKeyRow | null> {
     const hash = crypto.createHash('sha256').update(apiKey).digest('hex')
     const { data, error } = await (this.supabase as any)
       .from('api_keys')
@@ -115,7 +168,7 @@ export class APIService {
   /**
    * Met à jour une clé API
    */
-  async updateAPIKey(keyId: string, updates: any) {
+  async updateAPIKey(keyId: string, updates: APIKeyUpdate) {
     const { data, error } = await (this.supabase as any)
       .from('api_keys')
       .update(updates)
@@ -152,7 +205,7 @@ export class APIService {
    * Vérifie si une requête respecte les limites de taux
    */
   async checkRateLimit(
-    apiKey: APIKey,
+    apiKey: APIKeyRow,
     organizationId: string
   ): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
     // Vérifier les limites de la clé API
@@ -399,7 +452,7 @@ export class APIService {
     return data
   }
 
-  async updateQuota(organizationId: string, updates: any) {
+  async updateQuota(organizationId: string, updates: QuotaUpdate) {
     const { data, error } = await (this.supabase as any)
       .from('api_quotas')
       .update(updates)
@@ -413,7 +466,7 @@ export class APIService {
 
   // ========== WEBHOOKS ==========
 
-  async createWebhook(webhook: any) {
+  async createWebhook(webhook: WebhookInsert) {
     // Générer un secret
     const secret = crypto.randomBytes(32).toString('hex')
     const { data, error } = await (this.supabase as any)
@@ -440,7 +493,7 @@ export class APIService {
     return data
   }
 
-  async updateWebhook(webhookId: string, updates: any) {
+  async updateWebhook(webhookId: string, updates: WebhookUpdate) {
     const { data, error } = await (this.supabase as any)
       .from('webhooks')
       .update(updates)

@@ -16,8 +16,8 @@ export async function GET(
     const supabase = await createClient()
 
     // Get the share link
-    const { data: shareLink, error: linkError } = await (supabase
-      .from('opco_share_links' as any)
+    const { data: shareLink, error: linkError } = await supabase
+      .from('opco_share_links')
       .select(`
         *,
         company:companies (
@@ -29,7 +29,7 @@ export async function GET(
       `)
       .eq('token', token)
       .eq('is_active', true)
-      .single() as any)
+      .single()
 
     if (linkError || !shareLink) {
       return createSecureErrorResponse(new Error('Share link not found or expired'), { status: 404 })
@@ -46,18 +46,19 @@ export async function GET(
     }
 
     // Update access count and last accessed
-    await (supabase
-      .from('opco_share_links' as any)
+    await supabase
+      .from('opco_share_links')
       .update({
         access_count: (shareLink.access_count || 0) + 1,
         last_accessed_at: new Date().toISOString(),
         last_accessed_ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
       })
-      .eq('id', shareLink.id) as any)
+      .eq('id', shareLink.id)
 
     // Get company employees
-    const { data: employees } = await (supabase
-      .from('company_employees' as any)
+    type EmployeeWithStudent = { id: string; student_id: string; employee_number?: string; department?: string; job_title?: string; student?: { first_name?: string; last_name?: string } }
+    const { data: employees } = await supabase
+      .from('company_employees')
       .select(`
         id,
         student_id,
@@ -71,7 +72,7 @@ export async function GET(
         )
       `)
       .eq('company_id', shareLink.company_id)
-      .eq('is_active', true) as any)
+      .eq('is_active', true)
 
     if (!employees || employees.length === 0) {
       return NextResponse.json({
@@ -86,10 +87,10 @@ export async function GET(
       })
     }
 
-    const studentIds = employees.map((e: any) => e.student_id)
+    const studentIds = (employees as Array<{ student_id: string }>).map((e) => e.student_id)
 
     // Get documents based on allowed types
-    let documentsQuery: any = supabase
+    let documentsQuery = supabase
       .from('learner_documents')
       .select(`
         id,
@@ -112,12 +113,12 @@ export async function GET(
       documentsQuery = documentsQuery.in('document_type', shareLink.document_types)
     }
 
-    const { data: documents } = await (documentsQuery.order('created_at', { ascending: false }) as any)
+    const { data: documents } = await documentsQuery.order('created_at', { ascending: false })
 
     // Get invoices if accessible
     let invoices: unknown[] = []
     if (!shareLink.document_types || shareLink.document_types.length === 0 || shareLink.document_types.includes('invoice')) {
-      let invoicesQuery: any = supabase
+      let invoicesQuery = supabase
         .from('invoices')
         .select(`
           id,
@@ -141,7 +142,7 @@ export async function GET(
         invoicesQuery = invoicesQuery.in('id', shareLink.invoice_ids)
       }
 
-      const { data: invoicesData } = await (invoicesQuery.order('issue_date', { ascending: false }) as any)
+      const { data: invoicesData } = await invoicesQuery.order('issue_date', { ascending: false })
       invoices = invoicesData || []
     }
 
@@ -154,12 +155,12 @@ export async function GET(
       },
       documents: documents || [],
       invoices,
-      employees: employees.map((e: any) => ({
+      employees: (employees as Array<{ id: string; employee_number: string | null; department: string | null; job_title: string | null; student: { first_name: string; last_name: string } }>).map((e) => ({
         id: e.id,
-        employee_number: e.employee_number,
-        department: e.department,
-        job_title: e.job_title,
-        name: e.student ? `${(e.student as any).first_name} ${(e.student as any).last_name}` : 'N/A',
+        employee_number: e.employee_number ?? undefined,
+        department: e.department ?? undefined,
+        job_title: e.job_title ?? undefined,
+        name: e.student ? `${e.student.first_name ?? ''} ${e.student.last_name ?? ''}`.trim() || 'N/A' : 'N/A',
       })),
     })
   } catch (error) {

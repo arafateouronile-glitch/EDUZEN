@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { qualiopiService } from '@/lib/services/qualiopi.service'
+import { qualiopiService, type QualiopiIndicator } from '@/lib/services/qualiopi.service'
 import {
   QUALIOPI_REFERENTIAL,
 } from '@/lib/services/auditor-portal.service'
@@ -17,8 +17,8 @@ import { Plus, AlertCircle } from 'lucide-react'
 import { GlassCardPremium } from './glass-card-premium'
 import { AuditScoreRing } from './audit-score-ring'
 import { CriteriaNavigation } from './criterion-card'
-import { EvidenceVault } from './evidence-vault'
-import { CriticalAlerts } from './critical-alerts'
+import { EvidenceVault, type Evidence } from './evidence-vault'
+import { CriticalAlerts, type RiskIndicator } from './critical-alerts'
 import { ActivityHeatmap } from './activity-heatmap'
 
 // UI Components
@@ -225,7 +225,7 @@ function IndicatorPanel({
   indicators,
 }: {
   criterionNumber: number | null
-  indicators: any[]
+  indicators: QualiopiIndicator[]
 }) {
   const criterion = QUALIOPI_REFERENTIAL.find((c) => c.number === criterionNumber)
   const criterionIndicators = criterion?.indicators || []
@@ -420,41 +420,64 @@ export function QualiopiDashboardPremium() {
   })
 
   // Récupérer les preuves automatisées + manuelles (qualiopi_evidence)
+  type AutoEvidenceRow = {
+    id: string
+    title?: string
+    indicator_number?: number
+    evidence_type?: string
+    source?: string
+    entity_name?: string
+    event_date?: string
+    created_at?: string
+    confidence_score?: number
+    file_url?: string
+  }
+  type ManualEvidenceRow = {
+    id: string
+    title?: string
+    qualiopi_indicators?: { indicator_code?: string; indicator_name?: string } | null
+    evidence_type?: string
+    upload_date?: string
+    created_at?: string
+    file_url?: string
+  }
+
   const { data: evidenceRaw = [], refetch: refetchEvidenceList } = useQuery({
     queryKey: ['compliance-evidence-premium', user?.organization_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<Evidence[]> => {
       if (!user?.organization_id) return []
       const [autoRes, manualRes] = await Promise.all([
-        supabase
-          .from('compliance_evidence_automated' as any)
+        (supabase as { from: (t: string) => ReturnType<typeof supabase.from> })
+          .from('compliance_evidence_automated')
           .select('*')
           .eq('organization_id', user.organization_id)
           .eq('status', 'valid')
           .order('event_date', { ascending: false })
           .limit(100),
-        supabase
-          .from('qualiopi_evidence' as any)
+        (supabase as { from: (t: string) => ReturnType<typeof supabase.from> })
+          .from('qualiopi_evidence')
           .select('*, qualiopi_indicators(indicator_code, indicator_name)')
           .eq('organization_id', user.organization_id)
           .in('status', ['pending', 'approved'])
           .order('upload_date', { ascending: false })
           .limit(100),
       ])
-      const manualData = manualRes.error ? [] : (manualRes.data || [])
-      const auto = (autoRes.data || []).map((e: any) => ({
+      const manualData = (manualRes.error ? [] : (manualRes.data || [])) as unknown as ManualEvidenceRow[]
+      const autoRows = (autoRes.data || []) as unknown as AutoEvidenceRow[]
+      const auto: Evidence[] = autoRows.map((e: AutoEvidenceRow) => ({
         id: e.id,
-        title: e.title,
-        indicator_number: e.indicator_number,
-        evidence_type: e.evidence_type,
-        source: e.source,
+        title: e.title ?? '',
+        indicator_number: e.indicator_number ?? 1,
+        evidence_type: (e.evidence_type === 'certificate' ? 'certificate' : 'document') as Evidence['evidence_type'],
+        source: (e.source === 'automated_detection' ? 'automated_detection' : 'system') as Evidence['source'],
         entity_name: e.entity_name,
-        event_date: e.event_date,
-        created_at: e.created_at,
+        event_date: e.event_date ?? new Date().toISOString(),
+        created_at: e.created_at ?? new Date().toISOString(),
         confidence_score: e.confidence_score ?? 100,
         file_url: e.file_url,
       }))
-      const manual = manualData.map((e: any) => {
-        const ind = e.qualiopi_indicators as any
+      const manual: Evidence[] = manualData.map((e: ManualEvidenceRow) => {
+        const ind = e.qualiopi_indicators
         const code = String(ind?.indicator_code ?? '1.1').trim()
         let refNum = indicatorCodeToReferentialNumber(code)
         if (refNum == null && /^[1-9]$|^[1-2][0-9]$|^3[0-2]$/.test(code)) {
@@ -462,13 +485,13 @@ export function QualiopiDashboardPremium() {
         }
         return {
           id: e.id,
-          title: e.title,
+          title: e.title ?? '',
           indicator_number: refNum ?? 1,
-          evidence_type: (e.evidence_type === 'document' ? 'document' : e.evidence_type === 'certificate' ? 'certificate' : 'document') as any,
+          evidence_type: (e.evidence_type === 'certificate' ? 'certificate' : 'document') as Evidence['evidence_type'],
           source: 'manual_upload' as const,
           entity_name: ind?.indicator_name ?? e.title,
-          event_date: e.upload_date ?? e.created_at,
-          created_at: e.created_at,
+          event_date: e.upload_date ?? e.created_at ?? new Date().toISOString(),
+          created_at: e.created_at ?? new Date().toISOString(),
           confidence_score: 80,
           file_url: e.file_url,
         }
@@ -509,7 +532,7 @@ export function QualiopiDashboardPremium() {
 
   // Indicateurs du référentiel ayant au moins une preuve (auto ou manuelle)
   const evidenceIndicatorNumbers = useMemo(
-    () => new Set(evidence.map((e: { indicator_number: number }) => e.indicator_number)),
+    () => new Set(evidence.map((e) => e.indicator_number)),
     [evidence]
   )
 
@@ -561,8 +584,7 @@ export function QualiopiDashboardPremium() {
     })
   }, [effectiveIndicators, evidenceIndicatorNumbers])
 
-  // Indicateurs à risque (à partir des indicateurs effectifs)
-  const riskIndicators = useMemo(() => {
+  const riskIndicators = useMemo((): RiskIndicator[] => {
     return effectiveIndicators
       .filter(
         (i) =>
@@ -570,15 +592,19 @@ export function QualiopiDashboardPremium() {
           i.status === 'non_compliant' ||
           i.status === 'needs_improvement'
       )
-      .map((i) => {
+      .map((i): RiskIndicator => {
         const criterionNumber =
           QUALIOPI_REFERENTIAL.find((c) =>
             c.indicators.some((ci) => ci.number === parseInt(i.indicator_code, 10))
-          )?.number || 1
-
+          )?.number ?? 1
         return {
-          ...i,
+          id: i.id,
+          indicator_code: i.indicator_code,
+          indicator_name: i.indicator_name,
           criterionNumber,
+          status: i.status as RiskIndicator['status'],
+          compliance_rate: i.compliance_rate,
+          evidence_count: 0,
           riskLevel:
             i.status === 'non_compliant'
               ? 'critical'
@@ -588,7 +614,7 @@ export function QualiopiDashboardPremium() {
           recommendation: undefined,
         }
       })
-      .slice(0, 5) as any[]
+      .slice(0, 5)
   }, [effectiveIndicators])
 
   // Données pour le heatmap (simulées pour la démo)
@@ -596,7 +622,7 @@ export function QualiopiDashboardPremium() {
     // Utiliser les vraies données d'evidence si disponibles
     const activityByDate = new Map<string, number>()
 
-    evidence.forEach((e: any) => {
+    evidence.forEach((e: Evidence) => {
       const dateKey = format(new Date(e.event_date), 'yyyy-MM-dd')
       activityByDate.set(dateKey, (activityByDate.get(dateKey) || 0) + 1)
     })
@@ -708,7 +734,7 @@ export function QualiopiDashboardPremium() {
           <div className="lg:col-span-4 space-y-6">
             <CriticalAlerts indicators={riskIndicators} />
             <EvidenceVault
-              evidence={evidence as any}
+              evidence={evidence}
               onRefreshEvidence={handleRefreshEvidence}
             />
           </div>

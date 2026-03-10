@@ -9,17 +9,36 @@ type Payment = TableRow<'payments'>
 type Session = TableRow<'sessions'>
 type Formation = TableRow<'formations'>
 
+/** Organisation avec champs optionnels (website, siret, postal_code, rcs, representative_name) */
+type OrgExtended = Organization & {
+  website?: string | null
+  siret?: string | null
+  postal_code?: string | null
+  rcs?: string | null
+  representative_name?: string | null
+}
+/** Étudiant avec champs optionnels (postal_code, city, etc.) */
+type StudentExtended = StudentWithRelations & {
+  postal_code?: string | null
+  city?: string | null
+}
+/** Formation avec objectifs */
+type FormationExtended = Formation & { objectives?: string | null }
+
 /**
  * Mappe les données d'un étudiant vers les variables de document
  */
 export function mapStudentToVariables(
-  student: StudentWithRelations | any,
+  student: StudentWithRelations | null | undefined,
   organization?: Organization | null,
   session?: Session | null,
   formation?: Formation | null
 ): DocumentVariables {
   const now = new Date()
-  
+  const org = organization as OrgExtended | undefined
+  const stud = student as StudentExtended | undefined
+  const form = formation as FormationExtended | undefined
+
   return {
     // Établissement
     ecole_nom: organization?.name || '',
@@ -28,10 +47,10 @@ export function mapStudentToVariables(
     ecole_ville: organization?.city || '',
     ecole_telephone: organization?.phone || '',
     ecole_email: organization?.email || '',
-    ecole_site_web: (organization as any)?.website || '',
-    ecole_siret: (organization as any)?.siret || '',
-    ecole_code_postal: (organization as any)?.postal_code || '',
-    
+    ecole_site_web: org?.website || '',
+    ecole_siret: org?.siret || '',
+    ecole_code_postal: org?.postal_code || '',
+
     // Élève
     eleve_nom: student?.last_name || '',
     eleve_prenom: student?.first_name || '',
@@ -40,11 +59,11 @@ export function mapStudentToVariables(
     eleve_classe: session?.name || '',
     eleve_photo: student?.photo_url || '',
     eleve_adresse: student?.address || '',
-    eleve_code_postal: (student as any)?.postal_code || '',
-    eleve_ville: (student as any)?.city || '',
+    eleve_code_postal: stud?.postal_code || '',
+    eleve_ville: stud?.city || '',
     eleve_telephone: student?.phone || '',
     eleve_email: student?.email || '',
-    
+
     // Formation
     formation_nom: formation?.name || '',
     formation_code: formation?.code || '',
@@ -52,7 +71,7 @@ export function mapStudentToVariables(
     formation_prix: formation?.price ? `${formation.price} ${formation.currency || 'EUR'}` : '',
     formation_dates: session ? `${formatDate(session.start_date)} - ${formatDate(session.end_date)}` : '',
     formation_description: formation?.description || '',
-    formation_objectifs: (formation as any)?.objectives || '',
+    formation_objectifs: form?.objectives || '',
     
     // Session
     session_nom: session?.name || '',
@@ -81,12 +100,14 @@ export function mapStudentToVariables(
  * Mappe les données d'une facture vers les variables de document
  */
 export function mapInvoiceToVariables(
-  invoice: Invoice | any,
-  student?: StudentWithRelations | any,
+  invoice: Invoice | null | undefined,
+  student?: StudentWithRelations | null,
   organization?: Organization | null
 ): DocumentVariables {
   const now = new Date()
-  
+  const org = organization as OrgExtended | undefined
+  const stud = student as StudentExtended | undefined
+
   return {
     // Établissement
     ecole_nom: organization?.name || '',
@@ -95,15 +116,15 @@ export function mapInvoiceToVariables(
     ecole_ville: organization?.city || '',
     ecole_telephone: organization?.phone || '',
     ecole_email: organization?.email || '',
-    ecole_siret: (organization as any)?.siret || '',
-    
+    ecole_siret: org?.siret || '',
+
     // Élève
     eleve_nom: student?.last_name || '',
     eleve_prenom: student?.first_name || '',
     eleve_numero: student?.student_number || '',
     eleve_adresse: student?.address || '',
-    eleve_code_postal: (student as any)?.postal_code || '',
-    eleve_ville: (student as any)?.city || '',
+    eleve_code_postal: stud?.postal_code || '',
+    eleve_ville: stud?.city || '',
     
     // Finances
     montant: invoice?.total_amount ? `${invoice.total_amount} ${invoice.currency || 'EUR'}` : '',
@@ -132,9 +153,9 @@ export function mapInvoiceToVariables(
  * Mappe les données d'un paiement vers les variables de document
  */
 export function mapPaymentToVariables(
-  payment: Payment | any,
-  invoice?: Invoice | any,
-  student?: StudentWithRelations | any,
+  payment: Payment | null | undefined,
+  invoice?: Invoice | null,
+  student?: StudentWithRelations | null,
   organization?: Organization | null
 ): DocumentVariables {
   const now = new Date()
@@ -154,7 +175,7 @@ export function mapPaymentToVariables(
     
     // Finances
     montant: payment?.amount ? `${payment.amount} ${payment.currency || 'EUR'}` : '',
-    date_paiement: payment?.paid_at ? formatDate(payment.paid_at) : payment?.payment_date ? formatDate(payment.payment_date) : '',
+    date_paiement: payment?.paid_at ? formatDate(payment.paid_at) : '',
     mode_paiement: payment?.payment_method || '',
     numero_facture: invoice?.invoice_number || '',
     
@@ -164,7 +185,7 @@ export function mapPaymentToVariables(
     date_generation: formatDate(now),
     
     // Divers
-    numero_document: payment?.payment_number || `DOC-${now.getTime()}`,
+    numero_document: (payment as { payment_number?: string })?.payment_number ?? `DOC-${now.getTime()}`,
     numero_page: 1,
     total_pages: 1,
   }
@@ -174,13 +195,15 @@ export function mapPaymentToVariables(
  * Mappe les données d'une session vers les variables de document
  */
 export function mapSessionToVariables(
-  session: Session | any,
-  formation?: Formation | any,
+  session: Session | null | undefined,
+  formation?: Formation | null,
   organization?: Organization | null
 ): DocumentVariables {
   const now = new Date()
-  
-  const variables: any = {
+  const org = organization as OrgExtended | undefined
+  const form = formation as FormationExtended | undefined
+
+  const variables: DocumentVariables = {
     // Établissement
     ecole_nom: organization?.name || '',
     ecole_logo: organization?.logo_url || '',
@@ -188,17 +211,17 @@ export function mapSessionToVariables(
     ecole_ville: organization?.city || '',
     ecole_telephone: organization?.phone || '',
     ecole_email: organization?.email || '',
-    ecole_siret: (organization as any)?.siret || '',
-    ecole_rcs: (organization as any)?.rcs || '',
-    ecole_representant: (organization as any)?.representative_name || '',
-    
+    ecole_siret: org?.siret || '',
+    ecole_rcs: org?.rcs || '',
+    ecole_representant: org?.representative_name || '',
+
     // Formation
     formation_nom: formation?.name || '',
     formation_code: formation?.code || '',
     formation_duree: formation?.duration_hours ? `${formation.duration_hours} heures` : '',
     formation_prix: formation?.price ? `${formation.price} ${formation.currency || 'EUR'}` : '',
     formation_description: formation?.description || '',
-    formation_objectifs: (formation as any)?.objectives || '',
+    formation_objectifs: form?.objectives || '',
     
     // Session
     session_nom: session?.name || '',
@@ -220,7 +243,7 @@ export function mapSessionToVariables(
     numero_page: 1,
     total_pages: 1,
   }
-  return variables as DocumentVariables
+  return variables
 }
 
 /**
@@ -229,11 +252,11 @@ export function mapSessionToVariables(
 export function mapDataToVariables(
   type: 'invoice' | 'quote' | 'certificate' | 'contract' | 'report' | 'other',
   data: {
-    student?: StudentWithRelations | any
-    invoice?: Invoice | any
-    payment?: Payment | any
-    session?: Session | any | Session[]
-    formation?: Formation | any
+    student?: StudentWithRelations | null
+    invoice?: Invoice | null
+    payment?: Payment | null
+    session?: Session | Session[] | null
+    formation?: Formation | null
     organization?: Organization | null
   }
 ): DocumentVariables {
@@ -267,6 +290,7 @@ export function mapDataToVariables(
 
   // Fallback: retourner des variables vides avec les données de base disponibles
   const now = new Date()
+  const fallbackStud = student as StudentExtended | undefined
   return {
     ecole_nom: organization?.name || '',
     ecole_logo: organization?.logo_url || '',
@@ -278,8 +302,8 @@ export function mapDataToVariables(
     eleve_prenom: student?.first_name || '',
     eleve_numero: student?.student_number || '',
     eleve_adresse: student?.address || '',
-    eleve_code_postal: (student as any)?.postal_code || '',
-    eleve_ville: (student as any)?.city || '',
+    eleve_code_postal: fallbackStud?.postal_code || '',
+    eleve_ville: fallbackStud?.city || '',
     date_jour: formatDate(now),
     date_emission: formatDate(now),
     date_generation: formatDate(now),

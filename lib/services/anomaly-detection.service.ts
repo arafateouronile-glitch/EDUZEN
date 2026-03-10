@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 // Types locaux pour les tables anomaly qui ne sont pas encore dans le schéma Supabase
 type Anomaly = any
@@ -21,14 +22,19 @@ export class AnomalyDetectionService {
   // ========== ANOMALY TYPES ==========
 
   async getAnomalyTypes() {
-    const { data, error } = await (this.supabase as any)
-      .from('anomaly_types')
-      .select('*')
-      .eq('is_active', true)
-      .order('severity', { ascending: false })
+    try {
+      const { data, error } = await (this.supabase as any)
+        .from('anomaly_types')
+        .select('*')
+        .eq('is_active', true)
+        .order('severity', { ascending: false })
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('AnomalyDetectionService.getAnomalyTypes', error)
+      throw error
+    }
   }
 
   // ========== ANOMALIES ==========
@@ -45,6 +51,7 @@ export class AnomalyDetectionService {
       assignedTo?: string
     }
   ) {
+    try {
     let query = (this.supabase as any)
       .from('anomalies')
       .select(`
@@ -91,20 +98,29 @@ export class AnomalyDetectionService {
 
     if (error) throw error
     return data
+    } catch (error) {
+      logger.error('AnomalyDetectionService.getAnomalies', error, { organizationId })
+      throw error
+    }
   }
 
   async createAnomaly(anomaly: TableInsert<'anomalies'>) {
-    const { data, error } = await (this.supabase as any)
-      .from('anomalies')
-      .insert(anomaly)
-      .select(`
-        *,
-        anomaly_type:anomaly_types(*)
-      `)
-      .single()
+    try {
+      const { data, error } = await (this.supabase as any)
+        .from('anomalies')
+        .insert(anomaly)
+        .select(`
+          *,
+          anomaly_type:anomaly_types(*)
+        `)
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('AnomalyDetectionService.createAnomaly', error, { organizationId: (anomaly as { organization_id?: string }).organization_id })
+      throw error
+    }
   }
 
   async updateAnomalyStatus(

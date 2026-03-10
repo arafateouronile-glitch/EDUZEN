@@ -53,22 +53,22 @@ export async function sendEmailViaResend(
       from,
       to: recipients,
       subject: options.subject,
-      html: options.html,
+      html: options.html ?? undefined,
       text: options.text ?? (options.html ? options.html.replace(/<[^>]*>/g, '') : undefined),
-      replyTo: options.replyTo as string | undefined,
-    } as any)
+      replyTo: options.replyTo ?? undefined,
+    } as Parameters<typeof resend.emails.send>[0])
 
-    if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as any)) {
+    if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as { statusCode?: number; message?: string })) {
       logger.warn('Email (Resend server) - Domaine non vérifié, nouvel essai avec onboarding@resend.dev')
       from = RESEND_SANDBOX_FROM
       const retry = await resend.emails.send({
         from,
         to: recipients,
         subject: options.subject,
-        html: options.html,
+        html: options.html ?? undefined,
         text: options.text ?? (options.html ? options.html.replace(/<[^>]*>/g, '') : undefined),
-        replyTo: options.replyTo as string | undefined,
-      } as any)
+        replyTo: options.replyTo ?? undefined,
+      } as Parameters<typeof resend.emails.send>[0])
       error = retry.error ?? null
       data = retry.data
     }

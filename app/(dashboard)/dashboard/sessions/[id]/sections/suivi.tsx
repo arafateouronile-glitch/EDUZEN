@@ -114,14 +114,15 @@ interface SuiviProps {
   onRefresh?: () => void
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+type TooltipEntry = { name?: string; value?: unknown; color?: string }
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white/90 backdrop-blur-md border border-gray-100 p-3 rounded-xl shadow-xl z-50">
         <p className="font-semibold text-gray-800 text-sm mb-1">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry: TooltipEntry, index: number) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}: <span className="font-bold">{entry.value}</span>
+            {entry.name}: <span className="font-bold">{String(entry.value ?? '')}</span>
           </p>
         ))}
       </div>
@@ -293,9 +294,9 @@ export function Suivi({
       setExamFormOpen(false)
       setExamForm({ subject: '', student_id: '', score: '', max_score: '20', notes: '' })
       addToast({ type: 'success', title: 'Résultat enregistré', description: 'Le résultat d\'examen a été ajouté.' })
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Erreur ajout résultat examen', err)
-      addToast({ type: 'error', title: 'Erreur', description: err?.message || 'Impossible d\'enregistrer le résultat.' })
+      addToast({ type: 'error', title: 'Erreur', description: err instanceof Error ? err.message : 'Impossible d\'enregistrer le résultat.' })
     } finally {
       setIsSubmittingExam(false)
     }
@@ -312,9 +313,9 @@ export function Suivi({
       onRefresh?.()
       setEditingGrade(null)
       addToast({ type: 'success', title: 'Note mise à jour', description: 'La note a été enregistrée.' })
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Erreur mise à jour note', err)
-      addToast({ type: 'error', title: 'Erreur', description: err?.message || 'Impossible de mettre à jour la note.' })
+      addToast({ type: 'error', title: 'Erreur', description: err instanceof Error ? err.message : 'Impossible de mettre à jour la note.' })
     } finally {
       setIsSavingEdit(false)
     }
@@ -407,7 +408,7 @@ export function Suivi({
                 </thead>
                 <tbody>
                   {examGrades.map((g: GradeWithRelations) => {
-                    const student = (g as any).students
+                    const student = (g as GradeWithRelations & { students?: { first_name?: string; last_name?: string } }).students
                     const name = student ? `${student.first_name || ''} ${student.last_name || ''}`.trim() || '—' : '—'
                     return (
                       <tr key={g.id} className="border-b border-gray-100 hover:bg-gray-50/50">
@@ -839,7 +840,7 @@ export function Suivi({
             </div>
           </div>
           <div className="divide-y divide-gray-100">
-            {sessionSignatures.map((signature: any) => (
+            {sessionSignatures.map((signature) => (
               <div
                 key={signature.id}
                 className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
@@ -866,10 +867,10 @@ export function Suivi({
                   {signature.document?.students && (
                     <div className="flex items-center gap-1.5">
                       <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center text-[8px] font-bold text-gray-600">
-                        {signature.document.students.first_name[0]}
+                        {signature.document.students.first_name?.[0] ?? ''}
                       </div>
                       <span className="text-xs text-gray-500">
-                        {signature.document.students.first_name} {signature.document.students.last_name}
+                        {signature.document.students.first_name ?? ''} {signature.document.students.last_name ?? ''}
                       </span>
                     </div>
                   )}

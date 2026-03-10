@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 type RNCPCertification = TableRow<'rncp_certifications'>
 type RNCPCertificationInsert = TableInsert<'rncp_certifications'>
@@ -38,70 +39,90 @@ export class RNCPCertificationService {
     type?: 'RNCP' | 'RS' | 'other'
     search?: string
   }): Promise<RNCPCertification[]> {
-    let query = this.supabase
-      .from('rncp_certifications')
-      .select('*')
-      .eq('organization_id', organizationId)
+    try {
+      let query = this.supabase
+        .from('rncp_certifications')
+        .select('*')
+        .eq('organization_id', organizationId)
 
-    if (filters?.isActive !== undefined) {
-      query = query.eq('is_active', filters.isActive)
+      if (filters?.isActive !== undefined) {
+        query = query.eq('is_active', filters.isActive)
+      }
+
+      if (filters?.type) {
+        query = query.eq('certification_type', filters.type)
+      }
+
+      if (filters?.search) {
+        query = query.or(`title.ilike.%${filters.search}%,rncp_code.ilike.%${filters.search}%,rs_code.ilike.%${filters.search}%`)
+      }
+
+      const { data, error } = await query.order('title', { ascending: true })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      logger.error('RNCPCertificationService.getCertifications', error, { organizationId })
+      throw error
     }
-
-    if (filters?.type) {
-      query = query.eq('certification_type', filters.type)
-    }
-
-    if (filters?.search) {
-      query = query.or(`title.ilike.%${filters.search}%,rncp_code.ilike.%${filters.search}%,rs_code.ilike.%${filters.search}%`)
-    }
-
-    const { data, error } = await query.order('title', { ascending: true })
-
-    if (error) throw error
-    return data || []
   }
 
   /**
    * Récupère une certification par son ID
    */
   async getCertificationById(id: string): Promise<RNCPCertification> {
-    const { data, error } = await this.supabase
-      .from('rncp_certifications')
-      .select('*')
-      .eq('id', id)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('rncp_certifications')
+        .select('*')
+        .eq('id', id)
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('RNCPCertificationService.getCertificationById', error, { id })
+      throw error
+    }
   }
 
   /**
    * Crée une certification
    */
   async createCertification(certification: FlexibleInsert<'rncp_certifications'>): Promise<RNCPCertification> {
-    const { data, error } = await this.supabase
-      .from('rncp_certifications')
-      .insert(certification as RNCPCertificationInsert)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('rncp_certifications')
+        .insert(certification as RNCPCertificationInsert)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('RNCPCertificationService.createCertification', error, { organizationId: (certification as { organization_id?: string }).organization_id })
+      throw error
+    }
   }
 
   /**
    * Met à jour une certification
    */
   async updateCertification(id: string, updates: FlexibleUpdate<'rncp_certifications'>): Promise<RNCPCertification> {
-    const { data, error } = await this.supabase
-      .from('rncp_certifications')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('rncp_certifications')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('RNCPCertificationService.updateCertification', error, { id })
+      throw error
+    }
   }
 
   // ==================== JURYS ====================
@@ -115,6 +136,7 @@ export class RNCPCertificationService {
     startDate?: string
     endDate?: string
   }): Promise<CertificationJury[]> {
+    try {
     let query = this.supabase
       .from('certification_juries')
       .select('*, rncp_certifications(*), sites(*)')
@@ -140,6 +162,10 @@ export class RNCPCertificationService {
 
     if (error) throw error
     return data || []
+    } catch (error) {
+      logger.error('RNCPCertificationService.getJuries', error, { organizationId })
+      throw error
+    }
   }
 
   /**

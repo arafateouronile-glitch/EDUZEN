@@ -70,13 +70,14 @@ export async function PATCH(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as any)?.manage_blog) {
+    const perms = admin?.permissions as Record<string, unknown> | null
+    if (!admin || !perms?.manage_blog) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
     const body: Partial<UpdateBlogPostInput> = await request.json()
 
-    const updates: any = {}
+    const updates: Record<string, unknown> = {}
 
     if (body.title) updates.title = body.title
     if (body.slug) updates.slug = body.slug
@@ -166,7 +167,8 @@ export async function DELETE(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as any)?.manage_blog) {
+    const perms = admin?.permissions as Record<string, unknown> | null
+    if (!admin || !perms?.manage_blog) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 

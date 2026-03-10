@@ -41,17 +41,16 @@ export default function SessionAttendancePage() {
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery<EnrollmentWithRelations[]>({
     queryKey: ['session-enrollments', sessionId],
     queryFn: async () => {
-      // eslint-disable-next-line
-      const q: any = supabase
+      const base = supabase
         .from('enrollments')
         .select('*, students(*)')
         .eq('session_id', sessionId)
         .in('status', ['confirmed', 'completed'])
-        .order('students(last_name)', { ascending: true })
-      const { data, error } = await q
+      type Orderable = { order: (column: string, opts: { ascending?: boolean }) => Promise<{ data: unknown; error: unknown }> }
+      const { data, error } = await (base as unknown as Orderable).order('students(last_name)', { ascending: true })
       if (error) throw error
-      // Mapper les résultats pour convertir null en undefined
-      return (data || []).map((enrollment: TableRow<'enrollments'> & { students?: TableRow<'students'> | null }) => ({
+      const list = Array.isArray(data) ? data : []
+      return list.map((enrollment: TableRow<'enrollments'> & { students?: TableRow<'students'> | null }) => ({
         ...enrollment,
         students: enrollment.students || undefined,
       })) as EnrollmentWithRelations[]
@@ -65,9 +64,9 @@ export default function SessionAttendancePage() {
     queryFn: async () => {
       const data = await attendanceService.getBySessionAndDate(sessionId, date)
       // Convertir students: null en students: undefined pour correspondre à AttendanceWithRelations
-      return data.map((att: any) => ({
+      return (data as AttendanceWithRelations[]).map((att) => ({
         ...att,
-        students: att.students || undefined,
+        students: att.students ?? undefined,
       }))
     },
     enabled: !!sessionId,

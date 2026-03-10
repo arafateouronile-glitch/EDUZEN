@@ -40,7 +40,8 @@ export interface CPFConfiguration {
 
 export default function CPFConfigurationPage() {
   const { user } = useAuth()
-  const supabase = createClient() as any // Cast pour tables non typées
+  type SupabaseClientLike = ReturnType<typeof createClient> & { from(table: string): ReturnType<ReturnType<typeof createClient>['from']> }
+  const supabase = createClient() as SupabaseClientLike
   const queryClient = useQueryClient()
   const { addToast } = useToast()
 
@@ -75,7 +76,7 @@ export default function CPFConfigurationPage() {
         throw error
       }
 
-      return data as CPFConfiguration
+      return data as unknown as CPFConfiguration
     },
     enabled: !!user?.organization_id,
     retry: false,
@@ -106,7 +107,7 @@ export default function CPFConfigurationPage() {
         // Mise à jour
         const { data, error } = await supabase
           .from('cpf_configurations')
-          .update(configToSave)
+          .update(configToSave as never)
           .eq('id', existingConfig.id)
           .select()
           .single()
@@ -120,7 +121,7 @@ export default function CPFConfigurationPage() {
           .insert({
             ...configToSave,
             created_at: new Date().toISOString(),
-          })
+          } as never)
           .select()
           .single()
 
@@ -142,11 +143,11 @@ export default function CPFConfigurationPage() {
       })
       queryClient.invalidateQueries({ queryKey: ['cpf-configuration', user?.organization_id] })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur lors de la sauvegarde',
-        description: error?.message || 'Une erreur est survenue lors de la sauvegarde de la configuration.',
+        description: (error instanceof Error ? error.message : null) || 'Une erreur est survenue lors de la sauvegarde de la configuration.',
       })
     },
   })
@@ -202,7 +203,7 @@ export default function CPFConfigurationPage() {
       </div>
 
       {/* Avertissement si table n'existe pas */}
-      {saveMutation.error?.message?.includes('n\'existe pas') && (
+      {(saveMutation.error as Error | null)?.message?.includes('n\'existe pas') && (
         <Card className="mb-6 border-yellow-200 bg-yellow-50">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">

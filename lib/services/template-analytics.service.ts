@@ -12,7 +12,7 @@ export const templateAnalyticsService = {
   /**
    * Enregistre un événement d'analytics pour un template
    */
-  async logEvent(templateId: string, eventType: string, metadata?: any) {
+  async logEvent(templateId: string, eventType: string, metadata?: Record<string, unknown>) {
     // NOTE: Fonctionnalité prévue - Logger les événements dans une table template_analytics
     logger.warn('TemplateAnalyticsService - logEvent not implemented')
     return null

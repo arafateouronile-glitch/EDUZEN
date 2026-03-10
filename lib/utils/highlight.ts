@@ -58,7 +58,7 @@ export function highlightText(text: string, query: string): Array<{ text: string
  * @param fields Les champs à rechercher
  * @returns L'objet avec les champs mis en évidence
  */
-export function highlightFields<T extends Record<string, any>>(
+export function highlightFields<T extends Record<string, unknown>>(
   obj: T,
   query: string,
   fields: (keyof T)[]

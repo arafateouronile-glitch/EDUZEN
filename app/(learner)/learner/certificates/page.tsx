@@ -71,8 +71,10 @@ export default function LearnerCertificatesPage() {
     enabled: !!studentData?.id,
   })
 
+  type CourseCert = { id: string; courses?: { title?: string; description?: string }; issued_at?: string; certificate_number?: string; certificate_url?: string }
+  type SessionEnrollment = { id: string; sessions?: { name?: string; start_date?: string; formations?: { name?: string } }; created_at?: string; enrollment_date?: string }
   const allCertificates = [
-    ...(courseCertificates || []).map((cert: any) => ({
+    ...((courseCertificates ?? []) as CourseCert[]).map((cert) => ({
       id: cert.id,
       title: cert.courses?.title || 'Cours',
       description: cert.courses?.description,
@@ -82,7 +84,7 @@ export default function LearnerCertificatesPage() {
       url: cert.certificate_url,
       hours: 0,
     })),
-    ...(sessionCertificates || []).map((enrollment: any) => ({
+    ...((sessionCertificates ?? []) as SessionEnrollment[]).map((enrollment) => ({
       id: enrollment.id,
       title: enrollment.sessions?.formations?.name || enrollment.sessions?.name || 'Formation',
       description: `Session du ${enrollment.sessions?.start_date ? formatDate(enrollment.sessions.start_date) : 'N/A'}`,
@@ -92,7 +94,7 @@ export default function LearnerCertificatesPage() {
       url: null,
       hours: 0,
     })),
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  ].sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
 
   const isLoading = loadingCourse || loadingSession
 

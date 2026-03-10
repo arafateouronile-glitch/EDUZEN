@@ -220,7 +220,7 @@ export class UserManagementService {
       .eq('role_id', roleId)
 
     if (error) throw error
-    return (data || []).map((item: { permission_id?: any; permissions?: Permission | Permission[] }) => {
+    return (data || []).map((item: { permission_id?: string; permissions?: Permission | Permission[] }) => {
       if (Array.isArray(item.permissions)) {
         return item.permissions[0]
       }

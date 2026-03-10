@@ -103,13 +103,14 @@ export default function NewStudentPage() {
         .eq('formations.organization_id', user.organization_id)
         .order('start_date', { ascending: false })
       if (error) throw error
-      return data?.map((session: any) => ({
+      type SessionOption = { id: string; name?: string; start_date?: string; end_date?: string; formations: { name?: string; code?: string; programs?: { name?: string } } }
+      return ((data ?? []) as SessionOption[]).map((session) => ({
         id: session.id,
-        name: `${session.name} - ${session.formations.name}${session.formations.programs ? ` (${session.formations.programs.name})` : ''}`,
-        code: session.formations.code,
+        name: `${session.name ?? ''} - ${session.formations?.name ?? ''}${session.formations?.programs ? ` (${session.formations.programs.name ?? ''})` : ''}`,
+        code: session.formations?.code,
         start_date: session.start_date,
         end_date: session.end_date,
-      })) || []
+      }))
     },
     enabled: !!user?.organization_id && !userLoading,
   })
@@ -308,7 +309,7 @@ export default function NewStudentPage() {
         }
       }
 
-      const studentData: any = {
+      const studentData: Record<string, unknown> = {
         organization_id: targetOrganizationId,
         student_number: studentNumber,
         first_name: data.first_name,
@@ -342,7 +343,7 @@ export default function NewStudentPage() {
 
       const { data: student, error: studentError } = await supabase
         .from('students')
-        .insert(studentData)
+        .insert(studentData as never)
         .select()
         .single()
 

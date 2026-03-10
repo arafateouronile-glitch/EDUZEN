@@ -44,14 +44,13 @@ export interface CreateExportHistoryParams {
   filename: string
   recordCount?: number
   fileSizeBytes?: number
-  filters?: Record<string, any>
+  filters?: Record<string, unknown>
 }
 
 export class ExportHistoryService {
-  private supabase: SupabaseClient<any>
+  private supabase: SupabaseClient
 
-
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient?: SupabaseClient) {
 
     this.supabase = supabaseClient || createClient()
 
@@ -86,9 +85,9 @@ export class ExportHistoryService {
         throw error
       }
       return data
-    } catch (error: any) {
-      // Si la table n'existe pas, retourner null silencieusement
-      if (error?.code === 'PGRST205' || error?.message?.includes('Could not find the table')) {
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string }
+      if (err?.code === 'PGRST205' || err?.message?.includes('Could not find the table')) {
         return null
       }
       throw error
@@ -140,8 +139,8 @@ export class ExportHistoryService {
           error.code === 'PGRST200' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          (error as any).status === 400 ||
-          (error as any).status === 404 ||
+          (error as { status?: number }).status === 400 ||
+          (error as { status?: number }).status === 404 ||
           error.code === '400' ||
           error.code === '404' ||
           error.message?.includes('relation') ||
@@ -165,19 +164,18 @@ export class ExportHistoryService {
         limit,
         totalPages: Math.ceil((count || 0) / limit),
       }
-    } catch (error: any) {
-      // Gérer les erreurs de table inexistante
+    } catch (error: unknown) {
+      const err = error as { code?: string; status?: number; message?: string }
       if (
-        error?.code === 'PGRST116' ||
-        error?.code === 'PGRST200' ||
-        error?.code === '42P01' ||
-        error?.code === 'PGRST301' ||
-        error?.status === 400 ||
-        error?.status === 404 ||
-        error?.code === '400' ||
-        error?.code === '404' ||
-        error?.message?.includes('relation') ||
-        error?.message?.includes('does not exist')
+        err?.code === 'PGRST116' ||
+        err?.code === 'PGRST200' ||
+        err?.code === '42P01' ||
+        err?.code === 'PGRST301' ||
+        err?.status === 400 ||
+        err?.status === 404 ||
+        err?.code === '400' ||
+        err?.code === '404' ||
+        (typeof err?.message === 'string' && (err.message.includes('relation') || err.message.includes('does not exist')))
       ) {
         return {
           data: [],
@@ -208,8 +206,8 @@ export class ExportHistoryService {
           error.code === 'PGRST200' ||
           error.code === '42P01' ||
           error.code === 'PGRST301' ||
-          (error as any).status === 400 ||
-          (error as any).status === 404 ||
+          (error as { status?: number }).status === 400 ||
+          (error as { status?: number }).status === 404 ||
           error.code === '400' ||
           error.code === '404' ||
           error.message?.includes('relation') ||
@@ -244,19 +242,18 @@ export class ExportHistoryService {
       })
 
       return stats
-    } catch (error: any) {
-      // Gérer les erreurs de table inexistante
+    } catch (error: unknown) {
+      const err = error as { code?: string; status?: number; message?: string }
       if (
-        error?.code === 'PGRST116' ||
-        error?.code === 'PGRST200' ||
-        error?.code === '42P01' ||
-        error?.code === 'PGRST301' ||
-        error?.status === 400 ||
-        error?.status === 404 ||
-        error?.code === '400' ||
-        error?.code === '404' ||
-        error?.message?.includes('relation') ||
-        error?.message?.includes('does not exist')
+        err?.code === 'PGRST116' ||
+        err?.code === 'PGRST200' ||
+        err?.code === '42P01' ||
+        err?.code === 'PGRST301' ||
+        err?.status === 400 ||
+        err?.status === 404 ||
+        err?.code === '400' ||
+        err?.code === '404' ||
+        (typeof err?.message === 'string' && (err.message.includes('relation') || err.message.includes('does not exist')))
       ) {
         return {
           total: 0,

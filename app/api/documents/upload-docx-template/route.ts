@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const { data: templateData, error: templateError } = await supabase
       .from('document_templates')
       .update({ docx_template_url: docxTemplateUrl })
-      .eq('type', type as any)
+      .eq('type', type as 'convention' | 'facture' | 'devis' | 'convocation' | 'contrat' | 'attestation_reussite' | 'certificat_scolarite' | 'releve_notes' | 'attestation_entree' | 'reglement_interieur' | 'attestation')
       .eq('organization_id', organizationId)
       .select()
       .single()

@@ -60,7 +60,7 @@ export default function ChargeCategoriesPage() {
     queryFn: async () => {
       if (!user?.organization_id) return []
       const { data, error } = await supabase
-        .from('charge_categories' as any)
+        .from('charge_categories')
         .select('*')
         .eq('organization_id', user.organization_id)
         .order('name', { ascending: true })
@@ -75,7 +75,7 @@ export default function ChargeCategoriesPage() {
       if (!user?.organization_id) throw new Error('Organisation manquante')
       const code = data.code || data.name.toUpperCase().replace(/\s+/g, '_').slice(0, 50)
       const { data: row, error } = await supabase
-        .from('charge_categories' as any)
+        .from('charge_categories')
         .insert({
           organization_id: user.organization_id,
           name: data.name,
@@ -105,7 +105,7 @@ export default function ChargeCategoriesPage() {
     mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
       if (!user?.organization_id) throw new Error('Organisation manquante')
       const { error } = await supabase
-        .from('charge_categories' as any)
+        .from('charge_categories')
         .update({
           name: data.name,
           code: data.code,
@@ -133,7 +133,7 @@ export default function ChargeCategoriesPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('charge_categories' as any)
+        .from('charge_categories')
         .delete()
         .eq('id', id)
         .eq('organization_id', user!.organization_id!)
@@ -160,7 +160,7 @@ export default function ChargeCategoriesPage() {
     setEditingId(null)
   }
 
-  const handleEdit = (c: any) => {
+  const handleEdit = (c: { id: string; name?: string; code?: string; description?: string; is_active?: boolean | null; bpf_category?: string | null }) => {
     setFormData({
       name: c.name || '',
       code: c.code || '',
@@ -184,7 +184,7 @@ export default function ChargeCategoriesPage() {
   const handleSaveBpf = async (id: string, bpf: string) => {
     if (!user?.organization_id) return
     const { error } = await supabase
-      .from('charge_categories' as any)
+      .from('charge_categories')
       .update({ bpf_category: bpf || null, updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('organization_id', user.organization_id)
@@ -314,7 +314,7 @@ export default function ChargeCategoriesPage() {
         <Card><CardContent className="py-8 text-center text-gray-500">Chargement...</CardContent></Card>
       ) : list.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {(list as any[]).map((c) => (
+          {list.map((c) => (
             <GlassCard key={c.id} className="p-6">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -327,7 +327,7 @@ export default function ChargeCategoriesPage() {
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(c)}>
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(c as Parameters<typeof handleEdit>[0])}>
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => confirm('Supprimer ?') && deleteMutation.mutate(c.id)}>

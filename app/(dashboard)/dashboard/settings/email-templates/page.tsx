@@ -119,10 +119,10 @@ export default function EmailTemplatesPage() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Une erreur est survenue lors de la création du modèle.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la création du modèle.',
         type: 'error',
       })
     },
@@ -130,7 +130,7 @@ export default function EmailTemplatesPage() {
 
   // Mutation pour mettre à jour un modèle
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    mutationFn: async ({ id, data }: { id: string; data: import('@/lib/services/email-template.service').UpdateEmailTemplateInput }) => {
       return emailTemplateService.update(id, data)
     },
     onSuccess: () => {
@@ -143,10 +143,10 @@ export default function EmailTemplatesPage() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Une erreur est survenue lors de la mise à jour du modèle.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la mise à jour du modèle.',
         type: 'error',
       })
     },
@@ -165,10 +165,10 @@ export default function EmailTemplatesPage() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Une erreur est survenue lors de la suppression du modèle.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la suppression du modèle.',
         type: 'error',
       })
     },
@@ -193,18 +193,18 @@ export default function EmailTemplatesPage() {
     setShowCreateModal(true)
   }
 
-  const handleEdit = (template: any) => {
+  const handleEdit = (template: import('@/lib/services/email-template.service').EmailTemplate) => {
     const bodySource = template.body_text?.trim()
       ? template.body_text
       : htmlToPlainText(template.body_html || '')
     setFormData({
-      email_type: template.email_type,
+      email_type: template.email_type as import('@/lib/services/email-template.service').EmailType,
       name: template.name,
       subject: template.subject,
       body_html: template.body_html,
       body_text: bodySource,
-      is_default: template.is_default,
-      is_active: template.is_active,
+      is_default: template.is_default ?? false,
+      is_active: template.is_active ?? false,
       description: template.description || '',
     })
     setEditingTemplate(template)

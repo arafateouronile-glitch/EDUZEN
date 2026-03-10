@@ -37,7 +37,7 @@ const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
         )}
         whileHover={hoverable ? { scale: 1.02, y: -2 } : undefined}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        {...(props as any)}
+        {...(props as Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'>)}
       >
         {/* Glow effect */}
         {glow && (

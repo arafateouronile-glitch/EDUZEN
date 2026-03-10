@@ -289,6 +289,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     
     const expanded = getExpandedMenus()
     setExpandedMenus(expanded)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- getExpandedMenus reads from refs/state, sync on route
   }, [clientPathname, mounted, t])
 
   // Close sidebar when route changes

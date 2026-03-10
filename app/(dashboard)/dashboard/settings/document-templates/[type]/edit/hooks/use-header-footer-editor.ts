@@ -1,5 +1,6 @@
 'use client'
 
+/* eslint-disable react-hooks/exhaustive-deps -- header/footer derived from template, useCallback deps intentionally minimal */
 import { useState, useCallback } from 'react'
 import type { DocumentTemplate, HeaderConfig, FooterConfig, TemplateElement } from '@/lib/types/document-templates'
 
@@ -154,9 +155,9 @@ export function useHeaderFooterEditor(
       // NOTE: Application basique des layouts implémentée
       // Peut être étendue avec des layouts prédéfinis (centré, aligné à gauche/droite, etc.)
       if (type === 'header') {
-        updateHeader({ layout: layout as any })
+        updateHeader({ layout: layout as HeaderConfig['layout'] })
       } else {
-        updateFooter({ layout: layout as any })
+        updateFooter({ layout: layout as FooterConfig['layout'] })
       }
     },
     [updateHeader, updateFooter]

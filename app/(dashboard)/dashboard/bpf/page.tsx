@@ -83,11 +83,11 @@ export default function BPFPage() {
         description: `Le rapport pour l'année ${selectedYear} a été créé avec succès.`,
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible de créer le rapport BPF.',
+        description: error instanceof Error ? error.message : 'Impossible de créer le rapport BPF.',
       })
     },
   })

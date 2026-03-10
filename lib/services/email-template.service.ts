@@ -24,7 +24,7 @@ export interface CreateEmailTemplateInput {
   is_default?: boolean
   is_active?: boolean
   description?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface UpdateEmailTemplateInput {
@@ -36,7 +36,7 @@ export interface UpdateEmailTemplateInput {
   is_default?: boolean
   is_active?: boolean
   description?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export class EmailTemplateService {

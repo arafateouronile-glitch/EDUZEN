@@ -492,6 +492,7 @@ export default function LearnerQuizPage() {
     }, 1000)
 
     return () => clearInterval(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- handleSubmit stable ref, timer only depends on timeLeft/showResults
   }, [timeLeft, showResults])
 
   const formatTime = (seconds: number) => {

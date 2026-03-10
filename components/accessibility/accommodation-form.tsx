@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { accessibilityService } from '@/lib/services/accessibility.service'
+import { accessibilityService, type Accommodation } from '@/lib/services/accessibility.service'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,7 +16,7 @@ interface AccommodationFormProps {
   studentId: string
   studentNeedId?: string
   accommodationId?: string // Pour l'édition
-  initialData?: any
+  initialData?: Record<string, unknown>
   onSuccess?: () => void
   onCancel?: () => void
 }
@@ -68,6 +68,32 @@ const STATUS_OPTIONS = [
   { value: 'expired', label: 'Expiré' },
 ]
 
+type AccommodationFormState = {
+  accommodation_type: string
+  category: string
+  title: string
+  description: string
+  start_date: string
+  end_date: string
+  status: string
+  completion_rate: number
+  metadata: Record<string, unknown>
+}
+
+function toFormState(initialData?: Record<string, unknown>): AccommodationFormState {
+  return {
+    accommodation_type: typeof initialData?.accommodation_type === 'string' ? initialData.accommodation_type : 'pedagogical',
+    category: typeof initialData?.category === 'string' ? initialData.category : '',
+    title: typeof initialData?.title === 'string' ? initialData.title : '',
+    description: typeof initialData?.description === 'string' ? initialData.description : '',
+    start_date: typeof initialData?.start_date === 'string' ? initialData.start_date : new Date().toISOString().split('T')[0],
+    end_date: typeof initialData?.end_date === 'string' ? initialData.end_date : '',
+    status: typeof initialData?.status === 'string' ? initialData.status : 'active',
+    completion_rate: typeof initialData?.completion_rate === 'number' ? initialData.completion_rate : 0,
+    metadata: initialData?.metadata && typeof initialData.metadata === 'object' && !Array.isArray(initialData.metadata) ? (initialData.metadata as Record<string, unknown>) : {},
+  }
+}
+
 export function AccommodationForm({
   organizationId,
   studentId,
@@ -80,17 +106,7 @@ export function AccommodationForm({
   const queryClient = useQueryClient()
   const { addToast } = useToast()
 
-  const [formData, setFormData] = useState({
-    accommodation_type: initialData?.accommodation_type || 'pedagogical',
-    category: initialData?.category || '',
-    title: initialData?.title || '',
-    description: initialData?.description || '',
-    start_date: initialData?.start_date || new Date().toISOString().split('T')[0],
-    end_date: initialData?.end_date || '',
-    status: initialData?.status || 'active',
-    completion_rate: initialData?.completion_rate || 0,
-    metadata: initialData?.metadata || {},
-  })
+  const [formData, setFormData] = useState<AccommodationFormState>(() => toFormState(initialData))
 
   // Mettre à jour les catégories disponibles quand le type change
   const availableCategories = ACCOMMODATION_CATEGORIES[formData.accommodation_type as keyof typeof ACCOMMODATION_CATEGORIES] || []
@@ -100,6 +116,7 @@ export function AccommodationForm({
     if (formData.category && !availableCategories.find((c) => c.value === formData.category)) {
       setFormData((prev) => ({ ...prev, category: '' }))
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset when accommodation_type changes
   }, [formData.accommodation_type])
 
   const saveMutation = useMutation({
@@ -109,7 +126,7 @@ export function AccommodationForm({
         student_id: studentId,
         student_need_id: studentNeedId || null,
         ...formData,
-      }
+      } as Partial<Accommodation> & { organization_id: string; student_id: string; student_need_id: string | null }
 
       if (accommodationId) {
         return await accessibilityService.updateAccommodation(accommodationId, data)
@@ -127,11 +144,11 @@ export function AccommodationForm({
       })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible de sauvegarder l\'aménagement.',
+        description: error instanceof Error ? error.message : 'Impossible de sauvegarder l\'aménagement.',
       })
     },
   })
@@ -152,7 +169,7 @@ export function AccommodationForm({
     saveMutation.mutate()
   }
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 

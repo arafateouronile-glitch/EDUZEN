@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Récupérer tous les templates existants pour cette organisation
     const existingTemplates = await documentTemplateService.getAllTemplates(organizationId)
-    const existingTypes = new Set(existingTemplates.map(t => t.type))
+    const existingTypes = new Set(existingTemplates.map(t => t?.type).filter((x): x is NonNullable<typeof x> => x != null))
 
     // Créer les templates pour les types manquants
     const createdTemplates: { type: DocumentType; name: string; id: string }[] = []

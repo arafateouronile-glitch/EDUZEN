@@ -156,15 +156,16 @@ export class TemplateCollaborationService {
     if (error) throw error
     
     // Mapper les données pour correspondre au type de retour attendu
-    return (data || []).map((item: any) => ({
+    type SharedBy = { id: string; email: string; full_name: string }
+    return (data || []).map((item: { id: string; template_id: string; shared_with_user_id: string; shared_by_user_id: string; permission?: string; permission_type?: string; created_at: string | null; template?: unknown; shared_by?: unknown }) => ({
       id: item.id,
       template_id: item.template_id,
       shared_with_user_id: item.shared_with_user_id,
       shared_by_user_id: item.shared_by_user_id,
       permission_type: item.permission || item.permission_type || '',
-      created_at: item.created_at || new Date().toISOString(),
+      created_at: item.created_at ?? new Date().toISOString(),
       template: item.template,
-      shared_by: item.shared_by,
+      shared_by: item.shared_by as SharedBy | undefined,
     }))
   }
 
@@ -396,8 +397,8 @@ export class TemplateCollaborationService {
     templateId: string,
     userId: string,
     actionType: ActivityActionType,
-    actionDetails?: Record<string, any>,
-    changes?: Record<string, any>
+    actionDetails?: Record<string, unknown>,
+    changes?: Record<string, unknown>
   ): Promise<TemplateActivityLog | null> {
     try {
       const { data, error } = await this.supabase

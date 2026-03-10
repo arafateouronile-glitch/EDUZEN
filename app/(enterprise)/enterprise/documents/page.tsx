@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
-import { useAuth } from '@/lib/hooks/use-auth'
+import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
 import { enterprisePortalService } from '@/lib/services/enterprise-portal.service'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
@@ -28,7 +28,7 @@ import {
 type DocumentType = 'all' | 'certificate' | 'attestation' | 'convention'
 
 export default function EnterpriseDocumentsPage() {
-  const { user } = useAuth()
+  const { company } = useEnterpriseCompany()
   const searchParams = useSearchParams()
   const initialType = (searchParams.get('type') as DocumentType) || 'all'
 
@@ -36,16 +36,6 @@ export default function EnterpriseDocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>()
   const [page, setPage] = useState(1)
-
-  // Get company
-  const { data: company } = useQuery({
-    queryKey: ['enterprise-company', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null
-      return enterprisePortalService.getCompanyForManager(user.id)
-    },
-    enabled: !!user?.id,
-  })
 
   // Get employees for filter
   const { data: employeesData } = useQuery({

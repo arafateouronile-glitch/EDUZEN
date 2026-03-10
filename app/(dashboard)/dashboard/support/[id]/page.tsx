@@ -90,7 +90,7 @@ export default function SupportTicketPage() {
   // Mettre à jour le statut
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const updates: any = { status }
+      const updates: { status: string; resolved_at?: string; closed_at?: string } = { status }
       if (status === 'resolved') {
         updates.resolved_at = new Date().toISOString()
       } else if (status === 'closed') {
@@ -260,7 +260,7 @@ export default function SupportTicketPage() {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
                 {messages && messages.length > 0 ? (
-                  messages.map((msg: any) => {
+                  (messages as Array<{ id: string; user_id?: string; user?: { role?: string; full_name?: string; email?: string }; content?: string; created_at?: string }>).map((msg) => {
                     const isOwnMessage = msg.user_id === user?.id
                     const isSupportMessage = msg.user?.role === 'admin' || msg.user?.role === 'super_admin' || msg.user?.role === 'support'
 
@@ -336,14 +336,14 @@ export default function SupportTicketPage() {
               <div>
                 <Label className="text-xs text-muted-foreground">Créé par</Label>
                 <p className="font-medium">
-                  {(ticket as any).user?.full_name || (ticket as any).user?.email || 'Utilisateur'}
+                  {(ticket as { user?: { full_name?: string; email?: string } }).user?.full_name || (ticket as { user?: { full_name?: string; email?: string } }).user?.email || 'Utilisateur'}
                 </p>
               </div>
               {ticket.assigned_user && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Assigné à</Label>
                   <p className="font-medium">
-                    {(ticket as any).assigned_user?.full_name || (ticket as any).assigned_user?.email}
+                    {(ticket as { assigned_user?: { full_name?: string; email?: string } }).assigned_user?.full_name || (ticket as { assigned_user?: { full_name?: string; email?: string } }).assigned_user?.email}
                   </p>
                 </div>
               )}
@@ -381,7 +381,7 @@ export default function SupportTicketPage() {
               <CardContent>
                 {notes && notes.length > 0 ? (
                   <div className="space-y-3 mb-4">
-                    {notes.map((note: any) => (
+                    {(notes as Array<{ id: string; content?: string; user?: { full_name?: string; email?: string }; created_at?: string }>).map((note) => (
                       <div key={note.id} className="p-3 bg-gray-50 rounded-lg">
                         <p className="text-sm whitespace-pre-wrap">{note.content}</p>
                         <p className="text-xs text-muted-foreground mt-2">

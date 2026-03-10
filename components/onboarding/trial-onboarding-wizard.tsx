@@ -275,6 +275,7 @@ export function TrialOnboardingWizard({
     }
 
     complete()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount with URL params, callbacks would cause loop
   }, [sessionIdFromUrl, planIdFromUrl, billingFromUrl])
 
   // Démarrer l'essai sans carte bancaire

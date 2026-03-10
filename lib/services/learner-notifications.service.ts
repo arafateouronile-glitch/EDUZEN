@@ -244,7 +244,7 @@ class LearnerNotificationsService {
       const now = new Date()
 
       for (const enrollment of enrollments) {
-        const session = enrollment.sessions as any
+        const session = enrollment.sessions as { id?: string; start_date?: string; name?: string; start_time?: string; location?: string; is_remote?: boolean } | null
         if (!session?.start_date) continue
 
         const sessionDate = new Date(session.start_date)
@@ -252,32 +252,32 @@ class LearnerNotificationsService {
 
         // Programmer un rappel 24h avant
         await this.scheduleSessionReminder({
-          sessionId: session.id,
-          sessionName: session.name,
-          startDate: session.start_date,
-          startTime: session.start_time,
-          location: session.location,
-          isRemote: session.is_remote,
+          sessionId: session.id ?? '',
+          sessionName: session.name ?? '',
+          startDate: session.start_date ?? '',
+          startTime: session.start_time ?? '',
+          location: session.location ?? '',
+          isRemote: session.is_remote ?? false,
         }, 24 * 60)
 
         // Programmer un rappel 1h avant
         await this.scheduleSessionReminder({
-          sessionId: session.id,
-          sessionName: session.name,
-          startDate: session.start_date,
-          startTime: session.start_time,
-          location: session.location,
-          isRemote: session.is_remote,
+          sessionId: session.id ?? '',
+          sessionName: session.name ?? '',
+          startDate: session.start_date ?? '',
+          startTime: session.start_time ?? '',
+          location: session.location ?? '',
+          isRemote: session.is_remote ?? false,
         }, 60)
 
         // Programmer un rappel 15min avant
         await this.scheduleSessionReminder({
-          sessionId: session.id,
-          sessionName: session.name,
-          startDate: session.start_date,
-          startTime: session.start_time,
-          location: session.location,
-          isRemote: session.is_remote,
+          sessionId: session.id ?? '',
+          sessionName: session.name ?? '',
+          startDate: session.start_date ?? '',
+          startTime: session.start_time ?? '',
+          location: session.location ?? '',
+          isRemote: session.is_remote ?? false,
         }, 15)
       }
 
@@ -290,7 +290,7 @@ class LearnerNotificationsService {
   /**
    * Écouter les événements de notifications en temps réel
    */
-  subscribeToRealtimeNotifications(userId: string, callback: (notification: any) => void): () => void {
+  subscribeToRealtimeNotifications(userId: string, callback: (notification: Record<string, unknown>) => void): () => void {
     const channel = this.supabase
       .channel(`notifications:${userId}`)
       .on(

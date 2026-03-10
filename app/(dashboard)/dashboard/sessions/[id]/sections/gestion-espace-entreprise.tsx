@@ -28,7 +28,7 @@ interface GestionEspaceEntrepriseProps {
   program: Program | null | undefined
   organization: Organization | undefined
   enrollments?: EnrollmentWithRelations[]
-  grades?: any[]
+  grades?: unknown[]
   attendanceStats?: {
     total: number
     present: number
@@ -98,7 +98,7 @@ export function GestionEspaceEntreprise({
     enrollments.forEach((enrollment) => {
       const studentId = enrollment.student_id
       const entity = studentId ? studentToEntity.get(studentId) : null
-      const displayName = entity?.name ?? (enrollment.students as any)?.company ?? 'Non rattaché'
+      const displayName = entity?.name ?? (enrollment.students as { company?: string })?.company ?? 'Non rattaché'
       const entityId = entity?.id ?? `name:${displayName}`
       if (!byEntityId.has(entityId)) {
         byEntityId.set(entityId, { id: entity?.id ?? '', name: displayName, enrollments: [] })

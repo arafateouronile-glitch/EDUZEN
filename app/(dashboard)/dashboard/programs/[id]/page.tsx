@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
 import { generatePDFFromHTML } from '@/lib/utils/pdf-generator'
-import { generateProgramDOCX, generateProgramHTML } from '@/lib/utils/program-export'
+import { generateProgramDOCX, generateProgramHTML, type ProgramExportInput } from '@/lib/utils/program-export'
 import { GlassCard } from '@/components/ui/glass-card'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
@@ -170,7 +170,7 @@ export default function ProgramDetailPage() {
     if (!program) return
     setIsExporting(true)
     try {
-      const html = generateProgramHTML(program)
+      const html = generateProgramHTML(program as unknown as ProgramExportInput)
       const container = document.createElement('div')
       container.id = 'temp-pdf-container'
       container.innerHTML = html
@@ -195,7 +195,7 @@ export default function ProgramDetailPage() {
     if (!program) return
     setIsExporting(true)
     try {
-      await generateProgramDOCX(program)
+      await generateProgramDOCX(program as unknown as ProgramExportInput)
       addToast({ type: 'success', title: 'Export Word réussi', description: 'Le fichier a été téléchargé.' })
     } catch (error) {
        logger.error('Erreur lors de l\'export PDF', sanitizeError(error))

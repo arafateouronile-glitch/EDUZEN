@@ -47,7 +47,7 @@ export async function apiMiddleware(request: NextRequest): Promise<NextResponse 
     )
   }
 
-  const key = keyData as APIKeyData
+  const key = keyData as unknown as APIKeyData
 
   // Vérifier l'expiration
   if (key.expires_at && new Date(key.expires_at) < new Date()) {

@@ -35,7 +35,7 @@ export function createLearnerClient(studentId?: string) {
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false,
-        storage: noopStorage as any,
+        storage: noopStorage as { getItem: (key: string) => string | null; setItem: (key: string, value: string) => void; removeItem: (key: string) => void },
         // Évite le warning "Multiple GoTrueClient instances" en isolant la clé.
         storageKey: `sb-learner-auth-token-${cacheKey}`,
       },

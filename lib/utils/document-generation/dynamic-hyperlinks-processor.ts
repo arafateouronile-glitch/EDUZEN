@@ -7,7 +7,7 @@
  */
 export function processDynamicHyperlinks(
   html: string,
-  variables: Record<string, any>
+  variables: Record<string, unknown>
 ): string {
   // Pour l'instant, retourner le HTML tel quel
   // Les hyperliens dynamiques peuvent être implémentés plus tard si nécessaire

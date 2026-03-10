@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-interface RiskIndicator {
+export interface RiskIndicator {
   id: string
   indicator_code: string
   indicator_name: string

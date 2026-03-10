@@ -19,7 +19,7 @@ declare module '@tiptap/core' {
 }
 
 export interface ConditionalBlockOptions {
-  HTMLAttributes: Record<string, any>
+  HTMLAttributes: Record<string, unknown>
 }
 
 /**

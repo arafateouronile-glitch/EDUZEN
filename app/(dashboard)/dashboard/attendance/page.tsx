@@ -60,7 +60,9 @@ export default function AttendancePage() {
       }
       
       if (sessionTeachers && sessionTeachers.length > 0) {
-        return sessionTeachers.map((st: any) => st.session_id)
+        return sessionTeachers
+        .map((st: { session_id: string | null }) => st.session_id)
+        .filter((id): id is string => id != null)
       }
       
       // Fallback : récupérer via sessions.teacher_id
@@ -76,7 +78,7 @@ export default function AttendancePage() {
         return []
       }
       
-      return (sessionsByTeacherId || []).map((s: any) => s.id)
+      return (sessionsByTeacherId || []).map((s: { id: string }) => s.id)
     },
     enabled: !!user?.id && isTeacher,
   })
@@ -144,8 +146,7 @@ export default function AttendancePage() {
       // Récupérer les sessions à venir d'aujourd'hui
       const today = new Date().toISOString().split('T')[0]
       
-      // eslint-disable-next-line
-      let query: any = supabase
+      let query = supabase
         .from('sessions')
         .select('*, formations!inner(*, programs(*))')
         .eq('formations.organization_id', user.organization_id)
@@ -252,18 +253,19 @@ export default function AttendancePage() {
       // Gérer les doublons : un étudiant peut avoir plusieurs séances dans la journée
       // On compte chaque séance séparément, mais on évite les doublons pour la même séance
       // Clé unique : student_id + session_id (ou juste student_id si pas de session_id)
-      const uniqueByStudentSession = new Map<string, any>()
+      type AttendanceRecordRow = { id?: string; student_id?: string | null; session_id?: string | null; created_at?: string | null; status?: string | null }
+      const uniqueByStudentSession = new Map<string, AttendanceRecordRow>()
       
       // Trier par created_at décroissant pour prendre le plus récent en premier
-      const sortedRecords = [...attendanceRecords].sort((a: any, b: any) => {
-        const dateA = new Date(a.created_at || a.id).getTime()
-        const dateB = new Date(b.created_at || b.id).getTime()
+      const sortedRecords = [...attendanceRecords].sort((a: AttendanceRecordRow, b: AttendanceRecordRow) => {
+        const dateA = new Date(a.created_at ?? a.id ?? 0).getTime()
+        const dateB = new Date(b.created_at ?? b.id ?? 0).getTime()
         return dateB - dateA
       })
       
       // Garder le dernier émargement pour chaque combinaison étudiant-session
       // Si un étudiant a plusieurs séances dans la journée, on les compte toutes
-      sortedRecords.forEach((record: any) => {
+      sortedRecords.forEach((record: AttendanceRecordRow) => {
         if (record.student_id) {
           // Clé unique : étudiant + session (ou juste étudiant si pas de session)
           const uniqueKey = record.session_id 
@@ -284,7 +286,7 @@ export default function AttendancePage() {
       let late = 0
       let excused = 0
       
-      uniqueRecords.forEach((record: any) => {
+      uniqueRecords.forEach((record: AttendanceRecordRow) => {
         const status = record.status?.toLowerCase() || ''
         if (status === 'present') present++
         else if (status === 'absent') absent++
@@ -422,8 +424,7 @@ export default function AttendancePage() {
     queryFn: async () => {
       if (!user?.organization_id) return []
       
-      // eslint-disable-next-line
-      let query: any = supabase
+      let query = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')
         .eq('organization_id', user.organization_id)
@@ -460,8 +461,7 @@ export default function AttendancePage() {
         0
       ).toISOString().split('T')[0]
 
-      // eslint-disable-next-line
-      let query: any = supabase
+      let query = supabase
         .from('attendance')
         .select('*, students(first_name, last_name, student_number), sessions(name, formations(name, programs(name)))')
         .eq('organization_id', user.organization_id)
@@ -522,7 +522,7 @@ export default function AttendancePage() {
 
       // Grouper par étudiant
       const byStudent: Record<string, {
-        student: any
+        student: { first_name?: string; last_name?: string; student_number?: string } | null
         present: number
         absent: number
         late: number
@@ -533,7 +533,7 @@ export default function AttendancePage() {
         if (!studentId) return
         if (!byStudent[studentId]) {
           byStudent[studentId] = {
-            student: a.students,
+            student: a.students ?? null,
             present: 0,
             absent: 0,
             late: 0,
@@ -1029,7 +1029,7 @@ export default function AttendancePage() {
                     className="w-full px-4 py-2.5 rounded-xl bg-gray-50 border-transparent focus:bg-white focus:border-brand-blue/20 focus:ring-4 focus:ring-brand-blue/10 transition-all outline-none text-sm"
                   >
                     <option value="">Choisir une séance...</option>
-                    {sessionSlots.map((slot: any) => {
+                    {sessionSlots.map((slot: { id: string; date: string; time_slot?: string; start_time?: string; end_time?: string }) => {
                       const slotDate = new Date(slot.date).toLocaleDateString('fr-FR', { 
                         weekday: 'short', 
                         day: '2-digit', 

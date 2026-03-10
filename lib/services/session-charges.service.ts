@@ -73,28 +73,38 @@ class SessionChargesService {
     organizationId: string,
     category: Omit<ChargeCategoryInsert, 'organization_id' | 'created_at' | 'updated_at'>
   ): Promise<ChargeCategory> {
-    const { data, error } = await this.supabase
-      .from('charge_categories')
-      .insert({
-        ...category,
-        organization_id: organizationId,
-      })
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('charge_categories')
+        .insert({
+          ...category,
+          organization_id: organizationId,
+        })
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('SessionChargesService.createCategory', error, { organizationId })
+      throw error
+    }
   }
 
   /**
    * Initialise les catégories par défaut pour une organisation
    */
   async initDefaultCategories(organizationId: string): Promise<void> {
-    const { error } = await this.supabase.rpc('init_default_charge_categories', {
-      p_organization_id: organizationId,
-    })
+    try {
+      const { error } = await this.supabase.rpc('init_default_charge_categories', {
+        p_organization_id: organizationId,
+      })
 
-    if (error) throw error
+      if (error) throw error
+    } catch (error) {
+      logger.error('SessionChargesService.initDefaultCategories', error, { organizationId })
+      throw error
+    }
   }
 
   // =====================================================
@@ -173,21 +183,26 @@ class SessionChargesService {
    * Récupère une charge par son ID
    */
   async getById(id: string): Promise<SessionChargeWithCategory | null> {
-    const { data, error } = await this.supabase
-      .from('session_charges')
-      .select(`
-        *,
-        charge_categories(*),
-        sessions(id, name)
-      `)
-      .eq('id', id)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('session_charges')
+        .select(`
+          *,
+          charge_categories(*),
+          sessions(id, name)
+        `)
+        .eq('id', id)
+        .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') return null
+      if (error) {
+        if (error.code === 'PGRST116') return null
+        throw error
+      }
+      return data as SessionChargeWithCategory
+    } catch (error) {
+      logger.error('SessionChargesService.getById', error, { id })
       throw error
     }
-    return data as SessionChargeWithCategory
   }
 
   /**
@@ -198,21 +213,26 @@ class SessionChargesService {
     sessionId: string,
     charge: Omit<SessionChargeInsert, 'organization_id' | 'session_id' | 'created_at' | 'updated_at'>
   ): Promise<SessionChargeWithCategory> {
-    const { data, error } = await this.supabase
-      .from('session_charges')
-      .insert({
-        ...charge,
-        organization_id: organizationId,
-        session_id: sessionId,
-      })
-      .select(`
-        *,
-        charge_categories(*)
-      `)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('session_charges')
+        .insert({
+          ...charge,
+          organization_id: organizationId,
+          session_id: sessionId,
+        })
+        .select(`
+          *,
+          charge_categories(*)
+        `)
+        .single()
 
-    if (error) throw error
-    return data as SessionChargeWithCategory
+      if (error) throw error
+      return data as SessionChargeWithCategory
+    } catch (error) {
+      logger.error('SessionChargesService.create', error, { organizationId, sessionId })
+      throw error
+    }
   }
 
   /**
@@ -222,30 +242,40 @@ class SessionChargesService {
     id: string,
     updates: Partial<SessionChargeInsert>
   ): Promise<SessionChargeWithCategory> {
-    const { data, error } = await this.supabase
-      .from('session_charges')
-      .update(updates)
-      .eq('id', id)
-      .select(`
-        *,
-        charge_categories(*)
-      `)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('session_charges')
+        .update(updates)
+        .eq('id', id)
+        .select(`
+          *,
+          charge_categories(*)
+        `)
+        .single()
 
-    if (error) throw error
-    return data as SessionChargeWithCategory
+      if (error) throw error
+      return data as SessionChargeWithCategory
+    } catch (error) {
+      logger.error('SessionChargesService.update', error, { id })
+      throw error
+    }
   }
 
   /**
    * Supprime une charge
    */
   async delete(id: string): Promise<void> {
-    const { error } = await this.supabase
-      .from('session_charges')
-      .delete()
-      .eq('id', id)
+    try {
+      const { error } = await this.supabase
+        .from('session_charges')
+        .delete()
+        .eq('id', id)
 
-    if (error) throw error
+      if (error) throw error
+    } catch (error) {
+      logger.error('SessionChargesService.delete', error, { id })
+      throw error
+    }
   }
 
   /**

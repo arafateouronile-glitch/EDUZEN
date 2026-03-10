@@ -22,7 +22,7 @@ type RNCPCertification = {
   code?: string
   title?: string
   level?: string | number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export default function CertificationsPage() {
@@ -194,33 +194,39 @@ function CertificationCard({ certification }: CertificationCardProps) {
     if (!date) return 'Non définie'
     return new Date(date).toLocaleDateString('fr-FR')
   }
+  const ct = certification.certification_type as string | undefined
+  const rncp = certification.rncp_code as string | undefined
+  const level = certification.level as string | number | undefined
+  const startDate = certification.validity_start_date as string | null | undefined
+  const endDate = certification.validity_end_date as string | null | undefined
+  const desc = certification.description as string | undefined
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <CardTitle>{certification.title}</CardTitle>
+            <CardTitle>{String(certification.title ?? '')}</CardTitle>
             <div className="flex gap-2 mt-2">
               <span
                 className={`inline-block px-2 py-1 text-xs rounded-full ${
-                  certification.certification_type === 'RNCP'
+                  ct === 'RNCP'
                     ? 'bg-blue-100 text-blue-800'
-                    : certification.certification_type === 'RS'
+                    : ct === 'RS'
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
                 }`}
               >
-                {certification.certification_type}
+                {String(ct ?? '')}
               </span>
-              {certification.rncp_code && (
+              {rncp && (
                 <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">
-                  {certification.rncp_code}
+                  {String(rncp)}
                 </span>
               )}
-              {certification.level && (
+              {level != null && (
                 <span className="inline-block px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
-                  Niveau {certification.level}
+                  Niveau {String(level)}
                 </span>
               )}
             </div>
@@ -233,15 +239,15 @@ function CertificationCard({ certification }: CertificationCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        {certification.validity_start_date && (
+        {startDate && (
           <div className="text-sm text-gray-600">
-            <strong>Validité :</strong> Du {formatDate(certification.validity_start_date)} au{' '}
-            {formatDate(certification.validity_end_date)}
+            <strong>Validité :</strong> Du {formatDate(startDate)} au{' '}
+            {formatDate(endDate ?? null)}
           </div>
         )}
 
-        {certification.description && (
-          <p className="text-sm text-gray-600 line-clamp-2">{certification.description}</p>
+        {desc && (
+          <p className="text-sm text-gray-600 line-clamp-2">{desc}</p>
         )}
 
         <div className="flex gap-2 pt-2 border-t">

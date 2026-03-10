@@ -93,7 +93,7 @@ const SelectNative = React.forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             value={value}
-            {...(props as any)}
+            {...(props as Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd'>)}
             onFocus={(e) => {
               setIsFocused(true)
               props.onFocus?.(e)
@@ -264,24 +264,26 @@ SelectValue.displayName = 'SelectValue'
 interface SelectContentProps {
   children: React.ReactNode
   className?: string
+  /** Si false, le contenu est rendu dans le flux du DOM (recommandé dans un Dialog pour que les clics fonctionnent). */
+  portal?: boolean
 }
 
 export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ children, className }, ref) => {
+  ({ children, className, portal = true }, ref) => {
     const context = React.useContext(SelectContext)
     const open = context?.open ?? false
     const triggerRef = context?.triggerRef
     const [position, setPosition] = React.useState<{ top: number; left: number; width: number } | null>(null)
 
     React.useLayoutEffect(() => {
-      if (!open || !triggerRef?.current || typeof document === 'undefined') {
+      if (!portal || !open || !triggerRef?.current || typeof document === 'undefined') {
         setPosition(null)
         return
       }
       const el = triggerRef.current
       const rect = el.getBoundingClientRect()
       setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width })
-    }, [open, triggerRef])
+    }, [portal, open, triggerRef])
 
     if (!open) return null
     if (!children) return null
@@ -295,7 +297,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
           className
         )}
         style={
-          position
+          position && portal
             ? {
                 position: 'fixed' as const,
                 top: position.top,
@@ -310,7 +312,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
       </div>
     )
 
-    if (position && typeof document !== 'undefined') {
+    if (portal && position && typeof document !== 'undefined') {
       return createPortal(content, getPortalRoot())
     }
     return content

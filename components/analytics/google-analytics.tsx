@@ -49,9 +49,9 @@ export function useGoogleAnalytics() {
   const gaId = process.env.NEXT_PUBLIC_GA_ID
 
   useEffect(() => {
-    if (!gaId || typeof window === 'undefined' || !(window as any).gtag) return
+    if (!gaId || typeof window === 'undefined' || !(window as Window & { gtag?: (...args: unknown[]) => void }).gtag) return
 
-    ;(window as any).gtag('config', gaId, {
+    ;(window as unknown as Window & { gtag: (...args: unknown[]) => void }).gtag('config', gaId, {
       page_path: pathname,
     })
   }, [pathname, gaId])
@@ -60,10 +60,11 @@ export function useGoogleAnalytics() {
 /**
  * Fonction helper pour tracker des événements personnalisés
  */
-export function trackEvent(eventName: string, params?: Record<string, any>) {
-  if (typeof window === 'undefined' || !(window as any).gtag) return
+export function trackEvent(eventName: string, params?: Record<string, unknown>) {
+  const win = window as Window & { gtag?: (...args: unknown[]) => void }
+  if (typeof window === 'undefined' || !win.gtag) return
 
-  ;(window as any).gtag('event', eventName, params)
+  win.gtag('event', eventName, params)
 }
 
 

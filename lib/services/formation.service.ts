@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 // Types pour les formations (niveau 2)
 type Formation = TableRow<'formations'>
@@ -35,6 +36,7 @@ export class FormationService {
     limit?: number
     offset?: number
   }) {
+    try {
     const usePagination = filters?.limit !== undefined || filters?.offset !== undefined
 
     let query = this.supabase
@@ -71,53 +73,72 @@ export class FormationService {
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throw error
     return data
+    } catch (error) {
+      logger.error('FormationService.getAllFormations', error, { organizationId, filters })
+      throw error
+    }
   }
 
   /**
    * Récupère une formation par son ID avec son programme et ses sessions
    */
   async getFormationById(id: string) {
-    const { data, error } = await this.supabase
-      .from('formations')
-      .select(`
-        *,
-        programs(*),
-        sessions(*)
-      `)
-      .eq('id', id)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('formations')
+        .select(`
+          *,
+          programs(*),
+          sessions(*)
+        `)
+        .eq('id', id)
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('FormationService.getFormationById', error, { id })
+      throw error
+    }
   }
 
   /**
    * Crée une nouvelle formation
    */
   async createFormation(formation: FlexibleInsert<'formations'>) {
-    const { data, error } = await this.supabase
-      .from('formations')
-      .insert(formation as FormationInsert)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('formations')
+        .insert(formation as FormationInsert)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('FormationService.createFormation', error, { organizationId: (formation as { organization_id?: string }).organization_id })
+      throw error
+    }
   }
 
   /**
    * Met à jour une formation
    */
   async updateFormation(id: string, updates: FlexibleUpdate<'formations'>) {
-    const { data, error } = await this.supabase
-      .from('formations')
-      .update(updates as FormationUpdate)
-      .eq('id', id)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('formations')
+        .update(updates as FormationUpdate)
+        .eq('id', id)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('FormationService.updateFormation', error, { id })
+      throw error
+    }
   }
 
   /**
@@ -131,14 +152,19 @@ export class FormationService {
    * Récupère toutes les sessions d'une formation (relation directe legacy)
    */
   async getSessionsByFormation(formationId: string) {
-    const { data, error } = await this.supabase
-      .from('sessions')
-      .select('*')
-      .eq('formation_id', formationId)
-      .order('start_date', { ascending: true })
+    try {
+      const { data, error } = await this.supabase
+        .from('sessions')
+        .select('*')
+        .eq('formation_id', formationId)
+        .order('start_date', { ascending: true })
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('FormationService.getSessionsByFormation', error, { formationId })
+      throw error
+    }
   }
 
   // ========== GESTION DES RELATIONS N:N FORMATION-SESSION ==========
@@ -148,42 +174,43 @@ export class FormationService {
    * Inclut les sessions liées directement ET via formation_sessions
    */
   async getAllSessionsForFormation(formationId: string) {
-    // Sessions liées via formation_sessions (N:N)
-    const { data: linkedSessions, error: linkedError } = await this.supabase
-      .from('formation_sessions')
-      .select(`
-        session_id,
-        order_index,
-        sessions(*)
-      `)
-      .eq('formation_id', formationId)
-      .order('order_index', { ascending: true })
+    try {
+      const { data: linkedSessions, error: linkedError } = await this.supabase
+        .from('formation_sessions')
+        .select(`
+          session_id,
+          order_index,
+          sessions(*)
+        `)
+        .eq('formation_id', formationId)
+        .order('order_index', { ascending: true })
 
-    if (linkedError) throw linkedError
+      if (linkedError) throw linkedError
 
-    // Sessions liées directement (legacy)
-    const { data: directSessions, error: directError } = await this.supabase
-      .from('sessions')
-      .select('*')
-      .eq('formation_id', formationId)
-      .order('start_date', { ascending: true })
+      const { data: directSessions, error: directError } = await this.supabase
+        .from('sessions')
+        .select('*')
+        .eq('formation_id', formationId)
+        .order('start_date', { ascending: true })
 
-    if (directError) throw directError
+      if (directError) throw directError
 
-    // Combiner les deux en évitant les doublons
-    const linkedSessionsData = (linkedSessions?.map((fs: { sessions: unknown }) => fs.sessions).filter(Boolean) || []) as Array<{ id: string }>
-    const directSessionsData = directSessions || []
-    
-    const allSessions = [...linkedSessionsData]
-    const linkedIds = new Set(linkedSessionsData.map((s: { id: string }) => s.id))
-    
-    for (const session of directSessionsData) {
-      if (!linkedIds.has(session.id)) {
-        allSessions.push(session)
+      const linkedSessionsData = (linkedSessions?.map((fs: { sessions: unknown }) => fs.sessions).filter(Boolean) || []) as Array<{ id: string }>
+      const directSessionsData = directSessions || []
+      const allSessions = [...linkedSessionsData]
+      const linkedIds = new Set(linkedSessionsData.map((s: { id: string }) => s.id))
+
+      for (const session of directSessionsData) {
+        if (!linkedIds.has(session.id)) {
+          allSessions.push(session)
+        }
       }
-    }
 
-    return allSessions
+      return allSessions
+    } catch (error) {
+      logger.error('FormationService.getAllSessionsForFormation', error, { formationId })
+      throw error
+    }
   }
 
   /**

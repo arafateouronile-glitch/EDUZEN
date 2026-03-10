@@ -78,7 +78,7 @@ export class OrganizationSetupService {
     const defaultTemplates: Array<{
       type: DocumentType
       name: string
-      content: any
+      content: { html?: string; elements?: unknown[]; pageSize?: string; margins?: { top?: number; right?: number; bottom?: number; left?: number } }
     }> = [
       {
         type: 'convention',
@@ -426,7 +426,7 @@ export class OrganizationSetupService {
         throw new Error('Organisation non trouvée')
       }
 
-      const currentSettings = (org.settings as any) || {}
+      const currentSettings = (org.settings as Record<string, unknown> | null) ?? {}
       const updatedSettings = {
         ...currentSettings,
         ...(settings.primaryColor && { primaryColor: settings.primaryColor }),

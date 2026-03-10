@@ -106,10 +106,10 @@ export default function SEPASettingsPage() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Erreur lors de la sauvegarde',
+        description: (error instanceof Error ? error.message : null) || 'Erreur lors de la sauvegarde',
         type: 'error',
       })
     },

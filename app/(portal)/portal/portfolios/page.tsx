@@ -76,6 +76,16 @@ export default function StudentPortfoliosPage() {
     enabled: !!studentId,
   })
 
+  type PortfolioRow = {
+    id: string
+    status?: string
+    template?: { primary_color?: string; name?: string; secondary_color?: string; description?: string }
+    session?: { id?: string; name?: string; start_date?: string; end_date?: string; formations?: { id?: string; name?: string } }
+    validated_at?: string | null
+    progress_percentage?: number | null
+    pdf_url?: string | null
+  }
+
   const getStatusInfo = (status: string) => {
     const statuses: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
       draft: { label: 'En préparation', color: 'bg-gray-100 text-gray-700', icon: <Clock className="h-4 w-4" /> },
@@ -122,8 +132,8 @@ export default function StudentPortfoliosPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {portfolios?.map((portfolio: any, index: number) => {
-            const statusInfo = getStatusInfo(portfolio.status)
+          {((portfolios ?? []) as PortfolioRow[]).map((portfolio, index) => {
+            const statusInfo = getStatusInfo(portfolio.status ?? 'draft')
             const template = portfolio.template
             
             return (

@@ -325,7 +325,7 @@ function EntityStudentsPageContent() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isCompany && (
-            <Link href="/enterprise" target="_blank" rel="noopener noreferrer">
+            <Link href={`/enterprise?entity=${entityId}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="gap-2">
                 <Building2 className="h-4 w-4" />
                 Espace entreprise (portail)
@@ -609,7 +609,7 @@ function EntityStudentsPageContent() {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent portal={false}>
                       <SelectItem value="apprenticeship">Alternance</SelectItem>
                       <SelectItem value="internship">Stage</SelectItem>
                       <SelectItem value="employment">Emploi</SelectItem>

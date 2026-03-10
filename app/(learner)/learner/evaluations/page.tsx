@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
+import { logger } from '@/lib/utils/logger'
 import { useMemo } from 'react'
 
 export default function LearnerEvaluationsPage() {
@@ -68,7 +69,7 @@ export default function LearnerEvaluationsPage() {
         .order('graded_at', { ascending: false })
       
       if (error) {
-        console.error('[Learner Evaluations] Erreur lors de la récupération des évaluations:', error)
+        logger.error('[Learner Evaluations] Erreur lors de la récupération des évaluations:', error instanceof Error ? error : new Error(String(error)), {})
         // Essayer une requête plus simple sans les relations
         const { data: simpleData, error: simpleError } = await supabase
           .from('grades')
@@ -90,25 +91,23 @@ export default function LearnerEvaluationsPage() {
 
   // Séparer les évaluations en "à faire" et "terminées"
   // À faire : celles sans note (score null) ou sans date de correction (graded_at null)
+  type GradeRow = { assessment_type?: string; rating?: number | null; score?: number | null; graded_at?: string | null; percentage?: number }
   const SATISFACTION_TYPES = ['hot', 'cold', 'manager', 'instructor', 'funder']
-  const isSatisfaction = (g: any) => SATISFACTION_TYPES.includes(g.assessment_type || '')
-  // Satisfaction : terminée seulement si rating est renseigné (apprenant a fait le quiz ou formateur a corrigé)
-  // On ne se base pas sur graded_at seul pour éviter d'afficher en "terminées" les évals pas encore faites par l'apprenant
-  const isCompleted = (g: any) =>
+  const isSatisfaction = (g: GradeRow) => SATISFACTION_TYPES.includes(g.assessment_type || '')
+  const isCompleted = (g: GradeRow) =>
     isSatisfaction(g)
       ? g.rating !== null && g.rating !== undefined
       : g.score != null && g.graded_at != null
-  const pendingEvaluations = grades?.filter((g: any) => !isCompleted(g)) || []
-  const completedEvaluations = grades?.filter((g: any) => isCompleted(g)) || []
+  const pendingEvaluations = grades?.filter((g) => !isCompleted(g as GradeRow)) ?? []
+  const completedEvaluations = grades?.filter((g) => isCompleted(g as GradeRow)) ?? []
 
-  // Calcul des stats
-  // Seules les évaluations terminées (avec note) comptent pour les stats
-  const totalEvaluations = (quizResponses?.length || 0) + completedEvaluations.length
-  const avgScore = completedEvaluations.length
+  const totalEvaluations = (quizResponses?.length ?? 0) + completedEvaluations.length
+  const avgScore = completedEvaluations.length > 0
     ? Math.round(
-        completedEvaluations.reduce((acc: number, g: any) => {
-          if (isSatisfaction(g)) return acc + ((g.rating ?? 0) * 20)
-          return acc + (g.percentage || 0)
+        completedEvaluations.reduce((acc: number, g) => {
+          const row = g as GradeRow
+          if (isSatisfaction(row)) return acc + (Number(row.rating ?? 0) * 20)
+          return acc + (Number(row.percentage) || 0)
         }, 0) / completedEvaluations.length
       )
     : 0
@@ -248,7 +247,7 @@ export default function LearnerEvaluationsPage() {
               <Award className="h-6 w-6 text-purple-600" />
             </div>
             <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">
-              {completedEvaluations.filter((g: any) => isSatisfaction(g) ? (g.rating ?? 0) >= 4 : (g.percentage || 0) >= 80).length || 0}
+              {completedEvaluations.filter((g) => { const row = g as GradeRow; return isSatisfaction(row) ? (row.rating ?? 0) >= 4 : (row.percentage ?? 0) >= 80; }).length ?? 0}
             </div>
             <p className="text-sm text-gray-500 mt-1">Excellents</p>
           </motion.div>
@@ -279,7 +278,7 @@ export default function LearnerEvaluationsPage() {
             ) : ((pendingQuizzes && pendingQuizzes.length > 0) || pendingEvaluations.length > 0) ? (
               <div className="space-y-4">
                 {/* Quiz à faire */}
-                {pendingQuizzes?.map((quiz: any) => (
+                {pendingQuizzes?.map((quiz: { id: string; title?: string; lessons?: { courses?: { title?: string }; title?: string }; time_limit?: number; passing_score?: number }) => (
                   <GlassCard key={quiz.id} className="p-6 hover:shadow-lg transition-all duration-300">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-amber-50 rounded-xl">
@@ -309,7 +308,7 @@ export default function LearnerEvaluationsPage() {
                 ))}
                 
                 {/* Évaluations à faire (sans note) */}
-                {pendingEvaluations.map((evaluation: any) => (
+                {pendingEvaluations.map((evaluation) => (
                   <Link key={evaluation.id} href={`/learner/evaluations/${evaluation.id}`}>
                     <GlassCard className="p-6 hover:shadow-lg transition-all duration-300 cursor-pointer">
                       <div className="flex items-center gap-4">
@@ -317,14 +316,14 @@ export default function LearnerEvaluationsPage() {
                           <ClipboardCheck className="h-6 w-6 text-amber-600" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{evaluation.subject}</h3>
+                          <h3 className="font-semibold text-gray-900">{(evaluation as { subject?: string }).subject ?? ''}</h3>
                           <p className="text-sm text-gray-500">
-                            {evaluation.sessions?.formations?.name || evaluation.sessions?.name}
+                            {(evaluation as { sessions?: { formations?: { name?: string }; name?: string } }).sessions?.formations?.name ?? (evaluation as { sessions?: { name?: string } }).sessions?.name ?? ''}
                           </p>
                           <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
-                              {evaluation.created_at && formatDate(evaluation.created_at)}
+                              {(evaluation as { created_at?: string }).created_at && formatDate((evaluation as { created_at: string }).created_at)}
                             </span>
                             <span>{evaluation.assessment_type || 'Évaluation'}</span>
                           </div>
@@ -366,59 +365,60 @@ export default function LearnerEvaluationsPage() {
             ) : totalEvaluations > 0 ? (
               <div className="space-y-4">
                 {/* Notes/Grades - Seulement les évaluations terminées (avec note) */}
-                {completedEvaluations.map((grade: any) => {
-                  const satisfaction = isSatisfaction(grade)
+                {completedEvaluations.map((grade) => {
+                  const g = grade as GradeRow & { id: string; subject?: string; sessions?: { formations?: { name?: string }; name?: string }; graded_at?: string; max_score?: number; feedback?: string; notes?: string }
+                  const satisfaction = isSatisfaction(g)
                   return (
                   <Link key={grade.id} href={`/learner/evaluations/${grade.id}`}>
                     <GlassCard className="p-6 hover:shadow-lg transition-all duration-300 cursor-pointer">
                       <div className="flex items-center gap-4">
                         <div className={`p-3 rounded-xl ${
                           satisfaction ? 'bg-amber-50' :
-                          (grade.percentage || 0) >= 80 ? 'bg-green-50' :
-                          (grade.percentage || 0) >= 60 ? 'bg-blue-50' :
+                          (g.percentage ?? 0) >= 80 ? 'bg-green-50' :
+                          (g.percentage ?? 0) >= 60 ? 'bg-blue-50' :
                           'bg-amber-50'
                         }`}>
                           <ClipboardCheck className={`h-6 w-6 ${
                             satisfaction ? 'text-amber-600' :
-                            (grade.percentage || 0) >= 80 ? 'text-green-600' :
-                            (grade.percentage || 0) >= 60 ? 'text-blue-600' :
+                            (g.percentage ?? 0) >= 80 ? 'text-green-600' :
+                            (g.percentage ?? 0) >= 60 ? 'text-blue-600' :
                             'text-amber-600'
                           }`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-gray-900">{grade.subject}</h3>
+                            <h3 className="font-semibold text-gray-900">{g.subject ?? ''}</h3>
                             {satisfaction ? (
-                              <Badge className="bg-amber-100 text-amber-700">{grade.rating ?? '—'}/5</Badge>
+                              <Badge className="bg-amber-100 text-amber-700">{g.rating ?? '—'}/5</Badge>
                             ) : (
-                              getScoreBadge(grade.percentage || 0)
+                              getScoreBadge(g.percentage ?? 0)
                             )}
                           </div>
                           <p className="text-sm text-gray-500">
-                            {grade.sessions?.formations?.name || grade.sessions?.name}
+                            {g.sessions?.formations?.name ?? g.sessions?.name ?? ''}
                           </p>
                           <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                             <span className="flex items-center gap-1">
                               <Calendar className="h-4 w-4" />
-                              {grade.graded_at && formatDate(grade.graded_at)}
+                              {g.graded_at && formatDate(g.graded_at)}
                             </span>
-                            <span>{grade.assessment_type || 'Évaluation'}</span>
+                            <span>{g.assessment_type ?? 'Évaluation'}</span>
                           </div>
                         </div>
                         <div className="text-right">
                           {satisfaction ? (
                             <>
                               <div className="text-2xl font-bold text-amber-600">
-                                {grade.rating ?? '—'} / 5
+                                {g.rating ?? '—'} / 5
                               </div>
                               <p className="text-sm text-gray-500">Satisfaction</p>
                             </>
                           ) : (
                             <>
                               <div className="text-2xl font-bold text-gray-900">
-                                {grade.score}/{grade.max_score || 20}
+                                {g.score ?? 0}/{g.max_score ?? 20}
                               </div>
-                              <p className="text-sm text-gray-500">{grade.percentage}%</p>
+                              <p className="text-sm text-gray-500">{g.percentage ?? 0}%</p>
                             </>
                           )}
                           <Button variant="outline" size="sm" className="mt-2" onClick={(e) => e.preventDefault()}>
@@ -426,9 +426,9 @@ export default function LearnerEvaluationsPage() {
                           </Button>
                         </div>
                       </div>
-                      {(grade.feedback || (satisfaction && grade.notes)) && (
+                      {(g.feedback || (satisfaction && g.notes)) && (
                         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">{grade.feedback || grade.notes}</p>
+                          <p className="text-sm text-gray-600">{g.feedback ?? g.notes ?? ''}</p>
                         </div>
                       )}
                     </GlassCard>
@@ -437,7 +437,7 @@ export default function LearnerEvaluationsPage() {
                 })}
 
                 {/* Quiz Responses */}
-                {quizResponses?.map((response: any) => (
+                {(quizResponses ?? []).map((response: { id: string; lessons?: { title?: string; courses?: { title?: string } }; created_at?: string; score?: number; passed?: boolean }) => (
                   <GlassCard key={response.id} className="p-6">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-purple-50 rounded-xl">
@@ -445,18 +445,18 @@ export default function LearnerEvaluationsPage() {
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">
-                          Quiz - {response.lessons?.title}
+                          Quiz - {response.lessons?.title ?? ''}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          {response.lessons?.courses?.title}
+                          {response.lessons?.courses?.title ?? ''}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                          {response.created_at && formatDate(response.created_at)}
+                          {response.created_at ? formatDate(response.created_at) : null}
                         </p>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-gray-900">
-                          {response.score || 0}%
+                          {response.score ?? 0}%
                         </div>
                         {response.passed ? (
                           <Badge className="bg-green-100 text-green-700">Réussi</Badge>

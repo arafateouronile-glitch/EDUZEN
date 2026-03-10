@@ -7,7 +7,15 @@ import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import { motion } from '@/components/ui/motion'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   MessageSquare,
   Search,
@@ -17,6 +25,9 @@ import {
   Clock,
   CheckCheck,
   Circle,
+  GraduationCap,
+  UserCog,
+  ClipboardList,
 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { formatDistanceToNow } from 'date-fns'
@@ -24,13 +35,73 @@ import { fr } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
+type Contact = { id: string; full_name: string; email?: string; role: string; role_label: string }
+
 export default function LearnerMessagesPage() {
-  const { student: studentData, studentId, organizationId } = useLearnerContext()
+  const { student: studentData, studentId, accessToken, organizationId } = useLearnerContext()
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
+  const [newMessageOpen, setNewMessageOpen] = useState(false)
+  const [startConversationLoading, setStartConversationLoading] = useState(false)
+  const [startConversationError, setStartConversationError] = useState<string | null>(null)
+  const [firstMessageText, setFirstMessageText] = useState('')
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
 
   // Créer un client Supabase pour l'apprenant
   const supabase = useMemo(() => createLearnerClient(studentId), [studentId])
+
+  // Contacts messagerie (formateurs, admin, secrétaires)
+  const { data: contactsData } = useQuery({
+    queryKey: ['learner-contacts', studentId, accessToken],
+    queryFn: async () => {
+      if (!studentId || !accessToken) return { contacts: [] as Contact[] }
+      const res = await fetch('/api/learner/contacts', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err?.error || 'Impossible de charger les contacts')
+      }
+      return res.json()
+    },
+    enabled: !!studentId && !!accessToken && newMessageOpen,
+  })
+  const contacts: Contact[] = contactsData?.contacts ?? []
+
+  const startConversation = async () => {
+    if (!selectedContactId || !studentId || !accessToken) return
+    setStartConversationError(null)
+    setStartConversationLoading(true)
+    try {
+      const res = await fetch('/api/learner/conversations/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipientUserId: selectedContactId,
+          firstMessage: firstMessageText || undefined,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setStartConversationError(data?.error || 'Erreur lors de la création de la conversation')
+        return
+      }
+      setNewMessageOpen(false)
+      setSelectedContactId(null)
+      setFirstMessageText('')
+      if (data.conversationId) {
+        router.push(`/learner/messages/${data.conversationId}`)
+      }
+    } catch (e) {
+      setStartConversationError('Erreur réseau')
+      logger.warn('Start conversation error', sanitizeError(e))
+    } finally {
+      setStartConversationLoading(false)
+    }
+  }
 
   // Récupérer les conversations directement avec le client apprenant
   const { data: conversations, isLoading } = useQuery({
@@ -323,13 +394,16 @@ export default function LearnerMessagesPage() {
                   Messages
                 </h1>
                 <p className="text-gray-500 mt-1">
-                  Communiquez avec vos formateurs et le support
+                  Communiquez avec vos formateurs, l’admin et la secrétariat
                 </p>
               </div>
             </div>
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25 border-0">
+              <Button
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/25 border-0"
+                onClick={() => setNewMessageOpen(true)}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Nouveau message
               </Button>
@@ -337,6 +411,75 @@ export default function LearnerMessagesPage() {
           </div>
         </GlassCard>
       </motion.div>
+
+      {/* Dialog : Nouveau message — choisir un contact (formateur, admin, secrétaire) */}
+      <Dialog open={newMessageOpen} onOpenChange={(open) => { setNewMessageOpen(open); if (!open) { setSelectedContactId(null); setFirstMessageText(''); setStartConversationError(null); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nouveau message</DialogTitle>
+            <DialogDescription>
+              Choisissez un destinataire pour démarrer une conversation (formateur, administrateur ou secrétaire de votre organisme).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {contacts.length === 0 && newMessageOpen && (
+              <p className="text-sm text-muted-foreground">Chargement des contacts…</p>
+            )}
+            {contacts.length > 0 && (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {contacts.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedContactId(selectedContactId === c.id ? null : c.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                      selectedContactId === c.id
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200">
+                      {c.role === 'teacher' && <GraduationCap className="h-5 w-5 text-indigo-600" />}
+                      {c.role === 'admin' && <UserCog className="h-5 w-5 text-purple-600" />}
+                      {c.role === 'secretary' && <ClipboardList className="h-5 w-5 text-cyan-600" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 truncate">{c.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{c.role_label}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedContactId && (
+              <div>
+                <label className="text-sm font-medium text-gray-700">Premier message (optionnel)</label>
+                <Textarea
+                  placeholder="Écrivez votre message…"
+                  value={firstMessageText}
+                  onChange={(e) => setFirstMessageText(e.target.value)}
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
+            )}
+            {startConversationError && (
+              <p className="text-sm text-destructive">{startConversationError}</p>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setNewMessageOpen(false)}>
+                Annuler
+              </Button>
+              <Button
+                onClick={startConversation}
+                disabled={!selectedContactId || startConversationLoading}
+              >
+                {startConversationLoading ? 'Création…' : 'Démarrer la conversation'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Search Premium */}
       <motion.div variants={itemVariants}>
@@ -445,9 +588,9 @@ export default function LearnerMessagesPage() {
               Aucune conversation
             </h3>
             <p className="text-gray-500 mb-4">
-              Commencez une nouvelle conversation avec un formateur ou le support
+              Commencez une nouvelle conversation avec un formateur, l’admin ou la secrétaire
             </p>
-            <Button>
+            <Button onClick={() => setNewMessageOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nouveau message
             </Button>
@@ -455,7 +598,7 @@ export default function LearnerMessagesPage() {
         )}
       </motion.div>
 
-      {/* Quick actions Premium */}
+      {/* Quick actions */}
       <motion.div variants={itemVariants}>
         <GlassCard variant="premium" className="p-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-purple-50/30" />
@@ -466,23 +609,17 @@ export default function LearnerMessagesPage() {
               </div>
               Actions rapides
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button variant="outline" className="w-full justify-start h-12 hover:border-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Contacter le support
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button variant="outline" className="w-full justify-start h-12 hover:border-purple-500 hover:text-purple-600 hover:bg-purple-50 transition-all">
+                <Button variant="outline" className="w-full justify-start h-12 hover:border-purple-500 hover:text-purple-600 hover:bg-purple-50 transition-all" onClick={() => setNewMessageOpen(true)}>
                   <User className="h-4 w-4 mr-2" />
                   Contacter un formateur
                 </Button>
               </motion.div>
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button variant="outline" className="w-full justify-start h-12 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50 transition-all">
+                <Button variant="outline" className="w-full justify-start h-12 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50 transition-all" onClick={() => setNewMessageOpen(true)}>
                   <Send className="h-4 w-4 mr-2" />
-                  Signaler un problème
+                  Écrire à l’admin / secrétariat
                 </Button>
               </motion.div>
             </div>

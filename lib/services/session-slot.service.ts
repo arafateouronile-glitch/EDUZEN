@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 type SessionSlot = TableRow<'session_slots'>
 type SessionSlotInsert = TableInsert<'session_slots'>
@@ -34,76 +35,102 @@ export class SessionSlotService {
    * Récupère toutes les séances d'une session
    */
   async getBySessionId(sessionId: string) {
-    const { data, error } = await this.supabase
-      .from('session_slots')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('date', { ascending: true })
-      .order('start_time', { ascending: true })
+    try {
+      const { data, error } = await this.supabase
+        .from('session_slots')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true })
 
-    if (error) throw error
-    return data || []
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      logger.error('SessionSlotService.getBySessionId', error, { sessionId })
+      throw error
+    }
   }
 
   /**
    * Récupère une séance par son ID
    */
   async getById(id: string) {
-    const { data, error } = await this.supabase
-      .from('session_slots')
-      .select('*')
-      .eq('id', id)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('session_slots')
+        .select('*')
+        .eq('id', id)
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('SessionSlotService.getById', error, { id })
+      throw error
+    }
   }
 
   /**
    * Crée une nouvelle séance
    */
   async create(slot: FlexibleInsert<'session_slots'>) {
-    const { data, error } = await this.supabase
-      .from('session_slots')
-      .insert(slot as SessionSlotInsert)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('session_slots')
+        .insert(slot as SessionSlotInsert)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('SessionSlotService.create', error, { sessionId: (slot as { session_id?: string }).session_id })
+      throw error
+    }
   }
 
   /**
    * Met à jour une séance
    */
   async update(id: string, updates: FlexibleUpdate<'session_slots'>) {
-    const { data, error } = await this.supabase
-      .from('session_slots')
-      .update(updates as SessionSlotUpdate)
-      .eq('id', id)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('session_slots')
+        .update(updates as SessionSlotUpdate)
+        .eq('id', id)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('SessionSlotService.update', error, { id })
+      throw error
+    }
   }
 
   /**
    * Supprime une séance
    */
   async delete(id: string) {
-    const { error } = await this.supabase
-      .from('session_slots')
-      .delete()
-      .eq('id', id)
+    try {
+      const { error } = await this.supabase
+        .from('session_slots')
+        .delete()
+        .eq('id', id)
 
-    if (error) throw error
+      if (error) throw error
+    } catch (error) {
+      logger.error('SessionSlotService.delete', error, { id })
+      throw error
+    }
   }
 
   /**
    * Génère automatiquement les séances pour une session
    */
   async generateSlots(params: GenerateSlotsParams) {
+    try {
     const { sessionId, startDate, endDate, timeSlotType, morningStart, morningEnd, afternoonStart, afternoonEnd, location, teacherId, capacityMax } = params
 
     // Valeurs par défaut pour les heures
@@ -191,18 +218,27 @@ export class SessionSlotService {
     }
 
     return []
+    } catch (error) {
+      logger.error('SessionSlotService.generateSlots', error, { sessionId: params.sessionId })
+      throw error
+    }
   }
 
   /**
    * Supprime toutes les séances d'une session
    */
   async deleteBySessionId(sessionId: string) {
-    const { error } = await this.supabase
-      .from('session_slots')
-      .delete()
-      .eq('session_id', sessionId)
+    try {
+      const { error } = await this.supabase
+        .from('session_slots')
+        .delete()
+        .eq('session_id', sessionId)
 
-    if (error) throw error
+      if (error) throw error
+    } catch (error) {
+      logger.error('SessionSlotService.deleteBySessionId', error, { sessionId })
+      throw error
+    }
   }
 }
 

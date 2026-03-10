@@ -3,6 +3,8 @@
  * en nouvelles balises {variable} pour le système de génération de documents
  */
 
+import type { DocumentTemplate, TemplateElement } from '@/lib/types/document-templates'
+
 /**
  * Convertit les template literals JavaScript ${variable} en balises {variable}
  * dans le contenu HTML d'un template
@@ -127,26 +129,25 @@ export function convertTagsToVariableNodes(html: string): string {
  * @param template - Le template à convertir
  * @returns Le template avec les balises converties
  */
-export function convertTemplateContent(template: any): any {
+export function convertTemplateContent(template: DocumentTemplate | null): DocumentTemplate | null {
   if (!template) {
     return template
   }
 
   const converted = { ...template }
 
-  // Convertir le contenu HTML du body
   if (converted.content) {
     if (typeof converted.content === 'string') {
-      converted.content = convertTemplateLiteralsToTags(converted.content)
-    } else if (converted.content.html) {
+      converted.content = convertTemplateLiteralsToTags(converted.content) as unknown as DocumentTemplate['content']
+    } else if (converted.content && typeof converted.content === 'object' && 'html' in converted.content && converted.content.html) {
       converted.content = {
         ...converted.content,
         html: convertTemplateLiteralsToTags(converted.content.html),
       }
-    } else if (converted.content.elements && Array.isArray(converted.content.elements)) {
+    } else if (converted.content && typeof converted.content === 'object' && 'elements' in converted.content && Array.isArray(converted.content.elements)) {
       converted.content = {
         ...converted.content,
-        elements: converted.content.elements.map((element: any) => {
+        elements: converted.content.elements.map((element: TemplateElement) => {
           if (element.content && typeof element.content === 'string') {
             return {
               ...element,
@@ -162,7 +163,7 @@ export function convertTemplateContent(template: any): any {
   // Convertir le header
   if (converted.header) {
     if (typeof converted.header === 'string') {
-      converted.header = convertTemplateLiteralsToTags(converted.header)
+      converted.header = convertTemplateLiteralsToTags(converted.header) as unknown as NonNullable<DocumentTemplate['header']>
     } else if (converted.header.content) {
       converted.header = {
         ...converted.header,
@@ -174,7 +175,7 @@ export function convertTemplateContent(template: any): any {
   // Convertir le footer
   if (converted.footer) {
     if (typeof converted.footer === 'string') {
-      converted.footer = convertTemplateLiteralsToTags(converted.footer)
+      converted.footer = convertTemplateLiteralsToTags(converted.footer) as unknown as NonNullable<DocumentTemplate['footer']>
     } else if (converted.footer.content) {
       converted.footer = {
         ...converted.footer,

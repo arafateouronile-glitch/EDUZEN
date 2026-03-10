@@ -30,7 +30,7 @@ export async function GET(
       .eq('id', user.id)
       .single()
 
-    if (userData?.organization_id !== template.organization_id) {
+    if (!template || userData?.organization_id !== template.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
@@ -70,7 +70,7 @@ export async function PUT(
       .eq('id', user.id)
       .single()
 
-    if (userData?.organization_id !== template.organization_id) {
+    if (!template || userData?.organization_id !== template.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
@@ -116,6 +116,9 @@ export async function DELETE(
       .eq('id', user.id)
       .single()
 
+    if (!template) {
+      return NextResponse.json({ error: 'Template non trouvé' }, { status: 404 })
+    }
     if (userData?.organization_id !== template.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }

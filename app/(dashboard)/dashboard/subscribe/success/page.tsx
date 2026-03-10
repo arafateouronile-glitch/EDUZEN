@@ -27,15 +27,13 @@ export default function SubscribeSuccessPage() {
     queryFn: async () => {
       if (!user?.organization_id) return null
       
-      // eslint-disable-next-line
-      const q: any = supabase
+      const { data, error } = await supabase
         .from('subscriptions')
         .select('*, plans(*)')
         .eq('organization_id', user.organization_id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
-      const { data, error } = await q
       
       if (error) {
         logger.error('Erreur récupération subscription', error)
@@ -109,7 +107,7 @@ export default function SubscribeSuccessPage() {
                 Abonnement confirmé !
               </h1>
               <p className="text-lg text-gray-600 mb-8">
-                Votre abonnement <strong>{(subscription.plans as any)?.name}</strong> est maintenant actif.
+                Votre abonnement <strong>{(subscription.plans as { name?: string } | null)?.name}</strong> est maintenant actif.
               </p>
               
               <Button

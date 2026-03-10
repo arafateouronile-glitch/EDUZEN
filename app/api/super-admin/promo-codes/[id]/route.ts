@@ -27,13 +27,14 @@ export async function PATCH(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as any)?.manage_promo_codes) {
+    const perms = admin?.permissions as Record<string, unknown> | null
+    if (!admin || !perms?.manage_promo_codes) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
     const body: Partial<CreatePromoCodeInput> = await request.json()
 
-    const updates: any = {}
+    const updates: Record<string, unknown> = {}
 
     if (body.code) updates.code = body.code
     if (body.description !== undefined) updates.description = body.description
@@ -97,7 +98,8 @@ export async function DELETE(
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as any)?.manage_promo_codes) {
+    const perms = admin?.permissions as Record<string, unknown> | null
+    if (!admin || !perms?.manage_promo_codes) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 

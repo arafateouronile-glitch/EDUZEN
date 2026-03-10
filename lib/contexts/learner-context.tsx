@@ -6,6 +6,7 @@ import { useLearner } from '@/lib/hooks/use-learner'
 interface LearnerContextType {
   student: ReturnType<typeof useLearner>['student']
   studentId: string | undefined
+  accessToken: string | undefined
   isLoading: boolean
   hasStudent: boolean
   organizationId: string | null

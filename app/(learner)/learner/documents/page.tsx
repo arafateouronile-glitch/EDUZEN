@@ -43,8 +43,26 @@ export default function LearnerDocumentsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeType, setActiveType] = useState('all')
 
-  // Fonction pour télécharger un document
-  const handleDownload = async (doc: any) => {
+  // Type normalisé pour l'affichage (toutes les sources mappées)
+  type DocItem = {
+    id?: string
+    file_url?: string | null
+    name?: string
+    source?: string
+    title?: string
+    type?: string
+    original_type?: string
+    created_at?: string | null
+    metadata?: unknown
+    format?: string
+    file_name?: string
+    url?: string
+    description?: string
+    sent_at?: string
+    sessions?: { formations?: { name?: string } }
+    certificate_number?: string | null
+  }
+  const handleDownload = async (doc: DocItem) => {
     try {
       if (!doc.file_url) {
         logger.error('No file URL for document', { documentId: doc.id ? maskId(doc.id) : 'unknown' })
@@ -90,7 +108,7 @@ export default function LearnerDocumentsPage() {
   }
 
   // Fonction pour ouvrir un document dans un nouvel onglet
-  const handlePreview = (doc: any) => {
+  const handlePreview = (doc: DocItem) => {
     if (!doc.file_url) {
       alert('URL du fichier non disponible')
       return
@@ -163,7 +181,7 @@ export default function LearnerDocumentsPage() {
         })
         
         // Combiner les résultats des trois tables
-        const allDocs: any[] = []
+        const allDocs: DocItem[] = []
         
         // Fonction helper pour normaliser les types de documents
         const normalizeDocumentType = (type: string): string => {
@@ -188,12 +206,13 @@ export default function LearnerDocumentsPage() {
         }
         
         // Mapper les learner_documents (priorité - documents envoyés dans l'espace apprenant)
+        type LearnerDocRow = { id?: string; title?: string; type?: string; file_url?: string; sent_at?: string; created_at?: string; description?: string }
         if (!learnerError && learnerDocs) {
-          learnerDocs.forEach((doc: any) => {
+          (learnerDocs as LearnerDocRow[]).forEach((doc) => {
             allDocs.push({
               id: doc.id,
               name: doc.title || `Document ${doc.type}`,
-              type: normalizeDocumentType(doc.type),
+              type: normalizeDocumentType(doc.type ?? ''),
               original_type: doc.type,
               file_url: doc.file_url,
               created_at: doc.sent_at || doc.created_at,
@@ -205,12 +224,13 @@ export default function LearnerDocumentsPage() {
         }
         
         // Mapper les generated_documents
+        type GeneratedDocRow = { id?: string; file_name?: string; type?: string; file_url?: string; created_at?: string; metadata?: unknown; format?: string }
         if (!generatedError && generatedDocs) {
-          generatedDocs.forEach((doc: any) => {
+          (generatedDocs as GeneratedDocRow[]).forEach((doc) => {
             allDocs.push({
               id: doc.id,
               name: doc.file_name || `Document ${doc.type}`,
-              type: normalizeDocumentType(doc.type),
+              type: normalizeDocumentType(doc.type ?? ''),
               original_type: doc.type,
               file_url: doc.file_url,
               created_at: doc.created_at,
@@ -222,12 +242,13 @@ export default function LearnerDocumentsPage() {
         }
         
         // Mapper les documents
+        type RegularDocRow = { id?: string; name?: string; title?: string; type?: string; file_url?: string; url?: string; created_at?: string; metadata?: unknown; format?: string }
         if (!regularError && regularDocs) {
-          regularDocs.forEach((doc: any) => {
+          (regularDocs as RegularDocRow[]).forEach((doc) => {
             allDocs.push({
               id: doc.id,
               name: doc.name || doc.title || `Document ${doc.type}`,
-              type: normalizeDocumentType(doc.type),
+              type: normalizeDocumentType(doc.type ?? ''),
               original_type: doc.type,
               file_url: doc.file_url || doc.url,
               created_at: doc.created_at,
@@ -275,7 +296,7 @@ export default function LearnerDocumentsPage() {
         logger.debug('[Documents] Final documents', { documents: allDocs })
         
         return allDocs
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Unexpected error fetching documents:', error)
         return []
       }
@@ -322,7 +343,7 @@ export default function LearnerDocumentsPage() {
         }
         
         // Enrichir manuellement avec les cours si possible
-        const courseIds = [...new Set((simpleData || []).map((c: any) => c.course_id).filter(Boolean))]
+        const courseIds = [...new Set((simpleData || []).map((c: { course_id?: string }) => c.course_id).filter((id): id is string => typeof id === 'string'))]
         if (courseIds.length > 0) {
           const { data: coursesData } = await supabase
             .from('courses')
@@ -330,15 +351,15 @@ export default function LearnerDocumentsPage() {
             .in('id', courseIds)
           
           if (coursesData) {
-            return (simpleData || []).map((cert: any) => ({
+            return (simpleData || []).map((cert: { course_id?: string }) => ({
               ...cert,
-              courses: coursesData.find((c: any) => c.id === cert.course_id) || null
+              courses: coursesData.find((c: { id?: string }) => c.id === cert.course_id) || null
             }))
           }
         }
         
         return simpleData || []
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error('Unexpected error fetching certificates:', error)
         return []
       }
@@ -350,20 +371,20 @@ export default function LearnerDocumentsPage() {
 
   // Combiner et filtrer les documents
   const allDocuments = [
-    ...(documents || []).map((doc: any) => ({
+    ...(documents || []).map((doc: DocItem) => ({
       ...doc,
       source: 'document',
     })),
-    ...(certificates || []).map((cert: any) => ({
+    ...(certificates || []).map((cert: { id?: string; course_id?: string; issued_at?: string | null; certificate_url?: string | null; certificate_number?: string | null; courses?: { title?: string } | null }) => ({
       id: cert.id,
-      name: `Certificat - ${cert.courses?.title || 'Formation'}`,
+      name: `Certificat - ${cert.courses?.title ?? 'Formation'}`,
       type: 'certificate',
       created_at: cert.issued_at,
       file_url: cert.certificate_url,
       source: 'certificate',
       certificate_number: cert.certificate_number,
     })),
-  ].filter((doc) => {
+  ].filter((doc: DocItem) => {
     const matchesSearch = doc.name?.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesType = activeType === 'all' || doc.type === activeType
     return matchesSearch && matchesType
@@ -520,7 +541,7 @@ export default function LearnerDocumentsPage() {
           </div>
         ) : allDocuments.length > 0 ? (
           <div className="grid gap-4">
-            {allDocuments.map((doc: any, index: number) => (
+            {allDocuments.map((doc: DocItem, index: number) => (
               <motion.div
                 key={doc.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -537,7 +558,7 @@ export default function LearnerDocumentsPage() {
                       doc.type === 'attestation' ? 'bg-brand-cyan-pale' :
                       'bg-gray-50'
                     }`}>
-                      {getTypeIcon(doc.type)}
+                      {getTypeIcon(doc.type ?? 'other')}
                     </div>
 
                     {/* Content */}
@@ -546,7 +567,7 @@ export default function LearnerDocumentsPage() {
                         <h3 className="font-semibold text-gray-900 truncate">
                           {doc.name}
                         </h3>
-                        {getTypeBadge(doc.type)}
+                        {getTypeBadge(doc.type ?? 'other')}
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
@@ -611,14 +632,14 @@ export default function LearnerDocumentsPage() {
         <GlassCard className="p-4 text-center">
           <Mail className="h-6 w-6 text-blue-600 mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">
-            {documents?.filter((d: any) => d.type === 'convocation').length || 0}
+            {documents?.filter((d: DocItem) => d.type === 'convocation').length || 0}
           </div>
           <p className="text-xs text-gray-500">Convocations</p>
         </GlassCard>
         <GlassCard className="p-4 text-center">
           <ClipboardList className="h-6 w-6 text-brand-cyan mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">
-            {documents?.filter((d: any) => d.type === 'attestation').length || 0}
+            {documents?.filter((d: DocItem) => d.type === 'attestation').length || 0}
           </div>
           <p className="text-xs text-gray-500">Attestations</p>
         </GlassCard>
@@ -632,7 +653,7 @@ export default function LearnerDocumentsPage() {
         <GlassCard className="p-4 text-center">
           <Receipt className="h-6 w-6 text-gray-600 mx-auto mb-2" />
           <div className="text-xl font-bold text-gray-900">
-            {documents?.filter((d: any) => d.type === 'invoice').length || 0}
+            {documents?.filter((d: DocItem) => d.type === 'invoice').length || 0}
           </div>
           <p className="text-xs text-gray-500">Factures</p>
         </GlassCard>

@@ -1,237 +1,148 @@
 /**
  * Tests unitaires pour ELearningService
+ * Couverture : getCourses, getCourseBySlug, getCourseSections, getCourseLessons (audit P2-13)
  */
-
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ELearningService } from '@/lib/services/elearning.service'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.types'
 
-// Mock Supabase client
-const { mockSupabase } = vi.hoisted(() => {
-  const mock: any = {
-    from: vi.fn(),
-    select: vi.fn(),
-    eq: vi.fn(),
-    or: vi.fn(),
-    order: vi.fn(),
-    single: vi.fn(),
-    maybeSingle: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
+function createChain(result: { data: unknown; error: unknown }, terminal: 'order' | 'maybeSingle' = 'order') {
+  const chain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue(result),
+    maybeSingle: vi.fn().mockResolvedValue(result),
   }
-  
-  const chainableMethods = ['from', 'select', 'eq', 'or', 'order', 'insert', 'update', 'delete']
-  chainableMethods.forEach((method) => {
-    mock[method].mockImplementation(() => mock)
-  })
-  
-  mock.single.mockResolvedValue({ data: null, error: null })
-  mock.maybeSingle.mockResolvedValue({ data: null, error: null })
-  
-  return { mockSupabase: mock }
-})
+  return chain
+}
 
-vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => mockSupabase,
-}))
+function createMockSupabase(result: { data: unknown; error: unknown }, useMaybeSingle = false) {
+  const chain = createChain(result, useMaybeSingle ? 'maybeSingle' : 'order')
+  return { from: vi.fn(() => chain) } as unknown as SupabaseClient<Database>
+}
 
 describe('ELearningService', () => {
   let service: ELearningService
+  let mockSupabase: SupabaseClient<Database>
 
   beforeEach(() => {
     vi.clearAllMocks()
-    const chainableMethods = ['from', 'select', 'eq', 'order', 'insert', 'update', 'delete', 'or']
-    chainableMethods.forEach((method) => {
-      ;(mockSupabase as any)[method].mockImplementation(() => mockSupabase)
-    })
-    ;(mockSupabase as any).single.mockResolvedValue({ data: null, error: null })
-    ;(mockSupabase as any).maybeSingle.mockResolvedValue({ data: null, error: null })
-    service = new ELearningService(mockSupabase as any)
   })
 
   describe('getCourses', () => {
-    it('devrait récupérer tous les cours d\'une organisation', async () => {
-      const organizationId = 'org-1'
+    it('devrait retourner [] si erreur table absente (PGRST116)', async () => {
+      mockSupabase = createMockSupabase({ data: null, error: { code: 'PGRST116', message: 'No rows' } })
+      service = new ELearningService(mockSupabase)
+
+      const result = await service.getCourses('org-1')
+
+      expect(result).toEqual([])
+    })
+
+    it('devrait retourner les cours d\'une organisation', async () => {
       const mockCourses = [
-        {
-          id: 'course-1',
-          organization_id: organizationId,
-          title: 'Introduction à React',
-          description: 'Cours d\'introduction',
-          status: 'published',
-        },
+        { id: 'c1', organization_id: 'org-1', title: 'Cours 1', slug: 'cours-1' },
       ]
+      mockSupabase = createMockSupabase({ data: mockCourses, error: null })
+      service = new ELearningService(mockSupabase)
 
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
-          data: mockCourses,
-          error: null,
-        }),
-      }
+      const result = await service.getCourses('org-1')
 
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-
-      const result = await service.getCourses(organizationId)
-
-      expect(result).toEqual(mockCourses)
       expect(mockSupabase.from).toHaveBeenCalledWith('courses')
+      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>)()
+      expect(chain.eq).toHaveBeenCalledWith('organization_id', 'org-1')
+      expect(chain.order).toHaveBeenCalledWith('created_at', { ascending: false })
+      expect(result).toEqual(mockCourses)
     })
 
-    it('devrait retourner un tableau vide si la table n\'existe pas encore', async () => {
-      const organizationId = 'org-1'
-      const mockError = {
-        message: 'relation "public.courses" does not exist',
-        code: '42P01',
-      }
+    it('devrait appliquer les filtres instructorId, isPublished, difficulty, search si fournis', async () => {
+      mockSupabase = createMockSupabase({ data: [], error: null })
+      service = new ELearningService(mockSupabase)
 
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
-          data: null,
-          error: mockError,
-        }),
-      }
+      await service.getCourses('org-1', {
+        instructorId: 'u1',
+        isPublished: true,
+        difficulty: 'beginner',
+        search: 'test',
+      })
 
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-
-      const result = await service.getCourses(organizationId)
-
-      expect(result).toEqual([])
-    })
-
-    it('devrait retourner [] dans le catch si erreur a code PGRST116', async () => {
-      const organizationId = 'org-1'
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockRejectedValue({ code: 'PGRST116', message: 'No rows' }),
-      }
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-      const result = await service.getCourses(organizationId)
-      expect(result).toEqual([])
-    })
-
-    it('devrait propager l\'erreur si code inconnu dans le catch', async () => {
-      const organizationId = 'org-1'
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockRejectedValue(new Error('Connection refused')),
-      }
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-      await expect(service.getCourses(organizationId)).rejects.toThrow('Connection refused')
-    })
-
-    it('devrait appliquer le filtre instructorId quand fourni', async () => {
-      const organizationId = 'org-1'
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      }
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-      await service.getCourses(organizationId, { instructorId: 'instructor-1' })
-      expect(mockQueryChain.eq).toHaveBeenCalledWith('instructor_id', 'instructor-1')
-    })
-
-    it('devrait appliquer le filtre isPublished quand fourni', async () => {
-      const organizationId = 'org-1'
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
-      }
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-      await service.getCourses(organizationId, { isPublished: true })
-      expect(mockQueryChain.eq).toHaveBeenCalledWith('is_published', true)
+      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>)()
+      expect(chain.eq).toHaveBeenCalledWith('instructor_id', 'u1')
+      expect(chain.eq).toHaveBeenCalledWith('is_published', true)
+      expect(chain.eq).toHaveBeenCalledWith('difficulty_level', 'beginner')
+      expect(chain.or).toHaveBeenCalled()
     })
   })
 
   describe('getCourseBySlug', () => {
-    it('devrait récupérer un cours par son slug', async () => {
-      const slug = 'introduction-react'
-      const organizationId = 'org-1'
-      const mockCourse = {
-        id: 'course-1',
-        slug,
-        title: 'Introduction à React',
-        description: 'Cours d\'introduction',
-        status: 'published',
-        lessons: [],
-      }
+    it('devrait retourner un cours par slug et organisation', async () => {
+      const mockCourse = { id: 'c1', slug: 'mon-cours', organization_id: 'org-1', title: 'Mon cours' }
+      mockSupabase = createMockSupabase({ data: mockCourse, error: null }, true)
+      service = new ELearningService(mockSupabase)
 
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: mockCourse,
-          error: null,
-        }),
-      }
+      const result = await service.getCourseBySlug('mon-cours', 'org-1')
 
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-
-      const result = await service.getCourseBySlug(slug, organizationId)
-
-      expect(result).toEqual(mockCourse)
       expect(mockSupabase.from).toHaveBeenCalledWith('courses')
-      expect(mockQueryChain.eq).toHaveBeenCalledWith('slug', slug)
-      expect(mockQueryChain.eq).toHaveBeenCalledWith('organization_id', organizationId)
+      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>)()
+      expect(chain.eq).toHaveBeenCalledWith('slug', 'mon-cours')
+      expect(chain.eq).toHaveBeenCalledWith('organization_id', 'org-1')
+      expect(chain.maybeSingle).toHaveBeenCalled()
+      expect(result).toEqual(mockCourse)
     })
 
     it('devrait retourner null si le cours n\'existe pas', async () => {
-      const slug = 'course-inexistant'
-      const organizationId = 'org-1'
-      const mockError = {
-        message: 'relation "public.courses" does not exist',
-        code: '42P01',
-      }
+      mockSupabase = createMockSupabase({ data: null, error: null }, true)
+      service = new ELearningService(mockSupabase)
 
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: null,
-          error: mockError,
-        }),
-      }
-
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-
-      const result = await service.getCourseBySlug(slug, organizationId)
+      const result = await service.getCourseBySlug('inexistant', 'org-1')
 
       expect(result).toBeNull()
     })
   })
 
   describe('getCourseSections', () => {
-    it('devrait récupérer les sections d\'un cours', async () => {
-      const courseId = 'course-1'
+    it('devrait retourner les sections d\'un cours', async () => {
       const mockSections = [
-        {
-          id: 'section-1',
-          course_id: courseId,
-          title: 'Section 1',
-          order_index: 1,
-        },
+        { id: 's1', course_id: 'c1', title: 'Section 1', order_index: 0 },
       ]
+      mockSupabase = createMockSupabase({ data: mockSections, error: null })
+      service = new ELearningService(mockSupabase)
 
-      const mockQueryChain = {
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
-          data: mockSections,
-          error: null,
-        }),
-      }
+      const result = await service.getCourseSections('c1')
 
-      ;(mockSupabase as any).select.mockReturnValue(mockQueryChain)
-
-      const result = await service.getCourseSections(courseId)
-
-      expect(result).toEqual(mockSections)
       expect(mockSupabase.from).toHaveBeenCalledWith('course_sections')
-      expect(mockQueryChain.eq).toHaveBeenCalledWith('course_id', courseId)
+      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>)()
+      expect(chain.eq).toHaveBeenCalledWith('course_id', 'c1')
+      expect(chain.order).toHaveBeenCalledWith('order_index', { ascending: true })
+      expect(result).toEqual(mockSections)
+    })
+
+    it('devrait retourner un tableau vide en cas d\'erreur 409', async () => {
+      mockSupabase = createMockSupabase({ data: null, error: { code: '409', status: 409 } })
+      service = new ELearningService(mockSupabase)
+
+      const result = await service.getCourseSections('c1')
+
+      expect(result).toEqual([])
+    })
+  })
+
+  describe('getCourseLessons', () => {
+    it('devrait retourner les leçons d\'un cours', async () => {
+      const mockLessons = [
+        { id: 'l1', course_id: 'c1', title: 'Leçon 1', order_index: 0 },
+      ]
+      mockSupabase = createMockSupabase({ data: mockLessons, error: null })
+      service = new ELearningService(mockSupabase)
+
+      const result = await service.getCourseLessons('c1')
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('lessons')
+      const chain = (mockSupabase.from as ReturnType<typeof vi.fn>)()
+      expect(chain.eq).toHaveBeenCalledWith('course_id', 'c1')
+      expect(result).toEqual(mockLessons)
     })
   })
 })

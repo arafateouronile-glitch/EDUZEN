@@ -23,8 +23,17 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
       - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
   trigger-vercel:
     name: Déclencher Vercel
@@ -43,7 +52,7 @@ jobs:
           fi
           echo "Envoi du Deploy Hook à Vercel..."
           echo "URL du hook (début): ${URL:0:50}..."
-          resp=$(curl -s -w "\n%{http_code}" -X POST "$URL" 2>/dev/null) || true
+          resp=$(curl -s -w "\n%{http_code}" -X POST "$URL")
           code=$(echo "$resp" | tail -n1)
           body=$(echo "$resp" | sed '$d')
           echo "Réponse HTTP: ${code:-'(vide)'}"

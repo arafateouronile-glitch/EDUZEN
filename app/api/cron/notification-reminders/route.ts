@@ -13,9 +13,14 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 const CRON_SECRET = process.env.CRON_SECRET
 
 export async function GET(request: NextRequest) {
-  // Vérifier le secret CRON
+  if (!CRON_SECRET) {
+    return NextResponse.json(
+      { error: 'CRON_SECRET non configuré' },
+      { status: 503 }
+    )
+  }
   const authHeader = request.headers.get('authorization')
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

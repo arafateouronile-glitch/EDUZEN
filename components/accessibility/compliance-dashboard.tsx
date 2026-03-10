@@ -107,7 +107,7 @@ export function ComplianceDashboard({ organizationId }: ComplianceDashboardProps
         config?.partner_agefiph && 'Agefiph',
         config?.partner_cap_emploi && 'Cap emploi',
         config?.partner_fiphfp && 'FIPHFP',
-        ...(config?.partner_other || []).map((p: any) => p.name),
+        ...(config?.partner_other || []).map((p: { name?: string }) => p.name),
       ]
         .filter(Boolean)
         .join(', ') || 'Aucun partenariat',

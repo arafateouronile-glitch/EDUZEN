@@ -136,10 +136,10 @@ function DataTable({
   emptyMessage = 'Aucune donnée',
   onRowClick
 }: { 
-  columns: { key: string; label: string; render?: (value: any, row: any) => React.ReactNode }[]
-  data: any[]
+  columns: { key: string; label: string; render?: (value: unknown, row: Record<string, unknown>) => React.ReactNode }[]
+  data: Record<string, unknown>[]
   emptyMessage?: string
-  onRowClick?: (row: any) => void
+  onRowClick?: (row: Record<string, unknown>) => void
 }) {
   return (
     <div className="overflow-x-auto">
@@ -163,7 +163,7 @@ function DataTable({
           ) : (
             data.map((row, index) => (
               <motion.tr
-                key={row.id || index}
+                key={typeof row?.id === 'string' || typeof row?.id === 'number' ? row.id : index}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: index * 0.05 }}
@@ -175,7 +175,7 @@ function DataTable({
               >
                 {columns.map((col) => (
                   <td key={col.key} className="py-3 px-4 text-sm text-gray-900">
-                    {col.render ? col.render(row[col.key], row) : row[col.key]}
+                    {col.render ? col.render(row[col.key], row) : (row[col.key] as React.ReactNode)}
                   </td>
                 ))}
               </motion.tr>
@@ -357,14 +357,13 @@ function ReportsPageContent() {
     queryFn: async () => {
       if (!user?.organization_id) return null
 
-      // eslint-disable-next-line
-      const qSessions: any = supabase
+      const qSessions = supabase
         .from('sessions')
         .select('*, formations!inner(organization_id)', { count: 'exact' })
         .eq('formations.organization_id', user.organization_id)
         .gte('start_date', dateFilter.start)
         .lte('end_date', dateFilter.end)
-      const qEnrollments: any = supabase
+      const qEnrollments = supabase
         .from('enrollments')
         .select('*, sessions!inner(formations!inner(organization_id))', { count: 'exact' })
         .eq('sessions.formations.organization_id', user.organization_id)
@@ -415,14 +414,14 @@ function ReportsPageContent() {
       // Calcul du taux de présence
       const attendanceData = attendanceResult.data || []
       const totalAttendance = attendanceData.length
-      const presentCount = attendanceData.filter((a: any) => a.status === 'present' || a.status === 'late').length
+      const presentCount = attendanceData.filter((a: { status?: string }) => a.status === 'present' || a.status === 'late').length
       const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0
 
       // Total des paiements
-      const totalPayments = (paymentsResult.data || []).reduce((sum: number, p: any) => sum + (p.amount || 0), 0)
+      const totalPayments = (paymentsResult.data || []).reduce((sum: number, p: { amount?: number }) => sum + (p.amount || 0), 0)
 
       // Total impayés
-      const totalOverdue = (invoicesResult.data || []).reduce((sum: number, i: any) => sum + (i.total_amount || 0), 0)
+      const totalOverdue = (invoicesResult.data || []).reduce((sum: number, i: { total_amount?: number }) => sum + (i.total_amount || 0), 0)
 
       return {
         students: studentsResult.count || 0,
@@ -562,7 +561,7 @@ function ReportsPageContent() {
     try {
       // Générer le nom de fichier avec la date au format YYYY-MM-DD
       const dateStr = formatDate(new Date(), 'yyyy-MM-dd')
-      let dataToExport: Record<string, any>[] = []
+      let dataToExport: Record<string, unknown>[] = []
       let filename = ''
       let sheetName = ''
 
@@ -612,15 +611,16 @@ function ReportsPageContent() {
             return
           }
 
-          dataToExport = (sessions || []).map((session: any) => ({
-            'Session': session.name || '',
-            'Formation': session.formations?.name || '',
+          type SessionExportRow = { name?: string; formations?: { name?: string }; start_date?: string; end_date?: string; status?: string; enrollments?: Array<{ count?: number }> }
+          dataToExport = (sessions || []).map((session: SessionExportRow) => ({
+            'Session': session.name ?? '',
+            'Formation': session.formations?.name ?? '',
             'Date de début': session.start_date ? formatDate(session.start_date, 'dd/MM/yyyy') : '',
             'Date de fin': session.end_date ? formatDate(session.end_date, 'dd/MM/yyyy') : '',
             'Statut': session.status === 'ongoing' ? 'En cours' :
                      session.status === 'completed' ? 'Terminée' :
-                     session.status === 'planned' ? 'Planifiée' : session.status || '',
-            'Inscrits': session.enrollments?.[0]?.count || 0,
+                     session.status === 'planned' ? 'Planifiée' : session.status ?? '',
+            'Inscrits': session.enrollments?.[0]?.count ?? 0,
           }))
           filename = `rapport-sessions-${dateStr}`
           sheetName = 'Sessions'
@@ -639,15 +639,18 @@ function ReportsPageContent() {
             return
           }
 
-          dataToExport = (studentsData || []).map((student: any) => ({
-            'Nom': `${student.first_name || ''} ${student.last_name || ''}`.trim() || '-',
-            'Email': student.email || '',
-            'Téléphone': student.phone || '',
-            'Statut': student.status === 'active' ? 'Actif' :
-                     student.status === 'inactive' ? 'Inactif' : student.status || '',
-            'Inscriptions': student.enrollments?.length || 0,
-            'Date d\'inscription': student.created_at ? formatDate(student.created_at, 'dd/MM/yyyy') : '',
-          }))
+          type StudentExportRow = { first_name?: string; last_name?: string; email?: string; phone?: string; status?: string; enrollments?: unknown[]; created_at?: string }
+          dataToExport = (studentsData || []).map((student) => {
+            const s = student as StudentExportRow
+            return {
+            'Nom': `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() || '-',
+            'Email': s.email ?? '',
+            'Téléphone': s.phone ?? '',
+            'Statut': s.status === 'active' ? 'Actif' :
+                     s.status === 'inactive' ? 'Inactif' : s.status ?? '',
+            'Inscriptions': s.enrollments?.length ?? 0,
+            'Date d\'inscription': s.created_at ? formatDate(s.created_at, 'dd/MM/yyyy') : '',
+          }})
           filename = `rapport-apprenants-${dateStr}`
           sheetName = 'Apprenants'
           break
@@ -927,22 +930,22 @@ function ReportsPageContent() {
                     { 
                       key: 'formations', 
                       label: 'Formation',
-                      render: (_, row) => row.formations?.name || '-'
+                      render: (_: unknown, row: Record<string, unknown>) => (row.formations as { name?: string } | null)?.name || '-'
                     },
                     { 
                       key: 'start_date', 
                       label: 'Début',
-                      render: (value) => value ? formatDate(value) : '-'
+                      render: (value: unknown) => value ? formatDate(value as string | Date) : '-'
                     },
                     { 
                       key: 'end_date', 
                       label: 'Fin',
-                      render: (value) => value ? formatDate(value) : '-'
+                      render: (value: unknown) => value ? formatDate(value as string | Date) : '-'
                     },
                     { 
                       key: 'status', 
                       label: 'Statut',
-                      render: (value) => (
+                      render: (value: unknown) => (
                         <span className={cn(
                           'px-2 py-1 rounded-full text-xs font-medium',
                           value === 'ongoing' ? 'bg-green-100 text-green-700' :
@@ -952,14 +955,14 @@ function ReportsPageContent() {
                         )}>
                           {value === 'ongoing' ? 'En cours' :
                            value === 'completed' ? 'Terminée' :
-                           value === 'planned' ? 'Planifiée' : value}
+                           value === 'planned' ? 'Planifiée' : String(value ?? '')}
                         </span>
                       )
                     },
                     { 
                       key: 'enrollments', 
                       label: 'Inscrits',
-                      render: (value) => value?.[0]?.count || 0
+                      render: (value: unknown) => (value as Array<{ count?: number }>)?.[0]?.count ?? 0
                     },
                   ]}
                   data={sessions || []}
@@ -993,7 +996,7 @@ function ReportsPageContent() {
                     { 
                       key: 'status', 
                       label: 'Statut',
-                      render: (value) => (
+                      render: (value: unknown) => (
                         <span className={cn(
                           'px-2 py-1 rounded-full text-xs font-medium',
                           value === 'active' ? 'bg-green-100 text-green-700' :
@@ -1001,19 +1004,19 @@ function ReportsPageContent() {
                           'bg-blue-100 text-blue-700'
                         )}>
                           {value === 'active' ? 'Actif' :
-                           value === 'inactive' ? 'Inactif' : value}
+                           value === 'inactive' ? 'Inactif' : String(value ?? '')}
                         </span>
                       )
                     },
                     { 
                       key: 'enrollments', 
                       label: 'Inscriptions',
-                      render: (value) => value?.length || 0
+                      render: (value: unknown) => (Array.isArray(value) ? value.length : 0) || 0
                     },
                     { 
                       key: 'created_at', 
                       label: 'Inscrit le',
-                      render: (value) => value ? formatDate(value) : '-'
+                      render: (value: unknown) => value ? formatDate(value as string | Date) : '-'
                     },
                   ]}
                   data={studentsData || []}

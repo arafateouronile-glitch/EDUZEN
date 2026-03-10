@@ -18,12 +18,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get manager's company
-    const { data: manager } = await (supabase
-      .from('company_managers' as any)
+    const { data: manager } = await supabase
+      .from('company_managers')
       .select('company_id')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single() as any)
+      .maybeSingle()
 
     if (!manager) {
       return createSecureErrorResponse(new Error('No company found for this user'), { status: 403 })
@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(url.searchParams.get('limit') || '20')
     const offset = (page - 1) * limit
 
-    let query: any = supabase
-      .from('training_requests' as any)
+    let query = supabase
+      .from('training_requests')
       .select(`
         *,
         requested_by_manager:company_managers!training_requests_requested_by_fkey (
@@ -55,9 +55,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status)
     }
 
-    const { data, count, error } = await (query
+    const { data, count, error } = await query
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1) as any)
+      .range(offset, offset + limit - 1)
 
     if (error) {
       logger.error('Error fetching training requests', { error })
@@ -90,12 +90,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get manager info
-    const { data: manager } = await (supabase
-      .from('company_managers' as any)
+    const { data: manager } = await supabase
+      .from('company_managers')
       .select('id, company_id, can_request_training')
       .eq('user_id', user.id)
       .eq('is_active', true)
-      .single() as any)
+      .single()
 
     if (!manager) {
       return createSecureErrorResponse(new Error('No company found for this user'), { status: 403 })
@@ -107,8 +107,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    const { data, error } = await (supabase
-      .from('training_requests' as any)
+    const { data, error } = await supabase
+      .from('training_requests')
       .insert({
         company_id: manager.company_id,
         requested_by: manager.id,
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         metadata: body.metadata || {},
       })
       .select()
-      .single() as any)
+      .single()
 
     if (error) {
       logger.error('Error creating training request', { error })
@@ -140,11 +140,11 @@ export async function POST(request: NextRequest) {
     // Send notification to organization admins
     try {
       // Get company info for notification
-      const { data: company } = await (supabase
-        .from('companies' as any)
+      const { data: company } = await supabase
+        .from('companies')
         .select('organization_id, name')
         .eq('id', manager.company_id)
-        .single() as any)
+        .single()
 
       if (company?.organization_id) {
         // Get admin users for this organization

@@ -60,7 +60,7 @@ export function DocumentUpload({
   })
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ file, metadata }: { file: File; metadata: any }) => {
+    mutationFn: async ({ file, metadata }: { file: File; metadata: Record<string, unknown> }) => {
       // 1. Upload le fichier vers Supabase Storage
       const fileExt = file.name.split('.').pop()
       const fileName = `${studentId}/${Date.now()}.${fileExt}`
@@ -110,12 +110,12 @@ export function DocumentUpload({
       })
       setUploading(false)
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       setUploading(false)
       addToast({
         type: 'error',
         title: 'Erreur d\'upload',
-        description: error?.message || 'Impossible d\'uploader le document.',
+        description: (error instanceof Error ? error.message : null) || 'Impossible d\'uploader le document.',
       })
     },
   })
@@ -139,11 +139,11 @@ export function DocumentUpload({
         description: 'Le document a été supprimé avec succès.',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible de supprimer le document.',
+        description: (error instanceof Error ? error.message : null) || 'Impossible de supprimer le document.',
       })
     },
   })
@@ -177,7 +177,7 @@ export function DocumentUpload({
     uploadMutation.mutate({ file, metadata: formData })
   }
 
-  const handleDownload = async (document: any) => {
+  const handleDownload = async (document: { file_path: string; file_name?: string }) => {
     try {
       const { data, error } = await supabase.storage
         .from('accessibility-documents')
@@ -189,14 +189,14 @@ export function DocumentUpload({
       const url = URL.createObjectURL(data)
       const a = window.document.createElement('a')
       a.href = url
-      a.download = document.file_name
+      a.download = document.file_name ?? 'document'
       a.click()
       URL.revokeObjectURL(url)
-    } catch (error: any) {
+    } catch (error: unknown) {
       addToast({
         type: 'error',
         title: 'Erreur de téléchargement',
-        description: error?.message || 'Impossible de télécharger le document.',
+        description: (error instanceof Error ? error.message : null) || 'Impossible de télécharger le document.',
       })
     }
   }

@@ -213,7 +213,7 @@ export class AttendanceService {
       return { valid: false, verified: false, error: 'Session non trouvée' }
     }
 
-    const sessionData = session as any
+    const sessionData = session as unknown as { latitude?: number; longitude?: number; require_location_for_attendance?: boolean; allowed_attendance_radius_meters?: number }
 
     // Si la géolocalisation n'est pas requise, c'est valide
     if (!sessionData.require_location_for_attendance) {
@@ -221,25 +221,23 @@ export class AttendanceService {
     }
 
     // Si la session n'a pas de coordonnées GPS, on ne peut pas vérifier
-    if (!sessionData.latitude || !sessionData.longitude) {
+    const lat = Number(sessionData.latitude)
+    const lon = Number(sessionData.longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return { valid: true, verified: false, error: 'Session sans coordonnées GPS' }
     }
 
     // Calculer la distance
-    const distance = this.calculateDistance(
-      sessionData.latitude,
-      sessionData.longitude,
-      latitude,
-      longitude
-    )
+    const distance = this.calculateDistance(lat, lon, latitude, longitude)
 
     // Vérifier le rayon autorisé
-    if (sessionData.allowed_attendance_radius_meters) {
-      if (distance > sessionData.allowed_attendance_radius_meters) {
+    const radiusMeters = Number(sessionData.allowed_attendance_radius_meters)
+    if (Number.isFinite(radiusMeters) && radiusMeters > 0) {
+      if (distance > radiusMeters) {
         return {
           valid: false,
           verified: false,
-          error: `Vous êtes trop loin de la session (${Math.round(distance)}m, maximum: ${sessionData.allowed_attendance_radius_meters}m)`,
+          error: `Vous êtes trop loin de la session (${Math.round(distance)}m, maximum: ${radiusMeters}m)`,
           distance,
         }
       }

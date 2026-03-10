@@ -68,7 +68,7 @@ export type DocumentWithRelations = TableRow<'documents'> & {
 export type QueryResult<T> = T | T[] | null | undefined
 
 // Helper pour typer les données avec relations optionnelles
-export type WithOptionalRelations<T, R extends Record<string, any>> = T & {
+export type WithOptionalRelations<T, R extends Record<string, unknown>> = T & {
   [K in keyof R]?: R[K]
 }
 

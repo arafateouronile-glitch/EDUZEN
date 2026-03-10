@@ -8,6 +8,8 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 type Session = TableRow<'sessions'>
 type SessionInsert = TableInsert<'sessions'>
 type SessionUpdate = TableUpdate<'sessions'>
+/** Session ou payload avec teacher_id (présent en DB, parfois omis dans les types générés) */
+type WithTeacherId = { teacher_id?: string | null }
 
 /**
  * Service pour gérer les SESSIONS
@@ -205,22 +207,22 @@ export class SessionService {
       throw error
     }
 
-    // Synchroniser session_teachers si teacher_id est fourni
-    if (data && (session as any).teacher_id) {
+    const sessionTeacherId = (session as WithTeacherId).teacher_id
+    if (data && sessionTeacherId) {
       try {
         const { error: insertError } = await this.supabase
           .from('session_teachers')
           .insert({
             session_id: data.id,
-            teacher_id: (session as any).teacher_id,
+            teacher_id: sessionTeacherId,
             role: 'instructor',
-            is_primary: true, // Le teacher_id principal est considéré comme primary
+            is_primary: true,
           })
 
         if (insertError) {
           logger.warn('SessionService - Erreur lors de la création de l\'assignation dans session_teachers', { error: sanitizeError(insertError) })
         } else {
-          logger.debug('SessionService - Assignation créée dans session_teachers', { sessionId: data.id, teacherId: (session as any).teacher_id })
+          logger.debug('SessionService - Assignation créée dans session_teachers', { sessionId: data.id, teacherId: sessionTeacherId })
         }
       } catch (syncError) {
         // Ne pas faire échouer la création de session si la synchronisation échoue
@@ -326,7 +328,7 @@ export class SessionService {
       .single()
 
     const oldTeacherId = existingSession?.teacher_id
-    const newTeacherId = (updates as any)?.teacher_id
+    const newTeacherId = (updates as WithTeacherId)?.teacher_id
 
     // Mettre à jour la session
     const { data, error } = await this.supabase
@@ -650,22 +652,22 @@ export class SessionService {
 
     if (error) throw error
 
-    // Synchroniser session_teachers si teacher_id est fourni
-    if (data && (session as any).teacher_id) {
+    const indepTeacherId = (session as WithTeacherId).teacher_id
+    if (data && indepTeacherId) {
       try {
         const { error: insertError } = await this.supabase
           .from('session_teachers')
           .insert({
             session_id: data.id,
-            teacher_id: (session as any).teacher_id,
+            teacher_id: indepTeacherId,
             role: 'instructor',
-            is_primary: true, // Le teacher_id principal est considéré comme primary
+            is_primary: true,
           })
 
         if (insertError) {
           logger.warn('SessionService - Erreur lors de la création de l\'assignation dans session_teachers (session indépendante)', { error: sanitizeError(insertError) })
         } else {
-          logger.debug('SessionService - Assignation créée dans session_teachers (session indépendante)', { sessionId: data.id, teacherId: (session as any).teacher_id })
+          logger.debug('SessionService - Assignation créée dans session_teachers (session indépendante)', { sessionId: data.id, teacherId: indepTeacherId })
         }
       } catch (syncError) {
         // Ne pas faire échouer la création de session si la synchronisation échoue

@@ -15,7 +15,7 @@ export interface ExcelExportOptions {
   filename: string
   sheetName: string
   columns: ExcelColumn[]
-  data: Record<string, any>[]
+  data: Record<string, unknown>[]
 }
 
 /**
@@ -80,7 +80,7 @@ export async function exportToExcel(options: ExcelExportOptions): Promise<void> 
  * @param filename Nom du fichier
  * @param data Données à exporter
  */
-export function exportToCSV(filename: string, data: Record<string, any>[]): void {
+export function exportToCSV(filename: string, data: Record<string, unknown>[]): void {
   if (!data || data.length === 0) {
     throw new Error('Aucune donnée à exporter')
   }

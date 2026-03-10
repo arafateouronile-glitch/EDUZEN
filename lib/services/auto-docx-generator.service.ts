@@ -66,7 +66,7 @@ export async function generateDocxFromHtmlTemplate(
   
   // Header
   if (template.header && typeof template.header === 'object') {
-    headerHtml = (template.header as any).content || ''
+    headerHtml = (template.header as { content?: string }).content || ''
   }
   if (!headerHtml && defaultTemplate) {
     headerHtml = defaultTemplate.headerContent || ''
@@ -74,7 +74,7 @@ export async function generateDocxFromHtmlTemplate(
   
   // Body
   if (template.content && typeof template.content === 'object') {
-    bodyHtml = (template.content as any).html || ''
+    bodyHtml = (template.content as { html?: string }).html || ''
   }
   if (!bodyHtml && typeof template.content === 'string') {
     bodyHtml = template.content
@@ -85,7 +85,7 @@ export async function generateDocxFromHtmlTemplate(
   
   // Footer
   if (template.footer && typeof template.footer === 'object') {
-    footerHtml = (template.footer as any).content || ''
+    footerHtml = (template.footer as { content?: string }).content || ''
   }
   if (!footerHtml && defaultTemplate) {
     footerHtml = defaultTemplate.footerContent || ''
@@ -99,11 +99,11 @@ export async function generateDocxFromHtmlTemplate(
   
   // Afficher les variables de logo disponibles
   const varKeys = Object.keys(variables)
-  const varsAsAny = variables as any
+  const varsRecord = variables as Record<string, unknown>
   logger.debug('AutoDocx - Variables reçues', {
     variableCount: varKeys.length,
-    hasEcoleLogo: !!varsAsAny.ecole_logo,
-    hasOrganizationLogo: !!varsAsAny.organization_logo,
+    hasEcoleLogo: !!varsRecord.ecole_logo,
+    hasOrganizationLogo: !!varsRecord.organization_logo,
   })
   
   // Remplacer les variables dans le HTML AVANT la conversion
@@ -206,9 +206,9 @@ function replaceVariables(html: string, variables: DocumentVariables): string {
   let result = html
   
   // D'abord, convertir les variables de logo en balises <img>
-  const varsAsAny = variables as any
+  const varsRecord = variables as Record<string, unknown>
   for (const logoVar of LOGO_VARIABLES) {
-    const logoValue = varsAsAny[logoVar]
+    const logoValue = varsRecord[logoVar]
     if (logoValue && typeof logoValue === 'string' && logoValue.startsWith('http')) {
       // Remplacer {logo_var} par une balise <img>
       const logoRegex = new RegExp(`\\{${logoVar}\\}`, 'g')
@@ -566,6 +566,46 @@ function createParagraphFromBlock(
   return new Paragraph(finalParagraphOptions)
 }
 
+/** Aplatit le HTML d'une table imbriquée en texte (lignes séparées par \n, cellules par " | "). */
+function flattenNestedTableToText(html: string): string {
+  return html
+    .replace(/<table[^>]*>/gi, '')
+    .replace(/<\/table>/gi, '')
+    .replace(/<thead[^>]*>/gi, '')
+    .replace(/<\/thead>/gi, '')
+    .replace(/<tbody[^>]*>/gi, '')
+    .replace(/<\/tbody>/gi, '')
+    .replace(/<tr[^>]*>/gi, '')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<t[dh][^>]*>/gi, '')
+    .replace(/<\/t[dh]>/gi, ' | ')
+}
+
+/** Extrait le texte brut depuis du HTML (supprime les balises, décode les entités). */
+function stripHtmlToPlainText(html: string): string {
+  return html
+    .replace(/<img[^>]*>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n')
+    .replace(/<hr[^>]*>/gi, '\n---\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&euro;/gi, '€')
+    .replace(/&copy;/gi, '©')
+    .replace(/&reg;/gi, '®')
+    .replace(/&trade;/gi, '™')
+    .replace(/\n\s*\n/g, '\n')
+    .trim()
+}
+
 /**
  * Parse une table HTML en Table DOCX
  */
@@ -647,18 +687,7 @@ async function parseHtmlTable(
         let processedCellContent = cellContent
         
         if (hasNestedTable) {
-          // Extraire le contenu des cellules de la table imbriquée comme texte structuré
-          processedCellContent = cellContent
-            .replace(/<table[^>]*>/gi, '')
-            .replace(/<\/table>/gi, '')
-            .replace(/<thead[^>]*>/gi, '')
-            .replace(/<\/thead>/gi, '')
-            .replace(/<tbody[^>]*>/gi, '')
-            .replace(/<\/tbody>/gi, '')
-            .replace(/<tr[^>]*>/gi, '')
-            .replace(/<\/tr>/gi, '\n')
-            .replace(/<t[dh][^>]*>/gi, '')
-            .replace(/<\/t[dh]>/gi, ' | ')
+          processedCellContent = flattenNestedTableToText(cellContent)
         }
         
         // Vérifier si la cellule contient une image/logo
@@ -724,27 +753,7 @@ async function parseHtmlTable(
         }
         
         // Extraire et ajouter le texte de la cellule (sans les tags d'image)
-        let textContent = processedCellContent
-          .replace(/<img[^>]*>/gi, '')
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<\/p>/gi, '\n')
-          .replace(/<\/div>/gi, '\n')
-          .replace(/<\/li>/gi, '\n')
-          .replace(/<\/h[1-6]>/gi, '\n')
-          .replace(/<hr[^>]*>/gi, '\n---\n')
-          .replace(/<[^>]+>/g, '')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/&euro;/gi, '€')
-          .replace(/&copy;/gi, '©')
-          .replace(/&reg;/gi, '®')
-          .replace(/&trade;/gi, '™')
-          .replace(/\n\s*\n/g, '\n') // Supprimer les lignes vides multiples
-          .trim()
+        const textContent = stripHtmlToPlainText(processedCellContent)
         
         if (textContent) {
           // Diviser par lignes

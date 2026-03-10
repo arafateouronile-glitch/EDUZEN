@@ -315,9 +315,9 @@ export class TemplateSecurityService {
       throw new Error('Template non chiffré ou non trouvé')
     }
 
-    // Déchiffrer le contenu
-    const encryptedContent = encryption.encrypted_content as any
-    if (!encryptedContent || !encryptedContent.header || !encryptedContent.content || !encryptedContent.footer) {
+    type EncryptedContent = { header: string; content: string; footer: string }
+    const encryptedContent = encryption.encrypted_content as EncryptedContent | null
+    if (!encryptedContent?.header || !encryptedContent?.content || !encryptedContent?.footer) {
       throw new Error('Invalid encrypted content structure')
     }
     const decryptedContent = {
@@ -548,7 +548,7 @@ export class TemplateSecurityService {
     // Mettre à jour le template
     await this.supabase
       .from('document_templates')
-      .update({ content: anonymizedContent as any })
+      .update({ content: anonymizedContent as import('@/types/database.types').Json })
       .eq('id', templateId)
 
     // Logger l'audit

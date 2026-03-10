@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -120,25 +120,25 @@ export default function EditFormationPage() {
         competence_domains: formation.competence_domains || '',
         certification_issued: formation.certification_issued || false,
         is_active: formation.is_active ?? true,
-      } as any)
+      })
     }
   }, [formation, reset])
 
   // Pré-remplir les sessions sélectionnées
   useEffect(() => {
     if (formationSessions && formationSessions.length > 0) {
-      const sessionIds = formationSessions.map((s: any) => s.id).filter(Boolean)
+      const sessionIds = formationSessions.map((s: { id: string }) => s.id).filter(Boolean)
       setSelectedSessions(sessionIds)
     }
   }, [formationSessions])
 
-  const formData = watch()
+  const formData = watch() as FormationFormData
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormationFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         program_id: data.program_id || null,
         code: data.code,
         name: data.name,
@@ -201,11 +201,11 @@ export default function EditFormationPage() {
       })
       router.push(`/dashboard/formations/${formationId}`)
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Une erreur est survenue lors de la mise à jour de la formation.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la mise à jour de la formation.',
       })
     },
   })
@@ -252,10 +252,10 @@ export default function EditFormationPage() {
     )
   }
 
-  const sessionOptions = sessions?.map((s: any) => ({
-    label: s.name,
+  const sessionOptions: { label: string; value: string }[] = (sessions?.map((s: { id: string; name?: string }) => ({
+    label: s.name ?? '',
     value: s.id
-  })) || []
+  })) ?? [])
 
   return (
     <div className="space-y-6">
@@ -274,6 +274,8 @@ export default function EditFormationPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {(
+          <>
         {/* Section 1: Informations de base */}
         <Card>
           <CardHeader>
@@ -291,7 +293,7 @@ export default function EditFormationPage() {
                 }`}
               >
                 <option value="">Aucun programme</option>
-                {programs?.map((program: any) => (
+                {programs?.map((program: { id: string; name?: string }) => (
                   <option key={program.id} value={program.id}>
                     {program.name}
                   </option>
@@ -544,8 +546,7 @@ export default function EditFormationPage() {
           </CardContent>
         </Card>
 
-        {/* Section 5: Catalogue en ligne et CPF */}
-        <Card>
+        <Card key="cpf-section">
           <CardHeader>
             <CardTitle>Catalogue en ligne et CPF</CardTitle>
           </CardHeader>
@@ -572,7 +573,7 @@ export default function EditFormationPage() {
                 Eligible CPF (Compte Personnel Formation)
               </label>
             </div>
-            {formData.eligible_cpf && (
+            {(formData.eligible_cpf === true ? (
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Code CPF
@@ -584,80 +585,80 @@ export default function EditFormationPage() {
                   placeholder="Ex: 236631"
                 />
               </div>
-            )}
+            ) : null)}
           </CardContent>
         </Card>
 
-        {/* Section 6: Formation */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Détails de la formation</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Modalités</label>
-              <textarea
-                {...register('modalities')}
-                rows={3}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Modalités de la formation..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Type d'action de formation</label>
-              <input
-                type="text"
-                {...register('training_action_type')}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                placeholder="Type d'action de formation..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Objectifs pédagogiques</label>
-              <textarea
-                {...register('pedagogical_objectives')}
-                rows={4}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Objectifs pédagogiques..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Profil des apprenants</label>
-              <textarea
-                {...register('learner_profile')}
-                rows={3}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Profil des apprenants..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Contenu de la formation (progression pédagogique)</label>
-              <textarea
-                {...register('training_content')}
-                rows={6}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Contenu de la formation..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Suivi de l'exécution</label>
-              <textarea
-                {...register('execution_follow_up')}
-                rows={3}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Suivi de l'exécution..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Modalités de certification</label>
-              <textarea
-                {...register('certification_modalities')}
-                rows={3}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Modalités de certification..."
-              />
-            </div>
-          </CardContent>
+        {/* Section 6: Détails de la formation */}
+        <Card key="details-formation">
+            <CardHeader>
+              <CardTitle>Détails de la formation</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Modalités</label>
+                <textarea
+                  {...register('modalities')}
+                  rows={3}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Modalités de la formation..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Type d'action de formation</label>
+                <input
+                  type="text"
+                  {...register('training_action_type')}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                  placeholder="Type d'action de formation..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Objectifs pédagogiques</label>
+                <textarea
+                  {...register('pedagogical_objectives')}
+                  rows={4}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Objectifs pédagogiques..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Profil des apprenants</label>
+                <textarea
+                  {...register('learner_profile')}
+                  rows={3}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Profil des apprenants..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Contenu de la formation (progression pédagogique)</label>
+                <textarea
+                  {...register('training_content')}
+                  rows={6}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Contenu de la formation..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Suivi de l'exécution</label>
+                <textarea
+                  {...register('execution_follow_up')}
+                  rows={3}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Suivi de l'exécution..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Modalités de certification</label>
+                <textarea
+                  {...register('certification_modalities')}
+                  rows={3}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Modalités de certification..."
+                />
+              </div>
+            </CardContent>
         </Card>
 
         {/* Section 7: Public cible */}
@@ -806,6 +807,8 @@ export default function EditFormationPage() {
             {updateMutation.isPending ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </Button>
         </div>
+          </>
+        ) as React.ReactNode}
       </form>
     </div>
   )

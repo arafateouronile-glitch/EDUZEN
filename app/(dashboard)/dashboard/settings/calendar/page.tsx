@@ -16,6 +16,15 @@ import {
 } from 'lucide-react'
 import type { CalendarProvider } from '@/lib/services/calendar/calendar.types'
 
+type CalendarConfigView = {
+  is_active?: boolean
+  default_calendar_name?: string
+  last_sync_at?: string
+  last_sync_status?: string
+  api_key?: string
+  api_secret?: string
+}
+
 const PROVIDERS: Array<{ value: CalendarProvider; label: string; color: string; docs: string }> = [
   { value: 'google', label: 'Google Calendar', color: 'bg-blue-500', docs: 'https://developers.google.com/calendar/api' },
   { value: 'outlook', label: 'Microsoft Outlook', color: 'bg-orange-500', docs: 'https://learn.microsoft.com/en-us/graph/api/resources/calendar' },
@@ -65,14 +74,14 @@ export default function CalendarSettingsPage() {
   // Récupérer les configurations existantes
   const { data: existingConfigs, isLoading } = useQuery({
     queryKey: ['calendar-configs', user?.organization_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<Record<string, CalendarConfigView>> => {
       if (!user?.organization_id) return {}
 
-      const results: Record<string, any> = {}
+      const results: Record<string, CalendarConfigView> = {}
       for (const provider of ['google', 'outlook'] as CalendarProvider[]) {
         const config = await calendarService.getConfig(user.organization_id, provider)
         if (config) {
-          results[provider] = config
+          results[provider] = config as CalendarConfigView
           setConfigs((prev) => ({
             ...prev,
             [provider]: {
@@ -152,7 +161,7 @@ export default function CalendarSettingsPage() {
     authenticateMutation.mutate(provider)
   }
 
-  const updateConfig = (provider: CalendarProvider, field: string, value: any) => {
+  const updateConfig = (provider: CalendarProvider, field: string, value: string | number | boolean) => {
     setConfigs((prev) => ({
       ...prev,
       [provider]: {

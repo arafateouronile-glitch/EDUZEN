@@ -260,6 +260,7 @@ export default function LearnerCourseDetailPage() {
       if (prev[currentLesson.id] && Object.keys(prev[currentLesson.id]).length > 0) return prev
       return { ...prev, [currentLesson.id]: stored }
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- load from storage once when lesson/key change
   }, [currentLesson?.id, inlineQuizStorageKey])
 
   // Si le nombre de leçons change (RLS/migrations), s'assurer que l'index reste valide

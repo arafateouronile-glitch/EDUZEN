@@ -164,10 +164,10 @@ function UsersSettingsPageContent() {
         type: 'success',
       })
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         title: 'Erreur',
-        description: error.message || 'Erreur lors de la mise à jour',
+        description: error instanceof Error ? error.message : 'Erreur lors de la mise à jour',
         type: 'error',
       })
     },

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 // Types pour les vrais programmes (niveau 1)
 type Program = TableRow<'programs'>
@@ -34,6 +35,7 @@ export class ProgramService {
     limit?: number
     offset?: number
   }): Promise<Program[] | { data: Program[]; count: number; hasMore: boolean }> {
+    try {
     const usePagination = filters?.limit !== undefined || filters?.offset !== undefined
 
     let query = this.supabase
@@ -63,52 +65,71 @@ export class ProgramService {
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throw error
     return (data ?? []) as Program[]
+    } catch (error) {
+      logger.error('ProgramService.getAllPrograms', error, { organizationId, filters })
+      throw error
+    }
   }
 
   /**
    * Récupère un programme par son ID avec ses formations
    */
   async getProgramById(id: string) {
-    const { data, error } = await this.supabase
-      .from('programs')
-      .select(`
-        *,
-        formations(*)
-      `)
-      .eq('id', id)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('programs')
+        .select(`
+          *,
+          formations(*)
+        `)
+        .eq('id', id)
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ProgramService.getProgramById', error, { id })
+      throw error
+    }
   }
 
   /**
    * Crée un nouveau programme
    */
   async createProgram(program: FlexibleInsert<'programs'>) {
-    const { data, error } = await this.supabase
-      .from('programs')
-      .insert(program as ProgramInsert)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('programs')
+        .insert(program as ProgramInsert)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ProgramService.createProgram', error, { organizationId: (program as { organization_id?: string }).organization_id })
+      throw error
+    }
   }
 
   /**
    * Met à jour un programme
    */
   async updateProgram(id: string, updates: FlexibleUpdate<'programs'>) {
-    const { data, error } = await this.supabase
-      .from('programs')
-      .update(updates as ProgramUpdate)
-      .eq('id', id)
-      .select()
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('programs')
+        .update(updates as ProgramUpdate)
+        .eq('id', id)
+        .select()
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ProgramService.updateProgram', error, { id })
+      throw error
+    }
   }
 
   /**
@@ -122,14 +143,19 @@ export class ProgramService {
    * Récupère toutes les formations d'un programme
    */
   async getFormationsByProgram(programId: string) {
-    const { data, error } = await this.supabase
-      .from('formations')
-      .select('*')
-      .eq('program_id', programId)
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await this.supabase
+        .from('formations')
+        .select('*')
+        .eq('program_id', programId)
+        .order('created_at', { ascending: false })
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ProgramService.getFormationsByProgram', error, { programId })
+      throw error
+    }
   }
 
   /**
@@ -137,6 +163,7 @@ export class ProgramService {
    * Optimisé: une seule requête formations, une seule requête sessions
    */
   async getGlobalStats(organizationId: string) {
+    try {
     const { data: allPrograms, error } = await this.supabase
       .from('programs')
       .select('id, is_active, created_at')
@@ -236,6 +263,10 @@ export class ProgramService {
       totalEnrollments,
       statusData,
       monthlyData,
+    }
+    } catch (error) {
+      logger.error('ProgramService.getGlobalStats', error, { organizationId })
+      throw error
     }
   }
 }

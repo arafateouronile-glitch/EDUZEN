@@ -117,10 +117,11 @@ export async function POST(request: NextRequest) {
       dueDate: due_date,
     })
   } catch (error: unknown) {
-    const errorAmount = (error as any)?.amount || 'unknown'
-    const errorCurrency = (error as any)?.currency || 'unknown'
-    const errorDebtorIban = (error as any)?.debtor_iban || undefined
-    const errorCreditorIban = (error as any)?.creditor_iban || undefined
+    const err = error as { amount?: string; currency?: string; debtor_iban?: string; creditor_iban?: string }
+    const errorAmount = err?.amount ?? 'unknown'
+    const errorCurrency = err?.currency ?? 'unknown'
+    const errorDebtorIban = err?.debtor_iban
+    const errorCreditorIban = err?.creditor_iban
     logger.error('Error creating SEPA direct debit', error, {
       amount: errorAmount,
       currency: errorCurrency,

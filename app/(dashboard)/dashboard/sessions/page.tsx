@@ -617,7 +617,7 @@ function SessionsPageContent() {
                       className="w-full px-3 py-2 rounded-lg bg-gray-50 border-transparent focus:bg-white focus:border-brand-blue/20 focus:ring-2 focus:ring-brand-blue/10 outline-none text-sm transition-all"
                     >
                       <option value="">Toutes les formations</option>
-                      {(formations ?? []).map((formation: any) => (
+                      {(formations ?? []).map((formation: { id: string; name?: string }) => (
                         <option key={formation.id} value={formation.id}>
                           {formation.name}
                         </option>
@@ -757,8 +757,10 @@ function SessionsPageContent() {
           <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <AnimatePresence mode="popLayout">
-              {sessions.map((session: any, index: number) => {
-                const StatusIcon = getStatusIcon(session.status)
+              {sessions.map((session, index) => {
+                const s = session as { id: string; status?: string; name?: string; start_date?: string; end_date?: string; location?: string }
+                const status = s.status ?? 'planned'
+                const StatusIcon = getStatusIcon(status as Session['status'])
                 return (
                   <motion.div
                     key={session.id}
@@ -772,9 +774,9 @@ function SessionsPageContent() {
                       ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
                     }}
                     whileHover={{ y: -8, scale: 1.02 }}
-                    onMouseEnter={() => prefetchSessionDetails(session.id)}
+                    onMouseEnter={() => prefetchSessionDetails(s.id)}
                   >
-                    <Link href={`/dashboard/sessions/${session.id}`}>
+                    <Link href={`/dashboard/sessions/${s.id}`}>
                       <GlassCard
                         variant="premium"
                         hoverable
@@ -787,7 +789,7 @@ function SessionsPageContent() {
                               transition={{ type: "spring", stiffness: 500, damping: 15 }}
                               className={cn(
                                 'h-12 w-12 rounded-2xl flex items-center justify-center shadow-lg',
-                                getStatusColor(session.status)
+                                getStatusColor(status as Session['status'])
                               )}
                             >
                               <StatusIcon className="h-6 w-6" />
@@ -795,18 +797,18 @@ function SessionsPageContent() {
                             <motion.span
                               className={cn(
                                 'px-3 py-1.5 rounded-xl text-xs font-bold border-2 shadow-sm uppercase tracking-wide',
-                                getStatusColor(session.status)
+                                getStatusColor(status as Session['status'])
                               )}
                               whileHover={{ scale: 1.05 }}
                               transition={{ type: "spring", stiffness: 400, damping: 10 }}
                             >
-                              {getStatusLabel(session.status)}
+                              {getStatusLabel(status as Session['status'])}
                             </motion.span>
                           </div>
 
                           <div className="mb-5">
                             <h3 className="text-lg font-display font-bold text-gray-900 line-clamp-2 group-hover:text-brand-blue transition-colors tracking-tight leading-tight">
-                              {session.name}
+                              {s.name ?? ''}
                             </h3>
                           </div>
 
@@ -815,27 +817,27 @@ function SessionsPageContent() {
                               <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-brand-blue-ghost transition-colors">
                                 <Calendar className="h-4 w-4 flex-shrink-0 text-gray-500 group-hover:text-brand-blue transition-colors" />
                               </div>
-                              <span className="font-medium tracking-tight">{formatDate(session.start_date)}</span>
+                              <span className="font-medium tracking-tight">{formatDate(s.start_date ?? '')}</span>
                             </div>
-                            {session.end_date && (
+                            {s.end_date && (
                               <div className="flex items-center gap-2.5 text-gray-600 group-hover:text-gray-700 transition-colors">
                                 <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-brand-cyan-ghost transition-colors">
                                   <Clock className="h-4 w-4 flex-shrink-0 text-gray-500 group-hover:text-brand-cyan transition-colors" />
                                 </div>
-                                <span className="font-medium tracking-tight">{formatDate(session.end_date)}</span>
+                                <span className="font-medium tracking-tight">{formatDate(s.end_date ?? '')}</span>
                               </div>
                             )}
-                            {session.location && (
+                            {s.location && (
                               <div className="flex items-center gap-2.5 text-gray-600 group-hover:text-gray-700 transition-colors">
                                 <div className="p-1.5 bg-gray-100 rounded-lg group-hover:bg-emerald-50 transition-colors">
                                   <MapPin className="h-4 w-4 flex-shrink-0 text-gray-500 group-hover:text-emerald-600 transition-colors" />
                                 </div>
-                                <span className="truncate font-medium tracking-tight">{session.location}</span>
+                                <span className="truncate font-medium tracking-tight">{s.location}</span>
                               </div>
                             )}
                           </div>
 
-                          <SessionTimelineSummary startDate={session.start_date} endDate={session.end_date} />
+                          <SessionTimelineSummary startDate={s.start_date ?? ''} endDate={s.end_date ?? null} />
                         </div>
 
                         <motion.div

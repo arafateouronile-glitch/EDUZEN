@@ -1,14 +1,11 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database.types'
-import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
-// Types locaux pour les tables report_card qui ne sont pas encore dans le schéma Supabase
-type ReportCard = any
-type ReportCardSubject = any
-type SubjectStatistics = any
-type ReportCardInsert = any
-type ReportCardUpdate = any
+type ReportCard = Database['public']['Tables']['report_cards']['Row']
+type ReportCardSubject = Database['public']['Tables']['report_card_subjects']['Row']
+type ReportCardInsert = Database['public']['Tables']['report_cards']['Insert']
+type ReportCardUpdate = Database['public']['Tables']['report_cards']['Update']
 
 export interface ReportCardWithSubjects extends ReportCard {
   report_card_subjects: ReportCardSubject[]
@@ -59,7 +56,7 @@ class ReportCardService {
    * Récupère tous les bulletins pour une organisation
    */
   async getAll(organizationId: string, filters?: ReportCardFilters): Promise<ReportCardWithSubjects[]> {
-    let query = (this.supabase as any)
+    let query = this.supabase
       .from('report_cards')
       .select(`
         *,
@@ -100,7 +97,7 @@ class ReportCardService {
    * Récupère un bulletin par son ID
    */
   async getById(id: string): Promise<ReportCardWithSubjects | null> {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.supabase
       .from('report_cards')
       .select(`
         *,
@@ -147,7 +144,7 @@ class ReportCardService {
    * Met à jour un bulletin
    */
   async update(id: string, updates: ReportCardUpdate): Promise<ReportCardWithSubjects> {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.supabase
       .from('report_cards')
       .update({
         ...updates,
@@ -190,7 +187,7 @@ class ReportCardService {
    * Supprime un bulletin
    */
   async delete(id: string): Promise<void> {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.supabase
       .from('report_cards')
       .delete()
       .eq('id', id)
@@ -258,7 +255,7 @@ class ReportCardService {
     subject: string,
     updates: Partial<ReportCardSubject>
   ): Promise<ReportCardSubject> {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.supabase
       .from('report_card_subjects')
       .update(updates)
       .eq('report_card_id', reportCardId)

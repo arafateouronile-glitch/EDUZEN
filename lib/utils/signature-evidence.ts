@@ -5,6 +5,7 @@
  */
 
 import { createHash } from 'crypto'
+import { logger } from '@/lib/utils/logger'
 
 const DEV_FALLBACK_SECRET = 'eduzen-dev-signature-evidence-secret-min-16-chars'
 
@@ -50,11 +51,7 @@ export function getSignatureEvidenceSecret(): string {
   const secret = process.env.SIGNATURE_EVIDENCE_SECRET ?? process.env.EDUZEN_SIGNATURE_SECRET
   if (secret && secret.length >= 16) return secret
   if (process.env.NODE_ENV === 'development') {
-    if (typeof console !== 'undefined' && console.warn) {
-      console.warn(
-        '[signature-evidence] SIGNATURE_EVIDENCE_SECRET non défini : utilisation du secret de dev. En production, définissez SIGNATURE_EVIDENCE_SECRET dans .env.'
-      )
-    }
+    logger.warn('[signature-evidence] SIGNATURE_EVIDENCE_SECRET non défini : utilisation du secret de dev. En production, définissez SIGNATURE_EVIDENCE_SECRET dans .env.')
     return DEV_FALLBACK_SECRET
   }
   throw new Error(

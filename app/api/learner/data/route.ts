@@ -1,16 +1,30 @@
 import { createServerClient } from '@supabase/ssr'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { Database } from '@/types/database.types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
+/** Client Supabase dont .from() accepte un nom de table (ex. vue session_enrollments). */
+type FlexibleSupabase = Omit<SupabaseClient<Database>, 'from'> & { from(tableName: string): ReturnType<SupabaseClient<Database>['from']> }
+
 // API route pour récupérer les données de l'espace apprenant
 // Supporte à la fois l'authentification normale et l'accès par token
+function getAccessToken(request: NextRequest): string | null {
+  const authHeader = request.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) return authHeader.slice(7).trim()
+  const headerToken = request.headers.get('x-learner-access-token')
+  if (headerToken) return headerToken.trim()
+  const searchParams = new URL(request.url).searchParams
+  const fromQuery = searchParams.get('access_token')
+  if (fromQuery) return fromQuery.trim()
+  return null
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const dataType = searchParams.get('type') // 'student', 'enrollments', 'courses', etc.
-    const accessToken = searchParams.get('access_token') // Token d'accès direct optionnel
+    const accessToken = getAccessToken(request)
     
     logger.info('[API Learner Data] Request:', { dataType, hasToken: !!accessToken })
     
@@ -85,7 +99,7 @@ export async function GET(request: NextRequest) {
         
         case 'enrollments': {
           logger.info('[API Learner Data] Fetching enrollments for studentId', { studentId })
-          const { data, error } = await (supabaseAdmin as any)
+          const { data, error } = await (supabaseAdmin as FlexibleSupabase)
             .from('session_enrollments')
             .select(`
               *,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ComponentType } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { educationalResourcesService } from '@/lib/services/educational-resources.service'
@@ -27,7 +27,7 @@ import {
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 
-const RESOURCE_TYPE_ICONS: Record<string, any> = {
+const RESOURCE_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   document: FileText,
   video: Video,
   audio: Music,

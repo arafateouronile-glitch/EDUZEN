@@ -166,7 +166,7 @@ export class FECExportService {
         CompteLib: 'Clients',
         CompAuxNum: invoice.student_id ? invoice.student_id.slice(0, 10) : undefined,
         CompAuxLib: invoice.students
-          ? `${(invoice.students as any).first_name || ''} ${(invoice.students as any).last_name || ''}`.trim()
+          ? `${(invoice.students as { first_name?: string; last_name?: string }).first_name || ''} ${(invoice.students as { first_name?: string; last_name?: string }).last_name || ''}`.trim()
           : undefined,
         PieceRef: invoice.invoice_number || '',
         PieceDate: formattedDate,
@@ -244,7 +244,8 @@ export class FECExportService {
         const paymentDate = payment.paid_at ? new Date(payment.paid_at) : new Date(payment.created_at || new Date().toISOString())
         const formattedDate = this.formatDateFEC(paymentDate)
         const ecritureNum = `PAY-${payment.id.slice(0, 8).toUpperCase()}`
-        const invoice = payment.invoices as any
+        type InvoiceForFec = { invoice_number?: string; student_id?: string; students?: { first_name?: string; last_name?: string } }
+        const invoice = payment.invoices as InvoiceForFec | null
 
         // Écriture : Débit Banque / Crédit Client
         entries.push({
@@ -264,7 +265,7 @@ export class FECExportService {
           Montantdevise: payment.currency && payment.currency !== 'EUR' ? this.formatAmount(payment.amount || 0) : undefined,
         })
 
-        const invoiceData = invoice as any
+        const invoiceData = invoice
         entries.push({
           JournalCode: options.journalCode || 'BQ',
           JournalLib: 'Banque',

@@ -34,7 +34,7 @@ type Plan = {
   price_yearly_ht: number | null
   max_students: number | null
   max_sessions_per_month: number | null
-  features: Record<string, any>
+  features: Record<string, unknown>
   stripe_price_id: string | null
   is_active: boolean
 }
@@ -76,8 +76,7 @@ export default function SubscribePage() {
     queryFn: async () => {
       if (!user?.organization_id) return null
       
-      // eslint-disable-next-line
-      const q: any = supabase
+      const q = supabase
         .from('subscriptions')
         .select('*, plans(*)')
         .eq('organization_id', user.organization_id)
@@ -320,7 +319,7 @@ export default function SubscribePage() {
                               </div>
                               <div className="flex-1">
                                 <p className="text-sm font-medium text-gray-900">{feature.label}</p>
-                                <p className="text-sm text-gray-600">{feature.value}</p>
+                                <p className="text-sm text-gray-600">{typeof feature.value === 'string' || typeof feature.value === 'number' ? feature.value : ''}</p>
                               </div>
                             </li>
                           )

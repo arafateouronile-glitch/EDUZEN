@@ -73,20 +73,21 @@ export function GestionConventions({
   const queryClient = useQueryClient()
 
   // Charger tous les modèles actifs (comme dans la page des modèles de documents)
-  const { data: allTemplates } = useQuery<DocumentTemplate[]>({
+  const { data: allTemplates } = useQuery({
     queryKey: ['document-templates', 'all', user?.organization_id],
-    queryFn: async () => {
+    queryFn: async (): Promise<DocumentTemplate[]> => {
       if (!user?.organization_id) return []
-      return documentTemplateService.getAllTemplates(user.organization_id, { isActive: true })
+      const list = await documentTemplateService.getAllTemplates(user.organization_id, { isActive: true })
+      return list.filter((t): t is DocumentTemplate => t != null)
     },
     enabled: !!user?.organization_id,
   })
 
   // Filtrer les modèles de conventions
-  const conventionTemplates = allTemplates?.filter(template => template.type === 'convention') || []
+  const conventionTemplates = (allTemplates ?? []).filter((template: DocumentTemplate) => template.type === 'convention')
 
   // Filtrer les modèles de contrats
-  const contractTemplates = allTemplates?.filter(template => template.type === 'contrat') || []
+  const contractTemplates = (allTemplates ?? []).filter((template: DocumentTemplate) => template.type === 'contrat')
 
   const [selectedConventionTemplateId, setSelectedConventionTemplateId] = useState<string | undefined>()
 
@@ -398,7 +399,7 @@ export function GestionConventions({
                     <SelectContent className="rounded-xl z-[9999] max-h-[400px] overflow-y-auto w-full">
                       <SelectItem value="">Modèle par défaut</SelectItem>
                       {conventionTemplates && conventionTemplates.length > 0 ? (
-                        conventionTemplates.map((template) => (
+                        conventionTemplates.map((template: DocumentTemplate) => (
                           <SelectItem key={template.id} value={template.id}>
                             {template.name}
                           </SelectItem>

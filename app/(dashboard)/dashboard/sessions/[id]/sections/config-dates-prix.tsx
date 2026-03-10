@@ -62,7 +62,7 @@ export function ConfigDatesPrix({
       return
     }
     try {
-      await supabase.from('session_modules' as any).insert({
+      await supabase.from('session_modules').insert({
         session_id: sessionId,
         name: n,
         amount: a,
@@ -80,7 +80,7 @@ export function ConfigDatesPrix({
 
   const handleUpdateModule = async (id: string, name: string, amount: number) => {
     try {
-      await supabase.from('session_modules' as any).update({ name: name.trim(), amount }).eq('id', id)
+      await supabase.from('session_modules').update({ name: name.trim(), amount }).eq('id', id)
       onModulesRefetch()
       setEditingId(null)
       addToast({ type: 'success', title: 'Module mis à jour' })
@@ -92,7 +92,7 @@ export function ConfigDatesPrix({
   const handleDeleteModule = async (id: string) => {
     if (!confirm('Supprimer ce module ?')) return
     try {
-      await supabase.from('session_modules' as any).delete().eq('id', id)
+      await supabase.from('session_modules').delete().eq('id', id)
       onModulesRefetch()
       addToast({ type: 'success', title: 'Module supprimé' })
     } catch (e) {

@@ -6,7 +6,17 @@
 
 import * as React from 'react'
 import { Document, Page, View, Text, Image, StyleSheet, pdf, renderToStream } from '@react-pdf/renderer'
-import type { DocumentTemplate, DocumentVariables, TemplateElement } from '@/lib/types/document-templates'
+import type {
+  DocumentTemplate,
+  DocumentVariables,
+  TemplateElement,
+  DocumentContent,
+  HeaderConfig,
+  FooterConfig,
+} from '@/lib/types/document-templates'
+
+type HeaderWithContent = HeaderConfig & { content?: string }
+type FooterWithContent = FooterConfig & { content?: string }
 import { generateHTML } from './html-generator'
 import { logger } from '@/lib/utils/logger'
 
@@ -104,9 +114,10 @@ export async function generatePDF(
 ): Promise<PDFGenerationResult> {
   try {
     // Vérifier si le template a du contenu HTML (nouveau format)
-    const htmlContent = (template.content as any)?.html || ''
-    const headerContent = (template.header as any)?.content || ''
-    const footerContent = (template.footer as any)?.content || ''
+    const contentObj = template.content as DocumentContent | undefined
+    const htmlContent = contentObj && typeof contentObj === 'object' && 'html' in contentObj ? contentObj.html ?? '' : ''
+    const headerContent = (template.header as HeaderWithContent | null)?.content ?? ''
+    const footerContent = (template.footer as FooterWithContent | null)?.content ?? ''
     
     // Utiliser Puppeteer pour les templates HTML
     if (htmlContent || headerContent || footerContent) {
@@ -222,7 +233,7 @@ async function generatePDFFromElements(
   const PDFDocument = () => (
     <Document>
       {pages.map((pageElements, pageIndex) => (
-        <Page key={pageIndex} size={(template.page_size || 'A4') as any} style={styles.page}>
+        <Page key={pageIndex} size={(template.page_size ?? 'A4') as 'A4' | 'LETTER' | 'LEGAL'} style={styles.page}>
           {/* Header répété sur chaque page si activé */}
           {template.header_enabled && template.header && (
             <View style={styles.header} fixed>
@@ -239,21 +250,21 @@ async function generatePDFFromElements(
           {template.footer_enabled && template.footer && (
             <View style={styles.footer} fixed>
               {/* Pagination automatique */}
-              {(template.footer as any)?.pagination?.enabled && (
+              {(template.footer as FooterWithContent)?.pagination?.enabled && (
                 <Text
                   style={[
                     styles.pagination,
                     {
                       textAlign:
-                        (template.footer as any).pagination.position === 'left'
+                        (template.footer as FooterWithContent).pagination?.position === 'left'
                           ? 'left'
-                          : (template.footer as any).pagination.position === 'right'
+                          : (template.footer as FooterWithContent).pagination?.position === 'right'
                           ? 'right'
                           : 'center',
                     },
                   ]}
                   render={({ pageNumber, totalPages }) =>
-                    replaceVariables((template.footer as any).pagination?.format || 'Page {numero_page} / {total_pages}', {
+                    replaceVariables((template.footer as FooterWithContent).pagination?.format ?? 'Page {numero_page} / {total_pages}', {
                       ...variables,
                       numero_page: pageNumber,
                       total_pages: totalPages,
@@ -263,7 +274,7 @@ async function generatePDFFromElements(
                 />
               )}
               {/* Éléments du footer */}
-              {renderElements((template.footer as any).elements || [], {
+              {renderElements((template.footer as FooterWithContent).elements ?? [], {
                 ...variables,
                 numero_page: pageIndex + 1,
                 total_pages: pages.length,
@@ -402,24 +413,24 @@ function renderElements(
 ): React.ReactNode[] {
   return elements.map((element, index) => {
     switch (element.type) {
-      case 'text':
+      case 'text': {
+        const textStyleParts: Record<string, number | string>[] = [styles.text as Record<string, number | string>]
+        if (element.style?.fontSize != null) textStyleParts.push({ fontSize: element.style.fontSize })
+        if (element.style?.color != null) textStyleParts.push({ color: element.style.color })
+        if (element.style?.fontWeight === 'bold') textStyleParts.push(styles.textBold as Record<string, number | string>)
+        if (element.style?.fontStyle === 'italic') textStyleParts.push(styles.textItalic as Record<string, number | string>)
+        if (element.style?.textAlign === 'center') textStyleParts.push(styles.textCenter as Record<string, number | string>)
+        if (element.style?.textAlign === 'right') textStyleParts.push(styles.textRight as Record<string, number | string>)
         return (
           <View key={element.id || index} style={styles.element}>
             <Text
-              style={[
-                styles.text,
-                element.style?.fontSize && { fontSize: element.style.fontSize },
-                element.style?.color && { color: element.style.color },
-                element.style?.fontWeight === 'bold' && styles.textBold,
-                element.style?.fontStyle === 'italic' && styles.textItalic,
-                element.style?.textAlign === 'center' && styles.textCenter,
-                element.style?.textAlign === 'right' && styles.textRight,
-              ] as any}
+              style={textStyleParts as never}
             >
               {element.content ? replaceVariables(element.content, variables) : ''}
             </Text>
           </View>
         )
+      }
 
       case 'image':
         // NOTE: Amélioration prévue - Implémenter le rendu d'images
@@ -629,7 +640,7 @@ function processFooterPagination(
   // Remplace {numero_page} et {total_pages} dans le footer
   // Note: Puppeteer ne gère pas automatiquement la pagination, on doit utiliser du CSS
   // Pour l'instant, on retourne le footer tel quel et on compte sur le CSS
-  const paginationFormat = (template.footer as any)?.pagination?.format || 'Page {numero_page} / {total_pages}'
+  const paginationFormat = (template.footer as FooterWithContent)?.pagination?.format ?? 'Page {numero_page} / {total_pages}'
   const paginationText = replaceVariables(paginationFormat, {
     ...variables,
     numero_page: 1, // Sera remplacé dynamiquement si nécessaire
@@ -638,7 +649,7 @@ function processFooterPagination(
   
   // Ajouter la pagination au footer si elle n'y est pas déjà
   if (!footerHTML.includes('{numero_page}') && !footerHTML.includes(paginationText)) {
-    const position = (template.footer as any)?.pagination?.position || 'center'
+    const position = (template.footer as FooterWithContent)?.pagination?.position ?? 'center'
     const textAlign = position === 'left' ? 'left' : position === 'right' ? 'right' : 'center'
     return `${footerHTML}<div style="text-align: ${textAlign}; font-size: 9pt; color: #4D4D4D; margin-top: 10px;">
       ${paginationText.replace(/\{numero_page\}/g, '<span class="page-number"></span>').replace(/\{total_pages\}/g, '<span class="total-pages"></span>')}

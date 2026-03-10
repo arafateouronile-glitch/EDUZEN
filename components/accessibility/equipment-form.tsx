@@ -11,10 +11,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/toast'
 import { Save, X } from 'lucide-react'
 
+interface EquipmentFormData {
+  name?: string
+  category?: string
+  description?: string
+  location?: string
+  quantity_total?: number
+  quantity_available?: number
+  status?: string
+  purchase_date?: string
+  warranty_expiry_date?: string
+  maintenance_schedule?: string
+  last_maintenance_date?: string
+  next_maintenance_date?: string
+  notes?: string
+  metadata?: Record<string, unknown>
+}
+
 interface EquipmentFormProps {
   organizationId: string
-  equipmentId?: string // Pour l'édition
-  initialData?: any
+  equipmentId?: string
+  initialData?: EquipmentFormData
   onSuccess?: () => void
   onCancel?: () => void
 }
@@ -83,9 +100,9 @@ export function EquipmentForm({
       }
 
       if (equipmentId) {
-        return await accessibilityService.updateEquipment(equipmentId, data)
+        return await accessibilityService.updateEquipment(equipmentId, data as Parameters<typeof accessibilityService.updateEquipment>[1])
       } else {
-        return await accessibilityService.createEquipment(data)
+        return await accessibilityService.createEquipment(data as Parameters<typeof accessibilityService.createEquipment>[0])
       }
     },
     onSuccess: () => {
@@ -98,11 +115,11 @@ export function EquipmentForm({
       })
       onSuccess?.()
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error?.message || 'Impossible de sauvegarder l\'équipement.',
+        description: error instanceof Error ? error.message : 'Impossible de sauvegarder l\'équipement.',
       })
     },
   })
@@ -132,7 +149,7 @@ export function EquipmentForm({
     saveMutation.mutate()
   }
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | boolean | Record<string, unknown>) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 

@@ -54,7 +54,7 @@ export async function generateBarcodeBase64(
  */
 export function processDynamicQRBarcodes(
   html: string,
-  variables: Record<string, any>
+  variables: Record<string, string | number | boolean | undefined>
 ): string {
   let processedHTML = html
   

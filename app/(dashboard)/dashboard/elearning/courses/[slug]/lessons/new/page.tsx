@@ -16,7 +16,7 @@ import {
   Save,
   Plus,
   Type,
-  Image,
+  Image as ImageIcon,
   Video,
   FileText,
   HelpCircle,
@@ -449,7 +449,7 @@ export default function NewLessonPage() {
                     onClick={() => addContentBlock('media')}
                     className="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:border-brand-blue hover:bg-brand-blue-ghost transition-colors"
                   >
-                    <Image className="h-6 w-6 text-brand-blue" />
+                    <ImageIcon className="h-6 w-6 text-brand-blue" aria-hidden />
                     <span className="text-sm font-medium">Média</span>
                   </button>
                   <button

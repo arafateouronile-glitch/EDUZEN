@@ -218,7 +218,7 @@ export class EducationalResourcesService {
       if (allPublished.error) throw allPublished.error
       const resources = allPublished.data || []
 
-      const scope = (r: any) => r.visibility_scope ?? 'all'
+      const scope = (r: Record<string, unknown> & { visibility_scope?: string }) => r.visibility_scope ?? 'all'
 
       const { data: enrollments } = await this.supabase
         .from('enrollments')

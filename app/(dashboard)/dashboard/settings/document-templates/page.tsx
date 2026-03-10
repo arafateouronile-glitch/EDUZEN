@@ -208,6 +208,7 @@ export default function DocumentTemplatesPage() {
     if (!templates) return {} as Record<DocumentType, DocumentTemplate[]>
     
     return templates.reduce((acc, template) => {
+      if (!template) return acc
       if (!acc[template.type]) {
         acc[template.type] = []
       }

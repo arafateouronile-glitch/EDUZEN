@@ -21,11 +21,22 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Récupérer depuis la base de données
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (userError || !userRow?.organization_id) {
+      return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+    }
+
+    // Récupérer depuis la base de données (filtré par organisation)
     const { data: payment, error } = await supabase
       .from('payments')
       .select('*')
       .eq('id', paymentId)
+      .eq('organization_id', userRow.organization_id)
       .single()
 
     if (error || !payment) {

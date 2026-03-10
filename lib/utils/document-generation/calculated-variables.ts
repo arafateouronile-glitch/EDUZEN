@@ -7,7 +7,7 @@
  */
 export function processCalculatedVariables(
   html: string,
-  variables: Record<string, any>
+  variables: Record<string, unknown>
 ): string {
   // Pour l'instant, retourner le HTML tel quel
   // Les variables calculées peuvent être implémentées plus tard si nécessaire

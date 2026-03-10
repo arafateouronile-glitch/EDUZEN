@@ -7,7 +7,7 @@
  */
 export function processElementVisibility(
   html: string,
-  variables: Record<string, any>
+  variables: Record<string, unknown>
 ): string {
   // Pour l'instant, retourner le HTML tel quel
   // La visibilité conditionnelle peut être implémentée plus tard si nécessaire

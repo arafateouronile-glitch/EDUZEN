@@ -68,12 +68,15 @@ export default function ControlsPage() {
   })
 
   // Filtrer les contrôles
-  const filteredControls = controls?.filter((control: any) => {
-    if (selectedStatus !== 'all' && control.implementation_status !== selectedStatus) {
+  const filteredControls = controls?.filter((control) => {
+    const status = control.implementation_status ?? undefined
+    const title = control.title ?? ''
+    const controlId = control.control_id ?? ''
+    if (selectedStatus !== 'all' && status !== selectedStatus) {
       return false
     }
-    if (searchQuery && !control.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !control.control_id.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && !title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !controlId.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false
     }
     return true
@@ -296,15 +299,19 @@ export default function ControlsPage() {
       {/* Liste des contrôles */}
       {filteredControls && filteredControls.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
-          {filteredControls.map((control: any) => (
+          {filteredControls.map((control) => {
+            const implStatus = control.implementation_status ?? 'not_implemented'
+            const compStatus = control.compliance_status ?? 'non_compliant'
+            const riskLevel = control.risk_level ?? 'medium'
+            return (
             <Card key={control.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <CardTitle className="text-lg">{control.title}</CardTitle>
-                      <Badge variant="outline">{control.control_id}</Badge>
-                      <Badge>{control.framework.toUpperCase()}</Badge>
+                      <CardTitle className="text-lg">{control.title ?? ''}</CardTitle>
+                      <Badge variant="outline">{control.control_id ?? ''}</Badge>
+                      <Badge>{(control.framework ?? '').toUpperCase()}</Badge>
                     </div>
                     {control.description && (
                       <CardDescription className="mt-2">{control.description}</CardDescription>
@@ -314,31 +321,31 @@ export default function ControlsPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4 flex-wrap">
-                  <Badge className={statusColors[control.implementation_status] || 'bg-gray-100 text-gray-800'}>
-                    {control.implementation_status === 'implemented' ? (
+                  <Badge className={statusColors[implStatus] || 'bg-gray-100 text-gray-800'}>
+                    {implStatus === 'implemented' ? (
                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                    ) : control.implementation_status === 'partial' ? (
+                    ) : implStatus === 'partial' ? (
                       <Clock className="h-3 w-3 mr-1" />
                     ) : (
                       <XCircle className="h-3 w-3 mr-1" />
                     )}
-                    {control.implementation_status === 'implemented'
+                    {implStatus === 'implemented'
                       ? 'Implémenté'
-                      : control.implementation_status === 'partial'
+                      : implStatus === 'partial'
                       ? 'Partiel'
                       : 'Non implémenté'}
                   </Badge>
-                  <Badge className={complianceColors[control.compliance_status] || 'bg-gray-100 text-gray-800'}>
-                    {control.compliance_status === 'compliant'
+                  <Badge className={complianceColors[compStatus] || 'bg-gray-100 text-gray-800'}>
+                    {compStatus === 'compliant'
                       ? 'Conforme'
-                      : control.compliance_status === 'partially_compliant'
+                      : compStatus === 'partially_compliant'
                       ? 'Partiellement conforme'
                       : 'Non conforme'}
                   </Badge>
-                  {control.risk_level && (
-                    <Badge className={riskColors[control.risk_level] || 'bg-gray-100 text-gray-800'}>
+                  {riskLevel && (
+                    <Badge className={riskColors[riskLevel] || 'bg-gray-100 text-gray-800'}>
                       <AlertTriangle className="h-3 w-3 mr-1" />
-                      Risque {control.risk_level}
+                      Risque {riskLevel}
                     </Badge>
                   )}
                   {control.category && (
@@ -363,7 +370,7 @@ export default function ControlsPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       ) : (
         <Card>

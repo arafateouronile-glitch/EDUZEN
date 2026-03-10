@@ -59,16 +59,16 @@ export default function ViewPortfolioPage() {
     enabled: !!portfolioId,
   })
 
-  // Créer un map des entrées pour un accès facile
-  const entriesMap: Record<string, any> = {}
-  entries?.forEach((entry: any) => {
+  type PortfolioEntry = { section_id: string; field_id: string; value?: unknown; teacher_comment?: string }
+  const entriesMap: Record<string, PortfolioEntry> = {}
+  ;(entries as PortfolioEntry[] | undefined)?.forEach((entry: PortfolioEntry) => {
     const key = `${entry.section_id}.${entry.field_id}`
     entriesMap[key] = entry
   })
 
   const getFieldValue = (sectionId: string, fieldId: string) => {
     const key = `${sectionId}.${fieldId}`
-    const content = portfolio?.content as Record<string, any> | undefined | null
+    const content = portfolio?.content as Record<string, unknown> | undefined | null
     return entriesMap[key]?.value || (content && typeof content === 'object' && !Array.isArray(content) ? content[key] : undefined)
   }
 
@@ -77,14 +77,16 @@ export default function ViewPortfolioPage() {
     return entriesMap[key]?.teacher_comment
   }
 
-  // Rendu d'une valeur selon le type
-  const renderValue = (field: any, sectionId: string) => {
-    const value = getFieldValue(sectionId, field.id)
+  type TemplateField = { id: string; type: string; label?: string; max?: number; competencyLevels?: string[] }
+  const renderValue = (field: TemplateField, sectionId: string) => {
+    const rawValue = getFieldValue(sectionId, field.id)
     const comment = getFieldComment(sectionId, field.id)
 
-    if (value === undefined || value === null || value === '') {
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
       return <span className="text-gray-400 italic">Non renseigné</span>
     }
+
+    const value = rawValue as string | number
 
     switch (field.type) {
       case 'checkbox':
@@ -97,7 +99,8 @@ export default function ViewPortfolioPage() {
         )
 
       case 'rating':
-        const maxRating = field.max || 5
+        const maxRating = field.max ?? 5
+        const numVal = typeof value === 'number' ? value : Number(value)
         return (
           <div className="flex items-center gap-1">
             {Array.from({ length: maxRating }, (_, i) => (
@@ -105,32 +108,32 @@ export default function ViewPortfolioPage() {
                 key={i} 
                 className={cn(
                   'h-5 w-5',
-                  i < value ? 'text-yellow-500 fill-current' : 'text-gray-300'
+                  i < numVal ? 'text-yellow-500 fill-current' : 'text-gray-300'
                 )} 
               />
             ))}
-            <span className="ml-2 text-gray-600">{value}/{maxRating}</span>
+            <span className="ml-2 text-gray-600">{String(value)}/{maxRating}</span>
           </div>
         )
 
       case 'competency':
         const levels = field.competencyLevels || ['Non acquis', 'En cours', 'Acquis', 'Maîtrisé']
-        const levelIndex = levels.indexOf(value)
+        const levelIndex = levels.indexOf(String(value))
         const levelColors = ['bg-red-100 text-red-700', 'bg-yellow-100 text-yellow-700', 'bg-blue-100 text-blue-700', 'bg-green-100 text-green-700']
         return (
           <Badge className={cn('text-sm', levelColors[levelIndex] || 'bg-gray-100 text-gray-700')}>
-            {value}
+            {String(value)}
           </Badge>
         )
 
       case 'date':
-        return <span>{formatDate(value)}</span>
+        return <span>{formatDate(typeof value === 'string' ? value : typeof value === 'number' ? new Date(value).toISOString() : (value as unknown) instanceof Date ? (value as Date).toISOString() : String(value))}</span>
 
       case 'select':
-        return <span className="font-medium">{value}</span>
+        return <span className="font-medium">{String(value)}</span>
 
       default:
-        return <span className="whitespace-pre-wrap">{value}</span>
+        return <span className="whitespace-pre-wrap">{String(value)}</span>
     }
   }
 
@@ -273,7 +276,7 @@ export default function ViewPortfolioPage() {
 
       {/* Sections du livret */}
       <div className="space-y-6">
-        {Array.isArray(template?.template_structure) && (template.template_structure as any[]).map((section: any, sectionIndex: number) => (
+        {Array.isArray(template?.template_structure) && (template.template_structure as Array<{ id: string; title?: string; description?: string; fields?: TemplateField[] }>).map((section, sectionIndex: number) => (
           <motion.div
             key={section.id}
             initial={{ opacity: 0, y: 20 }}
@@ -301,7 +304,7 @@ export default function ViewPortfolioPage() {
               </CardHeader>
               <CardContent className="pt-6 print:pt-4">
                 <div className="space-y-6 print:space-y-4">
-                  {section.fields?.map((field: any) => {
+                  {section.fields?.map((field: TemplateField) => {
                     const value = getFieldValue(section.id, field.id)
                     const comment = getFieldComment(section.id, field.id)
                     

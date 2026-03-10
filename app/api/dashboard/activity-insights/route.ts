@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type TopProgram = {
   id: string
@@ -137,7 +138,9 @@ export async function GET() {
     res.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=30')
     return res
   } catch (error) {
-    console.error('activity insights error', error)
+    logger.error('activity insights error', error instanceof Error ? error : new Error(String(error)), {
+      error: sanitizeError(error),
+    })
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

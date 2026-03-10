@@ -347,6 +347,7 @@ export default function DocumentEditor() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- toggleFocusMode stable, only react to isFocusMode
   }, [isFocusMode])
 
   // Toggle Focus Mode

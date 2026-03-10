@@ -55,7 +55,7 @@ export interface CreateEmailScheduleInput {
   send_to_students?: boolean
   send_to_teachers?: boolean
   send_to_coordinators?: boolean
-  custom_variables?: Record<string, any>
+  custom_variables?: Record<string, unknown>
   send_document?: boolean
   document_type?: DocumentType
   document_template_id?: string
@@ -72,7 +72,7 @@ export interface EmailScheduleExecutionResult {
   successfulSends: number
   failedSends: number
   errorMessage?: string
-  errorDetails?: Record<string, any>
+  errorDetails?: Record<string, unknown>
 }
 
 export class EmailScheduleService {
@@ -90,38 +90,48 @@ export class EmailScheduleService {
     isActive?: boolean
     emailType?: string
   }) {
-    let query = this.supabase
-      .from('email_schedules')
-      .select('*, email_templates(*)')
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false })
+    try {
+      let query = this.supabase
+        .from('email_schedules')
+        .select('*, email_templates(*)')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
 
-    if (filters?.isActive !== undefined) {
-      query = query.eq('is_active', filters.isActive)
+      if (filters?.isActive !== undefined) {
+        query = query.eq('is_active', filters.isActive)
+      }
+
+      if (filters?.emailType) {
+        query = query.eq('email_type', filters.emailType)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      logger.error('EmailScheduleService.getAllSchedules', error, { organizationId })
+      throw error
     }
-
-    if (filters?.emailType) {
-      query = query.eq('email_type', filters.emailType)
-    }
-
-    const { data, error } = await query
-
-    if (error) throw error
-    return data || []
   }
 
   /**
    * Récupère une règle de planification par son ID
    */
   async getScheduleById(id: string) {
-    const { data, error } = await this.supabase
-      .from('email_schedules')
-      .select('*, email_templates(*)')
-      .eq('id', id)
-      .single()
+    try {
+      const { data, error } = await this.supabase
+        .from('email_schedules')
+        .select('*, email_templates(*)')
+        .eq('id', id)
+        .single()
 
-    if (error) throw error
-    return data
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('EmailScheduleService.getScheduleById', error, { id })
+      throw error
+    }
   }
 
   /**
@@ -172,7 +182,7 @@ export class EmailScheduleService {
       schedule.program_id = input.program_id || null
     }
     if (input.custom_variables !== undefined) {
-      schedule.custom_variables = input.custom_variables || null
+      schedule.custom_variables = (input.custom_variables ?? null) as unknown as EmailScheduleInsert['custom_variables']
     }
     if (input.send_document !== undefined) {
       schedule.send_document = input.send_document ?? false
@@ -221,7 +231,7 @@ export class EmailScheduleService {
       send_to_students: input.send_to_students,
       send_to_teachers: input.send_to_teachers,
       send_to_coordinators: input.send_to_coordinators,
-      custom_variables: input.custom_variables,
+      custom_variables: input.custom_variables as unknown as EmailScheduleUpdate['custom_variables'],
       send_document: input.send_document,
       document_type: input.document_type,
       document_template_id: input.document_template_id,
@@ -277,7 +287,7 @@ export class EmailScheduleService {
     scheduleId: string,
     organizationId: string,
     result: EmailScheduleExecutionResult,
-    triggerContext?: Record<string, any>
+    triggerContext?: Record<string, unknown>
   ) {
     const log: EmailScheduleLogInsert = {
       schedule_id: scheduleId,
@@ -287,8 +297,8 @@ export class EmailScheduleService {
       successful_sends: result.successfulSends,
       failed_sends: result.failedSends,
       error_message: result.errorMessage || null,
-      error_details: result.errorDetails || null,
-      trigger_context: triggerContext || null,
+      error_details: (result.errorDetails ?? null) as unknown as EmailScheduleLogInsert['error_details'],
+      trigger_context: (triggerContext ?? null) as unknown as EmailScheduleLogInsert['trigger_context'],
     }
 
     const { data, error } = await this.supabase
