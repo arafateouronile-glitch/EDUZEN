@@ -41,6 +41,7 @@ import {
   Globe,
   Badge,
   ClipboardCheck,
+  Plug,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -163,6 +164,13 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
     ],
   },
   {
+    title: 'Intégrations',
+    allowedRoles: ADMIN_ROLES,
+    items: [
+      { name: 'Intégrations & API', href: '/dashboard/integrations', icon: Plug },
+    ],
+  },
+  {
     title: t('navigation.help'),
     items: [
       {
@@ -271,6 +279,11 @@ export function Sidebar() {
         clientPathname.startsWith('/dashboard/accessibility') ||
         clientPathname.startsWith('/dashboard/admin')) {
       expanded.push(t('navigation.qualityRegulation'))
+    }
+    
+    // Intégrations
+    if (clientPathname.startsWith('/dashboard/integrations')) {
+      expanded.push('Intégrations & API')
     }
     
     // Centre d'aide

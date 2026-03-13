@@ -49,21 +49,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Aucune organisation' }, { status: 400 })
     }
 
-    // Récupérer l'entité (RLS : même organisation)
-    const { data: externalEntity, error: entityError } = await supabase
+    // Récupérer l'entité (RLS : même organisation) + contact principal
+    const { data: externalEntityRow, error: entityError } = await supabase
       .from('external_entities')
       .select('id, organization_id, name, siret, siren, email, phone, address, city, postal_code, country, website, legal_form')
       .eq('id', entityId)
       .eq('organization_id', organizationId)
       .single()
 
-    if (entityError || !externalEntity) {
+    if (entityError || !externalEntityRow) {
       logger.warn('Company-by-entity: external entity not found or access denied', { entityId, error: entityError })
       return NextResponse.json(
         { error: 'Entité introuvable ou accès refusé' },
         { status: 404 }
       )
     }
+
+    // Récupérer les champs contact s'ils existent (migration 20260312)
+    const { data: contactRow } = await supabase
+      .from('external_entities')
+      .select('contact_first_name, contact_last_name, contact_email, contact_phone, contact_job_title')
+      .eq('id', entityId)
+      .single()
+    const contact = contactRow as Record<string, string | null> | null
 
     // Company déjà liée ?
     let company: { id: string; [key: string]: unknown } | null = null
@@ -82,17 +90,17 @@ export async function GET(request: NextRequest) {
         .insert({
           organization_id: organizationId,
           external_entity_id: entityId,
-          name: externalEntity.name,
-          siret: externalEntity.siret ?? null,
-          siren: externalEntity.siren ?? null,
-          email: externalEntity.email ?? null,
-          phone: externalEntity.phone ?? null,
-          address: externalEntity.address ?? null,
-          city: externalEntity.city ?? null,
-          postal_code: externalEntity.postal_code ?? null,
-          country: externalEntity.country ?? 'France',
-          website: externalEntity.website ?? null,
-          legal_form: externalEntity.legal_form ?? null,
+          name: externalEntityRow.name,
+          siret: externalEntityRow.siret ?? null,
+          siren: externalEntityRow.siren ?? null,
+          email: externalEntityRow.email ?? null,
+          phone: externalEntityRow.phone ?? null,
+          address: externalEntityRow.address ?? null,
+          city: externalEntityRow.city ?? null,
+          postal_code: externalEntityRow.postal_code ?? null,
+          country: externalEntityRow.country ?? 'France',
+          website: externalEntityRow.website ?? null,
+          legal_form: externalEntityRow.legal_form ?? null,
           is_active: true,
         })
         .select('*')
@@ -106,6 +114,39 @@ export async function GET(request: NextRequest) {
         )
       }
       company = newCompany
+
+      // Créer le contact principal (affiché en tête de l'espace entreprise)
+      const contactEmail =
+        (contact?.contact_email as string | null) ||
+        externalEntityRow.email ||
+        `contact+${newCompany.id}@placeholder.local`
+      const contactFirstName = (contact?.contact_first_name as string) || 'Contact'
+      const contactLastName = (contact?.contact_last_name as string) || ''
+      const contactPhone = (contact?.contact_phone as string) || null
+      const contactJobTitle = (contact?.contact_job_title as string) || null
+
+      const { error: managerError } = await supabase
+        .from('company_managers')
+        .insert({
+          company_id: newCompany.id,
+          user_id: null,
+          first_name: contactFirstName,
+          last_name: contactLastName,
+          email: contactEmail,
+          phone: contactPhone,
+          job_title: contactJobTitle,
+          role: 'manager',
+          can_view_invoices: true,
+          can_download_documents: true,
+          can_request_training: true,
+          can_manage_employees: true,
+          is_primary_contact: true,
+          is_active: true,
+        } as unknown as Parameters<ReturnType<typeof supabase.from>['insert']>[0])
+
+      if (managerError) {
+        logger.warn('Company-by-entity: failed to create primary contact', { error: managerError })
+      }
     }
 
     // Synchroniser company_employees depuis student_entities (rattachements actuels de l'entité)

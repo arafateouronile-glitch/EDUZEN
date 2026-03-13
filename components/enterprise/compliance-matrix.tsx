@@ -2,12 +2,12 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { PieChart, Pie, Cell, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from 'recharts'
+import { motion } from '@/components/ui/motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import {
   Dialog,
   DialogContent,
@@ -135,42 +135,129 @@ function exportCSV(records: ComplianceRecord[]) {
   URL.revokeObjectURL(url)
 }
 
-// ─── Ring Chart ───────────────────────────────────────────────────────────────
+// ─── Ring Chart (Premium) ─────────────────────────────────────────────────────
+
+const renderComplianceActiveShape = (props: {
+  cx: number; cy: number; innerRadius: number; outerRadius: number;
+  startAngle: number; endAngle: number; fill: string;
+  payload: { name: string }; percent: number; value: number
+}) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props
+  return (
+    <g>
+      <Sector
+        cx={cx} cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 6}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        cornerRadius={6}
+      />
+      <Sector
+        cx={cx} cy={cy}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        innerRadius={outerRadius + 8}
+        outerRadius={outerRadius + 11}
+        fill={fill}
+        opacity={0.25}
+        cornerRadius={4}
+      />
+    </g>
+  )
+}
 
 function ComplianceRingChart({ stats }: { stats: ComplianceStats }) {
+  const [activeIndex, setActiveIndex] = useState(0)
   const pct = stats.total > 0 ? Math.round((stats.valid / stats.total) * 100) : 0
   const data = [
-    { name: 'Expirés',    value: stats.expired, color: STATUS_CONFIG.expired.chart },
+    { name: 'Expirés',      value: stats.expired, color: STATUS_CONFIG.expired.chart },
     { name: 'À renouveler', value: stats.warning, color: STATUS_CONFIG.warning.chart },
-    { name: 'Valides',    value: stats.valid,   color: STATUS_CONFIG.valid.chart },
+    { name: 'Valides',      value: stats.valid,   color: STATUS_CONFIG.valid.chart },
   ].filter(d => d.value > 0)
 
-  return (
-    <div className="relative flex flex-col items-center justify-center w-[160px] h-[160px]">
-      <PieChart width={160} height={160}>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={50}
-          outerRadius={72}
-          startAngle={90}
-          endAngle={-270}
-          strokeWidth={0}
-          dataKey="value"
+  const total = data.reduce((s, d) => s + d.value, 0)
+  const dataWithMeta = data.map((d, i) => ({ ...d, total, fill: d.color }))
+
+  const CustomTooltip = ({ active, payload }: {
+    active?: boolean
+    payload?: Array<{ name: string; value: number; payload: { name: string; value: number; color: string } }>
+  }) => {
+    if (active && payload && payload.length) {
+      const d = payload[0]
+      const percentage = total > 0 ? ((d.value / total) * 100).toFixed(1) : '0'
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl p-4 min-w-[140px]"
         >
-          {data.map((entry, i) => (
-            <Cell key={i} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip
-          formatter={(value: number, name: string) => [value, name]}
-          contentStyle={{ fontSize: 12, borderRadius: 8 }}
-        />
-      </PieChart>
-      <div className="absolute flex flex-col items-center justify-center pointer-events-none inset-0">
-        <span className="text-3xl font-bold text-gray-900">{pct}%</span>
-        <span className="text-xs text-gray-500 mt-0.5">conformes</span>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-3 h-3 rounded-full shadow-md" style={{ backgroundColor: d.payload?.color }} />
+            <span className="text-sm font-medium text-gray-600 uppercase tracking-wider">{d.name}</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-gray-900">{d.value}</span>
+            <span className="text-sm font-medium text-gray-400">({percentage}%)</span>
+          </div>
+        </motion.div>
+      )
+    }
+    return null
+  }
+
+  return (
+    <div className="relative w-full" style={{ minHeight: 220 }}>
+      <ResponsiveContainer width="100%" height={220}>
+        <PieChart>
+          <defs>
+            {dataWithMeta.map((entry, i) => (
+              <linearGradient key={`compGrad-${i}`} id={`compGrad-${i}`} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor={entry.color} stopOpacity={1} />
+                <stop offset="100%" stopColor={entry.color} stopOpacity={0.75} />
+              </linearGradient>
+            ))}
+            <filter id="compShadow" height="150%">
+              <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor="#000" floodOpacity="0.12" />
+            </filter>
+          </defs>
+          <Pie
+            activeIndex={activeIndex}
+            activeShape={renderComplianceActiveShape as any}
+            onMouseEnter={(_, i) => setActiveIndex(i)}
+            data={dataWithMeta}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={85}
+            startAngle={90}
+            endAngle={-270}
+            paddingAngle={4}
+            dataKey="value"
+            stroke="none"
+            animationBegin={0}
+            animationDuration={1000}
+            animationEasing="ease-out"
+            filter="url(#compShadow)"
+          >
+            {dataWithMeta.map((_, i) => (
+              <Cell key={i} fill={`url(#compGrad-${i})`} stroke="none" />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <motion.span
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+          className="text-4xl font-bold text-gray-900 tracking-tight"
+        >
+          {pct}%
+        </motion.span>
+        <span className="text-xs font-medium text-gray-500 mt-0.5 tracking-wide">conformes</span>
       </div>
     </div>
   )
@@ -401,52 +488,81 @@ export function ComplianceMatrix({ companyId, employees = [] }: ComplianceMatrix
       {/* ── Synthèse : Ring + Stat Cards ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-        {/* Ring chart */}
-        <Card className="lg:col-span-2 flex items-center justify-center py-4">
-          <CardContent className="pt-0 flex flex-col items-center gap-3 w-full">
+        {/* Ring chart – premium container */}
+        <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:scale-[1.01]">
+          <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-emerald-50 via-blue-50 to-transparent rounded-full blur-3xl" />
+          </div>
+          <div className="relative z-10 flex flex-col items-center gap-4">
             <ComplianceRingChart stats={stats} />
-            <div className="w-full px-4">
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                <span>Taux de conformité global</span>
-                <span className="font-semibold text-gray-800">{conformityPct}%</span>
+            <div className="w-full">
+              <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
+                <span className="font-medium">Taux de conformité global</span>
+                <span className="font-bold text-gray-800">{conformityPct}%</span>
               </div>
-              <Progress
-                value={conformityPct}
-                className="h-2"
-              />
+              <div className="relative h-2.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                <motion.div
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{
+                    background: conformityPct >= 80
+                      ? 'linear-gradient(90deg, #10B981, #34D399)'
+                      : conformityPct >= 50
+                        ? 'linear-gradient(90deg, #F59E0B, #FBBF24)'
+                        : 'linear-gradient(90deg, #EF4444, #F87171)',
+                  }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${conformityPct}%` }}
+                  transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] as [number, number, number, number], delay: 0.3 }}
+                />
+              </div>
             </div>
-            <div className="flex gap-4 text-xs">
+            <div className="flex gap-5 text-xs">
               {(['expired', 'warning', 'valid'] as ComplianceStatus[]).map(s => (
-                <div key={s} className="flex items-center gap-1">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: STATUS_CONFIG[s].chart }} />
-                  <span className="text-gray-600">{STATUS_CONFIG[s].label}</span>
+                <div key={s} className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ background: STATUS_CONFIG[s].chart }} />
+                  <span className="text-gray-600 font-medium">{STATUS_CONFIG[s].label}</span>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Stat cards cliquables */}
+        {/* Stat cards – premium */}
         <div className="lg:col-span-3 grid grid-cols-2 gap-3">
-          {statCards.map(card => (
-            <button
+          {statCards.map((card, idx) => (
+            <motion.button
               key={card.key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: idx * 0.08, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               onClick={() => setActiveFilter(card.key)}
-              className={`flex flex-col items-start p-4 rounded-xl border-2 transition-all text-left ${
+              className={`group relative flex flex-col items-start p-5 rounded-2xl border-2 transition-all duration-300 text-left overflow-hidden ${
                 activeFilter === card.key
-                  ? `${card.border} ${card.bg} shadow-sm ring-2 ring-offset-1 ring-current`
-                  : `border-gray-100 bg-white hover:${card.bg} hover:${card.border}`
+                  ? `${card.border} ${card.bg} shadow-md ring-2 ring-offset-2 ring-current`
+                  : 'border-gray-100 bg-white hover:shadow-[0_4px_20px_rgb(0,0,0,0.06)] hover:border-gray-200'
               } ${card.color}`}
             >
-              <span className="text-3xl font-bold">{card.count}</span>
-              <span className="text-sm font-medium mt-0.5">{card.label}</span>
-              {card.key === 'expired' && card.count > 0 && (
-                <span className="text-xs mt-1 opacity-75">Action requise</span>
-              )}
-              {card.key === 'warning' && card.count > 0 && (
-                <span className="text-xs mt-1 opacity-75">&lt; 6 mois</span>
-              )}
-            </button>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                <div className={`absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl ${card.bg} opacity-60`} />
+              </div>
+              <div className="relative z-10">
+                <motion.span
+                  className="text-3xl font-bold tracking-tight"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.2 + idx * 0.08 }}
+                >
+                  {card.count}
+                </motion.span>
+                <span className="text-sm font-semibold mt-1 block">{card.label}</span>
+                {card.key === 'expired' && card.count > 0 && (
+                  <span className="text-xs mt-1.5 opacity-70 font-medium">Action requise</span>
+                )}
+                {card.key === 'warning' && card.count > 0 && (
+                  <span className="text-xs mt-1.5 opacity-70 font-medium">&lt; 6 mois</span>
+                )}
+              </div>
+            </motion.button>
           ))}
         </div>
       </div>

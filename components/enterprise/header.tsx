@@ -18,12 +18,64 @@ export function EnterpriseHeader({ onMenuClick }: EnterpriseHeaderProps) {
   const { user, logout } = useAuth()
   const supabase = createClient()
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  const { company: contextCompany } = useEnterpriseCompany()
+  const { company: contextCompany, isEntityContext, entityQueryString, entityId } = useEnterpriseCompany()
 
   // Fetch company and manager info (pour le nom du manager quand il est bien manager)
   const { data: managerData } = useQuery({
-    queryKey: ['company-manager', user?.id],
+    queryKey: ['company-manager', user?.id, contextCompany?.id, isEntityContext, entityId],
     queryFn: async () => {
+      // Si on est en mode "Admin view" sur une entité spécifique
+      if (isEntityContext && entityId) {
+        // Priorité au contact renseigné sur l'entité dashboard
+        const { data: entityRow } = await supabase
+          .from('external_entities')
+          .select('*')
+          .eq('id', entityId)
+          .maybeSingle()
+
+        const entity = entityRow as (Record<string, unknown> & {
+          contact_first_name?: string | null
+          contact_last_name?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          contact_job_title?: string | null
+        }) | null
+
+        if (entity?.contact_first_name || entity?.contact_last_name || entity?.contact_email) {
+          return {
+            id: `entity-contact-${entityId}`,
+            company_id: contextCompany?.id || '',
+            user_id: '',
+            first_name: entity.contact_first_name || 'Contact',
+            last_name: entity.contact_last_name || '',
+            email: entity.contact_email || '',
+            phone: entity.contact_phone || undefined,
+            job_title: entity.contact_job_title || undefined,
+            role: 'manager',
+            company: contextCompany || undefined,
+          } as CompanyManager & { company: Company }
+        }
+
+        // Fallback: manager principal en base
+      }
+
+      if (isEntityContext && contextCompany?.id) {
+        const { data: manager } = await supabase
+          .from('company_managers')
+          .select(`
+            *,
+            company:companies (*)
+          `)
+          .eq('company_id', contextCompany.id)
+          .eq('is_active', true)
+          .order('is_primary_contact', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          
+        return manager as (CompanyManager & { company: Company }) | null
+      }
+
+      // Sinon, comportement normal (utilisateur connecté)
       if (!user?.id) return null
 
       const { data: manager } = await supabase
@@ -38,12 +90,14 @@ export function EnterpriseHeader({ onMenuClick }: EnterpriseHeaderProps) {
 
       return manager as (CompanyManager & { company: Company }) | null
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id || (isEntityContext && !!contextCompany?.id),
   })
 
   const companyName = contextCompany?.name || managerData?.company?.name || 'Mon Entreprise'
-  const managerName = managerData ? `${managerData.first_name} ${managerData.last_name}` : user?.email || ''
+  // En mode admin view, si pas de manager trouvé, on affiche quand même un placeholder ou l'admin
+  const managerName = managerData ? `${managerData.first_name} ${managerData.last_name}`.trim() : user?.email || ''
   const managerRole = managerData?.role || 'manager'
+  const displayEmail = managerData?.email || user?.email
 
   const roleLabels: Record<string, string> = {
     director: 'Directeur',
@@ -78,9 +132,9 @@ export function EnterpriseHeader({ onMenuClick }: EnterpriseHeaderProps) {
 
           {/* Company info (desktop) */}
           <div className="hidden md:flex items-center gap-3">
-            {managerData?.company?.logo_url ? (
+            {contextCompany?.logo_url || managerData?.company?.logo_url ? (
               <img
-                src={managerData.company.logo_url}
+                src={contextCompany?.logo_url || managerData?.company?.logo_url}
                 alt={companyName}
                 className="w-10 h-10 rounded-lg object-cover"
               />
@@ -137,10 +191,10 @@ export function EnterpriseHeader({ onMenuClick }: EnterpriseHeaderProps) {
                     <div className="p-2">
                       <div className="px-3 py-2 border-b border-gray-100 mb-2">
                         <p className="text-sm font-medium text-gray-900">{managerName}</p>
-                        <p className="text-xs text-gray-500">{user?.email}</p>
+                        <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
                       </div>
                       <Link
-                        href="/enterprise/profile"
+                        href={`/enterprise/profile${entityQueryString}`}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100"
                         onClick={() => setIsProfileOpen(false)}
                       >
@@ -148,7 +202,7 @@ export function EnterpriseHeader({ onMenuClick }: EnterpriseHeaderProps) {
                         Mon profil
                       </Link>
                       <Link
-                        href="/enterprise/settings"
+                        href={`/enterprise/settings${entityQueryString}`}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100"
                         onClick={() => setIsProfileOpen(false)}
                       >

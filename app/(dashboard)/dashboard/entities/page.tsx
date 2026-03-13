@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
 import { 
   Building2, Plus, Search, Edit, Trash2, Users, Mail, Phone, MapPin, 
-  Briefcase, Save, Loader2, Filter, Globe, Building, School, MoreHorizontal
+  Briefcase, Save, Loader2, Filter, Globe, Building, School, MoreHorizontal,
+  User
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -45,6 +46,11 @@ type ExternalEntity = {
   is_active: boolean
   created_at: string
   updated_at: string
+  contact_first_name?: string | null
+  contact_last_name?: string | null
+  contact_email?: string | null
+  contact_phone?: string | null
+  contact_job_title?: string | null
 }
 
 export default function EntitiesPage() {
@@ -87,6 +93,11 @@ function EntitiesPageContent() {
     activity_sector: '',
     employee_count: '',
     is_active: true,
+    contact_first_name: '',
+    contact_last_name: '',
+    contact_email: '',
+    contact_phone: '',
+    contact_job_title: '',
   })
 
   // Récupérer les entités
@@ -165,6 +176,11 @@ function EntitiesPageContent() {
         employee_count: data.employee_count || null,
         is_active: data.is_active,
         created_by: user.id,
+        contact_first_name: data.contact_first_name || null,
+        contact_last_name: data.contact_last_name || null,
+        contact_email: data.contact_email || null,
+        contact_phone: data.contact_phone || null,
+        contact_job_title: data.contact_job_title || null,
       }
 
       if (editingEntity) {
@@ -245,6 +261,11 @@ function EntitiesPageContent() {
       activity_sector: '',
       employee_count: '',
       is_active: true,
+      contact_first_name: '',
+      contact_last_name: '',
+      contact_email: '',
+      contact_phone: '',
+      contact_job_title: '',
     })
     setEditingEntity(null)
   }
@@ -270,6 +291,11 @@ function EntitiesPageContent() {
       activity_sector: entity.activity_sector || '',
       employee_count: entity.employee_count || '',
       is_active: entity.is_active,
+      contact_first_name: entity.contact_first_name || '',
+      contact_last_name: entity.contact_last_name || '',
+      contact_email: entity.contact_email || '',
+      contact_phone: entity.contact_phone || '',
+      contact_job_title: entity.contact_job_title || '',
     })
     setIsDialogOpen(true)
   }
@@ -660,6 +686,72 @@ function EntitiesPageContent() {
                       placeholder="+33..."
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Contact principal — affiché en tête de l'espace entreprise */}
+              <div className="rounded-xl border border-brand-blue/20 bg-brand-blue/5 p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-brand-blue" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Contact principal</h3>
+                    <p className="text-xs text-gray-500">Ces informations s'afficheront en haut de l'espace entreprise pour cette entité.</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_first_name">Prénom</Label>
+                    <Input
+                      id="contact_first_name"
+                      value={formData.contact_first_name}
+                      onChange={(e) => setFormData({ ...formData, contact_first_name: e.target.value })}
+                      className="bg-white/80 border-gray-200 focus:ring-brand-blue/20 focus:border-brand-blue"
+                      placeholder="Prénom du contact"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_last_name">Nom</Label>
+                    <Input
+                      id="contact_last_name"
+                      value={formData.contact_last_name}
+                      onChange={(e) => setFormData({ ...formData, contact_last_name: e.target.value })}
+                      className="bg-white/80 border-gray-200 focus:ring-brand-blue/20 focus:border-brand-blue"
+                      placeholder="Nom du contact"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_email">Email</Label>
+                    <Input
+                      id="contact_email"
+                      type="email"
+                      value={formData.contact_email}
+                      onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                      className="bg-white/80 border-gray-200 focus:ring-brand-blue/20 focus:border-brand-blue"
+                      placeholder="email@exemple.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_phone">Téléphone</Label>
+                    <Input
+                      id="contact_phone"
+                      value={formData.contact_phone}
+                      onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                      className="bg-white/80 border-gray-200 focus:ring-brand-blue/20 focus:border-brand-blue"
+                      placeholder="+33..."
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact_job_title">Fonction / Poste</Label>
+                  <Input
+                    id="contact_job_title"
+                    value={formData.contact_job_title}
+                    onChange={(e) => setFormData({ ...formData, contact_job_title: e.target.value })}
+                    className="bg-white/80 border-gray-200 focus:ring-brand-blue/20 focus:border-brand-blue"
+                    placeholder="Ex: Responsable formation, DRH..."
+                  />
                 </div>
               </div>
 

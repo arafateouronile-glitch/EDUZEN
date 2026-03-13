@@ -646,6 +646,50 @@ export class APIService {
     if (error) throw error
     return data
   }
+
+  /**
+   * Déclenche tous les webhooks d'une organisation pour un type d'événement donné.
+   * Appelée depuis la logique métier (signature de contrat, diplôme expiré, etc.)
+   */
+  async triggerWebhookForOrg(
+    organizationId: string,
+    eventType: string,
+    payload: Record<string, unknown>
+  ): Promise<Array<{ webhookId: string; deliveryId: string }>> {
+    const { data: webhooks } = await (this.supabase as any)
+      .from('webhooks')
+      .select('id, events')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+
+    if (!webhooks || webhooks.length === 0) return []
+
+    const results: Array<{ webhookId: string; deliveryId: string }> = []
+
+    for (const webhook of webhooks) {
+      if (!webhook.events?.includes(eventType)) continue
+
+      const { data: delivery, error } = await (this.supabase as any)
+        .from('webhook_deliveries')
+        .insert({
+          webhook_id: webhook.id,
+          event_type: eventType,
+          event_data: payload,
+          status: 'pending',
+        })
+        .select('id')
+        .single()
+
+      if (!error && delivery) {
+        results.push({ webhookId: webhook.id, deliveryId: delivery.id })
+
+        // Envoi asynchrone (fire-and-forget, les erreurs sont catchées dans sendWebhook)
+        this.sendWebhook(delivery.id).catch(() => {})
+      }
+    }
+
+    return results
+  }
 }
 
 // Factory function pour créer une instance du service

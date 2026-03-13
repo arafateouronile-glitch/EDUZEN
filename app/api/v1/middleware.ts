@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAPIService } from '@/lib/services/api.service'
 import { createClient } from '@/lib/supabase/server'
+import { canUseAPI } from '@/lib/services/plan-limits'
 
 // Interface pour les clés API
 interface APIKeyData {
@@ -24,8 +25,11 @@ export type APIMiddlewareResult = {
  * Middleware pour l'authentification et le rate limiting de l'API
  */
 export async function apiMiddleware(request: NextRequest): Promise<NextResponse | APIMiddlewareResult> {
-  // Récupérer la clé API depuis les headers
-  const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization')?.replace('Bearer ', '')
+  // Récupérer la clé API depuis les headers (supporte x-eduzen-api-key, x-api-key et Bearer)
+  const apiKey =
+    request.headers.get('x-eduzen-api-key') ||
+    request.headers.get('x-api-key') ||
+    request.headers.get('authorization')?.replace('Bearer ', '')
 
   if (!apiKey) {
     return NextResponse.json(
@@ -48,6 +52,19 @@ export async function apiMiddleware(request: NextRequest): Promise<NextResponse 
   }
 
   const key = keyData as unknown as APIKeyData
+
+  // Vérifier que l'organisation a le plan Enterprise
+  const hasApiAccess = await canUseAPI(supabase, key.organization_id)
+  if (!hasApiAccess) {
+    return NextResponse.json(
+      {
+        error: 'Plan upgrade required',
+        message: 'API access requires the Enterprise plan. Please upgrade your subscription to use the EDUZEN API.',
+        upgrade_url: '/dashboard/settings?tab=billing',
+      },
+      { status: 403 }
+    )
+  }
 
   // Vérifier l'expiration
   if (key.expires_at && new Date(key.expires_at) < new Date()) {

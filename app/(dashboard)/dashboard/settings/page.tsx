@@ -683,7 +683,7 @@ export default function SettingsPage() {
       label: 'Développeur',
       color: 'gray-600',
       tabs: [
-        { id: 'api', label: 'API', icon: Key, href: '/dashboard/settings/api' },
+        { id: 'api', label: 'Intégrations & API', icon: Code, href: '/dashboard/integrations' },
       ]
     },
   ]

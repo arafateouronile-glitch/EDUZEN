@@ -11,10 +11,42 @@ export async function GET() {
     info: {
       title: 'EDUZEN API',
       version: '1.0.0',
-      description: 'API publique pour accéder aux données EDUZEN',
+      description: `API publique pour accéder aux données EDUZEN.
+
+## Authentification
+
+Incluez votre clé API dans le header \`x-eduzen-api-key\` de chaque requête.
+Les headers \`X-API-Key\` et \`Authorization: Bearer <key>\` sont également acceptés.
+
+\`\`\`
+curl -H "x-eduzen-api-key: eduz_votre_cle" ${APP_URLS.getBaseUrl()}/api/v1/students
+\`\`\`
+
+## Plan requis
+
+L'accès à l'API est réservé au **plan Enterprise**. Les requêtes depuis une organisation sans ce plan recevront une erreur 403.
+
+## Rate Limiting
+
+| Fenêtre | Limite par défaut |
+|---------|-------------------|
+| Par minute | 60 requêtes |
+| Par heure | 1 000 requêtes |
+| Par jour | 10 000 requêtes |
+| Par mois | 100 000 requêtes |
+
+Les headers \`X-RateLimit-Remaining\` et \`X-RateLimit-Reset\` sont inclus dans chaque réponse.
+
+## Webhooks
+
+Configurez des webhooks depuis le dashboard (Intégrations & API) pour recevoir des notifications en temps réel.
+Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`.
+
+Événements disponibles : \`learner.created\`, \`document.signed\`, \`diploma.expired\`, \`payment.received\`, \`session.completed\`, etc.
+`,
       contact: {
         name: 'Support EDUZEN',
-        email: 'support@eduzen.com',
+        email: 'support@eduzen.io',
       },
     },
     servers: [
@@ -25,15 +57,22 @@ export async function GET() {
     ],
     security: [
       {
-        ApiKeyAuth: [],
+        EduzenApiKey: [],
       },
     ],
     components: {
       securitySchemes: {
+        EduzenApiKey: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-eduzen-api-key',
+          description: 'Clé API EDUZEN (préfixe eduz_). Générez-la depuis Dashboard > Intégrations & API.',
+        },
         ApiKeyAuth: {
           type: 'apiKey',
           in: 'header',
           name: 'X-API-Key',
+          description: 'Header alternatif accepté pour la clé API.',
         },
         BearerAuth: {
           type: 'http',
@@ -136,10 +175,10 @@ export async function GET() {
     paths: {
       '/api/v1/students': {
         get: {
-          summary: 'Liste des étudiants',
-          description: 'Récupère la liste des étudiants de l\'organisation',
-          tags: ['Students'],
-          security: [{ ApiKeyAuth: [] }],
+          summary: 'Liste des apprenants',
+          description: 'Récupère la liste paginée des apprenants de l\'organisation',
+          tags: ['Apprenants'],
+          security: [{ EduzenApiKey: [] }],
           parameters: [
             {
               name: 'page',
@@ -217,7 +256,7 @@ export async function GET() {
           summary: 'Liste des templates de documents',
           description: 'Récupère la liste des templates de documents disponibles',
           tags: ['Document Templates'],
-          security: [{ ApiKeyAuth: [] }],
+          security: [{ EduzenApiKey: [] }],
           parameters: [
             {
               name: 'type',
@@ -264,7 +303,7 @@ export async function GET() {
           summary: 'Créer un template de document',
           description: 'Crée un nouveau template de document',
           tags: ['Document Templates'],
-          security: [{ ApiKeyAuth: [] }],
+          security: [{ EduzenApiKey: [] }],
           requestBody: {
             required: true,
             content: {
@@ -302,7 +341,7 @@ export async function GET() {
           summary: 'Récupérer un template',
           description: 'Récupère un template de document par son ID',
           tags: ['Document Templates'],
-          security: [{ ApiKeyAuth: [] }],
+          security: [{ EduzenApiKey: [] }],
           parameters: [
             {
               name: 'id',
@@ -331,7 +370,7 @@ export async function GET() {
           summary: 'Générer un document',
           description: 'Génère un document à partir d\'un template et de variables',
           tags: ['Documents'],
-          security: [{ ApiKeyAuth: [] }],
+          security: [{ EduzenApiKey: [] }],
           requestBody: {
             required: true,
             content: {
@@ -2618,6 +2657,160 @@ export async function GET() {
               },
             },
           },
+        },
+      },
+      '/api/v1/webhooks/events': {
+        get: {
+          summary: 'Liste des types d\'événements webhook',
+          description: 'Retourne la liste complète des types d\'événements disponibles pour les webhooks',
+          tags: ['Webhooks'],
+          security: [{ EduzenApiKey: [] }],
+          responses: {
+            '200': {
+              description: 'Liste des événements',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      events: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            name: { type: 'string', example: 'learner.created' },
+                            description: { type: 'string', example: 'Déclenché quand un apprenant est créé' },
+                            category: { type: 'string', example: 'Apprenants' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    'x-webhooks': {
+      'learner.created': {
+        post: {
+          summary: 'Apprenant créé',
+          description: 'Déclenché quand un nouvel apprenant est créé dans l\'organisation',
+          tags: ['Webhook Events'],
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    event: { type: 'string', example: 'learner.created' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        full_name: { type: 'string' },
+                        email: { type: 'string', format: 'email' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'Webhook reçu' } },
+        },
+      },
+      'document.signed': {
+        post: {
+          summary: 'Document signé',
+          description: 'Déclenché quand un document (contrat, convention) est signé',
+          tags: ['Webhook Events'],
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    event: { type: 'string', example: 'document.signed' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        document_id: { type: 'string', format: 'uuid' },
+                        signer_name: { type: 'string' },
+                        signer_email: { type: 'string', format: 'email' },
+                        document_type: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'Webhook reçu' } },
+        },
+      },
+      'diploma.expired': {
+        post: {
+          summary: 'Diplôme expiré',
+          description: 'Déclenché quand un diplôme ou certificat arrive à expiration',
+          tags: ['Webhook Events'],
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    event: { type: 'string', example: 'diploma.expired' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        student_id: { type: 'string', format: 'uuid' },
+                        student_name: { type: 'string' },
+                        diploma_name: { type: 'string' },
+                        expired_at: { type: 'string', format: 'date' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'Webhook reçu' } },
+        },
+      },
+      'payment.received': {
+        post: {
+          summary: 'Paiement reçu',
+          description: 'Déclenché quand un paiement est reçu avec succès',
+          tags: ['Webhook Events'],
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    event: { type: 'string', example: 'payment.received' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        payment_id: { type: 'string', format: 'uuid' },
+                        amount: { type: 'number' },
+                        currency: { type: 'string' },
+                        student_name: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'Webhook reçu' } },
         },
       },
     },
