@@ -34,6 +34,8 @@ import {
   Target,
   Banknote,
   Eye,
+  Activity,
+  Mail,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -122,6 +124,18 @@ const navigation: NavSection[] = [
             permission: 'manage_referrals',
           },
         ],
+      },
+      {
+        name: 'CRM',
+        href: '/super-admin/crm',
+        icon: Activity,
+        permission: 'view_dashboard',
+      },
+      {
+        name: 'Emails',
+        href: '/super-admin/email-logs',
+        icon: Mail,
+        permission: 'view_dashboard',
       },
       {
         name: 'Affiliation',

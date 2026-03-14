@@ -97,6 +97,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
           { name: 'Entreprises & Organismes', href: '/dashboard/entities', icon: Building2 },
         ],
       },
+      { name: 'CRM Apprenants', href: '/dashboard/crm', icon: Activity, allowedRoles: ['admin', 'manager', 'owner'] },
       { name: t('navigation.myStudents'), href: '/dashboard/my-students', icon: Users, allowedRoles: ['teacher'] },
       { name: 'Mes documents', href: '/dashboard/teacher/documents', icon: FileText, allowedRoles: ['teacher'] },
       {

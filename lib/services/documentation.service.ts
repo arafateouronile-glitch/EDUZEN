@@ -4,7 +4,6 @@ import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-he
 import { logger } from '@/lib/utils/logger'
 
 /** Client Supabase pour les tables documentation (non encore dans Database). Un seul cast centralisé. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClientWithDocumentation = SupabaseClient<Database> & { from(table: string): any }
 
 /** Types locaux pour les tables documentation qui ne sont pas encore dans le schéma Supabase */
@@ -67,7 +66,7 @@ export class DocumentationService {
         .order('order_index', { ascending: true })
 
       if (organizationId) {
-        query = query.or(`organization_id.eq.${organizationId},is_public.eq.true`)
+        query = query.eq('organization_id', organizationId)
       } else if (includePublic) {
         query = query.eq('is_public', true)
       }
@@ -94,7 +93,7 @@ export class DocumentationService {
         .single()
 
       if (organizationId) {
-        query = query.or(`organization_id.eq.${organizationId},is_public.eq.true`)
+        query = query.eq('organization_id', organizationId)
       } else {
         query = query.eq('is_public', true)
       }
@@ -227,9 +226,7 @@ export class DocumentationService {
         .or(`title.ilike.%${query}%,content.ilike.%${query}%,excerpt.ilike.%${query}%`)
 
       if (organizationId) {
-        searchQuery = searchQuery.or(`organization_id.eq.${organizationId},category.is_public.eq.true`)
-      } else {
-        searchQuery = searchQuery.eq('category.is_public', true)
+        searchQuery = searchQuery.eq('organization_id', organizationId)
       }
 
       const { data, error } = await searchQuery
@@ -256,9 +253,9 @@ export class DocumentationService {
       .limit(limit)
 
     if (organizationId) {
-      query = query.or(`organization_id.eq.${organizationId},category.is_public.eq.true`)
+      query = query.eq('organization_id', organizationId)
     } else {
-      query = query.eq('category.is_public', true)
+      // Sans organization_id, aucun filtre appliqué (contexte non-authentifié)
     }
 
     const { data, error } = await query
@@ -279,9 +276,9 @@ export class DocumentationService {
       .limit(limit)
 
     if (organizationId) {
-      query = query.or(`organization_id.eq.${organizationId},category.is_public.eq.true`)
+      query = query.eq('organization_id', organizationId)
     } else {
-      query = query.eq('category.is_public', true)
+      // Sans organization_id, aucun filtre appliqué (contexte non-authentifié)
     }
 
     const { data, error } = await query
@@ -303,9 +300,9 @@ export class DocumentationService {
       .limit(limit)
 
     if (organizationId) {
-      query = query.or(`organization_id.eq.${organizationId},category.is_public.eq.true`)
+      query = query.eq('organization_id', organizationId)
     } else {
-      query = query.eq('category.is_public', true)
+      // Sans organization_id, aucun filtre appliqué (contexte non-authentifié)
     }
 
     const { data, error } = await query
