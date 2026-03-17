@@ -184,6 +184,7 @@ export function GestionConventions({
       return new Set((data || []).map((r: { document_id: string }) => r.document_id))
     },
     enabled: !!sessionContractDocs?.length,
+    refetchInterval: 30000, // Rafraîchit toutes les 30s pour détecter les nouvelles signatures
   })
 
   const getContractStatusForEnrollment = useMemo(() => {
@@ -922,7 +923,7 @@ export function GestionConventions({
                   setSignatureRequestDialog(null)
                   setSignatureRequestForm(null)
                   queryClient.invalidateQueries({ queryKey: ['session-contract-documents', sessionData?.id, user?.organization_id] })
-                  queryClient.invalidateQueries({ queryKey: ['signature-requests-signed'] })
+                  queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === 'signature-requests-signed' })
                   queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionData?.id] })
                   queryClient.invalidateQueries({ queryKey: ['session', sessionData?.id] })
 
