@@ -80,6 +80,8 @@ function documentTypeToTemplateType(docType: string): string {
   return docType
 }
 
+export const maxDuration = 60
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}))
@@ -507,7 +509,6 @@ export async function POST(request: NextRequest) {
         } as never)
         .eq('id', procId)
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: evErr } = await (db as any).from('digital_evidence').insert({
         organization_id: orgIdP,
         request_type: 'process',
@@ -627,6 +628,62 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Enregistrer la signature immédiatement (avant le scellement PDF coûteux)
+      // pour éviter de perdre le statut si la fonction Vercel timeout.
+      const signedAt = new Date().toISOString()
+
+      const { data: docSig, error: sigErr } = await (db as any).from('document_signatures').insert({
+        organization_id: orgId,
+        document_id: docId,
+        signer_id: signerId,
+        signature_data: signatureData.trim(),
+        signature_type: 'handwritten',
+        signer_name: signerName,
+        signer_email: signerEmail,
+        status: 'signed',
+        is_valid: true,
+        ip_address: metadata.ip ?? null,
+        user_agent: metadata.user_agent ?? null,
+      }).select('id').single()
+
+      if (sigErr) {
+        logger.error('Erreur création document_signatures:', sigErr)
+        return NextResponse.json(
+          { error: 'Erreur lors de l\'enregistrement de la signature.' },
+          { status: 500 }
+        )
+      }
+
+      const docSigId = (docSig as { id: string }).id
+      const { error: updErr } = await (db as any).from('signature_requests').update({
+        status: 'signed',
+        signature_id: docSigId,
+        signed_at: signedAt,
+      }).eq('id', resolved.sig.id)
+
+      if (updErr) {
+        logger.error('Erreur mise à jour signature_requests:', updErr)
+        return NextResponse.json(
+          { error: 'Erreur lors de la mise à jour de la demande.' },
+          { status: 500 }
+        )
+      }
+
+      const { error: evErr } = await (db as any).from('digital_evidence').insert({
+        organization_id: orgId,
+        request_type: 'signature',
+        request_id: resolved.sig.id,
+        signer_email: signerEmail,
+        signature_data: signatureData.trim(),
+        metadata,
+        integrity_hash: integrityHash,
+      })
+      if (evErr) {
+        logger.error('Erreur insertion digital_evidence (signature):', evErr)
+        // Non-fatal : le statut est déjà enregistré
+      }
+
+      // Scellement PDF (best-effort — si ça timeout, le statut est déjà signé)
       let sealedPdf: Uint8Array | null = null
       let pdfIntegrityHash: string | null = null
 
@@ -687,103 +744,29 @@ export async function POST(request: NextRequest) {
                 upsert: false,
               })
             if (upErr) {
-              logger.error('Erreur upload PDF signé:', upErr)
-              return NextResponse.json(
-                { error: 'Erreur lors de l\'enregistrement du document signé.' },
-                { status: 500 }
-              )
-            }
+              logger.error('Erreur upload PDF signé (non-fatal):', upErr)
+            } else {
+              const { data: urlData } = supabase.storage
+                .from('documents')
+                .getPublicUrl(signedPath)
 
-            const { data: urlData } = supabase.storage
-              .from('documents')
-              .getPublicUrl(signedPath)
-
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { error: docUpdErr } = await (db as any).from('documents').update({
-                signed_file_path: signedPath,
-                signed_file_url: urlData.publicUrl,
-                status: 'signed',
-                signed_at: signedAt,
-                updated_at: signedAt,
-              })
-              .eq('id', docId)
-              .eq('organization_id', orgId)
-            if (docUpdErr) {
-              logger.error('Erreur mise à jour statut document signé:', docUpdErr)
-              return NextResponse.json(
-                { error: 'Erreur lors de la mise à jour du document (statut signé). Vérifiez que la migration documents status/signed_at est appliquée.' },
-                { status: 500 }
-              )
+              const { error: docUpdErr } = await (db as any).from('documents').update({
+                  signed_file_path: signedPath,
+                  signed_file_url: urlData.publicUrl,
+                  status: 'signed',
+                  signed_at: signedAt,
+                  updated_at: signedAt,
+                })
+                .eq('id', docId)
+                .eq('organization_id', orgId)
+              if (docUpdErr) {
+                logger.error('Erreur mise à jour statut document signé (non-fatal):', docUpdErr)
+              }
             }
           } catch (e) {
-            logger.error('Erreur scellement PDF:', e)
-            return NextResponse.json(
-              { error: 'Erreur lors du scellement du document.' },
-              { status: 500 }
-            )
+            logger.error('Erreur scellement PDF (non-fatal):', e)
           }
         }
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: docSig, error: sigErr } = await (db as any).from('document_signatures').insert({
-        organization_id: orgId,
-        document_id: docId,
-        signer_id: signerId,
-        signature_data: signatureData.trim(),
-        signature_type: 'handwritten',
-        signer_name: signerName,
-        signer_email: signerEmail,
-        status: 'signed',
-        is_valid: true,
-        ip_address: metadata.ip ?? null,
-        user_agent: metadata.user_agent ?? null,
-      }).select('id').single()
-
-      if (sigErr) {
-        logger.error('Erreur création document_signatures:', sigErr)
-        return NextResponse.json(
-          { error: 'Erreur lors de l\'enregistrement de la signature.' },
-          { status: 500 }
-        )
-      }
-
-      const docSigId = (docSig as { id: string }).id
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updErr } = await (db as any).from('signature_requests').update({
-        status: 'signed',
-        signature_id: docSigId,
-        signed_at: new Date().toISOString(),
-      }).eq('id', resolved.sig.id)
-
-      if (updErr) {
-        logger.error('Erreur mise à jour signature_requests:', updErr)
-        return NextResponse.json(
-          { error: 'Erreur lors de la mise à jour de la demande.' },
-          { status: 500 }
-        )
-      }
-
-      const evidenceMeta = {
-        ...metadata,
-        ...(pdfIntegrityHash ? { pdf_integrity_hash: pdfIntegrityHash } : {}),
-      }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: evErr } = await (db as any).from('digital_evidence').insert({
-        organization_id: orgId,
-        request_type: 'signature',
-        request_id: resolved.sig.id,
-        signer_email: signerEmail,
-        signature_data: signatureData.trim(),
-        metadata: evidenceMeta,
-        integrity_hash: integrityHash,
-      })
-      if (evErr) {
-        logger.error('Erreur insertion digital_evidence (signature):', evErr)
-        return NextResponse.json(
-          { error: 'Erreur lors de l\'enregistrement de la preuve.' },
-          { status: 500 }
-        )
       }
 
       if (sealedPdf) {
@@ -814,22 +797,22 @@ export async function POST(request: NextRequest) {
             .maybeSingle()
           adminEmail = ((adminRow as { email?: string } | null)?.email as string)?.trim() ?? ''
         }
-        // Envoi à l'apprenant ET à l'OF (deux emails distincts si les adresses diffèrent)
-        await sendSignedPdfEmails({
+        // Envoi à l'apprenant ET à l'OF (non-fatal — ne doit pas bloquer la réponse)
+        sendSignedPdfEmails({
           recipientEmail: learnerEmail ?? '',
           recipientName: signerName,
           adminEmail: adminEmail ?? undefined,
           documentTitle: docTitle,
           signedPdfBuffer: sealedPdf,
           signedFilename: `convention_signee_${docId}.pdf`,
-        })
+        }).catch((e) => logger.error('Erreur envoi email PDF signé (non-fatal):', e))
       }
 
       return NextResponse.json({
         success: true,
         type: 'signature',
         integrityHash: pdfIntegrityHash ?? integrityHash,
-        message: 'Signature enregistrée avec succès. Une copie vous a été envoyée par email.',
+        message: 'Signature enregistrée avec succès.',
       })
     }
 
@@ -842,7 +825,6 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: evErr } = await (db as any).from('digital_evidence').insert({
         organization_id: orgId,
         request_type: 'attendance',
@@ -874,7 +856,6 @@ export async function POST(request: NextRequest) {
 
       // Insert sans colonnes géoloc : la table attendance peut ne pas les avoir (migration 20241202000026).
       // La géoloc est enregistrée dans electronic_attendance_requests.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: attRow, error: attInsErr } = await (db as any).from('attendance').insert({
         organization_id: orgId,
         student_id: resolved.att.student_id,
@@ -892,7 +873,6 @@ export async function POST(request: NextRequest) {
       }
 
       const attRowId = (attRow as { id: string }).id
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: attUpdErr } = await (db as any).from('electronic_attendance_requests').update({
         status: 'signed',
         signature_data: signatureData.trim(),
