@@ -192,13 +192,16 @@ export function GestionConventions({
     const docs = sessionContractDocs || []
     const signedIds = signedRequestIds || new Set<string>()
     return (enrollment: EnrollmentWithRelations) => {
-      const doc = docs.find(
+      const enrollmentDocs = docs.filter(
         (d) =>
           (d.metadata as Record<string, unknown> | null)?.enrollment_id === enrollment.id ||
           d.student_id === enrollment.student_id
       )
-      if (!doc) return null
-      const isSigned = (doc as { status?: string }).status === 'signed' || signedIds.has(doc.id)
+      if (!enrollmentDocs.length) return null
+      // Signé si au moins un document de cet apprenant est signé (gère les envois multiples)
+      const isSigned = enrollmentDocs.some(
+        (d) => (d as { status?: string }).status === 'signed' || signedIds.has(d.id)
+      )
       return isSigned ? 'signed' : 'pending'
     }
   }, [sessionContractDocs, signedRequestIds])
