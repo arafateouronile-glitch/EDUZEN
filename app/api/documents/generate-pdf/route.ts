@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       logger.debug('[PDF API] Page Puppeteer obtenue', { duration: `${Date.now() - puppeteerStartTime}ms` })
 
       await page.setContent(html, {
-        waitUntil: 'networkidle0',
+        waitUntil: 'domcontentloaded',
       })
 
       const pdf = await page.pdf({

@@ -2,7 +2,7 @@
 # Polices système + support PDF/A (métadonnées) + polices personnalisées
 # Déploiement : Railway, Docker Compose, ou tout hébergeur Docker
 
-FROM gotenberg/gotenberg:8.4.2 AS base
+FROM gotenberg/gotenberg:8 AS base
 
 USER root
 
@@ -23,6 +23,10 @@ COPY fonts/ /usr/share/fonts/eduzen/
 # Reconstruire le cache des polices
 RUN fc-cache -fv
 
+# Entrypoint pour Railway (utilise $PORT dynamique)
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 USER gotenberg
 
 # Variables d'environnement optionnelles (surchargeables au run)
@@ -31,3 +35,4 @@ USER gotenberg
 # GOTENBERG_CHROMIUM_MAX_QUEUE_SIZE=...
 
 EXPOSE 3000
+ENTRYPOINT ["/entrypoint.sh"]
