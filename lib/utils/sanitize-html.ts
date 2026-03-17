@@ -11,7 +11,33 @@
  * <div dangerouslySetInnerHTML={{ __html: sanitizeHTML(untrustedContent) }} />
  */
 
-import DOMPurify from 'isomorphic-dompurify'
+// isomorphic-dompurify charge jsdom côté serveur, ce qui échoue sur Vercel
+// (jsdom → html-encoding-sniffer → @exodus/bytes ESM non compatible CJS).
+// On utilise DOMPurify uniquement côté client ; côté serveur, on utilise
+// une sanitisation légère par regex (les templates viennent de la DB).
+const _isServer = typeof window === 'undefined'
+
+function _sanitizeServer(dirty: string, opts: { allowTags?: boolean; stripAll?: boolean }): string {
+  let out = dirty
+  // Supprimer les vecteurs XSS critiques
+  out = out.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+  out = out.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+  out = out.replace(/javascript\s*:/gi, '')
+  out = out.replace(/data\s*:\s*text\/html/gi, '')
+  if (opts.stripAll) {
+    out = out.replace(/<[^>]*>/g, '')
+  }
+  return out
+}
+
+function _getClientDOMPurify(): any {
+  try {
+
+    return require('dompurify')
+  } catch {
+    return null
+  }
+}
 
 /**
  * Default allowed tags for general content
@@ -120,9 +146,14 @@ export function sanitizeHTML(dirty: string | null | undefined, options: Sanitize
       config.FORBID_TAGS = [...(config.FORBID_TAGS || []), 'img']
     }
 
-    const sanitized = DOMPurify.sanitize(dirty, config)
-    // Convertir TrustedHTML en string si nécessaire
-    let clean: string = typeof sanitized === 'string' ? sanitized : String(sanitized)
+    let clean: string
+    if (_isServer) {
+      clean = _sanitizeServer(dirty, { allowTags: true })
+    } else {
+      const DOMPurify = _getClientDOMPurify()
+      const sanitized = DOMPurify ? DOMPurify.sanitize(dirty, config) : _sanitizeServer(dirty, { allowTags: true })
+      clean = typeof sanitized === 'string' ? sanitized : String(sanitized)
+    }
 
     // Post-process: Add security attributes to external links
     if (allowExternalLinks && clean.includes('<a ')) {
@@ -213,6 +244,9 @@ export function escapeHtml(value: string | null | undefined): string {
  */
 export function stripHTML(dirty: string | null | undefined): string {
   if (!dirty) return ''
+  if (_isServer) return _sanitizeServer(dirty, { stripAll: true })
+  const DOMPurify = _getClientDOMPurify()
+  if (!DOMPurify) return _sanitizeServer(dirty, { stripAll: true })
   return DOMPurify.sanitize(dirty, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
 }
 

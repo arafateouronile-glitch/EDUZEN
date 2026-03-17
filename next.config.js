@@ -25,7 +25,7 @@ const nextConfig = {
   reactStrictMode: true,
   // jsdom et ses dépendances (html-encoding-sniffer → @exodus/bytes ESM) doivent rester
   // en tant que packages externes côté serveur pour que Node.js gère l'ESM correctement.
-  serverExternalPackages: ['jsdom', 'canvas', 'isomorphic-dompurify'],
+  serverExternalPackages: ['canvas'],
   // Turbopack (dev Next.js 16+) : stub canvas pour pdfjs-dist côté client (chemin relatif au projet)
   turbopack: {
     resolveAlias: {

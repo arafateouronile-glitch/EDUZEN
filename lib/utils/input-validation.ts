@@ -11,8 +11,22 @@
  * - XML Injection
  */
 
-import DOMPurify from 'isomorphic-dompurify'
 import validator from 'validator'
+
+const _isServer = typeof window === 'undefined'
+function _getDOMPurify(): any {
+  if (_isServer) return null
+  try {
+
+    return require('dompurify')
+  } catch { return null }
+}
+const _serverSanitize = (input: string) =>
+  input
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/<[^>]*>/g, '') // strip all tags server-side (input validation = texte brut)
 
 // ============================================================================
 // TYPES
@@ -44,6 +58,8 @@ export interface ValidationOptions {
 export function sanitizeHTML(input: string): string {
   if (!input) return ''
 
+  const DOMPurify = _getDOMPurify()
+  if (!DOMPurify) return _serverSanitize(input)
   return DOMPurify.sanitize(input, {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
     ALLOWED_ATTR: ['href', 'title', 'target'],
@@ -59,6 +75,8 @@ export function sanitizeHTML(input: string): string {
 export function sanitizeText(input: string): string {
   if (!input) return ''
 
+  const DOMPurify = _getDOMPurify()
+  if (!DOMPurify) return _serverSanitize(input)
   return DOMPurify.sanitize(input, {
     ALLOWED_TAGS: [],
     ALLOWED_ATTR: [],
