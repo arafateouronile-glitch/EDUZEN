@@ -96,15 +96,13 @@ function defaultOrgZoneForPage(pageNumber: number): SignZone {
  * Embed une image PNG ou JPEG (data URL / base64) pour la signature OF.
  */
 async function embedOrgImage(pdfDoc: PDFDocument, dataUrl: string) {
-  const normalized =
-    dataUrl.startsWith('data:') && dataUrl.includes('base64,')
-      ? dataUrl
-      : `data:image/png;base64,${dataUrl}`
-  const isJpeg = normalized.includes('image/jpeg') || normalized.includes('image/jpg')
+  const isJpeg = dataUrl.includes('image/jpeg') || dataUrl.includes('image/jpg')
+  const base64Data = dataUrl.includes('base64,') ? dataUrl.split('base64,')[1] : dataUrl
+  const bytes = new Uint8Array(Buffer.from(base64Data, 'base64'))
   if (isJpeg) {
-    return pdfDoc.embedJpg(normalized)
+    return pdfDoc.embedJpg(bytes)
   }
-  return pdfDoc.embedPng(normalized)
+  return pdfDoc.embedPng(bytes)
 }
 
 /**
@@ -133,11 +131,12 @@ export async function sealPdf(
   const pages = pdfDoc.getPages()
   if (pages.length === 0) throw new Error('PDF sans page')
 
-  const pngInput =
-    signatureDataUrl.startsWith('data:') && signatureDataUrl.includes('base64,')
-      ? signatureDataUrl
-      : `data:image/png;base64,${signatureDataUrl}`
-  const img = await pdfDoc.embedPng(pngInput)
+  // pdf-lib attend des bytes bruts (Uint8Array), pas une data URL
+  const base64Data = signatureDataUrl.includes('base64,')
+    ? signatureDataUrl.split('base64,')[1]
+    : signatureDataUrl
+  const pngBytes = new Uint8Array(Buffer.from(base64Data, 'base64'))
+  const img = await pdfDoc.embedPng(pngBytes)
   // Utiliser la police standard Helvetica de pdf-lib
   const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica)
 
