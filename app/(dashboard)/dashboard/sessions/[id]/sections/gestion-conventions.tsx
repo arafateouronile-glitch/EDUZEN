@@ -161,13 +161,14 @@ export function GestionConventions({
       const supabase = createClient()
       const { data } = await supabase
         .from('documents')
-        .select('id, student_id, metadata, signed_at')
+        .select('id, student_id, metadata, status, signed_at')
         .eq('organization_id', user.organization_id)
         .eq('type', 'contract')
-      const list = (data ?? []) as unknown as Array<{ id: string; student_id: string | null; metadata: Record<string, unknown> | null; status?: string; signed_at?: string | null }>
+      const list = (data ?? []) as unknown as Array<{ id: string; student_id: string | null; metadata: Record<string, unknown> | null; status: string | null; signed_at?: string | null }>
       return list.filter((d) => (d.metadata as Record<string, unknown> | null)?.session_id === sessionData?.id)
     },
     enabled: !!sessionData?.id && !!user?.organization_id,
+    refetchInterval: 10000,
   })
 
   // Demandes de signature signées (fallback si documents.status absent)
@@ -184,7 +185,7 @@ export function GestionConventions({
       return new Set((data || []).map((r: { document_id: string }) => r.document_id))
     },
     enabled: !!sessionContractDocs?.length,
-    refetchInterval: 30000, // Rafraîchit toutes les 30s pour détecter les nouvelles signatures
+    refetchInterval: 10000, // Rafraîchit toutes les 10s pour détecter les nouvelles signatures
   })
 
   const getContractStatusForEnrollment = useMemo(() => {
