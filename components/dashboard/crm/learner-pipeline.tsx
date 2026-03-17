@@ -15,7 +15,7 @@ import { useDraggable } from '@dnd-kit/core'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { AlertTriangle, User } from 'lucide-react'
+import { AlertTriangle, User, Building2 } from 'lucide-react'
 import type { CrmStatus, LearnerCard, LearnerPipelineData } from '@/lib/actions/learner-crm-actions'
 
 // ─── Configuration des colonnes ───────────────────────────────────────────────
@@ -57,6 +57,12 @@ function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard
           )}
           {learner.formation_name && (
             <p className="mt-0.5 truncate text-xs text-slate-500">{learner.formation_name}</p>
+          )}
+          {learner.company_name && (
+            <div className="mt-0.5 flex items-center gap-1">
+              <Building2 className="h-3 w-3 shrink-0 text-slate-300" />
+              <p className="truncate text-xs text-slate-400">{learner.company_name}</p>
+            </div>
           )}
         </div>
       </div>

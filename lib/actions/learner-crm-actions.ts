@@ -38,6 +38,7 @@ export interface LearnerCard {
   session_name: string | null
   session_id: string | null
   formation_name: string | null
+  company_name: string | null
   missing_qualiopi: string[]
   enrollment_id: string | null
   created_at: string
@@ -382,7 +383,7 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
   const studentIds    = (students ?? []).map(s => s.id)
   const studentEmails = (students ?? []).map(s => s.email).filter(Boolean) as string[]
 
-  const [{ data: presences }, { data: learnerDocs }, { data: emailLogsBatch }, { data: evalsBatch }] = await Promise.all([
+  const [{ data: presences }, { data: learnerDocs }, { data: emailLogsBatch }, { data: evalsBatch }, { data: companyEmployees }] = await Promise.all([
     supabase.from('attendance').select('student_id').eq('organization_id', orgId)
       .in('student_id', studentIds).in('status', ['present', 'present_late']),
     supabase.from('learner_documents').select('student_id, type').in('student_id', studentIds),
@@ -390,10 +391,20 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       ? (supabase as any).from('email_logs').select('recipient, template_type').eq('organization_id', orgId).in('recipient', studentEmails)
       : Promise.resolve({ data: [] }),
     supabase.from('evaluation_responses').select('student_id').in('student_id', studentIds),
+    studentIds.length > 0
+      ? supabase.from('company_employees').select('student_id, companies(id, name)').in('student_id', studentIds).eq('is_active', true)
+      : Promise.resolve({ data: [] }),
   ])
 
   const hasPresence   = new Set((presences ?? []).map(p => p.student_id))
   const hasEval       = new Set((evalsBatch ?? []).map(e => e.student_id))
+
+  // Entreprise par student_id
+  const companyByStudent = new Map<string, string>()
+  for (const ce of companyEmployees ?? []) {
+    const company = ce.companies as { id: string; name: string } | null
+    if (company) companyByStudent.set(ce.student_id, company.name)
+  }
 
   // Docs par student_id
   const docsByStudent = new Map<string, string[]>()
@@ -451,6 +462,7 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       session_name:   sess?.name ?? null,
       session_id:     sess?.id ?? null,
       formation_name: sess?.formations?.[0]?.name ?? null,
+      company_name:   companyByStudent.get(student.id) ?? null,
       missing_qualiopi: getMissingQualiopi(student.id, student.email),
       enrollment_id:  active?.id ?? null,
       created_at:     student.created_at ?? new Date().toISOString(),
@@ -479,6 +491,15 @@ export async function getLearnerProfile(studentId: string): Promise<LearnerProfi
     .single()
 
   if (error || !student) throw new Error('Apprenant introuvable')
+
+  // Entreprise de l'apprenant
+  const { data: companyEmployeeRow } = await supabase
+    .from('company_employees')
+    .select('companies(id, name)')
+    .eq('student_id', studentId)
+    .eq('is_active', true)
+    .maybeSingle()
+  const company = (companyEmployeeRow?.companies as { id: string; name: string } | null) ?? null
 
   // Construction de la timeline depuis les vraies tables
   const events = await buildTimeline(supabase, studentId, student.email, orgId)
@@ -520,7 +541,7 @@ export async function getLearnerProfile(studentId: string): Promise<LearnerProfi
     student_number: student.student_number,
     created_at:     student.created_at ?? new Date().toISOString(),
     enrollment:     enrollmentOut,
-    company:        null,
+    company,
     checklist,
     events,
   }

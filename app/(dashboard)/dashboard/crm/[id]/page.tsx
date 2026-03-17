@@ -21,6 +21,7 @@ import {
   BookOpen,
   CreditCard,
   Send,
+  Building2,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -194,6 +195,21 @@ export default function LearnerProfilePage() {
                     </Badge>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Entreprise */}
+          {profile.company && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold">Entreprise</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="font-medium">{profile.company.name}</span>
+                </div>
               </CardContent>
             </Card>
           )}
