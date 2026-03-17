@@ -23,6 +23,9 @@ if (process.env.ANALYZE === 'true' || process.env.NODE_ENV === 'development') {
 
 const nextConfig = {
   reactStrictMode: true,
+  // jsdom et ses dépendances (html-encoding-sniffer → @exodus/bytes ESM) doivent rester
+  // en tant que packages externes côté serveur pour que Node.js gère l'ESM correctement.
+  serverExternalPackages: ['jsdom', 'canvas', 'isomorphic-dompurify'],
   // Turbopack (dev Next.js 16+) : stub canvas pour pdfjs-dist côté client (chemin relatif au projet)
   turbopack: {
     resolveAlias: {
@@ -173,7 +176,7 @@ const nextConfig = {
     if (isServer) {
       // Puppeteer nécessite certaines configurations côté serveur
       // Ne pas externaliser framer-motion car il est utilisé dans les composants
-      config.externals = [...(config.externals || []), 'canvas', 'jsdom']
+      config.externals = [...(config.externals || []), 'canvas']
     } else {
       // Côté client, ignorer canvas qui est un module Node.js
       config.resolve.fallback = {
