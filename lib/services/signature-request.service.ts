@@ -423,8 +423,9 @@ export class SignatureRequestService {
       typeof window !== 'undefined'
         ? window.location.origin
         : process.env.NEXT_PUBLIC_APP_URL ||
+          (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null) ||
           (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-          `http://localhost:${process.env.PORT || 3001}`
+          `http://localhost:${process.env.PORT || 3000}`
 
     const url = `${baseUrl.replace(/\/$/, '')}/sign/${token}`
 

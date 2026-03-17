@@ -114,9 +114,11 @@ export const APP_URLS = {
     return (
       process.env.NEXT_PUBLIC_APP_URL ||
       process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.NODE_ENV === 'development' 
-        ? APP_DEFAULTS.defaultDevUrl 
-        : 'https://eduzen.fr') // URL de production par défaut
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null) ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+      (process.env.NODE_ENV === 'development'
+        ? APP_DEFAULTS.defaultDevUrl
+        : 'https://www.eduzen.io')
     )
   },
   
