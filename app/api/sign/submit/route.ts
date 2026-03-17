@@ -19,7 +19,7 @@ import {
   extractStoragePathFromPublicUrl,
   downloadDocumentPdf,
 } from '@/lib/utils/sign-document-helpers'
-import { sendSignedPdfEmails } from '@/lib/utils/send-signed-pdf-email'
+import { sendSignedPdfEmails, sendSignatureNotificationEmails } from '@/lib/utils/send-signed-pdf-email'
 import { logger } from '@/lib/utils/logger'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
@@ -692,7 +692,6 @@ export async function POST(request: NextRequest) {
         if (path) {
           try {
             const pdfBytes = await downloadDocumentPdf(supabase, path)
-            const signedAt = new Date().toISOString()
             const safeSignerName = sanitizeForPDF(signerName)
             const safeSignerEmail = sanitizeForPDF(signerEmail, 100)
 
@@ -741,7 +740,7 @@ export async function POST(request: NextRequest) {
               .upload(signedPath, sealedPdf, {
                 contentType: 'application/pdf',
                 cacheControl: '3600',
-                upsert: false,
+                upsert: true,
               })
             if (upErr) {
               logger.error('Erreur upload PDF signé (non-fatal):', upErr)
@@ -769,43 +768,50 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (sealedPdf) {
-        // Email apprenant (signataire) : priorité recipient_email, sinon students si recipient_id
-        let learnerEmail = (resolved.sig.recipient_email as string)?.trim() ?? ''
-        if (!learnerEmail && resolved.sig.recipient_id) {
-          const { data: studentRow } = await db
-            .from('students')
-            .select('email')
-            .eq('id', resolved.sig.recipient_id)
-            .maybeSingle()
-          learnerEmail = ((studentRow as { email?: string } | null)?.email as string)?.trim() ?? ''
-        }
-        // Email OF (admin / secrétaire) pour recevoir aussi une copie
-        const { data: reqUser } = await db
+      // Récupérer les emails pour la notification (toujours envoyée, avec ou sans PDF scellé)
+      let learnerEmail = (resolved.sig.recipient_email as string)?.trim() ?? ''
+      if (!learnerEmail && resolved.sig.recipient_id) {
+        const { data: studentRow } = await db
+          .from('students')
+          .select('email')
+          .eq('id', resolved.sig.recipient_id)
+          .maybeSingle()
+        learnerEmail = ((studentRow as { email?: string } | null)?.email as string)?.trim() ?? ''
+      }
+      const { data: reqUser } = await db
+        .from('users')
+        .select('email')
+        .eq('id', signerId)
+        .maybeSingle()
+      let adminEmail = ((reqUser as { email?: string } | null)?.email as string)?.trim() ?? ''
+      if (!adminEmail) {
+        const { data: adminRow } = await db
           .from('users')
           .select('email')
-          .eq('id', signerId)
+          .eq('organization_id', orgId)
+          .in('role', ['admin', 'secretary'])
+          .limit(1)
           .maybeSingle()
-        let adminEmail = ((reqUser as { email?: string } | null)?.email as string)?.trim() ?? ''
-        if (!adminEmail) {
-          const { data: adminRow } = await db
-            .from('users')
-            .select('email')
-            .eq('organization_id', orgId)
-            .in('role', ['admin', 'secretary'])
-            .limit(1)
-            .maybeSingle()
-          adminEmail = ((adminRow as { email?: string } | null)?.email as string)?.trim() ?? ''
-        }
-        // Envoi à l'apprenant ET à l'OF (non-fatal — ne doit pas bloquer la réponse)
+        adminEmail = ((adminRow as { email?: string } | null)?.email as string)?.trim() ?? ''
+      }
+      // Envoi à l'apprenant ET à l'OF — non-fatal, avec pièce jointe PDF si disponible
+      if (sealedPdf) {
         sendSignedPdfEmails({
-          recipientEmail: learnerEmail ?? '',
+          recipientEmail: learnerEmail,
           recipientName: signerName,
-          adminEmail: adminEmail ?? undefined,
+          adminEmail: adminEmail || undefined,
           documentTitle: docTitle,
           signedPdfBuffer: sealedPdf,
           signedFilename: `convention_signee_${docId}.pdf`,
         }).catch((e) => logger.error('Erreur envoi email PDF signé (non-fatal):', e))
+      } else {
+        // PDF non disponible : envoyer notification simple sans pièce jointe
+        sendSignatureNotificationEmails({
+          recipientEmail: learnerEmail,
+          recipientName: signerName,
+          adminEmail: adminEmail || undefined,
+          documentTitle: docTitle,
+        }).catch((e) => logger.error('Erreur envoi email notification signature (non-fatal):', e))
       }
 
       return NextResponse.json({

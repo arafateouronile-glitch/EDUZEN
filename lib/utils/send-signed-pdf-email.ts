@@ -104,6 +104,49 @@ export async function sendSignedPdfEmails(params: SendSignedPdfParams): Promise<
 }
 
 /**
+ * Notification simple (sans PDF) quand le scellement a échoué mais le statut est signé.
+ */
+export async function sendSignatureNotificationEmails(params: {
+  recipientEmail: string
+  recipientName: string
+  adminEmail?: string
+  documentTitle: string
+}): Promise<void> {
+  const { RESEND_API_KEY } = process.env
+  if (!RESEND_API_KEY) return
+
+  const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #274472 0%, #1e3a5f 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="margin: 0;">Document signé</h1>
+  </div>
+  <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
+    <p>Bonjour,</p>
+    <p>Le document <strong>${params.documentTitle}</strong> a bien été signé électroniquement.</p>
+    <p>La copie signée sera disponible prochainement dans votre espace.</p>
+  </div>
+  <p style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 14px;">${APP_NAME} – Plateforme de gestion de formation</p>
+</body></html>`
+
+  const { Resend } = await import('resend')
+  const resend = new Resend(RESEND_API_KEY)
+  const fromEmail = getFromEmail()
+  const seen = new Set<string>()
+  const toSend: Array<{ to: string }> = []
+  if (params.recipientEmail?.trim()) { toSend.push({ to: params.recipientEmail.trim() }); seen.add(params.recipientEmail.trim().toLowerCase()) }
+  if (params.adminEmail?.trim() && !seen.has(params.adminEmail.trim().toLowerCase())) { toSend.push({ to: params.adminEmail.trim() }) }
+
+  await Promise.allSettled(
+    toSend.map(async ({ to }) => {
+      const { error } = await resend.emails.send({ from: fromEmail, to, subject: `Document signé : ${params.documentTitle}`, html })
+      if (error) logger.error('Erreur envoi notification signature:', { to, error })
+    })
+  )
+}
+
+/**
  * Envoie le PDF final à plusieurs destinataires (workflow cascade).
  * Un email par destinataire + un à l'admin si fourni.
  */
