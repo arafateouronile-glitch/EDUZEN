@@ -161,10 +161,10 @@ export function GestionConventions({
       const supabase = createClient()
       const { data } = await supabase
         .from('documents')
-        .select('id, student_id, metadata, status, signed_at')
+        .select('id, student_id, metadata, status, signed_at, signed_file_url')
         .eq('organization_id', user.organization_id)
         .eq('type', 'contract')
-      const list = (data ?? []) as unknown as Array<{ id: string; student_id: string | null; metadata: Record<string, unknown> | null; status: string | null; signed_at?: string | null }>
+      const list = (data ?? []) as unknown as Array<{ id: string; student_id: string | null; metadata: Record<string, unknown> | null; status: string | null; signed_at?: string | null; signed_file_url?: string | null }>
       return list.filter((d) => (d.metadata as Record<string, unknown> | null)?.session_id === sessionData?.id)
     },
     enabled: !!sessionData?.id && !!user?.organization_id,
@@ -203,6 +203,21 @@ export function GestionConventions({
         (d) => (d as { status?: string }).status === 'signed' || signedIds.has(d.id)
       )
       return isSigned ? 'signed' : 'pending'
+    }
+  }, [sessionContractDocs, signedRequestIds])
+
+  // Retourne l'URL du document signé pour un apprenant (null si non signé)
+  const getSignedUrlForEnrollment = useMemo(() => {
+    const docs = sessionContractDocs || []
+    const signedIds = signedRequestIds || new Set<string>()
+    return (enrollment: EnrollmentWithRelations) => {
+      const signedDoc = docs.find(
+        (d) =>
+          ((d.metadata as Record<string, unknown> | null)?.enrollment_id === enrollment.id ||
+            d.student_id === enrollment.student_id) &&
+          ((d as { status?: string }).status === 'signed' || signedIds.has(d.id))
+      )
+      return (signedDoc as { signed_file_url?: string | null } | undefined)?.signed_file_url ?? null
     }
   }, [sessionContractDocs, signedRequestIds])
 
@@ -489,58 +504,71 @@ export function GestionConventions({
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleGenerateContract(enrollment, selectedConventionTemplateId)}
-                            className="h-9 w-9 p-0 rounded-full hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
-                            title="Télécharger le contrat"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const emailData = prepareContractEmail(enrollment)
-                              if (emailData) {
-                                setEmailPreview(emailData)
-                                setEditedEmail({
-                                  to: emailData.to,
-                                  subject: emailData.subject,
-                                  body: emailData.body,
-                                })
-                              }
-                            }}
-                            disabled={!student.email}
-                            className="h-9 w-9 p-0 rounded-full hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
-                            title="Envoyer par email"
-                          >
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSignatureRequestDialog({
-                                enrollment,
-                                type: 'contract',
-                              })
-                              setSignatureRequestForm({
-                                recipientEmail: student.email || '',
-                                recipientName: `${student.first_name} ${student.last_name}`,
-                                subject: `Demande de signature : Contrat de formation - ${student.first_name} ${student.last_name}`,
-                                message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre contrat de formation pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir le signer en ligne.\n\nCordialement,\n${organization?.name || ''}`,
-                              })
-                            }}
-                            disabled={!student.email}
-                            className="h-9 w-9 p-0 rounded-full hover:bg-purple-100 hover:text-purple-600 transition-colors"
-                            title="Envoyer en demande de signature"
-                          >
-                            <PenTool className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {(() => {
+                          const contractStatus = getContractStatusForEnrollment(enrollment)
+                          const signedUrl = getSignedUrlForEnrollment(enrollment)
+                          const isSigned = contractStatus === 'signed'
+                          return (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (isSigned && signedUrl) {
+                                    window.open(signedUrl, '_blank')
+                                  } else {
+                                    handleGenerateContract(enrollment, selectedConventionTemplateId)
+                                  }
+                                }}
+                                className="h-9 w-9 p-0 rounded-full hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
+                                title={isSigned ? 'Télécharger le contrat signé' : 'Télécharger le contrat'}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const emailData = prepareContractEmail(enrollment)
+                                  if (emailData) {
+                                    setEmailPreview(emailData)
+                                    setEditedEmail({
+                                      to: emailData.to,
+                                      subject: emailData.subject,
+                                      body: emailData.body,
+                                    })
+                                  }
+                                }}
+                                disabled={!student.email}
+                                className="h-9 w-9 p-0 rounded-full hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
+                                title="Envoyer par email"
+                              >
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSignatureRequestDialog({
+                                    enrollment,
+                                    type: 'contract',
+                                  })
+                                  setSignatureRequestForm({
+                                    recipientEmail: student.email || '',
+                                    recipientName: `${student.first_name} ${student.last_name}`,
+                                    subject: `Demande de signature : Contrat de formation - ${student.first_name} ${student.last_name}`,
+                                    message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre contrat de formation pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir le signer en ligne.\n\nCordialement,\n${organization?.name || ''}`,
+                                  })
+                                }}
+                                disabled={!student.email || isSigned}
+                                className="h-9 w-9 p-0 rounded-full hover:bg-purple-100 hover:text-purple-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={isSigned ? 'Document déjà signé' : 'Envoyer en demande de signature'}
+                              >
+                                <PenTool className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )
+                        })()}
                       </motion.div>
                     )
                   })}
