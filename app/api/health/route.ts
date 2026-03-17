@@ -37,7 +37,7 @@ export async function GET() {
     try {
       const ctrl = new AbortController()
       const t = setTimeout(() => ctrl.abort(), 3000)
-      const res = await fetch(`${gotenbergUrl}/ping`, { method: 'GET', signal: ctrl.signal })
+      const res = await fetch(`${gotenbergUrl}/health`, { method: 'GET', signal: ctrl.signal })
       clearTimeout(t)
       checks.gotenberg = res.ok ? 'ok' : `status ${res.status}`
     } catch (e) {
