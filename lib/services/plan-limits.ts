@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
-export type PlanTier = 'free' | 'starter' | 'professional' | 'enterprise'
+// Codes correspondant exactement aux valeurs de subscription_plans.code en base
+export type PlanTier = 'trial' | 'free' | 'pro' | 'premium' | 'enterprise'
 
 const PLAN_FEATURES: Record<PlanTier, {
   apiAccess: boolean
@@ -10,6 +11,13 @@ const PLAN_FEATURES: Record<PlanTier, {
   maxWebhooksCount: number
   maxRequestsPerMonth: number
 }> = {
+  trial: {
+    apiAccess: false,
+    webhooksAccess: false,
+    maxApiKeysCount: 0,
+    maxWebhooksCount: 0,
+    maxRequestsPerMonth: 0,
+  },
   free: {
     apiAccess: false,
     webhooksAccess: false,
@@ -17,19 +25,19 @@ const PLAN_FEATURES: Record<PlanTier, {
     maxWebhooksCount: 0,
     maxRequestsPerMonth: 0,
   },
-  starter: {
+  pro: {
     apiAccess: false,
     webhooksAccess: false,
     maxApiKeysCount: 0,
     maxWebhooksCount: 0,
     maxRequestsPerMonth: 0,
   },
-  professional: {
-    apiAccess: false,
-    webhooksAccess: false,
-    maxApiKeysCount: 0,
-    maxWebhooksCount: 0,
-    maxRequestsPerMonth: 0,
+  premium: {
+    apiAccess: true,
+    webhooksAccess: true,
+    maxApiKeysCount: 5,
+    maxWebhooksCount: 10,
+    maxRequestsPerMonth: 10000,
   },
   enterprise: {
     apiAccess: true,

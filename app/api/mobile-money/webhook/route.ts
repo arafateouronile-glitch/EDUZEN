@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { MobileMoneyService } from '@/lib/services/mobile-money.service'
 import type { MobileMoneyProvider, WebhookPayload } from '@/lib/services/mobile-money/mobile-money.types'
@@ -61,7 +62,13 @@ export async function POST(
 
     // Lire le body comme texte pour la validation de signature
     const bodyText = await req.text()
-    const body = JSON.parse(bodyText)
+    let body: Record<string, unknown>
+    try {
+      body = JSON.parse(bodyText)
+    } catch {
+      logger.warn('Mobile Money Webhook - Invalid JSON body', { provider })
+      return NextResponse.json({ error: 'Body JSON invalide' }, { status: 400 })
+    }
 
     // Valider la signature du webhook (obligatoire)
     const webhookSecret = process.env[`${provider.toUpperCase()}_WEBHOOK_SECRET`] || process.env.MOBILE_MONEY_WEBHOOK_SECRET
@@ -109,16 +116,17 @@ export async function POST(
                      req.headers.get('authorization')?.replace('Bearer ', '')
 
     // Construire le payload du webhook
+    const b = body as Record<string, any>
     const payload: WebhookPayload = {
       provider: provider as MobileMoneyProvider,
-      transaction_id: body.transaction_id || body.transactionId || body.id,
-      status: mapWebhookStatus(provider, body.status || body.state),
-      amount: body.amount != null ? Number(body.amount) : 0,
-      currency: body.currency || 'XOF',
-      phone_number: body.phone_number || body.phoneNumber || body.msisdn || body.subscriber?.msisdn,
-      timestamp: body.timestamp || body.created_at || new Date().toISOString(),
+      transaction_id: (b.transaction_id || b.transactionId || b.id) as string,
+      status: mapWebhookStatus(provider, (b.status || b.state) as string),
+      amount: b.amount != null ? Number(b.amount) : 0,
+      currency: (b.currency || 'XOF') as string,
+      phone_number: (b.phone_number || b.phoneNumber || b.msisdn || b.subscriber?.msisdn) as string | undefined,
+      timestamp: (b.timestamp || b.created_at || new Date().toISOString()) as string,
       metadata: {
-        external_transaction_id: body.external_transaction_id || body.externalId || body.reference,
+        external_transaction_id: b.external_transaction_id || b.externalId || b.reference,
         signature,
         raw_data: body,
       } as Record<string, unknown>,

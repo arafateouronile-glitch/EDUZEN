@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAPIService } from '@/lib/services/api.service'
 import { canUseAPI } from '@/lib/services/plan-limits'
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: result })
   } catch (error) {
+    console.error('[API KEYS POST ERROR]', error)
     const message = error instanceof Error ? error.message : 'Internal server error'
     return NextResponse.json({ error: message }, { status: 500 })
   }
