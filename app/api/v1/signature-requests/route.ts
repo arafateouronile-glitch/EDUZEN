@@ -111,6 +111,7 @@ async function createOne(params: {
       expires_at: expiresAt,
       requires_notarization: false,
       reminder_frequency: 'none',
+      requester_id: null,
     })
     .select('*')
     .single()
