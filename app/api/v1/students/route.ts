@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { apiMiddleware, hasScope } from '../middleware'
 import { createAPIService } from '@/lib/services/api.service'
 import { createStudentService } from '@/lib/services/student.service'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * GET /api/v1/students
@@ -25,14 +26,14 @@ export async function GET(request: NextRequest) {
 
     const startTime = Date.now()
     const searchParams = request.nextUrl.searchParams
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1)
+    const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '50') || 50), 100)
     const search = searchParams.get('search') || undefined
 
-    // Créer les services avec le client serveur
-    const supabase = await createClient()
-    const studentService = createStudentService(supabase)
-    const apiService = createAPIService(supabase)
+    // Utiliser le client admin (bypass RLS — pas de session utilisateur ici)
+    const adminClient = createAdminClient()
+    const studentService = createStudentService(adminClient)
+    const apiService = createAPIService(adminClient)
 
     // Récupérer les étudiants
     const students = await studentService.getAll(middleware.organizationId, {
