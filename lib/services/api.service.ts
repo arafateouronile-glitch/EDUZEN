@@ -2,7 +2,7 @@
 // Le client doit être passé en paramètre du constructeur
 import type { SupabaseClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
 // Types locaux pour les tables API (api_keys, webhooks, etc.) non présentes dans database.types
@@ -261,22 +261,22 @@ export class APIService {
       .gte('created_at', oneDayAgo.toISOString())
 
     // Vérifier les limites
-    if (minuteCount && minuteCount >= (key.rate_limit_per_minute || 60)) {
+    if (minuteCount && minuteCount >= (key.rate_limit_per_minute || 120)) {
       return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 60 * 1000) }
     }
 
-    if (hourCount && hourCount >= (key.rate_limit_per_hour || 1000)) {
+    if (hourCount && hourCount >= (key.rate_limit_per_hour || 2000)) {
       return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 60 * 60 * 1000) }
     }
 
-    if (dayCount && dayCount >= (key.rate_limit_per_day || 10000)) {
+    if (dayCount && dayCount >= (key.rate_limit_per_day || 20000)) {
       return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) }
     }
 
     const remaining = Math.min(
-      (key.rate_limit_per_minute || 60) - (minuteCount || 0),
-      (key.rate_limit_per_hour || 1000) - (hourCount || 0),
-      (key.rate_limit_per_day || 10000) - (dayCount || 0)
+      (key.rate_limit_per_minute || 120) - (minuteCount || 0),
+      (key.rate_limit_per_hour || 2000) - (hourCount || 0),
+      (key.rate_limit_per_day || 20000) - (dayCount || 0)
     )
 
     return { allowed: true, remaining, resetAt: new Date(now.getTime() + 60 * 1000) }
@@ -297,23 +297,24 @@ export class APIService {
       return { allowed: true, remaining: 10000, resetAt: new Date() }
     }
 
+    const now = new Date()
     // Vérifier les quotas
-    if (quota.requests_used_minute >= (quota.requests_per_minute || 60)) {
-      return { allowed: false, remaining: 0, resetAt: new Date() }
+    if (quota.requests_used_minute >= (quota.requests_per_minute || 120)) {
+      return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 60 * 1000) }
     }
 
-    if (quota.requests_used_hour >= (quota.requests_per_hour || 1000)) {
-      return { allowed: false, remaining: 0, resetAt: new Date() }
+    if (quota.requests_used_hour >= (quota.requests_per_hour || 2000)) {
+      return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 60 * 60 * 1000) }
     }
 
-    if (quota.requests_used_day >= (quota.requests_per_day || 10000)) {
-      return { allowed: false, remaining: 0, resetAt: new Date() }
+    if (quota.requests_used_day >= (quota.requests_per_day || 20000)) {
+      return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) }
     }
 
     const remaining = Math.min(
-      (quota.requests_per_minute || 60) - quota.requests_used_minute,
-      (quota.requests_per_hour || 1000) - quota.requests_used_hour,
-      (quota.requests_per_day || 10000) - quota.requests_used_day
+      (quota.requests_per_minute || 120) - quota.requests_used_minute,
+      (quota.requests_per_hour || 2000) - quota.requests_used_hour,
+      (quota.requests_per_day || 20000) - quota.requests_used_day
     )
 
     return { allowed: true, remaining, resetAt: new Date() }
