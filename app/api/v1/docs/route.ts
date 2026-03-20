@@ -106,6 +106,25 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             updated_at: { type: 'string', format: 'date-time' },
           },
         },
+        Session: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string' },
+            status: { type: 'string', enum: ['active', 'completed', 'cancelled', 'draft'] },
+            start_date: { type: 'string', format: 'date' },
+            end_date: { type: 'string', format: 'date' },
+            start_time: { type: 'string' },
+            end_time: { type: 'string' },
+            location: { type: 'string' },
+            capacity_max: { type: 'integer' },
+            formation_id: { type: 'string', format: 'uuid' },
+            teacher_id: { type: 'string', format: 'uuid' },
+            organization_id: { type: 'string', format: 'uuid' },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
         SignatureRequest: {
           type: 'object',
           properties: {
@@ -251,6 +270,72 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
           },
         },
       },
+      '/api/v1/sessions': {
+        get: {
+          summary: 'Liste des sessions de formation',
+          description: 'Récupère la liste paginée des sessions de formation de l\'organisation',
+          tags: ['Sessions'],
+          security: [{ EduzenApiKey: [] }],
+          parameters: [
+            {
+              name: 'page',
+              in: 'query',
+              schema: { type: 'integer', default: 1, minimum: 1 },
+              description: 'Numéro de page',
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 },
+              description: 'Nombre d\'éléments par page',
+            },
+            {
+              name: 'status',
+              in: 'query',
+              schema: { type: 'string', enum: ['active', 'completed', 'cancelled', 'draft'] },
+              description: 'Filtrer par statut',
+            },
+            {
+              name: 'formation_id',
+              in: 'query',
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Filtrer par formation',
+            },
+            {
+              name: 'search',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Recherche par nom de session',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Liste des sessions',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Session' } },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          page: { type: 'integer' },
+                          limit: { type: 'integer' },
+                          total: { type: 'integer' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '429': { $ref: '#/components/responses/RateLimit' },
+          },
+        },
+      },
       '/api/v1/document-templates': {
         get: {
           summary: 'Liste des templates de documents',
@@ -289,6 +374,10 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
                         type: 'array',
                         items: { $ref: '#/components/schemas/DocumentTemplate' },
                       },
+                      meta: {
+                        type: 'object',
+                        properties: { total: { type: 'integer' } },
+                      },
                     },
                   },
                 },
@@ -297,42 +386,6 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             '401': { $ref: '#/components/responses/Unauthorized' },
             '403': { $ref: '#/components/responses/Forbidden' },
             '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-        post: {
-          summary: 'Créer un template de document',
-          description: 'Crée un nouveau template de document',
-          tags: ['Document Templates'],
-          security: [{ EduzenApiKey: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['name', 'type'],
-                  properties: {
-                    name: { type: 'string', description: 'Nom du template' },
-                    type: { type: 'string', enum: ['attestation', 'facture', 'devis', 'contrat'] },
-                    body: { type: 'object', description: 'Corps du template' },
-                    variables: { type: 'object', description: 'Variables disponibles' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '201': {
-              description: 'Template créé',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/DocumentTemplate' },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
           },
         },
       },
@@ -377,11 +430,14 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['template_id', 'variables'],
+                  required: ['template_id', 'format', 'variables'],
                   properties: {
                     template_id: { type: 'string', format: 'uuid', description: 'ID du template' },
+                    format: { type: 'string', enum: ['PDF', 'DOCX', 'HTML'], description: 'Format de sortie' },
                     variables: { type: 'object', description: 'Variables à remplacer dans le template' },
-                    format: { type: 'string', enum: ['PDF', 'DOCX', 'HTML'], default: 'PDF' },
+                    related_entity_type: { type: 'string', description: 'Type d\'entité liée (ex: student)' },
+                    related_entity_id: { type: 'string', format: 'uuid', description: 'ID de l\'entité liée' },
+                    download: { type: 'boolean', default: true, description: 'true = retourne le fichier binaire, false = retourne les métadonnées' },
                   },
                 },
               },
@@ -389,14 +445,23 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
           },
           responses: {
             '200': {
-              description: 'Document généré',
+              description: 'Document généré — fichier binaire (download=true) ou métadonnées (download=false)',
               content: {
+                'application/pdf': { schema: { type: 'string', format: 'binary' } },
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { schema: { type: 'string', format: 'binary' } },
+                'text/html': { schema: { type: 'string', format: 'binary' } },
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
-                      document_url: { type: 'string', format: 'uri' },
-                      document_id: { type: 'string', format: 'uuid' },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          file_name: { type: 'string' },
+                          page_count: { type: 'integer' },
+                          format: { type: 'string' },
+                        },
+                      },
                     },
                   },
                 },
@@ -404,6 +469,7 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             },
             '400': { $ref: '#/components/responses/BadRequest' },
             '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
             '404': { $ref: '#/components/responses/NotFound' },
           },
         },
