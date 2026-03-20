@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
       date_of_birth: date_of_birth || null,
       status: status || 'active',
       organization_id: middleware.organizationId,
+      student_number: '',
     })
 
     const responseTime = Date.now() - startTime
