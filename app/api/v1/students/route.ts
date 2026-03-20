@@ -82,3 +82,77 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+/**
+ * POST /api/v1/students
+ * Crée un nouvel apprenant
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const middleware = await apiMiddleware(request)
+    if (middleware instanceof NextResponse) return middleware
+
+    if (!hasScope(middleware.scopes, 'write:students') && !hasScope(middleware.scopes, '*')) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions', message: 'This API key does not have permission to create students' },
+        { status: 403 }
+      )
+    }
+
+    const body = await request.json()
+    const { first_name, last_name, email, phone, date_of_birth, status } = body
+
+    if (!first_name || !last_name) {
+      return NextResponse.json(
+        { error: 'first_name and last_name are required' },
+        { status: 400 }
+      )
+    }
+
+    const startTime = Date.now()
+    const adminClient = createAdminClient()
+    const studentService = createStudentService(adminClient)
+    const apiService = createAPIService(adminClient)
+
+    const student = await studentService.create({
+      first_name,
+      last_name,
+      email: email || null,
+      phone: phone || null,
+      date_of_birth: date_of_birth || null,
+      status: status || 'active',
+      organization_id: middleware.organizationId,
+    })
+
+    const responseTime = Date.now() - startTime
+
+    await apiService.logAPIRequest(
+      middleware.key.id,
+      middleware.organizationId,
+      'POST',
+      '/api/v1/students',
+      request.nextUrl.pathname,
+      201,
+      responseTime,
+      request.headers.get('x-forwarded-for') || undefined,
+      request.headers.get('user-agent') || undefined
+    )
+
+    return NextResponse.json(
+      { data: student },
+      {
+        status: 201,
+        headers: {
+          'X-RateLimit-Remaining': middleware.rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': middleware.rateLimit.resetAt.toISOString(),
+        },
+      }
+    )
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
+    return NextResponse.json(
+      { error: 'Internal server error', message: errorMessage },
+      { status: 500 }
+    )
+  }
+}
