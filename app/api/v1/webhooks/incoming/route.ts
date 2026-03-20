@@ -41,7 +41,8 @@ export async function POST(request: NextRequest) {
     const apiService = createAPIService(adminClient)
 
     // Stocker l'événement entrant dans la table webhook_deliveries
-    const { data: stored, error } = await adminClient
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: stored, error } = await (adminClient as any)
       .from('webhook_deliveries')
       .insert({
         webhook_id: middleware.key.id, // utilise l'ID de la clé API comme référence
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     )
 
     return NextResponse.json(
-      { data: { id: stored?.id, event, status: 'received' } },
+      { data: { id: (stored as { id?: string } | null)?.id, event, status: 'received' } },
       {
         status: 201,
         headers: {
