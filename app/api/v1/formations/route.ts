@@ -2,7 +2,6 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { apiMiddleware, hasScope } from '../middleware'
 import { createAPIService } from '@/lib/services/api.service'
-import { FormationService } from '@/lib/services/formation.service'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
@@ -30,18 +29,23 @@ export async function GET(request: NextRequest) {
     const programId = searchParams.get('program_id') || undefined
 
     const adminClient = createAdminClient()
-    const formationService = new FormationService(adminClient)
     const apiService = createAPIService(adminClient)
 
-    const result = await formationService.getAllFormations(middleware.organizationId, {
-      programId,
-      search,
-      limit,
-      offset,
-    }) as { data: unknown[]; count: number; hasMore: boolean }
+    let query = adminClient
+      .from('formations')
+      .select('*, programs(id, name)', { count: 'exact' })
+      .eq('organization_id', middleware.organizationId)
 
-    const { data, count: total } = result
+    if (programId) query = query.eq('program_id', programId)
+    if (search) query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%,description.ilike.%${search}%`)
 
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (error) throw new Error(error.message)
+
+    const total = count ?? 0
     const responseTime = Date.now() - startTime
 
     await apiService.logAPIRequest(
@@ -58,7 +62,7 @@ export async function GET(request: NextRequest) {
     )
 
     return NextResponse.json(
-      { data, meta: { page, limit, total } },
+      { data: data ?? [], meta: { page, limit, total } },
       {
         headers: {
           'X-RateLimit-Remaining': middleware.rateLimit.remaining.toString(),
