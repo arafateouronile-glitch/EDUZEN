@@ -474,6 +474,184 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
           },
         },
       },
+      '/api/v1/formations': {
+        get: {
+          summary: 'Liste des formations',
+          description: 'Récupère la liste paginée des formations de l\'organisation',
+          tags: ['Formations'],
+          security: [{ EduzenApiKey: [] }],
+          parameters: [
+            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 50, maximum: 100 } },
+            { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Recherche par nom, code ou description' },
+            { name: 'program_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par programme' },
+          ],
+          responses: {
+            '200': {
+              description: 'Liste des formations',
+              content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } }, meta: { type: 'object', properties: { page: { type: 'integer' }, limit: { type: 'integer' }, total: { type: 'integer' } } } } } } },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '429': { $ref: '#/components/responses/RateLimit' },
+          },
+        },
+      },
+      '/api/v1/enrollments': {
+        get: {
+          summary: 'Liste des inscriptions',
+          description: 'Récupère les inscriptions de l\'organisation, filtrables par session ou apprenant',
+          tags: ['Inscriptions'],
+          security: [{ EduzenApiKey: [] }],
+          parameters: [
+            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 50, maximum: 100 } },
+            { name: 'session_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par session' },
+            { name: 'student_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par apprenant' },
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['active', 'cancelled', 'completed', 'pending'] } },
+          ],
+          responses: {
+            '200': {
+              description: 'Liste des inscriptions',
+              content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } }, meta: { type: 'object', properties: { page: { type: 'integer' }, limit: { type: 'integer' }, total: { type: 'integer' } } } } } } },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '429': { $ref: '#/components/responses/RateLimit' },
+          },
+        },
+      },
+      '/api/v1/email/send': {
+        post: {
+          summary: 'Envoyer un email',
+          description: 'Envoie un email via Resend au nom de l\'organisation (scope: send:email)',
+          tags: ['Email'],
+          security: [{ EduzenApiKey: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['to', 'subject'],
+                  properties: {
+                    to: { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
+                    subject: { type: 'string' },
+                    html: { type: 'string', description: 'Corps HTML (html ou text requis)' },
+                    text: { type: 'string', description: 'Corps texte brut' },
+                    cc: { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
+                    bcc: { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
+                    reply_to: { type: 'string', format: 'email' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': { description: 'Email envoyé', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string' }, to: { type: 'array', items: { type: 'string' } } } } } } } } },
+            '400': { $ref: '#/components/responses/BadRequest' },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+      '/api/v1/signature-requests': {
+        get: {
+          summary: 'Liste des demandes de signature',
+          description: 'Récupère les demandes de signature de l\'organisation (scope: read:signatures)',
+          tags: ['Signatures'],
+          security: [{ EduzenApiKey: [] }],
+          parameters: [
+            { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'signed', 'expired', 'declined', 'cancelled'] } },
+            { name: 'recipient_type', in: 'query', schema: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] } },
+          ],
+          responses: {
+            '200': { description: 'Liste des demandes', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/SignatureRequest' } }, meta: { type: 'object', properties: { total: { type: 'integer' } } } } } } } },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+        post: {
+          summary: 'Créer une demande de signature',
+          description: 'Crée une demande de signature et envoie l\'email au destinataire. Supporte l\'envoi unique ou multiple (scope: write:signatures)',
+          tags: ['Signatures'],
+          security: [{ EduzenApiKey: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['document_id'],
+                  properties: {
+                    document_id: { type: 'string', format: 'uuid' },
+                    recipient_email: { type: 'string', format: 'email', description: 'Requis pour envoi unique' },
+                    recipient_name: { type: 'string', description: 'Requis pour envoi unique' },
+                    recipient_type: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'], description: 'Requis pour envoi unique' },
+                    recipient_id: { type: 'string', format: 'uuid', description: 'ID de l\'apprenant/enseignant si connu' },
+                    subject: { type: 'string', description: 'Objet de l\'email (optionnel)' },
+                    message: { type: 'string', description: 'Message personnalisé (optionnel)' },
+                    expires_at: { type: 'string', format: 'date-time', description: 'Date d\'expiration (défaut: +30 jours)' },
+                    recipients: {
+                      type: 'array',
+                      maxItems: 20,
+                      description: 'Pour envoi multiple (remplace recipient_email/name/type)',
+                      items: {
+                        type: 'object',
+                        required: ['email', 'name', 'type'],
+                        properties: {
+                          email: { type: 'string', format: 'email' },
+                          name: { type: 'string' },
+                          type: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] },
+                          id: { type: 'string', format: 'uuid' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': { description: 'Demande(s) créée(s) et email(s) envoyé(s)', content: { 'application/json': { schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/SignatureRequest' } } } } } },
+            '400': { $ref: '#/components/responses/BadRequest' },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+      '/api/v1/webhooks/incoming': {
+        post: {
+          summary: 'Recevoir un événement externe',
+          description: 'Reçoit et stocke un événement depuis une application externe (scope: write:webhooks)',
+          tags: ['Webhooks'],
+          security: [{ EduzenApiKey: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['event', 'data'],
+                  properties: {
+                    event: { type: 'string', description: 'Type d\'événement (ex: student.updated, payment.received)' },
+                    data: { type: 'object', description: 'Payload de l\'événement' },
+                    source: { type: 'string', description: 'Nom de l\'application source (ex: formflow, typeform)' },
+                    idempotency_key: { type: 'string', description: 'Clé d\'idempotence pour éviter les doublons' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': { description: 'Événement reçu', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string' }, event: { type: 'string' }, status: { type: 'string' } } } } } } } },
+            '400': { $ref: '#/components/responses/BadRequest' },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
       '/api/auth/check': {
         get: {
           summary: 'Vérifier l\'authentification',
