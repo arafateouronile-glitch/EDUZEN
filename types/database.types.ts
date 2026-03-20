@@ -16844,7 +16844,7 @@ export type Database = {
           recipient_type: string
           reminder_count?: number | null
           reminder_frequency?: string | null
-          requester_id: string
+          requester_id?: string | null
           requires_notarization?: boolean | null
           signature_id?: string | null
           signature_token: string
