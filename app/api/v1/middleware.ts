@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAPIService } from '@/lib/services/api.service'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { canUseAPI } from '@/lib/services/plan-limits'
 
 // Interface pour les clés API
@@ -38,12 +40,12 @@ export async function apiMiddleware(request: NextRequest): Promise<NextResponse 
     )
   }
 
-  // Créer le service API avec le client serveur
-  const supabase = await createClient()
-  const apiService = createAPIService(supabase)
+  // Utiliser le client admin pour vérifier la clé API (bypass RLS — pas de session utilisateur ici)
+  const adminClient = createAdminClient()
+  const adminApiService = createAPIService(adminClient)
 
   // Vérifier la clé API
-  const keyData = await apiService.verifyAPIKey(apiKey)
+  const keyData = await adminApiService.verifyAPIKey(apiKey)
   if (!keyData) {
     return NextResponse.json(
       { error: 'Invalid API key', message: 'The provided API key is invalid or has been revoked' },
@@ -52,6 +54,9 @@ export async function apiMiddleware(request: NextRequest): Promise<NextResponse 
   }
 
   const key = keyData as unknown as APIKeyData
+
+  // Créer le client serveur pour les autres opérations
+  const supabase = await createClient()
 
   // Vérifier que l'organisation a le plan Enterprise
   const hasApiAccess = await canUseAPI(supabase, key.organization_id)
@@ -86,7 +91,7 @@ export async function apiMiddleware(request: NextRequest): Promise<NextResponse 
   }
 
   // Vérifier le rate limiting
-  const rateLimit = await apiService.checkRateLimit(keyData, key.organization_id)
+  const rateLimit = await adminApiService.checkRateLimit(keyData, key.organization_id)
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
