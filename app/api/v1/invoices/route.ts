@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       student_id: enrollment.student_id,
       document_type,
       invoice_number: '',
-      type: document_type === 'quote' ? 'devis' : 'facture',
+      type: 'other',
       amount: effectiveAmount,
       total_amount: effectiveTotalAmount,
       tax_amount: tax_amount !== undefined ? Number(tax_amount) : 0,
