@@ -17,8 +17,11 @@ import type { DocumentTemplate } from '@/lib/types/document-templates'
  *   template_id: string
  *   format: 'PDF' | 'DOCX' | 'HTML'
  *   variables: Record<string, string>
+ *   session_id?: string         — lie le document à une session (visible dans le dashboard)
+ *   student_id?: string         — lie le document à un apprenant
  *   related_entity_type?: string
  *   related_entity_id?: string
+ *   requires_signature?: boolean (défaut: false)
  *   download?: boolean   (défaut: true — retourne le fichier en binaire)
  *                         false — retourne uniquement l'URL du fichier stocké
  */
@@ -35,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { template_id, format, variables, related_entity_type, related_entity_id } = body
+    const { template_id, format, variables, related_entity_type, related_entity_id, session_id, student_id, requires_signature } = body
     const download: boolean = body.download !== false
 
     if (!template_id) {
@@ -68,6 +71,10 @@ export async function POST(request: NextRequest) {
       HTML: 'text/html',
     }
 
+    // Toujours générer le HTML pour le stocker dans of_generated_documents
+    const htmlResult = await generateHTML(template as unknown as DocumentTemplate, variables, undefined, middleware.organizationId)
+    const htmlContent = htmlResult.html
+
     if (format === 'PDF') {
       const result = await generatePDF(template as unknown as DocumentTemplate, variables, undefined, middleware.organizationId)
       blob = result.blob
@@ -78,13 +85,12 @@ export async function POST(request: NextRequest) {
       blob = result.blob
       fileName = `${baseName}.docx`
     } else {
-      const result = await generateHTML(template as unknown as DocumentTemplate, variables, undefined, middleware.organizationId)
-      blob = new Blob([result.html], { type: 'text/html;charset=utf-8' })
-      pageCount = result.pageCount
+      blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' })
+      pageCount = htmlResult.pageCount
       fileName = `${baseName}.html`
     }
 
-    // Upload dans Supabase Storage et créer l'enregistrement en base
+    // Upload dans Supabase Storage et créer les enregistrements en base
     const storagePath = `${middleware.organizationId}/api/${fileName}`
     const arrayBuffer = await blob.arrayBuffer()
     const { error: uploadError } = await adminClient.storage
@@ -92,6 +98,7 @@ export async function POST(request: NextRequest) {
       .upload(storagePath, arrayBuffer, { contentType: contentTypeMap[format], upsert: true })
 
     let documentId: string | undefined
+    let ofDocumentId: string | undefined
     let fileUrl: string | undefined
 
     if (!uploadError) {
@@ -101,21 +108,47 @@ export async function POST(request: NextRequest) {
         .createSignedUrl(storagePath, 3600)
       fileUrl = signedData?.signedUrl
 
+      const effectiveStudentId = student_id || (related_entity_type === 'student' ? related_entity_id : null)
+      const docTitle = `${(template as any).name || template.type} — ${new Date().toLocaleDateString('fr-FR')}`
+
+      // Insert dans documents (référencé par signature_requests)
       const { data: docRow } = await adminClient
         .from('documents')
         .insert({
-          title: `${(template as any).name || template.type} — ${new Date().toLocaleDateString('fr-FR')}`,
+          title: docTitle,
           type: template.type,
-          file_url: storagePath, // stocker le chemin, pas l'URL signée (elle expire)
+          file_url: storagePath,
           organization_id: middleware.organizationId,
           template_id: template_id,
-          student_id: related_entity_type === 'student' ? related_entity_id : null,
+          student_id: effectiveStudentId,
           metadata: { format, page_count: pageCount, generated_via: 'api_v1' },
         })
         .select('id')
         .single()
 
       documentId = docRow?.id
+
+      // Insert dans of_generated_documents (visible dans le dashboard session)
+      const { data: ofRow } = await adminClient
+        .from('of_generated_documents')
+        .insert({
+          title: docTitle,
+          document_type: template.type,
+          content: htmlContent,
+          organization_id: middleware.organizationId,
+          template_id: template_id,
+          session_id: session_id || null,
+          student_id: effectiveStudentId,
+          file_path: storagePath,
+          status: 'generated',
+          requires_signature: requires_signature === true,
+          generated_at: new Date().toISOString(),
+          metadata: { format, page_count: pageCount, document_id: documentId, generated_via: 'api_v1' },
+        })
+        .select('id')
+        .single()
+
+      ofDocumentId = ofRow?.id
     }
 
     const responseTime = Date.now() - startTime
@@ -147,7 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { data: { document_id: documentId, file_name: fileName, file_url: fileUrl, page_count: pageCount, format } },
+      { data: { document_id: documentId, of_document_id: ofDocumentId, file_name: fileName, file_url: fileUrl, page_count: pageCount, format } },
       {
         headers: {
           'X-RateLimit-Remaining': middleware.rateLimit.remaining.toString(),
