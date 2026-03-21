@@ -95,15 +95,18 @@ export async function POST(request: NextRequest) {
     let fileUrl: string | undefined
 
     if (!uploadError) {
-      const { data: urlData } = adminClient.storage.from('documents').getPublicUrl(storagePath)
-      fileUrl = urlData?.publicUrl
+      // URL signée valable 1h (document potentiellement sensible)
+      const { data: signedData } = await adminClient.storage
+        .from('documents')
+        .createSignedUrl(storagePath, 3600)
+      fileUrl = signedData?.signedUrl
 
       const { data: docRow } = await adminClient
         .from('documents')
         .insert({
           title: `${(template as any).name || template.type} — ${new Date().toLocaleDateString('fr-FR')}`,
           type: template.type,
-          file_url: fileUrl || storagePath,
+          file_url: storagePath, // stocker le chemin, pas l'URL signée (elle expire)
           organization_id: middleware.organizationId,
           template_id: template_id,
           student_id: related_entity_type === 'student' ? related_entity_id : null,
