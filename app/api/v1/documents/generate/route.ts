@@ -62,6 +62,11 @@ export async function POST(request: NextRequest) {
     let blob: Blob
     let fileName: string
     let pageCount = 1
+    const contentTypeMap: Record<string, string> = {
+      PDF: 'application/pdf',
+      DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      HTML: 'text/html',
+    }
 
     if (format === 'PDF') {
       const result = await generatePDF(template as unknown as DocumentTemplate, variables, undefined, middleware.organizationId)
@@ -77,6 +82,37 @@ export async function POST(request: NextRequest) {
       blob = new Blob([result.html], { type: 'text/html;charset=utf-8' })
       pageCount = result.pageCount
       fileName = `${baseName}.html`
+    }
+
+    // Upload dans Supabase Storage et créer l'enregistrement en base
+    const storagePath = `${middleware.organizationId}/api/${fileName}`
+    const arrayBuffer = await blob.arrayBuffer()
+    const { error: uploadError } = await adminClient.storage
+      .from('documents')
+      .upload(storagePath, arrayBuffer, { contentType: contentTypeMap[format], upsert: true })
+
+    let documentId: string | undefined
+    let fileUrl: string | undefined
+
+    if (!uploadError) {
+      const { data: urlData } = adminClient.storage.from('documents').getPublicUrl(storagePath)
+      fileUrl = urlData?.publicUrl
+
+      const { data: docRow } = await adminClient
+        .from('documents')
+        .insert({
+          title: `${(template as any).name || template.type} — ${new Date().toLocaleDateString('fr-FR')}`,
+          type: template.type,
+          file_url: fileUrl || storagePath,
+          organization_id: middleware.organizationId,
+          template_id: template_id,
+          student_id: related_entity_type === 'student' ? related_entity_id : null,
+          metadata: { format, page_count: pageCount, generated_via: 'api_v1' },
+        })
+        .select('id')
+        .single()
+
+      documentId = docRow?.id
     }
 
     const responseTime = Date.now() - startTime
@@ -95,16 +131,12 @@ export async function POST(request: NextRequest) {
     )
 
     if (download) {
-      const contentTypeMap: Record<string, string> = {
-        PDF: 'application/pdf',
-        DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        HTML: 'text/html',
-      }
       return new NextResponse(blob, {
         headers: {
           'Content-Type': contentTypeMap[format],
           'Content-Disposition': `attachment; filename="${fileName}"`,
           'X-Page-Count': pageCount.toString(),
+          'X-Document-Id': documentId || '',
           'X-RateLimit-Remaining': middleware.rateLimit.remaining.toString(),
           'X-RateLimit-Reset': middleware.rateLimit.resetAt.toISOString(),
         },
@@ -112,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { data: { file_name: fileName, page_count: pageCount, format } },
+      { data: { document_id: documentId, file_name: fileName, file_url: fileUrl, page_count: pageCount, format } },
       {
         headers: {
           'X-RateLimit-Remaining': middleware.rateLimit.remaining.toString(),
