@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         document_type: template.type,
         content: htmlContent,
         organization_id: middleware.organizationId,
-        template_id: template_id,
+        template_id: null,
         session_id: session_id || null,
         student_id: effectiveStudentId,
         file_path: storagePath,
