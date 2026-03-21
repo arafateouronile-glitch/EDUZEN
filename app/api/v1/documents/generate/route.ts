@@ -90,65 +90,63 @@ export async function POST(request: NextRequest) {
       fileName = `${baseName}.html`
     }
 
-    // Upload dans Supabase Storage et créer les enregistrements en base
+    // Créer les enregistrements en base (indépendamment du storage)
+    const effectiveStudentId = student_id || (related_entity_type === 'student' ? related_entity_id : null)
+    const docTitle = `${(template as any).name || template.type} — ${new Date().toLocaleDateString('fr-FR')}`
     const storagePath = `${middleware.organizationId}/api/${fileName}`
+
+    let fileUrl: string | undefined
+
+    // Insert dans documents (référencé par signature_requests)
+    const { data: docRow } = await adminClient
+      .from('documents')
+      .insert({
+        title: docTitle,
+        type: template.type,
+        file_url: storagePath,
+        organization_id: middleware.organizationId,
+        template_id: template_id,
+        student_id: effectiveStudentId,
+        metadata: { format, page_count: pageCount, generated_via: 'api_v1' },
+      })
+      .select('id')
+      .single()
+
+    const documentId = docRow?.id
+
+    // Insert dans of_generated_documents (visible dans le dashboard session)
+    const { data: ofRow } = await adminClient
+      .from('of_generated_documents')
+      .insert({
+        title: docTitle,
+        document_type: template.type,
+        content: htmlContent,
+        organization_id: middleware.organizationId,
+        template_id: template_id,
+        session_id: session_id || null,
+        student_id: effectiveStudentId,
+        file_path: storagePath,
+        status: 'generated',
+        requires_signature: requires_signature === true,
+        generated_at: new Date().toISOString(),
+        metadata: { format, page_count: pageCount, document_id: documentId, generated_via: 'api_v1' },
+      })
+      .select('id')
+      .single()
+
+    const ofDocumentId = ofRow?.id
+
+    // Upload storage (best-effort — n'empêche pas la réponse si ça échoue)
     const arrayBuffer = await blob.arrayBuffer()
     const { error: uploadError } = await adminClient.storage
       .from('documents')
       .upload(storagePath, arrayBuffer, { contentType: contentTypeMap[format], upsert: true })
 
-    let documentId: string | undefined
-    let ofDocumentId: string | undefined
-    let fileUrl: string | undefined
-
     if (!uploadError) {
-      // URL signée valable 1h (document potentiellement sensible)
       const { data: signedData } = await adminClient.storage
         .from('documents')
         .createSignedUrl(storagePath, 3600)
       fileUrl = signedData?.signedUrl
-
-      const effectiveStudentId = student_id || (related_entity_type === 'student' ? related_entity_id : null)
-      const docTitle = `${(template as any).name || template.type} — ${new Date().toLocaleDateString('fr-FR')}`
-
-      // Insert dans documents (référencé par signature_requests)
-      const { data: docRow } = await adminClient
-        .from('documents')
-        .insert({
-          title: docTitle,
-          type: template.type,
-          file_url: storagePath,
-          organization_id: middleware.organizationId,
-          template_id: template_id,
-          student_id: effectiveStudentId,
-          metadata: { format, page_count: pageCount, generated_via: 'api_v1' },
-        })
-        .select('id')
-        .single()
-
-      documentId = docRow?.id
-
-      // Insert dans of_generated_documents (visible dans le dashboard session)
-      const { data: ofRow } = await adminClient
-        .from('of_generated_documents')
-        .insert({
-          title: docTitle,
-          document_type: template.type,
-          content: htmlContent,
-          organization_id: middleware.organizationId,
-          template_id: template_id,
-          session_id: session_id || null,
-          student_id: effectiveStudentId,
-          file_path: storagePath,
-          status: 'generated',
-          requires_signature: requires_signature === true,
-          generated_at: new Date().toISOString(),
-          metadata: { format, page_count: pageCount, document_id: documentId, generated_via: 'api_v1' },
-        })
-        .select('id')
-        .single()
-
-      ofDocumentId = ofRow?.id
     }
 
     const responseTime = Date.now() - startTime
