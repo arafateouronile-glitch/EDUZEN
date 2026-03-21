@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     let fileUrl: string | undefined
 
     // Insert dans documents (référencé par signature_requests)
-    const { data: docRow } = await adminClient
+    const { data: docRow, error: docError } = await adminClient
       .from('documents')
       .insert({
         title: docTitle,
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     const documentId = docRow?.id
 
     // Insert dans of_generated_documents (visible dans le dashboard session)
-    const { data: ofRow } = await adminClient
+    const { data: ofRow, error: ofError } = await adminClient
       .from('of_generated_documents')
       .insert({
         title: docTitle,
@@ -135,6 +135,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     const ofDocumentId = ofRow?.id
+    const dbErrors = {
+      documents: docError?.message || null,
+      of_generated_documents: ofError?.message || null,
+    }
 
     // Upload storage (best-effort — n'empêche pas la réponse si ça échoue)
     const arrayBuffer = await blob.arrayBuffer()
@@ -178,7 +182,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { data: { document_id: documentId, of_document_id: ofDocumentId, file_name: fileName, file_url: fileUrl, page_count: pageCount, format } },
+      { data: { document_id: documentId, of_document_id: ofDocumentId, file_name: fileName, file_url: fileUrl, page_count: pageCount, format }, _db_errors: dbErrors },
       {
         headers: {
           'X-RateLimit-Remaining': middleware.rateLimit.remaining.toString(),
