@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import {
@@ -8,20 +9,20 @@ import {
   UserPlus,
   Search,
   CheckCircle2,
-  XCircle,
-  Clock,
   AlertCircle,
   Plus,
   X,
   User,
   Mail,
   Phone,
-  Calendar,
   DollarSign,
   Loader2,
   Building2,
-  Briefcase,
   MapPin,
+  Pencil,
+  Trash2,
+  MoreVertical,
+  UserCog,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -34,8 +35,16 @@ import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
-import { cn, formatDate, formatCurrency } from '@/lib/utils'
-import { enrollmentSchema, type EnrollmentFormData } from '@/lib/validations/schemas'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { formatDate, formatCurrency } from '@/lib/utils'
+import { enrollmentSchema } from '@/lib/validations/schemas'
 import type { EnrollmentWithRelations, StudentWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 
@@ -76,7 +85,7 @@ export function ConfigApprenants({
   sessionId,
   formationId,
   enrollments = [],
-  students = [],
+  students: _students = [],
   enrollmentForm,
   onEnrollmentFormChange,
   onCreateEnrollment,
@@ -96,11 +105,22 @@ export function ConfigApprenants({
   const { addToast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
+  const router = useRouter()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showEnrollmentForm, setShowEnrollmentForm] = useState(false)
-  const [showNewStudentForm, setShowNewStudentForm] = useState(false)
+  const [_showNewStudentForm, setShowNewStudentForm] = useState(false)
   const [searchMode, setSearchMode] = useState<'all' | 'students' | 'entities'>('all')
+  const [editingEnrollment, setEditingEnrollment] = useState<EnrollmentWithRelations | null>(null)
+  const [editForm, setEditForm] = useState<{
+    enrollment_date: string
+    status: Enrollment['status']
+    payment_status: Enrollment['payment_status']
+    total_amount: string
+    paid_amount: string
+    funding_type_id: string
+  } | null>(null)
+  const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null)
 
   // Récupérer les types de financement
   const { data: fundingTypes } = useQuery({
@@ -372,6 +392,97 @@ export function ConfigApprenants({
     }
   }
 
+  // Mutation pour modifier une inscription
+  const updateEnrollmentMutation = useMutation({
+    mutationFn: async ({ enrollmentId, data }: {
+      enrollmentId: string
+      data: {
+        enrollment_date: string
+        status: Enrollment['status']
+        payment_status: Enrollment['payment_status']
+        total_amount: number
+        paid_amount: number
+        funding_type_id: string | null
+      }
+    }) => {
+      const { data: updated, error } = await supabase
+        .from('enrollments')
+        .update(data)
+        .eq('id', enrollmentId)
+        .select()
+        .single()
+      if (error) throw error
+      return updated
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionId] })
+      setEditingEnrollment(null)
+      setEditForm(null)
+      addToast({ type: 'success', title: 'Inscription modifiée', description: 'L\'inscription a été mise à jour avec succès.' })
+    },
+    onError: (error) => {
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Une erreur est survenue.' })
+    },
+  })
+
+  // Mutation pour supprimer une inscription
+  const deleteEnrollmentMutation = useMutation({
+    mutationFn: async (enrollmentId: string) => {
+      // Vérifier s'il existe une facture pour cette inscription
+      const { data: invoice } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('enrollment_id', enrollmentId)
+        .eq('document_type', 'invoice')
+        .maybeSingle()
+      if (invoice) {
+        throw new Error('Impossible de supprimer une inscription pour laquelle une facture a été émise')
+      }
+      const { error } = await supabase
+        .from('enrollments')
+        .delete()
+        .eq('id', enrollmentId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionId] })
+      queryClient.invalidateQueries({ queryKey: ['session', sessionId] })
+      setDeletingEnrollmentId(null)
+      addToast({ type: 'success', title: 'Inscription supprimée', description: 'L\'inscription a été supprimée.' })
+    },
+    onError: (error) => {
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Une erreur est survenue.' })
+      setDeletingEnrollmentId(null)
+    },
+  })
+
+  const handleOpenEdit = (enrollment: EnrollmentWithRelations) => {
+    setEditingEnrollment(enrollment)
+    setEditForm({
+      enrollment_date: enrollment.enrollment_date || new Date().toISOString().split('T')[0],
+      status: enrollment.status || 'pending',
+      payment_status: enrollment.payment_status || 'pending',
+      total_amount: enrollment.total_amount != null ? String(enrollment.total_amount) : '0',
+      paid_amount: enrollment.paid_amount != null ? String(enrollment.paid_amount) : '0',
+      funding_type_id: enrollment.funding_type_id || '',
+    })
+  }
+
+  const handleSubmitEdit = () => {
+    if (!editingEnrollment || !editForm) return
+    updateEnrollmentMutation.mutate({
+      enrollmentId: editingEnrollment.id,
+      data: {
+        enrollment_date: editForm.enrollment_date,
+        status: editForm.status,
+        payment_status: editForm.payment_status,
+        total_amount: parseFloat(editForm.total_amount) || 0,
+        paid_amount: parseFloat(editForm.paid_amount) || 0,
+        funding_type_id: editForm.funding_type_id || null,
+      },
+    })
+  }
+
   // Statistiques
   const stats = useMemo(() => {
     const enrolled = enrollments?.length || 0
@@ -596,13 +707,14 @@ export function ConfigApprenants({
                       const studentNumber = candidate.student_number || ''
                       const email = candidate.email || ''
                       const phone = candidate.phone || ''
+                      const enrollment = enrollments.find((e) => e.student_id === candidate.id)
 
                       return (
                         <motion.div
                           key={candidate.id}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="p-4 rounded-lg border border-gray-200 bg-gray-50 opacity-75"
+                          className="p-4 rounded-lg border border-green-200 bg-green-50/30"
                         >
                           <div className="flex items-start gap-3">
                             <Avatar
@@ -623,9 +735,38 @@ export function ConfigApprenants({
                                     </p>
                                   )}
                                 </div>
-                                <Badge variant="outline" className="text-xs border-green-200 text-green-600 flex-shrink-0">
-                                  Inscrit
-                                </Badge>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <Badge variant="outline" className="text-xs border-green-200 text-green-600">
+                                    Inscrit
+                                  </Badge>
+                                  {enrollment && (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-gray-700">
+                                          <MoreVertical className="h-3 w-3" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-52">
+                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${candidate.id}`)}>
+                                          <UserCog className="h-4 w-4 mr-2 text-gray-500" />
+                                          Modifier la fiche apprenant
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleOpenEdit(enrollment)}>
+                                          <Pencil className="h-4 w-4 mr-2 text-gray-500" />
+                                          Modifier l'inscription
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                          onClick={() => setDeletingEnrollmentId(enrollment.id)}
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Retirer de la session
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
+                                </div>
                               </div>
                               <div className="mt-2 space-y-1">
                                 {email && (
@@ -640,9 +781,6 @@ export function ConfigApprenants({
                                     <span>{phone}</span>
                                   </div>
                                 )}
-                              </div>
-                              <div className="mt-3 text-xs text-gray-500 text-center">
-                                Déjà inscrit à cette session
                               </div>
                             </div>
                           </div>
@@ -678,7 +816,6 @@ export function ConfigApprenants({
           <div className="space-y-4">
             {filteredEntities.map((entity) => {
               const e = entity as { id: string; name?: string | null; code?: string | null; type?: string | null; siret?: string | null; email?: string | null; phone?: string | null; address?: string | null }
-              const entityStudents = getStudentsForEntity(e.id)
               const getTypeLabel = (type: string) => {
                 const labels: Record<string, string> = {
                   company: 'Entreprise',
@@ -908,13 +1045,14 @@ export function ConfigApprenants({
                     const studentNumber = student.student_number || ''
                     const email = student.email || ''
                     const phone = student.phone || ''
+                    const enrollment = enrollments.find((e) => e.student_id === student.id)
 
                     return (
                       <motion.div
                         key={student.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-4 rounded-lg border border-gray-200 bg-gray-50 opacity-75"
+                        className="p-4 rounded-lg border border-green-200 bg-green-50/30"
                       >
                         <div className="flex items-start gap-3">
                           <Avatar
@@ -935,9 +1073,38 @@ export function ConfigApprenants({
                                   </p>
                                 )}
                               </div>
-                              <Badge variant="outline" className="text-xs border-green-200 text-green-600 flex-shrink-0">
-                                Inscrit
-                              </Badge>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <Badge variant="outline" className="text-xs border-green-200 text-green-600">
+                                  Inscrit
+                                </Badge>
+                                {enrollment && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-gray-700">
+                                        <MoreVertical className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-52">
+                                      <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${student.id}`)}>
+                                        <UserCog className="h-4 w-4 mr-2 text-gray-500" />
+                                        Modifier la fiche apprenant
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleOpenEdit(enrollment)}>
+                                        <Pencil className="h-4 w-4 mr-2 text-gray-500" />
+                                        Modifier l'inscription
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                        onClick={() => setDeletingEnrollmentId(enrollment.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Retirer de la session
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </div>
                             </div>
                             <div className="mt-2 space-y-1">
                               {email && (
@@ -952,9 +1119,6 @@ export function ConfigApprenants({
                                   <span>{phone}</span>
                                 </div>
                               )}
-                            </div>
-                            <div className="mt-3 text-xs text-gray-500 text-center">
-                              Déjà inscrit à cette session
                             </div>
                           </div>
                         </div>
@@ -1115,7 +1279,39 @@ export function ConfigApprenants({
                         {formatCurrency(parseFloat(String(enrollment.total_amount)))}
                       </Badge>
                     )}
-                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem
+                          onClick={() => router.push(`/dashboard/students/${enrollment.student_id}`)}
+                        >
+                          <UserCog className="h-4 w-4 mr-2 text-gray-500" />
+                          Modifier la fiche apprenant
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenEdit(enrollment)}
+                        >
+                          <Pencil className="h-4 w-4 mr-2 text-gray-500" />
+                          Modifier l'inscription
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                          onClick={() => setDeletingEnrollmentId(enrollment.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Retirer de la session
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </motion.div>
               )
@@ -1369,6 +1565,143 @@ export function ConfigApprenants({
           </div>
         </GlassCard>
       )}
+
+      {/* Dialog de modification d'inscription */}
+      <Dialog open={!!editingEnrollment} onOpenChange={(open) => { if (!open) { setEditingEnrollment(null); setEditForm(null) } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier l'inscription</DialogTitle>
+          </DialogHeader>
+          {editForm && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_enrollment_date">Date d'inscription</Label>
+                  <Input
+                    id="edit_enrollment_date"
+                    type="date"
+                    value={editForm.enrollment_date}
+                    onChange={(e) => setEditForm({ ...editForm, enrollment_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_status">Statut</Label>
+                  <select
+                    id="edit_status"
+                    value={editForm.status || 'pending'}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as Enrollment['status'] })}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm"
+                  >
+                    <option value="pending">En attente</option>
+                    <option value="confirmed">Confirmé</option>
+                    <option value="completed">Terminé</option>
+                    <option value="cancelled">Annulé</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_total_amount">Montant total</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="edit_total_amount"
+                      type="number"
+                      step="0.01"
+                      value={editForm.total_amount}
+                      onChange={(e) => setEditForm({ ...editForm, total_amount: e.target.value })}
+                      className="pl-10"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit_paid_amount">Montant payé</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="edit_paid_amount"
+                      type="number"
+                      step="0.01"
+                      value={editForm.paid_amount}
+                      onChange={(e) => setEditForm({ ...editForm, paid_amount: e.target.value })}
+                      className="pl-10"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="edit_payment_status">Statut de paiement</Label>
+                <select
+                  id="edit_payment_status"
+                  value={editForm.payment_status || 'pending'}
+                  onChange={(e) => setEditForm({ ...editForm, payment_status: e.target.value as Enrollment['payment_status'] })}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm"
+                >
+                  <option value="pending">En attente</option>
+                  <option value="partial">Partiel</option>
+                  <option value="paid">Payé</option>
+                  <option value="overdue">En retard</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="edit_funding_type_id">Type de financement</Label>
+                <select
+                  id="edit_funding_type_id"
+                  value={editForm.funding_type_id || ''}
+                  onChange={(e) => setEditForm({ ...editForm, funding_type_id: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm"
+                >
+                  <option value="">Aucun (financement personnel)</option>
+                  {fundingTypes?.map((type) => {
+                    const ft = type as { id?: string; name?: string; code?: string }
+                    return (
+                      <option key={ft.id} value={ft.id ?? ''}>{ft.name ?? ''} {ft.code ? `(${ft.code})` : ''}</option>
+                    )
+                  })}
+                </select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditingEnrollment(null); setEditForm(null) }}>
+              Annuler
+            </Button>
+            <Button onClick={handleSubmitEdit} disabled={updateEnrollmentMutation.isPending}>
+              {updateEnrollmentMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Enregistrement...</>
+              ) : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmation de suppression */}
+      <Dialog open={!!deletingEnrollmentId} onOpenChange={(open) => { if (!open) setDeletingEnrollmentId(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Supprimer l'inscription</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 py-2">
+            Êtes-vous sûr de vouloir supprimer définitivement cette inscription ? Cette action est irréversible.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeletingEnrollmentId(null)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingEnrollmentId && deleteEnrollmentMutation.mutate(deletingEnrollmentId)}
+              disabled={deleteEnrollmentMutation.isPending}
+            >
+              {deleteEnrollmentMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Suppression...</>
+              ) : 'Supprimer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
