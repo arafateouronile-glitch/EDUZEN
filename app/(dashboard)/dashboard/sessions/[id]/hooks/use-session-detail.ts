@@ -34,7 +34,7 @@ type SessionSlot = TableRow<'session_slots'>
 
 type WorkflowStep = 'configuration' | 'gestion' | 'espace_apprenant' | 'suivi'
 type ConfigTab = 'initialisation' | 'dates_prix' | 'apprenants' | 'programme' | 'intervenants'
-type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'finances' | 'espace_entreprise' | 'automatisation'
+type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'finances' | 'espace_entreprise' | 'automatisation' | 'examen'
 
 export interface SessionFormData {
   name: string
@@ -55,6 +55,7 @@ export interface SessionFormData {
   capacity_max: string
   teacher_id: string
   status: 'planned' | 'ongoing' | 'completed' | 'cancelled'
+  exam_date: string
 }
 
 export interface EnrollmentFormData {
@@ -134,7 +135,7 @@ export function useSessionDetail(sessionId: string) {
       // Support aussi du paramètre "tab" pour compatibilité avec "finances"
       const tabFromUrl = params.get('tab') as GestionTab | null
       const finalTab = gestionTabFromUrl || tabFromUrl
-      if (finalTab && ['conventions', 'convocations', 'evaluations', 'finances', 'espace_entreprise', 'automatisation'].includes(finalTab)) {
+      if (finalTab && ['conventions', 'convocations', 'evaluations', 'finances', 'espace_entreprise', 'automatisation', 'examen'].includes(finalTab)) {
         return finalTab
       }
     }
@@ -155,7 +156,7 @@ export function useSessionDetail(sessionId: string) {
       setActiveTab(tabFromUrl)
     }
     
-    if (gestionTabFromUrl && ['conventions', 'convocations', 'evaluations', 'finances', 'espace_entreprise', 'automatisation'].includes(gestionTabFromUrl) && gestionTabFromUrl !== activeGestionTab) {
+    if (gestionTabFromUrl && ['conventions', 'convocations', 'evaluations', 'finances', 'espace_entreprise', 'automatisation', 'examen'].includes(gestionTabFromUrl) && gestionTabFromUrl !== activeGestionTab) {
       setActiveGestionTab(gestionTabFromUrl)
     }
     
@@ -229,6 +230,7 @@ export function useSessionDetail(sessionId: string) {
     capacity_max: '',
     teacher_id: '',
     status: 'planned',
+    exam_date: '',
   })
 
   const [showEnrollmentForm, setShowEnrollmentForm] = useState(false)
@@ -624,6 +626,7 @@ export function useSessionDetail(sessionId: string) {
         capacity_max: sessionData.capacity_max?.toString() || '',
         teacher_id: sessionData.teacher_id || '',
         status: (sessionData.status || 'planned') as 'completed' | 'planned' | 'ongoing' | 'cancelled',
+        exam_date: (s as any).exam_date?.slice(0, 16) || '',
       })
 
       // Note: le total_amount sera mis à jour par l'effet sessionModules ci-dessous
@@ -1540,6 +1543,7 @@ export function useSessionDetail(sessionId: string) {
       capacity_max: formData.capacity_max ? parseInt(formData.capacity_max) : null,
       teacher_id: formData.teacher_id || null,
       status: formData.status,
+      exam_date: formData.exam_date ? new Date(formData.exam_date).toISOString() : null,
     }
 
     if (formData.formation_id && formData.formation_id !== sessionData?.formation_id) {

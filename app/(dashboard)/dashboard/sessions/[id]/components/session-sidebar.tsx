@@ -2,28 +2,29 @@
 
 import type { SVGProps } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Settings, 
-  Calendar, 
-  Users, 
-  BookOpen, 
-  UserCheck, 
-  FileText, 
-  Mail, 
-  ClipboardCheck, 
-  Euro, 
-  Building2, 
-  Cog, 
-  GraduationCap, 
+import {
+  Settings,
+  Calendar,
+  Users,
+  BookOpen,
+  UserCheck,
+  FileText,
+  Mail,
+  ClipboardCheck,
+  Euro,
+  Building2,
+  Cog,
+  GraduationCap,
   BarChart2,
   CheckCircle2,
-  Lock
+  Lock,
+  ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type WorkflowStep = 'configuration' | 'gestion' | 'espace_apprenant' | 'suivi'
 type ConfigTab = 'initialisation' | 'dates_prix' | 'apprenants' | 'programme' | 'intervenants'
-type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'finances' | 'espace_entreprise' | 'automatisation'
+type GestionTab = 'conventions' | 'convocations' | 'evaluations' | 'finances' | 'espace_entreprise' | 'automatisation' | 'examen'
 
 interface SessionSidebarProps {
   activeStep: WorkflowStep
@@ -70,7 +71,8 @@ export function SessionSidebar({
         { id: 'evaluations', label: 'Évaluations', icon: ClipboardCheck },
         { id: 'finances', label: 'Finances', icon: Euro },
         { id: 'espace_entreprise', label: 'Espace Entreprise', icon: Building2 },
-        { id: 'automatisation', label: 'Automatisation', icon: Cog }, 
+        { id: 'automatisation', label: 'Automatisation', icon: Cog },
+        { id: 'examen', label: 'Examen & Jury', icon: ScrollText },
       ]
     },
     {

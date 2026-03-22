@@ -45,6 +45,7 @@ const GestionEvaluations = lazy(() => import('./sections/gestion-evaluations').t
 const GestionFinances = lazy(() => import('./sections/gestion-finances').then(m => ({ default: m.GestionFinances })))
 const GestionEspaceEntreprise = lazy(() => import('./sections/gestion-espace-entreprise').then(m => ({ default: m.GestionEspaceEntreprise })))
 const GestionAutomatisation = lazy(() => import('./sections/gestion-automatisation').then(m => ({ default: m.GestionAutomatisation })))
+const GestionExamen = lazy(() => import('./sections/gestion-examen').then(m => ({ default: m.GestionExamen })))
 
 // Lazy loading des sections principales
 const EspaceApprenant = lazy(() => import('./sections/espace-apprenant').then(m => ({ default: m.EspaceApprenant })))
@@ -808,6 +809,15 @@ export default function SessionDetailPage() {
               {activeStep === 'gestion' && activeGestionTab === 'automatisation' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <GestionAutomatisation
+                    sessionId={sessionId}
+                    sessionData={sessionData}
+                  />
+                </Suspense>
+              )}
+
+              {activeStep === 'gestion' && activeGestionTab === 'examen' && (
+                <Suspense fallback={<SkeletonLoader />}>
+                  <GestionExamen
                     sessionId={sessionId}
                     sessionData={sessionData}
                   />
