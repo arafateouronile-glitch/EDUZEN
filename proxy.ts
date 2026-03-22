@@ -142,7 +142,7 @@ export async function proxy(req: NextRequest) {
     const requestHeaders = new Headers(req.headers)
     requestHeaders.set('x-pathname', pathname)
     requestHeaders.set(CSP_NONCE_HEADER, nonce)
-    let intlResponse = NextResponse.next({ request: { headers: requestHeaders } })
+    const intlResponse = NextResponse.next({ request: { headers: requestHeaders } })
 
     try {
       const intlResult = intlMiddleware(req)

@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 
 /** Client Supabase permettant d'appeler .from() sur des tables non encore dans Database (marketplace). Un seul cast centralisé. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClientWithMarketplace = SupabaseClient<Database> & { from(table: string): any }
 
 /** Types locaux pour les tables marketplace qui ne sont pas encore dans le schéma Supabase */

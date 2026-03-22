@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 
 type ReportCard = Database['public']['Tables']['report_cards']['Row']
 type ReportCardSubject = Database['public']['Tables']['report_card_subjects']['Row']

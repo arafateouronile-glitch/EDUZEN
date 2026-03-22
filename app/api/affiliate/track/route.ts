@@ -4,7 +4,8 @@
  * À appeler côté client quand l'utilisateur arrive avec ?ref= dans l'URL.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 

@@ -10,6 +10,11 @@
  * - Variables {variable} préservées pour docxtemplater
  */
 
+import type {
+  ITableCellOptions,
+  ITableOptions,
+  IParagraphOptions,
+  IRunOptions} from 'docx';
 import {
   Document,
   Packer,
@@ -29,11 +34,7 @@ import {
   TableLayoutType,
   VerticalAlign,
   ShadingType,
-  ITableCellOptions,
-  ITableRowOptions,
-  ITableOptions,
-  IParagraphOptions,
-  IRunOptions,
+  ITableRowOptions
 } from 'docx'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import { documentTemplateDefaults } from '@/lib/utils/document-template-defaults'
@@ -272,7 +273,7 @@ async function htmlToDocxElements(
   }
   
   // Nettoyer le HTML
-  let cleanHtml = html
+  const cleanHtml = html
     .replace(/<!--[\s\S]*?-->/g, '') // Supprimer les commentaires
     .trim()
   

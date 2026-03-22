@@ -310,7 +310,7 @@ async function processLogos(html: string, variables: VariablesMap): Promise<stri
           const altValue = altMatch ? altMatch[1] : 'Logo'
           
           // Supprimer src et data-logo-var des attributs existants
-          let cleanedAttrs = allAttrs
+          const cleanedAttrs = allAttrs
             .replace(/\s+src\s*=\s*"[^"]*"/g, '')
             .replace(/\s+data-logo-var\s*=\s*"[^"]*"/g, '')
             .trim()

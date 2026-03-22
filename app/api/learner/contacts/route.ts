@@ -3,7 +3,8 @@
  * Liste les contacts messagerie pour l'apprenant : formateurs, admin, secrétaires de l'organisme.
  * Authentification : Authorization: Bearer <token> ou x-learner-access-token (token RPC ou token de session).
  */
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStudentIdFromLearnerRequest } from '@/lib/api/learner-auth'
 import { logger, sanitizeError } from '@/lib/utils/logger'

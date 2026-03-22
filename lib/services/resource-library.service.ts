@@ -1,10 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 import { logger } from '@/lib/utils/logger'
 
 /** Client Supabase pour les tables resource (non encore dans Database). Un seul cast centralisé. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClientWithResource = SupabaseClient<Database> & { from(table: string): any }
 
 /** Types locaux pour les tables resource qui ne sont pas encore dans le schéma Supabase */

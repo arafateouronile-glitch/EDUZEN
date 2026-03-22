@@ -4,7 +4,7 @@
  * SEO optimisé avec métadonnées dynamiques
  */
 
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { PublicFormationDetail } from '@/components/public/formation-detail'
 import { createClient } from '@/lib/supabase/server'

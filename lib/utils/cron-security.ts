@@ -3,7 +3,8 @@
  * Vérification de secret, IP whitelist, logging
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { logger } from './logger'
 
 /**

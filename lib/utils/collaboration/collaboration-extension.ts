@@ -4,7 +4,7 @@
  */
 
 import { Collaboration } from '@tiptap/extension-collaboration'
-import * as Y from 'yjs'
+import type * as Y from 'yjs'
 import type { WebsocketProvider } from 'y-websocket'
 
 export interface CollaborationConfig {

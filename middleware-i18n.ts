@@ -15,7 +15,7 @@ const intlMiddleware = createMiddleware(routing)
 export async function middleware(req: NextRequest) {
   // D'abord, générer la réponse i18n, puis la réutiliser partout (auth + headers)
   // pour conserver les Set-Cookie Supabase (refresh tokens).
-  let response = intlMiddleware(req)
+  const response = intlMiddleware(req)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

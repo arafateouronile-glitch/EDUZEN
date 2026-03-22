@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 export async function GET() {
   try {
@@ -37,7 +38,7 @@ export async function GET() {
     if (error) throw error
     return NextResponse.json(data || [])
   } catch (err) {
-    console.error('[diploma-types] GET error:', err)
+    logger.error('[diploma-types] GET error', err)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

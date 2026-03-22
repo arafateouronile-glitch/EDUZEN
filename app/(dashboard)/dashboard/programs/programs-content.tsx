@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Program } from './types'
+import type { Program } from './types'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { CardTitle } from '@/components/ui/card'

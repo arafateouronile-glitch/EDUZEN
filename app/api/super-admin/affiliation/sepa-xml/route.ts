@@ -3,7 +3,8 @@
  * Génère un fichier SEPA pain.001.001.03 (Customer Credit Transfer)
  * pour virement groupé vers les affiliés. À importer dans l'interface bancaire.
  */
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 

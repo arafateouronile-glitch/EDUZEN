@@ -145,7 +145,7 @@ export function SignZonePicker({
     if (!pdfDoc || !pdfLibRef.current || !file) return
     const pdfjs = pdfLibRef.current
     const src = typeof file === 'string' ? file : URL.createObjectURL(file as File)
-    let objectUrl: string | null = typeof file === 'object' ? src : null
+    const objectUrl: string | null = typeof file === 'object' ? src : null
 
     const render = async () => {
       try {

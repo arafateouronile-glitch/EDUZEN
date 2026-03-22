@@ -41,19 +41,19 @@ CREATE TABLE IF NOT EXISTS learner_events (
 -- ─── Index ─────────────────────────────────────────────────────────────────────
 
 -- Principal : timeline par apprenant + date
-CREATE INDEX idx_learner_events_student_date
+CREATE INDEX IF NOT EXISTS idx_learner_events_student_date
   ON learner_events (student_id, created_at DESC);
 
 -- Par organisation + date : pour les dashboards globaux
-CREATE INDEX idx_learner_events_org_date
+CREATE INDEX IF NOT EXISTS idx_learner_events_org_date
   ON learner_events (organization_id, created_at DESC);
 
 -- Par session : pour voir les événements d'une session
-CREATE INDEX idx_learner_events_session
+CREATE INDEX IF NOT EXISTS idx_learner_events_session
   ON learner_events (session_id, created_at DESC);
 
 -- Par type : pour les agrégations et filtres
-CREATE INDEX idx_learner_events_type
+CREATE INDEX IF NOT EXISTS idx_learner_events_type
   ON learner_events (event_type);
 
 -- ─── RLS (Row Level Security) ──────────────────────────────────────────────────
@@ -61,6 +61,7 @@ CREATE INDEX idx_learner_events_type
 ALTER TABLE learner_events ENABLE ROW LEVEL SECURITY;
 
 -- Politique 1 : Les membres authentifiés de l'organisation lisent LEURS apprenants uniquement
+DROP POLICY IF EXISTS "org_members_read_own_learner_events" ON learner_events;
 CREATE POLICY "org_members_read_own_learner_events"
   ON learner_events FOR SELECT
   TO authenticated
@@ -72,6 +73,7 @@ CREATE POLICY "org_members_read_own_learner_events"
   );
 
 -- Politique 2 : Les membres authentifiés peuvent insérer des événements pour leur org
+DROP POLICY IF EXISTS "org_members_insert_learner_events" ON learner_events;
 CREATE POLICY "org_members_insert_learner_events"
   ON learner_events FOR INSERT
   TO authenticated
@@ -83,6 +85,7 @@ CREATE POLICY "org_members_insert_learner_events"
   );
 
 -- Politique 3 : Le service role a accès total (pour les automations serveur)
+DROP POLICY IF EXISTS "service_role_all_learner_events" ON learner_events;
 CREATE POLICY "service_role_all_learner_events"
   ON learner_events FOR ALL
   TO service_role
@@ -90,6 +93,7 @@ CREATE POLICY "service_role_all_learner_events"
   WITH CHECK (true);
 
 -- Politique 4 : Les super-admins peuvent tout lire
+DROP POLICY IF EXISTS "platform_admins_read_all_learner_events" ON learner_events;
 CREATE POLICY "platform_admins_read_all_learner_events"
   ON learner_events FOR SELECT
   TO authenticated

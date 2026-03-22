@@ -2,7 +2,8 @@
  * POST /api/signing-processes/[id]/resend – Renvoyer le lien au signataire courant.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SigningProcessService } from '@/lib/services/signing-process.service'
 import { logger } from '@/lib/utils/logger'

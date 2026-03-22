@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Editor } from '@tiptap/react'
+import type { Editor } from '@tiptap/react'
 import { cn } from '@/lib/utils'
 
 export interface SlashCommand {

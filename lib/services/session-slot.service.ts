@@ -145,7 +145,7 @@ export class SessionSlotService {
     const end = new Date(endDate)
 
     // Exclure les weekends (samedi = 6, dimanche = 0)
-    let currentDate = new Date(start)
+    const currentDate = new Date(start)
     while (currentDate <= end) {
       const dayOfWeek = currentDate.getDay()
       if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Exclure dimanche et samedi

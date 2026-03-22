@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, AppError, ErrorCode } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'

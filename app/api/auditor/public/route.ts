@@ -4,7 +4,8 @@
  * Rate limit: 20 req/min par IP (anti brute-force).
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { AuditorPortalService } from '@/lib/services/auditor-portal.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'

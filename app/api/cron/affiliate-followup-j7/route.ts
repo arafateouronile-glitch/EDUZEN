@@ -4,7 +4,8 @@
  * qui n'ont pas encore généré de clic. À appeler via un cron (ex. Vercel Cron).
  * Sécuriser par CRON_SECRET ou vérification d'origine.
  */
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import {

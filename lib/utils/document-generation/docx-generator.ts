@@ -3,6 +3,8 @@
  * Utilise la bibliothèque docx
  */
 
+import type {
+  Table} from 'docx';
 import {
   Document,
   Packer,
@@ -13,7 +15,6 @@ import {
   AlignmentType,
   PageNumber,
   PageBreak,
-  Table,
   TableRow,
   TableCell,
   WidthType,
@@ -339,7 +340,7 @@ function replacePaginationFormat(
 ): string {
   // Pour Word, on utilise des champs spéciaux qui seront remplacés lors du rendu
   // Pour l'instant, on fait une substitution basique
-  let result = format
+  const result = format
     .replace(/\{numero_page\}/g, '1') // Sera remplacé par PageNumber.CURRENT dans la vraie implémentation
     .replace(/\{total_pages\}/g, String(totalPages))
 

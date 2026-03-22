@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import { fecExportService } from '@/lib/services/fec-export.service'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 

@@ -2,7 +2,8 @@
  * GET /api/signing-processes/[id] – Détail d’un processus (Tour de contrôle).
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SigningProcessService } from '@/lib/services/signing-process.service'
 import { logger } from '@/lib/utils/logger'

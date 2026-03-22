@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { errorHandler, ErrorCode, AppError } from '@/lib/errors'
 import { logger } from '@/lib/utils/logger'
@@ -230,7 +230,7 @@ export class SignatureService {
       const validationCode = this.generateValidationCode()
 
       // Récupérer l'IP et le user agent si disponibles
-      let ipAddress: string | null = null
+      const ipAddress: string | null = null
       let userAgent: string | null = null
       
       if (typeof window !== 'undefined') {

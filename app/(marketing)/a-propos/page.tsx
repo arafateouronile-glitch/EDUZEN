@@ -1,4 +1,4 @@
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import { Navbar } from '@/components/landing/Navbar'
 import { AboutContent } from './about-content'
 

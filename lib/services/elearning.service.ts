@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -104,7 +104,7 @@ export class ELearningService {
   async getCourseBySlug(slug: string, organizationId: string) {
     try {
       // Essayer d'abord avec toutes les relations
-      let query = this.supabase
+      const query = this.supabase
         .from('courses')
         .select(`
           *,
@@ -220,7 +220,7 @@ export class ELearningService {
   }
 
   async createSection(section: TableInsert<'course_sections'>) {
-    let { data, error } = await this.supabase
+    const { data, error } = await this.supabase
       .from('course_sections')
       .insert(section)
       .select()

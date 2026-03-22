@@ -4,7 +4,8 @@
  * Le viewer charge cette URL pour afficher le PDF sans blocage CORS par Supabase.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { extractStoragePathFromPublicUrl } from '@/lib/utils/sign-document-helpers'
 import { logger } from '@/lib/utils/logger'

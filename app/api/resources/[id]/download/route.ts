@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ResourceLibraryService } from '@/lib/services/resource-library.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -45,13 +46,29 @@ export async function GET(
     const resourceLibraryService = new ResourceLibraryService(supabase)
     await resourceLibraryService.recordDownload(resourceId, user.id, ipAddress, userAgent)
 
-    // Si c'est une URL externe, rediriger
+    // Si c'est une URL externe, rediriger (validation pour éviter open redirect)
     if (res.external_url) {
+      try {
+        const url = new URL(res.external_url)
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          return NextResponse.json({ error: 'URL externe invalide' }, { status: 400 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'URL externe malformée' }, { status: 400 })
+      }
       return NextResponse.redirect(res.external_url)
     }
 
-    // Si c'est un fichier, rediriger vers l'URL
+    // Si c'est un fichier, rediriger vers l'URL (validation identique)
     if (res.file_url) {
+      try {
+        const url = new URL(res.file_url)
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          return NextResponse.json({ error: 'URL fichier invalide' }, { status: 400 })
+        }
+      } catch {
+        return NextResponse.json({ error: 'URL fichier malformée' }, { status: 400 })
+      }
       return NextResponse.redirect(res.file_url)
     }
 

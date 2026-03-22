@@ -4,7 +4,7 @@
  * Affiche les programmes publics avec leurs formations et sessions
  */
 
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import { PublicProgramsList } from '@/components/public/programs-list'
 import { createClient } from '@/lib/supabase/server'
 import { Navbar } from '@/components/landing/Navbar'

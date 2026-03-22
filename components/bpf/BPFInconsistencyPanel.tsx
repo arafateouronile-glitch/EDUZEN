@@ -16,7 +16,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { BPFInconsistency } from '@/lib/services/bpf.service'
+import type { BPFInconsistency } from '@/lib/services/bpf.service'
 import {
   AlertTriangle,
   AlertCircle,

@@ -3,7 +3,8 @@
  * Relance les retardataires : renvoie les liens de signature par email pour les demandes en attente.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { QualiopiCheckService } from '@/lib/services/qualiopi-check.service'
 import { SignatureRequestService } from '@/lib/services/signature-request.service'

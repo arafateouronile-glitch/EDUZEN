@@ -3,7 +3,8 @@
  * À exécuter toutes les 5-15 minutes
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withCronSecurity } from '@/lib/utils/cron-security'
 import { logger, sanitizeError } from '@/lib/utils/logger'

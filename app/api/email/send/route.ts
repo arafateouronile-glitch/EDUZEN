@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest} from "next/server";
+import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { Database } from "@/types/database.types";
+import type { Database } from "@/types/database.types";
 import { logger, maskId, sanitizeError } from "@/lib/utils/logger";
 import {
   withBodyValidation,
@@ -47,6 +48,10 @@ export async function POST(request: NextRequest) {
         const emails = typeof value === "string" ? [value] : value;
         if (!Array.isArray(emails)) {
           return { isValid: false, errors: ["Destinataire invalide"] };
+        }
+
+        if (emails.length > 50) {
+          return { isValid: false, errors: ["Trop de destinataires (max 50)"] };
         }
 
         const errors: string[] = [];

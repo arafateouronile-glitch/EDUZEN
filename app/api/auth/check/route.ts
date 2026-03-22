@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { withRateLimit, generalRateLimiter } from '@/lib/utils/rate-limiter'
 import { errorHandler } from '@/lib/errors'

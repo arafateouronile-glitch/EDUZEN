@@ -4,7 +4,7 @@
  * Réduit la duplication de code pour la génération de numéros
  */
 
-import { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { errorHandler } from '@/lib/errors'
 
 export interface GenerateUniqueNumberOptions {

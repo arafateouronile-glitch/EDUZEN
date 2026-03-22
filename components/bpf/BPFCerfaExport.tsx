@@ -16,7 +16,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { BPFCerfaData, BPF_CATEGORIES, BPFCategory } from '@/lib/services/bpf.service'
+import type { BPFCerfaData, BPFCategory } from '@/lib/services/bpf.service';
+import { BPF_CATEGORIES } from '@/lib/services/bpf.service'
 import {
   Download,
   FileText,

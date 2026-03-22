@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // Masque les clés API pour le logging (affiche seulement les 8 premiers caractères)

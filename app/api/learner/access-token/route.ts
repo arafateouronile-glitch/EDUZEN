@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { NextRequest, NextResponse } from 'next/server'
-import { Database } from '@/types/database.types'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
+import type { Database } from '@/types/database.types'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
 // Générer un token d'accès pour un stagiaire

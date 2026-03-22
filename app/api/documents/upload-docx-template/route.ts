@@ -8,7 +8,8 @@
  *   - organizationId: L'ID de l'organisation
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 

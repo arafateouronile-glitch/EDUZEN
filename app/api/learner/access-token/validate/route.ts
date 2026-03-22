@@ -1,6 +1,7 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { NextRequest, NextResponse } from 'next/server'
-import { Database } from '@/types/database.types'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
+import type { Database } from '@/types/database.types'
 import { logger, maskToken, maskId, sanitizeError } from '@/lib/utils/logger'
 
 // Valider un token d'accès (endpoint public, pas besoin d'auth)

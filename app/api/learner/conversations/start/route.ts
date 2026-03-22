@@ -4,7 +4,8 @@
  * Authentification : Authorization: Bearer <token> ou x-learner-access-token.
  * Body : { recipientUserId: string, firstMessage?: string }
  */
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStudentIdFromLearnerRequest } from '@/lib/api/learner-auth'
 import { logger, sanitizeError } from '@/lib/utils/logger'

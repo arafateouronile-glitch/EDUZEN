@@ -4,7 +4,8 @@
  * Ce fichier montre comment utiliser le service pour générer une convention de formation
  */
 
-import { wordGeneratorService, ConventionData } from './word-generator.service'
+import type { ConventionData } from './word-generator.service';
+import { wordGeneratorService } from './word-generator.service'
 import * as path from 'path'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 

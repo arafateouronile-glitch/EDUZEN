@@ -2066,7 +2066,7 @@ export function useDocumentGeneration({
         document.body.appendChild(tempDiv)
         await new Promise((resolve) => setTimeout(resolve, 100))
 
-        let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+        const element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
           || tempDiv.querySelector('#contract-document') as HTMLElement
           || tempDiv.querySelector('div') as HTMLElement
         if (!element) {
@@ -2220,7 +2220,7 @@ export function useDocumentGeneration({
     const student = type === 'contract' ? enrollment!.students : null
 
     if (type === 'contract' && student) {
-      let template: DocumentTemplate | null = templateId
+      const template: DocumentTemplate | null = templateId
         ? await templateService.getTemplateById(templateId)
         : await templateService.getDefaultTemplate(organization.id, 'contrat')
 
@@ -2307,7 +2307,7 @@ export function useDocumentGeneration({
       tempDiv.style.minHeight = '297mm'
       document.body.appendChild(tempDiv)
       await new Promise((resolve) => setTimeout(resolve, 100))
-      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+      const element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
         || tempDiv.querySelector('#contract-document') as HTMLElement
         || tempDiv.querySelector('div') as HTMLElement
       if (!element) {
@@ -2325,7 +2325,7 @@ export function useDocumentGeneration({
     }
 
     // convention
-    let template: DocumentTemplate | null = templateId
+    const template: DocumentTemplate | null = templateId
       ? await templateService.getTemplateById(templateId)
       : await templateService.getDefaultTemplate(organization.id, 'convention')
 
@@ -2398,7 +2398,7 @@ export function useDocumentGeneration({
     tempDiv.style.minHeight = '297mm'
     document.body.appendChild(tempDiv)
     await new Promise((resolve) => setTimeout(resolve, 100))
-    let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+    const element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
       || tempDiv.querySelector('#convention-document') as HTMLElement
       || tempDiv.querySelector('div') as HTMLElement
     if (!element) {

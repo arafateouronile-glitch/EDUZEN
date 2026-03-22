@@ -4,7 +4,7 @@
  */
 
 import { createClient as createServerClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 
 type Invoice = TableRow<'invoices'>

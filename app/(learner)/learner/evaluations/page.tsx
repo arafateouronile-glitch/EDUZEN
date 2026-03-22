@@ -59,7 +59,7 @@ export default function LearnerEvaluationsPage() {
       if (!supabase) return []
 
       // Essayer d'abord avec la requête normale
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('grades')
         .select(`
           *,

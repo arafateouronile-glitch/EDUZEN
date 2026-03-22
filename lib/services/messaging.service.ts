@@ -82,7 +82,7 @@ export class MessagingService {
     const studentIds = [...new Set((allParticipants || []).filter(p => p.student_id !== null).map(p => p.student_id as string))]
 
     // 5. Récupérer tous les utilisateurs en une seule requête (batch)
-    let usersMap: Record<string, UserDisplay> = {}
+    const usersMap: Record<string, UserDisplay> = {}
     if (userIds.length > 0) {
       const { data: usersData } = await this.supabase
         .from('users')
@@ -93,7 +93,7 @@ export class MessagingService {
     }
 
     // 6. Récupérer tous les étudiants en une seule requête (batch)
-    let studentsMap: Record<string, StudentDisplay> = {}
+    const studentsMap: Record<string, StudentDisplay> = {}
     if (studentIds.length > 0) {
       const { data: studentsData } = await this.supabase
         .from('students')

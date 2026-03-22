@@ -7,7 +7,7 @@
 // Revalider régulièrement pour afficher les mises à jour (image, description, durée, etc.)
 export const revalidate = 60
 
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { PublicProgramDetail } from '@/components/public/program-detail'
 import { createClient } from '@/lib/supabase/server'

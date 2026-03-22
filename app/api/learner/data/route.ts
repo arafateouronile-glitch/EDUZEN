@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js'
-import { NextRequest, NextResponse } from 'next/server'
-import { Database } from '@/types/database.types'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
+import type { Database } from '@/types/database.types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 /** Client Supabase dont .from() accepte un nom de table (ex. vue session_enrollments). */

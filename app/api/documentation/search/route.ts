@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DocumentationService } from '@/lib/services/documentation.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'

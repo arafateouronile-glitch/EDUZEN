@@ -3,7 +3,8 @@
  * POST /api/signing-processes – Créer un processus et envoyer le premier mail.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { SigningProcessService } from '@/lib/services/signing-process.service'
 import { logger } from '@/lib/utils/logger'

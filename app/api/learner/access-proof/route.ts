@@ -4,7 +4,8 @@
  * Pose un cookie signé (court TTL) pour prouver que l'appelant a légitimement accédé à cet apprenant.
  * Requis avant d'appeler POST /api/learner/session.
  */
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { logger, sanitizeError } from '@/lib/utils/logger'

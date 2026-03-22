@@ -16,16 +16,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
+import type {
+  BPFRevenueBreakdown,
+  BPFDrillDownMetric,
+  BPFCategory} from '@/lib/services/bpf.service';
 import {
   bpfService,
   BPFStats,
-  BPFRevenueBreakdown,
   BPFChargesBreakdown,
   BPFInconsistency,
   BPFStudentBreakdown,
-  BPFCerfaData,
-  BPFDrillDownMetric,
-  BPFCategory,
+  BPFCerfaData
 } from '@/lib/services/bpf.service'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

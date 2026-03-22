@@ -147,7 +147,7 @@ export default function GenerateDocumentPage() {
       if (!user?.organization_id) return []
       
       // Essayer d'abord avec la jointure complète
-      let query = supabase
+      const query = supabase
         .from('invoices')
         .select('id, invoice_number, student_id, enrollment_id, issue_date, due_date, amount, tax_amount, total_amount, currency, items, students(first_name, last_name, student_number), enrollments(session_id)')
         .eq('organization_id', user.organization_id)

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import { parseEDOFXML, validateTraining, type EDOFTraining } from '@/lib/utils/cpf/xml-parser'
 import { createHash } from 'crypto'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'

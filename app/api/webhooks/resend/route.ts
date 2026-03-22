@@ -12,7 +12,8 @@
  *   Signing secret → copier dans RESEND_WEBHOOK_SECRET (format : whsec_XXXXXX)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 

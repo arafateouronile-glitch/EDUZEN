@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DEFAULT_PERMISSIONS_BY_ROLE } from '@/types/super-admin.types'
 import type { PlatformAdminRole } from '@/types/super-admin.types'

@@ -1,6 +1,7 @@
 'use server'
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 // NOTE: Service word-generator non implémenté - Fonctionnalité prévue pour une future version
 // import { wordGeneratorService, ConventionData } from '@/lib/services/word-generator.service'
 import * as path from 'path'

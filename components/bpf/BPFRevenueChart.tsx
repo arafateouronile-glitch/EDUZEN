@@ -18,7 +18,8 @@ import {
   RechartsResponsiveContainer,
   RechartsSector,
 } from '@/components/charts/recharts-wrapper'
-import { BPFRevenueBreakdown, BPF_CATEGORIES, BPFCategory } from '@/lib/services/bpf.service'
+import type { BPFRevenueBreakdown, BPFCategory } from '@/lib/services/bpf.service';
+import { BPF_CATEGORIES } from '@/lib/services/bpf.service'
 import { DollarSign, TrendingUp, Info } from 'lucide-react'
 
 // Couleurs premium pour chaque catégorie BPF

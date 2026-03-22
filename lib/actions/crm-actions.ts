@@ -150,7 +150,7 @@ export async function getOrganizationTimeline(organizationId: string): Promise<{
 
     // Resolve user names
     const userIds = [...new Set((events ?? []).map((e: { user_id?: string }) => e.user_id).filter(Boolean) as string[])]
-    let userMap = new Map<string, string>()
+    const userMap = new Map<string, string>()
 
     if (userIds.length > 0) {
       const { data: users } = await supabase

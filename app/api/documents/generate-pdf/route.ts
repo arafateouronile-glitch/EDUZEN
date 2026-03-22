@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import { logger } from '@/lib/utils/logger'
 import { createPage } from '@/lib/utils/puppeteer-pool'

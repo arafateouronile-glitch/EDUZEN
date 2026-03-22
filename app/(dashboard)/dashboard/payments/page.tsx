@@ -246,7 +246,7 @@ function PaymentsPageContent() {
           startDate = new Date(now.getFullYear(), now.getMonth() - 23, 1)
       }
 
-      let query = supabase
+      const query = supabase
         .from('payments')
         .select('amount, currency, payment_method, paid_at')
         .eq('organization_id', user.organization_id)

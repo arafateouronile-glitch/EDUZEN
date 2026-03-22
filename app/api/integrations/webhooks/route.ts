@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAPIService } from '@/lib/services/api.service'
 import { canUseWebhooks } from '@/lib/services/plan-limits'

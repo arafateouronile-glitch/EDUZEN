@@ -3,7 +3,8 @@
  * Télécharge un ZIP contenant les preuves de la session (conventions signées, etc.) pour l'audit.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { QualiopiCheckService } from '@/lib/services/qualiopi-check.service'
 import { logger } from '@/lib/utils/logger'

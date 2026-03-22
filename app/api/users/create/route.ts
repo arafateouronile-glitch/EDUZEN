@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest} from "next/server";
+import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { Database } from "@/types/database.types";
+import type { Database } from "@/types/database.types";
 import {
   withBodyValidation,
   type ValidationSchema,

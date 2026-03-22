@@ -123,7 +123,7 @@ export default function LearnerQuizPage() {
       logger.info('[Learner Grade] Tentative de récupération du grade', { quizId, studentId: studentData?.id })
       
       // Essayer d'abord sans relations pour éviter les problèmes RLS
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('grades')
         .select('*')
         .eq('id', quizId)

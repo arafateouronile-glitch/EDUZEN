@@ -3,7 +3,8 @@
  */
 
 import { logger, sanitizeError } from '@/lib/utils/logger'
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { applyRateLimit, RATE_LIMITS } from './rate-limit'
 
 type RateLimitType = keyof typeof RATE_LIMITS

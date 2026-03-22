@@ -79,7 +79,7 @@ export default function LearnerSessionDetailPage() {
       
       try {
         // Essayer d'abord avec formations (colonnes de base uniquement)
-        let { data, error } = await supabase
+        const { data, error } = await supabase
           .from('sessions')
           .select(`
             *,

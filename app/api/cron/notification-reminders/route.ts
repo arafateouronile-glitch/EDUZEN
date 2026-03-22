@@ -5,7 +5,8 @@
  * Configurer via Vercel Cron ou service externe
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 

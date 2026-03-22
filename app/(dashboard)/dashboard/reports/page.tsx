@@ -488,7 +488,7 @@ function ReportsPageContent() {
     queryFn: async () => {
       if (!user?.organization_id) return []
 
-      let query = supabase
+      const query = supabase
         .from('students')
         .select(`
           *,

@@ -1,7 +1,8 @@
 'use client'
 
 import { motion, useMotionValue, useSpring, useTransform } from '@/components/ui/motion'
-import { ReactNode, useRef } from 'react'
+import type { ReactNode} from 'react';
+import { useRef } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface Card3DProps {

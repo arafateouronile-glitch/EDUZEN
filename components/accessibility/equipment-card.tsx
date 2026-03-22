@@ -1,6 +1,6 @@
 'use client'
 
-import { Equipment } from '@/lib/services/accessibility.service'
+import type { Equipment } from '@/lib/services/accessibility.service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

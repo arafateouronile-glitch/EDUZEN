@@ -3,7 +3,8 @@
  * Permet de programmer l'envoi à une date/heure précise
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger, sanitizeError } from '@/lib/utils/logger'

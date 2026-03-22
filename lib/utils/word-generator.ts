@@ -1537,7 +1537,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Traiter le contenu du div de manière récursive pour préserver la structure
           // Exclure les tableaux déjà traités et les divs imbriqués (pour éviter la récursion infinie)
-          let processedDivContent = divContent
+          const processedDivContent = divContent
             .replace(/<table[^>]*>[\s\S]*?<\/table>/gi, '') // Exclure les tableaux
             .replace(/<div[^>]*>[\s\S]*?<\/div>/gi, '') // Exclure les divs imbriqués (traités séparément)
           

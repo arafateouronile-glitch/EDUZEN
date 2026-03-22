@@ -56,7 +56,7 @@ export default function CatalogSettingsPage() {
   const { data: settings, isLoading } = useQuery<Record<string, unknown> | null>({
     queryKey: ['public-catalog-settings', user?.organization_id],
     queryFn: async () => {
-      const result = await publicCatalogSettingsService.getSettings(user?.organization_id!)
+      const result = await publicCatalogSettingsService.getSettings(user?.organization_id ?? '')
       return result as Record<string, unknown> | null
     },
     enabled: !!user?.organization_id,

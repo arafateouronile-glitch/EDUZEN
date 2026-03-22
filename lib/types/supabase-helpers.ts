@@ -1,4 +1,4 @@
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 
 /**
  * Helpers pour améliorer l'inférence de types avec Supabase

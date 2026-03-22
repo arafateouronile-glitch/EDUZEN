@@ -4,7 +4,8 @@
  * Même origine = pas de CORS pour le viewer.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { extractStoragePathFromPublicUrl } from '@/lib/utils/sign-document-helpers'
 import { logger } from '@/lib/utils/logger'

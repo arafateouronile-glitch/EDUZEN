@@ -33,7 +33,7 @@ import { motion, AnimatePresence } from '@/components/ui/motion'
 /** Retourne le contenu HTML en texte brut (pas de rendu HTML). Supprime style/script. */
 function htmlToPlainText(html: string): string {
   if (!html || typeof html !== 'string') return ''
-  let cleaned = html
+  const cleaned = html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
   const div = typeof document !== 'undefined' ? document.createElement('div') : null

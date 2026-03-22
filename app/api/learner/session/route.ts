@@ -4,7 +4,8 @@
  * Exige un cookie "preuve d'accès" posé par POST /api/learner/access-proof après visite de /learner/access/[id].
  * Rate limit: 10 requêtes / heure / IP.
  */
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createLearnerSessionToken } from '@/lib/api/learner-auth'
 import { verifyAccessProofCookie } from '@/app/api/learner/access-proof/route'
@@ -23,7 +24,7 @@ export function resetLearnerSessionRateLimitForTests(): void {
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
   const hour = 60 * 60 * 1000
-  let entry = ipCount.get(ip)
+  const entry = ipCount.get(ip)
   if (!entry) {
     ipCount.set(ip, { count: 1, resetAt: now + hour })
     return true

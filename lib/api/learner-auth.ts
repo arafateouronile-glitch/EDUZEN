@@ -2,9 +2,9 @@
  * Authentification des routes API espace apprenant.
  * Valide le token (RPC Supabase ou token de session signé) et retourne le student_id.
  */
-import { NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 

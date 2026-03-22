@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import JSZip from 'jszip'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'

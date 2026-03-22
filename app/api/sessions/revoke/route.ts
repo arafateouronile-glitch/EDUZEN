@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'
 import { errorHandler, AppError } from '@/lib/errors'

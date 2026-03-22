@@ -14,7 +14,8 @@
  */
 
 import dynamic from 'next/dynamic'
-import { ComponentType, Suspense } from 'react'
+import type { ComponentType} from 'react';
+import { Suspense } from 'react'
 
 // Loading fallback component
 function LoadingFallback({ height = 200 }: { height?: number }) {

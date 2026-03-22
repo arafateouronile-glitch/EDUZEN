@@ -4,7 +4,7 @@
  * Affiche le catalogue public d'une organisation spécifique en utilisant son slug
  */
 
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
 // Revalider régulièrement pour afficher les mises à jour des programmes (image, description, etc.)
 export const revalidate = 60
 import { notFound } from 'next/navigation'

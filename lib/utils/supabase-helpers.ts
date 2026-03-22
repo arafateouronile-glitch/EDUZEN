@@ -4,7 +4,7 @@
  * Réduit la duplication de code dans les services
  */
 
-import { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { errorHandler, AppError, ErrorCode } from '@/lib/errors'
 
 export interface GetAllByOrganizationOptions {

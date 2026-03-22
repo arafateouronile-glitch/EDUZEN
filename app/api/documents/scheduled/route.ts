@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server'
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
-import { Database } from '@/types/database.types'
+import type { Database } from '@/types/database.types'
 import { ScheduledGenerationService, type ScheduledGenerationConfig } from '@/lib/services/scheduled-generation.service'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
