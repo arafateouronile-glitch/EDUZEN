@@ -3,8 +3,8 @@ import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 import { logger } from '@/lib/utils/logger'
 
-/** Client Supabase pour les tables documentation (non encore dans Database). Un seul cast centralisé. */
-type SupabaseClientWithDocumentation = SupabaseClient<Database> & { from(table: string): any }
+/** Client Supabase avec from() non typé pour contourner les erreurs de schéma. */
+type SupabaseClientWithDocumentation = Omit<SupabaseClient<Database>, 'from'> & { from(table: string): any }
 
 /** Types locaux pour les tables documentation qui ne sont pas encore dans le schéma Supabase */
 interface DocumentationCategory {
@@ -90,7 +90,6 @@ export class DocumentationService {
         .from('documentation_categories')
         .select('*')
         .eq('slug', slug)
-        .single()
 
       if (organizationId) {
         query = query.eq('organization_id', organizationId)
@@ -98,7 +97,7 @@ export class DocumentationService {
         query = query.eq('is_public', true)
       }
 
-      const { data, error } = await query
+      const { data, error } = await query.single()
 
       if (error) throw error
       return data
@@ -579,12 +578,12 @@ export class DocumentationService {
     }
 
     if (data.length > 0) {
-      const ratings = data.filter((f: DocumentationFeedback) => f.rating).map((f: DocumentationFeedback) => f.rating!)
+      const ratings = data.filter((f: { rating: number | null; is_helpful: boolean | null }) => f.rating).map((f: { rating: number | null; is_helpful: boolean | null }) => f.rating!)
       if (ratings.length > 0) {
         stats.averageRating = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length
       }
 
-      data.forEach((f: DocumentationFeedback) => {
+      data.forEach((f: { rating: number | null; is_helpful: boolean | null }) => {
         if (f.rating) stats.ratings[f.rating as keyof typeof stats.ratings]++
         if (f.is_helpful === true) stats.helpfulCount++
         if (f.is_helpful === false) stats.notHelpfulCount++

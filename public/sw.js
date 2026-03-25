@@ -126,7 +126,9 @@ self.addEventListener('fetch', (event) => {
         return response
       })
       .catch(() => {
-        return caches.match(request)
+        return caches.match(request).then((cachedResponse) => {
+          return cachedResponse || new Response('', { status: 503, statusText: 'Service Unavailable' })
+        })
       })
   )
 })

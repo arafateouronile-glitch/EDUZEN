@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const signature = await signatureService.createSignature({
       documentId: signatureRequest.document.id,
       organizationId: signatureRequest.organization_id,
-      signerId: signatureRequest.recipient_id || signatureRequest.requester_id,
+      signerId: (signatureRequest.recipient_id || signatureRequest.requester_id) as string,
       signatureData,
       signatureType: 'handwritten',
       signerName: signatureRequest.recipient_name,

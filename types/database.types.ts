@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       academic_years: {
@@ -50,7 +75,7 @@ export type Database = {
             foreignKeyName: "academic_years_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -117,7 +142,7 @@ export type Database = {
             foreignKeyName: "access_logs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -132,288 +157,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      affiliate_campaigns: {
-        Row: {
-          commission_percent: number
-          commission_type: string
-          cookie_days: number
-          created_at: string
-          description: string | null
-          id: string
-          is_active: boolean
-          metadata: Json | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          commission_percent: number
-          commission_type?: string
-          cookie_days?: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          metadata?: Json | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          commission_percent?: number
-          commission_type?: string
-          cookie_days?: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          metadata?: Json | null
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      affiliate_commissions: {
-        Row: {
-          affiliate_id: string
-          commission_amount: number
-          commission_percent: number
-          created_at: string
-          currency: string
-          id: string
-          order_amount: number
-          status: string
-          stripe_charge_id: string | null
-          stripe_customer_id: string
-          stripe_invoice_id: string
-          updated_at: string
-        }
-        Insert: {
-          affiliate_id: string
-          commission_amount: number
-          commission_percent: number
-          created_at?: string
-          currency?: string
-          id?: string
-          order_amount: number
-          status?: string
-          stripe_charge_id?: string | null
-          stripe_customer_id: string
-          stripe_invoice_id: string
-          updated_at?: string
-        }
-        Update: {
-          affiliate_id?: string
-          commission_amount?: number
-          commission_percent?: number
-          created_at?: string
-          currency?: string
-          id?: string
-          order_amount?: number
-          status?: string
-          stripe_charge_id?: string | null
-          stripe_customer_id?: string
-          stripe_invoice_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "affiliate_commissions_affiliate_id_fkey"
-            columns: ["affiliate_id"]
-            isOneToOne: false
-            referencedRelation: "affiliates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      affiliate_payouts: {
-        Row: {
-          affiliate_id: string
-          amount: number
-          created_at: string
-          currency: string
-          id: string
-          invoice_url: string | null
-          metadata: Json | null
-          paid_at: string | null
-          period_end: string
-          period_start: string
-          reference: string | null
-          referral_ids: string[] | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          affiliate_id: string
-          amount: number
-          created_at?: string
-          currency?: string
-          id?: string
-          invoice_url?: string | null
-          metadata?: Json | null
-          paid_at?: string | null
-          period_end: string
-          period_start: string
-          reference?: string | null
-          referral_ids?: string[] | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          affiliate_id?: string
-          amount?: number
-          created_at?: string
-          currency?: string
-          id?: string
-          invoice_url?: string | null
-          metadata?: Json | null
-          paid_at?: string | null
-          period_end?: string
-          period_start?: string
-          reference?: string | null
-          referral_ids?: string[] | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "affiliate_payouts_affiliate_id_fkey"
-            columns: ["affiliate_id"]
-            isOneToOne: false
-            referencedRelation: "affiliates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      affiliate_referrals: {
-        Row: {
-          affiliate_id: string
-          campaign_id: string | null
-          clicked_at: string
-          commission_amount: number
-          converted_at: string | null
-          created_at: string
-          id: string
-          metadata: Json | null
-          mrr_contribution: number
-          organization_id: string | null
-          promo_code_used: string | null
-          subscription_id: string | null
-          type: string
-          updated_at: string
-          visitor_id: string | null
-        }
-        Insert: {
-          affiliate_id: string
-          campaign_id?: string | null
-          clicked_at?: string
-          commission_amount?: number
-          converted_at?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          mrr_contribution?: number
-          organization_id?: string | null
-          promo_code_used?: string | null
-          subscription_id?: string | null
-          type: string
-          updated_at?: string
-          visitor_id?: string | null
-        }
-        Update: {
-          affiliate_id?: string
-          campaign_id?: string | null
-          clicked_at?: string
-          commission_amount?: number
-          converted_at?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          mrr_contribution?: number
-          organization_id?: string | null
-          promo_code_used?: string | null
-          subscription_id?: string | null
-          type?: string
-          updated_at?: string
-          visitor_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "affiliate_referrals_affiliate_id_fkey"
-            columns: ["affiliate_id"]
-            isOneToOne: false
-            referencedRelation: "affiliates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "affiliate_referrals_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "affiliate_campaigns"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      affiliates: {
-        Row: {
-          campaign_id: string | null
-          commission_rate_override: number | null
-          company_name: string | null
-          cookie_days: number | null
-          created_at: string
-          email: string
-          full_name: string | null
-          id: string
-          metadata: Json | null
-          payment_bic: string | null
-          payment_holder_name: string | null
-          payment_iban: string | null
-          payment_notes: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          campaign_id?: string | null
-          commission_rate_override?: number | null
-          company_name?: string | null
-          cookie_days?: number | null
-          created_at?: string
-          email: string
-          full_name?: string | null
-          id?: string
-          metadata?: Json | null
-          payment_bic?: string | null
-          payment_holder_name?: string | null
-          payment_iban?: string | null
-          payment_notes?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          campaign_id?: string | null
-          commission_rate_override?: number | null
-          company_name?: string | null
-          cookie_days?: number | null
-          created_at?: string
-          email?: string
-          full_name?: string | null
-          id?: string
-          metadata?: Json | null
-          payment_bic?: string | null
-          payment_holder_name?: string | null
-          payment_iban?: string | null
-          payment_notes?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_affiliates_campaign"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "affiliate_campaigns"
             referencedColumns: ["id"]
           },
         ]
@@ -485,7 +228,7 @@ export type Database = {
             foreignKeyName: "accessibility_accommodations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -597,7 +340,7 @@ export type Database = {
             foreignKeyName: "accessibility_compliance_reports_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -670,7 +413,7 @@ export type Database = {
             foreignKeyName: "accessibility_configurations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -807,7 +550,7 @@ export type Database = {
             foreignKeyName: "accessibility_documents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -926,7 +669,7 @@ export type Database = {
             foreignKeyName: "accessibility_equipment_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1020,7 +763,7 @@ export type Database = {
             foreignKeyName: "accessibility_equipment_assignments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1139,7 +882,7 @@ export type Database = {
             foreignKeyName: "accessibility_student_needs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1309,7 +1052,7 @@ export type Database = {
             foreignKeyName: "accounting_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1437,6 +1180,288 @@ export type Database = {
           },
         ]
       }
+      affiliate_campaigns: {
+        Row: {
+          commission_percent: number
+          commission_type: string
+          cookie_days: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          commission_percent: number
+          commission_type?: string
+          cookie_days?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          commission_percent?: number
+          commission_type?: string
+          cookie_days?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      affiliate_commissions: {
+        Row: {
+          affiliate_id: string
+          commission_amount: number
+          commission_percent: number
+          created_at: string
+          currency: string
+          id: string
+          order_amount: number
+          status: string
+          stripe_charge_id: string | null
+          stripe_customer_id: string
+          stripe_invoice_id: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          commission_amount: number
+          commission_percent: number
+          created_at?: string
+          currency?: string
+          id?: string
+          order_amount: number
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_customer_id: string
+          stripe_invoice_id: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          commission_amount?: number
+          commission_percent?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          order_amount?: number
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_customer_id?: string
+          stripe_invoice_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_payouts: {
+        Row: {
+          affiliate_id: string
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          invoice_url: string | null
+          metadata: Json | null
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          reference: string | null
+          referral_ids: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_url?: string | null
+          metadata?: Json | null
+          paid_at?: string | null
+          period_end: string
+          period_start: string
+          reference?: string | null
+          referral_ids?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          invoice_url?: string | null
+          metadata?: Json | null
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          reference?: string | null
+          referral_ids?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_referrals: {
+        Row: {
+          affiliate_id: string
+          campaign_id: string | null
+          clicked_at: string
+          commission_amount: number | null
+          converted_at: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          mrr_contribution: number | null
+          organization_id: string | null
+          promo_code_used: string | null
+          subscription_id: string | null
+          type: string
+          updated_at: string
+          visitor_id: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          campaign_id?: string | null
+          clicked_at?: string
+          commission_amount?: number | null
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          mrr_contribution?: number | null
+          organization_id?: string | null
+          promo_code_used?: string | null
+          subscription_id?: string | null
+          type: string
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          campaign_id?: string | null
+          clicked_at?: string
+          commission_amount?: number | null
+          converted_at?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          mrr_contribution?: number | null
+          organization_id?: string | null
+          promo_code_used?: string | null
+          subscription_id?: string | null
+          type?: string
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_referrals_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          campaign_id: string | null
+          commission_rate_override: number | null
+          company_name: string | null
+          cookie_days: number | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          metadata: Json | null
+          payment_bic: string | null
+          payment_holder_name: string | null
+          payment_iban: string | null
+          payment_notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          commission_rate_override?: number | null
+          company_name?: string | null
+          cookie_days?: number | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_bic?: string | null
+          payment_holder_name?: string | null
+          payment_iban?: string | null
+          payment_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          commission_rate_override?: number | null
+          company_name?: string | null
+          cookie_days?: number | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_bic?: string | null
+          payment_holder_name?: string | null
+          payment_iban?: string | null
+          payment_notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_affiliates_campaign"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_models: {
         Row: {
           accuracy_score: number | null
@@ -1497,7 +1522,7 @@ export type Database = {
             foreignKeyName: "ai_models_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1571,7 +1596,7 @@ export type Database = {
             foreignKeyName: "ai_predictions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1666,7 +1691,7 @@ export type Database = {
             foreignKeyName: "anomalies_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1766,7 +1791,7 @@ export type Database = {
             foreignKeyName: "anomaly_alerts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1848,7 +1873,7 @@ export type Database = {
             foreignKeyName: "anomaly_detection_models_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1919,7 +1944,7 @@ export type Database = {
             foreignKeyName: "anomaly_detection_rules_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1976,6 +2001,241 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      api_keys: {
+        Row: {
+          allowed_ips: string[] | null
+          allowed_origins: string[] | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          organization_id: string
+          rate_limit_per_day: number | null
+          rate_limit_per_hour: number | null
+          rate_limit_per_minute: number | null
+          request_count: number | null
+          scopes: string[] | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          allowed_ips?: string[] | null
+          allowed_origins?: string[] | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          organization_id: string
+          rate_limit_per_day?: number | null
+          rate_limit_per_hour?: number | null
+          rate_limit_per_minute?: number | null
+          request_count?: number | null
+          scopes?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          allowed_ips?: string[] | null
+          allowed_origins?: string[] | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          organization_id?: string
+          rate_limit_per_day?: number | null
+          rate_limit_per_hour?: number | null
+          rate_limit_per_minute?: number | null
+          request_count?: number | null
+          scopes?: string[] | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_quotas: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          quota_period_end: string | null
+          quota_period_start: string
+          requests_per_day: number | null
+          requests_per_hour: number | null
+          requests_per_minute: number | null
+          requests_per_month: number | null
+          requests_used_day: number | null
+          requests_used_hour: number | null
+          requests_used_minute: number | null
+          requests_used_month: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          quota_period_end?: string | null
+          quota_period_start?: string
+          requests_per_day?: number | null
+          requests_per_hour?: number | null
+          requests_per_minute?: number | null
+          requests_per_month?: number | null
+          requests_used_day?: number | null
+          requests_used_hour?: number | null
+          requests_used_minute?: number | null
+          requests_used_month?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          quota_period_end?: string | null
+          quota_period_start?: string
+          requests_per_day?: number | null
+          requests_per_hour?: number | null
+          requests_per_minute?: number | null
+          requests_per_month?: number | null
+          requests_used_day?: number | null
+          requests_used_hour?: number | null
+          requests_used_minute?: number | null
+          requests_used_month?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_quotas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "api_quotas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "api_quotas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_requests: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          endpoint: string
+          id: string
+          ip_address: unknown
+          method: string
+          organization_id: string | null
+          path: string
+          query_params: Json | null
+          response_time_ms: number | null
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip_address?: unknown
+          method: string
+          organization_id?: string | null
+          path: string
+          query_params?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip_address?: unknown
+          method?: string
+          organization_id?: string | null
+          path?: string
+          query_params?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_requests_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "api_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "api_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       assignment_submissions: {
         Row: {
@@ -2154,7 +2414,7 @@ export type Database = {
             foreignKeyName: "attendance_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -2260,6 +2520,73 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: unknown
+          metadata: Json | null
+          organization_id: string | null
+          record_id: string | null
+          success: boolean
+          table_name: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          organization_id?: string | null
+          record_id?: string | null
+          success?: boolean
+          table_name: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown
+          metadata?: Json | null
+          organization_id?: string | null
+          record_id?: string | null
+          success?: boolean
+          table_name?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auditor_access_links: {
         Row: {
           access_count: number | null
@@ -2331,7 +2658,7 @@ export type Database = {
             foreignKeyName: "auditor_access_links_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -2694,7 +3021,7 @@ export type Database = {
             foreignKeyName: "bpf_monthly_snapshots_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -2864,7 +3191,7 @@ export type Database = {
             foreignKeyName: "bpf_reports_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -3063,7 +3390,7 @@ export type Database = {
             foreignKeyName: "calendar_events_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -3178,7 +3505,7 @@ export type Database = {
             foreignKeyName: "calendar_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -3261,7 +3588,7 @@ export type Database = {
             foreignKeyName: "calendar_notifications_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -3553,7 +3880,7 @@ export type Database = {
             foreignKeyName: "calendar_todos_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -3651,7 +3978,7 @@ export type Database = {
             foreignKeyName: "calendar_user_preferences_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -3725,7 +4052,7 @@ export type Database = {
             foreignKeyName: "calendars_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -3913,7 +4240,7 @@ export type Database = {
             foreignKeyName: "certification_certificates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -4026,7 +4353,7 @@ export type Database = {
             foreignKeyName: "certification_juries_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -4105,7 +4432,7 @@ export type Database = {
             foreignKeyName: "charge_categories_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -4173,7 +4500,7 @@ export type Database = {
             foreignKeyName: "classes_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -4249,7 +4576,10 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
+          external_entity_id: string | null
           id: string
           is_active: boolean
           legal_form: string | null
@@ -4275,7 +4605,10 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
+          external_entity_id?: string | null
           id?: string
           is_active?: boolean
           legal_form?: string | null
@@ -4301,7 +4634,10 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
+          external_entity_id?: string | null
           id?: string
           is_active?: boolean
           legal_form?: string | null
@@ -4322,10 +4658,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "companies_external_entity_id_fkey"
+            columns: ["external_entity_id"]
+            isOneToOne: false
+            referencedRelation: "external_entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "companies_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -4438,7 +4781,7 @@ export type Database = {
           phone: string | null
           role: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -4461,7 +4804,7 @@ export type Database = {
           phone?: string | null
           role?: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -4484,7 +4827,7 @@ export type Database = {
           phone?: string | null
           role?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -4600,7 +4943,7 @@ export type Database = {
             foreignKeyName: "compliance_evidence_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -4698,7 +5041,7 @@ export type Database = {
             foreignKeyName: "compliance_evidence_automated_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -4816,7 +5159,7 @@ export type Database = {
             foreignKeyName: "conversations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -5117,7 +5460,7 @@ export type Database = {
             foreignKeyName: "courses_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -5218,7 +5561,7 @@ export type Database = {
             foreignKeyName: "cpf_catalog_sync_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -5330,7 +5673,7 @@ export type Database = {
             foreignKeyName: "cpf_eligible_trainings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -5439,7 +5782,7 @@ export type Database = {
             foreignKeyName: "cpf_enrollments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -5614,7 +5957,7 @@ export type Database = {
             foreignKeyName: "crm_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -5701,6 +6044,55 @@ export type Database = {
           },
         ]
       }
+      customer_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          organization_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "customer_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "customer_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digital_evidence: {
         Row: {
           created_at: string
@@ -5740,7 +6132,7 @@ export type Database = {
             foreignKeyName: "digital_evidence_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -5752,6 +6144,103 @@ export type Database = {
           },
           {
             foreignKeyName: "digital_evidence_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diploma_alert_log: {
+        Row: {
+          alert_type: string
+          diploma_id: string
+          id: string
+          recipient: string | null
+          sent_at: string
+        }
+        Insert: {
+          alert_type: string
+          diploma_id: string
+          id?: string
+          recipient?: string | null
+          sent_at?: string
+        }
+        Update: {
+          alert_type?: string
+          diploma_id?: string
+          id?: string
+          recipient?: string | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diploma_alert_log_diploma_id_fkey"
+            columns: ["diploma_id"]
+            isOneToOne: false
+            referencedRelation: "employee_diplomas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diploma_alert_log_diploma_id_fkey"
+            columns: ["diploma_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_diploma_compliance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diploma_types: {
+        Row: {
+          color: string
+          created_at: string
+          default_validity_months: number
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          default_validity_months?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          default_validity_months?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diploma_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "diploma_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "diploma_types_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -5847,7 +6336,7 @@ export type Database = {
             foreignKeyName: "document_signatures_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6014,7 +6503,7 @@ export type Database = {
             foreignKeyName: "document_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6033,6 +6522,323 @@ export type Database = {
           },
         ]
       }
+      documentation_articles: {
+        Row: {
+          author_id: string | null
+          category_id: string
+          content: string
+          created_at: string
+          excerpt: string | null
+          id: string
+          is_featured: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          order_index: number | null
+          organization_id: string | null
+          published_at: string | null
+          slug: string
+          status: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          view_count: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          category_id: string
+          content: string
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          is_featured?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          order_index?: number | null
+          organization_id?: string | null
+          published_at?: string | null
+          slug: string
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          view_count?: number | null
+        }
+        Update: {
+          author_id?: string | null
+          category_id?: string
+          content?: string
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          is_featured?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          order_index?: number | null
+          organization_id?: string | null
+          published_at?: string | null
+          slug?: string
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_articles_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_articles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "documentation_articles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "documentation_articles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          order_index: number | null
+          organization_id: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          order_index?: number | null
+          organization_id?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          order_index?: number | null
+          organization_id?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "documentation_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "documentation_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_favorites: {
+        Row: {
+          article_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_favorites_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_feedback: {
+        Row: {
+          article_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          is_helpful: boolean | null
+          rating: number | null
+          user_id: string | null
+        }
+        Insert: {
+          article_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          is_helpful?: boolean | null
+          rating?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          article_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          is_helpful?: boolean | null
+          rating?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_feedback_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_notes: {
+        Row: {
+          article_id: string
+          content: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          content: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_notes_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_search_history: {
+        Row: {
+          created_at: string
+          id: string
+          query: string
+          results_count: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          query: string
+          results_count?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          query?: string
+          results_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      documentation_sections: {
+        Row: {
+          article_id: string
+          content: string
+          created_at: string
+          id: string
+          order_index: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          article_id: string
+          content: string
+          created_at?: string
+          id?: string
+          order_index?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          article_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          order_index?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_sections_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string | null
@@ -6041,6 +6847,10 @@ export type Database = {
           id: string
           metadata: Json | null
           organization_id: string | null
+          signed_at: string | null
+          signed_file_path: string | null
+          signed_file_url: string | null
+          status: string | null
           student_id: string | null
           template_id: string | null
           title: string
@@ -6054,6 +6864,10 @@ export type Database = {
           id?: string
           metadata?: Json | null
           organization_id?: string | null
+          signed_at?: string | null
+          signed_file_path?: string | null
+          signed_file_url?: string | null
+          status?: string | null
           student_id?: string | null
           template_id?: string | null
           title: string
@@ -6067,6 +6881,10 @@ export type Database = {
           id?: string
           metadata?: Json | null
           organization_id?: string | null
+          signed_at?: string | null
+          signed_file_path?: string | null
+          signed_file_url?: string | null
+          status?: string | null
           student_id?: string | null
           template_id?: string | null
           title?: string
@@ -6078,7 +6896,7 @@ export type Database = {
             foreignKeyName: "documents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6184,7 +7002,7 @@ export type Database = {
             foreignKeyName: "dropout_predictions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6216,6 +7034,8 @@ export type Database = {
           author_id: string | null
           category_id: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           download_count: number | null
           duration_minutes: number | null
@@ -6240,12 +7060,18 @@ export type Database = {
           title: string
           updated_at: string
           view_count: number | null
+          visibility_formation_id: string | null
+          visibility_program_id: string | null
+          visibility_scope: string
+          visibility_session_id: string | null
         }
         Insert: {
           access_level?: string | null
           author_id?: string | null
           category_id?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           download_count?: number | null
           duration_minutes?: number | null
@@ -6270,12 +7096,18 @@ export type Database = {
           title: string
           updated_at?: string
           view_count?: number | null
+          visibility_formation_id?: string | null
+          visibility_program_id?: string | null
+          visibility_scope?: string
+          visibility_session_id?: string | null
         }
         Update: {
           access_level?: string | null
           author_id?: string | null
           category_id?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           download_count?: number | null
           duration_minutes?: number | null
@@ -6300,6 +7132,10 @@ export type Database = {
           title?: string
           updated_at?: string
           view_count?: number | null
+          visibility_formation_id?: string | null
+          visibility_program_id?: string | null
+          visibility_scope?: string
+          visibility_session_id?: string | null
         }
         Relationships: [
           {
@@ -6313,7 +7149,7 @@ export type Database = {
             foreignKeyName: "educational_resources_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6328,6 +7164,27 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "educational_resources_visibility_formation_id_fkey"
+            columns: ["visibility_formation_id"]
+            isOneToOne: false
+            referencedRelation: "formations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "educational_resources_visibility_program_id_fkey"
+            columns: ["visibility_program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "educational_resources_visibility_session_id_fkey"
+            columns: ["visibility_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -6507,7 +7364,7 @@ export type Database = {
             foreignKeyName: "electronic_attendance_requests_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6624,7 +7481,7 @@ export type Database = {
             foreignKeyName: "electronic_attendance_sessions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6646,6 +7503,67 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_logs: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          organization_id: string | null
+          recipient: string
+          resend_id: string | null
+          status: string
+          subject: string
+          template_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string | null
+          recipient: string
+          resend_id?: string | null
+          status?: string
+          subject: string
+          template_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string | null
+          recipient?: string
+          resend_id?: string | null
+          status?: string
+          subject?: string
+          template_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -6698,7 +7616,7 @@ export type Database = {
             foreignKeyName: "email_schedule_logs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6847,7 +7765,7 @@ export type Database = {
             foreignKeyName: "email_schedules_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6951,7 +7869,7 @@ export type Database = {
             foreignKeyName: "email_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6963,6 +7881,107 @@ export type Database = {
           },
           {
             foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_diplomas: {
+        Row: {
+          company_employee_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          diploma_type_id: string
+          document_url: string | null
+          expiry_date: string
+          id: string
+          issued_at: string | null
+          notes: string | null
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_employee_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          diploma_type_id: string
+          document_url?: string | null
+          expiry_date: string
+          id?: string
+          issued_at?: string | null
+          notes?: string | null
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_employee_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          diploma_type_id?: string
+          document_url?: string | null
+          expiry_date?: string
+          id?: string
+          issued_at?: string | null
+          notes?: string | null
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_diplomas_company_employee_id_fkey"
+            columns: ["company_employee_id"]
+            isOneToOne: false
+            referencedRelation: "company_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_diploma_type_id_fkey"
+            columns: ["diploma_type_id"]
+            isOneToOne: false
+            referencedRelation: "diploma_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -7111,6 +8130,7 @@ export type Database = {
         Row: {
           answer_boolean: boolean | null
           answer_choice: string[] | null
+          answer_rating: number | null
           answer_text: string | null
           corrected_at: string | null
           corrected_by: string | null
@@ -7128,6 +8148,7 @@ export type Database = {
         Insert: {
           answer_boolean?: boolean | null
           answer_choice?: string[] | null
+          answer_rating?: number | null
           answer_text?: string | null
           corrected_at?: string | null
           corrected_by?: string | null
@@ -7145,6 +8166,7 @@ export type Database = {
         Update: {
           answer_boolean?: boolean | null
           answer_choice?: string[] | null
+          answer_rating?: number | null
           answer_text?: string | null
           corrected_at?: string | null
           corrected_by?: string | null
@@ -7358,7 +8380,7 @@ export type Database = {
             foreignKeyName: "evaluation_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -7542,7 +8564,7 @@ export type Database = {
             foreignKeyName: "expense_categories_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -7629,7 +8651,7 @@ export type Database = {
             foreignKeyName: "expenses_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -7828,7 +8850,7 @@ export type Database = {
             foreignKeyName: "external_data_sources_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -7853,6 +8875,11 @@ export type Database = {
           address: string | null
           city: string | null
           code: string | null
+          contact_email: string | null
+          contact_first_name: string | null
+          contact_job_title: string | null
+          contact_last_name: string | null
+          contact_phone: string | null
           country: string | null
           created_at: string | null
           created_by: string | null
@@ -7879,6 +8906,11 @@ export type Database = {
           address?: string | null
           city?: string | null
           code?: string | null
+          contact_email?: string | null
+          contact_first_name?: string | null
+          contact_job_title?: string | null
+          contact_last_name?: string | null
+          contact_phone?: string | null
           country?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -7905,6 +8937,11 @@ export type Database = {
           address?: string | null
           city?: string | null
           code?: string | null
+          contact_email?: string | null
+          contact_first_name?: string | null
+          contact_job_title?: string | null
+          contact_last_name?: string | null
+          contact_phone?: string | null
           country?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -7938,7 +8975,7 @@ export type Database = {
             foreignKeyName: "external_entities_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -7999,7 +9036,7 @@ export type Database = {
             foreignKeyName: "faq_categories_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8120,7 +9157,7 @@ export type Database = {
             foreignKeyName: "faq_items_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8203,7 +9240,7 @@ export type Database = {
             foreignKeyName: "financial_forecasts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8267,7 +9304,7 @@ export type Database = {
             foreignKeyName: "financial_reports_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8326,7 +9363,7 @@ export type Database = {
             foreignKeyName: "formation_sessions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8481,7 +9518,7 @@ export type Database = {
             foreignKeyName: "formations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8633,7 +9670,7 @@ export type Database = {
             foreignKeyName: "programs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8716,7 +9753,7 @@ export type Database = {
             foreignKeyName: "funding_types_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8745,6 +9782,8 @@ export type Database = {
       generated_documents: {
         Row: {
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           file_name: string
           file_url: string
           format: string
@@ -8760,6 +9799,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           file_name: string
           file_url: string
           format: string
@@ -8775,6 +9816,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           file_name?: string
           file_url?: string
           format?: string
@@ -8800,7 +9843,7 @@ export type Database = {
             foreignKeyName: "generated_documents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -8899,7 +9942,7 @@ export type Database = {
             foreignKeyName: "global_document_layouts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -9020,7 +10063,7 @@ export type Database = {
             foreignKeyName: "grades_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -9118,7 +10161,7 @@ export type Database = {
             foreignKeyName: "guardians_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -9330,7 +10373,7 @@ export type Database = {
             foreignKeyName: "guides_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -9425,7 +10468,7 @@ export type Database = {
             foreignKeyName: "invoices_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -9511,6 +10554,61 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jury_members: {
+        Row: {
+          company: string | null
+          created_at: string | null
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          organization_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string | null
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          organization_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string | null
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          organization_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jury_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "jury_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "jury_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -9729,7 +10827,7 @@ export type Database = {
             foreignKeyName: "learner_access_tokens_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -9829,7 +10927,7 @@ export type Database = {
             foreignKeyName: "learner_documents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -9855,6 +10953,75 @@ export type Database = {
           },
           {
             foreignKeyName: "learner_documents_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learner_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          organization_id: string
+          session_id: string | null
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          session_id?: string | null
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          session_id?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learner_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "learner_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "learner_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learner_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learner_events_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -10427,7 +11594,7 @@ export type Database = {
             foreignKeyName: "lms_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -10724,7 +11891,7 @@ export type Database = {
             foreignKeyName: "mobile_money_configs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -10835,7 +12002,7 @@ export type Database = {
             foreignKeyName: "mobile_money_transactions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -10903,7 +12070,7 @@ export type Database = {
             foreignKeyName: "normal_patterns_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -10964,7 +12131,7 @@ export type Database = {
             foreignKeyName: "notifications_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11120,7 +12287,7 @@ export type Database = {
             foreignKeyName: "of_document_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11233,7 +12400,7 @@ export type Database = {
             foreignKeyName: "of_generated_documents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11269,13 +12436,6 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "of_generated_documents_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "of_document_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -11331,7 +12491,7 @@ export type Database = {
             foreignKeyName: "opco_configurations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11414,7 +12574,7 @@ export type Database = {
             foreignKeyName: "opco_conventions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11538,7 +12698,7 @@ export type Database = {
             foreignKeyName: "opco_declarations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11656,7 +12816,7 @@ export type Database = {
             foreignKeyName: "opco_funding_requests_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11823,7 +12983,7 @@ export type Database = {
             foreignKeyName: "organization_subscriptions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11863,10 +13023,14 @@ export type Database = {
           language: string
           logo_url: string | null
           name: string
+          nda_number: string | null
           organization_type: string | null
           phone: string | null
           qualiopi_certificate_url: string | null
           settings: Json | null
+          signature_url: string | null
+          siret: string | null
+          stamp_url: string | null
           subscription_status: string | null
           subscription_tier: string | null
           timezone: string
@@ -11886,10 +13050,14 @@ export type Database = {
           language?: string
           logo_url?: string | null
           name: string
+          nda_number?: string | null
           organization_type?: string | null
           phone?: string | null
           qualiopi_certificate_url?: string | null
           settings?: Json | null
+          signature_url?: string | null
+          siret?: string | null
+          stamp_url?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           timezone?: string
@@ -11909,10 +13077,14 @@ export type Database = {
           language?: string
           logo_url?: string | null
           name?: string
+          nda_number?: string | null
           organization_type?: string | null
           phone?: string | null
           qualiopi_certificate_url?: string | null
           settings?: Json | null
+          signature_url?: string | null
+          siret?: string | null
+          stamp_url?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           timezone?: string
@@ -11972,7 +13144,7 @@ export type Database = {
             foreignKeyName: "payment_reminder_settings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12065,7 +13237,7 @@ export type Database = {
             foreignKeyName: "payment_reminders_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12162,7 +13334,7 @@ export type Database = {
             foreignKeyName: "payments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12580,7 +13752,7 @@ export type Database = {
             foreignKeyName: "prediction_alerts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12694,7 +13866,7 @@ export type Database = {
             foreignKeyName: "predictive_analytics_reports_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12803,7 +13975,7 @@ export type Database = {
             foreignKeyName: "predictive_models_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12832,8 +14004,10 @@ export type Database = {
           completion_rate: number | null
           cpf_code: string | null
           created_at: string | null
+          currency: string | null
           description: string | null
           duration_days: number | null
+          duration_hours: number | null
           duration_unit: string | null
           edof_export_fields: Json | null
           eligible_cpf: boolean | null
@@ -12847,6 +14021,10 @@ export type Database = {
           organization_id: string
           pedagogical_objectives: string | null
           photo_url: string | null
+          price: number | null
+          price_enterprise: number | null
+          price_freelance: number | null
+          price_individual: number | null
           program_version: string | null
           public_description: string | null
           public_image_url: string | null
@@ -12870,8 +14048,10 @@ export type Database = {
           completion_rate?: number | null
           cpf_code?: string | null
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           duration_days?: number | null
+          duration_hours?: number | null
           duration_unit?: string | null
           edof_export_fields?: Json | null
           eligible_cpf?: boolean | null
@@ -12885,6 +14065,10 @@ export type Database = {
           organization_id: string
           pedagogical_objectives?: string | null
           photo_url?: string | null
+          price?: number | null
+          price_enterprise?: number | null
+          price_freelance?: number | null
+          price_individual?: number | null
           program_version?: string | null
           public_description?: string | null
           public_image_url?: string | null
@@ -12908,8 +14092,10 @@ export type Database = {
           completion_rate?: number | null
           cpf_code?: string | null
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           duration_days?: number | null
+          duration_hours?: number | null
           duration_unit?: string | null
           edof_export_fields?: Json | null
           eligible_cpf?: boolean | null
@@ -12923,6 +14109,10 @@ export type Database = {
           organization_id?: string
           pedagogical_objectives?: string | null
           photo_url?: string | null
+          price?: number | null
+          price_enterprise?: number | null
+          price_freelance?: number | null
+          price_individual?: number | null
           program_version?: string | null
           public_description?: string | null
           public_image_url?: string | null
@@ -12942,7 +14132,7 @@ export type Database = {
             foreignKeyName: "programs_organization_id_fkey1"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12994,7 +14184,7 @@ export type Database = {
             foreignKeyName: "promo_code_usages_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -13036,6 +14226,7 @@ export type Database = {
       }
       promo_codes: {
         Row: {
+          affiliate_id: string | null
           applicable_plans: string[] | null
           code: string
           created_at: string
@@ -13057,6 +14248,7 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          affiliate_id?: string | null
           applicable_plans?: string[] | null
           code: string
           created_at?: string
@@ -13078,6 +14270,7 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          affiliate_id?: string | null
           applicable_plans?: string[] | null
           code?: string
           created_at?: string
@@ -13099,6 +14292,13 @@ export type Database = {
           valid_until?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "promo_codes_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "promo_codes_created_by_fkey"
             columns: ["created_by"]
@@ -13243,7 +14443,7 @@ export type Database = {
             foreignKeyName: "public_catalog_settings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -13337,7 +14537,7 @@ export type Database = {
             foreignKeyName: "public_enrollments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -13500,7 +14700,7 @@ export type Database = {
             foreignKeyName: "public_formations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -13589,7 +14789,7 @@ export type Database = {
             foreignKeyName: "push_devices_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -13671,7 +14871,7 @@ export type Database = {
             foreignKeyName: "push_notification_campaigns_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -13850,7 +15050,7 @@ export type Database = {
             foreignKeyName: "push_notification_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14067,7 +15267,7 @@ export type Database = {
             foreignKeyName: "qualiopi_audits_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14082,6 +15282,118 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qualiopi_evidence: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          evidence_type: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          indicator_id: string
+          is_valid: boolean | null
+          organization_id: string
+          review_date: string | null
+          review_notes: string | null
+          reviewer_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          upload_date: string | null
+          uploaded_by: string | null
+          validity_end_date: string | null
+          validity_start_date: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          evidence_type: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          indicator_id: string
+          is_valid?: boolean | null
+          organization_id: string
+          review_date?: string | null
+          review_notes?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          upload_date?: string | null
+          uploaded_by?: string | null
+          validity_end_date?: string | null
+          validity_start_date?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          evidence_type?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          indicator_id?: string
+          is_valid?: boolean | null
+          organization_id?: string
+          review_date?: string | null
+          review_notes?: string | null
+          reviewer_id?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          upload_date?: string | null
+          uploaded_by?: string | null
+          validity_end_date?: string | null
+          validity_start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qualiopi_evidence_indicator_id_fkey"
+            columns: ["indicator_id"]
+            isOneToOne: false
+            referencedRelation: "qualiopi_indicators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qualiopi_evidence_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "qualiopi_evidence_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "qualiopi_evidence_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qualiopi_evidence_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qualiopi_evidence_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -14137,7 +15449,7 @@ export type Database = {
             foreignKeyName: "qualiopi_indicators_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14566,7 +15878,7 @@ export type Database = {
             foreignKeyName: "recommendations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14658,7 +15970,7 @@ export type Database = {
             foreignKeyName: "referrals_referred_organization_id_fkey"
             columns: ["referred_organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14679,7 +15991,7 @@ export type Database = {
             foreignKeyName: "referrals_referrer_organization_id_fkey"
             columns: ["referrer_organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14831,7 +16143,7 @@ export type Database = {
             foreignKeyName: "report_cards_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14912,7 +16224,7 @@ export type Database = {
             foreignKeyName: "resource_categories_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14986,7 +16298,7 @@ export type Database = {
             foreignKeyName: "resource_collections_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15300,7 +16612,7 @@ export type Database = {
             foreignKeyName: "risk_assessments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15395,7 +16707,7 @@ export type Database = {
             foreignKeyName: "rncp_certifications_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15493,7 +16805,7 @@ export type Database = {
             foreignKeyName: "roles_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15579,7 +16891,7 @@ export type Database = {
             foreignKeyName: "scheduled_document_sends_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15672,7 +16984,7 @@ export type Database = {
             foreignKeyName: "scheduled_notifications_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15764,7 +17076,7 @@ export type Database = {
             foreignKeyName: "security_audits_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15843,7 +17155,7 @@ export type Database = {
             foreignKeyName: "security_controls_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15940,7 +17252,7 @@ export type Database = {
             foreignKeyName: "security_incidents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16025,7 +17337,7 @@ export type Database = {
             foreignKeyName: "security_policies_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16089,7 +17401,7 @@ export type Database = {
             foreignKeyName: "security_training_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16241,7 +17553,7 @@ export type Database = {
             foreignKeyName: "session_charges_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16325,6 +17637,60 @@ export type Database = {
           },
         ]
       }
+      session_jury: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string | null
+          email_sent_at: string | null
+          id: string
+          jury_member_id: string
+          session_id: string
+          status: string
+          token: string
+          token_expires_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string | null
+          email_sent_at?: string | null
+          id?: string
+          jury_member_id: string
+          session_id: string
+          status?: string
+          token?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string | null
+          email_sent_at?: string | null
+          id?: string
+          jury_member_id?: string
+          session_id?: string
+          status?: string
+          token?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_jury_jury_member_id_fkey"
+            columns: ["jury_member_id"]
+            isOneToOne: false
+            referencedRelation: "jury_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_jury_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_modules: {
         Row: {
           amount: number
@@ -16396,7 +17762,7 @@ export type Database = {
             foreignKeyName: "session_programs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16650,7 +18016,7 @@ export type Database = {
             foreignKeyName: "session_timeout_rules_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16675,6 +18041,7 @@ export type Database = {
           created_at: string | null
           end_date: string
           end_time: string | null
+          exam_date: string | null
           formation_id: string | null
           id: string
           location: string | null
@@ -16691,6 +18058,7 @@ export type Database = {
           created_at?: string | null
           end_date: string
           end_time?: string | null
+          exam_date?: string | null
           formation_id?: string | null
           id?: string
           location?: string | null
@@ -16707,6 +18075,7 @@ export type Database = {
           created_at?: string | null
           end_date?: string
           end_time?: string | null
+          exam_date?: string | null
           formation_id?: string | null
           id?: string
           location?: string | null
@@ -16730,7 +18099,7 @@ export type Database = {
             foreignKeyName: "sessions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16819,7 +18188,7 @@ export type Database = {
           recipient_type: string
           reminder_count: number | null
           reminder_frequency: string | null
-          requester_id: string
+          requester_id: string | null
           requires_notarization: boolean | null
           signature_id: string | null
           signature_token: string
@@ -16869,7 +18238,7 @@ export type Database = {
           recipient_type?: string
           reminder_count?: number | null
           reminder_frequency?: string | null
-          requester_id?: string
+          requester_id?: string | null
           requires_notarization?: boolean | null
           signature_id?: string | null
           signature_token?: string
@@ -16891,7 +18260,7 @@ export type Database = {
             foreignKeyName: "signature_requests_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16973,7 +18342,7 @@ export type Database = {
             foreignKeyName: "signing_processes_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -17071,7 +18440,7 @@ export type Database = {
             foreignKeyName: "sites_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -17177,7 +18546,7 @@ export type Database = {
             foreignKeyName: "sso_configurations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -17536,7 +18905,7 @@ export type Database = {
             foreignKeyName: "students_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -17628,7 +18997,7 @@ export type Database = {
             foreignKeyName: "subject_statistics_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -17726,7 +19095,7 @@ export type Database = {
             foreignKeyName: "subscription_invoices_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -17860,7 +19229,7 @@ export type Database = {
             foreignKeyName: "subscriptions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -17973,7 +19342,7 @@ export type Database = {
             foreignKeyName: "success_rate_predictions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -18054,7 +19423,7 @@ export type Database = {
             foreignKeyName: "support_auto_assignment_rules_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -18112,7 +19481,7 @@ export type Database = {
             foreignKeyName: "support_categories_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -18183,7 +19552,7 @@ export type Database = {
             foreignKeyName: "support_response_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -18247,10 +19616,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "support_ticket_messages_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "support_ticket_messages_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -18289,6 +19672,13 @@ export type Database = {
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_ticket_notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -18367,7 +19757,7 @@ export type Database = {
           student_id?: string | null
           subject: string
           tags?: string[] | null
-          ticket_number?: string
+          ticket_number: string
           updated_at?: string
           user_id?: string | null
         }
@@ -18394,6 +19784,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "support_tickets_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "support_tickets_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -18404,7 +19801,7 @@ export type Database = {
             foreignKeyName: "support_tickets_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -18419,6 +19816,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -18489,7 +19900,7 @@ export type Database = {
             foreignKeyName: "teacher_documents_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -18571,7 +19982,7 @@ export type Database = {
             foreignKeyName: "teachers_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -19066,7 +20477,7 @@ export type Database = {
             foreignKeyName: "template_library_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -19119,7 +20530,7 @@ export type Database = {
             foreignKeyName: "template_library_downloads_downloaded_by_organization_id_fkey"
             columns: ["downloaded_by_organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -19195,7 +20606,7 @@ export type Database = {
             foreignKeyName: "template_library_ratings_rated_by_organization_id_fkey"
             columns: ["rated_by_organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -19299,7 +20710,7 @@ export type Database = {
             foreignKeyName: "template_organization_shares_shared_by_organization_id_fkey"
             columns: ["shared_by_organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -19320,7 +20731,7 @@ export type Database = {
             foreignKeyName: "template_organization_shares_shared_with_organization_id_fkey"
             columns: ["shared_with_organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -20094,7 +21505,7 @@ export type Database = {
             foreignKeyName: "user_permissions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -20153,7 +21564,7 @@ export type Database = {
             foreignKeyName: "user_roles_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -20291,10 +21702,13 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           email: string
+          first_name: string | null
           full_name: string
           id: string
           is_active: boolean | null
+          job_title: string | null
           last_login_at: string | null
+          last_name: string | null
           organization_id: string | null
           permissions: Json | null
           phone: string | null
@@ -20306,10 +21720,13 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email: string
+          first_name?: string | null
           full_name: string
           id: string
           is_active?: boolean | null
+          job_title?: string | null
           last_login_at?: string | null
+          last_name?: string | null
           organization_id?: string | null
           permissions?: Json | null
           phone?: string | null
@@ -20321,10 +21738,13 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           email?: string
+          first_name?: string | null
           full_name?: string
           id?: string
           is_active?: boolean | null
+          job_title?: string | null
           last_login_at?: string | null
+          last_name?: string | null
           organization_id?: string | null
           permissions?: Json | null
           phone?: string | null
@@ -20337,7 +21757,7 @@ export type Database = {
             foreignKeyName: "users_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -20485,7 +21905,7 @@ export type Database = {
             foreignKeyName: "videoconference_integrations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "bpf_current_year_summary"
+            referencedRelation: "organization_onboarding_status"
             referencedColumns: ["organization_id"]
           },
           {
@@ -20637,31 +22057,137 @@ export type Database = {
           },
         ]
       }
+      webhook_deliveries: {
+        Row: {
+          attempt_number: number | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          event_data: Json
+          event_type: string
+          id: string
+          max_attempts: number | null
+          next_retry_at: string | null
+          response_body: string | null
+          response_status_code: number | null
+          status: string | null
+          webhook_id: string
+        }
+        Insert: {
+          attempt_number?: number | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          event_data: Json
+          event_type: string
+          id?: string
+          max_attempts?: number | null
+          next_retry_at?: string | null
+          response_body?: string | null
+          response_status_code?: number | null
+          status?: string | null
+          webhook_id: string
+        }
+        Update: {
+          attempt_number?: number | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          event_data?: Json
+          event_type?: string
+          id?: string
+          max_attempts?: number | null
+          next_retry_at?: string | null
+          response_body?: string | null
+          response_status_code?: number | null
+          status?: string | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string
+          events: string[]
+          failure_count: number | null
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          name: string
+          organization_id: string
+          retry_count: number | null
+          secret: string
+          success_count: number | null
+          timeout_seconds: number | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          events: string[]
+          failure_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name: string
+          organization_id: string
+          retry_count?: number | null
+          secret: string
+          success_count?: number | null
+          timeout_seconds?: number | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          events?: string[]
+          failure_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name?: string
+          organization_id?: string
+          retry_count?: number | null
+          secret?: string
+          success_count?: number | null
+          timeout_seconds?: number | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "webhooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "webhooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      bpf_current_year_summary: {
-        Row: {
-          attendance_rate: number | null
-          organization_id: string | null
-          organization_name: string | null
-          revenue_companies: number | null
-          revenue_cpf: number | null
-          revenue_individuals: number | null
-          revenue_opco: number | null
-          revenue_other: number | null
-          revenue_pole_emploi: number | null
-          revenue_regions: number | null
-          revenue_state: number | null
-          total_hours_realized: number | null
-          total_programs_count: number | null
-          total_revenue: number | null
-          total_sessions_count: number | null
-          total_students_count: number | null
-          total_trainee_hours: number | null
-          year: number | null
-        }
-        Relationships: []
-      }
       company_billing_summary: {
         Row: {
           amount: number | null
@@ -20692,6 +22218,23 @@ export type Database = {
           },
         ]
       }
+      organization_onboarding_status: {
+        Row: {
+          onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
+          onboarding_stage: string | null
+          organization_id: string | null
+          organization_name: string | null
+          payment_method_added: boolean | null
+          payment_method_added_at: string | null
+          plan_name: string | null
+          selected_plan_id: string | null
+          subscription_status: string | null
+          trial_end_at: string | null
+          trial_start_at: string | null
+        }
+        Relationships: []
+      }
       organization_usage: {
         Row: {
           current_period_end: string | null
@@ -20707,6 +22250,74 @@ export type Database = {
           subscription_status: string | null
         }
         Relationships: []
+      }
+      v_employee_diploma_compliance: {
+        Row: {
+          company_employee_id: string | null
+          company_id: string | null
+          created_at: string | null
+          days_until_expiry: number | null
+          department: string | null
+          diploma_color: string | null
+          diploma_name: string | null
+          diploma_type_id: string | null
+          document_url: string | null
+          email: string | null
+          employee_number: string | null
+          expiry_date: string | null
+          first_name: string | null
+          id: string | null
+          issued_at: string | null
+          job_title: string | null
+          last_name: string | null
+          notes: string | null
+          organization_id: string | null
+          status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_diplomas_company_employee_id_fkey"
+            columns: ["company_employee_id"]
+            isOneToOne: false
+            referencedRelation: "company_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_diploma_type_id_fkey"
+            columns: ["diploma_type_id"]
+            isOneToOne: false
+            referencedRelation: "diploma_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_onboarding_status"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_usage"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "employee_diplomas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -20827,11 +22438,31 @@ export type Database = {
       }
       can_learner_access_quiz: { Args: { p_quiz_id: string }; Returns: boolean }
       can_manage_blog: { Args: { check_user_id: string }; Returns: boolean }
+      check_onboarding_complete: {
+        Args: { org_id: string }
+        Returns: {
+          days_remaining: number
+          has_payment_method: boolean
+          is_complete: boolean
+          trial_ends_at: string
+        }[]
+      }
       cleanup_expired_2fa_sessions: { Args: never; Returns: undefined }
       cleanup_expired_archives: { Args: never; Returns: undefined }
       cleanup_expired_external_data_cache: { Args: never; Returns: undefined }
       cleanup_expired_qr_codes: { Args: never; Returns: undefined }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
+      complete_onboarding_with_payment: {
+        Args: {
+          p_organization_id: string
+          p_payment_method_id: string
+          p_plan_id: string
+          p_stripe_customer_id: string
+          p_stripe_subscription_id: string
+          p_trial_days?: number
+        }
+        Returns: Json
+      }
       create_default_contrat_template: {
         Args: { org_id: string }
         Returns: string
@@ -20873,6 +22504,7 @@ export type Database = {
         Args: { todo_id: string }
         Returns: string
       }
+      current_learner_student_id: { Args: never; Returns: string }
       expire_attendance_requests: { Args: never; Returns: undefined }
       expire_signature_requests: { Args: never; Returns: undefined }
       expire_signature_tokens: { Args: never; Returns: undefined }
@@ -20927,6 +22559,17 @@ export type Database = {
         Returns: string
       }
       generate_ticket_number: { Args: never; Returns: string }
+      get_bpf_charges_breakdown: {
+        Args: { target_org_id: string; target_year: number }
+        Returns: {
+          equipment: number
+          location: number
+          other: number
+          subcontracting: number
+          supplies: number
+          total_charges: number
+        }[]
+      }
       get_bpf_drill_down: {
         Args: {
           metric_type: string
@@ -21111,6 +22754,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_article_view_count: {
+        Args: { article_uuid: string }
+        Returns: undefined
+      }
       increment_faq_view_count: {
         Args: { faq_uuid: string }
         Returns: undefined
@@ -21132,6 +22779,15 @@ export type Database = {
           p_name: string
           p_org_id: string
           p_subject: string
+        }
+        Returns: undefined
+      }
+      insert_session_programs: {
+        Args: {
+          p_formation_id?: string
+          p_organization_id: string
+          p_program_ids: string[]
+          p_session_id: string
         }
         Returns: undefined
       }
@@ -21172,9 +22828,26 @@ export type Database = {
         Returns: boolean
       }
       is_subscription_active: { Args: { org_id: string }; Returns: boolean }
-      is_super_admin: { Args: { check_user_id: string }; Returns: boolean }
+      is_super_admin:
+        | { Args: never; Returns: boolean }
+        | { Args: { check_user_id: string }; Returns: boolean }
       learner_organization_id: { Args: never; Returns: string }
       learner_student_id: { Args: never; Returns: string }
+      log_audit_event: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_error_message?: string
+          p_ip_address?: unknown
+          p_metadata?: Json
+          p_organization_id: string
+          p_record_id?: string
+          p_success?: boolean
+          p_table_name: string
+          p_user_agent?: string
+        }
+        Returns: string
+      }
       replace_template_variables: {
         Args: { template_content: string; variable_data: Json }
         Returns: string
@@ -21198,9 +22871,21 @@ export type Database = {
           title: string
         }[]
       }
+      seed_default_diploma_types: {
+        Args: { org_id: string }
+        Returns: undefined
+      }
+      soft_delete: {
+        Args: { p_actor: string; p_id: string; p_table: string }
+        Returns: undefined
+      }
       sync_session_teachers_from_sessions: { Args: never; Returns: number }
       sync_user_from_auth: { Args: { user_id: string }; Returns: Json }
       sync_user_on_create: { Args: { user_id: string }; Returns: Json }
+      update_grade_from_instance_for_learner: {
+        Args: { p_instance_id: string }
+        Returns: undefined
+      }
       user_has_permission: {
         Args: {
           p_organization_id: string
@@ -21210,7 +22895,6 @@ export type Database = {
         Returns: boolean
       }
       user_organization_id: { Args: never; Returns: string }
-      recover_user_organization: { Args: { p_user_id: string }; Returns: Json }
       validate_learner_access_token: {
         Args: { p_token: string }
         Returns: {
@@ -21369,6 +23053,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       document_type: [

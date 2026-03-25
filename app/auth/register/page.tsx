@@ -33,7 +33,7 @@ export default function RegisterPage() {
     }
 
     try {
-      register({
+      await register({
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,

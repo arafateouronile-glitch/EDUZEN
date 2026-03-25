@@ -1,4 +1,5 @@
 import type { NextRequest} from 'next/server';
+import type { Json } from '@/types/database.types'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { withRateLimit } from '@/app/api/_middleware/rate-limit'
@@ -43,28 +44,26 @@ export async function POST(
         .select('id, quiz_responses')
         .eq('lesson_id', lesson_id)
         .eq('student_id', user.id)
-        .maybeSingle()
+        .maybeSingle() as { data: { id: string; quiz_responses: Record<string, unknown> } | null }
 
-      const quizResponses = ((progress as any)?.quiz_responses as Record<string, unknown>) || {}
+      const quizResponses: Record<string, unknown> = ((progress?.quiz_responses as Record<string, unknown>) || {})
       quizResponses[block_id] = {
         answer,
         answered_at: new Date().toISOString(),
       }
 
       if (progress) {
-        const { error } = await supabase
-          .from('lesson_progress')
-          .update({ quiz_responses: quizResponses } as any)
-          .eq('id', (progress as any).id)
+        const { error } = await (supabase as unknown as { from: (t: string) => any }).from('lesson_progress')
+          .update({ quiz_responses: quizResponses })
+          .eq('id', progress.id)
 
         if (error) throw error
       } else {
-        const { error } = await supabase
-          .from('lesson_progress')
+        const { error } = await (supabase as unknown as { from: (t: string) => any }).from('lesson_progress')
           .insert({
             lesson_id,
             student_id: user.id,
-            quiz_responses: quizResponses as any,
+            quiz_responses: quizResponses,
             started_at: new Date().toISOString(),
             last_accessed_at: new Date().toISOString(),
           })
@@ -90,19 +89,17 @@ export async function POST(
       }
 
       if (progress) {
-        const { error } = await supabase
-          .from('lesson_progress')
-          .update({ poll_votes: pollVotes } as any)
-          .eq('id', (progress as any).id)
+        const { error } = await (supabase as unknown as { from: (t: string) => any }).from('lesson_progress')
+          .update({ poll_votes: pollVotes })
+          .eq('id', progress.id)
 
         if (error) throw error
       } else {
-        const { error } = await supabase
-          .from('lesson_progress')
+        const { error } = await (supabase as unknown as { from: (t: string) => any }).from('lesson_progress')
           .insert({
             lesson_id,
             student_id: user.id,
-            poll_votes: pollVotes as any,
+            poll_votes: pollVotes,
             started_at: new Date().toISOString(),
             last_accessed_at: new Date().toISOString(),
           })

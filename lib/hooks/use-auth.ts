@@ -199,7 +199,7 @@ export function useAuth() {
             // Récupération automatique de l'organisation si absente (ex: après récupération de compte)
             if (!data.organization_id && session?.user?.id) {
               try {
-                const { data: recoverResult, error: recoverError } = await supabase.rpc(
+                const { data: recoverResult, error: recoverError } = await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> }).rpc(
                   'recover_user_organization',
                   { p_user_id: session.user.id }
                 )
@@ -288,9 +288,14 @@ export function useAuth() {
         
         // Gérer l'erreur de rate limiting
         if (authError.status === 429 || authError.message?.includes('2 seconds')) {
-          throw new Error('Trop de tentatives. Veuillez attendre quelques secondes avant de réessayer.')
+          throw new Error('Trop de tentatives. Veuillez patienter quelques minutes avant de réessayer.')
         }
-        
+
+        // Email déjà utilisé
+        if (authError.message?.toLowerCase().includes('already registered') || authError.message?.toLowerCase().includes('already been registered')) {
+          throw new Error('Cette adresse email est déjà associée à un compte. Essayez de vous connecter ou de réinitialiser votre mot de passe.')
+        }
+
         throw new Error(authError.message || 'Erreur lors de la création du compte')
       }
       if (!authData.user) throw new Error('Erreur lors de la création du compte')
@@ -357,9 +362,22 @@ export function useAuth() {
         
         if (rpcError) {
           funcError = rpcError
-          
+
+          // Si l'organisation existe déjà (409 / 23505), récupérer l'ID existant
+          if (rpcError.code === '23505' || (rpcError as { status?: number }).status === 409) {
+            const { data: existingOrg } = await supabase
+              .from('organizations')
+              .select('id')
+              .eq('code', orgCode)
+              .maybeSingle()
+            if (existingOrg?.id) {
+              orgId = existingOrg.id
+              funcError = null
+            }
+          }
+
           // Si l'erreur est "User must be authenticated", essayer sans user_id
-          if (rpcError.code === 'P0001' && rpcError.message?.includes('User must be authenticated')) {
+          if (!orgId && rpcError.code === 'P0001' && rpcError.message?.includes('User must be authenticated')) {
             const retryResult = await supabase.rpc(
               'create_organization_for_user',
               {
@@ -657,7 +675,7 @@ export function useAuth() {
     isLoading,
     isAuthenticated: !!session && !!user,
     login: loginMutation.mutate,
-    register: registerMutation.mutate,
+    register: registerMutation.mutateAsync,
     logout,
     isLoggingIn: loginMutation.isPending,
     isRegistering: registerMutation.isPending,

@@ -7,6 +7,7 @@
  */
 
 import type { NextRequest} from 'next/server';
+import type { Json } from '@/types/database.types'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -28,7 +29,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 /** Client admin avec .from(table: string) pour tables éventuellement absentes du schéma typé */
 type AdminClient = ReturnType<typeof createAdminClient>
 type AdminDbAnyTable = Omit<AdminClient, 'from'> & {
-  from(table: string): ReturnType<AdminClient['from']>
+  from(table: string): any
 }
 
 /** Zone de signature (metadata ou template sign_zones) */
@@ -448,7 +449,7 @@ export async function POST(request: NextRequest) {
             request_id: procId,
             signer_email: signerEmail,
             signature_data: signatureData.trim(),
-            metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash },
+            metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash } as unknown as Json,
             integrity_hash: pdfHash,
           } as never)
         if (evErr) {
@@ -510,15 +511,15 @@ export async function POST(request: NextRequest) {
         } as never)
         .eq('id', procId)
 
-      const { error: evErr } = await (db as any).from('digital_evidence').insert({
+      const { error: evErr } = await db.from('digital_evidence').insert({
         organization_id: orgIdP,
         request_type: 'process',
         request_id: procId,
         signer_email: signerEmail,
         signature_data: signatureData.trim(),
-        metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash },
+        metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash } as unknown as Json,
         integrity_hash: pdfHash,
-      })
+      } as never)
       if (evErr) {
         logger.error('digital_evidence process:', evErr)
         return NextResponse.json(
@@ -633,7 +634,7 @@ export async function POST(request: NextRequest) {
       // pour éviter de perdre le statut si la fonction Vercel timeout.
       const signedAt = new Date().toISOString()
 
-      const { data: docSig, error: sigErr } = await (db as any).from('document_signatures').insert({
+      const { data: docSig, error: sigErr } = await db.from('document_signatures').insert({
         organization_id: orgId,
         document_id: docId,
         signer_id: signerId,
@@ -655,12 +656,12 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const docSigId = (docSig as { id: string }).id
-      const { error: updErr } = await (db as any).from('signature_requests').update({
+      const docSigId = (docSig as unknown as { id: string }).id
+      const { error: updErr } = await db.from('signature_requests').update({
         status: 'signed',
         signature_id: docSigId,
         signed_at: signedAt,
-      }).eq('id', resolved.sig.id)
+      }).eq('id', resolved.sig.id as string)
 
       if (updErr) {
         logger.error('Erreur mise à jour signature_requests:', updErr)
@@ -670,13 +671,13 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const { error: evErr } = await (db as any).from('digital_evidence').insert({
+      const { error: evErr } = await db.from('digital_evidence').insert({
         organization_id: orgId,
         request_type: 'signature',
         request_id: resolved.sig.id,
         signer_email: signerEmail,
         signature_data: signatureData.trim(),
-        metadata,
+        metadata: metadata as unknown as Json,
         integrity_hash: integrityHash,
       })
       if (evErr) {
@@ -750,7 +751,7 @@ export async function POST(request: NextRequest) {
                 .from('documents')
                 .getPublicUrl(signedPath)
 
-              const { error: docUpdErr } = await (db as any).from('documents').update({
+              const { error: docUpdErr } = await db.from('documents').update({
                   signed_file_path: signedPath,
                   signed_file_url: urlData.publicUrl,
                   status: 'signed',
@@ -832,13 +833,13 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      const { error: evErr } = await (db as any).from('digital_evidence').insert({
+      const { error: evErr } = await db.from('digital_evidence').insert({
         organization_id: orgId,
         request_type: 'attendance',
         request_id: resolved.att.id,
         signer_email: signerEmail,
         signature_data: signatureData.trim(),
-        metadata,
+        metadata: metadata as unknown as Json,
         integrity_hash: integrityHash,
       })
       if (evErr) {
@@ -863,7 +864,7 @@ export async function POST(request: NextRequest) {
 
       // Insert sans colonnes géoloc : la table attendance peut ne pas les avoir (migration 20241202000026).
       // La géoloc est enregistrée dans electronic_attendance_requests.
-      const { data: attRow, error: attInsErr } = await (db as any).from('attendance').insert({
+      const { data: attRow, error: attInsErr } = await db.from('attendance').insert({
         organization_id: orgId,
         student_id: resolved.att.student_id,
         session_id: sessionId ?? null,
@@ -879,8 +880,8 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const attRowId = (attRow as { id: string }).id
-      const { error: attUpdErr } = await (db as any).from('electronic_attendance_requests').update({
+      const attRowId = (attRow as unknown as { id: string }).id
+      const { error: attUpdErr } = await db.from('electronic_attendance_requests').update({
         status: 'signed',
         signature_data: signatureData.trim(),
         signed_at: new Date().toISOString(),
@@ -891,7 +892,7 @@ export async function POST(request: NextRequest) {
         location_verified: !!geolocation,
         ip_address: metadata.ip ?? null,
         user_agent: metadata.user_agent ?? null,
-      }).eq('id', resolved.att.id)
+      }).eq('id', resolved.att.id as string)
 
       if (attUpdErr) {
         logger.error('Erreur mise à jour electronic_attendance_requests:', attUpdErr)
