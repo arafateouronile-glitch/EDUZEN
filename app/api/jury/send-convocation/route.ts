@@ -8,6 +8,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient()
 
     // ── Récupérer l'entrée session_jury avec toutes les relations ────────────
-    const { data: sj, error: sjError } = await (supabase as any)
+    const { data: sj, error: sjError } = await supabase
       .from('session_jury')
       .select(`
         *,
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Sécurité multi-tenant : vérifier que la session appartient à l'org de l'utilisateur
-    const { data: userRow } = await (supabase as any)
+    const { data: userRow } = await supabase
       .from('users')
       .select('organization_id')
       .eq('id', user.id)
@@ -193,19 +194,23 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Mode développement — simuler l'envoi
-      console.log(`[send-convocation] DEV — email vers ${juryMember.email}`)
-      console.log(`  Subject: ${subject}`)
+      logger.debug('[send-convocation] DEV — email simulé', { to: juryMember.email, subject })
     }
 
     // ── Mettre à jour email_sent_at ──────────────────────────────────────────
-    await (supabase as any)
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 7)
+    await supabase
       .from('session_jury')
-      .update({ email_sent_at: new Date().toISOString() })
+      .update({
+        email_sent_at: new Date().toISOString(),
+        token_expires_at: expiresAt.toISOString(),
+      })
       .eq('id', sessionJuryId)
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('[send-convocation] error:', err)
+    logger.error('[send-convocation] error', err instanceof Error ? err : new Error(String(err)))
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur interne' },
       { status: 500 }

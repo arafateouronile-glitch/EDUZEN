@@ -20,16 +20,16 @@ export async function GET() {
 
     // Seed des types par défaut si aucun n'existe
     const { count } = await supabase
-      .from('diploma_types' as any)
+      .from('diploma_types')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', userData.organization_id)
 
     if (count === 0) {
-      await supabase.rpc('seed_default_diploma_types' as any, { org_id: userData.organization_id })
+      await supabase.rpc('seed_default_diploma_types', { org_id: userData.organization_id })
     }
 
     const { data, error } = await supabase
-      .from('diploma_types' as any)
+      .from('diploma_types')
       .select('*')
       .eq('organization_id', userData.organization_id)
       .eq('is_active', true)

@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreateBlogPostInput, UpdateBlogPostInput } from '@/types/super-admin.types'
+import type { Json } from '@/types/database.types'
 
 // GET - Liste des articles
 export async function GET(request: NextRequest) {
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as any)?.manage_blog) {
+    if (!admin || !(admin.permissions as Record<string, unknown>)?.manage_blog) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as any)?.manage_blog) {
+    if (!admin || !(admin.permissions as Record<string, unknown>)?.manage_blog) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
         category_id: body.category_id || null,
         allow_comments: body.allow_comments ?? true,
         is_featured: body.is_featured ?? false,
-        metadata: (body.metadata || {}) as any,
+        metadata: (body.metadata || {}) as unknown as Json,
       })
       .select()
       .single()

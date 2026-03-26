@@ -38,6 +38,7 @@ import type { TableRow } from '@/lib/types/supabase-helpers'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { sanitizeHTML } from '@/lib/utils/sanitize-html'
 import Image from 'next/image'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import { emailTemplateService } from '@/lib/services/email-template.service.client'
@@ -1112,15 +1113,15 @@ export function GestionConventions({
                     <div 
                       className="text-sm text-gray-700 whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{ 
-                        __html: bulkEmailContent.body 
-                          ? bulkEmailContent.body
+                        __html: bulkEmailContent.body
+                          ? sanitizeHTML(bulkEmailContent.body
                               .replace(/{student_first_name}/g, 'Jean')
                               .replace(/{student_last_name}/g, 'Dupont')
                               .replace(/{session_name}/g, sessionData?.name || 'Session de formation')
                               .replace(/{formation_name}/g, formation?.name || 'Formation')
                               .replace(/{session_start_date}/g, sessionData?.start_date ? formatDate(sessionData.start_date) : 'Date de début')
                               .replace(/{session_end_date}/g, sessionData?.end_date ? formatDate(sessionData.end_date) : 'Date de fin')
-                              .replace(/{session_location}/g, sessionData?.location || 'Lieu')
+                              .replace(/{session_location}/g, sessionData?.location || 'Lieu'))
                           : '(Aucun contenu)'
                       }}
                     />

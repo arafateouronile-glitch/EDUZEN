@@ -13,6 +13,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/utils/logger'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.eduzen.io'
 
@@ -32,15 +33,23 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient()
 
   // ── Récupérer l'entrée via le token ─────────────────────────────────────────
-  const { data: sj, error } = await (supabase as any)
+  const { data: sj, error } = await supabase
     .from('session_jury')
-    .select('id, status, session_id, sessions(name)')
+    .select('id, status, session_id, token_expires_at, sessions(name)')
     .eq('token', token)
     .single()
 
   if (error || !sj) {
     return NextResponse.redirect(
       `${APP_URL}/jury/success?action=invalid`,
+      { status: 302 }
+    )
+  }
+
+  // ── Vérifier l'expiration du token ──────────────────────────────────────────
+  if (sj.token_expires_at && new Date(sj.token_expires_at) < new Date()) {
+    return NextResponse.redirect(
+      `${APP_URL}/jury/success?action=expired`,
       { status: 302 }
     )
   }
@@ -54,13 +63,13 @@ export async function GET(request: NextRequest) {
     updateData.confirmed_at = new Date().toISOString()
   }
 
-  const { error: updateError } = await (supabase as any)
+  const { error: updateError } = await supabase
     .from('session_jury')
     .update(updateData)
     .eq('id', sj.id)
 
   if (updateError) {
-    console.error('[jury/confirm] update failed:', updateError)
+    logger.error('[jury/confirm] update failed', updateError instanceof Error ? updateError : new Error(String(updateError)))
     return NextResponse.redirect(
       `${APP_URL}/jury/success?action=error`,
       { status: 302 }

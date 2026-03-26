@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -275,7 +276,7 @@ export function PhysicalAttendanceSheetDownloader({
         document.body.removeChild(container)
       }
     } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error)
+      logger.error('Erreur lors de la génération du PDF', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setGeneratingSlotId(null)
     }

@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     const apiService = createAPIService(adminClient)
 
     const template = await templateService.getTemplateById(template_id)
-    if (!template || (template as any).organization_id !== middleware.organizationId) {
+    if (!template || template.organization_id !== middleware.organizationId) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 })
     }
 
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // Créer les enregistrements en base (indépendamment du storage)
     const effectiveStudentId = student_id || (related_entity_type === 'student' ? related_entity_id : null)
-    const docTitle = `${(template as any).name || template.type} — ${new Date().toLocaleDateString('fr-FR')}`
+    const docTitle = `${template.name || template.type} — ${new Date().toLocaleDateString('fr-FR')}`
     const storagePath = `${middleware.organizationId}/api/${fileName}`
 
     let fileUrl: string | undefined

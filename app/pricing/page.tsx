@@ -14,7 +14,6 @@ const plans = [
     subtitle: 'L\'essentiel pour débuter',
     monthlyPrice: 79,
     yearlyPrice: 790,
-    founderPrice: { monthly: 39, yearly: 390 },
     features: {
       usage: '20 stagiaires / mois',
       'Gestion Pédagogique': true,
@@ -36,7 +35,6 @@ const plans = [
     subtitle: 'La sérénité administrative',
     monthlyPrice: 169,
     yearlyPrice: 1690,
-    founderPrice: { monthly: 84, yearly: 840 },
     features: {
       usage: '100 stagiaires / mois',
       'Gestion Pédagogique': true,
@@ -58,7 +56,6 @@ const plans = [
     subtitle: 'Pour changer d\'échelle',
     monthlyPrice: 349,
     yearlyPrice: 3490,
-    founderPrice: null,
     features: {
       usage: 'Illimité',
       'Gestion Pédagogique': true,
@@ -93,18 +90,16 @@ const featureLabels: Record<string, string> = {
 }
 
 export default function PricingPage() {
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly')
-  const [isFounder, setIsFounder] = useState(true) // À déterminer selon l'utilisateur
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('yearly')
 
   const getPrice = (plan: typeof plans[0]) => {
-    if (isFounder && plan.founderPrice) {
-      return billingPeriod === 'monthly' ? plan.founderPrice.monthly : plan.founderPrice.yearly
-    }
     return billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice
   }
 
-  const getOriginalPrice = (plan: typeof plans[0]) => {
-    return billingPeriod === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice
+  const getMonthlySavings = (plan: typeof plans[0]) => {
+    const monthlyTotal = plan.monthlyPrice * 12
+    const yearlySaved = monthlyTotal - plan.yearlyPrice
+    return yearlySaved
   }
 
   return (
@@ -116,12 +111,11 @@ export default function PricingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-blue/10 to-brand-cyan/10 rounded-full mb-6">
-            <Sparkles className="w-5 h-5 text-brand-cyan" />
-            <span className="text-sm font-semibold text-brand-blue">
-              Offre de lancement France : -50% sur tous les plans
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-full mb-6">
+            <Sparkles className="w-5 h-5 text-green-600" />
+            <span className="text-sm font-semibold text-green-700">
+              Facturation annuelle : jusqu'à 2 mois offerts
             </span>
-            <span className="text-xs text-gray-500">(Durée limitée)</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-black tracking-tightest mb-4 bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">
             Choisissez le plan qui propulsera votre organisme
@@ -155,7 +149,7 @@ export default function PricingPage() {
             />
           </button>
           <span className={cn('text-sm font-medium', billingPeriod === 'yearly' ? 'text-gray-900' : 'text-gray-500')}>
-            Annuel <span className="text-xs text-green-600">(-17%)</span>
+            Annuel <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">-17% · 2 mois offerts</span>
           </span>
         </motion.div>
       </div>
@@ -165,8 +159,7 @@ export default function PricingPage() {
         <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {plans.map((plan, index) => {
             const price = getPrice(plan)
-            const originalPrice = getOriginalPrice(plan)
-            const discount = isFounder && plan.founderPrice ? 50 : 0
+            const savings = getMonthlySavings(plan)
 
             return (
               <motion.div
@@ -197,27 +190,29 @@ export default function PricingPage() {
 
                     <div className="mt-6">
                       <div className="flex items-baseline justify-center gap-2">
-                        {discount > 0 && (
-                          <span className="text-2xl text-gray-400 line-through">
-                            {originalPrice}€
-                          </span>
-                        )}
                         <span className="text-5xl font-black text-brand-blue">
-                          {price}€
+                          {billingPeriod === 'yearly'
+                            ? Math.round(price / 12)
+                            : price}€
                         </span>
-                        <span className="text-gray-600">HT</span>
+                        <span className="text-gray-600">HT/mois</span>
                       </div>
-                      {discount > 0 && (
-                        <div className="mt-2 flex items-center justify-center gap-2">
-                          <Gift className="w-4 h-4 text-brand-cyan" />
-                          <span className="text-sm font-semibold text-brand-cyan">
-                            -{discount}% Lancement France
-                          </span>
+                      {billingPeriod === 'yearly' && (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm text-gray-500">
+                            soit <span className="font-semibold text-gray-700">{price}€</span> facturé annuellement
+                          </p>
+                          <div className="inline-flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-3 py-1">
+                            <Gift className="w-3.5 h-3.5 text-green-600" />
+                            <span className="text-xs font-semibold text-green-700">
+                              Vous économisez {savings}€/an
+                            </span>
+                          </div>
                         </div>
                       )}
-                      <p className="text-sm text-gray-500 mt-2">
-                        {billingPeriod === 'monthly' ? 'par mois' : 'par an'}
-                      </p>
+                      {billingPeriod === 'monthly' && (
+                        <p className="text-sm text-gray-500 mt-2">par mois, sans engagement</p>
+                      )}
                     </div>
                   </CardHeader>
 

@@ -68,8 +68,7 @@ export const APP_DEFAULTS = {
  * Configuration Supabase
  */
 export const SUPABASE_CONFIG = {
-  // Project ID par défaut (peut être remplacé par SUPABASE_PROJECT_ID)
-  defaultProjectId: process.env.SUPABASE_PROJECT_ID || 'ocdlaouymksskmmhmzdr',
+  defaultProjectId: process.env.SUPABASE_PROJECT_ID || '',
 } as const
 
 /**

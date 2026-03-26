@@ -16,6 +16,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withCronSecurity } from '@/lib/utils/cron-security'
+import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       windowEnd.setHours(23, 59, 59, 999)
 
       // ── Requête ─────────────────────────────────────────────────────────────
-      const { data: entries, error: fetchError } = await (supabase as any)
+      const { data: entries, error: fetchError } = await supabase
         .from('session_jury')
         .select(`
           *,
@@ -207,14 +208,18 @@ export async function GET(request: NextRequest) {
             })
           } else {
             // Mode développement
-            console.log(`[cron/jury-convocations] DEV — email vers ${juryMember.email}`)
-            console.log(`  Subject: ${subject}`)
+            logger.debug(`[cron/jury-convocations] DEV — email simulé`, { to: juryMember.email, subject })
           }
 
-          // ── Mettre à jour email_sent_at ──────────────────────────────────
-          await (supabase as any)
+          // ── Mettre à jour email_sent_at + token_expires_at (J+7) ────────
+          const expiresAt = new Date()
+          expiresAt.setDate(expiresAt.getDate() + 7)
+          await supabase
             .from('session_jury')
-            .update({ email_sent_at: new Date().toISOString() })
+            .update({
+              email_sent_at:    new Date().toISOString(),
+              token_expires_at: expiresAt.toISOString(),
+            })
             .eq('id', sj.id)
 
           sent++
@@ -222,7 +227,7 @@ export async function GET(request: NextRequest) {
           failed++
           const msg = err instanceof Error ? err.message : String(err)
           errors.push(`session_jury ${sj.id} (${juryMember.email}): ${msg}`)
-          console.error(`[cron/jury-convocations] Erreur pour ${juryMember.email}:`, err)
+          logger.error(`[cron/jury-convocations] Erreur pour ${juryMember.email}`, err instanceof Error ? err : new Error(String(err)))
         }
       }
 

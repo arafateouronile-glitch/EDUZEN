@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     // Pour les bounces et delays, on peut stocker une info utile en metadata
     // via une mise à jour JSONB merge (concat operator)
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('email_logs')
       .update(updatePayload)
       .eq('resend_id', emailId)

@@ -190,6 +190,15 @@ export const uploadRateLimiter = new RateLimiter({
 })
 
 /**
+ * Rate limiter pour les opérations lourdes (génération PDF, exports)
+ * 5 requêtes par minute par IP
+ */
+export const heavyRateLimiter = new RateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 5,
+})
+
+/**
  * Rate limiter pour les routes publiques à token (sign, auditor, attendance)
  * 20 req/min par IP pour limiter le brute-force de tokens
  */

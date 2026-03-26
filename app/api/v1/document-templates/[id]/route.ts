@@ -30,7 +30,7 @@ export async function GET(
     const template = await templateService.getTemplateById(id)
 
     // Vérifier que le template appartient à l'organisation
-    if (!template || (template as any).organization_id !== middleware.organizationId) {
+    if (!template || template.organization_id !== middleware.organizationId) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 

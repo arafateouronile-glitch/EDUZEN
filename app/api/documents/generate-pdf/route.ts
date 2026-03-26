@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       try {
         const gotenbergStart = Date.now()
         const pdfBuffer = await htmlToPdf(html, {
-          format: ((template as any).page_size === 'Letter' ? 'Letter' : 'A4') as 'A4' | 'Letter',
+          format: (template.page_size === 'Letter' ? 'Letter' : 'A4') as 'A4' | 'Letter',
           marginTop: mmToInch(margins.top),
           marginBottom: mmToInch(margins.bottom),
           marginLeft: mmToInch(margins.left),

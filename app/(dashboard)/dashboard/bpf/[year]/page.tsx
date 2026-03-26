@@ -241,15 +241,37 @@ export default function BPFDetailPage() {
 
   const handleExportPdf = async () => {
     if (!cerfaData) return
-
-    // TODO: Implement actual PDF generation with jspdf
-    // For now, show a toast
-    addToast({
-      type: 'success',
-      title: 'Export en cours',
-      description: 'Le PDF Cerfa est en cours de génération...',
-    })
     setShowExportDialog(false)
+    addToast({ type: 'success', title: 'Génération en cours…', description: 'Le PDF Cerfa est en cours de génération.' })
+
+    try {
+      const res = await fetch('/api/bpf/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Erreur HTTP ${res.status}`)
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `BPF_${year}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+
+      addToast({ type: 'success', title: 'PDF téléchargé', description: `BPF ${year} généré avec succès.` })
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Erreur de génération',
+        description: err instanceof Error ? err.message : 'Impossible de générer le PDF.',
+      })
+    }
   }
 
   const handleCategoryClick = (category: BPFCategory) => {

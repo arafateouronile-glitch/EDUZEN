@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     // Requête sur la vue de conformité
     let query = supabase
-      .from('v_employee_diploma_compliance' as any)
+      .from('v_employee_diploma_compliance')
       .select('*')
       .eq('organization_id', userData.organization_id)
       .eq('company_id', companyId)
@@ -58,22 +58,22 @@ export async function GET(request: NextRequest) {
     if (error) throw error
 
     // Filtre search côté JS (noms non indexables facilement en SQL sur une vue)
-    let records = (rows || []) as any[]
+    let records = rows || []
     if (search) {
       const q = search.toLowerCase()
-      records = records.filter((r: any) =>
+      records = records.filter(r =>
         `${r.first_name} ${r.last_name}`.toLowerCase().includes(q) ||
         r.diploma_name?.toLowerCase().includes(q)
       )
     }
 
     // Stats globales
-    const all = (rows || []) as any[]
+    const all = rows || []
     const stats = {
       total:   all.length,
-      expired: all.filter((r: any) => r.status === 'expired').length,
-      warning: all.filter((r: any) => r.status === 'warning').length,
-      valid:   all.filter((r: any) => r.status === 'valid').length,
+      expired: all.filter(r => r.status === 'expired').length,
+      warning: all.filter(r => r.status === 'warning').length,
+      valid:   all.filter(r => r.status === 'valid').length,
     }
 
     return NextResponse.json({ records, stats })
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('employee_diplomas' as any)
+      .from('employee_diplomas')
       .insert({
         organization_id:     userData.organization_id,
         company_id,
@@ -180,7 +180,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await supabase
-      .from('employee_diplomas' as any)
+      .from('employee_diplomas')
       .delete()
       .eq('id', id)
       .eq('organization_id', userData.organization_id) // Scoper à l'organisation

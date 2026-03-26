@@ -84,10 +84,8 @@ export default function AuditorPage() {
     [token]
   )
 
-  // Export PDF
+  // Export PDF via impression navigateur (Ctrl+P → Enregistrer en PDF)
   const handleExportPdf = useCallback(() => {
-    // TODO: Implémenter l'export PDF
-    // Pour l'instant, on ouvre une version imprimable
     window.print()
   }, [])
 

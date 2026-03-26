@@ -41,13 +41,12 @@ export async function POST(request: NextRequest) {
     const apiService = createAPIService(adminClient)
 
     // Stocker l'événement entrant dans la table webhook_deliveries
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: stored, error } = await (adminClient as any)
+    const { data: stored, error } = await adminClient
       .from('webhook_deliveries')
       .insert({
         webhook_id: middleware.key.id, // utilise l'ID de la clé API comme référence
         event_type: event,
-        payload: { event, data, source: source || 'external', idempotency_key },
+        event_data: { event, data, source: source || 'external', idempotency_key },
         status: 'received',
         created_at: new Date().toISOString(),
       })
