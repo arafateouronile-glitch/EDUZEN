@@ -10,9 +10,8 @@ import { cn } from '@/lib/utils'
 const plans = [
   {
     name: "Starter",
-    price: { monthly: "79", yearly: "65" },
-    period: "/mois",
-    originalPrice: "79",
+    monthlyPrice: 79,
+    yearlyTotal: 790,
     description: "L'essentiel pour débuter",
     features: [
       "20 stagiaires / mois",
@@ -28,9 +27,8 @@ const plans = [
   },
   {
     name: "Pro",
-    price: { monthly: "169", yearly: "139" },
-    period: "/mois",
-    originalPrice: "169",
+    monthlyPrice: 169,
+    yearlyTotal: 1690,
     description: "La sérénité administrative",
     features: [
       "100 stagiaires / mois",
@@ -46,9 +44,8 @@ const plans = [
   },
   {
     name: "Enterprise",
-    price: { monthly: "Sur mesure", yearly: "Sur mesure" },
-    period: "",
-    originalPrice: "349",
+    monthlyPrice: 349,
+    yearlyTotal: 3490,
     description: "Pour changer d'échelle",
     features: [
       "Stagiaires illimités",
@@ -109,7 +106,7 @@ export function Pricing() {
                 Annuel
               </span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wide">
-                -20%
+                -17% · 2 mois offerts
               </span>
             </div>
           </div>
@@ -154,19 +151,26 @@ export function Pricing() {
 
                 <div className="mb-8">
                   <div className="flex items-baseline gap-1">
-                    {plan.price.monthly !== "Sur mesure" && <span className="text-2xl font-bold">€</span>}
+                    <span className="text-2xl font-bold">€</span>
                     <span className="text-5xl font-black tracking-tight">
-                      {isYearly ? plan.price.yearly : plan.price.monthly}
+                      {isYearly ? Math.round(plan.yearlyTotal / 12) : plan.monthlyPrice}
                     </span>
-                    {plan.price.monthly !== "Sur mesure" && (
-                      <span className={cn("text-sm font-medium ml-1", plan.highlight ? "text-gray-400" : "text-gray-500")}>
-                        /mois
-                      </span>
-                    )}
+                    <span className={cn("text-sm font-medium ml-1", plan.highlight ? "text-gray-400" : "text-gray-500")}>
+                      HT/mois
+                    </span>
                   </div>
-                  {isYearly && plan.price.monthly !== "Sur mesure" && (
-                    <p className={cn("text-xs mt-2 font-medium", plan.highlight ? "text-green-400" : "text-green-600")}>
-                      Facturé {parseInt(plan.price.yearly) * 12}€ / an
+                  {isYearly ? (
+                    <div className="mt-2 space-y-1">
+                      <p className={cn("text-xs font-medium", plan.highlight ? "text-gray-400" : "text-gray-500")}>
+                        soit {plan.yearlyTotal}€ facturé annuellement
+                      </p>
+                      <p className={cn("text-xs font-bold", plan.highlight ? "text-green-400" : "text-green-600")}>
+                        Économie : {plan.monthlyPrice * 12 - plan.yearlyTotal}€/an
+                      </p>
+                    </div>
+                  ) : (
+                    <p className={cn("text-xs mt-2 font-medium", plan.highlight ? "text-gray-400" : "text-gray-500")}>
+                      sans engagement
                     </p>
                   )}
                 </div>
