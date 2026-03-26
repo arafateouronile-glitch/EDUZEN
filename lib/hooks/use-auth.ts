@@ -504,8 +504,8 @@ export function useAuth() {
         if (rpcUserError) {
           userError = rpcUserError
           
-          // Si la fonction n'existe pas, essayer l'insertion directe
-          if (rpcUserError.code === '42883') {
+          // Si la fonction n'existe pas (PostgreSQL: 42883, PostgREST: PGRST202), essayer l'insertion directe
+          if (rpcUserError.code === '42883' || rpcUserError.code === 'PGRST202' || (rpcUserError as unknown as { status?: number }).status === 404) {
             
             const { data: userData, error: directUserError } = await supabase
               .from('users')
