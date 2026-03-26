@@ -142,8 +142,8 @@ export function generateCSP(config: CSPConfig = {}): string {
   // img-src: Images autorisées
   directives.push("img-src 'self' data: https: blob: https://*.supabase.co")
 
-  // font-src: Polices autorisées (Stripe peut charger des polices depuis ses domaines)
-  directives.push("font-src 'self' data: https://fonts.gstatic.com https://*.stripe.com https://js.stripe.com")
+  // font-src: Polices autorisées (Stripe charge des polices depuis plusieurs domaines)
+  directives.push("font-src 'self' data: https://fonts.gstatic.com https://*.stripe.com https://js.stripe.com https://checkout.stripe.com https://m.stripe.network https://*.stripe.network")
 
   // connect-src: Connexions autorisées (fetch, WebSocket, etc.)
   // blob: requis pour que le worker PDF.js puisse charger le PDF depuis une URL blob (page signature)
@@ -169,8 +169,8 @@ export function generateCSP(config: CSPConfig = {}): string {
 
   directives.push(`connect-src ${connectSrc.join(' ')}`)
 
-  // frame-src: Iframes autorisées (Stripe pour 3D Secure et CardElement)
-  directives.push("frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com")
+  // frame-src: Iframes autorisées (Stripe pour 3D Secure, CardElement et Checkout)
+  directives.push("frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://*.stripe.network")
 
   // media-src: Médias autorisés
   directives.push("media-src 'self' https://*.supabase.co blob:")
