@@ -208,8 +208,7 @@ export class ESignatureWebhookHandlerService {
     const supabase = await createClient()
 
     // Mettre à jour le statut du document (colonnes status/signed_at peuvent exister en BDD)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const docUpdate: any = {
+    const docUpdate: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
       status: 'signed',
       signed_at: new Date().toISOString(),

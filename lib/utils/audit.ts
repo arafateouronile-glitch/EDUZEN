@@ -41,8 +41,7 @@ export function auditLog(params: AuditEventParams): void {
 
   const admin = createAdminClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Promise.resolve((admin as any).rpc('log_audit_event', {
+  Promise.resolve((admin as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> }).rpc('log_audit_event', {
     p_actor_id:        actorId,
     p_organization_id: organizationId,
     p_action:          action,
@@ -53,7 +52,8 @@ export function auditLog(params: AuditEventParams): void {
     p_metadata:        metadata,
     p_success:         success,
     p_error_message:   errorMessage ?? null,
-  })).then(({ error }: { error: { message: string } | null }) => {
+  })).then((result: unknown) => {
+    const { error } = result as { error: { message: string } | null }
     if (error) logger.warn('audit_log insert failed', { error: error.message, action, tableName })
   }).catch((err: unknown) => {
     logger.warn('audit_log unexpected error', { err, action, tableName })

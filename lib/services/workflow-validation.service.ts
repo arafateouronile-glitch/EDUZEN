@@ -8,8 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
 /** Client Supabase pour les tables workflow (non encore dans Database). Un seul cast centralisé. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseClientWithWorkflow = SupabaseClient<Database> & { from(table: string): any }
+type SupabaseClientWithWorkflow = Omit<SupabaseClient<Database>, 'from'> & { from(table: string): ReturnType<SupabaseClient['from']> }
 
 /** Types locaux pour les tables workflow qui ne sont pas encore dans le schéma Supabase */
 interface Workflow {

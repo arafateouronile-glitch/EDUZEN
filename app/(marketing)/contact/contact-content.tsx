@@ -15,6 +15,7 @@ import {
   MapPin,
   Loader2
 } from 'lucide-react'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 
 const Footer = dynamic(
@@ -322,11 +323,11 @@ export const ContactContent = memo(function ContactContent() {
             <p className="text-gray-600 mb-6">
               Consultez notre FAQ pour trouver rapidement des réponses à vos questions.
             </p>
-            <a href="/#faq">
+            <Link href="/#faq">
               <Button variant="outline" className="rounded-full">
                 Voir la FAQ
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
       </section>

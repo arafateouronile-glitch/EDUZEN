@@ -248,8 +248,7 @@ export async function POST(request: NextRequest) {
           page_count:          pageCount,
           related_entity_type: body.related_entity_type,
           related_entity_id:   body.related_entity_id,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          metadata:            (body.variables ?? {}) as any,
+          metadata:            (body.variables ?? {}) as import('@/types/database.types').Json,
           generated_by:        user.id,
         })
         .select()
