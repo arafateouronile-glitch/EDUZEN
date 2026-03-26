@@ -598,7 +598,8 @@ export function useAuth() {
       if (authUser) {
         router.push('/dashboard/onboarding')
       } else {
-        router.push('/auth/login?message=confirm-email')
+        const email = authData.user?.email ? `?email=${encodeURIComponent(authData.user.email)}` : ''
+        router.push(`/auth/register/success${email}`)
       }
     },
   })
