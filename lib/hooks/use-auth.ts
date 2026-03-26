@@ -30,16 +30,21 @@ export function useAuth() {
       const fetchSession = async (): Promise<{ user: User } | null> => {
         const { data: { user }, error } = await supabase.auth.getUser()
         if (error) {
+          const errCode = (error as { code?: string })?.code
           const isSessionMissing =
             error?.name === 'AuthSessionMissingError' ||
             (error as { message?: string })?.message?.includes('Auth session missing')
+          const isInvalidToken =
+            errCode === 'refresh_token_not_found' ||
+            (error as { message?: string })?.message?.includes('Invalid Refresh Token')
           const isRateLimit = (error as { status?: number })?.status === 429
-          if (isSessionMissing) {
-            // Session réellement absente: ne pas conserver l'ancienne session en cache.
-            // Sinon on reste "connecté" côté UI alors que les routes serveur redirigent déjà.
+          if (isSessionMissing || isInvalidToken) {
+            if (isInvalidToken) {
+              await supabase.auth.signOut()
+            }
             return null
           }
-          if (!isSessionMissing && !isRateLimit) {
+          if (!isRateLimit) {
             logger.error('Auth getUser error', error as Error)
           }
           if (isRateLimit) {
