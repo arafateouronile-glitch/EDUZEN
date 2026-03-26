@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import type { BPFDrillDownMetric, BPFDrillDownResult} from '@/lib/services/bpf.service';
-import { bpfService } from '@/lib/services/bpf.service'
+import { bpfService } from '@/lib/services/bpf.client'
 import {
   Search,
   Clock,

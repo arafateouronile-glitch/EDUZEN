@@ -21,13 +21,13 @@ import type {
   BPFDrillDownMetric,
   BPFCategory} from '@/lib/services/bpf.service';
 import {
-  bpfService,
   BPFStats,
   BPFChargesBreakdown,
   BPFInconsistency,
   BPFStudentBreakdown,
   BPFCerfaData
 } from '@/lib/services/bpf.service'
+import { bpfService } from '@/lib/services/bpf.client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

@@ -173,14 +173,8 @@ export class BPFService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
-    if (supabaseClient) {
-      this.supabase = supabaseClient
-    } else {
-      // Lazy require : uniquement exécuté côté client (jamais lors d'un import serveur)
-      // eslint-disable-next-line
-      this.supabase = require('@/lib/supabase/client').createClient()
-    }
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient
   }
 
   /**
@@ -751,5 +745,3 @@ export interface BPFCerfaData {
   hasCriticalIssues: boolean
 }
 
-// Export singleton
-export const bpfService = new BPFService()
