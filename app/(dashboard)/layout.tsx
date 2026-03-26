@@ -68,32 +68,36 @@ export default async function DashboardLayout({
     try {
       const cached = await getCachedLayoutData(authUser.id)
 
-      if (cached?.userData?.organization_id) {
-        const { org, subscription } = cached
-        const settings = (org?.settings || {}) as Record<string, unknown>
-        const paymentMethodAdded = settings.payment_method_added === true
-        const onboardingCompleted = settings.onboarding_completed === true
+      // Pas de profil en base → onboarding non fait, rediriger
+      if (!cached?.userData?.organization_id) {
+        redirect('/dashboard/onboarding')
+      }
 
-        if (!onboardingCompleted) {
-          redirect('/dashboard/onboarding')
-        }
+      const { org, subscription } = cached
+      const settings = (org?.settings || {}) as Record<string, unknown>
+      const paymentMethodAdded = settings.payment_method_added === true
+      const onboardingCompleted = settings.onboarding_completed === true
 
-        if (!paymentMethodAdded) {
-          if (subscription) {
-            const trialEndAt = subscription.trial_end_at
-              ? new Date(subscription.trial_end_at)
-              : null
-            const now = new Date()
-            if (trialEndAt && trialEndAt < now) {
-              redirect('/dashboard/onboarding?reason=trial_expired&step=4')
-            }
-          } else {
-            redirect('/dashboard/onboarding?reason=payment_required&step=4')
+      if (!onboardingCompleted) {
+        redirect('/dashboard/onboarding')
+      }
+
+      if (!paymentMethodAdded) {
+        if (subscription) {
+          const trialEndAt = subscription.trial_end_at
+            ? new Date(subscription.trial_end_at)
+            : null
+          const now = new Date()
+          if (trialEndAt && trialEndAt < now) {
+            redirect('/dashboard/onboarding?reason=trial_expired&step=4')
           }
+        } else {
+          redirect('/dashboard/onboarding?reason=payment_required&step=4')
         }
       }
     } catch {
-      // En cas d'erreur DB, laisser passer (le client pourra rediriger si besoin)
+      // En cas d'erreur DB, rediriger vers l'onboarding par sécurité
+      redirect('/dashboard/onboarding')
     }
   }
 
