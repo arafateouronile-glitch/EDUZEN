@@ -9,7 +9,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { bpfService } from '@/lib/services/bpf.service'
+import { BPFService } from '@/lib/services/bpf.service'
 import { logger } from '@/lib/utils/logger'
 import { isGotenbergConfigured, htmlToPdf } from '@/lib/services/gotenberg.service'
 import { createPage } from '@/lib/utils/puppeteer-pool'
@@ -238,6 +238,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Préparer les données Cerfa
+    const bpfService = new BPFService(supabase)
     const cerfaData = await bpfService.prepareCerfaData(userRow.organization_id, year)
     const html = generateCerfaHTML(cerfaData)
     const filename = `BPF_${year}_${cerfaData.organization.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
