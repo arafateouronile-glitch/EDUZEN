@@ -59,7 +59,7 @@
     },
     {
       "path": "/api/cron/send-notifications",
-      "schedule": "0 */4 * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/affiliate-followup-j7",
