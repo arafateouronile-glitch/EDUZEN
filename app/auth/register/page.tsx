@@ -134,11 +134,15 @@ export default function RegisterPage() {
               />
             </div>
 
-            {(error || registerError) && (
-              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg text-sm">
-                {error || (registerError instanceof Error ? registerError.message : 'Une erreur est survenue')}
-              </div>
-            )}
+            {(error || registerError) && (() => {
+              const msg = error || (registerError instanceof Error ? registerError.message : 'Une erreur est survenue')
+              const isInfo = msg.includes('email de confirmation') || msg.includes('boîte de réception')
+              return (
+                <div className={`px-4 py-3 rounded-lg text-sm ${isInfo ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-destructive/10 text-destructive'}`}>
+                  {msg}
+                </div>
+              )
+            })()}
 
             <Button
               type="submit"

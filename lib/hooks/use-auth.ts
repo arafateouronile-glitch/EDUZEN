@@ -286,12 +286,17 @@ export function useAuth() {
           status: authError.status,
         })
         
-        // Gérer l'erreur de rate limiting
-        if (authError.status === 429 || authError.message?.includes('2 seconds')) {
-          throw new Error('Trop de tentatives. Veuillez patienter quelques minutes avant de réessayer.')
+        // 429 : soit rate-limit strict, soit email déjà enregistré (Supabase renvoie quand même l'email)
+        if (authError.status === 429) {
+          throw new Error('Un email de confirmation vous a peut-être déjà été envoyé. Vérifiez votre boîte de réception (et les spams), puis cliquez sur le lien pour activer votre compte.')
         }
 
-        // Email déjà utilisé
+        // Délai anti-spam Supabase ("after X seconds")
+        if (authError.message?.includes('seconds')) {
+          throw new Error('Veuillez patienter quelques secondes avant de réessayer.')
+        }
+
+        // Email déjà utilisé (compte confirmé)
         if (authError.message?.toLowerCase().includes('already registered') || authError.message?.toLowerCase().includes('already been registered')) {
           throw new Error('Cette adresse email est déjà associée à un compte. Essayez de vous connecter ou de réinitialiser votre mot de passe.')
         }
