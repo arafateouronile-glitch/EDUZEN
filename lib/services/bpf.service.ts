@@ -5,7 +5,6 @@
  * Module "BPF Magic Engine" - Calcul précis et automatisé
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -175,9 +174,13 @@ export class BPFService {
 
 
   constructor(supabaseClient?: SupabaseClient<any>) {
-
-    this.supabase = supabaseClient || createClient()
-
+    if (supabaseClient) {
+      this.supabase = supabaseClient
+    } else {
+      // Lazy require : uniquement exécuté côté client (jamais lors d'un import serveur)
+      // eslint-disable-next-line
+      this.supabase = require('@/lib/supabase/client').createClient()
+    }
   }
 
   /**
