@@ -32,26 +32,35 @@ export default function SuperAdminDashboardPage() {
   const { data: kpis, isLoading: kpisLoading, refetch } = useQuery({
     queryKey: ['super-admin-kpis'],
     queryFn: async (): Promise<DashboardKPIs> => {
-      // For now, return sample data - in production, this would fetch from platform_metrics_daily
-      // const { data, error } = await supabase
-      //   .from('platform_metrics_daily')
-      //   .select('*')
-      //   .order('date', { ascending: false })
-      //   .limit(1)
-      //   .single()
+      const { data, error } = await supabase
+        .from('platform_metrics_daily')
+        .select('mrr, arr, active_organizations, new_organizations, churn_rate, retention_rate, conversion_rate')
+        .order('date', { ascending: false })
+        .limit(1)
+        .single()
 
-      // Sample data for demonstration
+      if (error || !data) {
+        return {
+          mrr: 0,
+          arr: 0,
+          activeOrganizations: 0,
+          newSubscribersThisMonth: 0,
+          churnRate: 0,
+          retentionRate: 0,
+        }
+      }
+
       return {
-        mrr: 14850,
-        mrrGrowth: 12.5,
-        arr: 178200,
-        activeOrganizations: 193,
-        newSubscribersThisMonth: 24,
-        churnRate: 2.1,
-        retentionRate: 97.9,
-        conversionRate: 8.5,
-        totalRevenue: 156780,
-        averageRevenuePerUser: 77,
+        mrr: Number(data.mrr),
+        arr: Number(data.arr),
+        activeOrganizations: data.active_organizations,
+        newSubscribersThisMonth: data.new_organizations,
+        churnRate: Number((data.churn_rate ?? 0)) * 100,
+        retentionRate: Number((data.retention_rate ?? 0)) * 100,
+        conversionRate: Number((data.conversion_rate ?? 0)) * 100,
+        averageRevenuePerUser: data.active_organizations > 0
+          ? Math.round(Number(data.mrr) / data.active_organizations)
+          : 0,
       }
     },
     staleTime: 1000 * 60 * 5, // 5 minutes

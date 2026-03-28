@@ -26,15 +26,26 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 export default function SubscriptionsPage() {
   const [selectedSubscription, setSelectedSubscription] = useState<OrganizationSubscription | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const supabase = createClient()
 
-  // Sample stats - in production, fetch from API
-  const stats = {
-    total: 193,
-    active: 128,
-    trial: 35,
-    pastDue: 12,
-    growthPercent: 8.5,
-  }
+  const { data: stats = { total: 0, active: 0, trial: 0, pastDue: 0, growthPercent: 0 } } = useQuery({
+    queryKey: ['super-admin-subscription-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organization_subscriptions')
+        .select('status')
+
+      if (error || !data) return { total: 0, active: 0, trial: 0, pastDue: 0, growthPercent: 0 }
+
+      const total = data.length
+      const active = data.filter(s => s.status === 'active').length
+      const trial = data.filter(s => s.status === 'trial').length
+      const pastDue = data.filter(s => s.status === 'past_due').length
+
+      return { total, active, trial, pastDue, growthPercent: 0 }
+    },
+    staleTime: 1000 * 60 * 5,
+  })
 
   const handleViewDetails = (subscription: OrganizationSubscription) => {
     setSelectedSubscription(subscription)

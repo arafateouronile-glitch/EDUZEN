@@ -57,6 +57,11 @@ Thumbs.db
 *.bak
 *.tmp
 package.json.tmp
+package.json.new
+
+# TypeScript error logs
+tsc-errors*.txt
+typescript-errors*.txt
 
 # SDK
 sdk/javascript/dist/

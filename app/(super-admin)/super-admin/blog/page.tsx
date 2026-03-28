@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
 import { PlatformAdminGuard } from '@/components/super-admin/platform-admin-guard'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
@@ -58,133 +60,6 @@ import {
 import { toast } from 'sonner'
 import type { BlogPost, BlogPostStatus } from '@/types/super-admin.types'
 
-// Sample data
-const samplePosts: BlogPost[] = [
-  {
-    id: '1',
-    title: 'Guide complet Qualiopi 2024 : Tout ce que vous devez savoir',
-    slug: 'guide-complet-qualiopi-2024',
-    excerpt: 'Découvrez toutes les nouveautés de la certification Qualiopi pour 2024...',
-    content: 'Lorem ipsum...',
-    featured_image_url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173',
-    meta_title: 'Guide Qualiopi 2024 | EDUZEN',
-    meta_description: 'Guide complet sur la certification Qualiopi en 2024',
-    canonical_url: null,
-    status: 'published',
-    published_at: '2024-01-15T10:00:00Z',
-    scheduled_for: null,
-    author_id: 'user-1',
-    category_id: '3',
-    views_count: 1234,
-    likes_count: 45,
-    shares_count: 23,
-    allow_comments: true,
-    is_featured: true,
-    reading_time_minutes: 8,
-    metadata: {},
-    created_at: '2024-01-10T08:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-    author: { id: 'user-1', full_name: 'Sophie Martin', avatar_url: null, email: 'sophie@eduzen.io' },
-    category: { id: '3', name: 'Qualiopi', slug: 'qualiopi', description: null, parent_id: null, display_order: 2, is_active: true, created_at: '', updated_at: '' },
-    tags: [
-      { id: '1', name: 'Qualiopi', slug: 'qualiopi', color: '#6366f1', created_at: '' },
-      { id: '2', name: 'Certification', slug: 'certification', color: '#10b981', created_at: '' },
-    ],
-    comments_count: 12,
-  },
-  {
-    id: '2',
-    title: 'Comment optimiser vos formations avec l\'IA',
-    slug: 'optimiser-formations-ia',
-    excerpt: 'L\'intelligence artificielle révolutionne la formation professionnelle...',
-    content: 'Lorem ipsum...',
-    featured_image_url: 'https://images.unsplash.com/photo-1677442135703-1787eea5ce01',
-    meta_title: 'IA et Formation | EDUZEN',
-    meta_description: 'Découvrez comment l\'IA peut améliorer vos formations',
-    canonical_url: null,
-    status: 'published',
-    published_at: '2024-01-08T14:00:00Z',
-    scheduled_for: null,
-    author_id: 'user-2',
-    category_id: '2',
-    views_count: 856,
-    likes_count: 32,
-    shares_count: 15,
-    allow_comments: true,
-    is_featured: false,
-    reading_time_minutes: 5,
-    metadata: {},
-    created_at: '2024-01-05T10:00:00Z',
-    updated_at: '2024-01-08T14:00:00Z',
-    author: { id: 'user-2', full_name: 'Thomas Durand', avatar_url: null, email: 'thomas@eduzen.io' },
-    category: { id: '2', name: 'Tutoriels', slug: 'tutoriels', description: null, parent_id: null, display_order: 1, is_active: true, created_at: '', updated_at: '' },
-    tags: [
-      { id: '4', name: 'Digital', slug: 'digital', color: '#3b82f6', created_at: '' },
-    ],
-    comments_count: 8,
-  },
-  {
-    id: '3',
-    title: 'Les nouveautés EDOF 2024 pour les organismes de formation',
-    slug: 'nouveautes-edof-2024',
-    excerpt: 'Découvrez les dernières mises à jour de la plateforme EDOF...',
-    content: 'Lorem ipsum...',
-    featured_image_url: null,
-    meta_title: null,
-    meta_description: null,
-    canonical_url: null,
-    status: 'draft',
-    published_at: null,
-    scheduled_for: null,
-    author_id: 'user-1',
-    category_id: '1',
-    views_count: 0,
-    likes_count: 0,
-    shares_count: 0,
-    allow_comments: true,
-    is_featured: false,
-    reading_time_minutes: 6,
-    metadata: {},
-    created_at: '2024-01-18T09:00:00Z',
-    updated_at: '2024-01-18T09:00:00Z',
-    author: { id: 'user-1', full_name: 'Sophie Martin', avatar_url: null, email: 'sophie@eduzen.io' },
-    category: { id: '1', name: 'Actualités', slug: 'actualites', description: null, parent_id: null, display_order: 0, is_active: true, created_at: '', updated_at: '' },
-    tags: [],
-    comments_count: 0,
-  },
-  {
-    id: '4',
-    title: 'Financer ses formations : CPF, OPCO et autres dispositifs',
-    slug: 'financer-formations-cpf-opco',
-    excerpt: 'Tour d\'horizon complet des dispositifs de financement...',
-    content: 'Lorem ipsum...',
-    featured_image_url: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c',
-    meta_title: 'Financement Formation | EDUZEN',
-    meta_description: 'Guide des financements formation : CPF, OPCO, etc.',
-    canonical_url: null,
-    status: 'scheduled',
-    published_at: null,
-    scheduled_for: '2024-01-25T09:00:00Z',
-    author_id: 'user-2',
-    category_id: '4',
-    views_count: 0,
-    likes_count: 0,
-    shares_count: 0,
-    allow_comments: true,
-    is_featured: false,
-    reading_time_minutes: 10,
-    metadata: {},
-    created_at: '2024-01-17T15:00:00Z',
-    updated_at: '2024-01-17T15:00:00Z',
-    author: { id: 'user-2', full_name: 'Thomas Durand', avatar_url: null, email: 'thomas@eduzen.io' },
-    category: { id: '4', name: 'Formation', slug: 'formation', description: null, parent_id: null, display_order: 3, is_active: true, created_at: '', updated_at: '' },
-    tags: [
-      { id: '5', name: 'Financement', slug: 'financement', color: '#ec4899', created_at: '' },
-    ],
-    comments_count: 0,
-  },
-]
-
 const statusConfig: Record<BlogPostStatus, { label: string; color: string; icon: React.ReactNode }> = {
   draft: {
     label: 'Brouillon',
@@ -215,20 +90,46 @@ const statusConfig: Record<BlogPostStatus, { label: string; color: string; icon:
 
 export default function BlogPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
-  // Stats
+  const { data: allPosts = [] } = useQuery({
+    queryKey: ['super-admin-blog-posts'],
+    queryFn: async (): Promise<BlogPost[]> => {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select(`
+          id, title, slug, excerpt, featured_image_url, status,
+          published_at, scheduled_for, author_id, category_id,
+          views_count, likes_count, shares_count, allow_comments,
+          is_featured, reading_time_minutes, metadata, created_at, updated_at,
+          meta_title, meta_description, canonical_url, content,
+          category:blog_categories(id, name, slug, description, parent_id, display_order, is_active, created_at, updated_at),
+          tags:blog_post_tags(tag:blog_tags(id, name, slug, color, created_at))
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error || !data) return []
+
+      return data.map((p: any) => ({
+        ...p,
+        tags: (p.tags ?? []).map((t: any) => t.tag).filter(Boolean),
+        comments_count: 0,
+      })) as BlogPost[]
+    },
+    staleTime: 1000 * 60 * 2,
+  })
+
   const stats = {
-    totalPosts: samplePosts.length,
-    publishedPosts: samplePosts.filter((p) => p.status === 'published').length,
-    totalViews: samplePosts.reduce((sum, p) => sum + p.views_count, 0),
-    totalComments: samplePosts.reduce((sum, p) => sum + (p.comments_count || 0), 0),
+    totalPosts: allPosts.length,
+    publishedPosts: allPosts.filter((p) => p.status === 'published').length,
+    totalViews: allPosts.reduce((sum, p) => sum + p.views_count, 0),
+    totalComments: allPosts.reduce((sum, p) => sum + (p.comments_count || 0), 0),
   }
 
-  // Filter posts
-  const filteredPosts = samplePosts.filter((post) => {
+  const filteredPosts = allPosts.filter((post) => {
     const matchesSearch =
       searchQuery === '' ||
       post.title.toLowerCase().includes(searchQuery.toLowerCase())

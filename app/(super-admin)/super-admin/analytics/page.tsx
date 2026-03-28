@@ -32,40 +32,64 @@ export default function AnalyticsPage() {
   const { data: analytics, isLoading, refetch } = useQuery({
     queryKey: ['super-admin-analytics'],
     queryFn: async () => {
-      // Sample data - in production, fetch from platform_metrics_daily and platform_revenue_monthly
+      const [latestMetrics, monthlyRevenue] = await Promise.all([
+        supabase
+          .from('platform_metrics_daily')
+          .select('mrr, arr, active_organizations, total_organizations, total_users, active_users_month, new_organizations, churn_rate, retention_rate')
+          .order('date', { ascending: false })
+          .limit(2),
+        supabase
+          .from('platform_revenue_monthly')
+          .select('year, month, net_revenue, gross_revenue, recurring_revenue')
+          .order('year', { ascending: false })
+          .order('month', { ascending: false })
+          .limit(12),
+      ])
+
+      const current = latestMetrics.data?.[0]
+      const previous = latestMetrics.data?.[1]
+
+      const orgGrowth = previous && previous.total_organizations > 0
+        ? ((current?.total_organizations ?? 0) - previous.total_organizations) / previous.total_organizations * 100
+        : 0
+
+      const revenueGrowth = previous && Number(previous.mrr) > 0
+        ? (Number(current?.mrr ?? 0) - Number(previous.mrr)) / Number(previous.mrr) * 100
+        : 0
+
+      const churnRate = Number(current?.churn_rate ?? 0) * 100
+      const prevChurnRate = Number(previous?.churn_rate ?? 0) * 100
+      const retentionRate = Number(current?.retention_rate ?? 0) * 100
+      const prevRetentionRate = Number(previous?.retention_rate ?? 0) * 100
+
+      const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
+
       return {
         revenue: {
-          total: 156780,
-          growth: 12.5,
-          monthly: [
-            { month: 'Jan', revenue: 12000, mrr: 12000 },
-            { month: 'Fév', revenue: 13500, mrr: 13500 },
-            { month: 'Mar', revenue: 14200, mrr: 14200 },
-            { month: 'Avr', revenue: 14850, mrr: 14850 },
-          ],
+          total: Number(current?.mrr ?? 0),
+          growth: Math.round(revenueGrowth * 10) / 10,
+          monthly: [...(monthlyRevenue.data ?? [])].reverse().map((r) => ({
+            month: monthNames[(r.month ?? 1) - 1] ?? '',
+            revenue: Number(r.net_revenue),
+            mrr: Number(r.recurring_revenue),
+          })),
         },
         subscriptions: {
-          total: 193,
-          growth: 8.2,
-          byPlan: [
-            { plan: 'Free', count: 45, percentage: 23.3 },
-            { plan: 'Pro', count: 98, percentage: 50.8 },
-            { plan: 'Premium', count: 42, percentage: 21.8 },
-            { plan: 'Enterprise', count: 8, percentage: 4.1 },
-          ],
+          total: current?.total_organizations ?? 0,
+          growth: Math.round(orgGrowth * 10) / 10,
         },
         users: {
-          total: 2847,
-          active: 2156,
-          growth: 15.3,
+          total: current?.total_users ?? 0,
+          active: current?.active_users_month ?? 0,
+          growth: 0,
         },
         churn: {
-          rate: 2.1,
-          trend: -0.5, // Amélioration
+          rate: Math.round(churnRate * 100) / 100,
+          trend: Math.round((churnRate - prevChurnRate) * 100) / 100,
         },
         retention: {
-          rate: 97.9,
-          trend: 0.3, // Amélioration
+          rate: Math.round(retentionRate * 100) / 100,
+          trend: Math.round((retentionRate - prevRetentionRate) * 100) / 100,
         },
       }
     },

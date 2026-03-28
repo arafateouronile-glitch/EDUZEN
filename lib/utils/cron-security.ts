@@ -3,6 +3,7 @@
  * Vérification de secret, IP whitelist, logging
  */
 
+import { timingSafeEqual } from 'crypto'
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { logger } from './logger'
@@ -63,7 +64,13 @@ export function validateCronRequest(
       }
     }
 
-    details.secretValid = providedSecret === secret
+    try {
+      const a = Buffer.from(providedSecret)
+      const b = Buffer.from(secret)
+      details.secretValid = a.length === b.length && timingSafeEqual(a, b)
+    } catch {
+      details.secretValid = false
+    }
     if (!details.secretValid) {
       return {
         valid: false,

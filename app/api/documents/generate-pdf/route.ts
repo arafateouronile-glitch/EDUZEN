@@ -1,5 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import type { CookieOptions } from '@supabase/ssr'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import { logger } from '@/lib/utils/logger'
 import { createPage } from '@/lib/utils/puppeteer-pool'
@@ -14,6 +16,23 @@ export const maxDuration = 60 // 60 secondes maximum
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   let page: Awaited<ReturnType<typeof createPage>> | null = null
+
+  // Vérification de l'authentification
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) { return request.cookies.get(name)?.value },
+        set(_name: string, _value: string, _options?: CookieOptions) {},
+        remove(_name: string, _options?: CookieOptions) {},
+      },
+    }
+  )
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
 
   try {
     let body
@@ -67,7 +86,7 @@ export async function POST(request: NextRequest) {
         type: error instanceof Error ? error.constructor.name : typeof error,
       }
 
-      if (error instanceof Error && error.stack) {
+      if (process.env.NODE_ENV === 'development' && error instanceof Error && error.stack) {
         errorDetails.stack = error.stack.split('\n').slice(0, 10).join('\n')
       }
 
