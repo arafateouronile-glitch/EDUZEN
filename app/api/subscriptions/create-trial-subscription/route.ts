@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
@@ -156,6 +157,9 @@ export async function POST(request: NextRequest) {
         trialEndAt: trialEndAt.toISOString(),
       })
 
+      // Invalider le cache layout pour que la redirection vers /dashboard fonctionne immédiatement
+      revalidatePath('/dashboard', 'layout')
+
       return NextResponse.json({
         success: true,
         subscriptionId: null,
@@ -308,6 +312,9 @@ export async function POST(request: NextRequest) {
       subscriptionId: subscription.id,
       trialEndAt: stripeTrialEndAt.toISOString(),
     })
+
+    // Invalider le cache layout pour que la redirection vers /dashboard fonctionne immédiatement
+    revalidatePath('/dashboard', 'layout')
 
     return NextResponse.json({
       success: true,
