@@ -224,3 +224,16 @@ export function createForbiddenResponse(): NextResponse {
     { status: 403 }
   )
 }
+
+/**
+ * Retourne un message d'erreur sûr pour l'API.
+ *
+ * En production : retourne le fallback générique (pas de fuite de détails internes).
+ * En développement : retourne le message d'erreur réel pour faciliter le debug.
+ *
+ * Usage : `{ error: getPublicErrorMessage(error) }` à la place de `{ error: error.message }`
+ */
+export function getPublicErrorMessage(error: unknown, fallback = 'Erreur serveur'): string {
+  if (process.env.NODE_ENV === 'production') return fallback
+  return error instanceof Error ? error.message : fallback
+}
