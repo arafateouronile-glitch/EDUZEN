@@ -1,7 +1,9 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { logger, sanitizeError } from '@/lib/utils/logger'
+import { logger } from '@/lib/utils/logger'
+import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
+import type { TableInsert } from '@/lib/types/supabase-helpers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,7 +52,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    
+
+    // Vérifier le type MIME (PDF uniquement)
+    const ALLOWED_MIME_TYPES = ['application/pdf']
+    const ALLOWED_EXTENSIONS = ['pdf']
+    const fileExt = file.name.split('.').pop()?.toLowerCase()
+    if (!ALLOWED_MIME_TYPES.includes(file.type) || !fileExt || !ALLOWED_EXTENSIONS.includes(fileExt)) {
+      return NextResponse.json(
+        { error: 'Seuls les fichiers PDF sont acceptés' },
+        { status: 400 }
+      )
+    }
+
     // Vérifier la taille du fichier (10MB max)
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
@@ -58,9 +71,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    
-    // Générer un nom de fichier unique
-    const fileExt = file.name.split('.').pop()
+
+    // Générer un nom de fichier unique avec extension validée
     const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
     
     // Uploader le fichier dans Supabase Storage
@@ -83,14 +95,23 @@ export async function POST(request: NextRequest) {
     const { data: { publicUrl } } = supabase.storage
       .from('teacher-documents')
       .getPublicUrl(fileName)
-    
+
+    if (!publicUrl) {
+      await supabase.storage.from('teacher-documents').remove([fileName])
+      logger.error('URL publique vide après upload', { fileName })
+      return NextResponse.json(
+        { error: 'Erreur lors de la récupération de l\'URL du fichier' },
+        { status: 500 }
+      )
+    }
+
     // Créer l'enregistrement dans la base de données
-    const insertData: Record<string, unknown> = {
-      organization_id: userData.organization_id,
+    const insertData: TableInsert<'teacher_documents'> = {
+      organization_id: userData.organization_id!,
       teacher_id: user.id,
       title,
       description: description || null,
-      document_type: document_type as string,
+      document_type,
       file_url: fileName,
       file_name: file.name,
       file_size: file.size,
@@ -99,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
     const { data: document, error: insertError } = await supabase
       .from('teacher_documents')
-      .insert(insertData as never)
+      .insert(insertData)
       .select()
       .single()
     
@@ -123,7 +144,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     logger.error('Erreur upload document enseignant', error)
     return NextResponse.json(
-      { error: (error instanceof Error ? error.message : null) || 'Erreur serveur' },
+      { error: getPublicErrorMessage(error) },
       { status: 500 }
     )
   }

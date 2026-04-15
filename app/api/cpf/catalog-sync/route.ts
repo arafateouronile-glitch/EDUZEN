@@ -267,9 +267,9 @@ export async function POST(request: NextRequest) {
       .eq('id', syncId)
 
     // Mettre à jour la date de dernière synchronisation dans la config
-    await supabaseCpf
+    await (supabase as any)
       .from('cpf_configurations')
-      .update({ last_sync_date: new Date().toISOString() } as never)
+      .update({ last_sync_date: new Date().toISOString() })
       .eq('id', cpfConfig.id)
 
     return NextResponse.json({

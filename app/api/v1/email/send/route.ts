@@ -68,14 +68,14 @@ export async function POST(request: NextRequest) {
       subject: String(subject),
       html: html ? String(html) : undefined,
       text: text ? String(text) : undefined,
-      cc: cc ? (Array.isArray(cc) ? cc : [cc]) : undefined,
-      bcc: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined,
-      replyTo: replyTo as string,
-    } as any)
+      cc: cc ? (Array.isArray(cc) ? cc : [String(cc)]) : undefined,
+      bcc: bcc ? (Array.isArray(bcc) ? bcc : [String(bcc)]) : undefined,
+      replyTo: String(replyTo),
+    } as Parameters<typeof resend.emails.send>[0])
 
     if (resendError) {
       const msg = typeof resendError === 'object' && 'message' in resendError
-        ? String((resendError as any).message)
+        ? String(resendError.message)
         : 'Erreur envoi email'
       return NextResponse.json({ error: 'Email send failed', message: msg }, { status: 502 })
     }
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     )
 
     return NextResponse.json(
-      { data: { id: (emailData as any)?.id, to: recipients } },
+      { data: { id: emailData?.id, to: recipients } },
       {
         headers: {
           'X-RateLimit-Remaining': middleware.rateLimit.remaining.toString(),

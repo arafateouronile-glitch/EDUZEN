@@ -190,7 +190,7 @@ export default function AffiliationDashboardPage() {
                       tickFormatter={(v: number) => `€${v}`}
                     />
                     <RechartsTooltip
-                      formatter={(value: number) => [formatCurrency(value), 'MRR']}
+                      formatter={(value) => [formatCurrency(Number(value)), 'MRR'] as [string, string]}
                       labelFormatter={(_: unknown, payload: unknown) => (Array.isArray(payload) && payload[0] && typeof payload[0] === 'object' && payload[0] !== null && 'payload' in payload[0]) ? (payload[0] as { payload?: { name?: string } }).payload?.name : undefined}
                     />
                     <RechartsBar

@@ -103,11 +103,12 @@ export default function CPFConfigurationPage() {
         updated_at: new Date().toISOString(),
       }
 
+      const supabaseAny = supabase as any
       if (existingConfig?.id) {
         // Mise à jour
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAny
           .from('cpf_configurations')
-          .update(configToSave as never)
+          .update(configToSave)
           .eq('id', existingConfig.id)
           .select()
           .single()
@@ -116,12 +117,12 @@ export default function CPFConfigurationPage() {
         return data
       } else {
         // Création
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAny
           .from('cpf_configurations')
           .insert({
             ...configToSave,
             created_at: new Date().toISOString(),
-          } as never)
+          })
           .select()
           .single()
 

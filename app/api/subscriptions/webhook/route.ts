@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
           const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string,
             { expand: ['items.data.price.product'] }
-          )
+          ) as Stripe.Response<Stripe.Subscription> & { current_period_start: number; current_period_end: number }
 
           const organizationId = session.metadata?.organization_id
           const planId = session.metadata?.plan_id
@@ -99,13 +99,12 @@ export async function POST(request: NextRequest) {
           }
 
           // Créer ou mettre à jour la subscription
-          const subscriptionAny = subscription as any
-          const subscriptionData: any = {
+          const subscriptionData = {
             organization_id: organizationId,
             plan_id: planId,
             status: subscription.status,
-            current_period_start: new Date(subscriptionAny.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscriptionAny.current_period_end * 1000).toISOString(),
+            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
             stripe_customer_id: subscription.customer as string,
             stripe_subscription_id: subscription.id,
             cancel_at_period_end: subscription.cancel_at_period_end || false,
@@ -131,13 +130,12 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
-        const subscriptionAny = subscription as any
+        const subscription = event.data.object as Stripe.Subscription & { current_period_start: number; current_period_end: number }
 
         const updateData: Record<string, unknown> = {
           status: subscription.status,
-          current_period_start: new Date(subscriptionAny.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscriptionAny.current_period_end * 1000).toISOString(),
+          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
           cancel_at_period_end: subscription.cancel_at_period_end || false,
         }
 

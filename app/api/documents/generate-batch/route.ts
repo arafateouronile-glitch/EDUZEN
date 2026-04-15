@@ -5,6 +5,7 @@ import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import type { Database } from '@/types/database.types'
+import type { TableInsert } from '@/lib/types/supabase-helpers'
 import JSZip from 'jszip'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'
@@ -125,19 +126,7 @@ export async function POST(request: NextRequest) {
     }> = []
 
     // Collect all documents to insert in batch
-    const documentsToInsert: Array<{
-      organization_id: string
-      template_id: string
-      type: string
-      file_name: string
-      file_url: string
-      format: string
-      page_count: number
-      related_entity_type?: string
-      related_entity_id?: string
-      metadata: DocumentVariables
-      generated_by: string
-    }> = []
+    const documentsToInsert: TableInsert<'generated_documents'>[] = []
 
     let successCount = 0
     let errorCount = 0
@@ -177,7 +166,7 @@ export async function POST(request: NextRequest) {
           page_count: 1, // Approximatif
           related_entity_type: item.related_entity_type,
           related_entity_id: item.related_entity_id,
-          metadata: item.variables,
+          metadata: item.variables as import('@/types/database.types').Json,
           generated_by: user.id,
         })
 
@@ -203,7 +192,7 @@ export async function POST(request: NextRequest) {
       try {
         const { error: insertError } = await supabase
           .from('generated_documents')
-          .insert(documentsToInsert as any)
+          .insert(documentsToInsert)
 
         if (insertError) {
           logger.error('Batch document insert failed', insertError, {

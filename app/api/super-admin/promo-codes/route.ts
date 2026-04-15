@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreatePromoCodeInput } from '@/types/super-admin.types'
+import type { TableInsert } from '@/lib/types/supabase-helpers'
 
 // GET - Liste des codes promo
 export async function GET(request: NextRequest) {
@@ -89,25 +90,26 @@ export async function POST(request: NextRequest) {
 
     const body: CreatePromoCodeInput = await request.json()
 
+    const promoInsert: TableInsert<'promo_codes'> = {
+      code: body.code,
+      description: body.description || null,
+      discount_type: body.discount_type,
+      discount_value: body.discount_value,
+      currency: body.currency || null,
+      valid_from: new Date(body.valid_from).toISOString(),
+      valid_until: body.valid_until ? new Date(body.valid_until).toISOString() : null,
+      max_uses: body.max_uses || null,
+      max_uses_per_user: body.max_uses_per_user || 1,
+      min_subscription_amount: body.min_subscription_amount || null,
+      applicable_plans: body.applicable_plans || null,
+      first_subscription_only: body.first_subscription_only ?? false,
+      is_active: body.is_active ?? true,
+      created_by: user.id,
+      metadata: (body.metadata as import('@/types/database.types').Json) || null,
+    }
     const { data, error } = await supabase
       .from('promo_codes')
-      .insert({
-        code: body.code,
-        description: body.description || null,
-        discount_type: body.discount_type,
-        discount_value: body.discount_value,
-        currency: body.currency || null,
-        valid_from: new Date(body.valid_from).toISOString(),
-        valid_until: body.valid_until ? new Date(body.valid_until).toISOString() : null,
-        max_uses: body.max_uses || null,
-        max_uses_per_user: body.max_uses_per_user || 1,
-        min_subscription_amount: body.min_subscription_amount || null,
-        applicable_plans: body.applicable_plans || null,
-        first_subscription_only: body.first_subscription_only ?? false,
-        is_active: body.is_active ?? true,
-        created_by: user.id,
-        metadata: (body.metadata || {}) as Record<string, unknown>,
-      } as never)
+      .insert(promoInsert)
       .select()
       .single()
 

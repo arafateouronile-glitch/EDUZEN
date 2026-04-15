@@ -135,16 +135,16 @@ export function OrganizationSetupWizard() {
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `logo-${user.organization_id}-${Date.now()}.${fileExt}`
-      const filePath = `organizations/${user.organization_id}/${fileName}`
+      const filePath = `${user.organization_id}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
-        .from('public')
+        .from('organizations')
         .upload(filePath, file)
 
       if (uploadError) throw uploadError
 
       const { data: { publicUrl } } = supabase.storage
-        .from('public')
+        .from('organizations')
         .getPublicUrl(filePath)
 
       setBrandingData({ ...brandingData, logoUrl: publicUrl })

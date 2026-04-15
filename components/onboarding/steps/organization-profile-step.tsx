@@ -93,16 +93,16 @@ export function OrganizationProfileStep({
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `logo-${organizationId}-${Date.now()}.${fileExt}`
-      const filePath = `organizations/${organizationId}/${fileName}`
+      const filePath = `${organizationId}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
-        .from('public')
+        .from('organizations')
         .upload(filePath, file)
 
       if (uploadError) throw uploadError
 
       const { data: { publicUrl } } = supabase.storage
-        .from('public')
+        .from('organizations')
         .getPublicUrl(filePath)
 
       onChange({ ...data, logoUrl: publicUrl })

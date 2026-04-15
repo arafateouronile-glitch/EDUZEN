@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       .replace(/(^-|-$)/g, '')
 
     // Créer l'enregistrement de la ressource
-    const { data: resource, error: resourceError } = await (supabase as FlexibleSupabase)
+    const { data: resource, error: resourceError } = await (supabase as any)
       .from('resources')
       .insert({
         organization_id: organizationId,
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         file_type: file.type,
         author_id: user.id,
         tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-      } as never)
+      })
       .select()
       .single()
 

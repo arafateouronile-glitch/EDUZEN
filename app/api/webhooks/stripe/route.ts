@@ -1,6 +1,8 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.types'
 import Stripe from 'stripe'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
+        const subscription = event.data.object as Stripe.Subscription & { current_period_start: number; current_period_end: number }
         await handleSubscriptionUpdate(supabase, subscription)
         break
       }
@@ -79,7 +81,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null }
         await handlePaymentSuccess(supabase, invoice)
         const stripe = getStripe()
         try {
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string | null }
         await handlePaymentFailure(supabase, invoice)
         break
       }
@@ -137,8 +139,8 @@ export async function POST(request: NextRequest) {
  * Gère la création/mise à jour d'une souscription
  */
 async function handleSubscriptionUpdate(
-  supabase: any,
-  subscription: Stripe.Subscription
+  supabase: SupabaseClient<Database>,
+  subscription: Stripe.Subscription & { current_period_start: number; current_period_end: number }
 ) {
   try {
     const customerId = subscription.customer as string
@@ -175,12 +177,11 @@ async function handleSubscriptionUpdate(
     }
 
     // Mettre à jour ou créer la souscription
-    const subscriptionAny = subscription as any
-    const subscriptionData: any = {
+    const subscriptionData = {
       plan_id: plan.id,
       status: subscription.status === 'active' ? 'active' : subscription.status,
-      current_period_start: new Date(subscriptionAny.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscriptionAny.current_period_end * 1000).toISOString(),
+      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
       stripe_subscription_id: subscription.id,
       cancel_at_period_end: subscription.cancel_at_period_end,
       updated_at: new Date().toISOString(),
@@ -212,7 +213,7 @@ async function handleSubscriptionUpdate(
  * Gère l'annulation d'une souscription
  */
 async function handleSubscriptionCancellation(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   subscription: Stripe.Subscription
 ) {
   try {
@@ -270,10 +271,9 @@ async function handleSubscriptionCancellation(
 /**
  * Gère un paiement réussi
  */
-async function handlePaymentSuccess(supabase: any, invoice: Stripe.Invoice) {
+async function handlePaymentSuccess(supabase: SupabaseClient<Database>, invoice: Stripe.Invoice & { subscription?: string | null }) {
   try {
-    const invoiceAny = invoice as any
-    const subscriptionId = invoiceAny.subscription as string
+    const subscriptionId = invoice.subscription as string
 
     // Mettre à jour le statut de la souscription en "active"
     const { error } = await supabase
@@ -304,10 +304,9 @@ async function handlePaymentSuccess(supabase: any, invoice: Stripe.Invoice) {
 /**
  * Gère un échec de paiement
  */
-async function handlePaymentFailure(supabase: any, invoice: Stripe.Invoice) {
+async function handlePaymentFailure(supabase: SupabaseClient<Database>, invoice: Stripe.Invoice & { subscription?: string | null }) {
   try {
-    const invoiceAny = invoice as any
-    const subscriptionId = invoiceAny.subscription as string
+    const subscriptionId = invoice.subscription as string
 
     // Mettre à jour le statut en "past_due"
     const { error } = await supabase

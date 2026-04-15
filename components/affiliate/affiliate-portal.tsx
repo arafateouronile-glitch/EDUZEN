@@ -272,7 +272,7 @@ export function AffiliatePortal({ data }: { data: AffiliatePortalData }) {
                     <RechartsXAxis dataKey="month" tick={{ fontSize: 11 }} />
                     <RechartsYAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => `€${v}`} />
                     <RechartsTooltip
-                      formatter={(value: number) => [formatCurrency(value, 'EUR'), 'Revenus']}
+                      formatter={(value) => [formatCurrency(Number(value), 'EUR'), 'Revenus'] as [string, string]}
                     />
                     <RechartsArea
                       type="monotone"

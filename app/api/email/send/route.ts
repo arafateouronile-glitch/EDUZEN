@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
           cc: emailData.cc,
           bcc: emailData.bcc,
           replyTo: emailData.replyTo as string | undefined,
-        } as any);
+        } as Parameters<typeof resend.emails.send>[0]);
 
         if (error) {
           const rawMessage =

@@ -8,6 +8,20 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { withCronSecurity } from '@/lib/utils/cron-security'
 
+interface NotificationMetadata {
+  phone?: string
+  email?: string
+  [key: string]: unknown
+}
+
+interface OrgSettings {
+  whatsapp?: {
+    phone_number_id?: string
+    access_token?: string
+  }
+  [key: string]: unknown
+}
+
 const CRON_SECRET = process.env.CRON_SECRET
 const ALLOWED_IPS = process.env.CRON_ALLOWED_IPS?.split(',').map(ip => ip.trim()) || []
 
@@ -50,7 +64,7 @@ export async function GET(request: NextRequest) {
         const errors: string[] = []
 
         for (const notification of pending) {
-          const metadata = (notification.metadata as any) || {}
+          const metadata = (notification.metadata as NotificationMetadata) || {}
           let success = false
           let errorMessage: string | null = null
 
@@ -58,10 +72,10 @@ export async function GET(request: NextRequest) {
             if (notification.type === 'whatsapp') {
               // Envoyer via WhatsApp
               success = await sendWhatsAppMessage(
-                metadata.phone,
+                metadata.phone ?? '',
                 notification.message,
                 notification.organization_id,
-                (notification.organizations as any)?.settings
+                (notification.organizations as { settings?: OrgSettings } | null)?.settings
               )
               if (!success) {
                 errorMessage = 'WhatsApp send failed'
@@ -69,10 +83,10 @@ export async function GET(request: NextRequest) {
             } else if (notification.type === 'email') {
               // Envoyer via Email (utilise l'API email interne)
               const emailResult = await sendEmailNotification(
-                metadata.email,
+                metadata.email ?? '',
                 notification.subject || 'Notification',
                 notification.message,
-                metadata.recipient_name
+                metadata.recipient_name as string | undefined
               )
               success = emailResult.success
               if (!success) {

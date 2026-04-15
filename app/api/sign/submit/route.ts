@@ -8,6 +8,7 @@
 
 import type { NextRequest} from 'next/server';
 import type { Json } from '@/types/database.types'
+import type { TableUpdate, TableInsert } from '@/lib/types/supabase-helpers'
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -421,24 +422,24 @@ export async function POST(request: NextRequest) {
             status: 'signed',
             signed_at: signedAt,
             updated_at: signedAt,
-          } as never)
+          } satisfies TableUpdate<'documents'>)
           .eq('id', docId)
           .eq('organization_id', orgIdP)
 
         await db
           .from('signatories')
-          .update({ signed_at: signedAt, signature_data: signatureData.trim() } as never)
+          .update({ signed_at: signedAt, signature_data: signatureData.trim() } satisfies TableUpdate<'signatories'>)
           .eq('id', signatoryId)
 
         await db
           .from('signing_processes')
           .update({
             status: 'completed',
-            current_index: proc.current_index ?? 0,
+            current_index: (proc.current_index as number) ?? 0,
             intermediate_pdf_path: null,
             intermediate_pdf_url: null,
             updated_at: signedAt,
-          } as never)
+          } satisfies TableUpdate<'signing_processes'>)
           .eq('id', procId)
 
         const { error: evErr } = await db
@@ -449,9 +450,9 @@ export async function POST(request: NextRequest) {
             request_id: procId,
             signer_email: signerEmail,
             signature_data: signatureData.trim(),
-            metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash } as unknown as Json,
+            metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash } as Json,
             integrity_hash: pdfHash,
-          } as never)
+          } satisfies TableInsert<'digital_evidence'>)
         if (evErr) {
           logger.error('digital_evidence process:', evErr)
           return NextResponse.json(
@@ -497,7 +498,7 @@ export async function POST(request: NextRequest) {
 
       await db
         .from('signatories')
-        .update({ signed_at: signedAt, signature_data: signatureData.trim() } as never)
+        .update({ signed_at: signedAt, signature_data: signatureData.trim() } satisfies TableUpdate<'signatories'>)
         .eq('id', signatoryId)
 
       await db
@@ -508,7 +509,7 @@ export async function POST(request: NextRequest) {
           intermediate_pdf_path: intermPath,
           intermediate_pdf_url: urlData.publicUrl,
           updated_at: signedAt,
-        } as never)
+        } satisfies TableUpdate<'signing_processes'>)
         .eq('id', procId)
 
       const { error: evErr } = await db.from('digital_evidence').insert({
@@ -517,9 +518,9 @@ export async function POST(request: NextRequest) {
         request_id: procId,
         signer_email: signerEmail,
         signature_data: signatureData.trim(),
-        metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash } as unknown as Json,
+        metadata: { ...metadata, signatory_id: signatoryId, pdf_integrity_hash: pdfHash } as Json,
         integrity_hash: pdfHash,
-      } as never)
+      } satisfies TableInsert<'digital_evidence'>)
       if (evErr) {
         logger.error('digital_evidence process:', evErr)
         return NextResponse.json(

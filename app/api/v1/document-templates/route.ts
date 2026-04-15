@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { apiMiddleware, hasScope } from '../middleware'
 import { createAPIService } from '@/lib/services/api.service'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
+import type { DocumentType } from '@/lib/types/document-templates'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function GET(request: NextRequest) {
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     const apiService = createAPIService(adminClient)
 
     const templates = await templateService.getAllTemplates(middleware.organizationId, {
-      type: type as any,
+      type: type as DocumentType | undefined,
       isActive: true,
     })
 

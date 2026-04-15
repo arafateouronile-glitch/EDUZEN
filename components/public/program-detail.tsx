@@ -38,11 +38,30 @@ import type { TableRow } from '@/lib/types/supabase-helpers'
 import { BRAND_COLORS } from '@/lib/config/app-config'
 import { cn } from '@/lib/utils'
 
+type ProgramSettings = {
+  logo_url?: string | null
+  qualiopi_certificate_url?: string | null
+  [key: string]: unknown
+}
+
 type Program = TableRow<'programs'> & {
+  // Champs optionnels présents en DB mais hors types générés
+  success_rate?: number | null
+  satisfaction_rate?: number | null
+  total_learners?: number | null
+  completion_rate?: number | null
+  public_image_url?: string | null
+  photo_url?: string | null
+  price?: number | null
+  price_enterprise?: number | null
+  price_individual?: number | null
+  currency?: string | null
   formations?: Array<TableRow<'formations'> & {
     sessions?: TableRow<'sessions'>[]
   }>
-  organizations?: TableRow<'organizations'>
+  organizations?: TableRow<'organizations'> & {
+    settings?: ProgramSettings | null
+  }
 }
 
 interface PublicProgramDetailProps {
@@ -80,10 +99,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
   // Statistiques du programme (vraies données ou valeurs par défaut)
   const stats = {
-    successRate: (program as any).success_rate ?? null,
-    satisfactionRate: (program as any).satisfaction_rate ?? null,
-    totalLearners: (program as any).total_learners ?? null,
-    completionRate: (program as any).completion_rate ?? null,
+    successRate: program.success_rate ?? null,
+    satisfactionRate: program.satisfaction_rate ?? null,
+    totalLearners: program.total_learners ?? null,
+    completionRate: program.completion_rate ?? null,
   }
 
   // Vérifier si au moins une statistique est disponible
@@ -222,10 +241,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Image ou stats card */}
             <div className="hidden lg:block">
-              {((program as any).public_image_url || (program as any).photo_url) ? (
+              {(program.public_image_url || program.photo_url) ? (
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
                   <Image
-                    src={((program as any).public_image_url || (program as any).photo_url) as string}
+                    src={(program.public_image_url || program.photo_url) as string}
                     alt={program.name}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -624,10 +643,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
               <CardContent className="p-6 space-y-6">
                 {/* Prix si disponible (programme ou première formation) */}
                 {(() => {
-                  const programPrice = (program as any).price ?? (program as any).price_enterprise ?? (program as any).price_individual
+                  const programPrice = program.price ?? program.price_enterprise ?? program.price_individual
                   const formationPrice = program.formations?.[0]?.price
                   const price = programPrice ?? formationPrice
-                  const currency = (program as any).currency || 'EUR'
+                  const currency = program.currency || 'EUR'
                   const currencySymbol = currency === 'EUR' ? '€' : currency === 'XOF' ? 'FCFA' : currency
                   if (price == null || Number(price) <= 0) return (
                     <div className="text-center pb-4 border-b">
@@ -772,7 +791,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                   <div className="flex items-center gap-4">
                     {(organization.logo_url || (organization.settings && typeof organization.settings === 'object' && 'logo_url' in organization.settings)) && (
                       <img
-                        src={organization.logo_url || (organization.settings as any)?.logo_url}
+                        src={organization.logo_url ?? organization.settings?.logo_url ?? undefined}
                         alt={organization.name}
                         className="h-14 w-auto object-contain"
                       />
@@ -813,7 +832,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                   {/* Badge Qualiopi */}
                   {organization.settings && typeof organization.settings === 'object' && 'qualiopi_certificate_url' in organization.settings && (
                     <a
-                      href={(organization.settings as any).qualiopi_certificate_url}
+                      href={(organization.settings.qualiopi_certificate_url as string | null | undefined) ?? undefined}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors"

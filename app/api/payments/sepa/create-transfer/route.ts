@@ -2,8 +2,10 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger, maskId, maskEmail, sanitizeError } from '@/lib/utils/logger'
+import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'
 import { withRateLimit, mutationRateLimiter } from '@/lib/utils/rate-limiter'
+import type { TableInsert } from '@/lib/types/supabase-helpers'
 
 const maskIBAN = (iban: string): string => {
   if (!iban || iban.length < 4) return '[REDACTED]'
@@ -128,28 +130,29 @@ export async function POST(request: NextRequest) {
         const amount = typeof validatedData.amount === 'number' ? validatedData.amount : parseFloat(String(validatedData.amount));
         const currency = typeof validatedData.currency === 'string' ? validatedData.currency : 'EUR';
         
+        const sepaInsert: TableInsert<'payments'> = {
+          organization_id: userData?.organization_id || null,
+          amount,
+          currency: currency.toUpperCase(),
+          status: 'pending',
+          payment_method: 'sepa_transfer',
+          payment_provider: 'sepa',
+          metadata: {
+            debtor_name: validatedData.debtor_name,
+            debtor_iban: validatedData.debtor_iban,
+            debtor_bic: validatedData.debtor_bic,
+            debtor_email: validatedData.debtor_email,
+            creditor_name: validatedData.creditor_name,
+            creditor_iban: validatedData.creditor_iban,
+            creditor_bic: validatedData.creditor_bic,
+            reference: validatedData.reference,
+            description: validatedData.description,
+            type: 'transfer',
+          } as import('@/types/database.types').Json,
+        }
         const { data: paymentRecord, error: dbError } = await supabase
           .from('payments')
-          .insert({
-            organization_id: userData?.organization_id || null,
-            amount: amount.toString(),
-            currency: currency.toUpperCase(),
-            status: 'pending',
-            payment_method: 'sepa_transfer',
-            payment_provider: 'sepa',
-            description: validatedData.description as string | undefined,
-            metadata: {
-              debtor_name: validatedData.debtor_name,
-              debtor_iban: validatedData.debtor_iban,
-              debtor_bic: validatedData.debtor_bic,
-              debtor_email: validatedData.debtor_email,
-              creditor_name: validatedData.creditor_name,
-              creditor_iban: validatedData.creditor_iban,
-              creditor_bic: validatedData.creditor_bic,
-              reference: validatedData.reference,
-              type: 'transfer',
-            } as Record<string, unknown>,
-          } as any)
+          .insert(sepaInsert)
           .select()
           .single()
 
@@ -181,7 +184,7 @@ export async function POST(request: NextRequest) {
         logger.error('Error creating SEPA transfer', error, {
           error: sanitizeError(error),
         })
-        const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
+        const errorMessage = getPublicErrorMessage(error)
         return NextResponse.json({ error: errorMessage }, { status: 500 })
       }
     })
