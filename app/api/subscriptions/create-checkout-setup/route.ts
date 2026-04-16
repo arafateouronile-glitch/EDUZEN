@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       const cookieStore = await cookies()
       const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
       const metadata: Record<string, string> = {
-        organization_id: userData.organization_id,
+        organization_id: userData.organization_id!,
         user_id: user.id,
       }
       if (affiliateRef) metadata.affiliate_id = affiliateRef
