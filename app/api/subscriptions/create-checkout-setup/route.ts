@@ -19,13 +19,14 @@ const getStripe = () => {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Étape 1: Auth
     const supabase = await createClient()
-
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
+    // Étape 2: Organisation
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('organization_id')
@@ -33,9 +34,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || !userData?.organization_id) {
-      return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
+      return NextResponse.json({ error: `Organisation non trouvée: ${userError?.message ?? 'pas de org_id'}` }, { status: 404 })
     }
 
+    // Étape 3: Body
     const body = await request.json().catch(() => ({}))
     const planId = body.planId as string | undefined
     const billingPeriod = (body.billingPeriod as string) || 'monthly'
@@ -44,15 +46,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'planId requis' }, { status: 400 })
     }
 
+    // Étape 4: Stripe key
+    const secretKey = process.env.STRIPE_SECRET_KEY
+    if (!secretKey) {
+      return NextResponse.json({ error: 'STRIPE_SECRET_KEY non configurée sur le serveur' }, { status: 500 })
+    }
+    const stripe = new Stripe(secretKey, { apiVersion: '2026-01-28.clover' })
+
+    // Étape 5: Organisation name
     const { data: organization } = await supabase
       .from('organizations')
       .select('id, name')
       .eq('id', userData.organization_id)
       .single()
 
+    // Étape 6: Customer Stripe
     let customerId: string
-    const stripe = getStripe()
-
     const { data: existingSubscription } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id')
@@ -79,6 +88,7 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
     }
 
+    // Étape 7: Checkout session
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3001')
@@ -104,15 +114,10 @@ export async function POST(request: NextRequest) {
       organizationId: userData.organization_id,
     })
 
-    return NextResponse.json({
-      url: session.url,
-      sessionId: session.id,
-    })
+    return NextResponse.json({ url: session.url, sessionId: session.id })
   } catch (error) {
-    logger.error('Erreur création checkout setup', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur serveur' },
-      { status: 500 }
-    )
+    const msg = error instanceof Error ? error.message : 'Erreur serveur'
+    logger.error('Erreur création checkout setup', { error: msg })
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
