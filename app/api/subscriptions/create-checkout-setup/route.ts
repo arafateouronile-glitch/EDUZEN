@@ -69,9 +69,7 @@ export async function POST(request: NextRequest) {
       .not('stripe_customer_id', 'is', null)
       .maybeSingle()
 
-    if (existingSubscription?.stripe_customer_id) {
-      customerId = existingSubscription.stripe_customer_id
-    } else {
+    const createNewCustomer = async () => {
       const cookieStore = await cookies()
       const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
       const metadata: Record<string, string> = {
@@ -79,13 +77,25 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
       }
       if (affiliateRef) metadata.affiliate_id = affiliateRef
-
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
         name: organization?.name || 'Organisation',
         metadata,
       })
-      customerId = customer.id
+      return customer.id
+    }
+
+    if (existingSubscription?.stripe_customer_id) {
+      // Vérifier que le customer existe encore dans Stripe (évite les erreurs test/live ou suppression)
+      try {
+        await stripe.customers.retrieve(existingSubscription.stripe_customer_id)
+        customerId = existingSubscription.stripe_customer_id
+      } catch {
+        // Customer introuvable dans Stripe → en créer un nouveau
+        customerId = await createNewCustomer()
+      }
+    } else {
+      customerId = await createNewCustomer()
     }
 
     // Étape 7: Checkout session
