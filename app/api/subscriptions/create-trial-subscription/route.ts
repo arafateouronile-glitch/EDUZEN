@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
             selected_plan_id: planId,
             ...(affiliateRef ? { affiliate_id: affiliateRef } : {}),
           },
-          subscription_status: 'trialing',
+          subscription_status: 'active',
           updated_at: new Date().toISOString(),
         })
         .eq('id', userData.organization_id)
