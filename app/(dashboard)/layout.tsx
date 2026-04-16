@@ -22,8 +22,8 @@ async function getLayoutData(userId: string) {
       .eq('id', orgId)
       .single(),
     supabase
-      .from('organization_subscriptions')
-      .select('trial_ends_at, status')
+      .from('subscriptions')
+      .select('trial_end_at, status')
       .eq('organization_id', orgId)
       .maybeSingle(),
   ])
@@ -78,8 +78,8 @@ export default async function DashboardLayout({
 
       if (!paymentMethodAdded) {
         if (subscription) {
-          const trialEndAt = subscription.trial_ends_at
-            ? new Date(subscription.trial_ends_at)
+          const trialEndAt = subscription.trial_end_at
+            ? new Date(subscription.trial_end_at)
             : null
           const now = new Date()
           if (trialEndAt && trialEndAt < now) {

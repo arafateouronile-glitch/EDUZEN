@@ -138,21 +138,21 @@ export async function POST(request: NextRequest) {
 
       if (orgUpdateError) {
         logger.error('Erreur mise à jour organisation (skip payment)', { error: orgUpdateError.message })
-        return NextResponse.json({ error: 'Erreur lors de la mise à jour de l\'organisation' }, { status: 500 })
+        return NextResponse.json({ error: `org_update: ${orgUpdateError.message}` }, { status: 500 })
       }
 
       // Créer la subscription en base sans Stripe
       const { error: subError } = await adminClient
-        .from('organization_subscriptions')
+        .from('subscriptions')
         .upsert({
           organization_id: userData.organization_id,
           plan_id: planId,
           status: 'trialing',
-          billing_cycle: billingPeriod,
           stripe_customer_id: null,
           stripe_subscription_id: null,
-          payment_method: null,
-          trial_ends_at: trialEndAt.toISOString(),
+          payment_method_id: null,
+          trial_start_at: trialStartAt.toISOString(),
+          trial_end_at: trialEndAt.toISOString(),
           current_period_start: trialStartAt.toISOString(),
           current_period_end: trialEndAt.toISOString(),
           updated_at: new Date().toISOString(),
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
 
       if (subError) {
         logger.error('Erreur création subscription (skip payment)', { error: subError.message })
-        return NextResponse.json({ error: 'Erreur lors de la création de l\'abonnement' }, { status: 500 })
+        return NextResponse.json({ error: `sub_upsert: ${subError.message}` }, { status: 500 })
       }
 
       logger.info('Essai démarré sans carte', {
@@ -307,16 +307,16 @@ export async function POST(request: NextRequest) {
 
       // Créer ou mettre à jour la subscription
       const { error: subError } = await adminClient
-        .from('organization_subscriptions')
+        .from('subscriptions')
         .upsert({
           organization_id: userData.organization_id,
           plan_id: planId,
           status: 'trialing',
-          billing_cycle: billingPeriod,
           stripe_customer_id: customerId,
           stripe_subscription_id: subscription.id,
-          payment_method: { id: paymentMethodId },
-          trial_ends_at: stripeTrialEndAt.toISOString(),
+          payment_method_id: paymentMethodId,
+          trial_start_at: trialStartAt.toISOString(),
+          trial_end_at: stripeTrialEndAt.toISOString(),
           current_period_start: trialStartAt.toISOString(),
           current_period_end: stripeTrialEndAt.toISOString(),
           updated_at: new Date().toISOString(),
