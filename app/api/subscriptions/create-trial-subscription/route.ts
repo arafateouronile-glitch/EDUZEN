@@ -95,6 +95,16 @@ export async function POST(request: NextRequest) {
     const trialStartAt = new Date()
     const trialEndAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 jours
 
+    // Vérifier que les variables d'environnement Supabase admin sont disponibles
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[create-trial-subscription] SUPABASE_SERVICE_ROLE_KEY non configurée')
+      return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY non configurée sur le serveur' }, { status: 500 })
+    }
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('[create-trial-subscription] NEXT_PUBLIC_SUPABASE_URL non configurée')
+      return NextResponse.json({ error: 'NEXT_PUBLIC_SUPABASE_URL non configurée sur le serveur' }, { status: 500 })
+    }
+
     // ========================================
     // CAS 1: Démarrage sans carte bancaire
     // ========================================
