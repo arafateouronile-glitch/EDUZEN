@@ -143,16 +143,16 @@ export async function POST(request: NextRequest) {
 
       // Créer la subscription en base sans Stripe
       const { error: subError } = await adminClient
-        .from('subscriptions')
+        .from('organization_subscriptions')
         .upsert({
           organization_id: userData.organization_id,
           plan_id: planId,
           status: 'trialing',
+          billing_cycle: billingPeriod,
           stripe_customer_id: null,
           stripe_subscription_id: null,
-          payment_method_id: null,
-          trial_start_at: trialStartAt.toISOString(),
-          trial_end_at: trialEndAt.toISOString(),
+          payment_method: null,
+          trial_ends_at: trialEndAt.toISOString(),
           current_period_start: trialStartAt.toISOString(),
           current_period_end: trialEndAt.toISOString(),
           updated_at: new Date().toISOString(),
@@ -307,16 +307,16 @@ export async function POST(request: NextRequest) {
 
       // Créer ou mettre à jour la subscription
       const { error: subError } = await adminClient
-        .from('subscriptions')
+        .from('organization_subscriptions')
         .upsert({
           organization_id: userData.organization_id,
           plan_id: planId,
           status: 'trialing',
+          billing_cycle: billingPeriod,
           stripe_customer_id: customerId,
           stripe_subscription_id: subscription.id,
-          payment_method_id: paymentMethodId,
-          trial_start_at: trialStartAt.toISOString(),
-          trial_end_at: stripeTrialEndAt.toISOString(),
+          payment_method: { id: paymentMethodId },
+          trial_ends_at: stripeTrialEndAt.toISOString(),
           current_period_start: trialStartAt.toISOString(),
           current_period_end: stripeTrialEndAt.toISOString(),
           updated_at: new Date().toISOString(),
