@@ -1,8 +1,8 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
 import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
 import { z } from 'zod'
@@ -108,8 +108,11 @@ export async function POST(request: NextRequest) {
       const cookieStore = await cookies()
       const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
 
+      // Utiliser le client admin pour bypass RLS sur organizations
+      const adminClient = createServiceRoleClient()
+
       // Mettre à jour les settings de l'organisation
-      const { data: orgData } = await supabase
+      const { data: orgData } = await adminClient
         .from('organizations')
         .select('settings')
         .eq('id', userData.organization_id)
@@ -117,7 +120,7 @@ export async function POST(request: NextRequest) {
 
       const currentSettings = (orgData?.settings as Record<string, unknown>) || {}
 
-      await supabase
+      const { error: orgUpdateError } = await adminClient
         .from('organizations')
         .update({
           settings: {
@@ -133,8 +136,13 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', userData.organization_id)
 
+      if (orgUpdateError) {
+        logger.error('Erreur mise à jour organisation (skip payment)', { error: orgUpdateError.message })
+        return NextResponse.json({ error: 'Erreur lors de la mise à jour de l\'organisation' }, { status: 500 })
+      }
+
       // Créer la subscription en base sans Stripe
-      await supabase
+      const { error: subError } = await adminClient
         .from('subscriptions')
         .upsert({
           organization_id: userData.organization_id,
@@ -152,13 +160,15 @@ export async function POST(request: NextRequest) {
           onConflict: 'organization_id',
         })
 
+      if (subError) {
+        logger.error('Erreur création subscription (skip payment)', { error: subError.message })
+        return NextResponse.json({ error: 'Erreur lors de la création de l\'abonnement' }, { status: 500 })
+      }
+
       logger.info('Essai démarré sans carte', {
         organizationId: userData.organization_id,
         trialEndAt: trialEndAt.toISOString(),
       })
-
-      // Invalider le cache layout pour que la redirection vers /dashboard fonctionne immédiatement
-      revalidatePath('/dashboard', 'layout')
 
       return NextResponse.json({
         success: true,
@@ -256,13 +266,16 @@ export async function POST(request: NextRequest) {
       }
     )
 
+    // Utiliser le client admin pour bypass RLS sur organizations
+    const adminClient = createServiceRoleClient()
+
     if (rpcError) {
       logger.warn('RPC complete_onboarding_with_payment failed, fallback to manual update', {
         error: rpcError.message,
       })
 
       // Récupérer les settings actuels
-      const { data: orgData } = await supabase
+      const { data: orgData } = await adminClient
         .from('organizations')
         .select('settings')
         .eq('id', userData.organization_id)
@@ -271,7 +284,7 @@ export async function POST(request: NextRequest) {
       const currentSettings = (orgData?.settings as Record<string, unknown>) || {}
 
       // Mettre à jour les settings de l'organisation
-      await supabase
+      const { error: orgUpdateError } = await adminClient
         .from('organizations')
         .update({
           settings: {
@@ -287,8 +300,13 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', userData.organization_id)
 
+      if (orgUpdateError) {
+        logger.error('Erreur mise à jour organisation (with payment)', { error: orgUpdateError.message })
+        return NextResponse.json({ error: 'Erreur lors de la mise à jour de l\'organisation' }, { status: 500 })
+      }
+
       // Créer ou mettre à jour la subscription
-      await supabase
+      const { error: subError } = await adminClient
         .from('subscriptions')
         .upsert({
           organization_id: userData.organization_id,
@@ -305,6 +323,11 @@ export async function POST(request: NextRequest) {
         }, {
           onConflict: 'organization_id',
         })
+
+      if (subError) {
+        logger.error('Erreur création subscription (with payment)', { error: subError.message })
+        return NextResponse.json({ error: 'Erreur lors de la création de l\'abonnement' }, { status: 500 })
+      }
     }
 
     logger.info('Onboarding complété avec succès', {
@@ -312,9 +335,6 @@ export async function POST(request: NextRequest) {
       subscriptionId: subscription.id,
       trialEndAt: stripeTrialEndAt.toISOString(),
     })
-
-    // Invalider le cache layout pour que la redirection vers /dashboard fonctionne immédiatement
-    revalidatePath('/dashboard', 'layout')
 
     return NextResponse.json({
       success: true,

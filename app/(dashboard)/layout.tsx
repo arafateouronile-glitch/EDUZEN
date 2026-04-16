@@ -1,44 +1,38 @@
 import { redirect } from 'next/navigation'
-import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import DashboardClientLayout from './dashboard-client-layout'
 
-/** Cache 60s : évite de refaire users + org + subscription à chaque requête dashboard */
-async function getCachedLayoutData(userId: string) {
-  return unstable_cache(
-    async () => {
-      const supabase = await createClient()
-      const { data: userData } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('id', userId)
-        .single()
+/** Requêtes directes (sans cache) pour le check onboarding/subscription — données critiques */
+async function getLayoutData(userId: string) {
+  const supabase = await createClient()
 
-      if (!userData?.organization_id) return null
+  const { data: userData } = await supabase
+    .from('users')
+    .select('organization_id')
+    .eq('id', userId)
+    .single()
 
-      const orgId = userData.organization_id
-      const [orgResult, subscriptionResult] = await Promise.all([
-        supabase
-          .from('organizations')
-          .select('settings, subscription_status')
-          .eq('id', orgId)
-          .single(),
-        supabase
-          .from('subscriptions')
-          .select('trial_end_at, status')
-          .eq('organization_id', orgId)
-          .maybeSingle(),
-      ])
+  if (!userData?.organization_id) return null
 
-      return {
-        userData,
-        org: orgResult.data,
-        subscription: subscriptionResult.data,
-      }
-    },
-    ['dashboard-layout', userId],
-    { revalidate: 120 }
-  )()
+  const orgId = userData.organization_id
+  const [orgResult, subscriptionResult] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('settings, subscription_status')
+      .eq('id', orgId)
+      .single(),
+    supabase
+      .from('subscriptions')
+      .select('trial_end_at, status')
+      .eq('organization_id', orgId)
+      .maybeSingle(),
+  ])
+
+  return {
+    userData,
+    org: orgResult.data,
+    subscription: subscriptionResult.data,
+  }
 }
 
 export default async function DashboardLayout({
@@ -66,7 +60,7 @@ export default async function DashboardLayout({
 
   if (!isOnboardingRoute && !isSubscribeRoute) {
     try {
-      const cached = await getCachedLayoutData(authUser.id)
+      const cached = await getLayoutData(authUser.id)
 
       // Pas de profil en base → onboarding non fait, rediriger
       if (!cached?.userData?.organization_id) {
