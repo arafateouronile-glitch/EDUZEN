@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import type { TableInsert } from '@/lib/types/supabase-helpers'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { 
@@ -99,14 +100,14 @@ export default function NewStudentPage() {
       if (!user?.organization_id) return []
       const { data, error } = await supabase
         .from('sessions')
-        .select('id, name, start_date, end_date, formations!inner(id, name, code, organization_id, programs(id, name))')
-        .eq('formations.organization_id', user.organization_id)
+        .select('id, name, start_date, end_date, formations(id, name, code, programs(id, name))')
+        .eq('organization_id', user.organization_id)
         .order('start_date', { ascending: false })
       if (error) throw error
-      type SessionOption = { id: string; name?: string; start_date?: string; end_date?: string; formations: { name?: string; code?: string; programs?: { name?: string } } }
+      type SessionOption = { id: string; name: string; start_date: string; end_date: string; formations: { name?: string; code?: string; programs?: { name?: string } } | null }
       return ((data ?? []) as SessionOption[]).map((session) => ({
         id: session.id,
-        name: `${session.name ?? ''} - ${session.formations?.name ?? ''}${session.formations?.programs ? ` (${session.formations.programs.name ?? ''})` : ''}`,
+        name: `${session.name}${session.formations ? ` - ${session.formations.name ?? ''}${session.formations.programs ? ` (${session.formations.programs.name ?? ''})` : ''}` : ''}`,
         code: session.formations?.code,
         start_date: session.start_date,
         end_date: session.end_date,
@@ -276,38 +277,7 @@ export default function NewStudentPage() {
         sequence = lastSequence + 1
       }
       
-      let studentNumber = `${prefix}${String(sequence).padStart(4, '0')}`
-      
-      const { data: existingCheck } = await supabase
-        .from('students')
-        .select('id')
-        .eq('organization_id', targetOrganizationId)
-        .eq('student_number', studentNumber)
-        .maybeSingle()
-      
-      if (existingCheck) {
-        let attempts = 0
-        while (attempts < 100) {
-          sequence++
-          studentNumber = `${prefix}${String(sequence).padStart(4, '0')}`
-          
-          const { data: check } = await supabase
-            .from('students')
-            .select('id')
-            .eq('organization_id', targetOrganizationId)
-            .eq('student_number', studentNumber)
-            .maybeSingle()
-          
-          if (!check) {
-            break
-          }
-          attempts++
-        }
-        
-        if (attempts >= 100) {
-          throw new Error('Impossible de générer un numéro d\'élève unique. Veuillez réessayer.')
-        }
-      }
+      const studentNumber = `${prefix}${String(sequence).padStart(4, '0')}`
 
       const studentData: Record<string, unknown> = {
         organization_id: targetOrganizationId,
@@ -343,7 +313,7 @@ export default function NewStudentPage() {
 
       const { data: student, error: studentError } = await supabase
         .from('students')
-        .insert(studentData as never)
+        .insert(studentData as unknown as TableInsert<'students'>)
         .select()
         .single()
 
