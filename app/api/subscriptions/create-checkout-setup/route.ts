@@ -88,8 +88,13 @@ export async function POST(request: NextRequest) {
     if (existingSubscription?.stripe_customer_id) {
       // Vérifier que le customer existe encore dans Stripe (évite les erreurs test/live ou suppression)
       try {
-        await stripe.customers.retrieve(existingSubscription.stripe_customer_id)
-        customerId = existingSubscription.stripe_customer_id
+        const existing = await stripe.customers.retrieve(existingSubscription.stripe_customer_id)
+        // retrieve() ne throw pas si supprimé, il retourne { deleted: true }
+        if ((existing as { deleted?: boolean }).deleted) {
+          customerId = await createNewCustomer()
+        } else {
+          customerId = existingSubscription.stripe_customer_id
+        }
       } catch {
         // Customer introuvable dans Stripe → en créer un nouveau
         customerId = await createNewCustomer()
