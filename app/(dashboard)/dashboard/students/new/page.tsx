@@ -292,6 +292,7 @@ export default function NewStudentPage() {
         address: data.address || null,
         postal_code: data.postal_code || null,
         city: data.city || null,
+        address_complement: data.address_complement || null,
         enrollment_date: data.enrollment_date || null,
         status: 'active',
       }
