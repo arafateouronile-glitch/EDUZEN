@@ -293,7 +293,7 @@ export default function NewStudentPage() {
         postal_code: data.postal_code || null,
         city: data.city || null,
         address_complement: data.address_complement || null,
-        enrollment_date: data.enrollment_date,
+        enrollment_date: data.enrollment_date || null,
         status: 'active',
       }
 
@@ -365,7 +365,7 @@ export default function NewStudentPage() {
           .insert({
             student_id: student.id,
             session_id: data.class_id,
-            enrollment_date: data.enrollment_date,
+            enrollment_date: data.enrollment_date || null,
             status: 'confirmed',
             payment_status: 'pending',
             total_amount: 0,
@@ -404,7 +404,7 @@ export default function NewStudentPage() {
       }
     } else {
       // Dernière étape : soumettre (valider tous les champs requis)
-      const requiredFields: (keyof StudentFormData)[] = ['first_name', 'last_name', 'enrollment_date']
+      const requiredFields: (keyof StudentFormData)[] = ['first_name', 'last_name']
 
       // Validation tuteur optionnelle
       if (guardianMode === 'existing') {
@@ -1103,7 +1103,7 @@ export default function NewStudentPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-700">Date d'inscription *</label>
+                        <label className="text-sm font-semibold text-gray-700">Date d'inscription</label>
                         <input
                           type="date"
                           {...register('enrollment_date')}

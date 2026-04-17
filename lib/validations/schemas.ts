@@ -14,7 +14,7 @@ export const studentSchema = z.object({
   city: z.string().optional().or(z.literal('')),
   address_complement: z.string().optional().or(z.literal('')),
   class_id: z.string().optional().or(z.literal('')),
-  enrollment_date: z.string().min(1, 'La date d\'inscription est requise'),
+  enrollment_date: z.string().optional().or(z.literal('')),
   // Tuteur - Option 1: Sélectionner un tuteur existant
   guardian_id: z.string().optional().or(z.literal('')),
   // Tuteur - Option 2: Créer un nouveau tuteur
