@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
           size: `${Math.round(pdfBuffer.length / 1024)}KB`,
         })
 
-        return new NextResponse(pdfBuffer as any, {
+        return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="${template.name || 'document'}.pdf"`,
@@ -147,7 +147,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // --- Puppeteer (fallback) ---
+    // Sur Vercel sans Gotenberg : Puppeteer ne fonctionne pas (Hobby plan)
+    if (process.env.VERCEL === '1' && !isGotenbergConfigured()) {
+      logger.error('[PDF API] Génération PDF impossible : Gotenberg non configuré sur Vercel')
+      return NextResponse.json(
+        {
+          error: 'Génération PDF indisponible',
+          details: 'Gotenberg n\'est pas configuré. Configurez GOTENBERG_URL dans les variables d\'environnement Vercel.',
+          hint: 'Déployez Gotenberg sur Railway/Render et ajoutez GOTENBERG_URL dans Vercel.',
+        },
+        { status: 503 }
+      )
+    }
+
+    // --- Puppeteer (fallback local) ---
     const puppeteerStartTime = Date.now()
     try {
       page = await createPage()
@@ -182,7 +195,7 @@ export async function POST(request: NextRequest) {
         size: `${Math.round(pdf.length / 1024)}KB`,
       })
 
-      return new NextResponse(pdf as any, {
+      return new NextResponse(new Uint8Array(pdf), {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${template.name || 'document'}.pdf"`,

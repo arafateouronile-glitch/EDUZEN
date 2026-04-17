@@ -69,7 +69,7 @@ export function ContextualFAQ({ maxArticles = 3, className }: ContextualFAQProps
                     className="group"
                   >
                     <Link
-                      href={`/dashboard/knowledge-base/${article.id}`}
+                      href={`/dashboard/knowledge-base/faq/${article.id}`}
                       className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/50 transition-colors"
                     >
                       <BookOpen className="w-4 h-4 text-brand-cyan mt-0.5 flex-shrink-0" />
