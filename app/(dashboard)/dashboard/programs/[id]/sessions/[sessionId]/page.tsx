@@ -369,11 +369,11 @@ export default function SessionDetailPage() {
                             <div>
                               <span className="text-muted-foreground">Montant:</span>{' '}
                               <span className="font-medium">
-                                {formatCurrency(enrollment.total_amount, (program as { formations?: { currency?: string }[] })?.formations?.[0]?.currency ?? 'XOF')}
+                                {formatCurrency(enrollment.total_amount, (program as { formations?: { currency?: string }[] })?.formations?.[0]?.currency ?? 'EUR')}
                               </span>
                               {enrollment.paid_amount > 0 && (
                                 <span className="text-success-primary ml-1">
-                                  (Payé: {formatCurrency(enrollment.paid_amount, (program as { formations?: { currency?: string }[] })?.formations?.[0]?.currency ?? 'XOF')})
+                                  (Payé: {formatCurrency(enrollment.paid_amount, (program as { formations?: { currency?: string }[] })?.formations?.[0]?.currency ?? 'EUR')})
                                 </span>
                               )}
                             </div>

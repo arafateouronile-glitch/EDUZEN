@@ -27,7 +27,7 @@ const courseSchema = z.object({
   difficulty_level: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
   estimated_duration_hours: z.number().min(0).optional(),
   price: z.number().min(0).optional(),
-  currency: z.string().default('XOF'),
+  currency: z.string().default('EUR'),
   is_published: z.boolean().default(false),
   is_featured: z.boolean().default(false),
   instructor_id: z.string().optional(),
@@ -86,7 +86,7 @@ export default function NewCoursePage() {
     mode: 'onChange',
     defaultValues: {
       difficulty_level: 'beginner',
-      currency: 'XOF',
+      currency: 'EUR',
       is_published: false,
       is_featured: false,
     },
@@ -347,6 +347,8 @@ export default function NewCoursePage() {
                   {...register('currency')}
                   className="w-24 px-3 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all"
                 >
+                  <option value="EUR">EUR</option>
+                  <option value="USD">USD</option>
                   <option value="XOF">XOF</option>
                   <option value="EUR">EUR</option>
                   <option value="USD">USD</option>

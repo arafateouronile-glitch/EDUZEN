@@ -98,7 +98,7 @@ export default function EditFormationPage() {
         duration_days: formation.duration_days ? String(formation.duration_days) : '',
         duration_unit: (formation.duration_unit as 'hours' | 'days') || 'hours',
         price: formation.price ? String(formation.price) : '',
-        currency: formation.currency || 'XOF',
+        currency: formation.currency || 'EUR',
         payment_plan: (formation.payment_plan as 'full' | 'installment' | 'free') || 'full',
         prerequisites: formation.prerequisites || '',
         capacity_max: formation.capacity_max ? String(formation.capacity_max) : '',
@@ -152,7 +152,7 @@ export default function EditFormationPage() {
         duration_days: data.duration_days ? parseInt(data.duration_days) : null,
         duration_unit: data.duration_unit as 'hours' | 'days' | null,
         price: data.price ? parseFloat(data.price) || 0 : 0,
-        currency: data.currency || 'XOF',
+        currency: data.currency || 'EUR',
         payment_plan: data.payment_plan as 'full' | 'installment' | 'free' | null,
         prerequisites: data.prerequisites || null,
         capacity_max: data.capacity_max ? parseInt(data.capacity_max) : null,
@@ -514,10 +514,10 @@ export default function EditFormationPage() {
                   {...register('currency')}
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
                 >
-                  <option value="XOF">XOF (Franc CFA Ouest)</option>
-                  <option value="XAF">XAF (Franc CFA Centre)</option>
                   <option value="EUR">EUR (Euro)</option>
                   <option value="USD">USD (Dollar)</option>
+                  <option value="XOF">XOF (Franc CFA Ouest)</option>
+                  <option value="XAF">XAF (Franc CFA Centre)</option>
                 </select>
               </div>
               <div>

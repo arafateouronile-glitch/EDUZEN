@@ -36,7 +36,7 @@ const courseSchema = z.object({
   difficulty_level: z.enum(['beginner', 'intermediate', 'advanced']).default('beginner'),
   estimated_duration_hours: z.number().min(0).optional(),
   price: z.number().min(0).optional(),
-  currency: z.string().default('XOF'),
+  currency: z.string().default('EUR'),
   is_published: z.boolean().default(false),
   is_featured: z.boolean().default(false),
   instructor_id: z.string().optional(),
@@ -121,7 +121,7 @@ export default function EditCoursePage() {
     mode: 'onChange',
     defaultValues: {
       difficulty_level: 'beginner',
-      currency: 'XOF',
+      currency: 'EUR',
       is_published: false,
       is_featured: false,
     },
@@ -140,7 +140,7 @@ export default function EditCoursePage() {
       difficulty_level: (course.difficulty_level as any) || 'beginner',
       estimated_duration_hours: course.estimated_duration_hours ? Number(course.estimated_duration_hours) : undefined,
       price: course.price ? Number(course.price) : 0,
-      currency: course.currency || 'XOF',
+      currency: course.currency || 'EUR',
       is_published: !!course.is_published,
       is_featured: !!course.is_featured,
       instructor_id: course.instructor_id || undefined,
@@ -682,6 +682,8 @@ export default function EditCoursePage() {
                     {...register('currency')}
                     className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm focus:border-brand-blue focus:outline-none"
                   >
+                    <option value="EUR">EUR</option>
+                    <option value="USD">USD</option>
                     <option value="XOF">XOF</option>
                     <option value="EUR">EUR</option>
                     <option value="USD">USD</option>

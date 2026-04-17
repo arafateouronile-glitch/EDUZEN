@@ -253,7 +253,7 @@ export default function DocumentTemplatePreviewPage() {
         formation_nom: 'Formation en Développement Web',
         formation_code: 'DEV-WEB-2024',
         formation_duree: '6 mois',
-        formation_prix: '500 000 XOF',
+        formation_prix: '500 000 EUR',
         session_nom: 'Session Janvier 2024',
         session_debut: '01/01/2024',
         session_fin: '30/06/2024',

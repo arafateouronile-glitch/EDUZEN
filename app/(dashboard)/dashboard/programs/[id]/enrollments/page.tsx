@@ -390,7 +390,7 @@ export default function ProgramEnrollmentsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="text-lg font-bold">{formatCurrency(stats.totalAmount, firstFormation?.currency ?? 'XOF')}</div>
+                <div className="text-lg font-bold">{formatCurrency(stats.totalAmount, firstFormation?.currency ?? 'EUR')}</div>
                 <div className="text-sm text-muted-foreground">Total</div>
               </div>
             </CardContent>
@@ -398,7 +398,7 @@ export default function ProgramEnrollmentsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="text-lg font-bold">{formatCurrency(stats.paidAmount, firstFormation?.currency ?? 'XOF')}</div>
+                <div className="text-lg font-bold">{formatCurrency(stats.paidAmount, firstFormation?.currency ?? 'EUR')}</div>
                 <div className="text-sm text-muted-foreground">Payé</div>
               </div>
             </CardContent>
@@ -600,7 +600,7 @@ export default function ProgramEnrollmentsPage() {
                 {/* Montant total */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Montant total ({firstFormation?.currency ?? 'XOF'}) *
+                    Montant total ({firstFormation?.currency ?? 'EUR'}) *
                   </label>
                   <input
                     type="number"
@@ -621,7 +621,7 @@ export default function ProgramEnrollmentsPage() {
                 {/* Montant payé */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Montant payé ({firstFormation?.currency ?? 'XOF'})
+                    Montant payé ({firstFormation?.currency ?? 'EUR'})
                   </label>
                   <input
                     type="number"
@@ -741,14 +741,14 @@ export default function ProgramEnrollmentsPage() {
                           <div>
                             <span className="text-muted-foreground">Montant:</span>{' '}
                             <span className="font-medium">
-                              {formatCurrency(enrollment.total_amount || 0, firstFormation?.currency ?? 'XOF')}
+                              {formatCurrency(enrollment.total_amount || 0, firstFormation?.currency ?? 'EUR')}
                             </span>
                           </div>
                           {(enrollment.paid_amount ?? 0) > 0 && (
                             <div>
                               <span className="text-muted-foreground">Payé:</span>{' '}
                               <span className="font-medium">
-                                {formatCurrency(enrollment.paid_amount ?? 0, firstFormation?.currency ?? 'XOF')}
+                                {formatCurrency(enrollment.paid_amount ?? 0, firstFormation?.currency ?? 'EUR')}
                               </span>
                             </div>
                           )}

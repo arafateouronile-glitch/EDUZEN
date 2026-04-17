@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { useOrganizationCurrency } from '@/lib/hooks/use-organization'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, DollarSign, TrendingUp, AlertCircle, BookOpen, ClipboardList, Calendar, Award, TrendingDown, ExternalLink, Clock, Activity, UserCheck } from 'lucide-react'
@@ -50,6 +51,7 @@ type Invoice = TableRow<'invoices'>
 export default function DashboardPage() {
   const supabase = createClient()
   const { user } = useAuth()
+  const orgCurrency = useOrganizationCurrency()
   const { addToast } = useToast()
 
   // Récupérer les statistiques générales (optimisé avec Promise.all)
@@ -474,7 +476,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Chiffre d\'affaires',
-      value: formatCurrency(stats?.monthlyRevenue || 0, 'XOF'),
+      value: formatCurrency(stats?.monthlyRevenue || 0, orgCurrency),
       icon: DollarSign,
       gradient: 'from-[#335ACF] to-[#34B9EE]',
       neon: '#335ACF',
@@ -756,7 +758,7 @@ export default function DashboardPage() {
                         fontFamily: 'Inter, sans-serif',
                         fontWeight: 300,
                       },
-                      formatter: (value: any) => formatCurrency(value, 'XOF')
+                      formatter: (value: any) => formatCurrency(value, orgCurrency)
                     } as any)}
                   />
                   <Line

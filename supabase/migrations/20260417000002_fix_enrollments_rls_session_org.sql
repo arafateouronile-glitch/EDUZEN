@@ -22,7 +22,7 @@ CREATE POLICY "Users can view enrollments in their organization"
           )
           OR
           -- Session directement liée à l'org (sans formation)
-          s.organization_id = public.get_user_organization_id()
+          s.organization_id = public.get_user_organization_id()::text
         )
     )
   );
@@ -43,7 +43,7 @@ CREATE POLICY "Users can create enrollments in their organization"
               AND f.organization_id = public.get_user_organization_id()
           )
           OR
-          s.organization_id = public.get_user_organization_id()
+          s.organization_id = public.get_user_organization_id()::text
         )
     )
     AND
@@ -70,7 +70,7 @@ CREATE POLICY "Users can update enrollments in their organization"
               AND f.organization_id = public.get_user_organization_id()
           )
           OR
-          s.organization_id = public.get_user_organization_id()
+          s.organization_id = public.get_user_organization_id()::text
         )
     )
   )
@@ -85,7 +85,7 @@ CREATE POLICY "Users can update enrollments in their organization"
               AND f.organization_id = public.get_user_organization_id()
           )
           OR
-          s.organization_id = public.get_user_organization_id()
+          s.organization_id = public.get_user_organization_id()::text
         )
     )
   );
@@ -106,7 +106,7 @@ CREATE POLICY "Users can delete enrollments in their organization"
               AND f.organization_id = public.get_user_organization_id()
           )
           OR
-          s.organization_id = public.get_user_organization_id()
+          s.organization_id = public.get_user_organization_id()::text
         )
     )
   );

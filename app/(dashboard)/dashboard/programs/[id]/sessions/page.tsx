@@ -607,7 +607,7 @@ export default function ProgramSessionsPage() {
                 {program && (
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Montant total ({program?.formations?.[0]?.currency ?? 'XOF'}) *
+                      Montant total ({program?.formations?.[0]?.currency ?? 'EUR'}) *
                     </label>
                     <input
                       type="number"
@@ -630,7 +630,7 @@ export default function ProgramSessionsPage() {
                 {program && (
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Montant payé ({(program as { currency?: string })?.currency ?? 'XOF'})
+                      Montant payé ({(program as { currency?: string })?.currency ?? 'EUR'})
                     </label>
                     <input
                       type="number"

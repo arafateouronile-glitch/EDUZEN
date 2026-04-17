@@ -286,7 +286,7 @@ export default function FormationDetailPage() {
             { label: 'Terminées', value: formationStats.completedSessions, sub: 'Sessions', icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
             { label: 'Complétées', value: formationStats.completedEnrollments, sub: 'Inscriptions', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
             { label: 'Planifiées', value: formationStats.plannedSessions, sub: 'Sessions', icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-            { label: 'Revenu estimé', value: formatCurrency(formationStats.totalRevenue, formationData?.currency || 'XOF'), sub: 'Total', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50', isCurrency: true },
+            { label: 'Revenu estimé', value: formatCurrency(formationStats.totalRevenue, formationData?.currency || 'EUR'), sub: 'Total', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50', isCurrency: true },
           ].map((stat, i) => (
             <GlassCard key={i} variant="subtle" className="p-4 flex flex-col justify-between hover:border-brand-blue/30 transition-all duration-300">
               <div className="flex items-start justify-between mb-2">
@@ -433,7 +433,7 @@ export default function FormationDetailPage() {
                       <div>
                         <p className="text-sm font-bold text-green-900 mb-1">Prix de la formation</p>
                         <p className="text-lg font-bold text-green-700">
-                          {formatCurrency(Number(formationData.price), formationData.currency || 'XOF')}
+                          {formatCurrency(Number(formationData.price), formationData.currency || 'EUR')}
                         </p>
                       </div>
                     </div>

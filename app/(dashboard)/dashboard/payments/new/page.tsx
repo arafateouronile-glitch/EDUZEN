@@ -331,10 +331,10 @@ export default function NewInvoicePage() {
                   {...register('currency')}
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
                 >
-                  <option value="XOF">XOF (Franc CFA Ouest)</option>
-                  <option value="XAF">XAF (Franc CFA Centre)</option>
                   <option value="EUR">EUR (Euro)</option>
                   <option value="USD">USD (Dollar)</option>
+                  <option value="XOF">XOF (Franc CFA Ouest)</option>
+                  <option value="XAF">XAF (Franc CFA Centre)</option>
                 </select>
               </div>
             </div>

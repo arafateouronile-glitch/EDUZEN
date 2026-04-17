@@ -506,7 +506,7 @@ export function Suivi({
           {
             label: 'Taux de recouvrement',
             value: `${recoveryRate}%`,
-            detail: `${formatCurrency(totalPaid, 'XOF')} payé sur ${formatCurrency(totalRevenue, 'XOF')}`,
+            detail: `${formatCurrency(totalPaid, formation?.currency || 'EUR')} payé sur ${formatCurrency(totalRevenue, formation?.currency || 'EUR')}`,
             icon: DollarSign,
             iconBg: 'bg-brand-cyan/10',
             iconColor: 'text-brand-cyan-dark',

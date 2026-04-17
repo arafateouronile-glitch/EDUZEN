@@ -1506,7 +1506,7 @@ export function useSessionDetail(sessionId: string) {
         end_time: formData.end_time || '',
         location: formData.location || '',
         capacity_max: formData.capacity_max || '',
-        currency: 'XOF',
+        currency: 'EUR',
         status: formData.status,
         teacher_id: formData.teacher_id || '',
         manager1_id: formData.manager1_id || '',

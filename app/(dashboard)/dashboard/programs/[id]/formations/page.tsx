@@ -185,7 +185,7 @@ export default function ProgramFormationsPage() {
                       {formation.price && (
                         <div className="flex items-center">
                           <DollarSign className="mr-1 h-4 w-4" />
-                          {formatCurrency(Number(formation.price), formation.currency || 'XOF')}
+                          {formatCurrency(Number(formation.price), formation.currency || 'EUR')}
                         </div>
                       )}
                     </div>
