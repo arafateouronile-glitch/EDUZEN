@@ -149,6 +149,17 @@ export class FormationService {
   }
 
   /**
+   * Supprime définitivement une formation de la base de données
+   */
+  async hardDeleteFormation(id: string) {
+    const { error } = await this.supabase
+      .from('formations')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+  }
+
+  /**
    * Récupère toutes les sessions d'une formation (relation directe legacy)
    */
   async getSessionsByFormation(formationId: string) {

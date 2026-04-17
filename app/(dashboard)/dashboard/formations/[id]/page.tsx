@@ -1,8 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formationService } from '@/lib/services/formation.service'
 import { sessionService } from '@/lib/services/session.service'
 import { createClient } from '@/lib/supabase/client'
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { CardTitle } from '@/components/ui/card'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Calendar, Clock, DollarSign, Users, BookOpen, GraduationCap, TrendingUp, CheckCircle, Plus, MapPin, Sparkles, FileText, Target, Award, List } from 'lucide-react'
+import { ArrowLeft, Edit, Calendar, Clock, DollarSign, Users, BookOpen, GraduationCap, TrendingUp, CheckCircle, Plus, MapPin, Sparkles, FileText, Target, Award, List, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency, cn } from '@/lib/utils'
 // Lazy load recharts pour réduire le bundle initial
@@ -36,6 +36,16 @@ export default function FormationDetailPage() {
   const formationId = params.id as string
   const { user } = useAuth()
   const supabase = createClient()
+  const queryClient = useQueryClient()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: () => formationService.hardDeleteFormation(formationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['formations'] })
+      router.push('/dashboard/formations')
+    },
+  })
 
   const { data: formation, isLoading } = useQuery({
     queryKey: ['formation', formationId],
@@ -201,7 +211,8 @@ export default function FormationDetailPage() {
   }
 
   return (
-    <motion.div 
+    <>
+    <motion.div
       className="space-y-8 pb-12 max-w-[1600px] mx-auto"
       variants={containerVariants}
       initial="hidden"
@@ -262,6 +273,14 @@ export default function FormationDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="bg-white hover:bg-red-50 border-red-200 text-red-600 hover:text-red-700 shadow-sm transition-all"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Supprimer
+          </Button>
           <Link href={`/dashboard/formations/${formationId}/edit`}>
             <Button variant="outline" className="bg-white hover:bg-gray-50 border-gray-200 shadow-sm transition-all">
               <Edit className="mr-2 h-4 w-4 text-gray-500" />
@@ -694,5 +713,48 @@ export default function FormationDetailPage() {
         </GlassCard>
       </motion.div>
     </motion.div>
+
+    {/* Modale de confirmation de suppression */}
+    {showDeleteConfirm && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-red-100 rounded-xl">
+              <Trash2 className="h-5 w-5 text-red-600" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">Supprimer la formation</h2>
+          </div>
+          <p className="text-gray-600 mb-2">
+            Vous êtes sur le point de supprimer définitivement la formation{' '}
+            <span className="font-semibold text-gray-900">{formation?.name}</span>.
+          </p>
+          <p className="text-sm text-red-600 bg-red-50 rounded-lg p-3 mb-6">
+            Cette action est irréversible. Toutes les données associées (sessions, inscriptions) seront également supprimées.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={deleteMutation.isPending}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteMutation.isPending ? 'Suppression...' : 'Supprimer définitivement'}
+            </Button>
+          </div>
+          {deleteMutation.isError && (
+            <p className="text-sm text-red-600 mt-3">
+              Erreur : {deleteMutation.error instanceof Error ? deleteMutation.error.message : 'Impossible de supprimer'}
+            </p>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   )
 }
