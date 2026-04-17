@@ -2,17 +2,7 @@
 -- les opérations car la policy utilisait un INNER JOIN formations.
 -- On accepte maintenant les sessions dont organization_id correspond directement.
 
--- Helper : renvoie l'organization_id de l'utilisateur courant (SECURITY DEFINER
--- pour éviter la récursion RLS sur la table users).
-DROP FUNCTION IF EXISTS public.get_user_organization_id();
-CREATE FUNCTION public.get_user_organization_id()
-RETURNS uuid
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-AS $$
-  SELECT organization_id FROM public.users WHERE id = auth.uid();
-$$;
+-- Note: get_user_organization_id() existe déjà en base, on la réutilise.
 
 -- SELECT
 DROP POLICY IF EXISTS "Users can view enrollments in their organization" ON public.enrollments;
