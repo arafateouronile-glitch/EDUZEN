@@ -15,6 +15,57 @@ const DEFAULT_TIMEOUT_MS = 25_000
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1000
 
+// Cache du chemin d'endpoint détecté pour éviter les détections répétées
+let detectedEndpoint: string | null = null
+
+/**
+ * Détecte la version de Gotenberg et retourne le bon chemin d'endpoint.
+ * Gotenberg 8.x → /forms/chromium/convert/html
+ * Gotenberg 7.x → /convert/html
+ */
+async function detectGotenbergEndpoint(authHeaders: Record<string, string>): Promise<string> {
+  if (detectedEndpoint) return detectedEndpoint
+
+  const v8Path = `${GOTENBERG_URL}/forms/chromium/convert/html`
+  const v7Path = `${GOTENBERG_URL}/convert/html`
+
+  // Tenter un health check v8
+  try {
+    const res = await fetch(`${GOTENBERG_URL}/health`, {
+      method: 'GET',
+      headers: authHeaders,
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      detectedEndpoint = v8Path
+      logger.debug('[Gotenberg] Détecté v8 via /health')
+      return detectedEndpoint
+    }
+  } catch {
+    // Pas de /health → probablement v7
+  }
+
+  // Tenter un health check v7
+  try {
+    const res = await fetch(`${GOTENBERG_URL}/ping`, {
+      method: 'GET',
+      headers: authHeaders,
+      signal: AbortSignal.timeout(5000),
+    })
+    if (res.ok) {
+      detectedEndpoint = v7Path
+      logger.debug('[Gotenberg] Détecté v7 via /ping')
+      return detectedEndpoint
+    }
+  } catch {
+    // Ignore
+  }
+
+  // Par défaut v8
+  detectedEndpoint = v8Path
+  return detectedEndpoint
+}
+
 export function isGotenbergConfigured(): boolean {
   return !!GOTENBERG_URL
 }
@@ -82,7 +133,8 @@ export async function htmlToPdf(
     throw new GotenbergError('GOTENBERG_URL is not configured')
   }
 
-  const endpoint = `${GOTENBERG_URL}/forms/chromium/convert/html`
+  const authHeaders = buildAuthHeaders()
+  let endpoint = await detectGotenbergEndpoint(authHeaders)
   const formData = new FormData()
 
   const blob = new Blob([html], { type: 'text/html' })
@@ -112,7 +164,6 @@ export async function htmlToPdf(
   if (options.waitDelay != null) formData.append('waitDelay', options.waitDelay)
   if (options.preferCssPageSize === true) formData.append('preferCssPageSize', 'true')
 
-  const authHeaders = buildAuthHeaders()
   const timeoutMs = DEFAULT_TIMEOUT_MS
 
   let lastError: Error | null = null
@@ -139,6 +190,13 @@ export async function htmlToPdf(
           response.status,
           text
         )
+        // Si 404 sur l'endpoint v8, basculer vers v7 et réessayer
+        if (response.status === 404 && endpoint.includes('/forms/chromium/convert/html')) {
+          detectedEndpoint = `${GOTENBERG_URL}/convert/html`
+          endpoint = detectedEndpoint
+          logger.warn('[Gotenberg] 404 sur v8, bascule vers v7', { newEndpoint: endpoint })
+          continue
+        }
         if (response.status >= 400 && response.status < 500 && response.status !== 429) {
           break
         }
