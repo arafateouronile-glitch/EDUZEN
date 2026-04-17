@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { useOrganizationCurrency } from '@/lib/hooks/use-organization'
 import { formationService } from '@/lib/services/formation.service'
 import { programService } from '@/lib/services/program.service'
 import { sessionService } from '@/lib/services/session.service'
@@ -47,7 +46,6 @@ type Formation = TableRow<'formations'>
 export default function NewFormationPage() {
   const router = useRouter()
   const { user, isLoading: userLoading } = useAuth()
-  const orgCurrency = useOrganizationCurrency()
   const [selectedSessions, setSelectedSessions] = useState<string[]>([])
 
   // Récupérer les programmes pour la sélection
@@ -139,11 +137,6 @@ export default function NewFormationPage() {
   })
 
   const formData = watch()
-
-  // Mettre à jour la devise avec celle de l'organisation dès qu'elle est disponible
-  useEffect(() => {
-    setValue('currency', orgCurrency)
-  }, [orgCurrency, setValue])
 
   const createMutation = useMutation({
     mutationFn: async (data: FormationFormData) => {
