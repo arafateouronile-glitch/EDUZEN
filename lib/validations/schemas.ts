@@ -35,16 +35,7 @@ export const studentSchema = z.object({
   company_phone: z.string().optional().or(z.literal('')),
   company_email: z.string().email('Email invalide').optional().or(z.literal('')),
   company_siret: z.string().optional().or(z.literal('')),
-}).refine(
-  (data) => {
-    // Au moins un tuteur doit être fourni (existant ou nouveau)
-    return data.guardian_id || (data.guardian_first_name && data.guardian_last_name && data.guardian_phone_primary)
-  },
-  {
-    message: 'Vous devez sélectionner un tuteur existant ou créer un nouveau tuteur',
-    path: ['guardian_id'],
-  }
-)
+})
 
 // Schéma pour la mise à jour d'un étudiant
 export const studentUpdateSchema = z.object({

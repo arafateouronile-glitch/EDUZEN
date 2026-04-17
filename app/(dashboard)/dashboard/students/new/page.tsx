@@ -423,14 +423,13 @@ export default function NewStudentPage() {
 
       const allFieldsValid = await trigger(requiredFields)
       if (!allFieldsValid) {
-        // Si erreur sur step 1, retour step 1
         const fn = watch('first_name')
         const ln = watch('last_name')
         if (!fn || !ln) setStep(1)
         return
       }
 
-      createMutation.mutate(data)
+      await createMutation.mutateAsync(data)
     }
   }
 
