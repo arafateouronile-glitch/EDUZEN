@@ -1674,30 +1674,25 @@ export function useDocumentGeneration({
       })
 
       // Créer un élément temporaire pour générer le PDF
-      // Utiliser position:absolute + left:-9999px + width explicite (comme physical-attendance-sheet-downloader)
-      // NE PAS utiliser visibility:hidden — html2canvas ignore les éléments cachés et produit un canvas vide
+      // generateConvocationHTML retourne un document HTML complet — utiliser DOMParser
+      // (même approche que physical-attendance-sheet-downloader)
+      const tempId = `temp-convocation-email-${Date.now()}`
       const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = html
+      tempDiv.id = tempId
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
       tempDiv.style.top = '0'
       tempDiv.style.width = '794px'
       tempDiv.style.minHeight = '297mm'
       tempDiv.style.backgroundColor = 'white'
+      const parsed = new DOMParser().parseFromString(html, 'text/html')
+      tempDiv.appendChild(parsed.documentElement)
       document.body.appendChild(tempDiv)
 
       let pdfBlob!: Blob
       try {
-        const element = tempDiv.querySelector('[id$="-document"]')
-        if (!element) {
-          throw new Error('Élément de document non trouvé dans le HTML généré')
-        }
-
-        element.id = `temp-convocation-email-${Date.now()}`
         await new Promise((resolve) => setTimeout(resolve, 500))
-
-        // Générer le PDF en Blob
-        pdfBlob = await generatePDFBlobFromHTML(element.id)
+        pdfBlob = await generatePDFBlobFromHTML(tempId)
       } finally {
         document.body.removeChild(tempDiv)
       }
@@ -1782,30 +1777,25 @@ export function useDocumentGeneration({
       })
 
       // Créer un élément temporaire pour générer le PDF
-      // Utiliser position:absolute + left:-9999px + width explicite (comme physical-attendance-sheet-downloader)
-      // NE PAS utiliser visibility:hidden — html2canvas ignore les éléments cachés et produit un canvas vide
+      // generateConvocationHTML retourne un document HTML complet — utiliser DOMParser
+      // (même approche que physical-attendance-sheet-downloader)
+      const tempId2 = `temp-convocation-email-${Date.now()}`
       const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = html
+      tempDiv.id = tempId2
       tempDiv.style.position = 'absolute'
       tempDiv.style.left = '-9999px'
       tempDiv.style.top = '0'
       tempDiv.style.width = '794px'
       tempDiv.style.minHeight = '297mm'
       tempDiv.style.backgroundColor = 'white'
+      const parsed2 = new DOMParser().parseFromString(html, 'text/html')
+      tempDiv.appendChild(parsed2.documentElement)
       document.body.appendChild(tempDiv)
 
       let pdfBlob2!: Blob
       try {
-        const element = tempDiv.querySelector('[id$="-document"]')
-        if (!element) {
-          throw new Error('Élément de document non trouvé dans le HTML généré')
-        }
-
-        element.id = `temp-convocation-email-${Date.now()}`
         await new Promise((resolve) => setTimeout(resolve, 500))
-
-        // Générer le PDF en Blob
-        pdfBlob2 = await generatePDFBlobFromHTML(element.id)
+        pdfBlob2 = await generatePDFBlobFromHTML(tempId2)
       } finally {
         document.body.removeChild(tempDiv)
       }
