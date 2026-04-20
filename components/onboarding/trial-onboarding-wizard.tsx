@@ -108,17 +108,19 @@ export function TrialOnboardingWizard({
       }
 
       // Mettre à jour l'organisation
+      // Les champs directs de la table (address, city, logo_url, siret, nda_number)
+      // et postal_code dans settings.postal_code (pas de colonne dédiée)
       const { error: orgError } = await supabase
         .from('organizations')
         .update({
           name: orgData.name,
+          address: orgData.address || null,
+          city: orgData.city || null,
+          logo_url: orgData.logoUrl || null,
+          siret: orgData.siret || null,
+          nda_number: orgData.nda || null,
           settings: {
-            siret: orgData.siret,
-            nda: orgData.nda,
-            address: orgData.address,
-            postalCode: orgData.postalCode,
-            city: orgData.city,
-            logoUrl: orgData.logoUrl,
+            postal_code: orgData.postalCode || null,
           },
           updated_at: new Date().toISOString(),
         })

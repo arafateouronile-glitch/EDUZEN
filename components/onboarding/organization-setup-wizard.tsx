@@ -167,19 +167,21 @@ export function OrganizationSetupWizard() {
 
       setIsLoading(true)
 
-      // Mettre à jour l'organisation avec les données
+      // Mettre à jour l'organisation avec les données dans les colonnes directes
       const { error: updateError } = await supabase
         .from('organizations')
         .update({
           name: orgData.name,
+          address: orgData.address || null,
+          city: orgData.city || null,
+          logo_url: brandingData.logoUrl || null,
+          siret: orgData.siret || null,
+          brand_color: brandingData.primaryColor || null,
           settings: {
-            siret: orgData.siret,
-            address: orgData.address,
-            postalCode: orgData.postalCode,
-            city: orgData.city,
-            primaryColor: brandingData.primaryColor,
-            logoUrl: brandingData.logoUrl,
-            signatureEnabled: signatureData.enabled,
+            postal_code: orgData.postalCode || null,
+            signature_enabled: signatureData.enabled,
+            onboarding_completed: true,
+            onboarding_completed_at: new Date().toISOString(),
           },
         })
         .eq('id', user.organization_id)
@@ -194,17 +196,6 @@ export function OrganizationSetupWizard() {
         primaryColor: brandingData.primaryColor,
         logoUrl: brandingData.logoUrl,
       })
-
-      // Marquer l'onboarding comme terminé
-      await supabase
-        .from('organizations')
-        .update({
-          settings: {
-            onboarding_completed: true,
-            onboarding_completed_at: new Date().toISOString(),
-          },
-        })
-        .eq('id', user.organization_id)
     },
     onSuccess: () => {
       addToast({
