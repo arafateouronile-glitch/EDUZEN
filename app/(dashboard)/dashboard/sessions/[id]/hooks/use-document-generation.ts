@@ -1674,24 +1674,33 @@ export function useDocumentGeneration({
       })
 
       // Créer un élément temporaire pour générer le PDF
+      // Utiliser position fixed + visibility hidden pour que le navigateur calcule correctement les dimensions
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
+      tempDiv.style.position = 'fixed'
+      tempDiv.style.top = '0'
+      tempDiv.style.left = '0'
+      tempDiv.style.width = '794px'
+      tempDiv.style.visibility = 'hidden'
+      tempDiv.style.pointerEvents = 'none'
+      tempDiv.style.zIndex = '-1'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
-      if (!element) {
+      let pdfBlob!: Blob
+      try {
+        const element = tempDiv.querySelector('[id$="-document"]')
+        if (!element) {
+          throw new Error('Élément de document non trouvé dans le HTML généré')
+        }
+
+        element.id = `temp-convocation-email-${Date.now()}`
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        // Générer le PDF en Blob
+        pdfBlob = await generatePDFBlobFromHTML(element.id)
+      } finally {
         document.body.removeChild(tempDiv)
-        throw new Error('Élément de document non trouvé')
       }
-
-      element.id = `temp-convocation-email-${Date.now()}`
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Générer le PDF en Blob
-      const pdfBlob = await generatePDFBlobFromHTML(element.id)
-      document.body.removeChild(tempDiv)
 
       // Convertir le texte en HTML si nécessaire (ajouter des retours à la ligne)
       const emailBodyHTML = customBody.replace(/\n/g, '<br>')
@@ -1717,7 +1726,7 @@ export function useDocumentGeneration({
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de l\'envoi de l\'email.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'envoi de l\'email.',
       })
     }
   }
@@ -1773,24 +1782,33 @@ export function useDocumentGeneration({
       })
 
       // Créer un élément temporaire pour générer le PDF
+      // Utiliser position fixed + visibility hidden pour que le navigateur calcule correctement les dimensions
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
+      tempDiv.style.position = 'fixed'
+      tempDiv.style.top = '0'
+      tempDiv.style.left = '0'
+      tempDiv.style.width = '794px'
+      tempDiv.style.visibility = 'hidden'
+      tempDiv.style.pointerEvents = 'none'
+      tempDiv.style.zIndex = '-1'
       document.body.appendChild(tempDiv)
 
-      const element = tempDiv.querySelector('[id$="-document"]')
-      if (!element) {
+      let pdfBlob2!: Blob
+      try {
+        const element = tempDiv.querySelector('[id$="-document"]')
+        if (!element) {
+          throw new Error('Élément de document non trouvé dans le HTML généré')
+        }
+
+        element.id = `temp-convocation-email-${Date.now()}`
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        // Générer le PDF en Blob
+        pdfBlob2 = await generatePDFBlobFromHTML(element.id)
+      } finally {
         document.body.removeChild(tempDiv)
-        throw new Error('Élément de document non trouvé')
       }
-
-      element.id = `temp-convocation-email-${Date.now()}`
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Générer le PDF en Blob
-      const pdfBlob = await generatePDFBlobFromHTML(element.id)
-      document.body.removeChild(tempDiv)
 
       // Créer le corps de l'email
       const emailSubject = `Convocation - ${sessionData.name}`
@@ -1812,7 +1830,7 @@ export function useDocumentGeneration({
       await emailService.sendDocument(
         student.email,
         emailSubject,
-        pdfBlob,
+        pdfBlob2,
         `convocation_${student.last_name}_${student.first_name}.pdf`,
         emailBody
       )
@@ -1830,7 +1848,7 @@ export function useDocumentGeneration({
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de l\'envoi de l\'email.',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'envoi de l\'email.',
       })
     }
   }
