@@ -68,8 +68,8 @@ export async function GET() {
 
     // Récupérer les codes d'indicateurs si des preuves existent
     const indicatorIds = (manualRes.data || [])
-      .map((e: { indicator_id: string | null }) => e.indicator_id)
-      .filter((id: string | null): id is string => !!id)
+      .map((e: unknown) => (e as { indicator_id?: string | null }).indicator_id ?? null)
+      .filter((id): id is string => !!id)
 
     let manualIndicatorCodes: { indicator_code: string }[] = []
     if (indicatorIds.length > 0) {
