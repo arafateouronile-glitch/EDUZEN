@@ -272,7 +272,7 @@ export function GestionConvocations({
                         required
                       >
                         <option value="">Sélectionner un élève</option>
-                        {students.map((student) => (
+                        {(students ?? []).map((student) => (
                           <option key={student.id} value={student.id}>
                             {student.first_name} {student.last_name} ({student.student_number})
                           </option>
@@ -553,7 +553,7 @@ export function GestionConvocations({
               <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                 <h4 className="font-bold text-gray-900 uppercase tracking-wide text-sm flex items-center gap-2">
                   <UserPlus className="h-4 w-4 text-brand-blue" />
-                  Apprenants inscrits ({enrollments.length})
+                  Apprenants inscrits ({(enrollments ?? []).length})
                 </h4>
                 {!showEnrollmentForm && (
                   <Button 
@@ -568,7 +568,7 @@ export function GestionConvocations({
                 )}
               </div>
 
-              {enrollments.length === 0 ? (
+              {(enrollments ?? []).length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
                   <div className="p-4 bg-white rounded-full shadow-sm mb-4">
                     <UserPlus className="h-8 w-8 text-gray-400" />
@@ -587,7 +587,7 @@ export function GestionConvocations({
                 </div>
               ) : (
                 <div className="grid gap-3">
-                  {enrollments.map((enrollment, index) => {
+                  {(enrollments ?? []).map((enrollment, index) => {
                     const student = enrollment.students
                     if (!student) return null
 

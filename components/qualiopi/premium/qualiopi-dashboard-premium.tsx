@@ -751,7 +751,7 @@ export function QualiopiDashboardPremium() {
           transition={{ delay: 1 }}
         >
           <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/qualiopi/audits">
+            <Link href="/dashboard/qualiopi/auditor-links">
               <FileText className="h-4 w-4 mr-2" />
               Historique des audits
             </Link>
@@ -763,7 +763,7 @@ export function QualiopiDashboardPremium() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/qualiopi/reports">
+            <Link href="/dashboard/qualiopi/evidence">
               <Download className="h-4 w-4 mr-2" />
               Exporter un rapport
             </Link>
