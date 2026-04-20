@@ -1674,16 +1674,16 @@ export function useDocumentGeneration({
       })
 
       // Créer un élément temporaire pour générer le PDF
-      // Utiliser position fixed + visibility hidden pour que le navigateur calcule correctement les dimensions
+      // Utiliser position:absolute + left:-9999px + width explicite (comme physical-attendance-sheet-downloader)
+      // NE PAS utiliser visibility:hidden — html2canvas ignore les éléments cachés et produit un canvas vide
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
-      tempDiv.style.position = 'fixed'
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
       tempDiv.style.top = '0'
-      tempDiv.style.left = '0'
       tempDiv.style.width = '794px'
-      tempDiv.style.visibility = 'hidden'
-      tempDiv.style.pointerEvents = 'none'
-      tempDiv.style.zIndex = '-1'
+      tempDiv.style.minHeight = '297mm'
+      tempDiv.style.backgroundColor = 'white'
       document.body.appendChild(tempDiv)
 
       let pdfBlob!: Blob
@@ -1782,16 +1782,16 @@ export function useDocumentGeneration({
       })
 
       // Créer un élément temporaire pour générer le PDF
-      // Utiliser position fixed + visibility hidden pour que le navigateur calcule correctement les dimensions
+      // Utiliser position:absolute + left:-9999px + width explicite (comme physical-attendance-sheet-downloader)
+      // NE PAS utiliser visibility:hidden — html2canvas ignore les éléments cachés et produit un canvas vide
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = html
-      tempDiv.style.position = 'fixed'
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
       tempDiv.style.top = '0'
-      tempDiv.style.left = '0'
       tempDiv.style.width = '794px'
-      tempDiv.style.visibility = 'hidden'
-      tempDiv.style.pointerEvents = 'none'
-      tempDiv.style.zIndex = '-1'
+      tempDiv.style.minHeight = '297mm'
+      tempDiv.style.backgroundColor = 'white'
       document.body.appendChild(tempDiv)
 
       let pdfBlob2!: Blob
