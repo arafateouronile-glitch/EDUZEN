@@ -12,59 +12,13 @@ const GOTENBERG_API_KEY = process.env.GOTENBERG_API_KEY
 const GOTENBERG_BASIC_AUTH = process.env.GOTENBERG_BASIC_AUTH // "user:password" à encoder en Base64 côté appelant ou via env
 
 const DEFAULT_TIMEOUT_MS = 25_000
-const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 1000
 
-// Cache du chemin d'endpoint détecté pour éviter les détections répétées
-let detectedEndpoint: string | null = null
-
-/**
- * Détecte la version de Gotenberg et retourne le bon chemin d'endpoint.
- * Gotenberg 8.x → /forms/chromium/convert/html
- * Gotenberg 7.x → /convert/html
- */
-async function detectGotenbergEndpoint(authHeaders: Record<string, string>): Promise<string> {
-  if (detectedEndpoint) return detectedEndpoint
-
-  const v8Path = `${GOTENBERG_URL}/forms/chromium/convert/html`
-  const v7Path = `${GOTENBERG_URL}/convert/html`
-
-  // Tenter un health check v8
-  try {
-    const res = await fetch(`${GOTENBERG_URL}/health`, {
-      method: 'GET',
-      headers: authHeaders,
-      signal: AbortSignal.timeout(5000),
-    })
-    if (res.ok) {
-      detectedEndpoint = v8Path
-      logger.debug('[Gotenberg] Détecté v8 via /health')
-      return detectedEndpoint
-    }
-  } catch {
-    // Pas de /health → probablement v7
-  }
-
-  // Tenter un health check v7
-  try {
-    const res = await fetch(`${GOTENBERG_URL}/ping`, {
-      method: 'GET',
-      headers: authHeaders,
-      signal: AbortSignal.timeout(5000),
-    })
-    if (res.ok) {
-      detectedEndpoint = v7Path
-      logger.debug('[Gotenberg] Détecté v7 via /ping')
-      return detectedEndpoint
-    }
-  } catch {
-    // Ignore
-  }
-
-  // Par défaut v8
-  detectedEndpoint = v8Path
-  return detectedEndpoint
-}
+// Endpoints Gotenberg par version (essayés dans l'ordre)
+const GOTENBERG_ENDPOINTS = [
+  '/forms/chromium/convert/html', // v8
+  '/convert/html',                // v7
+]
 
 export function isGotenbergConfigured(): boolean {
   return !!GOTENBERG_URL
@@ -134,53 +88,40 @@ export async function htmlToPdf(
   }
 
   const authHeaders = buildAuthHeaders()
-  let endpoint = await detectGotenbergEndpoint(authHeaders)
-  const formData = new FormData()
 
-  const blob = new Blob([html], { type: 'text/html' })
-  formData.append('files', blob, 'index.html')
-
-  if (options.headerHtml) {
-    const headerBlob = new Blob([options.headerHtml], { type: 'text/html' })
-    formData.append('files', headerBlob, 'header.html')
+  const buildFormData = () => {
+    const formData = new FormData()
+    formData.append('files', new Blob([html], { type: 'text/html' }), 'index.html')
+    if (options.headerHtml) formData.append('files', new Blob([options.headerHtml], { type: 'text/html' }), 'header.html')
+    if (options.footerHtml) formData.append('files', new Blob([options.footerHtml], { type: 'text/html' }), 'footer.html')
+    if (options.css) formData.append('files', new Blob([options.css], { type: 'text/css' }), 'styles.css')
+    const format = options.format ?? 'A4'
+    formData.append('paperWidth', format === 'Letter' ? '8.5' : '8.267')
+    formData.append('paperHeight', format === 'Letter' ? '11' : '11.692')
+    if (options.marginTop != null) formData.append('marginTop', options.marginTop)
+    if (options.marginBottom != null) formData.append('marginBottom', options.marginBottom)
+    if (options.marginLeft != null) formData.append('marginLeft', options.marginLeft)
+    if (options.marginRight != null) formData.append('marginRight', options.marginRight)
+    if (options.waitDelay != null) formData.append('waitDelay', options.waitDelay)
+    if (options.preferCssPageSize === true) formData.append('preferCssPageSize', 'true')
+    return formData
   }
-  if (options.footerHtml) {
-    const footerBlob = new Blob([options.footerHtml], { type: 'text/html' })
-    formData.append('files', footerBlob, 'footer.html')
-  }
-  if (options.css) {
-    const cssBlob = new Blob([options.css], { type: 'text/css' })
-    formData.append('files', cssBlob, 'styles.css')
-  }
-
-  const format = options.format ?? 'A4'
-  formData.append('paperWidth', format === 'Letter' ? '8.5' : '8.267')
-  formData.append('paperHeight', format === 'Letter' ? '11' : '11.692')
-
-  if (options.marginTop != null) formData.append('marginTop', options.marginTop)
-  if (options.marginBottom != null) formData.append('marginBottom', options.marginBottom)
-  if (options.marginLeft != null) formData.append('marginLeft', options.marginLeft)
-  if (options.marginRight != null) formData.append('marginRight', options.marginRight)
-  if (options.waitDelay != null) formData.append('waitDelay', options.waitDelay)
-  if (options.preferCssPageSize === true) formData.append('preferCssPageSize', 'true')
-
-  const timeoutMs = DEFAULT_TIMEOUT_MS
 
   let lastError: Error | null = null
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+
+  // Essayer chaque endpoint dans l'ordre (v8 puis v7) — pas de cache pour éviter les états corrompus
+  for (const endpointPath of GOTENBERG_ENDPOINTS) {
+    const endpoint = `${GOTENBERG_URL}${endpointPath}`
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
+    const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
 
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        body: formData,
+        body: buildFormData(),
         signal: controller.signal,
-        headers: {
-          ...authHeaders,
-        },
+        headers: { ...authHeaders },
       })
-
       clearTimeout(timeout)
 
       if (!response.ok) {
@@ -190,46 +131,27 @@ export async function htmlToPdf(
           response.status,
           text
         )
-        // Si 404 sur l'endpoint v8, basculer vers v7 et réessayer
-        if (response.status === 404 && endpoint.includes('/forms/chromium/convert/html')) {
-          detectedEndpoint = `${GOTENBERG_URL}/convert/html`
-          endpoint = detectedEndpoint
-          logger.warn('[Gotenberg] 404 sur v8, bascule vers v7', { newEndpoint: endpoint })
+        if (response.status === 404) {
+          logger.warn(`[Gotenberg] 404 sur ${endpointPath}, essai endpoint suivant`)
           continue
         }
-        if (response.status >= 400 && response.status < 500 && response.status !== 429) {
-          break
-        }
-        if (attempt < MAX_RETRIES) {
-          const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1)
-          logger.warn('Gotenberg retry', { attempt, maxRetries: MAX_RETRIES, delay, status: response.status })
-          await new Promise((r) => setTimeout(r, delay))
-        }
-        continue
+        // Erreur non-404 : on arrête
+        break
       }
 
+      logger.debug(`[Gotenberg] PDF généré via ${endpointPath}`)
       const arrayBuffer = await response.arrayBuffer()
       return Buffer.from(arrayBuffer)
     } catch (err) {
       clearTimeout(timeout)
-      const isTimeout = err instanceof Error && err.name === 'AbortError'
-      const isNetwork = err instanceof TypeError && err.message?.includes('fetch')
       lastError = err instanceof Error ? err : new Error(String(err))
-
-      logger.error('Gotenberg request failed', lastError, {
-        attempt,
-        maxRetries: MAX_RETRIES,
-        isTimeout,
-        isNetwork,
-      })
-
-      if (attempt < MAX_RETRIES && (isTimeout || isNetwork)) {
-        const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1)
-        await new Promise((r) => setTimeout(r, delay))
-      } else {
-        break
-      }
+      logger.error(`[Gotenberg] Erreur sur ${endpointPath}`, lastError)
+      // Continuer avec l'endpoint suivant si réseau ou timeout
+      const isRetryable = lastError.name === 'AbortError' || (err instanceof TypeError && err.message?.includes('fetch'))
+      if (!isRetryable) break
     }
+
+    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
   }
 
   if (lastError instanceof GotenbergError) throw lastError
