@@ -74,7 +74,7 @@ export async function getEmailLogs(filters: EmailLogsFilters = {}): Promise<Emai
   } = filters
 
   // ── Requête principale ──
-  let query = (supabase as any)
+  let query = (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
     .from('email_logs')
     .select(`
       id,
@@ -116,7 +116,7 @@ export async function getEmailLogs(filters: EmailLogsFilters = {}): Promise<Emai
   if (error) throw new Error(`Erreur récupération email_logs : ${error.message}`)
 
   // ── Stats globales (sans les filtres de pagination) ──
-  const { data: statsData } = await (supabase as any)
+  const { data: statsData } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
     .from('email_logs')
     .select('status')
 
@@ -135,7 +135,7 @@ export async function getEmailLogs(filters: EmailLogsFilters = {}): Promise<Emai
   }
 
   return {
-    logs: (logs ?? []) as EmailLog[],
+    logs: (logs ?? []) as unknown as EmailLog[],
     total: count ?? 0,
     stats,
   }

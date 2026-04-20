@@ -13,11 +13,52 @@ import { convert } from 'html-to-text'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
+// ─── Types locaux pour les internaux non exposés de la lib docx ───────────────
+
+/** Mock minimaliste d'Element pour parser CSS sans accès DOM complet */
+interface PseudoElement { getAttribute(name: string): string | null }
+
+/** Style retourné par parseStyles, compatible avec les options TextRun/Paragraph */
+interface DocxTextStyle {
+  bold?: boolean
+  italics?: boolean
+  size?: number
+  color?: string
+  font?: string | { name: string }
+  underline?: { type?: string }
+  strike?: boolean
+  superScript?: boolean
+  subScript?: boolean
+  highlight?: string
+  [key: string]: unknown
+}
+
+/** Résultat de parsing : paragraphes + tables flottantes attachées à l'array */
+type ParagraphWithMeta = Paragraph & { __isTableMarker?: boolean }
+type ParagraphsResult = ParagraphWithMeta[] & { __tables?: Table[] }
+
+/** Accès aux propriétés internes des objets docx (non exposées dans les types v9) */
+interface DocxWithChildren { children?: unknown[] }
+interface DocxWithRows { rows?: DocxWithChildren[]; _rows?: DocxWithChildren[] }
+type DocxConfigExt = Record<string, unknown> & { borders?: Record<string, unknown>; children?: unknown[] }
+
+/** Template avec champs alternatifs (legacy compat) */
+interface TemplateExt extends DocumentTemplate {
+  headerContent?: string
+  bodyContent?: string
+  footerContent?: string
+}
+
+/** Champ header/content/footer du template — string ou objet avec .content/.body/.html */
+type TemplateSectionField = string | { content?: string; body?: string; html?: string } | undefined | null
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Parse les styles CSS depuis un élément HTML et retourne les propriétés pour TextRun
  */
-function parseStyles(element: Element, context?: 'header' | 'content' | 'footer', defaultFontSize?: number): Partial<any> {
-  const style: Partial<any> = {}
+function parseStyles(element: Element, context?: 'header' | 'content' | 'footer', defaultFontSize?: number): DocxTextStyle {
+  const style: DocxTextStyle = {}
   const computedStyle = element.getAttribute('style') || ''
   const tagName = element.tagName.toLowerCase()
   
@@ -182,7 +223,7 @@ function parseBackgroundColor(element: Element): string | undefined {
     }
     
     // Couleurs nommées courantes
-    const colorMap: Record<string, string> = {
+    const colorMap: Record<string, string | undefined> = {
       'white': 'FFFFFF',
       'black': '000000',
       'red': 'FF0000',
@@ -193,7 +234,7 @@ function parseBackgroundColor(element: Element): string | undefined {
       'grey': '808080',
       'lightgray': 'D3D3D3',
       'lightgrey': 'D3D3D3',
-      'transparent': undefined as any,
+      'transparent': undefined,
     }
     
     const namedColor = colorMap[bgValue.toLowerCase()]
@@ -377,23 +418,23 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 
                 // Utiliser ImageRun directement (Media.addImage n'existe pas dans docx)
                 const imageRun = new ImageRun({
-                  data: imageBuffer as any,
+                  data: imageBuffer as Buffer,
                   transformation: {
                     width: imageWidth,
                     height: imageHeight,
                   },
-                } as any)
-                
+                } as unknown as ConstructorParameters<typeof ImageRun>[0])
+
                 // Déterminer l'alignement depuis le parent ou les styles
-                let alignment = AlignmentType.CENTER
+                let alignment: typeof AlignmentType[keyof typeof AlignmentType] = AlignmentType.CENTER
                 let parent = element.parentElement
                 while (parent) {
                   const parentStyle = parent.getAttribute('style') || ''
                   if (parentStyle.includes('text-align: left')) {
-                    alignment = AlignmentType.LEFT as any
+                    alignment = AlignmentType.LEFT
                     break
                   } else if (parentStyle.includes('text-align: right')) {
-                    alignment = AlignmentType.RIGHT as any
+                    alignment = AlignmentType.RIGHT
                     break
                   } else if (parentStyle.includes('text-align: center')) {
                     alignment = AlignmentType.CENTER
@@ -526,16 +567,16 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               if (divHTML) {
                 // Utiliser htmlToParagraphs pour traiter le contenu du div (y compris les tableaux imbriqués)
                 const tempDivParagraphs = await htmlToParagraphs(`<div>${divHTML}</div>`, doc, context, defaultFontSize)
-                divContentParagraphs.push(...tempDivParagraphs.filter(p => !(p as any).__isTableMarker))
+                divContentParagraphs.push(...tempDivParagraphs.filter(p => !(p as ParagraphWithMeta).__isTableMarker))
                 
                 // Récupérer aussi les tableaux du div (ils seront ajoutés séparément)
-                const divTables = (tempDivParagraphs as any).__tables || []
+                const divTables = (tempDivParagraphs as ParagraphsResult).__tables || []
                 if (divTables.length > 0) {
                   logger.debug(`[Word Generator] 📊 ${divTables.length} tableau(x) trouvé(s) dans l'encadrement`)
-                  if (!(paragraphs as any).__tables) {
-                    (paragraphs as any).__tables = []
+                  if (!(paragraphs as ParagraphsResult).__tables) {
+                    (paragraphs as ParagraphsResult).__tables = []
                   }
-                  (paragraphs as any).__tables.push(...divTables)
+                  ;(paragraphs as ParagraphsResult).__tables!.push(...divTables)
                 }
               }
               
@@ -585,7 +626,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               
               // Ajouter les bordures si présentes
               if (borderConfig) {
-                (cellConfig as any).borders = {
+                (cellConfig as DocxConfigExt).borders = {
                   top: borderConfig,
                   bottom: borderConfig,
                   left: borderConfig,
@@ -616,19 +657,19 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               
               // Ajouter les bordures au tableau si présentes
               if (borderConfig) {
-                (encadrementTable as any).borders = {
+                (encadrementTable as unknown as DocxConfigExt).borders = {
                   top: borderConfig,
                   bottom: borderConfig,
                   left: borderConfig,
                   right: borderConfig,
                 }
               }
-              
+
               // Stocker le tableau dans paragraphs
-              if (!(paragraphs as any).__tables) {
-                (paragraphs as any).__tables = []
+              if (!(paragraphs as ParagraphsResult).__tables) {
+                (paragraphs as ParagraphsResult).__tables = []
               }
-              (paragraphs as any).__tables.push(encadrementTable)
+              ;(paragraphs as ParagraphsResult).__tables!.push(encadrementTable)
               
               // Ajouter un paragraphe vide avant pour l'espacement
               paragraphs.push(
@@ -747,12 +788,12 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                             }
                             
                             const imageRun = new ImageRun({
-                              data: imageBuffer as any,
+                              data: imageBuffer as Buffer,
                               transformation: {
                                 width: imageWidth,
                                 height: imageHeight,
                               },
-                            } as any)
+                            } as unknown as ConstructorParameters<typeof ImageRun>[0])
                             
                             // Alignement de l'image selon la cellule
                             let imageAlignment = cellAlignment || AlignmentType.LEFT
@@ -885,7 +926,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                   }
                   
                   const finalBorder = cellBorder || defaultBorder
-                  ;(cellConfig as any).borders = {
+                  ;(cellConfig as DocxConfigExt).borders = {
                     top: finalBorder,
                     bottom: finalBorder,
                     left: finalBorder,
@@ -930,7 +971,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               
               // Ajouter les bordures seulement si elles sont définies
               if (borderConfig) {
-                (tableConfig as any).borders = {
+                (tableConfig as DocxConfigExt).borders = {
                   top: borderConfig,
                   bottom: borderConfig,
                   left: borderConfig,
@@ -944,11 +985,11 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               
               // Stocker le tableau dans un tableau spécial pour l'ajouter plus tard
               // On va utiliser une propriété spéciale sur paragraphs
-              if (!(paragraphs as any).__tables) {
-                (paragraphs as any).__tables = []
+              if (!(paragraphs as ParagraphsResult).__tables) {
+                (paragraphs as ParagraphsResult).__tables = []
               }
-              (paragraphs as any).__tables.push(table)
-              
+              ;(paragraphs as ParagraphsResult).__tables!.push(table)
+
               // Ajouter un paragraphe vide avant le tableau pour l'espacement
               paragraphs.push(
                 new Paragraph({
@@ -957,7 +998,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 })
               )
               
-              const firstRowChildren = ((tableRows[0] as any)?.children as any)?.length || 0
+              const firstRowChildren = (tableRows[0] as DocxWithChildren)?.children?.length || 0
               logger.debug(`[Word Generator] ✅ Tableau créé avec ${tableRows.length} lignes et ${firstRowChildren} colonnes`)
             } else {
               logger.warn('[Word Generator] ⚠️ Aucune ligne trouvée dans le tableau HTML')
@@ -1071,10 +1112,10 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                 const attrMatch = cellAttributes.match(new RegExp(`${name}\\s*=\\s*["']([^"']+)["']`, 'i'))
                 return attrMatch ? attrMatch[1] : null
               } 
-            } as any
-            
-            const cellBgColor = parseBackgroundColor(virtualCell)
-            const cellBorder = parseBorderStyle(virtualCell)
+            } as PseudoElement
+
+            const cellBgColor = parseBackgroundColor(virtualCell as unknown as Element)
+            const cellBorder = parseBorderStyle(virtualCell as unknown as Element)
             
             // Parser le padding depuis les attributs ou styles de la cellule
             const cellStyle = virtualCell.getAttribute('style') || ''
@@ -1150,12 +1191,12 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
                   }
                   
                   const imageRun = new ImageRun({
-                    data: imageBuffer as any,
+                    data: imageBuffer as Buffer,
                     transformation: {
                       width: imageWidth,
                       height: imageHeight,
                     },
-                  } as any)
+                  } as unknown as ConstructorParameters<typeof ImageRun>[0])
                   
                   // Déterminer l'alignement de l'image selon le style de la cellule
                   // Pour l'en-tête, si text-align: right, l'image doit être à droite
@@ -1301,7 +1342,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             // Ajouter les bordures seulement si elles sont définies (pas pour border: 0)
             const cellHasBorder = cellStyle.match(/border[:\s]/i) && !cellStyle.match(/border:\s*0|border:\s*none/i)
             if (cellHasBorder && finalBorder) {
-              (cellConfig as any).borders = {
+              (cellConfig as DocxConfigExt).borders = {
                 top: finalBorder,
                 bottom: finalBorder,
                 left: finalBorder,
@@ -1319,7 +1360,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             
             // Vérifier que la cellule a bien des paragraphes avec contenu
             const hasContent = cellParagraphs.some(p => {
-              const children = (p as any).children as any || []
+              const children = (p as DocxWithChildren)?.children as unknown[] ?? []
               return children.length > 0 && children.some((c: any) => {
                 return c.text || c.type === 'imageRun' || c.constructor?.name === 'ImageRun'
               })
@@ -1335,7 +1376,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             // Log pour déboguer les images dans les cellules
             try {
               const imageCount = cellParagraphs.filter(p => {
-                const children = (p as any).children as any || []
+                const children = (p as DocxWithChildren)?.children as unknown[] ?? []
                 return children.some((c: any) => c.type === 'imageRun' || c.constructor?.name === 'ImageRun')
               }).length
               if (imageCount > 0) {
@@ -1346,9 +1387,9 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
             }
             try {
               logger.debug('[Word Generator] Cellule ' + tableCells.length + ' ajoutée:', {
-                cellChildrenCount: (cellConfig as any).children?.length || 0,
-                cellHasImage: (cellConfig as any).children?.some((p: any) => 
-                  (p as any).children?.some((c: any) => c.type === 'imageRun' || c.constructor?.name === 'ImageRun')
+                cellChildrenCount: (cellConfig as DocxConfigExt).children?.length || 0,
+                cellHasImage: (cellConfig as DocxConfigExt).children?.some((p: any) => 
+                  (p as DocxWithChildren).children?.some((c: any) => c.type === 'imageRun' || c.constructor?.name === 'ImageRun')
                 ) || false,
               })
             } catch (e) {
@@ -1405,7 +1446,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Ajouter les bordures seulement si elles sont définies
           if (borderConfig) {
-            (tableConfig as any).borders = {
+            (tableConfig as DocxConfigExt).borders = {
               top: borderConfig,
               bottom: borderConfig,
               left: borderConfig,
@@ -1434,7 +1475,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Ajouter les bordures seulement si elles sont définies
           if (borderConfig) {
-            (finalTableConfig as any).borders = {
+            (finalTableConfig as DocxConfigExt).borders = {
               top: borderConfig,
               bottom: borderConfig,
               left: borderConfig,
@@ -1519,10 +1560,10 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               const attrMatch = divAttributes.match(new RegExp(escapedName + '\\s*=\\s*["\']([^"\']+)["\']', 'i'))
               return attrMatch ? attrMatch[1] : null
             } 
-          } as any
-          
-          const divBorder = parseBorderStyle(virtualDiv)
-          const divBgColor = parseBackgroundColor(virtualDiv)
+          } as PseudoElement
+
+          const divBorder = parseBorderStyle(virtualDiv as unknown as Element)
+          const divBgColor = parseBackgroundColor(virtualDiv as unknown as Element)
           
           // Parser le padding depuis le style
           const paddingMatch = styleValue.match(/padding:\s*(\d+(?:\.\d+)?)\s*(?:px|pt)?/i)
@@ -1591,7 +1632,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Ajouter les bordures si présentes
           if (borderConfig) {
-            (cellConfig as any).borders = {
+            (cellConfig as DocxConfigExt).borders = {
               top: borderConfig,
               bottom: borderConfig,
               left: borderConfig,
@@ -1622,14 +1663,14 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
           
           // Ajouter les bordures au tableau si présentes
           if (borderConfig) {
-            (encadrementTable as any).borders = {
+            (encadrementTable as unknown as DocxConfigExt).borders = {
               top: borderConfig,
               bottom: borderConfig,
               left: borderConfig,
               right: borderConfig,
             }
           }
-          
+
           encadrements.push(encadrementTable)
           
           // Remplacer le div dans le HTML par un placeholder
@@ -1648,10 +1689,10 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
     if (allTables.length > 0) {
       // CRITIQUE : S'assurer que __tables est bien attaché au tableau paragraphs
       // En créant un nouvel objet qui préserve la propriété
-      if (!(paragraphs as any).__tables) {
-        (paragraphs as any).__tables = []
+      if (!(paragraphs as ParagraphsResult).__tables) {
+        (paragraphs as ParagraphsResult).__tables = []
       }
-      (paragraphs as any).__tables.push(...allTables)
+      ;(paragraphs as ParagraphsResult).__tables!.push(...allTables)
       
       // Vérifier que les tableaux ont bien des lignes
       const tablesWithRows = allTables.filter(t => {
@@ -1725,12 +1766,12 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
               logger.debug(`[Word Generator] Image téléchargée, taille: ${imageBuffer.length} bytes`)
               // Utiliser ImageRun directement (Media.addImage n'existe pas dans docx)
               const imageRun = new ImageRun({
-                data: imageBuffer as any,
+                data: imageBuffer as Buffer,
                 transformation: {
                   width: 200,
                   height: 200,
                 },
-              } as any)
+              } as unknown as ConstructorParameters<typeof ImageRun>[0])
               paragraphs.push(
                 new Paragraph({
                   children: [imageRun],
@@ -1842,7 +1883,7 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
     
     logger.debug('[Word Generator] Paragraphes créés côté serveur', { 
       paragraphCount: paragraphs.length, 
-      imageCount: paragraphs.filter(p => ((p as any).children as any)?.some((c: any) => c.type === 'imageRun')).length 
+      imageCount: paragraphs.filter(p => ((p as DocxWithChildren)?.children as unknown[])?.some((c: any) => c.type === 'imageRun')).length 
     })
   }
 
@@ -1874,28 +1915,28 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
   }
   
   logger.debug('[Word Generator] ✅ Paragraphes générés', { count: paragraphs.length })
-  logger.debug('[Word Generator] ✅ Paragraphes.__tables AVANT retour', { tableCount: (paragraphs as any).__tables?.length || 0 })
+  logger.debug('[Word Generator] ✅ Paragraphes.__tables AVANT retour', { tableCount: (paragraphs as ParagraphsResult).__tables?.length || 0 })
   
   // S'assurer que la propriété __tables est bien attachée au tableau avant le retour
-  if ((paragraphs as any).__tables && (paragraphs as any).__tables.length > 0) {
-    logger.debug('[Word Generator] ✅ Détail des tableaux AVANT retour', { 
-      details: (paragraphs as any).__tables.map((t: any, i: number) => ({
+  if ((paragraphs as ParagraphsResult).__tables && (paragraphs as ParagraphsResult).__tables!.length > 0) {
+    logger.debug('[Word Generator] ✅ Détail des tableaux AVANT retour', {
+      details: (paragraphs as ParagraphsResult).__tables!.map((t: any, i: number) => ({
         index: i,
         tableType: t.constructor?.name,
-        rowsCount: (t as any).rows?.length || (t as any)._rows?.length || 0,
-        hasRows: !!(t as any).rows || !!(t as any)._rows,
-        firstRowCells: ((t as any).rows?.[0]?.children as any)?.length || ((t as any)._rows?.[0]?.children as any)?.length || 0,
+        rowsCount: (t as DocxWithRows).rows?.length || (t as DocxWithRows)._rows?.length || 0,
+        hasRows: !!(t as DocxWithRows).rows || !!(t as DocxWithRows)._rows,
+        firstRowCells: (t as DocxWithRows).rows?.[0]?.children?.length || (t as DocxWithRows)._rows?.[0]?.children?.length || 0,
       }))
     })
-    
+
     // Vérifier que les tableaux ont bien des lignes
     try {
-      (paragraphs as any).__tables.forEach((table: any, index: number) => {
+      ;(paragraphs as ParagraphsResult).__tables!.forEach((table: any, index: number) => {
         const rows = table.rows || table._rows || []
         logger.debug('[Word Generator] Tableau ' + index + ':', {
           rowsCount: rows.length,
           firstRowExists: !!rows[0],
-          firstRowChildren: ((rows[0] as any)?.children as any)?.length || 0,
+          firstRowChildren: (rows[0] as DocxWithChildren)?.children?.length || 0,
         })
       })
     } catch (e) {
@@ -1905,16 +1946,16 @@ async function htmlToParagraphs(html: string, doc?: Document, context?: 'header'
   
   // CRITIQUE : Créer un nouvel objet Array qui préserve la propriété __tables
   // Les tableaux JavaScript peuvent perdre les propriétés personnalisées lors de certaines opérations
-  const result = [...paragraphs] as any
+  const result = [...paragraphs] as ParagraphsResult
   
   // Attacher explicitement la propriété __tables au nouveau tableau
-  if ((paragraphs as any).__tables && (paragraphs as any).__tables.length > 0) {
-    result.__tables = [...(paragraphs as any).__tables] // Créer une copie du tableau
+  if ((paragraphs as ParagraphsResult).__tables && (paragraphs as ParagraphsResult).__tables!.length > 0) {
+    result.__tables = [...(paragraphs as ParagraphsResult).__tables!] // Créer une copie du tableau
     logger.debug('[Word Generator] ✅ Paragraphes.__tables APRÈS préparation', { tableCount: result.__tables.length })
-    
+
     // Vérifier que les tableaux sont bien des instances de Table
     const validTables = result.__tables.filter((t: any) => t instanceof Table)
-    logger.debug('[Word Generator] ✅ Tableaux valides (instances de Table):', validTables.length)
+    logger.debug('[Word Generator] ✅ Tableaux valides (instances de Table):', { count: validTables.length })
     
     if (validTables.length < result.__tables.length) {
       logger.warn('[Word Generator] ⚠️ Certains tableaux ne sont pas des instances valides de Table')
@@ -2010,47 +2051,45 @@ export async function generateWordFromTemplate(
     // Extraire header, content et footer directement depuis le template
     let headerContent = ''
     if (template.header) {
-      const headerData = template.header as any
+      const headerData = template.header as TemplateSectionField
       if (typeof headerData === 'string') {
         headerContent = headerData
-      } else if (headerData.content) {
+      } else if (headerData && typeof headerData === 'object' && headerData.content) {
         headerContent = headerData.content
       }
     }
-    if (!headerContent && (template as any).headerContent) {
-      headerContent = (template as any).headerContent
+    if (!headerContent && (template as TemplateExt).headerContent) {
+      headerContent = (template as TemplateExt).headerContent ?? ''
     }
-    
+
     // Pour le body, utiliser content directement
     let content = ''
     if (template.content) {
-      const contentData = template.content as any
+      const contentData = template.content as TemplateSectionField
       if (typeof contentData === 'string') {
         content = contentData
-      } else if (contentData.body) {
-        content = contentData.body
-      } else if (contentData.content) {
-        content = contentData.content
-      } else if (contentData.html) {
-        content = contentData.html
+      } else if (contentData && typeof contentData === 'object') {
+        if (contentData.body) content = contentData.body
+        else if (contentData.content) content = contentData.content
+        else if (contentData.html) content = contentData.html
       }
     }
-    if (!content && (template as any).bodyContent) {
-      content = (template as any).bodyContent
+    if (!content && (template as TemplateExt).bodyContent) {
+      content = (template as TemplateExt).bodyContent ?? ''
     }
-    
+
     // Pour le footer, utiliser footer.content directement
     let footerContent = ''
     if (template.footer) {
-      const footerData = template.footer as any
+      const footerData = template.footer as TemplateSectionField
       if (typeof footerData === 'string') {
         footerContent = footerData
-      } else if (footerData.content) {
+      } else if (footerData && typeof footerData === 'object' && footerData.content) {
         footerContent = footerData.content
       }
     }
-    if (!footerContent && (template as any).footerContent) {
-      footerContent = (template as any).footerContent
+    if (!footerContent && (template as TemplateExt).footerContent) {
+      footerContent = (template as TemplateExt).footerContent ?? ''
     }
 
     // Aplatir les variables
@@ -2226,9 +2265,9 @@ export async function generateWordFromTemplate(
     
     const headerParagraphs = await htmlToParagraphs(processedHeader, tempDoc, 'header', headerFooterFontSize)
     logger.debug('[Word Generator] Header paragraphes créés', { count: headerParagraphs.length })
-    logger.debug('[Word Generator] Header paragraphs.__tables', { count: (headerParagraphs as any).__tables?.length || 0 })
+    logger.debug('[Word Generator] Header paragraphs.__tables', { count: (headerParagraphs as ParagraphsResult).__tables?.length || 0 })
     logger.debug('[Word Generator] Header paragraphs.__tables détails', { 
-      details: (headerParagraphs as any).__tables ? (headerParagraphs as any).__tables.map((t: any, i: number) => ({
+      details: (headerParagraphs as ParagraphsResult).__tables ? (headerParagraphs as ParagraphsResult).__tables!.map((t: any, i: number) => ({
         index: i,
         rowsCount: t.rows?.length || 0,
         hasRows: !!t.rows,
@@ -2236,10 +2275,10 @@ export async function generateWordFromTemplate(
     })
     
     // Extraire les tableaux du header (comme pour le body)
-    const headerTablesRaw = (headerParagraphs as any).__tables || []
+    const headerTablesRaw = (headerParagraphs as ParagraphsResult).__tables || []
     // CRITIQUE : Filtrer pour ne garder que les instances valides de Table
     const headerTables: Table[] = headerTablesRaw.filter((t: any) => t instanceof Table)
-    const cleanHeaderParagraphs = headerParagraphs.filter(p => !(p as any).__isTableMarker)
+    const cleanHeaderParagraphs = headerParagraphs.filter(p => !(p as ParagraphWithMeta).__isTableMarker)
     
     logger.debug('[Word Generator] Header - Paragraphes et tableaux', { 
       paragraphs: cleanHeaderParagraphs.length, 
@@ -2260,17 +2299,17 @@ export async function generateWordFromTemplate(
     
     // Vérifier si des images sont dans les paragraphes ou les tableaux
     const headerHasImages = cleanHeaderParagraphs.some(p => {
-      const children = (p as any).children as any || []
+      const children = (p as DocxWithChildren)?.children as unknown[] ?? []
       return children.some((c: any) => c.type === 'imageRun' || c.type === 'drawing')
     }) || headerTables.some(t => {
       // Vérifier les images dans les tableaux
-      const rows = (t as any).rows || []
+      const rows = (t as DocxWithRows).rows || []
       return rows.some((r: any) => {
-        const cells = ((r as any).children as any) || []
+        const cells = ((r as DocxWithChildren).children as unknown[]) ?? []
         return cells.some((c: any) => {
-          const cellChildren = ((c as any).children as any) || []
+          const cellChildren = ((c as DocxWithChildren).children as unknown[]) ?? []
           return cellChildren.some((p: any) => {
-            const pChildren = (p as any).children as any || []
+            const pChildren = (p as DocxWithChildren)?.children as unknown[] ?? []
             return pChildren.some((child: any) => child.type === 'imageRun' || child.type === 'drawing')
           })
         })
@@ -2296,10 +2335,10 @@ export async function generateWordFromTemplate(
     })
     
     // Extraire les tableaux des paragraphes du body
-    const bodyTablesRaw = (bodyParagraphs as any).__tables || []
+    const bodyTablesRaw = (bodyParagraphs as ParagraphsResult).__tables || []
     // CRITIQUE : Filtrer pour ne garder que les instances valides de Table
     const bodyTables: Table[] = bodyTablesRaw.filter((t: any) => t instanceof Table)
-    const cleanBodyParagraphs = bodyParagraphs.filter(p => !(p as any).__isTableMarker)
+    const cleanBodyParagraphs = bodyParagraphs.filter(p => !(p as ParagraphWithMeta).__isTableMarker)
     
     if (bodyTablesRaw.length > bodyTables.length) {
       logger.warn('[Word Generator] ⚠️ Certains tableaux du body ne sont pas des instances valides de Table')
@@ -2325,8 +2364,8 @@ export async function generateWordFromTemplate(
     if (finalBodyChildren.length === 0) {
       logger.warn('[Word Generator] ⚠️ Aucun contenu dans le body, utilisation du content original')
       const fallbackParagraphs = await htmlToParagraphs(content, tempDoc)
-      const fallbackTables = (fallbackParagraphs as any).__tables || []
-      const cleanFallbackParagraphs = fallbackParagraphs.filter(p => !(p as any).__isTableMarker)
+      const fallbackTables = (fallbackParagraphs as ParagraphsResult).__tables || []
+      const cleanFallbackParagraphs = fallbackParagraphs.filter(p => !(p as ParagraphWithMeta).__isTableMarker)
       
       if (cleanFallbackParagraphs.length > 0 || fallbackTables.length > 0) {
         finalBodyChildren.push(...cleanFallbackParagraphs)
@@ -2366,7 +2405,7 @@ export async function generateWordFromTemplate(
     if (cleanHeaderParagraphs.length > 0 || headerTables.length > 0) {
       // Vérifier le contenu des paragraphes du header
       cleanHeaderParagraphs.forEach((p, i) => {
-        const children = (p as any).children as any || []
+        const children = (p as DocxWithChildren)?.children as unknown[] ?? []
         const hasImage = children.some((c: any) => c.type === 'imageRun' || c.type === 'drawing')
         logger.debug(`[Word Generator] Header paragraphe ${i}`, {
           hasImage,

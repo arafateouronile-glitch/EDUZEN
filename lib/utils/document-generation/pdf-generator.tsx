@@ -424,7 +424,7 @@ function renderElements(
         return (
           <View key={element.id || index} style={styles.element}>
             <Text
-              style={textStyleParts as never}
+              style={textStyleParts as any}
             >
               {element.content ? replaceVariables(element.content, variables) : ''}
             </Text>

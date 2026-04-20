@@ -94,7 +94,7 @@ export class QualiopiCheckService {
         return null
       }
 
-      const sessionRow = session.data as any
+      const sessionRow = session.data
       const enrollmentList = enrollments.data ?? []
       const slotList = (slots.data ?? []) as Array<{ id: string; date: string }>
       const attendanceList = attendance.data ?? []
@@ -135,7 +135,7 @@ export class QualiopiCheckService {
 
       const students: SessionComplianceStudent[] = enrollmentList.map((e: any) => {
         const sid = e.student_id
-        const student = e.students as any
+        const student = e.students
         const studentName = student
           ? [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Inconnu'
           : 'Inconnu'
@@ -177,7 +177,7 @@ export class QualiopiCheckService {
       return {
         sessionId,
         sessionName: sessionRow.name,
-        formationName: (sessionRow.formations as any)?.name,
+        formationName: (sessionRow.formations as Array<{ name: string }>)?.[0]?.name,
         startDate: sessionRow.start_date,
         endDate: sessionRow.end_date,
         score,
@@ -215,7 +215,7 @@ export class QualiopiCheckService {
     const results = await Promise.all(
       list.map(async (s) => {
         const full = await this.getSessionCompliance(organizationId, s.id)
-        if (!full) return { sessionId: s.id, sessionName: s.name, formationName: (s as any).formations?.name, startDate: s.start_date, endDate: s.end_date, score: 0, totalStudents: 0, alertCount: 0 }
+        if (!full) return { sessionId: s.id, sessionName: s.name, formationName: s.formations?.name, startDate: s.start_date, endDate: s.end_date, score: 0, totalStudents: 0, alertCount: 0 }
         return {
           sessionId: full.sessionId,
           sessionName: full.sessionName,
