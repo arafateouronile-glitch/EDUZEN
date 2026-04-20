@@ -10,6 +10,15 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
+interface OrgNotificationSettings {
+  notifications?: {
+    reminder_enabled?: boolean
+    email_enabled?: boolean
+    whatsapp_enabled?: boolean
+    reminder_hours_before?: number
+  }
+}
+
 // Sécuriser l'endpoint avec un secret
 const CRON_SECRET = process.env.CRON_SECRET
 
@@ -51,7 +60,7 @@ export async function GET(request: NextRequest) {
       }
 
       try {
-        const settings = (org.settings as any) || {}
+        const settings = (org.settings as OrgNotificationSettings) || {}
         const isPremium = ['premium', 'enterprise'].includes(org.subscription_tier || '')
         
         // Vérifier si les rappels sont activés
@@ -105,7 +114,7 @@ export async function GET(request: NextRequest) {
         }
 
         for (const session of upcomingSessions) {
-          const formation = (session.formations as any)
+          const formation = Array.isArray(session.formations) ? session.formations[0] : session.formations
           const formattedDate = tomorrow.toLocaleDateString('fr-FR', {
             weekday: 'long',
             day: 'numeric',
@@ -119,7 +128,7 @@ export async function GET(request: NextRequest) {
 
           // Rappels pour les enseignants
           for (const teacherAssignment of (session.session_teachers || [])) {
-            const teacherId = (teacherAssignment as any).teacher_id
+            const teacherId = 'teacher_id' in teacherAssignment ? String(teacherAssignment.teacher_id) : null
             if (!teacherId) continue
 
             // Récupérer les infos de l'enseignant
@@ -190,7 +199,7 @@ export async function GET(request: NextRequest) {
 
           // Rappels pour les apprenants
           for (const enrollment of (session.enrollments || [])) {
-            const studentId = (enrollment as any).student_id
+            const studentId = 'student_id' in enrollment ? String(enrollment.student_id) : null
             if (!studentId) continue
 
             // Récupérer les infos de l'apprenant

@@ -68,7 +68,7 @@ const AccordionItem = ({ value, className, children }: AccordionItemProps) => {
     <div className={cn("border-b border-gray-100 last:border-0", className)}>
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as any, { value })
+          return React.cloneElement(child as React.ReactElement<{ value?: unknown }>, { value })
         }
         return child
       })}

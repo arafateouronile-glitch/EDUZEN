@@ -6,6 +6,11 @@ import { Loader2, FileWarning } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import '@react-pdf-viewer/core/lib/styles/index.css'
 
+// SECURITY: pdfjs-dist ≤4.1.392 est vulnérable à l'exécution JS arbitraire via PDF malveillant
+// (CVE GHSA-wgrm-67xf-hhpq). Aucun fix disponible pour cette branche.
+// Mitigation : les PDFs sont chargés via blob URL proxy (API interne, token signé) et
+// validés application/pdf avant rendu — l'upload direct de PDF utilisateur est interdit.
+// À surveiller : https://github.com/mozilla/pdf.js/releases pour une version corrigée.
 const PDF_VIEWER_WORKER = `https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`
 
 const Viewer = dynamic(

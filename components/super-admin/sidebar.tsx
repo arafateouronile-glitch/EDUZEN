@@ -225,6 +225,12 @@ const navigation: NavSection[] = [
         permission: 'manage_team',
       },
       {
+        name: 'Santé système',
+        href: '/super-admin/health',
+        icon: Activity,
+        permission: 'view_dashboard',
+      },
+      {
         name: 'Paramètres',
         href: '/super-admin/settings',
         icon: Settings,

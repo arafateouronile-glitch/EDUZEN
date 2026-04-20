@@ -2,7 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LearnerEventType } from '@/lib/utils/track-learner-event'
+
+// Tables email_logs et learner_events non dans le schéma généré — cast centralisé ici
+function untyped(client: ReturnType<typeof createAdminClient>): SupabaseClient {
+  return client as unknown as SupabaseClient
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -223,10 +229,20 @@ async function buildTimeline(
 
     for (const sig of signatories ?? []) {
       const proc = sig.signing_processes as { id: string; title: string | null; document_id: string; status: string } | null
+      const titleLower = (proc?.title ?? '').toLowerCase()
+      const isReglement  = titleLower.includes('règlement') || titleLower.includes('reglement')
+      const isConvoc     = titleLower.includes('convocation')
+      const isContrat    = titleLower.includes('contrat') || titleLower.includes('convention')
+
       if (sig.mail_sent_at) {
+        // Convocation uniquement si le process est explicitement une convocation
+        // (ou si le titre ne permet pas de déterminer le type, on ne suppose pas)
+        const sentType = isConvoc ? 'convocation_envoyee'
+                       : isContrat ? 'contrat_genere'
+                       : 'convocation_envoyee' // fallback par défaut
         events.push({
           id:         `sig-sent-${sig.id}`,
-          event_type: 'convocation_envoyee',
+          event_type: sentType,
           metadata:   { signature_process_id: proc?.id, title: proc?.title ?? 'Demande de signature' },
           created_at: sig.mail_sent_at,
           created_by: null,
@@ -234,9 +250,13 @@ async function buildTimeline(
         })
       }
       if (sig.signed_at) {
+        const signedType = isReglement ? 'reglement_signe'
+                         : isContrat   ? 'contrat_signe'
+                         : isConvoc    ? 'convocation_signee'
+                         : 'contrat_signe' // fallback par défaut
         events.push({
           id:         `sig-done-${sig.id}`,
-          event_type: 'contrat_signe',
+          event_type: signedType,
           metadata:   { signature_process_id: proc?.id, title: proc?.title, document_id: proc?.document_id },
           created_at: sig.signed_at,
           created_by: null,
@@ -272,7 +292,7 @@ async function buildTimeline(
 
   // ── 6. Emails trackés (email_logs, par adresse) ──
   if (studentEmail) {
-    const { data: emails } = await (supabase as any)
+    const { data: emails } = await untyped(supabase)
       .from('email_logs')
       .select('id, subject, template_type, status, created_at, updated_at')
       .eq('recipient', studentEmail)
@@ -318,7 +338,7 @@ async function buildTimeline(
   }
 
   // ── 7. Événements manuels (learner_events : notes, etc.) ──
-  const { data: manualEvents } = await (supabase as any)
+  const { data: manualEvents } = await untyped(supabase)
     .from('learner_events')
     .select('id, event_type, metadata, created_at, created_by, sessions(id, name)')
     .eq('student_id', studentId)
@@ -326,7 +346,7 @@ async function buildTimeline(
     .limit(100)
 
   for (const ev of manualEvents ?? []) {
-    const sess = ev.sessions as { id: string; name: string } | null
+    const sess = ev.sessions as unknown as { id: string; name: string } | null
     events.push({
       id:         ev.id,
       event_type: ev.event_type,
@@ -346,9 +366,9 @@ async function buildTimeline(
 function buildChecklist(events: LearnerEvent[]): QualiopiChecklist {
   const types = new Set(events.map(e => e.event_type))
   return {
-    convocation_envoyee: types.has('convocation_envoyee') || types.has('email_envoye'),
+    convocation_envoyee: types.has('convocation_envoyee'),
     convocation_ouverte: types.has('convocation_ouverte'),
-    contrat_genere:      types.has('contrat_genere') || types.has('document_genere'),
+    contrat_genere:      types.has('contrat_genere'),
     contrat_signe:       types.has('contrat_signe'),
     reglement_signe:     types.has('reglement_signe'),
     presence_validee:    types.has('presence_validee'),
@@ -388,7 +408,7 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       .in('student_id', studentIds).in('status', ['present', 'present_late']),
     supabase.from('learner_documents').select('student_id, type').in('student_id', studentIds),
     studentEmails.length > 0
-      ? (supabase as any).from('email_logs').select('recipient, template_type').eq('organization_id', orgId).in('recipient', studentEmails)
+      ? untyped(supabase).from('email_logs').select('recipient, template_type').eq('organization_id', orgId).in('recipient', studentEmails)
       : Promise.resolve({ data: [] }),
     supabase.from('evaluation_responses').select('student_id').in('student_id', studentIds),
     studentIds.length > 0
@@ -551,7 +571,7 @@ export async function addLearnerNote(studentId: string, note: string): Promise<v
   const { supabase, orgId, userId } = await getAuthContext()
   void supabase
   const adminClient = createAdminClient()
-  await (adminClient as any).from('learner_events').insert({
+  await untyped(adminClient).from('learner_events').insert({
     student_id:      studentId,
     organization_id: orgId,
     event_type:      'note_admin',

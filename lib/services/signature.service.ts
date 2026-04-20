@@ -398,7 +398,7 @@ export class SignatureService {
   async validateSignature(signatureId: string, validationCode: string): Promise<boolean> {
     try {
       const signature = await this.getSignatureById(signatureId)
-      const sig = signature as any
+      const sig = signature as { validation_code?: string; is_valid?: boolean }
       return (sig.validation_code === validationCode) && (sig.is_valid === true)
     } catch (error) {
       return false

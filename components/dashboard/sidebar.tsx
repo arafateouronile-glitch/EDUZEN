@@ -143,35 +143,6 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
     ],
   },
   {
-    title: t('navigation.compliance'),
-    allowedRoles: ADMIN_ROLES,
-    items: [
-      {
-        name: t('navigation.qualityRegulation'),
-        icon: Shield,
-        children: [
-          { name: t('navigation.qualiopi'), href: '/dashboard/qualiopi', icon: Award },
-          { name: 'Qualiopi Check', href: '/dashboard/qualiopi/check', icon: ClipboardCheck },
-          { name: 'Accessibilité Handicap', href: '/dashboard/accessibility', icon: Accessibility },
-          { name: t('navigation.cpf'), href: '/dashboard/cpf', icon: GraduationCap },
-          { name: 'Certifications RNCP/RS', href: '/dashboard/certifications', icon: Badge },
-          { name: t('navigation.opco'), href: '/dashboard/opco', icon: Building2 },
-          { name: t('navigation.gdpr'), href: '/dashboard/gdpr', icon: Lock },
-          { name: t('navigation.compliance'), href: '/dashboard/compliance', icon: Shield },
-          { name: t('navigation.systemHealth'), href: '/dashboard/admin/health', icon: Activity, allowedRoles: ADMIN_ROLES },
-          { name: t('navigation.exportHistory'), href: '/dashboard/admin/exports', icon: FileDown, allowedRoles: ADMIN_ROLES },
-        ],
-      } as NavigationItem,
-    ],
-  },
-  {
-    title: 'Intégrations',
-    allowedRoles: ADMIN_ROLES,
-    items: [
-      { name: 'Intégrations & API', href: '/dashboard/integrations', icon: Plug },
-    ],
-  },
-  {
     title: t('navigation.help'),
     items: [
       {
@@ -268,23 +239,6 @@ export function Sidebar() {
         clientPathname.startsWith('/dashboard/financial-reports') ||
         clientPathname.startsWith('/dashboard/bpf')) {
       expanded.push(t('navigation.finances'))
-    }
-    
-    // Qualité & Réglementation
-    if (clientPathname.startsWith('/dashboard/qualiopi') ||
-        clientPathname.startsWith('/dashboard/cpf') ||
-        clientPathname.startsWith('/dashboard/certifications') ||
-        clientPathname.startsWith('/dashboard/opco') ||
-        clientPathname.startsWith('/dashboard/gdpr') ||
-        clientPathname.startsWith('/dashboard/compliance') ||
-        clientPathname.startsWith('/dashboard/accessibility') ||
-        clientPathname.startsWith('/dashboard/admin')) {
-      expanded.push(t('navigation.qualityRegulation'))
-    }
-    
-    // Intégrations
-    if (clientPathname.startsWith('/dashboard/integrations')) {
-      expanded.push('Intégrations & API')
     }
     
     // Centre d'aide

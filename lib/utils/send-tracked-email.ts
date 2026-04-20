@@ -111,7 +111,7 @@ export async function sendTrackedEmail(
   }
 
   // Insérer le log dans Supabase
-  const { data: logRow, error: dbError } = await (supabase as any)
+  const { data: logRow, error: dbError } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
     .from('email_logs')
     .insert({
       organization_id: options.organizationId ?? null,

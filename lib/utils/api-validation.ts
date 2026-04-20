@@ -7,6 +7,7 @@
 
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
+import type { ZodSchema, ZodError } from 'zod'
 import {
   validateString,
   validateEmail,
@@ -524,4 +525,72 @@ export const dateRangeSchema: ValidationSchema = {
     type: 'date',
     required: false,
   },
+}
+
+// ============================================================================
+// VALIDATION ZOD — BRIDGE
+// ============================================================================
+
+/**
+ * Parse et valide le body JSON d'une requête avec un schéma Zod.
+ * Retourne les données typées ou une NextResponse 400 prête à retourner.
+ *
+ * Usage dans une route :
+ * ```ts
+ * const result = await validateWithZod(request, MySchema)
+ * if (result instanceof NextResponse) return result
+ * // result est maintenant typé z.infer<typeof MySchema>
+ * ```
+ */
+export async function validateWithZod<T>(
+  request: NextRequest,
+  schema: ZodSchema<T>
+): Promise<T | NextResponse> {
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Corps de requête invalide (JSON attendu)' }, { status: 400 })
+  }
+
+  const result = schema.safeParse(body)
+  if (!result.success) {
+    return NextResponse.json(
+      {
+        error: 'Données invalides',
+        details: (result.error as ZodError).flatten().fieldErrors,
+      },
+      { status: 400 }
+    )
+  }
+
+  return result.data
+}
+
+/**
+ * Parse et valide les query params d'une requête avec un schéma Zod.
+ * Retourne les données typées ou une NextResponse 400 prête à retourner.
+ *
+ * Usage dans une route :
+ * ```ts
+ * const result = validateQueryWithZod(request, MyQuerySchema)
+ * if (result instanceof NextResponse) return result
+ * ```
+ */
+export function validateQueryWithZod<T>(
+  request: NextRequest,
+  schema: ZodSchema<T>
+): T | NextResponse {
+  const params = Object.fromEntries(request.nextUrl.searchParams.entries())
+  const result = schema.safeParse(params)
+  if (!result.success) {
+    return NextResponse.json(
+      {
+        error: 'Paramètres invalides',
+        details: (result.error as ZodError).flatten().fieldErrors,
+      },
+      { status: 400 }
+    )
+  }
+  return result.data
 }

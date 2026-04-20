@@ -108,7 +108,9 @@ export class SignatureRequestService {
 
       if (error) throw error
 
-      const signatureUrl = this.generateSignatureUrl((data as any).access_token ?? signatureToken)
+      const signatureUrl = this.generateSignatureUrl(
+        (data as SignatureRequest & { access_token?: string }).access_token ?? signatureToken
+      )
 
       await this.sendSignatureRequestEmail({
         to: params.recipientEmail,
@@ -376,10 +378,10 @@ export class SignatureRequestService {
       await this.sendSignatureReminderEmail({
         to: request.recipient_email,
         recipientName: request.recipient_name,
-        documentTitle: (request.document as any)?.title || 'Document',
+        documentTitle: (request.document as SignatureRequestWithDetails['document'])?.title || 'Document',
         signatureUrl,
         expiresAt: request.expires_at,
-        requesterName: (request.requester as any)?.full_name || 'Un utilisateur',
+        requesterName: (request.requester as SignatureRequestWithDetails['requester'])?.full_name || 'Un utilisateur',
       })
 
       // Mettre à jour le compteur de rappels et la date du dernier rappel

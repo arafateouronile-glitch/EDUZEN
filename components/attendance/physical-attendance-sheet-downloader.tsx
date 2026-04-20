@@ -21,6 +21,7 @@ import {
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { generatePDFBlobFromHTML } from '@/lib/utils/pdf-generator'
+import { escapeHtml } from '@/lib/utils/sanitize-html'
 import { cn, formatDate } from '@/lib/utils'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 
@@ -103,9 +104,9 @@ export function PhysicalAttendanceSheetDownloader({
         return `
           <tr style="border-bottom: 1px solid #e5e7eb; ${i % 2 === 0 ? 'background: white;' : 'background: #f9fafb;'}">
             <td style="padding: 14px 12px; text-align: center; font-weight: 500; color: #374151;">${i + 1}</td>
-            <td style="padding: 14px 12px; font-weight: 600; color: #111827;">${s.last_name || ''}</td>
-            <td style="padding: 14px 12px; color: #374151;">${s.first_name || ''}</td>
-            ${hasStudentNumber ? `<td style="padding: 14px 12px; color: #6b7280; font-size: 0.9em;">${s.student_number || '—'}</td>` : ''}
+            <td style="padding: 14px 12px; font-weight: 600; color: #111827;">${escapeHtml(s.last_name)}</td>
+            <td style="padding: 14px 12px; color: #374151;">${escapeHtml(s.first_name)}</td>
+            ${hasStudentNumber ? `<td style="padding: 14px 12px; color: #6b7280; font-size: 0.9em;">${escapeHtml(s.student_number) || '—'}</td>` : ''}
             <td style="padding: 14px 12px; width: 180px;">
               <div style="height: 40px; border: 1px dashed #d1d5db; border-radius: 6px; background: #fafafa;"></div>
             </td>
@@ -146,8 +147,8 @@ export function PhysicalAttendanceSheetDownloader({
           <h1 style="margin: 0 0 4px 0; font-size: 18pt; font-weight: 700; color: ${DEEP_BLUE}; text-transform: uppercase; letter-spacing: 0.5px;">
             Feuille d'émargement
           </h1>
-          <p style="margin: 0; font-size: 11pt; color: #4b5563; font-weight: 500;">${organizationName}</p>
-          ${organizationAddress ? `<p style="margin: 2px 0 0 0; font-size: 9pt; color: #6b7280;">${organizationAddress}</p>` : ''}
+          <p style="margin: 0; font-size: 11pt; color: #4b5563; font-weight: 500;">${escapeHtml(organizationName)}</p>
+          ${organizationAddress ? `<p style="margin: 2px 0 0 0; font-size: 9pt; color: #6b7280;">${escapeHtml(organizationAddress)}</p>` : ''}
         </div>
 
         <!-- Session Info -->
@@ -155,7 +156,7 @@ export function PhysicalAttendanceSheetDownloader({
           <div style="display: flex; flex-wrap: wrap; gap: 20px;">
             <div style="flex: 1; min-width: 200px;">
               <p style="margin: 0 0 2px 0; font-size: 8pt; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">Formation</p>
-              <p style="margin: 0; font-size: 13pt; font-weight: 600;">${formationName || sessionName}</p>
+              <p style="margin: 0; font-size: 13pt; font-weight: 600;">${escapeHtml(formationName || sessionName)}</p>
             </div>
           </div>
         </div>
@@ -182,7 +183,7 @@ export function PhysicalAttendanceSheetDownloader({
                 <span style="color: ${DEEP_BLUE}; font-size: 14pt;">📍</span>
                 <div>
                   <p style="margin: 0; font-size: 8pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Lieu</p>
-                  <p style="margin: 0; font-weight: 600; color: #1e293b;">${slot.location}</p>
+                  <p style="margin: 0; font-weight: 600; color: #1e293b;">${escapeHtml(slot.location)}</p>
                 </div>
               </div>
             ` : ''}
@@ -252,7 +253,9 @@ export function PhysicalAttendanceSheetDownloader({
       const containerId = `attendance-sheet-${slot.id}-${Date.now()}`
       const container = document.createElement('div')
       container.id = containerId
-      container.innerHTML = html
+      // Utiliser DOMParser pour éviter l'exécution de scripts injectés (XSS)
+      const parsed = new DOMParser().parseFromString(html, 'text/html')
+      container.appendChild(parsed.documentElement)
       container.style.position = 'absolute'
       container.style.left = '-9999px'
       container.style.top = '0'

@@ -13,21 +13,29 @@
 
 // isomorphic-dompurify charge jsdom côté serveur, ce qui échoue sur Vercel
 // (jsdom → html-encoding-sniffer → @exodus/bytes ESM non compatible CJS).
-// On utilise DOMPurify uniquement côté client ; côté serveur, on utilise
-// une sanitisation légère par regex (les templates viennent de la DB).
+// On utilise DOMPurify côté client et la librairie xss (pur JS) côté serveur.
 const _isServer = typeof window === 'undefined'
 
 function _sanitizeServer(dirty: string, opts: { allowTags?: boolean; stripAll?: boolean }): string {
-  let out = dirty
-  // Supprimer les vecteurs XSS critiques
-  out = out.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-  out = out.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-  out = out.replace(/javascript\s*:/gi, '')
-  out = out.replace(/data\s*:\s*text\/html/gi, '')
+  // Utiliser la librairie xss (pur JS, compatible Edge/SSR)
+  // require synchrone nécessaire : cette fonction est appelée dans un contexte non-async
+  const xssLib = require('xss') as typeof import('xss')
+
   if (opts.stripAll) {
-    out = out.replace(/<[^>]*>/g, '')
+    return xssLib.filterXSS(dirty, { whiteList: {}, stripIgnoreTag: true, stripIgnoreTagBody: ['script'] })
   }
-  return out
+
+  return xssLib.filterXSS(dirty, {
+    // Conserver les balises HTML courantes, bloquer les vecteurs XSS
+    onTagAttr(_tag: string, name: string, value: string) {
+      // Bloquer les event handlers (onclick, onload, etc.)
+      if (/^on\w+$/i.test(name)) return ''
+      // Bloquer javascript: dans href/src/action
+      if (['href', 'src', 'action'].includes(name) && /^\s*javascript\s*:/i.test(value)) return ''
+      // Conserver les autres attributs (xss gère déjà les cas critiques)
+      return undefined
+    },
+  })
 }
 
 function _getClientDOMPurify(): any {

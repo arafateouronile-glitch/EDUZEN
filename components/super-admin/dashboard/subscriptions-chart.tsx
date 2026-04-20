@@ -116,7 +116,6 @@ export function SubscriptionsChart({
           <RechartsResponsiveContainer width="100%" height="100%">
             <RechartsPieChart>
               <RechartsPie
-                {...({} as any)}
                 data={data}
                 cx="50%"
                 cy="45%"
@@ -126,11 +125,11 @@ export function SubscriptionsChart({
                 dataKey="value"
               >
                 {data.map((entry, index) => (
-                  <RechartsCell {...({} as any)} key={`cell-${index}`} fill={entry.color} />
+                  <RechartsCell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </RechartsPie>
-              <RechartsTooltip {...({} as any)} content={<CustomTooltip />} />
-              <RechartsLegend {...({} as any)} content={renderCustomLegend} />
+              <RechartsTooltip content={<CustomTooltip />} />
+              <RechartsLegend content={renderCustomLegend} />
             </RechartsPieChart>
           </RechartsResponsiveContainer>
         </div>

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useTransition } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { emailTemplateService } from '@/lib/services/email-template.service.client'
 import type { EmailType } from '@/lib/services/email-template.service'
+import { seedDefaultEmailTemplates, DEFAULT_TEMPLATES } from '@/lib/actions/seed-email-templates'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -27,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
-import { Mail, Plus, Edit, Trash2, Copy, CheckCircle, XCircle } from 'lucide-react'
+import { Mail, Plus, Edit, Trash2, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 
 /** Retourne le contenu HTML en texte brut (pas de rendu HTML). Supprime style/script. */
@@ -67,6 +68,7 @@ export default function EmailTemplatesPage() {
   const queryClient = useQueryClient()
   const { addToast } = useToast()
   const [selectedEmailType, setSelectedEmailType] = useState<EmailType | 'all'>('all')
+  const [isSeeding, startSeeding] = useTransition()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<any>(null)
   const [formData, setFormData] = useState({
@@ -230,6 +232,30 @@ export default function EmailTemplatesPage() {
     }
   }
 
+  const handleSeedDefaults = () => {
+    startSeeding(async () => {
+      const result = await seedDefaultEmailTemplates()
+      if (!result.success) {
+        addToast({ title: 'Erreur', description: result.error, type: 'error' })
+        return
+      }
+      queryClient.invalidateQueries({ queryKey: ['email-templates'] })
+      if (result.created === 0) {
+        addToast({
+          title: 'Déjà configurés',
+          description: `Tous les modèles existent déjà (${result.skipped} types couverts).`,
+          type: 'info',
+        })
+      } else {
+        addToast({
+          title: 'Modèles créés',
+          description: `${result.created} modèle${result.created > 1 ? 's' : ''} par défaut créé${result.created > 1 ? 's' : ''} avec succès.`,
+          type: 'success',
+        })
+      }
+    })
+  }
+
   const selectedTypeInfo = emailTypes.find(t => t.value === formData.email_type)
 
   // Grouper les modèles par type
@@ -250,10 +276,24 @@ export default function EmailTemplatesPage() {
             Gérez les modèles d'emails pour chaque type d'envoi
           </p>
         </div>
-        <Button onClick={handleCreate} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Nouveau modèle
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleSeedDefaults}
+            disabled={isSeeding}
+            className="gap-2"
+          >
+            {isSeeding
+              ? <RefreshCw className="w-4 h-4 animate-spin" />
+              : <Sparkles className="w-4 h-4" />
+            }
+            Modèles par défaut
+          </Button>
+          <Button onClick={handleCreate} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nouveau modèle
+          </Button>
+        </div>
       </div>
 
       {/* Filtres */}
@@ -286,17 +326,54 @@ export default function EmailTemplatesPage() {
         <div className="text-center py-12 text-gray-500">Chargement...</div>
       ) : filteredTemplates.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Mail className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">
-              {selectedEmailType === 'all' 
-                ? 'Aucun modèle d\'email configuré'
-                : `Aucun modèle pour le type "${emailTypes.find(t => t.value === selectedEmailType)?.label}"`
-              }
-            </p>
-            <Button onClick={handleCreate} variant="outline">
-              Créer le premier modèle
-            </Button>
+          <CardContent className="py-14 text-center">
+            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
+              <Mail className="w-8 h-8 text-blue-500" />
+            </div>
+            {selectedEmailType === 'all' ? (
+              <>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Aucun modèle configuré</h2>
+                <p className="text-gray-500 mb-2 max-w-md mx-auto">
+                  Initialisez en un clic les <strong>{DEFAULT_TEMPLATES.length} modèles par défaut</strong> couvrant tous les types d'envoi : confirmation d'inscription, rappels, factures, certificats…
+                </p>
+                <p className="text-sm text-gray-400 mb-8">Vous pourrez ensuite modifier chaque template à votre convenance.</p>
+                <div className="flex items-center justify-center gap-3">
+                  <Button
+                    onClick={handleSeedDefaults}
+                    disabled={isSeeding}
+                    className="gap-2"
+                  >
+                    {isSeeding
+                      ? <RefreshCw className="w-4 h-4 animate-spin" />
+                      : <Sparkles className="w-4 h-4" />
+                    }
+                    {isSeeding ? 'Création en cours…' : 'Créer les modèles par défaut'}
+                  </Button>
+                  <Button onClick={handleCreate} variant="outline" className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Créer manuellement
+                  </Button>
+                </div>
+                {/* Aperçu des types couverts */}
+                <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-2 max-w-2xl mx-auto text-left">
+                  {DEFAULT_TEMPLATES.map(t => (
+                    <div key={t.email_type} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                      <span className="text-xs text-gray-600">{emailTypes.find(e => e.value === t.email_type)?.label ?? t.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600 mb-4">
+                  Aucun modèle pour le type &quot;{emailTypes.find(t => t.value === selectedEmailType)?.label}&quot;
+                </p>
+                <Button onClick={handleCreate} variant="outline">
+                  Créer un modèle
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (

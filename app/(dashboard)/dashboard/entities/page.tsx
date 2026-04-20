@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import type { TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -186,13 +187,13 @@ function EntitiesPageContent() {
       if (editingEntity) {
         const { error } = await supabase
           .from('external_entities')
-          .update(payload as never)
+          .update(payload as unknown as TableUpdate<'external_entities'>)
           .eq('id', editingEntity.id)
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('external_entities')
-          .insert(payload as never)
+          .insert(payload as unknown as TableInsert<'external_entities'>)
         if (error) throw error
       }
     },

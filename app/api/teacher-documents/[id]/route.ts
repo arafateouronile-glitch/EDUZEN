@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
 
 export async function DELETE(
   request: NextRequest,
@@ -87,7 +88,7 @@ export async function DELETE(
   } catch (error: unknown) {
     logger.error('Erreur suppression document enseignant', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur serveur' },
+      { error: getPublicErrorMessage(error) },
       { status: 500 }
     )
   }

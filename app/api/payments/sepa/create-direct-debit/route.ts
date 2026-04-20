@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { withRateLimit, mutationRateLimiter } from '@/lib/utils/rate-limiter'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
 
 // Masque un IBAN pour le logging (affiche seulement les 4 derniers caractères)
 const maskIBAN = (iban: string): string => {
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
       creditorIBAN: errorCreditorIban ? maskIBAN(errorCreditorIban) : undefined,
       error: sanitizeError(error),
     })
-    const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
+    const errorMessage = getPublicErrorMessage(error)
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
   })

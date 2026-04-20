@@ -141,29 +141,10 @@ const nextConfig = {
                 },
               ]
             : []),
-          // Content Security Policy - Géré dynamiquement par le middleware avec nonces
-          // La CSP statique est en mode report-only pour observer sans bloquer
-          // Le middleware applique une CSP stricte avec nonces pour chaque requête
-          {
-            key: 'Content-Security-Policy-Report-Only',
-            value: [
-              "default-src 'self'",
-              // Autoriser unsafe-inline et unsafe-eval pour html2canvas/jsPDF et le hot reload Next.js
-              // https://js.stripe.com pour Stripe.js
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.sentry.io https://unpkg.com https://js.stripe.com",
-              "worker-src 'self' blob: https://unpkg.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com data:",
-              "img-src 'self' data: https: blob:",
-              "connect-src 'self' blob: https://*.supabase.co https://*.sentry.io wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://*.stripe.network",
-              "frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              // upgrade-insecure-requests retiré : ignoré en report-only (le navigateur l'ignore et affiche un warning)
-            ].join('; '),
-          },
+          // Content Security Policy - Entièrement gérée par le middleware (middleware-i18n.ts)
+          // via getSecurityHeadersWithNonce() : CSP stricte avec nonce par requête.
+          // Ce fichier statique ne définit pas de CSP car le middleware couvre toutes les routes HTML.
+          // Les assets statiques (_next/static, _next/image) n'ont pas besoin de CSP.
         ],
       },
     ]

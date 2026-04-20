@@ -39,7 +39,7 @@ export interface TrackLearnerEventOptions {
 export async function trackLearnerEvent(options: TrackLearnerEventOptions): Promise<void> {
   try {
     const supabase = createAdminClient()
-    const { error } = await (supabase as any).from('learner_events').insert({
+    const { error } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient).from('learner_events').insert({
       student_id:      options.studentId,
       organization_id: options.organizationId,
       session_id:      options.sessionId ?? null,

@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { withRateLimit, mutationRateLimiter } from '@/lib/utils/rate-limiter'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'
 import { logger, maskId, maskEmail, sanitizeError } from '@/lib/utils/logger'
+import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
+import type { TableInsert } from '@/lib/types/supabase-helpers'
 
 // Schéma de validation pour création d'intention de paiement Stripe
 const createIntentSchema: ValidationSchema = {
@@ -100,23 +102,24 @@ export async function POST(request: NextRequest) {
       .single()
 
     // Enregistrer dans la base de données
+    const paymentInsert: TableInsert<'payments'> = {
+      organization_id: userData?.organization_id || null,
+      amount,
+      currency: currency.toUpperCase(),
+      status: 'pending',
+      payment_method: 'stripe',
+      payment_provider: 'stripe',
+      transaction_id: paymentIntentId,
+      metadata: {
+        customer_email,
+        customer_name,
+        description,
+        ...(metadata || {}),
+      },
+    }
     const { data: paymentRecord, error: dbError } = await supabase
       .from('payments')
-      .insert({
-        organization_id: userData?.organization_id || null,
-        amount: amount.toString(),
-        currency: currency.toUpperCase(),
-        status: 'pending',
-        payment_method: 'stripe',
-        payment_provider: 'stripe',
-        payment_provider_transaction_id: paymentIntentId,
-        description,
-        metadata: {
-          customer_email,
-          customer_name,
-          ...(metadata || {}),
-        } as Record<string, unknown>,
-      } as any)
+      .insert(paymentInsert)
       .select()
       .single()
 
@@ -147,7 +150,7 @@ export async function POST(request: NextRequest) {
       customerEmail: customer_email ? maskEmail(customer_email) : undefined,
       error: sanitizeError(error),
     })
-    const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
+    const errorMessage = getPublicErrorMessage(error)
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
     })

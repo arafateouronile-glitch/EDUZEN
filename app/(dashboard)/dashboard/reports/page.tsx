@@ -482,6 +482,105 @@ function ReportsPageContent() {
     enabled: !!user?.organization_id,
   })
 
+  // Query: Détails présences (onglet attendance)
+  const { data: attendanceDetails } = useQuery({
+    queryKey: ['report-attendance-details', user?.organization_id, dateFilter],
+    queryFn: async () => {
+      if (!user?.organization_id) return null
+
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('status, date')
+        .eq('organization_id', user.organization_id)
+        .gte('date', dateFilter.start.split('T')[0])
+        .lte('date', dateFilter.end.split('T')[0])
+
+      if (error) throw error
+
+      const records = data || []
+      const present = records.filter(r => r.status === 'present').length
+      const late    = records.filter(r => r.status === 'late' || r.status === 'present_late').length
+      const absent  = records.filter(r => r.status === 'absent').length
+
+      // Tendance hebdomadaire — regrouper par semaine ISO
+      const byWeek = new Map<string, { present: number; total: number }>()
+      for (const rec of records) {
+        const d   = new Date(rec.date)
+        const day = d.getDay()
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+        const monday = new Date(new Date(rec.date).setDate(diff))
+        const key = monday.toISOString().split('T')[0]
+        const entry = byWeek.get(key) ?? { present: 0, total: 0 }
+        entry.total++
+        if (rec.status === 'present' || rec.status === 'late' || rec.status === 'present_late') entry.present++
+        byWeek.set(key, entry)
+      }
+
+      const weeklyTrend = Array.from(byWeek.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .slice(-8) // 8 dernières semaines max
+        .map(([date, s]) => ({
+          name:  new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+          value: s.total > 0 ? Math.round((s.present / s.total) * 100) : 0,
+        }))
+
+      return { present, late, absent, total: records.length, weeklyTrend }
+    },
+    enabled: !!user?.organization_id && activeTab === 'attendance',
+  })
+
+  // Query: Détails finances (onglet finances)
+  const { data: financeDetails } = useQuery({
+    queryKey: ['report-finance-details', user?.organization_id, dateFilter],
+    queryFn: async () => {
+      if (!user?.organization_id) return null
+
+      const [paymentsResult, pendingInvoicesResult, allInvoicesResult] = await Promise.all([
+        supabase
+          .from('payments')
+          .select('amount, paid_at')
+          .eq('organization_id', user.organization_id)
+          .eq('status', 'completed')
+          .gte('paid_at', dateFilter.start)
+          .lte('paid_at', dateFilter.end),
+        supabase
+          .from('invoices')
+          .select('total_amount')
+          .eq('organization_id', user.organization_id)
+          .in('status', ['pending', 'sent']),
+        supabase
+          .from('invoices')
+          .select('total_amount, status')
+          .eq('organization_id', user.organization_id),
+      ])
+
+      const payments        = paymentsResult.data        || []
+      const pendingInvoices = pendingInvoicesResult.data || []
+      const allInvoices     = allInvoicesResult.data     || []
+
+      const pendingAmount = pendingInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0)
+
+      // Taux de recouvrement = payé / (payé + impayé)
+      const totalPaid    = allInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total_amount || 0), 0)
+      const totalOverdue = allInvoices.filter(i => i.status === 'overdue').reduce((s, i) => s + (i.total_amount || 0), 0)
+      const recoveryRate = (totalPaid + totalOverdue) > 0
+        ? Math.round((totalPaid / (totalPaid + totalOverdue)) * 100)
+        : 100
+
+      // Tendance mensuelle des paiements
+      const byMonth = new Map<string, number>()
+      for (const p of payments) {
+        if (!p.paid_at) continue
+        const key = new Date(p.paid_at).toLocaleDateString('fr-FR', { month: 'short' })
+        byMonth.set(key, (byMonth.get(key) ?? 0) + (p.amount || 0))
+      }
+      const monthlyTrend = Array.from(byMonth.entries()).map(([name, value]) => ({ name, value }))
+
+      return { pendingAmount, recoveryRate, monthlyTrend }
+    },
+    enabled: !!user?.organization_id && activeTab === 'finances',
+  })
+
   // Query: Étudiants avec stats
   const { data: studentsData } = useQuery({
     queryKey: ['report-students', user?.organization_id, dateFilter, filters.sessionId],
@@ -533,14 +632,6 @@ function ReportsPageContent() {
       attendanceDistribution: [
         { name: 'Présent', value: stats?.attendanceRate || 0, color: '#10B981' },
         { name: 'Absent', value: 100 - (stats?.attendanceRate || 0), color: '#EF4444' },
-      ],
-      paymentsTrend: [
-        { name: 'Jan', value: 12500 },
-        { name: 'Fév', value: 15000 },
-        { name: 'Mar', value: 18200 },
-        { name: 'Avr', value: 14800 },
-        { name: 'Mai', value: 21000 },
-        { name: 'Juin', value: stats?.totalPayments || 0 },
       ],
     }
   }, [stats])
@@ -824,32 +915,24 @@ function ReportsPageContent() {
               <StatCard
                 title="Apprenants actifs"
                 value={stats?.students || 0}
-                change={12}
-                changeType="increase"
                 icon={Users}
                 color="blue"
               />
               <StatCard
                 title="Sessions en cours"
                 value={stats?.sessions || 0}
-                change={5}
-                changeType="increase"
                 icon={Calendar}
                 color="purple"
               />
               <StatCard
                 title="Taux de présence"
                 value={`${stats?.attendanceRate || 0}%`}
-                change={-2}
-                changeType="decrease"
                 icon={CheckCircle2}
                 color="green"
               />
               <StatCard
                 title="Chiffre d'affaires"
                 value={formatCurrency(stats?.totalPayments || 0)}
-                change={18}
-                changeType="increase"
                 icon={CreditCard}
                 color="teal"
               />
@@ -1044,20 +1127,20 @@ function ReportsPageContent() {
                 color="green"
               />
               <StatCard
-                title="Présences ce mois"
-                value="1,245"
+                title="Présences"
+                value={attendanceDetails?.present ?? 0}
                 icon={Users}
                 color="blue"
               />
               <StatCard
-                title="Absences non justifiées"
-                value="23"
+                title="Absences"
+                value={attendanceDetails?.absent ?? 0}
                 icon={AlertCircle}
                 color="red"
               />
               <StatCard
                 title="Retards"
-                value="45"
+                value={attendanceDetails?.late ?? 0}
                 icon={Clock}
                 color="orange"
               />
@@ -1070,12 +1153,7 @@ function ReportsPageContent() {
               </CardHeader>
               <CardContent>
                 <PremiumLineChart
-                  data={[
-                    { name: 'Sem 1', value: 92 },
-                    { name: 'Sem 2', value: 88 },
-                    { name: 'Sem 3', value: 95 },
-                    { name: 'Sem 4', value: 91 },
-                  ]}
+                  data={attendanceDetails?.weeklyTrend ?? []}
                   dataKey="value"
                   xAxisKey="name"
                   color="#10B981"
@@ -1103,14 +1181,12 @@ function ReportsPageContent() {
               <StatCard
                 title="Chiffre d'affaires"
                 value={formatCurrency(stats?.totalPayments || 0)}
-                change={18}
-                changeType="increase"
                 icon={TrendingUp}
                 color="green"
               />
               <StatCard
                 title="Factures en attente"
-                value={formatCurrency(12500)}
+                value={formatCurrency(financeDetails?.pendingAmount ?? 0)}
                 icon={FileText}
                 color="orange"
               />
@@ -1122,7 +1198,7 @@ function ReportsPageContent() {
               />
               <StatCard
                 title="Taux de recouvrement"
-                value="94%"
+                value={`${financeDetails?.recoveryRate ?? 0}%`}
                 icon={Target}
                 color="teal"
               />
@@ -1135,7 +1211,7 @@ function ReportsPageContent() {
               </CardHeader>
               <CardContent>
                 <PremiumLineChart
-                  data={chartData.paymentsTrend}
+                  data={financeDetails?.monthlyTrend ?? []}
                   dataKey="value"
                   xAxisKey="name"
                   color="#8B5CF6"

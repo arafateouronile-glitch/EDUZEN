@@ -133,7 +133,6 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
         <div className="h-[300px]">
           <RechartsResponsiveContainer width="100%" height="100%">
             <RechartsAreaChart
-              {...({} as any)}
               data={data}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             >
@@ -147,24 +146,21 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <RechartsCartesianGrid {...({} as any)} strokeDasharray="3 3" className="stroke-muted" />
+              <RechartsCartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <RechartsXAxis
-                {...({} as any)}
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
               />
               <RechartsYAxis
-                {...({} as any)}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                 tickFormatter={(value: any) => `${(value / 1000).toFixed(0)}k€`}
               />
-              <RechartsTooltip {...({} as any)} content={<CustomTooltip />} />
+              <RechartsTooltip content={<CustomTooltip />} />
               <RechartsLegend
-                {...({} as any)}
                 verticalAlign="top"
                 height={36}
                 iconType="circle"
@@ -174,7 +170,6 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
                 )}
               />
               <RechartsArea
-                {...({} as any)}
                 type="monotone"
                 dataKey="mrr"
                 name="MRR"
@@ -184,7 +179,6 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
                 fill="url(#colorMrr)"
               />
               <RechartsArea
-                {...({} as any)}
                 type="monotone"
                 dataKey="newRevenue"
                 name="Nouveau revenu"

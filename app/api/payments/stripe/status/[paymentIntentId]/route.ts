@@ -1,3 +1,4 @@
+import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -67,7 +68,7 @@ export async function GET(
         paid: paymentStatus === 'completed',
       })
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
+      const errorMessage = getPublicErrorMessage(error)
       return NextResponse.json({ error: errorMessage }, { status: 500 })
     }
   })

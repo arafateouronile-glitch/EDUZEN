@@ -184,20 +184,20 @@ export async function GET(
 
     if (isUuid(t)) {
       const admin = createAdminClient()
-      const { data: sig } = await (admin
-        .from('signatories' as any)
+      const { data: sig } = await admin
+        .from('signatories')
         .select('id, process_id, email, name, order_index, token, signed_at')
         .eq('token', t)
-        .maybeSingle() as any)
+        .maybeSingle()
 
       if (sig && !sig.signed_at) {
-        const { data: proc } = await (admin
-          .from('signing_processes' as any)
+        const { data: proc } = await admin
+          .from('signing_processes')
           .select(
             'id, organization_id, document_id, status, current_index, title, document:documents(id, title, file_url, type)'
           )
           .eq('id', sig.process_id)
-          .single() as any)
+          .single()
 
         if (proc && proc.status !== 'completed' && proc.current_index === sig.order_index) {
           return NextResponse.json({
@@ -205,7 +205,7 @@ export async function GET(
             data: {
               process: proc,
               signatory: sig,
-              document: (proc as any).document,
+              document: proc.document,
             },
           })
         }

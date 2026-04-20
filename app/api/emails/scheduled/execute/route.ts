@@ -7,7 +7,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { EmailScheduleService } from '@/lib/services/email-schedule.service'
-import { EmailTemplateService } from '@/lib/services/email-template.service'
+import { EmailTemplateService, type EmailType } from '@/lib/services/email-template.service'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -482,7 +482,7 @@ export async function POST(request: NextRequest) {
           } else {
             template = await emailTemplateService.getDefault(
               schedule.organization_id,
-              schedule.email_type as any
+              schedule.email_type as EmailType
             )
           }
 

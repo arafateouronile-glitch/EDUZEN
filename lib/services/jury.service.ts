@@ -6,6 +6,12 @@
  */
 
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// Tables jury_members et session_jury non dans le schéma généré — cast centralisé ici
+function db(client: ReturnType<typeof createClient>): SupabaseClient {
+  return client as unknown as SupabaseClient
+}
 
 export interface JuryMember {
   id: string
@@ -42,7 +48,7 @@ export interface CreateJuryMemberInput {
 
 async function getJuryMembers(organizationId: string): Promise<JuryMember[]> {
   const supabase = createClient()
-  const { data, error } = await (supabase as any)
+  const { data, error } = await db(supabase)
     .from('jury_members')
     .select('*')
     .eq('organization_id', organizationId)
@@ -56,7 +62,7 @@ async function searchJuryMembers(
   query: string
 ): Promise<JuryMember[]> {
   const supabase = createClient()
-  const { data, error } = await (supabase as any)
+  const { data, error } = await db(supabase)
     .from('jury_members')
     .select('*')
     .eq('organization_id', organizationId)
@@ -74,7 +80,7 @@ async function createJuryMember(
   input: CreateJuryMemberInput
 ): Promise<JuryMember> {
   const supabase = createClient()
-  const { data, error } = await (supabase as any)
+  const { data, error } = await db(supabase)
     .from('jury_members')
     .insert({ ...input, organization_id: organizationId })
     .select()
@@ -88,7 +94,7 @@ async function updateJuryMember(
   input: Partial<CreateJuryMemberInput>
 ): Promise<JuryMember> {
   const supabase = createClient()
-  const { data, error } = await (supabase as any)
+  const { data, error } = await db(supabase)
     .from('jury_members')
     .update(input)
     .eq('id', id)
@@ -100,7 +106,7 @@ async function updateJuryMember(
 
 async function deleteJuryMember(id: string): Promise<void> {
   const supabase = createClient()
-  const { error } = await (supabase as any)
+  const { error } = await db(supabase)
     .from('jury_members')
     .delete()
     .eq('id', id)
@@ -111,7 +117,7 @@ async function deleteJuryMember(id: string): Promise<void> {
 
 async function getSessionJury(sessionId: string): Promise<SessionJury[]> {
   const supabase = createClient()
-  const { data, error } = await (supabase as any)
+  const { data, error } = await db(supabase)
     .from('session_jury')
     .select('*, jury_members(*)')
     .eq('session_id', sessionId)
@@ -125,7 +131,7 @@ async function addJuryToSession(
   juryMemberId: string
 ): Promise<SessionJury> {
   const supabase = createClient()
-  const { data, error } = await (supabase as any)
+  const { data, error } = await db(supabase)
     .from('session_jury')
     .insert({ session_id: sessionId, jury_member_id: juryMemberId })
     .select('*, jury_members(*)')
@@ -136,7 +142,7 @@ async function addJuryToSession(
 
 async function removeJuryFromSession(sessionJuryId: string): Promise<void> {
   const supabase = createClient()
-  const { error } = await (supabase as any)
+  const { error } = await db(supabase)
     .from('session_jury')
     .delete()
     .eq('id', sessionJuryId)

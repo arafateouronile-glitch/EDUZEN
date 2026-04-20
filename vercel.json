@@ -72,6 +72,10 @@
     {
       "path": "/api/emails/scheduled/execute",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/auto-launch-attendance",
+      "schedule": "*/5 * * * *"
     }
   ],
   "functions": {

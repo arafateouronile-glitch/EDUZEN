@@ -23,9 +23,9 @@ export async function GET() {
     try {
       const supabase = createClient(supabaseUrl, supabaseAnonKey)
       const { error } = await supabase.from('organizations').select('id').limit(1).maybeSingle()
-      checks.supabase = error ? `error: ${error.message}` : 'ok'
-    } catch (e) {
-      checks.supabase = e instanceof Error ? e.message : 'error'
+      checks.supabase = error ? 'error' : 'ok'
+    } catch {
+      checks.supabase = 'error'
     }
   } else {
     checks.supabase = 'missing_env'
@@ -40,8 +40,8 @@ export async function GET() {
       const res = await fetch(`${gotenbergUrl}/health`, { method: 'GET', signal: ctrl.signal })
       clearTimeout(t)
       checks.gotenberg = res.ok ? 'ok' : `status ${res.status}`
-    } catch (e) {
-      checks.gotenberg = e instanceof Error ? e.message : 'error'
+    } catch {
+      checks.gotenberg = 'error'
     }
   } else {
     checks.gotenberg = 'not_configured'

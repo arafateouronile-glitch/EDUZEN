@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
 
 /**
  * GET /api/payments/sepa/status/[paymentId]
@@ -63,7 +64,7 @@ export async function GET(
       userId: currentUser ? maskId(currentUser.id) : undefined,
       error: sanitizeError(error),
     })
-    const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
+    const errorMessage = getPublicErrorMessage(error)
     return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

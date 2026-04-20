@@ -224,7 +224,7 @@ function ComplianceRingChart({ stats }: { stats: ComplianceStats }) {
           </defs>
           <Pie
             activeIndex={activeIndex}
-            activeShape={renderComplianceActiveShape as any}
+            activeShape={renderComplianceActiveShape as (props: object) => React.ReactElement}
             onMouseEnter={(_, i) => setActiveIndex(i)}
             data={dataWithMeta}
             cx="50%"

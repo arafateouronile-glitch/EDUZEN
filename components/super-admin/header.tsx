@@ -66,6 +66,7 @@ const routeNames: Record<string, string> = {
   '/super-admin/blog/comments': 'Commentaires',
   '/super-admin/support': 'Support',
   '/super-admin/team': 'Équipe',
+  '/super-admin/health': 'Santé système',
   '/super-admin/settings': 'Paramètres',
 }
 

@@ -72,7 +72,6 @@ export function SkillsEvolutionChart({ data, isLoading }: SkillsEvolutionChartPr
     <div className="h-80 w-full">
       <RechartsResponsiveContainer width="100%" height="100%">
         <RechartsAreaChart
-          {...({} as any)}
           data={formattedData}
           margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
         >
@@ -86,9 +85,8 @@ export function SkillsEvolutionChart({ data, isLoading }: SkillsEvolutionChartPr
               <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <RechartsCartesianGrid {...({} as any)} strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+          <RechartsCartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
           <RechartsXAxis
-            {...({} as any)}
             dataKey="monthLabel"
             axisLine={false}
             tickLine={false}
@@ -96,7 +94,6 @@ export function SkillsEvolutionChart({ data, isLoading }: SkillsEvolutionChartPr
             dy={10}
           />
           <RechartsYAxis
-            {...({} as any)}
             yAxisId="left"
             axisLine={false}
             tickLine={false}
@@ -105,7 +102,6 @@ export function SkillsEvolutionChart({ data, isLoading }: SkillsEvolutionChartPr
             tickFormatter={(value: any) => `${value}%`}
           />
           <RechartsYAxis
-            {...({} as any)}
             yAxisId="right"
             orientation="right"
             axisLine={false}
@@ -113,9 +109,8 @@ export function SkillsEvolutionChart({ data, isLoading }: SkillsEvolutionChartPr
             tick={{ fill: '#6b7280', fontSize: 12 }}
             domain={[0, 'auto']}
           />
-          <RechartsTooltip {...({} as any)} content={<CustomTooltip />} />
+          <RechartsTooltip content={<CustomTooltip />} />
           <RechartsLegend
-            {...({} as any)}
             verticalAlign="top"
             height={36}
             formatter={(value: any) => {
@@ -127,7 +122,6 @@ export function SkillsEvolutionChart({ data, isLoading }: SkillsEvolutionChartPr
             }}
           />
           <RechartsArea
-            {...({} as any)}
             yAxisId="left"
             type="monotone"
             dataKey="averageSkillLevel"
@@ -138,7 +132,6 @@ export function SkillsEvolutionChart({ data, isLoading }: SkillsEvolutionChartPr
             activeDot={{ r: 6, stroke: BRAND_COLORS.primary, strokeWidth: 2, fill: '#fff' }}
           />
           <RechartsArea
-            {...({} as any)}
             yAxisId="right"
             type="monotone"
             dataKey="skillsAcquired"

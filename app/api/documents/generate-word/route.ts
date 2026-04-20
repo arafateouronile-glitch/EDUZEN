@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Retourner le document Word
-    return new NextResponse(wordBuffer as any, {
+    return new NextResponse(new Uint8Array(wordBuffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${(template.name || 'document').replace(/[^\w.\-]/g, '_')}.docx"`,

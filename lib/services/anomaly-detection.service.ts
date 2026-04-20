@@ -12,18 +12,18 @@ type AnomalyDetectionRule = any
 export class AnomalyDetectionService {
   private supabase: SupabaseClient<Database>
 
+  // Tables anomaly_* et normal_patterns non dans le schéma généré — cast centralisé ici
+  private get db() { return this.supabase as unknown as SupabaseClient }
 
   constructor(supabaseClient?: SupabaseClient<Database>) {
-
     this.supabase = supabaseClient || createClient()
-
   }
 
   // ========== ANOMALY TYPES ==========
 
   async getAnomalyTypes() {
     try {
-      const { data, error } = await (this.supabase as any)
+      const { data, error } = await this.db
         .from('anomaly_types')
         .select('*')
         .eq('is_active', true)
@@ -52,7 +52,7 @@ export class AnomalyDetectionService {
     }
   ) {
     try {
-    let query = (this.supabase as any)
+    let query = this.db
       .from('anomalies')
       .select(`
         *,
@@ -106,7 +106,7 @@ export class AnomalyDetectionService {
 
   async createAnomaly(anomaly: TableInsert<'anomalies'>) {
     try {
-      const { data, error } = await (this.supabase as any)
+      const { data, error } = await this.db
         .from('anomalies')
         .insert(anomaly)
         .select(`
@@ -140,7 +140,7 @@ export class AnomalyDetectionService {
       updates.resolved_at = new Date().toISOString()
     }
 
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('anomalies')
       .update(updates)
       .eq('id', anomalyId)
@@ -158,7 +158,7 @@ export class AnomalyDetectionService {
   }
 
   async assignAnomaly(anomalyId: string, userId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('anomalies')
       .update({
         assigned_to: userId,
@@ -192,7 +192,7 @@ export class AnomalyDetectionService {
     actionType: string,
     actionDetails: Record<string, unknown>
   ) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('anomaly_actions')
       .insert({
         anomaly_id: anomalyId,
@@ -209,7 +209,7 @@ export class AnomalyDetectionService {
   }
 
   async getAnomalyActions(anomalyId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('anomaly_actions')
       .select('*, user:users(id, full_name, email)')
       .eq('anomaly_id', anomalyId)
@@ -222,7 +222,7 @@ export class AnomalyDetectionService {
   // ========== DETECTION RULES ==========
 
   async getDetectionRules(organizationId: string, anomalyTypeId?: string) {
-    let query = (this.supabase as any)
+    let query = this.db
       .from('anomaly_detection_rules')
       .select('*, anomaly_type:anomaly_types(*)')
       .eq('organization_id', organizationId)
@@ -239,7 +239,7 @@ export class AnomalyDetectionService {
   }
 
   async createDetectionRule(rule: TableInsert<'anomaly_detection_rules'>) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('anomaly_detection_rules')
       .insert(rule)
       .select()
@@ -253,7 +253,7 @@ export class AnomalyDetectionService {
     ruleId: string,
     updates: TableUpdate<'anomaly_detection_rules'>
   ) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('anomaly_detection_rules')
       .update(updates)
       .eq('id', ruleId)
@@ -267,7 +267,7 @@ export class AnomalyDetectionService {
   // ========== NORMAL PATTERNS ==========
 
   async getNormalPatterns(organizationId: string, patternType?: string) {
-    let query = (this.supabase as any)
+    let query = this.db
       .from('normal_patterns')
       .select('*')
       .eq('organization_id', organizationId)
@@ -285,7 +285,7 @@ export class AnomalyDetectionService {
   }
 
   async createNormalPattern(pattern: TableInsert<'normal_patterns'>) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('normal_patterns')
       .insert(pattern)
       .select()
@@ -298,7 +298,7 @@ export class AnomalyDetectionService {
   // ========== ALERTS ==========
 
   async getAnomalyAlerts(userId: string, unreadOnly: boolean = false) {
-    let query = (this.supabase as any)
+    let query = this.db
       .from('anomaly_alerts')
       .select(`
         *,
@@ -319,7 +319,7 @@ export class AnomalyDetectionService {
   }
 
   async markAlertAsSent(alertId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('anomaly_alerts')
       .update({
         is_sent: true,
@@ -336,7 +336,7 @@ export class AnomalyDetectionService {
   // ========== ANALYTICS ==========
 
   async getAnomalyStats(organizationId: string, startDate?: Date, endDate?: Date) {
-    let query = (this.supabase as any)
+    let query = this.db
       .from('anomalies')
       .select('status, anomaly_type:anomaly_types(category, severity)')
       .eq('organization_id', organizationId)

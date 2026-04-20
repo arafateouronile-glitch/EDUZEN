@@ -16,11 +16,22 @@ interface RateLimitEntry {
 // Store en mémoire (pour production, utiliser Redis)
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
+// Limite de taille pour éviter la saturation mémoire (~50KB max, ~10K entrées)
+const MAX_STORE_SIZE = 10_000
+
 // Nettoyage périodique du store (toutes les 5 minutes)
+// Si le store dépasse la limite, supprime les entrées expirées puis les plus anciennes
 setInterval(() => {
   const now = Date.now()
   for (const [key, entry] of rateLimitStore.entries()) {
     if (entry.resetTime < now) {
+      rateLimitStore.delete(key)
+    }
+  }
+  // Si encore trop grand après nettoyage des expirées, vider la moitié la plus ancienne
+  if (rateLimitStore.size > MAX_STORE_SIZE) {
+    const keysToDelete = Array.from(rateLimitStore.keys()).slice(0, Math.floor(rateLimitStore.size / 2))
+    for (const key of keysToDelete) {
       rateLimitStore.delete(key)
     }
   }
@@ -72,6 +83,10 @@ export function checkRateLimit(
 
   // Première requête ou fenêtre expirée
   if (!entry || entry.resetTime < now) {
+    // Éviter la saturation : si plein, refuser sans enregistrer (fail-open : autorisé)
+    if (!entry && rateLimitStore.size >= MAX_STORE_SIZE) {
+      return { allowed: true, remaining: 1, resetTime: now + config.interval }
+    }
     const resetTime = now + config.interval
     rateLimitStore.set(identifier, {
       count: 1,

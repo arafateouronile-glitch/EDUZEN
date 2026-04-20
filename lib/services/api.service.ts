@@ -66,6 +66,13 @@ interface QuotaUpdate {
 export class APIService {
   private supabase: SupabaseClient<Database>
 
+  // Contournement "Type instantiation is excessively deep" sur le client générique Supabase.
+  // Les tables api_keys/api_requests/api_quotas/webhooks/webhook_deliveries sont dans
+  // database.types.ts mais leur profondeur de types dépasse la limite de TypeScript.
+  // Le cast est centralisé ici plutôt que répété à chaque appel.
+  private get db(): SupabaseClient {
+    return this.supabase as unknown as SupabaseClient
+  }
 
   constructor(supabaseClient: SupabaseClient<Database>) {
     if (!supabaseClient) {
@@ -91,7 +98,7 @@ export class APIService {
    */
   async verifyAPIKey(apiKey: string): Promise<APIKeyRow | null> {
     const hash = crypto.createHash('sha256').update(apiKey).digest('hex')
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('api_keys')
       .select('*')
       .eq('key_hash', hash)
@@ -125,7 +132,7 @@ export class APIService {
     // Créer le quota si nécessaire
     await this.ensureQuotaExists(organizationId)
 
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('api_keys')
       .insert({
         organization_id: organizationId,
@@ -155,7 +162,7 @@ export class APIService {
    * Récupère les clés API d'une organisation
    */
   async getAPIKeys(organizationId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('api_keys')
       .select('*')
       .eq('organization_id', organizationId)
@@ -169,7 +176,7 @@ export class APIService {
    * Met à jour une clé API
    */
   async updateAPIKey(keyId: string, updates: APIKeyUpdate) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('api_keys')
       .update(updates)
       .eq('id', keyId)
@@ -191,7 +198,7 @@ export class APIService {
    * Supprime une clé API
    */
   async deleteAPIKey(keyId: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.db
       .from('api_keys')
       .delete()
       .eq('id', keyId)
@@ -226,7 +233,7 @@ export class APIService {
   private async checkKeyRateLimit(
     keyId: string
   ): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
-    const { data: key } = await (this.supabase as any)
+    const { data: key } = await this.db
       .from('api_keys')
       .select('rate_limit_per_minute, rate_limit_per_hour, rate_limit_per_day')
       .eq('id', keyId)
@@ -242,19 +249,19 @@ export class APIService {
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
     // Compter les requêtes récentes
-    const { count: minuteCount } = await (this.supabase as any)
+    const { count: minuteCount } = await this.db
       .from('api_requests')
       .select('*', { count: 'exact', head: true })
       .eq('api_key_id', keyId)
       .gte('created_at', oneMinuteAgo.toISOString())
 
-    const { count: hourCount } = await (this.supabase as any)
+    const { count: hourCount } = await this.db
       .from('api_requests')
       .select('*', { count: 'exact', head: true })
       .eq('api_key_id', keyId)
       .gte('created_at', oneHourAgo.toISOString())
 
-    const { count: dayCount } = await (this.supabase as any)
+    const { count: dayCount } = await this.db
       .from('api_requests')
       .select('*', { count: 'exact', head: true })
       .eq('api_key_id', keyId)
@@ -285,7 +292,7 @@ export class APIService {
   private async checkQuotaRateLimit(
     organizationId: string
   ): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
-    const { data: quota } = await (this.supabase as any)
+    const { data: quota } = await this.db
       .from('api_quotas')
       .select('*')
       .eq('organization_id', organizationId)
@@ -335,7 +342,7 @@ export class APIService {
     userAgent?: string,
     queryParams?: Record<string, string | number | boolean>
   ) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('api_requests')
       .insert({
         api_key_id: apiKeyId,
@@ -360,7 +367,7 @@ export class APIService {
    * Récupère les statistiques d'utilisation API
    */
   async getAPIUsageStats(organizationId: string, startDate?: Date, endDate?: Date) {
-    let query = (this.supabase as any)
+    let query = this.db
       .from('api_requests')
       .select('method, endpoint, status_code, response_time_ms')
       .eq('organization_id', organizationId)
@@ -425,14 +432,14 @@ export class APIService {
   // ========== QUOTAS ==========
 
   async ensureQuotaExists(organizationId: string) {
-    const { data: existing } = await (this.supabase as any)
+    const { data: existing } = await this.db
       .from('api_quotas')
       .select('id')
       .eq('organization_id', organizationId)
       .maybeSingle()
 
     if (!existing) {
-      const { error } = await (this.supabase as any)
+      const { error } = await this.db
         .from('api_quotas')
         .insert({
           organization_id: organizationId,
@@ -443,7 +450,7 @@ export class APIService {
   }
 
   async getQuota(organizationId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('api_quotas')
       .select('*')
       .eq('organization_id', organizationId)
@@ -454,7 +461,7 @@ export class APIService {
   }
 
   async updateQuota(organizationId: string, updates: QuotaUpdate) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('api_quotas')
       .update(updates)
       .eq('organization_id', organizationId)
@@ -470,7 +477,7 @@ export class APIService {
   async createWebhook(webhook: WebhookInsert) {
     // Générer un secret
     const secret = crypto.randomBytes(32).toString('hex')
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('webhooks')
       .insert({
         ...webhook,
@@ -484,7 +491,7 @@ export class APIService {
   }
 
   async getWebhooks(organizationId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('webhooks')
       .select('*')
       .eq('organization_id', organizationId)
@@ -495,7 +502,7 @@ export class APIService {
   }
 
   async updateWebhook(webhookId: string, updates: WebhookUpdate) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('webhooks')
       .update(updates)
       .eq('id', webhookId)
@@ -507,7 +514,7 @@ export class APIService {
   }
 
   async deleteWebhook(webhookId: string) {
-    const { error } = await (this.supabase as any)
+    const { error } = await this.db
       .from('webhooks')
       .delete()
       .eq('id', webhookId)
@@ -519,7 +526,7 @@ export class APIService {
    * Déclenche un webhook
    */
   async triggerWebhook(webhookId: string, eventType: string, eventData: Record<string, unknown>) {
-    const { data: webhook } = await (this.supabase as any)
+    const { data: webhook } = await this.db
       .from('webhooks')
       .select('*')
       .eq('id', webhookId)
@@ -534,7 +541,7 @@ export class APIService {
     }
 
     // Créer une livraison
-    const { data: delivery, error: deliveryError } = await (this.supabase as any)
+    const { data: delivery, error: deliveryError } = await this.db
       .from('webhook_deliveries')
       .insert({
         webhook_id: webhookId,
@@ -557,7 +564,7 @@ export class APIService {
    * Envoie un webhook (appelé par un worker)
    */
   async sendWebhook(deliveryId: string) {
-    const { data: delivery } = await (this.supabase as any)
+    const { data: delivery } = await this.db
       .from('webhook_deliveries')
       .select('*, webhook:webhooks(*)')
       .eq('id', deliveryId)
@@ -595,7 +602,7 @@ export class APIService {
       const responseBody = await response.text()
 
       // Mettre à jour la livraison
-      await (this.supabase as any)
+      await this.db
         .from('webhook_deliveries')
         .update({
           status: response.ok ? 'success' : 'failed',
@@ -606,7 +613,7 @@ export class APIService {
         .eq('id', deliveryId)
 
       // Mettre à jour les statistiques du webhook
-      await (this.supabase as any)
+      await this.db
         .from('webhooks')
         .update({
           success_count: response.ok ? ((webhook.success_count as number) || 0) + 1 : (webhook.success_count as number) || 0,
@@ -619,7 +626,7 @@ export class APIService {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
       // Mettre à jour la livraison avec l'erreur
-      await (this.supabase as any)
+      await this.db
         .from('webhook_deliveries')
         .update({
           status: 'failed',
@@ -637,7 +644,7 @@ export class APIService {
   }
 
   async getWebhookDeliveries(webhookId: string) {
-    const { data, error } = await (this.supabase as any)
+    const { data, error } = await this.db
       .from('webhook_deliveries')
       .select('*')
       .eq('webhook_id', webhookId)
@@ -657,7 +664,7 @@ export class APIService {
     eventType: string,
     payload: Record<string, unknown>
   ): Promise<Array<{ webhookId: string; deliveryId: string }>> {
-    const { data: webhooks } = await (this.supabase as any)
+    const { data: webhooks } = await this.db
       .from('webhooks')
       .select('id, events')
       .eq('organization_id', organizationId)
@@ -670,7 +677,7 @@ export class APIService {
     for (const webhook of webhooks) {
       if (!webhook.events?.includes(eventType)) continue
 
-      const { data: delivery, error } = await (this.supabase as any)
+      const { data: delivery, error } = await this.db
         .from('webhook_deliveries')
         .insert({
           webhook_id: webhook.id,

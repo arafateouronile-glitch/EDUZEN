@@ -3,6 +3,12 @@
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
+declare global {
+  interface Window {
+    plausible?: (event: string, options?: { url?: string; props?: Record<string, unknown> }) => void
+  }
+}
+
 /**
  * Composant Plausible Analytics
  * 
@@ -35,9 +41,9 @@ export function PlausibleAnalytics() {
 
   // Track les changements de page
   useEffect(() => {
-    if (!domain || typeof window === 'undefined' || !(window as any).plausible) return
+    if (!domain || typeof window === 'undefined' || !window.plausible) return
 
-    ;(window as any).plausible('pageview', {
+    ;window.plausible('pageview', {
       url: pathname,
     })
   }, [pathname, domain])
@@ -48,10 +54,10 @@ export function PlausibleAnalytics() {
 /**
  * Fonction helper pour tracker des événements personnalisés
  */
-export function trackEvent(eventName: string, props?: Record<string, any>) {
-  if (typeof window === 'undefined' || !(window as any).plausible) return
+export function trackEvent(eventName: string, props?: Record<string, unknown>) {
+  if (typeof window === 'undefined' || !window.plausible) return
 
-  ;(window as any).plausible(eventName, {
+  ;window.plausible(eventName, {
     props,
   })
 }

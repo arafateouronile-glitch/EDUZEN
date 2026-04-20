@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
 
         if (pdfBuffer && pdfBuffer.length > 0) {
           logger.info('[BPF PDF] Généré via Gotenberg', { year, org: cerfaData.organization.name })
-          return new NextResponse(pdfBuffer as any, {
+          return new NextResponse(new Uint8Array(pdfBuffer), {
             headers: {
               'Content-Type': 'application/pdf',
               'Content-Disposition': `attachment; filename="${filename}"`,
@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('[BPF PDF] Généré via Puppeteer', { year, org: cerfaData.organization.name })
-    return new NextResponse(pdf as any, {
+    return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,

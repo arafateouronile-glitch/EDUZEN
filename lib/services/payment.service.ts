@@ -60,8 +60,9 @@ export class PaymentService {
         )
       } catch (error) {
         // Gestion gracieuse si la table n'existe pas encore ou si les relations sont manquantes
-        const errorCode = (error as any)?.code || (error as any)?.originalError?.code
-        const errorMessage = (error as any)?.message || String(error)
+        const err = error as { code?: string; message?: string; originalError?: { code?: string } }
+        const errorCode = err?.code || err?.originalError?.code
+        const errorMessage = err?.message || String(error)
         
         // Vérifier les codes d'erreur Supabase et les messages d'erreur liés aux relations
         if (

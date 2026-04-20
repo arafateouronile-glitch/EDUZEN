@@ -131,11 +131,11 @@ export type UpdateTodoInput = Partial<CreateTodoInput> & {
 class CalendarService {
   private supabase: SupabaseClient<Database>
 
+  // Table calendar_todos non dans le schéma généré — cast centralisé ici
+  private get db() { return this.supabase as unknown as SupabaseClient }
 
   constructor(supabaseClient?: SupabaseClient<Database>) {
-
     this.supabase = supabaseClient || createClient()
-
   }
 
   // ==========================================
@@ -230,9 +230,9 @@ class CalendarService {
    * Crée un nouveau TODO
    */
   async createTodo(input: CreateTodoInput): Promise<CalendarTodo> {
-    const { data, error } = await this.supabase
+    const { data, error } = await this.db
       .from('calendar_todos')
-      .insert(input as any)
+      .insert(input)
       .select()
       .single()
 
@@ -250,9 +250,9 @@ class CalendarService {
    * Met à jour un TODO
    */
   async updateTodo(id: string, updates: UpdateTodoInput): Promise<CalendarTodo> {
-    const { data, error } = await this.supabase
+    const { data, error } = await this.db
       .from('calendar_todos')
-      .update(updates as any)
+      .update(updates)
       .eq('id', id)
       .select()
       .single()

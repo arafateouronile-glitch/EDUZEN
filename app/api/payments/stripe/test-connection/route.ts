@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
 
 // Masque les clés API pour le logging (affiche seulement les 8 premiers caractères)
 const maskApiKey = (key: string): string => {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       secretKey: secretKey ? maskApiKey(secretKey) : undefined,
       error: sanitizeError(error),
     })
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json({ error: getPublicErrorMessage(error) }, { status: 500 })
   }
 }
 

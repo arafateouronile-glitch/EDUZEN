@@ -76,7 +76,6 @@ const renderActiveShape = (props: any) => {
         ({payload.percentage.toFixed(1)}%)
       </text>
       <RechartsSector
-        {...({} as any)}
         cx={cx}
         cy={cy}
         innerRadius={innerRadius}
@@ -86,7 +85,6 @@ const renderActiveShape = (props: any) => {
         fill={fill}
       />
       <RechartsSector
-        {...({} as any)}
         cx={cx}
         cy={cy}
         innerRadius={outerRadius + 15}
@@ -204,7 +202,6 @@ export function BPFRevenueChart({ data, loading, year, onCategoryClick }: BPFRev
               <RechartsResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
                   <RechartsPie
-                    {...({} as any)}
                     activeIndex={activeIndex}
                     activeShape={renderActiveShape}
                     data={chartData}
@@ -221,7 +218,6 @@ export function BPFRevenueChart({ data, loading, year, onCategoryClick }: BPFRev
                   >
                     {chartData.map((entry, index) => (
                       <RechartsCell
-                        {...({} as any)}
                         key={`cell-${index}`}
                         fill={entry.color}
                         stroke="white"
@@ -230,7 +226,6 @@ export function BPFRevenueChart({ data, loading, year, onCategoryClick }: BPFRev
                     ))}
                   </RechartsPie>
                   <RechartsTooltip
-                    {...({} as any)}
                     content={({ active, payload }: { active?: boolean; payload?: any[] }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload as ChartDataItem

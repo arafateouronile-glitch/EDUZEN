@@ -54,7 +54,7 @@ export async function POST() {
       .or('is_public.eq.true,published_online.eq.true')
 
     if (programs?.length) {
-      for (const p of programs as any[]) {
+      for (const p of programs) {
         const name = p.name ?? 'Programme'
 
         // Ind. 1 – Information sur les prestations (programme publié au catalogue)
@@ -249,7 +249,7 @@ export async function POST() {
 
     for (const d of convocationDocs ?? []) {
       const title = d.title ?? 'Convocation'
-      const eventDate = (d as any).created_at ?? now
+      const eventDate = d.created_at ?? now
       await supabase.from('compliance_evidence_automated').insert({
         organization_id: orgId,
         indicator_number: 9,

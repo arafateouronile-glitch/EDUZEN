@@ -58,8 +58,8 @@ export async function GET() {
       .eq('status', 'valid')
       .limit(200)
 
-    // Requête simplifiée ; cast pour éviter "Type instantiation is excessively deep" (types Supabase)
-    const manualRes = await (supabase as any)
+    // Cast nécessaire : qualiopi_evidence n'est pas dans database.types.ts
+    const manualRes = await (supabase as unknown as { from: (table: string) => ReturnType<typeof supabase.from> })
       .from('qualiopi_evidence')
       .select('indicator_id')
       .eq('organization_id', orgId)

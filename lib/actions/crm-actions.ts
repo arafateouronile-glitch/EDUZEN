@@ -68,7 +68,7 @@ export async function getCrmOrganizations(): Promise<{
     const orgIds = orgs.map((o) => o.id)
 
     // Fetch latest event per org + event type list
-    const { data: events, error: eventsError } = await (supabase as any)
+    const { data: events, error: eventsError } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
       .from('customer_events')
       .select('organization_id, event_type, created_at')
       .in('organization_id', orgIds)
@@ -138,7 +138,7 @@ export async function getOrganizationTimeline(organizationId: string): Promise<{
         .select('name')
         .eq('id', organizationId)
         .maybeSingle(),
-      (supabase as any)
+      (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
         .from('customer_events')
         .select('id, organization_id, user_id, event_type, metadata, created_at')
         .eq('organization_id', organizationId)

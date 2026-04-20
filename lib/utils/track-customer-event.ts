@@ -22,7 +22,7 @@ export async function trackCustomerEvent(
 ): Promise<void> {
   try {
     const supabase = createAdminClient()
-    const { error } = await (supabase as any).from('customer_events').insert({
+    const { error } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient).from('customer_events').insert({
       organization_id: organizationId,
       user_id: userId ?? null,
       event_type: eventType,

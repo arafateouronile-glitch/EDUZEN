@@ -76,7 +76,7 @@ export function PremiumPieChart({
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number; payload: { name: string; value: number; total?: number; fill?: string } }> }) => {
     if (active && payload && payload.length) {
-      const data = payload[0] as any
+      const data = payload[0]
       const total = (data.payload?.total as number) || data.value
       const percentage = ((data.value / total) * 100).toFixed(1)
       return (
@@ -134,7 +134,7 @@ export function PremiumPieChart({
           
           <Pie
             activeIndex={activeIndex}
-            activeShape={renderActiveShape as any}
+            activeShape={renderActiveShape as (props: object) => React.ReactElement}
             onMouseEnter={onPieEnter}
             data={dataWithTotal}
             cx="50%"

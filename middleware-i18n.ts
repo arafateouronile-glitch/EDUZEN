@@ -100,10 +100,12 @@ export async function middleware(req: NextRequest) {
   // Configuration CORS pour les routes API
   const origin = req.headers.get('origin')
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || []
-  const allowLocalhost = process.env.NODE_ENV !== 'production'
+  // En dev, autoriser uniquement le port 3001 (éviter qu'une app locale malveillante
+  // sur localhost:9999 puisse faire des requêtes CORS cross-origin)
+  const devAllowedOrigins = ['http://localhost:3001', 'http://127.0.0.1:3001']
   const isAllowedOrigin = origin && (
     allowedOrigins.includes(origin) ||
-    (allowLocalhost && (origin.includes('localhost') || origin.includes('127.0.0.1')))
+    (process.env.NODE_ENV !== 'production' && devAllowedOrigins.includes(origin))
   )
 
   // Headers CORS pour les routes API

@@ -7,86 +7,103 @@
 
 import dynamic from 'next/dynamic'
 import type React from 'react'
+import type {
+  LineChart,
+  BarChart,
+  PieChart,
+  AreaChart,
+  Line,
+  Bar,
+  Pie,
+  Area,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Sector,
+} from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
 
-// Lazy load tous les composants recharts
-// Utilisation de 'any' pour les props car recharts a ses propres types complexes
-export const RechartsLineChart = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.LineChart as any })),
+// Lazy load tous les composants recharts avec types exacts
+export const RechartsLineChart = dynamic<React.ComponentProps<typeof LineChart>>(
+  () => import('recharts').then((mod) => ({ default: mod.LineChart as unknown as React.ComponentType<React.ComponentProps<typeof LineChart>> })),
   { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> }
 )
 
-export const RechartsLine = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.Line as any })),
+export const RechartsLine = dynamic<React.ComponentProps<typeof Line>>(
+  () => import('recharts').then((mod) => ({ default: mod.Line as unknown as React.ComponentType<React.ComponentProps<typeof Line>> })),
   { ssr: false }
 )
 
-export const RechartsBarChart = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.BarChart as any })),
+export const RechartsBarChart = dynamic<React.ComponentProps<typeof BarChart>>(
+  () => import('recharts').then((mod) => ({ default: mod.BarChart as unknown as React.ComponentType<React.ComponentProps<typeof BarChart>> })),
   { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> }
-) as React.ComponentType<{ children?: React.ReactNode; data?: unknown[]; margin?: { top?: number; right?: number; left?: number; bottom?: number }; [key: string]: unknown }>
+)
 
-export const RechartsBar = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.Bar as any })),
+export const RechartsBar = dynamic<React.ComponentProps<typeof Bar>>(
+  () => import('recharts').then((mod) => ({ default: mod.Bar as unknown as React.ComponentType<React.ComponentProps<typeof Bar>> })),
   { ssr: false }
-) as React.ComponentType<{ dataKey?: string; fill?: string; radius?: number[]; name?: string; [key: string]: unknown }>
+)
 
-export const RechartsPieChart = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.PieChart as any })),
+export const RechartsPieChart = dynamic<React.ComponentProps<typeof PieChart>>(
+  () => import('recharts').then((mod) => ({ default: mod.PieChart as unknown as React.ComponentType<React.ComponentProps<typeof PieChart>> })),
   { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> }
-) as React.ComponentType<{ children: React.ReactNode; className?: string }>
+)
 
-export const RechartsPie = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.Pie as any })),
+export const RechartsPie = dynamic<React.ComponentProps<typeof Pie>>(
+  () => import('recharts').then((mod) => ({ default: mod.Pie as unknown as React.ComponentType<React.ComponentProps<typeof Pie>> })),
   { ssr: false }
 )
 
-export const RechartsCell = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.Cell as any })),
+export const RechartsCell = dynamic<React.ComponentProps<typeof Cell>>(
+  () => import('recharts').then((mod) => ({ default: mod.Cell as unknown as React.ComponentType<React.ComponentProps<typeof Cell>> })),
   { ssr: false }
 )
 
-export const RechartsXAxis = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.XAxis as any })),
-  { ssr: false }
-) as React.ComponentType<{ dataKey?: string; tick?: { fontSize?: number }; tickFormatter?: (v: string | number) => string; [key: string]: unknown }>
-
-export const RechartsYAxis = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.YAxis as any })),
-  { ssr: false }
-) as React.ComponentType<{ tick?: { fontSize?: number }; tickFormatter?: (v: number) => string; [key: string]: unknown }>
-
-export const RechartsCartesianGrid = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.CartesianGrid as any })),
-  { ssr: false }
-) as React.ComponentType<{ strokeDasharray?: string; className?: string; [key: string]: unknown }>
-
-export const RechartsTooltip = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.Tooltip as any })),
-  { ssr: false }
-) as React.ComponentType<{ formatter?: (value: number) => string[]; labelFormatter?: (_: unknown, payload: unknown) => unknown; [key: string]: unknown }>
-
-export const RechartsLegend = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.Legend as any })),
+export const RechartsXAxis = dynamic<React.ComponentProps<typeof XAxis>>(
+  () => import('recharts').then((mod) => ({ default: mod.XAxis as unknown as React.ComponentType<React.ComponentProps<typeof XAxis>> })),
   { ssr: false }
 )
 
-export const RechartsResponsiveContainer = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.ResponsiveContainer as any })),
+export const RechartsYAxis = dynamic<React.ComponentProps<typeof YAxis>>(
+  () => import('recharts').then((mod) => ({ default: mod.YAxis as unknown as React.ComponentType<React.ComponentProps<typeof YAxis>> })),
   { ssr: false }
-) as React.ComponentType<{ children: React.ReactNode; width: string | number; height: string | number; className?: string }>
+)
 
-export const RechartsArea = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.Area as any })),
+export const RechartsCartesianGrid = dynamic<React.ComponentProps<typeof CartesianGrid>>(
+  () => import('recharts').then((mod) => ({ default: mod.CartesianGrid as unknown as React.ComponentType<React.ComponentProps<typeof CartesianGrid>> })),
   { ssr: false }
-) as React.ComponentType<{ type?: string; dataKey?: string; stroke?: string; strokeWidth?: number; fill?: string; [key: string]: unknown }>
+)
 
-export const RechartsAreaChart = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.AreaChart as any })),
+export const RechartsTooltip = dynamic<React.ComponentProps<typeof Tooltip>>(
+  () => import('recharts').then((mod) => ({ default: mod.Tooltip as unknown as React.ComponentType<React.ComponentProps<typeof Tooltip>> })),
+  { ssr: false }
+)
+
+export const RechartsLegend = dynamic<React.ComponentProps<typeof Legend>>(
+  () => import('recharts').then((mod) => ({ default: mod.Legend as unknown as React.ComponentType<React.ComponentProps<typeof Legend>> })),
+  { ssr: false }
+)
+
+export const RechartsResponsiveContainer = dynamic<React.ComponentProps<typeof ResponsiveContainer>>(
+  () => import('recharts').then((mod) => ({ default: mod.ResponsiveContainer as unknown as React.ComponentType<React.ComponentProps<typeof ResponsiveContainer>> })),
+  { ssr: false }
+)
+
+export const RechartsArea = dynamic<React.ComponentProps<typeof Area>>(
+  () => import('recharts').then((mod) => ({ default: mod.Area as unknown as React.ComponentType<React.ComponentProps<typeof Area>> })),
+  { ssr: false }
+)
+
+export const RechartsAreaChart = dynamic<React.ComponentProps<typeof AreaChart>>(
+  () => import('recharts').then((mod) => ({ default: mod.AreaChart as unknown as React.ComponentType<React.ComponentProps<typeof AreaChart>> })),
   { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> }
-) as React.ComponentType<{ children?: React.ReactNode; data?: unknown[]; margin?: { top?: number; right?: number; left?: number; bottom?: number }; [key: string]: unknown }>
+)
 
-export const RechartsSector = dynamic(
-  () => import('recharts').then((mod) => ({ default: mod.Sector as any })),
+export const RechartsSector = dynamic<React.ComponentProps<typeof Sector>>(
+  () => import('recharts').then((mod) => ({ default: mod.Sector as unknown as React.ComponentType<React.ComponentProps<typeof Sector>> })),
   { ssr: false }
 )

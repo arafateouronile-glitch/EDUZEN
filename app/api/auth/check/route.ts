@@ -24,19 +24,21 @@ function getSupabaseSession(request: NextRequest) {
 
 /**
  * API Route de test pour vérifier l'état de l'authentification
+ * RÉSERVÉ AU DÉVELOPPEMENT — bloqué en production
  */
 export async function GET(request: NextRequest) {
+  // Bloquer en production : cette route expose des informations de debug sensibles
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   return withRateLimit(request, generalRateLimiter, async (req) => {
     try {
-      // Liste tous les cookies présents
+      // Cherche les cookies Supabase (noms seulement, pas de valeurs)
       const allCookies = request.cookies.getAll()
-      const cookieNames = allCookies.map(c => c.name)
-
-      // Cherche les cookies Supabase
-      const supabaseCookies = allCookies.filter(c =>
-        c.name.includes('supabase') ||
-        c.name.includes('sb-')
-      )
+      const supabaseCookieNames = allCookies
+        .filter(c => c.name.includes('supabase') || c.name.includes('sb-'))
+        .map(c => c.name)
 
       // Parser le token manuellement
       const sessionTokens = getSupabaseSession(request)
@@ -50,47 +52,29 @@ export async function GET(request: NextRequest) {
             getAll() {
               return request.cookies.getAll()
             },
-            setAll(cookiesToSet) {
+            setAll() {
               // Ne rien faire
             },
           },
         }
       )
 
-      // Méthode 1 : getUser standard
+      // Vérifier l'authentification standard
       const { data: userData, error: userError } = await supabase.auth.getUser()
-
-      // Méthode 2 : setSession avec les tokens parsés
-      let userFromManualSession = null
-      if (sessionTokens?.access_token) {
-        const { data, error } = await supabase.auth.setSession({
-          access_token: sessionTokens.access_token,
-          refresh_token: sessionTokens.refresh_token || '',
-        })
-        userFromManualSession = data?.user
-      }
 
       return NextResponse.json({
         timestamp: new Date().toISOString(),
         cookies: {
           total: allCookies.length,
-          names: cookieNames,
-          supabaseCookies: supabaseCookies.map(c => ({
-            name: c.name,
-            valueLength: c.value?.length || 0,
-            valuePreview: c.value?.substring(0, 50) + '...'
-          }))
+          supabaseCookieNames,
         },
         standardAuth: {
-          id: userData?.user?.id || null,
-          email: userData?.user?.email || null,
-          error: userError?.message || null
+          authenticated: !!userData?.user,
+          error: userError?.message || null,
         },
         manualSessionAuth: {
           hasTokens: !!sessionTokens,
-          id: userFromManualSession?.id || null,
-          email: userFromManualSession?.email || null,
-        }
+        },
       })
     } catch (error: unknown) {
       throw errorHandler.handleError(error, {

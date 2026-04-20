@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     logger.info('[Generate DOCX] ✅ Document généré avec succès', { size: outputBuffer.length, unit: 'bytes' })
 
     // Retourner le document
-    return new NextResponse(outputBuffer as any, {
+    return new NextResponse(new Uint8Array(outputBuffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${filename}"`,
