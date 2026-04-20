@@ -16,7 +16,8 @@ import {
   Settings, Users, Shield, Bell, CreditCard, Globe, FileText,
   Layout, Code, Save, Building2, Mail, Phone, MapPin,
   Calendar, DollarSign, Languages, Moon, Sun, Key,
-  Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image as ImageIcon, Award, Palette, X, Clock, Receipt, FileSignature, User
+  Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image as ImageIcon, Award, Palette, X, Clock, Receipt, FileSignature, User,
+  Lock, FileDown, ClipboardCheck, Accessibility, Plug
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -129,9 +130,50 @@ export default function SettingsPage() {
     timezone: 'Europe/Paris',
   })
 
+  // Récupérer l'abonnement actif + plan + factures
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['subscription', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return null
+      const { data } = await supabase
+        .from('organization_subscriptions')
+        .select(`
+          id,
+          current_period_end,
+          current_period_start,
+          billing_cycle,
+          status,
+          trial_ends_at,
+          subscription_plans(id, name, features, max_users, max_students, max_storage_gb, price_monthly, price_yearly)
+        `)
+        .eq('organization_id', user.organization_id)
+        .eq('status', 'active')
+        .order('current_period_end', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      return data
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  const { data: invoices } = useQuery({
+    queryKey: ['subscription-invoices', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data } = await supabase
+        .from('subscription_invoices')
+        .select('id, invoice_number, amount, currency, status, paid_at, billing_period_start, billing_period_end, pdf_url')
+        .eq('organization_id', user.organization_id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+      return data ?? []
+    },
+    enabled: !!user?.organization_id,
+  })
+
   // Récupérer l'organisation
-  const { 
-    data: organization, 
+  const {
+    data: organization,
     refetch: refetchOrg,
     isLoading: isLoadingOrg,
     isError: isErrorOrg,
@@ -613,6 +655,7 @@ export default function SettingsPage() {
     communications: false,
     payments: false,
     modules: false,
+    compliance: false,
     developer: false,
   })
 
@@ -648,11 +691,9 @@ export default function SettingsPage() {
       label: 'Communications',
       color: 'orange-500',
       tabs: [
-        { id: 'notifications', label: 'Notifications', icon: Bell, href: '/dashboard/settings/notifications' },
         { id: 'email-templates', label: 'Modèles d\'emails', icon: Mail, href: '/dashboard/settings/email-templates' },
         { id: 'email-schedules', label: 'Planification', icon: Clock, href: '/dashboard/settings/email-schedules' },
-        { id: 'email-test', label: 'Test Email', icon: Mail, href: '/dashboard/settings/email-test' },
-        { id: 'document-templates', label: 'Documents', icon: FileText, href: '/dashboard/settings/document-templates' },
+{ id: 'document-templates', label: 'Documents', icon: FileText, href: '/dashboard/settings/document-templates' },
       ]
     },
     {
@@ -661,8 +702,6 @@ export default function SettingsPage() {
       color: 'emerald-600',
       tabs: [
         { id: 'payment-reminders', label: 'Rappels', icon: Bell, href: '/dashboard/settings/payment-reminders' },
-        { id: 'stripe', label: 'Stripe', icon: CreditCard, href: '/dashboard/settings/stripe' },
-        { id: 'sepa', label: 'SEPA', icon: CreditCard, href: '/dashboard/settings/sepa' },
         { id: 'funding-types', label: 'Financements', icon: DollarSign, href: '/dashboard/settings/funding-types' },
         { id: 'charge-categories', label: 'Charges', icon: Receipt, href: '/dashboard/settings/charge-categories' },
         { id: 'accounting', label: 'Comptabilité', icon: Building2, href: '/dashboard/settings/accounting' },
@@ -679,11 +718,27 @@ export default function SettingsPage() {
       ]
     },
     {
+      id: 'compliance',
+      label: 'Conformité & Réglementation',
+      color: 'violet-600',
+      tabs: [
+        { id: 'qualiopi', label: 'Qualiopi', icon: Award, href: '/dashboard/qualiopi' },
+        { id: 'qualiopi-check', label: 'Qualiopi Check', icon: ClipboardCheck, href: '/dashboard/qualiopi/check' },
+        { id: 'accessibility', label: 'Accessibilité Handicap', icon: Accessibility, href: '/dashboard/accessibility' },
+        { id: 'cpf', label: 'CPF', icon: GraduationCap, href: '/dashboard/cpf' },
+        { id: 'certifications', label: 'Certifications RNCP/RS', icon: Award, href: '/dashboard/certifications' },
+        { id: 'opco', label: 'OPCO', icon: Building2, href: '/dashboard/opco' },
+        { id: 'gdpr', label: 'RGPD', icon: Lock, href: '/dashboard/gdpr' },
+        { id: 'compliance-page', label: 'Conformité', icon: Shield, href: '/dashboard/compliance' },
+        { id: 'exports', label: 'Historique exports', icon: FileDown, href: '/dashboard/admin/exports' },
+      ]
+    },
+    {
       id: 'developer',
       label: 'Développeur',
       color: 'gray-600',
       tabs: [
-        { id: 'api', label: 'Intégrations & API', icon: Code, href: '/dashboard/integrations' },
+        { id: 'api', label: 'Intégrations & API', icon: Plug, href: '/dashboard/integrations' },
       ]
     },
   ]
@@ -1769,94 +1824,170 @@ export default function SettingsPage() {
                           }}
                         />
 
-                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                          <div>
-                            <div className="flex items-center gap-3 mb-3">
-                              <motion.span
-                                className="text-sm font-bold bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/30 shadow-lg"
-                                whileHover={{ scale: 1.05 }}
-                              >
-                                Plan Actuel
-                              </motion.span>
-                              {organization.subscription_status === 'active' && (
-                                <motion.span
-                                  className="flex items-center gap-2 text-sm font-bold text-emerald-300 bg-emerald-900/40 px-4 py-1.5 rounded-full backdrop-blur-sm border border-emerald-400/40 shadow-lg"
-                                  whileHover={{ scale: 1.05 }}
-                                >
-                                  <motion.span
-                                    className="w-2 h-2 rounded-full bg-emerald-400"
-                                    animate={{
-                                      scale: [1, 1.2, 1],
-                                      opacity: [1, 0.5, 1],
-                                    }}
-                                    transition={{
-                                      duration: 2,
-                                      repeat: Infinity,
-                                      ease: "easeInOut"
-                                    }}
-                                  />
-                                  Actif
-                                </motion.span>
-                              )}
-                            </div>
-                            <motion.h3
-                              className="text-5xl font-display font-bold mb-2 tracking-tight drop-shadow-lg"
-                              whileHover={{ scale: 1.02 }}
-                            >
-                              {organization.subscription_tier === 'free' ? 'Gratuit' :
-                               organization.subscription_tier === 'starter' ? 'Starter' :
-                               organization.subscription_tier === 'professional' ? 'Professionnel' :
-                               'Enterprise'}
-                            </motion.h3>
-                            <p className="text-white/90 font-semibold drop-shadow-md">Renouvellement le 01/01/2025</p>
-                          </div>
+                        {(() => {
+                          const plan = subscriptionData
+                            ? (Array.isArray((subscriptionData as any).subscription_plans)
+                                ? (subscriptionData as any).subscription_plans[0]
+                                : (subscriptionData as any).subscription_plans)
+                            : null
+                          const renewalDate = subscriptionData?.current_period_end
+                            ? new Date(subscriptionData.current_period_end).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                            : null
+                          const planFeatures: string[] = Array.isArray(plan?.features)
+                            ? plan.features as string[]
+                            : plan?.features && typeof plan.features === 'object'
+                              ? Object.values(plan.features as Record<string, string>)
+                              : []
+                          const tierLabel = plan?.name
+                            ?? (organization.subscription_tier === 'free' ? 'Gratuit'
+                              : organization.subscription_tier === 'starter' ? 'Starter'
+                              : organization.subscription_tier === 'professional' ? 'Professionnel'
+                              : organization.subscription_tier === 'enterprise' ? 'Enterprise'
+                              : organization.subscription_tier ?? 'Gratuit')
 
-                          <div className="flex flex-col gap-3 w-full md:w-auto">
-                            <motion.div
-                              whileHover={{ scale: 1.05, y: -2 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <Button className="group relative overflow-hidden bg-white text-brand-blue hover:bg-white shadow-xl hover:shadow-2xl border-0 w-full md:w-auto font-bold">
-                                <motion.div
-                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-blue/10 to-transparent"
-                                  initial={{ x: '-100%' }}
-                                  whileHover={{ x: '100%' }}
-                                  transition={{ duration: 0.6 }}
-                                />
-                                <span className="relative z-10">Changer de plan</span>
-                              </Button>
-                            </motion.div>
-                            <motion.div
-                              whileHover={{ scale: 1.05, y: -2 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <Button variant="outline" className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20 hover:border-white/50 hover:text-white w-full md:w-auto font-bold shadow-lg">
-                                Historique factures
-                              </Button>
-                            </motion.div>
-                          </div>
-                        </div>
+                          return (
+                            <>
+                              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                                <div>
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <motion.span
+                                      className="text-sm font-bold bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/30 shadow-lg"
+                                      whileHover={{ scale: 1.05 }}
+                                    >
+                                      Plan Actuel
+                                    </motion.span>
+                                    {(organization.subscription_status === 'active' || subscriptionData?.status === 'active') && (
+                                      <motion.span
+                                        className="flex items-center gap-2 text-sm font-bold text-emerald-300 bg-emerald-900/40 px-4 py-1.5 rounded-full backdrop-blur-sm border border-emerald-400/40 shadow-lg"
+                                        whileHover={{ scale: 1.05 }}
+                                      >
+                                        <motion.span
+                                          className="w-2 h-2 rounded-full bg-emerald-400"
+                                          animate={{ scale: [1, 1.2, 1], opacity: [1, 0.5, 1] }}
+                                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                        />
+                                        Actif
+                                      </motion.span>
+                                    )}
+                                    {subscriptionData?.billing_cycle && (
+                                      <span className="text-xs bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 text-white/80">
+                                        {subscriptionData.billing_cycle === 'yearly' ? 'Annuel' : 'Mensuel'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <motion.h3
+                                    className="text-5xl font-display font-bold mb-2 tracking-tight drop-shadow-lg"
+                                    whileHover={{ scale: 1.02 }}
+                                  >
+                                    {tierLabel}
+                                  </motion.h3>
+                                  {renewalDate ? (
+                                    <p className="text-white/90 font-semibold drop-shadow-md">Renouvellement le {renewalDate}</p>
+                                  ) : (
+                                    <p className="text-white/60 font-medium drop-shadow-md text-sm">Aucun renouvellement planifié</p>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-col gap-3 w-full md:w-auto">
+                                  <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.98 }}>
+                                    <Button className="group relative overflow-hidden bg-white text-brand-blue hover:bg-white shadow-xl hover:shadow-2xl border-0 w-full md:w-auto font-bold">
+                                      <motion.div
+                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-blue/10 to-transparent"
+                                        initial={{ x: '-100%' }}
+                                        whileHover={{ x: '100%' }}
+                                        transition={{ duration: 0.6 }}
+                                      />
+                                      <span className="relative z-10">Changer de plan</span>
+                                    </Button>
+                                  </motion.div>
+                                </div>
+                              </div>
+
+                              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Fonctionnalités du plan */}
+                                <div className="p-6 border border-gray-100 rounded-xl bg-gray-50/50">
+                                  <h4 className="font-semibold text-gray-900 mb-4">Inclus dans votre offre</h4>
+                                  {planFeatures.length > 0 ? (
+                                    <ul className="space-y-3 text-sm text-gray-600">
+                                      {planFeatures.map((feature, i) => (
+                                        <li key={i} className="flex items-center gap-2">
+                                          <Shield className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                                          <span>{feature}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <ul className="space-y-3 text-sm text-gray-600">
+                                      {plan?.max_users && (
+                                        <li className="flex items-center gap-2">
+                                          <Users className="h-4 w-4 text-emerald-600" />
+                                          <span>{plan.max_users === -1 ? 'Utilisateurs illimités' : `${plan.max_users} utilisateurs max`}</span>
+                                        </li>
+                                      )}
+                                      {plan?.max_students && (
+                                        <li className="flex items-center gap-2">
+                                          <GraduationCap className="h-4 w-4 text-emerald-600" />
+                                          <span>{plan.max_students === -1 ? 'Apprenants illimités' : `${plan.max_students} apprenants max`}</span>
+                                        </li>
+                                      )}
+                                      {plan?.max_storage_gb && (
+                                        <li className="flex items-center gap-2">
+                                          <Globe className="h-4 w-4 text-emerald-600" />
+                                          <span>{plan.max_storage_gb} Go de stockage</span>
+                                        </li>
+                                      )}
+                                      {!plan && (
+                                        <li className="text-gray-400 text-sm italic">Aucune information disponible</li>
+                                      )}
+                                    </ul>
+                                  )}
+                                </div>
+
+                                {/* Historique des factures */}
+                                <div className="p-6 border border-gray-100 rounded-xl bg-gray-50/50">
+                                  <h4 className="font-semibold text-gray-900 mb-4">Historique des factures</h4>
+                                  {invoices && invoices.length > 0 ? (
+                                    <ul className="space-y-2 text-sm">
+                                      {invoices.map((inv) => (
+                                        <li key={inv.id} className="flex items-center justify-between gap-2 py-2 border-b border-gray-100 last:border-0">
+                                          <div className="flex flex-col">
+                                            <span className="font-medium text-gray-800">{inv.invoice_number}</span>
+                                            <span className="text-xs text-gray-400">
+                                              {inv.billing_period_start
+                                                ? new Date(inv.billing_period_start).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+                                                : inv.paid_at
+                                                  ? new Date(inv.paid_at).toLocaleDateString('fr-FR')
+                                                  : '—'}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <span className="font-semibold text-gray-900">
+                                              {(inv.amount / 100).toLocaleString('fr-FR', { style: 'currency', currency: inv.currency?.toUpperCase() ?? 'EUR' })}
+                                            </span>
+                                            <span className={cn(
+                                              'text-xs px-2 py-0.5 rounded-full font-medium',
+                                              inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'
+                                            )}>
+                                              {inv.status === 'paid' ? 'Payée' : inv.status}
+                                            </span>
+                                            {inv.pdf_url && (
+                                              <a href={inv.pdf_url} target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline text-xs">
+                                                PDF
+                                              </a>
+                                            )}
+                                          </div>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="text-sm text-gray-400 italic">Aucune facture disponible</p>
+                                  )}
+                                </div>
+                              </div>
+                            </>
+                          )
+                        })()}
                       </motion.div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="p-6 border border-gray-100 rounded-xl bg-gray-50/50">
-                          <h4 className="font-semibold text-gray-900 mb-4">Inclus dans votre offre</h4>
-                          <ul className="space-y-3 text-sm text-gray-600">
-                            <li className="flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-emerald-600" />
-                              <span>Support prioritaire 24/7</span>
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-emerald-600" />
-                              <span>Utilisateurs illimités</span>
-                            </li>
-                            <li className="flex items-center gap-2">
-                              <Globe className="h-4 w-4 text-emerald-600" />
-                              <span>Domaine personnalisé</span>
-                            </li>
-                          </ul>
-                        </div>
-                            </div>
                           </div>
                         )}
                 </GlassCard>
