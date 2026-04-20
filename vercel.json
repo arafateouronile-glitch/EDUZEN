@@ -79,6 +79,9 @@
     }
   ],
   "functions": {
+    "app/api/jury/send-convocation/route.ts": {
+      "maxDuration": 30
+    },
     "app/api/documents/generate-pdf/route.ts": {
       "maxDuration": 60,
       "memory": 1024
