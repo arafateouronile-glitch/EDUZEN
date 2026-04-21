@@ -4,8 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_TEMPLATES } from '@/lib/data/default-email-templates'
 
-export { DEFAULT_TEMPLATES }
-
 // ─── Server action ────────────────────────────────────────────────────────────
 
 export async function seedDefaultEmailTemplates(): Promise<{
