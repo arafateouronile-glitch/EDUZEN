@@ -304,6 +304,7 @@ async function sendDocumentByEmail(
         to,
         subject: subject || `Document : ${document.name}`,
         html,
+        template_type: document.type ?? null,
       }),
     })
 

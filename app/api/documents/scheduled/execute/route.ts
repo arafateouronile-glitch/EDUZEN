@@ -182,12 +182,13 @@ export async function POST(request: NextRequest) {
                   attachments: [{
                     filename: fileName,
                     content: arrayBuffer,
-                    contentType: generation.format === 'PDF' 
-                      ? 'application/pdf' 
+                    contentType: generation.format === 'PDF'
+                      ? 'application/pdf'
                       : generation.format === 'DOCX'
                       ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                       : 'text/html',
                   }],
+                  templateType: template.type,
                 })
               }
             }

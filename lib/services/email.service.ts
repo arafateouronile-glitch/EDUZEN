@@ -37,6 +37,7 @@ interface SendEmailOptions {
   cc?: string | string[]
   bcc?: string | string[]
   replyTo?: string
+  templateType?: string
 }
 
 export class EmailService {
@@ -108,6 +109,7 @@ export class EmailService {
           cc: options.cc,
           bcc: options.bcc,
           replyTo: options.replyTo,
+          template_type: options.templateType,
         }),
       })
 
@@ -138,13 +140,15 @@ export class EmailService {
     pdfBlob: Blob,
     filename: string,
     htmlBody?: string,
-    textBody?: string
+    textBody?: string,
+    templateType?: string
   ): Promise<{ success: boolean; message: string }> {
     return this.sendEmail({
       to,
       subject,
       html: htmlBody,
       text: textBody,
+      templateType,
       attachments: [
         {
           filename,

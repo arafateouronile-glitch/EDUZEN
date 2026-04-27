@@ -98,6 +98,11 @@ export async function POST(request: NextRequest) {
       type: "email",
       required: false,
     },
+    template_type: {
+      type: "string",
+      required: false,
+      maxLength: 100,
+    },
   };
 
   return withBodyValidation(request, schema, async (req, validatedData, rawBody) => {
@@ -140,7 +145,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Utiliser les données validées
-      const { to, subject, html, text, cc, bcc, replyTo } = validatedData;
+      const { to, subject, html, text, cc, bcc, replyTo, template_type } = validatedData;
 
       // Récupérer l'organisation de l'utilisateur
       const { data: userData } = await supabase
@@ -266,6 +271,22 @@ export async function POST(request: NextRequest) {
           subject: String(subject),
           resendId: data?.id,
         });
+
+        // Insérer dans email_logs pour traçabilité (checklist Qualiopi, timeline CRM, etc.)
+        try {
+          await supabase.from("email_logs").insert({
+            recipient: recipients[0],
+            subject: String(subject),
+            template_type: template_type ? String(template_type) : null,
+            organization_id: userData.organization_id,
+            resend_id: data?.id ?? null,
+            status: "sent",
+            metadata: { recipients },
+          });
+        } catch (logError) {
+          // Non-bloquant : l'email est envoyé, on logue juste l'erreur
+          logger.error("Email Send - Failed to insert email_log", logError as Error);
+        }
 
         return NextResponse.json({
           success: true,

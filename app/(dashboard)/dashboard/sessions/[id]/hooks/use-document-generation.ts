@@ -1706,7 +1706,9 @@ export function useDocumentGeneration({
         customSubject,
         pdfBlob,
         `convocation_${student.last_name}_${student.first_name}.pdf`,
-        emailBodyHTML
+        emailBodyHTML,
+        undefined,
+        'convocation'
       )
 
       addToast({
@@ -1822,7 +1824,9 @@ export function useDocumentGeneration({
         emailSubject,
         pdfBlob2,
         `convocation_${student.last_name}_${student.first_name}.pdf`,
-        emailBody
+        emailBody,
+        undefined,
+        'convocation'
       )
 
       addToast({
@@ -2093,7 +2097,9 @@ export function useDocumentGeneration({
         customSubject,
         pdfBlob,
         `contrat_${student.last_name}_${student.first_name}.pdf`,
-        emailBodyHTML
+        emailBodyHTML,
+        undefined,
+        'contrat'
       )
 
       addToast({
@@ -2528,7 +2534,9 @@ export function useDocumentGeneration({
         emailSubject,
         pdfBlob,
         `contrat_${student.last_name}_${student.first_name}.pdf`,
-        emailBody
+        emailBody,
+        undefined,
+        'contrat'
       )
 
       addToast({

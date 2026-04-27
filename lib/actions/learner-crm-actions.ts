@@ -304,8 +304,14 @@ async function buildTimeline(
       // Email envoyé
       events.push({
         id:         `email-sent-${em.id}`,
-        event_type: em.template_type === 'convocation' ? 'convocation_envoyee'
-                  : em.template_type === 'contrat'     ? 'contrat_genere'
+        event_type: (em.template_type === 'convocation' || em.template_type?.includes('convoc'))
+                    ? 'convocation_envoyee'
+                  : (em.template_type === 'contrat' || em.template_type?.includes('contrat') || em.template_type?.includes('convention'))
+                    ? 'contrat_genere'
+                  : (em.template_type?.includes('diplom') || em.template_type?.includes('certif') || em.template_type?.includes('attestat'))
+                    ? 'diplome_emis'
+                  : (em.template_type?.includes('regl') || em.template_type?.includes('règl'))
+                    ? 'reglement_envoye'
                   : 'email_envoye',
         metadata:   { email_log_id: em.id, subject: em.subject, template_type: em.template_type },
         created_at: em.created_at,

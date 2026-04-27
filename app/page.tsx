@@ -145,6 +145,20 @@ export default function HomePage() {
         {/* Hero - SSR activé, critique pour LCP */}
         <Hero />
 
+        {/* Aperçu vidéo — courte présentation de l'app (~1 min) */}
+        <section className="pt-4 pb-16 bg-white">
+          <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl">
+            <video
+              src="/videos/VIDEO LP EDUZEN 1.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full rounded-2xl shadow-2xl"
+            />
+          </div>
+        </section>
+
         {/* Sections below-the-fold rendues à l'approche viewport (qualité visuelle inchangée). */}
         <DeferredSection>
           <Suspense fallback={<SectionSkeleton />}>

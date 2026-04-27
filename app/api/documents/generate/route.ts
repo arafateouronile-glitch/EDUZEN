@@ -142,6 +142,7 @@ async function sendDocumentEmail(params: {
       </div></body></html>`,
     text: `Bonjour${recipientName ? ` ${recipientName}` : ''},\n\nVeuillez trouver ci-joint votre document ${documentTitle}.\n\nCe document a été généré le ${new Date().toLocaleDateString('fr-FR')}.\n\n${organizationName ? `Cordialement,\n${organizationName}` : 'Cordialement,\nL\'équipe Eduzen'}`,
     attachments: [{ filename: fileName, content: arrayBuffer, contentType: contentTypeMap[body.format] || 'application/octet-stream' }],
+    templateType: template.type,
   })
 
   logger.info('Email envoyé', { to: emailTo, documentId })

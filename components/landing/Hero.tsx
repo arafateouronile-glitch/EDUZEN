@@ -79,9 +79,7 @@ const MagneticButton = ({ children, className, ...props }: any) => {
 
 export const Hero = memo(function Hero() {
   const { scrollY } = useScroll();
-  const y1 = useTransform(scrollY, [0, 500], [0, 200]);
   const y2 = useTransform(scrollY, [0, 500], [0, -150]);
-  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
   
   // Animation variantes pour le texte
   const textVariants = {
@@ -97,7 +95,7 @@ export const Hero = memo(function Hero() {
   };
 
   return (
-    <section className="relative min-h-screen pt-32 pb-16 md:pt-48 md:pb-32 overflow-hidden bg-[#FDFDFD]">
+    <section className="relative pt-32 pb-4 md:pt-48 md:pb-8 overflow-hidden bg-[#FDFDFD]">
       {/* Background Grille Subtile */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
@@ -160,7 +158,7 @@ export const Hero = memo(function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.8 }}
-            className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-16 md:mb-24 items-center justify-center"
+            className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-8 md:mb-10 items-center justify-center"
           >
             <Link href="/auth/register" className="w-full sm:w-auto">
               <MagneticButton className="group relative w-full sm:w-auto overflow-hidden rounded-full bg-[#111] px-8 py-4 text-white transition-all hover:bg-gray-900 active:scale-95 shadow-xl hover:shadow-2xl hover:shadow-brand-blue/20">
@@ -179,68 +177,6 @@ export const Hero = memo(function Hero() {
                 <span>Voir la Démo</span>
               </div>
             </MagneticButton>
-          </motion.div>
-
-          {/* Dashboard Preview - Glassmorphism Avancé */}
-          <motion.div 
-            style={{ y: y1, opacity }}
-            className="relative w-full max-w-6xl mx-auto perspective-[2000px]"
-          >
-            <motion.div
-              initial={{ rotateX: 20, opacity: 0, y: 100 }}
-              animate={{ rotateX: 0, opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 1.2, type: "spring", stiffness: 30 }}
-              className="relative rounded-2xl border border-gray-200/60 bg-white/40 p-2 shadow-2xl backdrop-blur-xl ring-1 ring-white/50"
-            >
-              <div className="rounded-xl overflow-hidden bg-white border border-gray-100 shadow-inner">
-                {/* Fake Browser Bar */}
-                <div className="h-10 border-b border-gray-100 bg-gray-50/50 flex items-center px-4 gap-2">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-400/80" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
-                    <div className="w-3 h-3 rounded-full bg-green-400/80" />
-                  </div>
-                  <div className="mx-auto w-1/3 h-5 bg-white rounded-md border border-gray-100 shadow-sm flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-gray-300 mr-2" />
-                    <div className="h-2 w-20 bg-gray-100 rounded-full" />
-                  </div>
-                </div>
-                
-                {/* Image Placeholder avec Shimmer */}
-                <div className="relative aspect-[16/9] w-full bg-gray-50 group overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-gray-100 via-white to-gray-50" />
-                  
-                  {/* Contenu simulé du dashboard */}
-                  <div className="absolute inset-0 p-8 grid grid-cols-12 gap-6 opacity-60">
-                    <div className="col-span-3 h-full bg-white rounded-xl border border-gray-100 shadow-sm" />
-                    <div className="col-span-9 h-full flex flex-col gap-6">
-                      <div className="h-32 w-full bg-white rounded-xl border border-gray-100 shadow-sm" />
-                      <div className="flex-1 grid grid-cols-3 gap-6">
-                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm" />
-                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm" />
-                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Overlay avec Texte */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-white/10 backdrop-blur-[2px]">
-                    <div className="bg-white/80 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/60 shadow-xl flex flex-col items-center gap-3">
-                       <span className="text-4xl font-black bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent font-display tracking-tight">
-                         Interface Premium
-                       </span>
-                       <div className="h-1 w-20 bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full" />
-                    </div>
-                  </div>
-
-                   {/* Reflet lumineux sur le verre */}
-                   <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-all duration-700 pointer-events-none transform translate-x-[-100%] group-hover:translate-x-[100%] ease-in-out" />
-                </div>
-              </div>
-            </motion.div>
-            
-            {/* Glow derrière le dashboard */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-brand-blue to-brand-cyan opacity-20 blur-3xl -z-10 rounded-[3rem]" />
           </motion.div>
 
         </div>
