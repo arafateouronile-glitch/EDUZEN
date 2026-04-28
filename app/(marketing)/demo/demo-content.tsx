@@ -139,16 +139,25 @@ export function DemoContent() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Voici la démo complète</h2>
               <p className="text-gray-500">Découvre toutes les fonctionnalités d'EDUZEN.</p>
             </div>
-            <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl">
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${YOUTUBE_ID}?autoplay=1&rel=0`}
-                title="Démo EDUZEN"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full"
+            <a
+              href={`https://www.youtube.com/watch?v=${YOUTUBE_ID}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative block w-full aspect-video rounded-2xl overflow-hidden shadow-2xl"
+            >
+              <img
+                src={`https://img.youtube.com/vi/${YOUTUBE_ID}/maxresdefault.jpg`}
+                alt="Démo EDUZEN"
+                className="w-full h-full object-cover"
               />
-            </div>
+              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                <div className="w-20 h-20 rounded-full bg-white/90 group-hover:bg-white transition-colors flex items-center justify-center shadow-2xl">
+                  <svg className="w-8 h-8 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+            </a>
           </div>
         )}
       </div>
