@@ -169,8 +169,8 @@ export function generateCSP(config: CSPConfig = {}): string {
 
   directives.push(`connect-src ${connectSrc.join(' ')}`)
 
-  // frame-src: Iframes autorisées (Stripe pour 3D Secure, CardElement et Checkout)
-  directives.push("frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://*.stripe.network")
+  // frame-src: Iframes autorisées (Stripe pour 3D Secure, CardElement et Checkout + YouTube pour la démo)
+  directives.push("frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://*.stripe.network https://www.youtube.com https://youtube.com")
 
   // media-src: Médias autorisés
   directives.push("media-src 'self' https://*.supabase.co blob:")
