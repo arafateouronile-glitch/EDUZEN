@@ -171,12 +171,14 @@ export const Hero = memo(function Hero() {
               </MagneticButton>
             </Link>
 
-            <MagneticButton className="group relative w-full sm:w-auto overflow-hidden rounded-full border border-gray-200 bg-white px-8 py-4 text-gray-900 transition-all hover:bg-gray-50 active:scale-95 shadow-sm hover:shadow-md">
-              <div className="relative z-10 flex items-center justify-center gap-2 font-semibold">
-                <PlayCircle className="w-4 h-4 text-gray-500 group-hover:text-brand-blue transition-colors" />
-                <span>Voir la Démo</span>
-              </div>
-            </MagneticButton>
+            <Link href="/demo" className="w-full sm:w-auto">
+              <MagneticButton className="group relative w-full sm:w-auto overflow-hidden rounded-full border border-gray-200 bg-white px-8 py-4 text-gray-900 transition-all hover:bg-gray-50 active:scale-95 shadow-sm hover:shadow-md">
+                <div className="relative z-10 flex items-center justify-center gap-2 font-semibold">
+                  <PlayCircle className="w-4 h-4 text-gray-500 group-hover:text-brand-blue transition-colors" />
+                  <span>Voir la Démo</span>
+                </div>
+              </MagneticButton>
+            </Link>
           </motion.div>
 
         </div>
