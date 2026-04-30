@@ -81,8 +81,8 @@ export async function PATCH(
 
     const updates: Record<string, unknown> = {}
 
-    if (body.title) updates.title = body.title
-    if (body.slug) updates.slug = body.slug
+    if (body.title) updates.title = body.title.trim()
+    if (body.slug) updates.slug = body.slug.trim()
     if (body.excerpt !== undefined) updates.excerpt = body.excerpt
     if (body.content) updates.content = body.content
     if (body.featured_image_url !== undefined) updates.featured_image_url = body.featured_image_url
@@ -98,7 +98,7 @@ export async function PATCH(
     if (body.scheduled_for !== undefined) {
       updates.scheduled_for = body.scheduled_for ? new Date(body.scheduled_for).toISOString() : null
     }
-    if (body.category_id !== undefined) updates.category_id = body.category_id
+    if (body.category_id !== undefined) updates.category_id = body.category_id || null
     if (body.allow_comments !== undefined) updates.allow_comments = body.allow_comments
     if (body.is_featured !== undefined) updates.is_featured = body.is_featured
     if (body.metadata) updates.metadata = body.metadata
