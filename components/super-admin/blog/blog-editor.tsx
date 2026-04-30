@@ -84,6 +84,9 @@ export function BlogEditor({ value, onChange, placeholder = 'Commencez à écrir
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // Disable extensions we configure separately to avoid duplicates
+        link: false,
+        underline: false,
       }),
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
