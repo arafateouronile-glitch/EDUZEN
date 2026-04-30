@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -28,8 +27,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import {
   Popover,
   PopoverContent,
@@ -37,39 +34,15 @@ import {
 } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import {
-  Bold,
-  Italic,
-  Underline,
-  Strikethrough,
-  List,
-  ListOrdered,
-  Link2,
-  Image as ImageIcon,
-  Code,
-  Quote,
-  Heading1,
-  Heading2,
-  Heading3,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Undo,
-  Redo,
-  Eye,
   Save,
   Send,
-  Clock,
   CalendarIcon,
-  FileText,
-  Settings,
-  Search,
-  X,
-  Plus,
   Hash,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { BlogEditor } from './blog-editor'
 import type {
   BlogPost,
   BlogCategory,
@@ -130,7 +103,6 @@ export function BlogPostEditor({
   const [activeTab, setActiveTab] = useState('editor')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedTags, setSelectedTags] = useState<string[]>(post?.tags?.map((t) => t.id) || [])
-  const [showPreview, setShowPreview] = useState(false)
 
   const form = useForm<BlogPostFormData>({
     resolver: zodResolver(blogPostSchema),
@@ -255,94 +227,21 @@ export function BlogPostEditor({
               )}
             />
 
-            {/* Toolbar */}
-            <Card className="sticky top-0 z-10">
-              <CardContent className="p-2">
-                <div className="flex flex-wrap items-center gap-1">
-                  <div className="flex items-center gap-0.5 border-r pr-2 mr-2">
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Bold className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Italic className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Underline className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Strikethrough className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-0.5 border-r pr-2 mr-2">
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Heading1 className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Heading2 className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Heading3 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-0.5 border-r pr-2 mr-2">
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <List className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <ListOrdered className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Quote className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Code className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-0.5 border-r pr-2 mr-2">
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Link2 className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <ImageIcon className="h-4 w-4" aria-hidden />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-0.5 ml-auto">
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Undo className="h-4 w-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8">
-                      <Redo className="h-4 w-4" />
-                    </Button>
-                    <Separator orientation="vertical" className="h-6 mx-2" />
-                    <Button
-                      type="button"
-                      variant={showPreview ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setShowPreview(!showPreview)}
-                      className="gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Aperçu
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Content Editor */}
+            {/* Rich Text Editor */}
             <FormField
               control={form.control}
               name="content"
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Textarea
-                      {...field}
-                      placeholder="Commencez à écrire votre article..."
-                      className="min-h-[400px] text-base leading-relaxed resize-none border-0 shadow-none focus-visible:ring-0"
+                    <BlogEditor
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Commencez à écrire votre article…"
+                      minHeight="400px"
                     />
                   </FormControl>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                     <span>{wordCount} mots</span>
                     <span>{readingTime} min de lecture</span>
                   </div>
