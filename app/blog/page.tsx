@@ -1,42 +1,66 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { formatDate, formatRelativeTime } from '@/lib/utils/format'
+import { formatDate } from '@/lib/utils/format'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Calendar, Clock, ArrowRight, Search, TrendingUp, BookOpen, Tag as TagIcon } from 'lucide-react'
+import { Calendar, Clock, ArrowRight, TrendingUp, BookOpen, Tag as TagIcon } from 'lucide-react'
 import type { BlogPost, BlogCategory, BlogTag } from '@/types/super-admin.types'
 import { Navbar } from '@/components/landing/Navbar'
 import { Footer } from '@/components/landing/Footer'
 import { BlogSearch } from '@/components/blog/blog-search'
 import { BlogSidebar } from '@/components/blog/blog-sidebar'
-import { logger, sanitizeError } from '@/lib/utils/logger'
+import { logger } from '@/lib/utils/logger'
 
 export const metadata = {
   title: 'Blog | EDUZEN',
-  description: 'Découvrez nos articles sur la formation professionnelle, la gestion d\'organisme de formation et bien plus encore.',
+  description: "Découvrez nos articles sur la formation professionnelle, la gestion d'organisme de formation et bien plus encore.",
 }
 
-async function getBlogPosts(categoryId?: string, search?: string, page: number = 1, limit: number = 12) {
+async function getBlogPosts(
+  categoryId?: string,
+  tagSlug?: string,
+  search?: string,
+  page: number = 1,
+  limit: number = 12
+) {
   const supabase = await createClient()
   const offset = (page - 1) * limit
-  
-  // Construire la requête de base
   const now = new Date().toISOString()
+
+  // Si on filtre par tag, on récupère d'abord les IDs des posts associés à ce tag
+  let tagPostIds: string[] | null = null
+  if (tagSlug) {
+    const { data: tag } = await supabase
+      .from('blog_tags')
+      .select('id')
+      .eq('slug', tagSlug)
+      .maybeSingle()
+
+    if (tag) {
+      const { data: postTags } = await supabase
+        .from('blog_post_tags')
+        .select('post_id')
+        .eq('tag_id', tag.id)
+      tagPostIds = (postTags || []).map((pt: { post_id: string }) => pt.post_id)
+    } else {
+      tagPostIds = [] // tag inconnu → aucun résultat
+    }
+  }
+
   let query = supabase
     .from('blog_posts')
     .select('*', { count: 'exact' })
     .eq('status', 'published')
-    // Articles publiés : soit published_at est NULL, soit published_at <= maintenant
     .or(`published_at.is.null,published_at.lte.${now}`)
     .order('published_at', { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1)
 
-  if (categoryId) {
-    query = query.eq('category_id', categoryId)
+  if (categoryId) query = query.eq('category_id', categoryId)
+  if (tagPostIds !== null) {
+    if (tagPostIds.length === 0) return { posts: [], total: 0 }
+    query = query.in('id', tagPostIds)
   }
-
   if (search) {
     query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%,content.ilike.%${search}%`)
   }
@@ -45,21 +69,11 @@ async function getBlogPosts(categoryId?: string, search?: string, page: number =
 
   if (error) {
     logger.error('[Blog] Error fetching blog posts:', error)
-    logger.error('[Blog] Error details:', {
-      message: error.message,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-    })
     return { posts: [], total: 0 }
   }
 
-  logger.debug(`[Blog] Found ${posts?.length || 0} published posts (total: ${count || 0})`)
-
-  // Enrichir avec les catégories et tags
   const postsWithRelations = await Promise.all(
     (posts || []).map(async (post) => {
-      // Récupérer la catégorie
       let category: BlogCategory | null = null
       if (post.category_id) {
         const { data: catData } = await supabase
@@ -70,7 +84,6 @@ async function getBlogPosts(categoryId?: string, search?: string, page: number =
         category = catData as BlogCategory | null
       }
 
-      // Récupérer les tags
       const { data: postTags } = await supabase
         .from('blog_post_tags')
         .select('*')
@@ -78,24 +91,16 @@ async function getBlogPosts(categoryId?: string, search?: string, page: number =
 
       let tags: BlogTag[] = []
       if (postTags && postTags.length > 0) {
-        // La table blog_post_tags a probablement une colonne tag_id
         const tagIds = postTags
-          .map((pt: { tag_id?: string; blog_tag_id?: string }) => pt.tag_id || pt.blog_tag_id)
+          .map((pt: { tag_id?: string }) => pt.tag_id)
           .filter((id): id is string => typeof id === 'string')
         if (tagIds.length > 0) {
-          const { data: tagsData } = await supabase
-            .from('blog_tags')
-            .select('*')
-            .in('id', tagIds)
+          const { data: tagsData } = await supabase.from('blog_tags').select('*').in('id', tagIds)
           tags = (tagsData || []) as BlogTag[]
         }
       }
 
-      return {
-        ...post,
-        tags,
-        blog_categories: category,
-      }
+      return { ...post, tags, blog_categories: category }
     })
   )
 
@@ -108,7 +113,7 @@ async function getBlogPosts(categoryId?: string, search?: string, page: number =
 async function getFeaturedPosts() {
   const supabase = await createClient()
   const now = new Date().toISOString()
-  
+
   const { data: posts, error } = await supabase
     .from('blog_posts')
     .select('*')
@@ -123,7 +128,6 @@ async function getFeaturedPosts() {
     return []
   }
 
-  // Enrichir avec les catégories
   const postsWithCategories = await Promise.all(
     (posts || []).map(async (post) => {
       let category: BlogCategory | null = null
@@ -135,10 +139,7 @@ async function getFeaturedPosts() {
           .maybeSingle()
         category = catData as BlogCategory | null
       }
-      return {
-        ...post,
-        blog_categories: category,
-      }
+      return { ...post, blog_categories: category }
     })
   )
 
@@ -147,8 +148,8 @@ async function getFeaturedPosts() {
 
 async function getCategories() {
   const supabase = await createClient()
-  
-  // Récupérer toutes les catégories actives
+  const now = new Date().toISOString()
+
   const { data: categories, error } = await supabase
     .from('blog_categories')
     .select('*')
@@ -160,8 +161,6 @@ async function getCategories() {
     return []
   }
 
-  // Compter les articles publiés par catégorie
-  const now = new Date().toISOString()
   const categoriesWithCount = await Promise.all(
     (categories || []).map(async (category) => {
       const { count } = await supabase
@@ -170,45 +169,61 @@ async function getCategories() {
         .eq('category_id', category.id)
         .eq('status', 'published')
         .or(`published_at.is.null,published_at.lte.${now}`)
-
-      return {
-        ...category,
-        postsCount: count || 0,
-      }
+      return { ...category, postsCount: count || 0 }
     })
   )
 
-  // Filtrer les catégories qui ont au moins un article publié
   return categoriesWithCount
     .filter((cat) => cat.postsCount > 0)
     .map(({ postsCount, ...cat }) => cat) as BlogCategory[]
 }
 
+async function getTagBySlug(slug: string) {
+  const supabase = await createClient()
+  const { data } = await supabase.from('blog_tags').select('*').eq('slug', slug).maybeSingle()
+  return data as BlogTag | null
+}
+
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; search?: string; page?: string }>
+  searchParams: Promise<{ category?: string; tag?: string; search?: string; page?: string }>
 }) {
   const params = await searchParams
   const categoryId = params.category
+  const tagSlug = params.tag
   const search = params.search
   const page = parseInt(params.page || '1', 10)
 
-  const [{ posts, total }, featuredPosts, categories] = await Promise.all([
-    getBlogPosts(categoryId, search, page, 12),
+  const [{ posts, total }, featuredPosts, categories, selectedTag] = await Promise.all([
+    getBlogPosts(categoryId, tagSlug, search, page, 12),
     getFeaturedPosts(),
     getCategories(),
+    tagSlug ? getTagBySlug(tagSlug) : Promise.resolve(null),
   ])
 
   const totalPages = Math.ceil(total / 12)
-  const selectedCategory = categoryId
-    ? categories.find((c) => c.id === categoryId)
-    : null
+  const selectedCategory = categoryId ? categories.find((c) => c.id === categoryId) : null
+  const isFiltered = Boolean(categoryId || tagSlug || search)
+
+  function buildUrl(overrides: Record<string, string | undefined>) {
+    const p: Record<string, string> = {}
+    if (categoryId) p.category = categoryId
+    if (tagSlug) p.tag = tagSlug
+    if (search) p.search = search
+    if (page > 1) p.page = String(page)
+    Object.entries(overrides).forEach(([k, v]) => {
+      if (v === undefined) delete p[k]
+      else p[k] = v
+    })
+    const qs = new URLSearchParams(p).toString()
+    return `/blog${qs ? `?${qs}` : ''}`
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-gray-50/50 to-white">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 md:px-6 lg:px-8 py-16 md:py-24">
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">
@@ -216,14 +231,14 @@ export default async function BlogPage({
             Blog EDUZEN
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-            Découvrez nos articles sur la formation professionnelle, la gestion d'organisme de formation, 
+            Découvrez nos articles sur la formation professionnelle, la gestion d'organisme de formation,
             les bonnes pratiques et les actualités du secteur.
           </p>
         </div>
 
-        {/* Featured Posts */}
-        {featuredPosts.length > 0 && page === 1 && !categoryId && !search && (
-          <div className="mb-16">
+        {/* Featured Posts — page 1, sans filtre */}
+        {featuredPosts.length > 0 && page === 1 && !isFiltered && (
+          <section className="mb-16">
             <div className="flex items-center gap-2 mb-6">
               <TrendingUp className="h-5 w-5 text-brand-blue" />
               <h2 className="text-2xl font-bold text-gray-900">Articles à la une</h2>
@@ -246,7 +261,7 @@ export default async function BlogPage({
                     )}
                     <CardHeader>
                       {post.blog_categories && (
-                        <Badge variant="outline" className="mb-2 w-fit">
+                        <Badge variant="outline" className="mb-2 w-fit text-xs">
                           {post.blog_categories.name}
                         </Badge>
                       )}
@@ -254,9 +269,7 @@ export default async function BlogPage({
                         {post.title}
                       </CardTitle>
                       {post.excerpt && (
-                        <CardDescription className="line-clamp-2 mt-2">
-                          {post.excerpt}
-                        </CardDescription>
+                        <CardDescription className="line-clamp-2 mt-2">{post.excerpt}</CardDescription>
                       )}
                     </CardHeader>
                     <CardContent>
@@ -274,7 +287,7 @@ export default async function BlogPage({
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center text-brand-blue group-hover:gap-2 transition-all">
+                      <div className="flex items-center text-brand-blue">
                         <span className="font-semibold">Lire l'article</span>
                         <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                       </div>
@@ -283,35 +296,35 @@ export default async function BlogPage({
                 </Link>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         <div className="grid lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3">
-            {/* Search and Filters */}
+            {/* Search */}
             <div className="mb-8">
               <BlogSearch initialSearch={search} />
             </div>
 
-            {/* Category Filter */}
+            {/* Filtres catégories */}
             {categories.length > 0 && (
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
                   <BookOpen className="h-4 w-4 text-gray-500" />
                   <span className="text-sm font-semibold text-gray-700">Catégories :</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link href="/blog">
                     <Badge
-                      variant={!categoryId ? 'default' : 'outline'}
-                      className={!categoryId ? 'bg-brand-blue text-white' : 'cursor-pointer hover:bg-gray-100'}
+                      variant={!categoryId && !tagSlug ? 'default' : 'outline'}
+                      className={!categoryId && !tagSlug ? 'bg-brand-blue text-white' : 'cursor-pointer hover:bg-gray-100'}
                     >
                       Tous
                     </Badge>
                   </Link>
                   {categories.map((category) => (
-                    <Link key={category.id} href={`/blog?category=${category.id}`}>
+                    <Link key={category.id} href={buildUrl({ category: category.id, tag: undefined, page: undefined })}>
                       <Badge
                         variant={categoryId === category.id ? 'default' : 'outline'}
                         className={
@@ -328,47 +341,78 @@ export default async function BlogPage({
               </div>
             )}
 
-            {/* Selected Category Info */}
+            {/* Filtre actif : catégorie */}
             {selectedCategory && (
-              <div className="mb-6 p-4 bg-brand-blue-ghost border border-brand-blue-pale rounded-lg">
-                <p className="text-sm text-gray-600">
-                  Affichage des articles de la catégorie :{' '}
-                  <span className="font-semibold text-brand-blue">{selectedCategory.name}</span>
+              <div className="mb-5 flex items-center gap-3 p-3 bg-brand-blue-ghost border border-brand-blue-pale rounded-lg">
+                <BookOpen className="h-4 w-4 text-brand-blue flex-shrink-0" />
+                <p className="text-sm text-gray-600 flex-1">
+                  Catégorie : <span className="font-semibold text-brand-blue">{selectedCategory.name}</span>
                 </p>
+                <Link href="/blog" className="text-xs text-gray-500 hover:text-gray-700 underline">
+                  Effacer
+                </Link>
               </div>
             )}
 
-            {/* Search Results Info */}
+            {/* Filtre actif : tag */}
+            {selectedTag && (
+              <div className="mb-5 flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <TagIcon className="h-4 w-4 flex-shrink-0" style={{ color: selectedTag.color || undefined }} />
+                <p className="text-sm text-gray-600 flex-1">
+                  Tag :{' '}
+                  <Badge
+                    variant="outline"
+                    className="ml-1"
+                    style={{
+                      borderColor: selectedTag.color || undefined,
+                      color: selectedTag.color || undefined,
+                    }}
+                  >
+                    {selectedTag.name}
+                  </Badge>
+                </p>
+                <Link href="/blog" className="text-xs text-gray-500 hover:text-gray-700 underline">
+                  Effacer
+                </Link>
+              </div>
+            )}
+
+            {/* Résultats de recherche */}
             {search && (
-              <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  Résultats de recherche pour : <span className="font-semibold">"{search}"</span>
-                  {' '}({total} article{total > 1 ? 's' : ''})
+              <div className="mb-5 flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 flex-1">
+                  Recherche : <span className="font-semibold">"{search}"</span>{' '}
+                  <span className="text-gray-400">({total} article{total > 1 ? 's' : ''})</span>
                 </p>
               </div>
             )}
 
-            {/* Posts Grid */}
+            {/* Grille d'articles */}
             {posts.length === 0 ? (
-              <div className="text-center py-16">
+              <div className="text-center py-20">
                 <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-lg font-semibold text-gray-700 mb-2">
                   {search ? 'Aucun article trouvé' : 'Aucun article publié pour le moment'}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 mb-6">
                   {search
-                    ? 'Essayez avec d\'autres mots-clés'
+                    ? "Essayez avec d'autres mots-clés"
                     : 'Revenez bientôt pour découvrir nos contenus !'}
                 </p>
+                {isFiltered && (
+                  <Link href="/blog">
+                    <Button variant="outline">Voir tous les articles</Button>
+                  </Link>
+                )}
               </div>
             ) : (
               <>
                 <div className="grid gap-6 md:grid-cols-2">
                   {posts.map((post) => (
                     <Link key={post.id} href={`/blog/${post.slug}`}>
-                      <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer group border-2 hover:border-brand-blue/20">
+                      <Card className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer group border-2 hover:border-brand-blue/20 overflow-hidden">
                         {post.featured_image_url && (
-                          <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+                          <div className="relative h-48 w-full overflow-hidden">
                             <img
                               src={post.featured_image_url}
                               alt={post.title}
@@ -382,7 +426,7 @@ export default async function BlogPage({
                           </div>
                         )}
                         <CardHeader>
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             {post.blog_categories && (
                               <Badge variant="outline" className="text-xs">
                                 {post.blog_categories.name}
@@ -392,8 +436,11 @@ export default async function BlogPage({
                               <div className="flex items-center gap-1">
                                 <TagIcon className="h-3 w-3 text-gray-400" />
                                 <span className="text-xs text-gray-500">
-                                  {post.tags.slice(0, 2).map((t) => t.name).join(', ')}
-                                  {post.tags.length > 2 && '...'}
+                                  {post.tags
+                                    .slice(0, 2)
+                                    .map((t) => t.name)
+                                    .join(', ')}
+                                  {post.tags.length > 2 && '…'}
                                 </span>
                               </div>
                             )}
@@ -402,29 +449,25 @@ export default async function BlogPage({
                             {post.title}
                           </CardTitle>
                           {post.excerpt && (
-                            <CardDescription className="line-clamp-3 mt-2">
-                              {post.excerpt}
-                            </CardDescription>
+                            <CardDescription className="line-clamp-3 mt-2">{post.excerpt}</CardDescription>
                           )}
                         </CardHeader>
                         <CardContent>
-                          <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                            <div className="flex items-center gap-4">
-                              {post.published_at && (
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>{formatDate(post.published_at, 'dd MMM yyyy')}</span>
-                                </div>
-                              )}
-                              {post.reading_time_minutes && (
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4" />
-                                  <span>{post.reading_time_minutes} min</span>
-                                </div>
-                              )}
-                            </div>
+                          <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                            {post.published_at && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                <span>{formatDate(post.published_at, 'dd MMM yyyy')}</span>
+                              </div>
+                            )}
+                            {post.reading_time_minutes && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{post.reading_time_minutes} min</span>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center text-brand-blue group-hover:gap-2 transition-all">
+                          <div className="flex items-center text-brand-blue">
                             <span className="font-semibold text-sm">Lire l'article</span>
                             <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
                           </div>
@@ -436,40 +479,21 @@ export default async function BlogPage({
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="mt-12 flex justify-center gap-2">
+                  <div className="mt-12 flex justify-center items-center gap-2 flex-wrap">
                     {page > 1 && (
-                      <Link
-                        href={`/blog?${new URLSearchParams({
-                          ...(categoryId && { category: categoryId }),
-                          ...(search && { search }),
-                          page: String(page - 1),
-                        }).toString()}`}
-                      >
+                      <Link href={buildUrl({ page: String(page - 1) })}>
                         <Button variant="outline">Précédent</Button>
                       </Link>
                     )}
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter((p) => {
-                        // Afficher la première, dernière, et les pages autour de la page actuelle
-                        return (
-                          p === 1 ||
-                          p === totalPages ||
-                          (p >= page - 1 && p <= page + 1)
-                        )
-                      })
+                      .filter((p) => p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1))
                       .map((p, idx, arr) => {
                         const prev = arr[idx - 1]
                         const showEllipsis = prev && p - prev > 1
                         return (
                           <div key={p} className="flex items-center gap-2">
-                            {showEllipsis && <span className="px-2">...</span>}
-                            <Link
-                              href={`/blog?${new URLSearchParams({
-                                ...(categoryId && { category: categoryId }),
-                                ...(search && { search }),
-                                page: String(p),
-                              }).toString()}`}
-                            >
+                            {showEllipsis && <span className="px-1 text-gray-400">…</span>}
+                            <Link href={buildUrl({ page: String(p) })}>
                               <Button
                                 variant={p === page ? 'default' : 'outline'}
                                 className={p === page ? 'bg-brand-blue' : ''}
@@ -481,13 +505,7 @@ export default async function BlogPage({
                         )
                       })}
                     {page < totalPages && (
-                      <Link
-                        href={`/blog?${new URLSearchParams({
-                          ...(categoryId && { category: categoryId }),
-                          ...(search && { search }),
-                          page: String(page + 1),
-                        }).toString()}`}
-                      >
+                      <Link href={buildUrl({ page: String(page + 1) })}>
                         <Button variant="outline">Suivant</Button>
                       </Link>
                     )}
@@ -498,9 +516,9 @@ export default async function BlogPage({
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <aside className="lg:col-span-1">
             <BlogSidebar categories={categories} />
-          </div>
+          </aside>
         </div>
       </main>
 

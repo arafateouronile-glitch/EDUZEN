@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-// Lazy load recharts pour réduire le bundle initial
+import { TrendingUp } from 'lucide-react'
 import {
   RechartsAreaChart,
   RechartsArea,
@@ -17,53 +17,42 @@ import {
   RechartsLegend,
 } from '@/components/charts/recharts-wrapper'
 
+const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+
+export interface RevenueDataPoint {
+  name: string
+  mrr: number
+  newRevenue: number
+  churnedRevenue: number
+}
+
 interface RevenueChartProps {
-  data?: {
-    name: string
-    mrr: number
-    newRevenue: number
-    churnedRevenue: number
-  }[]
+  data?: RevenueDataPoint[]
   loading?: boolean
   className?: string
 }
 
-// Sample data for demonstration
-const sampleData = [
-  { name: 'Jan', mrr: 4500, newRevenue: 800, churnedRevenue: 200 },
-  { name: 'Fév', mrr: 5100, newRevenue: 900, churnedRevenue: 300 },
-  { name: 'Mar', mrr: 5800, newRevenue: 1100, churnedRevenue: 400 },
-  { name: 'Avr', mrr: 6200, newRevenue: 700, churnedRevenue: 300 },
-  { name: 'Mai', mrr: 7100, newRevenue: 1200, churnedRevenue: 300 },
-  { name: 'Juin', mrr: 7800, newRevenue: 1000, churnedRevenue: 300 },
-  { name: 'Juil', mrr: 8500, newRevenue: 1100, churnedRevenue: 400 },
-  { name: 'Août', mrr: 9200, newRevenue: 1000, churnedRevenue: 300 },
-  { name: 'Sep', mrr: 10100, newRevenue: 1300, churnedRevenue: 400 },
-  { name: 'Oct', mrr: 11200, newRevenue: 1400, churnedRevenue: 300 },
-  { name: 'Nov', mrr: 12500, newRevenue: 1600, churnedRevenue: 300 },
-  { name: 'Déc', mrr: 14000, newRevenue: 1800, churnedRevenue: 300 },
-]
+type Period = '3m' | '6m' | '12m'
 
-type Period = '7d' | '30d' | '90d' | '12m'
-
-export function RevenueChart({ data = sampleData, loading = false, className }: RevenueChartProps) {
+export function RevenueChart({ data = [], loading = false, className }: RevenueChartProps) {
   const [period, setPeriod] = useState<Period>('12m')
 
   const periods: { value: Period; label: string }[] = [
-    { value: '7d', label: '7 jours' },
-    { value: '30d', label: '30 jours' },
-    { value: '90d', label: '90 jours' },
+    { value: '3m', label: '3 mois' },
+    { value: '6m', label: '6 mois' },
     { value: '12m', label: '12 mois' },
   ]
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('fr-FR', {
+  const periodLimits: Record<Period, number> = { '3m': 3, '6m': 6, '12m': 12 }
+  const displayData = data.slice(-periodLimits[period])
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'EUR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value)
-  }
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -74,10 +63,7 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
             {payload.map((entry: any, index: number) => (
               <div key={index} className="flex items-center justify-between gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <div
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: entry.color }}
-                  />
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
                   <span className="text-muted-foreground">{entry.name}</span>
                 </div>
                 <span className="font-medium">{formatCurrency(entry.value)}</span>
@@ -96,13 +82,28 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-semibold">Évolution du MRR</CardTitle>
           <div className="flex gap-1">
-            {periods.map((p) => (
-              <Skeleton key={p.value} className="h-8 w-16" />
-            ))}
+            {periods.map((p) => <Skeleton key={p.value} className="h-8 w-16" />)}
           </div>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (data.length === 0) {
+    return (
+      <Card className={className}>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-lg font-semibold">Évolution du MRR</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground gap-2">
+            <TrendingUp className="h-10 w-10 opacity-20" />
+            <p className="text-sm">Aucune donnée de revenu disponible</p>
+            <p className="text-xs opacity-60">Les métriques apparaîtront ici une fois des abonnements enregistrés</p>
+          </div>
         </CardContent>
       </Card>
     )
@@ -119,10 +120,7 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
               variant={period === p.value ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setPeriod(p.value)}
-              className={cn(
-                'h-8 px-3 text-xs',
-                period === p.value && 'bg-brand-blue hover:bg-brand-blue/90'
-              )}
+              className={cn('h-8 px-3 text-xs', period === p.value && 'bg-brand-blue hover:bg-brand-blue/90')}
             >
               {p.label}
             </Button>
@@ -132,10 +130,7 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
       <CardContent>
         <div className="h-[300px]">
           <RechartsResponsiveContainer width="100%" height="100%">
-            <RechartsAreaChart
-              data={data}
-              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            >
+            <RechartsAreaChart data={displayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#274472" stopOpacity={0.3} />
@@ -157,7 +152,7 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                tickFormatter={(value: any) => `${(value / 1000).toFixed(0)}k€`}
+                tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k€`}
               />
               <RechartsTooltip content={<CustomTooltip />} />
               <RechartsLegend
@@ -165,9 +160,7 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
                 height={36}
                 iconType="circle"
                 iconSize={8}
-                formatter={(value: any) => (
-                  <span className="text-sm text-muted-foreground">{value}</span>
-                )}
+                formatter={(value: any) => <span className="text-sm text-muted-foreground">{value}</span>}
               />
               <RechartsArea
                 type="monotone"
@@ -194,3 +187,5 @@ export function RevenueChart({ data = sampleData, loading = false, className }: 
     </Card>
   )
 }
+
+export { MONTH_LABELS }

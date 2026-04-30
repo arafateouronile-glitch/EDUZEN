@@ -42,15 +42,30 @@ export function Footer() {
             {[
               {
                 title: "Produit",
-                links: ["Fonctionnalités", "Tarifs", "Mises à jour", "Roadmap"]
+                links: [
+                  { label: "Fonctionnalités", href: "/#features" },
+                  { label: "Tarifs", href: "/pricing" },
+                  { label: "Demo", href: "/demo" },
+                  { label: "Contact", href: "/contact" },
+                ]
               },
               {
                 title: "Ressources",
-                links: ["Blog", "Guide Qualiopi", "Centre d'aide", "API Docs"]
+                links: [
+                  { label: "Blog", href: "/blog" },
+                  { label: "À propos", href: "/a-propos" },
+                  { label: "Centre d'aide", href: "/contact" },
+                  { label: "Demander une démo", href: "/demo" },
+                ]
               },
               {
                 title: "Légal",
-                links: ["Confidentialité", "CGU", "Mentions Légales", "Sécurité"]
+                links: [
+                  { label: "Confidentialité", href: "/legal/privacy" },
+                  { label: "CGU", href: "/legal/terms" },
+                  { label: "Mentions légales", href: "/legal/terms" },
+                  { label: "Sécurité", href: "/contact" },
+                ]
               }
             ].map((col, i) => (
               <div key={i}>
@@ -58,9 +73,9 @@ export function Footer() {
                 <ul className="space-y-4">
                   {col.links.map((link, j) => (
                     <li key={j}>
-                      <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm hover:translate-x-1 inline-block duration-200">
-                        {link}
-                      </a>
+                      <Link href={link.href} className="text-gray-400 hover:text-white transition-colors text-sm hover:translate-x-1 inline-block duration-200">
+                        {link.label}
+                      </Link>
                     </li>
                   ))}
                 </ul>
