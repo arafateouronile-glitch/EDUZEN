@@ -66,13 +66,14 @@ export async function PATCH(
     // Vérifier les permissions
     const { data: admin } = await supabase
       .from('platform_admins')
-      .select('permissions')
+      .select('role, permissions')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .maybeSingle()
 
     const perms = admin?.permissions as Record<string, unknown> | null
-    if (!admin || !perms?.manage_blog) {
+    const isSuperAdmin = admin?.role === 'super_admin'
+    if (!admin || (!isSuperAdmin && !perms?.manage_blog)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -163,13 +164,14 @@ export async function DELETE(
     // Vérifier les permissions
     const { data: admin } = await supabase
       .from('platform_admins')
-      .select('permissions')
+      .select('role, permissions')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .maybeSingle()
 
     const perms = admin?.permissions as Record<string, unknown> | null
-    if (!admin || !perms?.manage_blog) {
+    const isSuperAdmin = admin?.role === 'super_admin'
+    if (!admin || (!isSuperAdmin && !perms?.manage_blog)) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
