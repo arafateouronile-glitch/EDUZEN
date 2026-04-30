@@ -3,10 +3,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { usePlatformAdmin } from '@/lib/hooks/use-platform-admin'
 import { PlatformAdminGuard } from '@/components/super-admin/platform-admin-guard'
 import { motion } from '@/components/ui/motion'
-import { Building2, CreditCard, AlertTriangle, TrendingUp, Clock } from 'lucide-react'
+import { Building2, CreditCard, AlertTriangle, Clock } from 'lucide-react'
 import { StatsCard } from '@/components/super-admin/dashboard/stats-card'
 import { SubscriptionsTable } from '@/components/super-admin/subscriptions/subscriptions-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,33 +18,39 @@ import {
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { toast } from 'sonner'
 import type { OrganizationSubscription } from '@/types/super-admin.types'
-import { logger, sanitizeError } from '@/lib/utils/logger'
+import { logger } from '@/lib/utils/logger'
 
 export default function SubscriptionsPage() {
   const [selectedSubscription, setSelectedSubscription] = useState<OrganizationSubscription | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const supabase = createClient()
 
-  const { data: stats = { total: 0, active: 0, trial: 0, pastDue: 0, growthPercent: 0 } } = useQuery({
-    queryKey: ['super-admin-subscription-stats'],
+  const { data: subscriptions = [], isLoading: subsLoading } = useQuery({
+    queryKey: ['super-admin-subscriptions'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('organization_subscriptions')
-        .select('status')
+        .select(`
+          *,
+          plan:subscription_plans(*),
+          organization:organizations(id, name, code, logo_url, country, created_at)
+        `)
+        .order('created_at', { ascending: false })
 
-      if (error || !data) return { total: 0, active: 0, trial: 0, pastDue: 0, growthPercent: 0 }
-
-      const total = data.length
-      const active = data.filter(s => s.status === 'active').length
-      const trial = data.filter(s => s.status === 'trial').length
-      const pastDue = data.filter(s => s.status === 'past_due').length
-
-      return { total, active, trial, pastDue, growthPercent: 0 }
+      if (error) throw error
+      return (data ?? []) as import('@/types/super-admin.types').OrganizationSubscription[]
     },
     staleTime: 1000 * 60 * 5,
   })
+
+  const stats = {
+    total: subscriptions.length,
+    active: subscriptions.filter(s => s.status === 'active').length,
+    trial: subscriptions.filter(s => s.status === 'trial').length,
+    pastDue: subscriptions.filter(s => s.status === 'past_due').length,
+    growthPercent: 0,
+  }
 
   const handleViewDetails = (subscription: OrganizationSubscription) => {
     setSelectedSubscription(subscription)
@@ -112,6 +117,8 @@ export default function SubscriptionsPage() {
           </CardHeader>
           <CardContent>
             <SubscriptionsTable
+              subscriptions={subscriptions}
+              loading={subsLoading}
               onViewDetails={handleViewDetails}
               onEdit={(sub) => logger.debug('Edit', { subscription: sub })}
               onSendReminder={(sub) => logger.debug('Send reminder', { subscription: sub })}
