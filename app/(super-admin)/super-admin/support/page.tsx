@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select-shadcn'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { MessageSquare, AlertCircle, Clock, CheckCircle, ExternalLink, RefreshCw } from 'lucide-react'
+import { MessageSquare, AlertCircle, Clock, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 
@@ -203,8 +203,8 @@ export default function SuperAdminSupportPage() {
                       </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/dashboard/support/${ticket.id}`} target="_blank" rel="noopener">
-                            <ExternalLink className="h-4 w-4" />
+                          <Link href={`/super-admin/support/${ticket.id}`}>
+                            <ArrowRight className="h-4 w-4" />
                           </Link>
                         </Button>
                       </TableCell>
