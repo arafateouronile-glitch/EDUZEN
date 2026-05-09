@@ -515,6 +515,39 @@ export const AI_TOOLS: Tool[] = [
       required: ['formation_id'],
     },
   },
+  {
+    name: 'get_student_details',
+    description: 'Obtenir la fiche complète d\'un apprenant : coordonnées, toutes ses inscriptions, documents envoyés et statut de signature.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        student_id: {
+          type: 'string',
+          description: 'UUID de l\'apprenant',
+        },
+      },
+      required: ['student_id'],
+    },
+  },
+  {
+    name: 'send_reminder',
+    description: 'Envoyer un email de rappel de signature aux apprenants d\'une session qui n\'ont pas encore signé leur convention ou devis. Ne recrée pas de document — utilise les demandes de signature existantes.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        session_id: {
+          type: 'string',
+          description: 'UUID de la session',
+        },
+        document_type: {
+          type: 'string',
+          enum: ['convention', 'devis'],
+          description: 'Type de document (optionnel, par défaut les deux)',
+        },
+      },
+      required: ['session_id'],
+    },
+  },
 ]
 
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -571,6 +604,10 @@ export async function executeTool(
         return await updateSession(toolInput, supabase)
       case 'update_formation':
         return await updateFormation(toolInput, supabase, organizationId)
+      case 'get_student_details':
+        return await getStudentDetails(toolInput, supabase)
+      case 'send_reminder':
+        return await sendReminder(toolInput, supabase, organizationId)
       default:
         return `Outil inconnu : ${toolName}`
     }
@@ -1515,5 +1552,125 @@ async function updateFormation(input: ToolInput, supabase: SupabaseClient, _orgI
     (data.category ? `• Catégorie : ${data.category}\n` : '') +
     `• Statut : ${data.is_active ? 'Active' : 'Inactive'}\n` +
     `[Voir la formation →](/dashboard/formations/${data.id})`
+  )
+}
+
+async function getStudentDetails(input: ToolInput, supabase: SupabaseClient) {
+  const studentId = input.student_id as string
+
+  const [studentRes, enrollmentsRes, docsRes] = await Promise.all([
+    supabase
+      .from('students')
+      .select('id, first_name, last_name, email, phone, student_number, date_of_birth, address, created_at')
+      .eq('id', studentId)
+      .single(),
+    supabase
+      .from('enrollments')
+      .select('id, status, total_amount, enrollment_date, sessions(id, name, start_date, end_date, formations(name))')
+      .eq('student_id', studentId)
+      .order('enrollment_date', { ascending: false }),
+    supabase
+      .from('documents')
+      .select('id, title, type, created_at')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ])
+
+  if (studentRes.error || !studentRes.data) return `Apprenant introuvable (ID: ${studentId})`
+
+  const st = studentRes.data
+  const enrollments = enrollmentsRes.data ?? []
+  const docs = docsRes.data ?? []
+
+  const statusLabel: Record<string, string> = {
+    pending: '⏳ En attente', active: '✅ Actif', confirmed: '✅ Confirmé', cancelled: '❌ Annulé',
+  }
+
+  const activeEnrollments = enrollments.filter((e: Record<string, unknown>) => e.status !== 'cancelled')
+  const totalSpent = activeEnrollments.reduce((s: number, e: Record<string, unknown>) =>
+    s + (typeof e.total_amount === 'number' ? e.total_amount : 0), 0)
+
+  const enrollLines = enrollments.map((e: Record<string, unknown>) => {
+    const se = (Array.isArray(e.sessions) ? e.sessions[0] : e.sessions) as Record<string, unknown> | null
+    const fo = se ? (Array.isArray(se.formations) ? se.formations[0] : se.formations) as Record<string, unknown> | null : null
+    return `  • ${se?.name ?? '—'} (${se?.start_date ?? '?'}) — ${statusLabel[e.status as string] ?? e.status}` +
+      (fo ? ` — ${fo.name}` : '')
+  })
+
+  const docLines = docs.map((d: Record<string, unknown>) => {
+    const icon = d.type === 'convention' ? '📋' : '💰'
+    return `  • ${icon} ${d.type === 'convention' ? 'Convention' : 'Devis'} — ${new Date(d.created_at as string).toLocaleDateString('fr-FR')}`
+  })
+
+  return (
+    `**Fiche apprenant**\n` +
+    `• Numéro : ${st.student_number}\n` +
+    `• Nom : ${st.first_name} ${st.last_name}\n` +
+    `• Email : ${st.email ?? '—'}\n` +
+    `• Téléphone : ${st.phone ?? '—'}\n` +
+    (st.address ? `• Adresse : ${st.address}\n` : '') +
+    `• Inscrit depuis : ${new Date(st.created_at as string).toLocaleDateString('fr-FR')}\n` +
+    `\n**Inscriptions (${enrollments.length}) :**\n` +
+    (enrollLines.length > 0 ? enrollLines.join('\n') : '  Aucune inscription.') +
+    (totalSpent > 0 ? `\n• Total CA : ${totalSpent.toLocaleString('fr-FR')} EUR` : '') +
+    `\n\n**Documents (${docs.length}) :**\n` +
+    (docLines.length > 0 ? docLines.join('\n') : '  Aucun document envoyé.') +
+    `\n[Voir la fiche →](/dashboard/students/${st.id})`
+  )
+}
+
+async function sendReminder(input: ToolInput, supabase: SupabaseClient, _orgId: string) {
+  const sessionId = input.session_id as string
+  const docTypeFilter = input.document_type as string | undefined
+
+  const typesFilter = docTypeFilter ? [docTypeFilter] : ['convention', 'devis']
+  const { data: docs, error: docsErr } = await supabase
+    .from('documents')
+    .select('id, type, student_id')
+    .contains('metadata', { session_id: sessionId })
+    .in('type', typesFilter)
+
+  if (docsErr) return `Erreur : ${docsErr.message}`
+  if (!docs?.length) {
+    return `Aucun document trouvé pour cette session. Envoyez d'abord les conventions avec send_bulk_documents.`
+  }
+
+  const docIds = docs.map((d: Record<string, unknown>) => d.id as string)
+  const { data: requests, error: reqErr } = await supabase
+    .from('signature_requests')
+    .select('id, status, recipient_name, recipient_email, document_id')
+    .in('document_id', docIds)
+    .eq('status', 'pending')
+
+  if (reqErr) return `Erreur lors de la récupération des demandes : ${reqErr.message}`
+  if (!requests?.length) {
+    return `✅ Toutes les conventions/devis de cette session ont déjà été signés ! Aucun rappel à envoyer.`
+  }
+
+  const { SignatureRequestService } = await import('@/lib/services/signature-request.service')
+  const service = new SignatureRequestService(supabase)
+
+  const results: string[] = []
+  let sent = 0
+  let failed = 0
+
+  for (const req of requests) {
+    try {
+      await service.sendReminder(req.id)
+      results.push(`✅ ${req.recipient_name} (${req.recipient_email})`)
+      sent++
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      results.push(`❌ ${req.recipient_name} — ${msg}`)
+      failed++
+    }
+  }
+
+  return (
+    `**Rappels envoyés**\n` +
+    `• ✅ Envoyés : ${sent}\n` +
+    (failed > 0 ? `• ❌ Échecs : ${failed}\n` : '') +
+    `\n${results.join('\n')}`
   )
 }

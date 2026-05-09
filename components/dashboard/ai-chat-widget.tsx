@@ -45,6 +45,8 @@ const TOOL_LABELS: Record<string, string> = {
   search_sessions: 'Recherche session',
   update_session: 'Modification session',
   update_formation: 'Modification formation',
+  get_student_details: 'Fiche apprenant',
+  send_reminder: 'Rappel signature',
 }
 
 function formatRelativeTime(ts: number): string {
@@ -687,25 +689,124 @@ function AgentStepBadge({ step }: { step: AgentStep }) {
   )
 }
 
-function formatLine(line: string): string {
-  return line
+function formatInline(text: string): string {
+  return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.*?)`/g, '<code class="bg-gray-200 px-1 rounded text-xs font-mono">$1</code>')
+    .replace(/`(.*?)`/g, '<code class="bg-gray-200 px-1 rounded text-[11px] font-mono">$1</code>')
     .replace(
       /\[([^\]]+)\]\((\/[^)]*)\)/g,
-      '<a href="$2" class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline underline-offset-2 font-medium" target="_self">$1</a>'
+      '<a href="$2" class="text-blue-600 hover:text-blue-800 underline underline-offset-2 font-medium" target="_self">$1</a>'
     )
 }
 
-function FormattedMessage({ content }: { content: string }) {
+type MdBlock =
+  | { t: 'heading'; level: 1 | 2 | 3; text: string }
+  | { t: 'list'; items: string[] }
+  | { t: 'table'; headers: string[]; rows: string[][] }
+  | { t: 'hr' }
+  | { t: 'para'; text: string }
+  | { t: 'blank' }
+
+function parseMd(content: string): MdBlock[] {
   const lines = content.split('\n')
+  const blocks: MdBlock[] = []
+  let i = 0
+
+  while (i < lines.length) {
+    const line = lines[i]
+
+    if (!line.trim()) { blocks.push({ t: 'blank' }); i++; continue }
+
+    // Heading
+    const hm = line.match(/^(#{1,3})\s+(.+)$/)
+    if (hm) {
+      blocks.push({ t: 'heading', level: Math.min(hm[1].length, 3) as 1|2|3, text: hm[2] })
+      i++; continue
+    }
+
+    // HR
+    if (/^---+$/.test(line.trim())) { blocks.push({ t: 'hr' }); i++; continue }
+
+    // List (-, *, •, numbered 1.)
+    if (/^[-*•]\s|^\d+\.\s/.test(line)) {
+      const items: string[] = []
+      while (i < lines.length && /^[-*•]\s|^\d+\.\s/.test(lines[i])) {
+        items.push(lines[i].replace(/^[-*•]\s+|^\d+\.\s+/, ''))
+        i++
+      }
+      blocks.push({ t: 'list', items }); continue
+    }
+
+    // Table (line has | and next non-empty line is a separator)
+    if (line.includes('|')) {
+      const sep = lines[i + 1]?.trim()
+      if (sep && /^\|?[-\s|:]+\|?$/.test(sep)) {
+        const headers = line.split('|').map(s => s.trim()).filter(Boolean)
+        i += 2
+        const rows: string[][] = []
+        while (i < lines.length && lines[i].includes('|')) {
+          rows.push(lines[i].split('|').map(s => s.trim()).filter(Boolean))
+          i++
+        }
+        blocks.push({ t: 'table', headers, rows }); continue
+      }
+    }
+
+    blocks.push({ t: 'para', text: line }); i++
+  }
+  return blocks
+}
+
+function FormattedMessage({ content }: { content: string }) {
+  const blocks = parseMd(content)
   return (
-    <div className="space-y-0.5">
-      {lines.map((line, i) => {
-        if (!line.trim()) return <div key={i} className="h-2" />
-        return (
-          <p key={i} dangerouslySetInnerHTML={{ __html: formatLine(line) }} />
+    <div className="space-y-1 text-sm leading-relaxed">
+      {blocks.map((b, i) => {
+        if (b.t === 'blank') return <div key={i} className="h-1" />
+        if (b.t === 'hr') return <hr key={i} className="border-gray-300 my-1" />
+        if (b.t === 'heading') {
+          const cls = b.level === 1
+            ? 'font-bold text-gray-900 text-base mt-2 mb-0.5'
+            : b.level === 2
+              ? 'font-semibold text-gray-800 text-sm mt-1.5 mb-0.5'
+              : 'font-medium text-gray-700 text-sm mt-1'
+          return <p key={i} className={cls} dangerouslySetInnerHTML={{ __html: formatInline(b.text) }} />
+        }
+        if (b.t === 'list') return (
+          <ul key={i} className="space-y-0.5 pl-1">
+            {b.items.map((item, j) => (
+              <li key={j} className="flex gap-1.5">
+                <span className="text-gray-400 flex-shrink-0 select-none">•</span>
+                <span dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+              </li>
+            ))}
+          </ul>
         )
+        if (b.t === 'table') return (
+          <div key={i} className="overflow-x-auto rounded border border-gray-200 my-1">
+            <table className="text-xs w-full border-collapse">
+              <thead className="bg-gray-50">
+                <tr>
+                  {b.headers.map((h, j) => (
+                    <th key={j} className="px-2 py-1.5 text-left font-semibold text-gray-700 border-b border-gray-200"
+                      dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {b.rows.map((row, j) => (
+                  <tr key={j} className={j % 2 === 1 ? 'bg-gray-50' : ''}>
+                    {row.map((cell, k) => (
+                      <td key={k} className="px-2 py-1 border-b border-gray-100"
+                        dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+        return <p key={i} dangerouslySetInnerHTML={{ __html: formatInline(b.text) }} />
       })}
     </div>
   )

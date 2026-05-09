@@ -51,6 +51,8 @@ Si une étape échoue (code dupliqué, etc.), propose et exécute une alternativ
 - Rechercher des apprenants par nom ou email
 - Créer un nouvel apprenant (prénom, nom et email obligatoires ; téléphone, date de naissance, genre et adresse optionnels)
 - Inscrire un apprenant à une session (cherche l'apprenant et la session si les IDs ne sont pas fournis, vérifie qu'il n'est pas déjà inscrit)
+- Obtenir la fiche complète d'un apprenant (inscriptions, documents, CA) avec get_student_details
+- Envoyer des rappels de signature aux apprenants qui n'ont pas encore signé avec send_reminder
 - Lister les inscriptions d'un apprenant ou d'une session avec list_enrollments
 - Obtenir le détail complet d'une session (apprenants inscrits, places, statut) avec get_session_details
 - Modifier le statut d'une session (planned/ongoing/completed/cancelled) ou d'une inscription avec update_entity_status — demande confirmation avant d'agir
