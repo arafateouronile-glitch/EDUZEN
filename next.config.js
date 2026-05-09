@@ -147,6 +147,16 @@ const nextConfig = {
           // Les assets statiques (_next/static, _next/image) n'ont pas besoin de CSP.
         ],
       },
+      {
+        // VSL landing pages : COEP relâché pour autoriser les iframes YouTube.
+        // Doit être listé APRÈS /:path* pour que ses valeurs écrasent celles du bloc général.
+        source: '/vsl/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
     ]
   },
   // Configuration pour Puppeteer
