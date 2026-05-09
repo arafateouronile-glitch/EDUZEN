@@ -19,11 +19,15 @@ document.getElementById('nav-cta').addEventListener('click', scrollToForm);
 /* ── Urgency bar button ── */
 document.getElementById('urgency-cta').addEventListener('click', scrollToForm);
 
-/* ── VSL link tracking (optionnel) ── */
-var vslLink = document.getElementById('vsl-link');
-if (vslLink) {
-  vslLink.addEventListener('click', function() {
-    if (typeof gtag !== 'undefined') gtag('event', 'vsl_play', { event_category: 'video' });
+/* ── VSL Placeholder play ── */
+var vslPlaceholder = document.getElementById('vsl-placeholder');
+if (vslPlaceholder) {
+  vslPlaceholder.addEventListener('click', function() {
+    var player = document.getElementById('vsl-player');
+    var dataSrc = player.getAttribute('data-src');
+    if (dataSrc) player.setAttribute('src', dataSrc);
+    player.style.display = 'block';
+    vslPlaceholder.classList.add('hidden');
   });
 }
 
