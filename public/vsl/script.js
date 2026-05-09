@@ -97,13 +97,45 @@ document.getElementById('signup-form').addEventListener('submit', function(e) {
     if (!ok) valid = false;
   });
   if (!valid) return;
+
   var btn = document.getElementById('submit-btn');
   btn.classList.add('loading');
-  setTimeout(function() {
-    btn.classList.remove('loading');
-    document.getElementById('signup-form').style.display = 'none';
-    document.getElementById('success-msg').classList.add('visible');
-  }, 1800);
+
+  var payload = {
+    prenom:    document.getElementById('prenom').value.trim(),
+    nom:       document.getElementById('nom').value.trim(),
+    email:     document.getElementById('email').value.trim(),
+    telephone: document.getElementById('telephone').value.trim(),
+    organisme: document.getElementById('organisme').value.trim(),
+  };
+
+  fetch('/api/vsl-signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+    .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+    .then(function(result) {
+      btn.classList.remove('loading');
+      if (result.ok) {
+        document.getElementById('signup-form').style.display = 'none';
+        document.getElementById('success-msg').classList.add('visible');
+      } else {
+        var errorEl = document.getElementById('form-server-error');
+        if (errorEl) {
+          errorEl.textContent = result.data.error || 'Une erreur est survenue. Réessayez.';
+          errorEl.style.display = 'block';
+        }
+      }
+    })
+    .catch(function() {
+      btn.classList.remove('loading');
+      var errorEl = document.getElementById('form-server-error');
+      if (errorEl) {
+        errorEl.textContent = 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.';
+        errorEl.style.display = 'block';
+      }
+    });
 });
 
 /* ── Mini CTA form ── */

@@ -114,8 +114,7 @@
             Le fondateur vous appelle personnellement sous 48h pour configurer votre espace EduZen avec vous — gratuitement.
           </p>
 
-          <!-- REMPLACER : action du formulaire (Tally, Typeform, ou votre backend) -->
-          <form id="signup-form" action="VOTRE_ACTION_FORMULAIRE" method="POST" novalidate>
+          <form id="signup-form" novalidate>
             <div class="form-row">
               <div class="form-group">
                 <label for="prenom">Prénom *</label>
@@ -154,14 +153,18 @@
 
             <p class="btn-subtext">Appel personnel sous 48h · 14 jours gratuits · Sans CB</p>
 
+            <p id="form-server-error" style="display:none;font-size:13px;color:#e74c3c;margin-top:10px;padding:10px 14px;background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.3);border-radius:8px;"></p>
+
             <p class="rgpd-mention">
               Vos données sont utilisées uniquement pour vous contacter dans le cadre de votre essai. Aucun spam. Désinscription libre.
             </p>
           </form>
 
           <div class="success-message" id="success-msg">
-            <h3>✅ Parfait ! Vérifiez votre email.</h3>
-            <p>Je vous appelle dans les 48 heures.</p>
+            <h3>✅ Votre espace est créé !</h3>
+            <p>Un email de confirmation vous a été envoyé.<br>
+            Cliquez sur le lien pour activer votre compte et accéder à votre espace EduZen.<br><br>
+            <strong>Je vous appelle personnellement dans les 48h</strong> pour tout configurer ensemble.</p>
           </div>
         </div>
 
