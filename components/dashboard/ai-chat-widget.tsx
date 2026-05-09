@@ -62,6 +62,37 @@ const DEFAULT_SUGGESTIONS = [
   'État de ma conformité Qualiopi',
 ]
 
+type ProactiveAction = { label: string; message: string }
+
+function getProactiveActions(pathname: string): ProactiveAction[] {
+  const segments = pathname.split('/').filter(Boolean)
+  const section = segments[1]
+  const entityId = segments[2]
+  if (!entityId || !/^[0-9a-f-]{36}$/i.test(entityId)) return []
+
+  if (section === 'sessions') return [
+    { label: '👥 Inscrits & résumé', message: `Donne-moi le résumé complet de la session ${entityId}` },
+    { label: '📄 Conventions non envoyées', message: `Vérifie quels apprenants n'ont pas encore reçu de convention pour la session ${entityId} et envoie-les` },
+    { label: '✍️ Émargements', message: `Montre-moi les émargements de la session ${entityId}` },
+    { label: '✅ Passer en cours', message: `Passe la session ${entityId} au statut "En cours"` },
+  ]
+  if (section === 'formations') return [
+    { label: '📅 Sessions', message: `Liste les sessions de la formation ${entityId}` },
+    { label: '👥 Inscrits', message: `Combien d'apprenants sont inscrits aux sessions de la formation ${entityId} ?` },
+    { label: '✏️ Modifier le prix', message: `Je veux modifier le prix de la formation ${entityId}` },
+  ]
+  if (section === 'students' || section === 'my-students') return [
+    { label: '📚 Historique', message: `Montre-moi l'historique de formations de l'apprenant ${entityId}` },
+    { label: '➕ Inscrire', message: `Je veux inscrire l'apprenant ${entityId} à une session` },
+    { label: '📄 Envoyer un devis', message: `Envoie un devis à l'apprenant ${entityId}` },
+  ]
+  if (section === 'programs') return [
+    { label: '📋 Formations', message: `Liste les formations du programme ${entityId}` },
+    { label: '✏️ Modifier', message: `Je veux modifier le programme ${entityId}` },
+  ]
+  return []
+}
+
 function getContextualSuggestions(pathname: string): string[] {
   const segments = pathname.split('/').filter(Boolean)
   const section = segments[1]
@@ -158,6 +189,7 @@ function buildPageContext(pathname: string): string | undefined {
 
 export function AiChatWidget() {
   const [open, setOpen] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
@@ -387,12 +419,14 @@ export function AiChatWidget() {
       {/* Chat panel */}
       <div
         className={cn(
-          'fixed bottom-24 right-6 z-50 w-[400px] max-w-[calc(100vw-24px)]',
-          'flex flex-col rounded-2xl shadow-2xl bg-white border border-gray-200 overflow-hidden',
-          'transition-all duration-300 origin-bottom-right',
+          'fixed z-50 flex flex-col bg-white border border-gray-200 overflow-hidden shadow-2xl',
+          'transition-all duration-300',
+          fullscreen
+            ? 'inset-[5%] rounded-2xl'
+            : 'bottom-24 right-6 w-[400px] max-w-[calc(100vw-24px)] rounded-2xl origin-bottom-right',
           open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
         )}
-        style={{ height: '560px' }}
+        style={fullscreen ? undefined : { height: '560px' }}
       >
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex-shrink-0">
@@ -422,6 +456,13 @@ export function AiChatWidget() {
             title="Nouvelle conversation"
           >
             Réinitialiser
+          </button>
+          <button
+            onClick={() => setFullscreen((v) => !v)}
+            className="text-blue-200 hover:text-white transition-colors ml-1"
+            title={fullscreen ? 'Réduire' : 'Plein écran'}
+          >
+            {fullscreen ? <CompressIcon /> : <ExpandIcon />}
           </button>
         </div>
 
@@ -466,22 +507,46 @@ export function AiChatWidget() {
             </div>
           )}
 
-          {showSuggestions && (
-            <div className="pt-1 space-y-2">
-              <p className="text-xs text-gray-400 text-center">Suggestions</p>
-              <div className="flex flex-col gap-1.5">
-                {getContextualSuggestions(pathname).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => sendMessage(s)}
-                    className="text-left text-xs px-3 py-2 rounded-xl border border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
+          {showSuggestions && (() => {
+            const proactive = getProactiveActions(pathname)
+            const suggestions = getContextualSuggestions(pathname)
+            return (
+              <div className="pt-1 space-y-3">
+                {proactive.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-gray-400 text-center uppercase tracking-wide font-medium">⚡ Actions rapides sur cette page</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {proactive.map((a) => (
+                        <button
+                          key={a.label}
+                          onClick={() => sendMessage(a.message)}
+                          className="text-left text-xs px-2.5 py-2 rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors leading-snug"
+                        >
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  {proactive.length === 0 && (
+                    <p className="text-xs text-gray-400 text-center">Suggestions</p>
+                  )}
+                  <div className="flex flex-col gap-1.5">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => sendMessage(s)}
+                        className="text-left text-xs px-3 py-2 rounded-xl border border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           <div ref={bottomRef} />
         </div>
@@ -698,6 +763,22 @@ function CheckIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  )
+}
+
+function ExpandIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+    </svg>
+  )
+}
+
+function CompressIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
     </svg>
   )
 }

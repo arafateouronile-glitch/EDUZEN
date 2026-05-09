@@ -1176,7 +1176,7 @@ async function enrollStudent(input: ToolInput, supabase: SupabaseClient) {
 async function getSessionDetails(input: ToolInput, supabase: SupabaseClient) {
   const sessionId = input.session_id as string
 
-  const [sessionRes, enrollmentsRes] = await Promise.all([
+  const [sessionRes, enrollmentsRes, docsRes] = await Promise.all([
     supabase
       .from('sessions')
       .select('id, name, start_date, end_date, location, status, capacity_max, formations(name, code, duration_hours, price, currency)')
@@ -1187,6 +1187,12 @@ async function getSessionDetails(input: ToolInput, supabase: SupabaseClient) {
       .select('id, status, total_amount, enrollment_date, students(id, first_name, last_name, email, student_number)')
       .eq('session_id', sessionId)
       .order('enrollment_date', { ascending: true }),
+    // Documents sent for this session (convention or devis)
+    supabase
+      .from('documents')
+      .select('id, type, student_id')
+      .contains('metadata', { session_id: sessionId })
+      .in('type', ['convention', 'devis']),
   ])
 
   if (sessionRes.error || !sessionRes.data) return `Session introuvable (ID: ${sessionId})`
@@ -1194,6 +1200,7 @@ async function getSessionDetails(input: ToolInput, supabase: SupabaseClient) {
   const s = sessionRes.data
   const formation = (Array.isArray(s.formations) ? s.formations[0] : s.formations) as Record<string, unknown> | null
   const enrollments = enrollmentsRes.data ?? []
+  const docs = docsRes.data ?? []
 
   const statusLabel: Record<string, string> = {
     planned: 'Planifiée', ongoing: 'En cours', completed: 'Terminée', cancelled: 'Annulée',
@@ -1202,14 +1209,36 @@ async function getSessionDetails(input: ToolInput, supabase: SupabaseClient) {
     pending: '⏳ En attente', active: '✅ Actif', confirmed: '✅ Confirmé', cancelled: '❌ Annulé',
   }
 
-  const spotsUsed = enrollments.filter((e: Record<string, unknown>) => e.status !== 'cancelled').length
+  const activeEnrollments = enrollments.filter((e: Record<string, unknown>) => e.status !== 'cancelled')
+  const spotsUsed = activeEnrollments.length
   const spotsMax = s.capacity_max ?? null
-  const spotsInfo = spotsMax ? `${spotsUsed}/${spotsMax} places` : `${spotsUsed} inscrit(s)`
+
+  // Taux de remplissage
+  const fillRate = spotsMax ? Math.round((spotsUsed / spotsMax) * 100) : null
+  const spotsInfo = spotsMax
+    ? `${spotsUsed}/${spotsMax} places (${fillRate}% de remplissage)`
+    : `${spotsUsed} inscrit(s)`
+
+  // CA potentiel
+  const caPotentiel = activeEnrollments.reduce((sum: number, e: Record<string, unknown>) => {
+    return sum + (typeof e.total_amount === 'number' ? e.total_amount : 0)
+  }, 0)
+
+  // Documents manquants
+  const studentIdsWithDoc = new Set(docs.map((d: Record<string, unknown>) => d.student_id as string))
+  const activeStudentIds = activeEnrollments
+    .map((e: Record<string, unknown>) => {
+      const st = (Array.isArray(e.students) ? e.students[0] : e.students) as Record<string, unknown> | null
+      return st?.id as string | undefined
+    })
+    .filter(Boolean) as string[]
+  const missingDocCount = activeStudentIds.filter((id) => !studentIdsWithDoc.has(id)).length
 
   const enrollLines = enrollments.map((e: Record<string, unknown>) => {
     const st = (Array.isArray(e.students) ? e.students[0] : e.students) as Record<string, unknown> | null
     const name = st ? `${st.first_name} ${st.last_name}${st.student_number ? ` (n°${st.student_number})` : ''}` : 'Apprenant inconnu'
-    return `  • ${name} — ${enrollStatusLabel[e.status as string] ?? e.status}`
+    const hasDoc = st?.id && studentIdsWithDoc.has(st.id as string) ? ' 📄' : ''
+    return `  • ${name} — ${enrollStatusLabel[e.status as string] ?? e.status}${hasDoc}`
   })
 
   return (
@@ -1219,8 +1248,12 @@ async function getSessionDetails(input: ToolInput, supabase: SupabaseClient) {
     `• Dates : ${s.start_date} → ${s.end_date}${s.location ? `\n• Lieu : ${s.location}` : ''}\n` +
     (formation ? `• Formation : ${formation.name} (${formation.code})\n` : '') +
     `• Inscriptions : ${spotsInfo}\n` +
+    (caPotentiel > 0 ? `• CA potentiel : ${caPotentiel.toLocaleString('fr-FR')} EUR\n` : '') +
+    (missingDocCount > 0
+      ? `• ⚠️ Documents manquants : ${missingDocCount} apprenant(s) sans convention/devis\n`
+      : docs.length > 0 ? `• ✅ Tous les apprenants ont un document envoyé\n` : '') +
     (enrollLines.length > 0
-      ? `\n**Apprenants inscrits :**\n${enrollLines.join('\n')}`
+      ? `\n**Apprenants inscrits** (📄 = document envoyé) :\n${enrollLines.join('\n')}`
       : '\nAucun apprenant inscrit.') +
     `\n[Voir la session →](/dashboard/sessions/${s.id})`
   )
