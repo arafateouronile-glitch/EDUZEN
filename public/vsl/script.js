@@ -23,12 +23,12 @@ document.getElementById('urgency-cta').addEventListener('click', scrollToForm);
 document.getElementById('vsl-placeholder').addEventListener('click', function() {
   var placeholder = document.getElementById('vsl-placeholder');
   var player = document.getElementById('vsl-player');
-  placeholder.classList.add('hidden');
-  player.style.display = 'block';
-  var src = player.getAttribute('src');
-  if (src && src !== 'VOTRE_URL_VIDEO') {
-    player.setAttribute('src', src + (src.includes('?') ? '&' : '?') + 'autoplay=1');
+  var dataSrc = player.getAttribute('data-src');
+  if (dataSrc) {
+    player.setAttribute('src', dataSrc + '&autoplay=1');
   }
+  player.style.display = 'block';
+  placeholder.classList.add('hidden');
 });
 
 /* ── Fade-up on scroll ── */
