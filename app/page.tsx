@@ -64,6 +64,11 @@ const ProductShowcase = dynamic(
 )
 
 
+const AiAgent = dynamic(
+  () => import('@/components/landing/AiAgent').then(mod => ({ default: mod.AiAgent })),
+  { loading: () => <SectionSkeleton /> }
+)
+
 const HowItWorks = dynamic(
   () => import('@/components/landing/HowItWorks').then(mod => ({ default: mod.HowItWorks })),
   { loading: () => <SectionSkeleton /> }
@@ -181,6 +186,12 @@ export default function HomePage() {
         <DeferredSection>
           <Suspense fallback={<SectionSkeleton />}>
             <ProductShowcase />
+          </Suspense>
+        </DeferredSection>
+
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <AiAgent />
           </Suspense>
         </DeferredSection>
 
