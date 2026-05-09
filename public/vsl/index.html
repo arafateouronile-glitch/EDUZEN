@@ -53,24 +53,26 @@
   <section id="vsl-section">
     <div class="container">
       <div class="vsl-wrapper fade-up">
-        <div class="vsl-container">
-          <iframe
-            id="vsl-player"
-            data-src="https://www.youtube.com/embed/zT28zM5cyhA?rel=0&modestbranding=1&origin=https://www.eduzen.io"
-            frameborder="0"
-            allowfullscreen
-            allow="autoplay; encrypted-media; fullscreen"
-            style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;"
-          ></iframe>
-
-          <div class="vsl-placeholder" id="vsl-placeholder">
-            <div class="vsl-logo">Edu<span>Zen</span></div>
-            <div class="play-btn">
+        <div class="vsl-container" id="vsl-container">
+          <!-- Thumbnail cliquable → ouvre la vidéo sur YouTube -->
+          <a id="vsl-link" href="https://youtu.be/zT28zM5cyhA" target="_blank" rel="noopener"
+             style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;">
+            <img
+              id="vsl-thumb"
+              src="https://img.youtube.com/vi/zT28zM5cyhA/maxresdefault.jpg"
+              alt="Présentation EduZen — Gérez votre OF en 2h par semaine"
+              style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px;"
+              onerror="this.src='https://img.youtube.com/vi/zT28zM5cyhA/hqdefault.jpg'"
+            />
+            <div class="play-btn" style="position:relative;z-index:2;">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
                 <path d="M8 5v14l11-7z"/>
               </svg>
             </div>
-          </div>
+            <span style="position:relative;z-index:2;margin-top:16px;font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#fff;background:rgba(0,0,0,0.55);padding:6px 16px;border-radius:20px;">
+              ▶ Regarder la présentation
+            </span>
+          </a>
         </div>
 
         <p class="vsl-duration">⏱ 5 min 30 — Regardez jusqu'à la fin</p>

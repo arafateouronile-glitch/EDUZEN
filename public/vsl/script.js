@@ -19,17 +19,13 @@ document.getElementById('nav-cta').addEventListener('click', scrollToForm);
 /* ── Urgency bar button ── */
 document.getElementById('urgency-cta').addEventListener('click', scrollToForm);
 
-/* ── VSL Placeholder play ── */
-document.getElementById('vsl-placeholder').addEventListener('click', function() {
-  var placeholder = document.getElementById('vsl-placeholder');
-  var player = document.getElementById('vsl-player');
-  var dataSrc = player.getAttribute('data-src');
-  if (dataSrc) {
-    player.setAttribute('src', dataSrc + '&autoplay=1');
-  }
-  player.style.display = 'block';
-  placeholder.classList.add('hidden');
-});
+/* ── VSL link tracking (optionnel) ── */
+var vslLink = document.getElementById('vsl-link');
+if (vslLink) {
+  vslLink.addEventListener('click', function() {
+    if (typeof gtag !== 'undefined') gtag('event', 'vsl_play', { event_category: 'video' });
+  });
+}
 
 /* ── Fade-up on scroll ── */
 var fadeEls = document.querySelectorAll('.fade-up');
