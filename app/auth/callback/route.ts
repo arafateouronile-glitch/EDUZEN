@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -8,19 +7,23 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next') ?? '/dashboard/onboarding'
 
   if (code) {
-    const cookieStore = await cookies()
+    // Créer la réponse redirect EN PREMIER, puis y attacher les cookies de session.
+    // Si on utilise cookies() de next/headers, les Set-Cookie sont perdus lors du
+    // NextResponse.redirect() qui crée une nouvelle réponse indépendante.
+    const response = NextResponse.redirect(new URL(next, request.url))
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
-            return cookieStore.getAll()
+            return request.cookies.getAll()
           },
           setAll(cookiesToSet) {
-            for (const { name, value, options } of cookiesToSet) {
-              cookieStore.set(name, value, options)
-            }
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options)
+            })
           },
         },
       }
@@ -28,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(new URL(next, request.url))
+      return response
     }
   }
 
