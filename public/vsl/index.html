@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="EduZen — Logiciel SaaS tout-en-un pour organismes de formation. Gérez vos conventions, émargements, Qualiopi et CPF en un seul outil. Essai gratuit 14 jours sans CB." />
+  <title>EduZen — Gérez votre OF en 2h par semaine</title>
+
+  <!-- Google Fonts preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── CSS VARIABLES ─────────────────────────────────────────── */
+    :root {
+      --deep-blue:    #274472;
+      --dark-blue:    #1d3556;
+      --darker-blue:  #15263f;
+      --light-blue:   #3b5c8a;
+      --pale-blue:    #d1d9e2;
+      --cyan:         #34B9EE;
+      --cyan-dark:    #2A95BF;
+      --cyan-light:   #5CCBF3;
+      --white:        #ffffff;
+      --gray:         #8a9bb0;
+      --gradient:     linear-gradient(135deg, #335ACF 0%, #34B9EE 100%);
+      --green:        #2ecc71;
+    }
+
+    /* ─── RESET & BASE ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--darker-blue);
+      color: var(--white);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4 { font-family: 'Syne', sans-serif; line-height: 1.15; }
+
+    a { color: inherit; text-decoration: none; }
+
+    img { display: block; max-width: 100%; }
+
+    /* ─── UTILITY ───────────────────────────────────────────────── */
+    .container {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .gradient-text {
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--gradient);
+      color: var(--white);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 32px rgba(52,185,238,0.3);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(52,185,238,0.5);
+    }
+
+    /* ─── FADE-UP ANIMATION ─────────────────────────────────────── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ─── 1. URGENCY BAR ────────────────────────────────────────── */
+    #urgency-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      height: 44px;
+      background: var(--gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      gap: 16px;
+    }
+
+    #urgency-bar p {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--white);
+      text-align: center;
+    }
+
+    #urgency-bar .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--white);
+      margin-right: 6px;
+      animation: pulse-dot 1.5s infinite;
+      vertical-align: middle;
+    }
+
+    #urgency-bar .urgency-btn {
+      background: rgba(255,255,255,0.2);
+      color: var(--white);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    #urgency-bar .urgency-btn:hover { background: rgba(255,255,255,0.35); }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ─── 2. NAVIGATION ─────────────────────────────────────────── */
+    #navbar {
+      position: fixed;
+      top: 44px;
+      left: 0;
+      width: 100%;
+      z-index: 999;
+      height: 64px;
+      background: transparent;
+      border-bottom: 1px solid rgba(52,185,238,0.15);
+      display: flex;
+      align-items: center;
+      transition: background 0.3s ease, backdrop-filter 0.3s ease;
+    }
+
+    #navbar.scrolled {
+      background: rgba(21,38,63,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .logo span { color: var(--cyan); }
+
+    /* ─── 3. HERO ───────────────────────────────────────────────── */
+    #hero {
+      padding: 160px 0 60px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #hero::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(ellipse at center, rgba(52,185,238,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(52,185,238,0.12);
+      border: 1px solid rgba(52,185,238,0.3);
+      border-radius: 100px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--cyan);
+      margin-bottom: 28px;
+    }
+
+    .hero-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      animation: pulse-dot 1.5s infinite;
+      flex-shrink: 0;
+    }
+
+    #hero h1 {
+      font-size: clamp(36px, 6vw, 68px);
+      font-weight: 800;
+      color: var(--white);
+      max-width: 820px;
+      margin: 0 auto 24px;
+      letter-spacing: -0.5px;
+    }
+
+    #hero .subtitle {
+      font-size: clamp(16px, 2vw, 19px);
+      color: var(--pale-blue);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      font-weight: 400;
+    }
+
+    /* ─── 4. VSL PLAYER ─────────────────────────────────────────── */
+    #vsl-section {
+      padding: 0 0 80px;
+    }
+
+    .vsl-wrapper {
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .vsl-container {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      background: #000;
+      border-radius: 16px;
+      border: 2px solid rgba(52,185,238,0.4);
+      box-shadow: 0 0 60px rgba(52,185,238,0.15), 0 24px 64px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+
+    .vsl-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Placeholder overlay shown before user plays */
+    .vsl-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0d1b2e 0%, #1a3050 100%);
+      cursor: pointer;
+      z-index: 2;
+      transition: opacity 0.3s;
+    }
+
+    .vsl-placeholder.hidden { opacity: 0; pointer-events: none; }
+
+    .vsl-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 36px;
+      margin-bottom: 32px;
+    }
+
+    .vsl-logo span { color: var(--cyan); }
+
+    .play-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 0 rgba(52,185,238,0.4);
+      animation: play-pulse 2s infinite;
+      transition: transform 0.2s;
+    }
+
+    .play-btn:hover { transform: scale(1.08); }
+
+    .play-btn svg { margin-left: 6px; }
+
+    @keyframes play-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(52,185,238,0.4); }
+      70% { box-shadow: 0 0 0 20px rgba(52,185,238,0); }
+      100% { box-shadow: 0 0 0 0 rgba(52,185,238,0); }
+    }
+
+    .vsl-duration {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--pale-blue);
+    }
+
+    /* ─── 5. SOCIAL PROOF BAR ───────────────────────────────────── */
+    #proof-bar {
+      padding: 48px 0;
+      background: rgba(39,68,114,0.4);
+      border-top: 1px solid rgba(52,185,238,0.1);
+      border-bottom: 1px solid rgba(52,185,238,0.1);
+    }
+
+    .proof-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+      text-align: center;
+    }
+
+    .proof-item .value {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(32px, 4vw, 42px);
+      font-weight: 800;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .proof-item .label {
+      font-size: 13px;
+      color: var(--pale-blue);
+      font-weight: 400;
+    }
+
+    /* ─── 6. FORMULAIRE ─────────────────────────────────────────── */
+    #formulaire {
+      padding: 96px 0;
+    }
+
+    .form-section-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 48px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .form-card {
+      flex: 1;
+      background: rgba(27,53,86,0.6);
+      border: 1px solid rgba(52,185,238,0.2);
+      border-radius: 20px;
+      border-top: 3px solid var(--cyan);
+      padding: 48px 40px;
+    }
+
+    .form-card h2 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--white);
+    }
+
+    .form-card .form-subtitle {
+      font-size: 15px;
+      color: var(--pale-blue);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--pale-blue);
+    }
+
+    .form-group input {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    .form-group input::placeholder { color: var(--gray); }
+
+    .form-group input:focus {
+      border-color: var(--cyan);
+    }
+
+    .form-group input.error {
+      border-color: #e74c3c;
+    }
+
+    .field-error {
+      font-size: 11px;
+      color: #e74c3c;
+      margin-top: 2px;
+      display: none;
+    }
+
+    .field-error.visible { display: block; }
+
+    .btn-submit {
+      width: 100%;
+      height: 56px;
+      background: var(--gradient);
+      color: var(--white);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 8px 32px rgba(52,185,238,0.3);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(52,185,238,0.5);
+    }
+
+    .btn-submit .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: var(--white);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-submit.loading .btn-text { display: none; }
+    .btn-submit.loading .spinner { display: block; }
+
+    .btn-subtext {
+      text-align: center;
+      font-size: 12px;
+      color: var(--gray);
+      margin-top: 10px;
+    }
+
+    .rgpd-mention {
+      font-size: 11px;
+      color: var(--gray);
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+
+    /* Success message */
+    .success-message {
+      display: none;
+      background: rgba(30,110,90,0.2);
+      border: 1px solid rgba(46,204,113,0.4);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .success-message.visible { display: block; }
+
+    .success-message h3 {
+      font-size: 20px;
+      color: var(--green);
+      margin-bottom: 8px;
+    }
+
+    .success-message p {
+      font-size: 15px;
+      color: var(--pale-blue);
+    }
+
+    /* Badge flottant côté formulaire */
+    .form-side-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding-top: 60px;
+      flex-shrink: 0;
+      width: 200px;
+    }
+
+    .limited-badge {
+      background: rgba(52,185,238,0.1);
+      border: 1px solid rgba(52,185,238,0.3);
+      border-radius: 16px;
+      padding: 20px 16px;
+      text-align: center;
+      animation: badge-pulse 3s infinite;
+    }
+
+    .limited-badge .badge-icon { font-size: 28px; margin-bottom: 8px; }
+
+    .limited-badge p {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--cyan);
+      line-height: 1.4;
+    }
+
+    @keyframes badge-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(52,185,238,0.2); }
+      50% { box-shadow: 0 0 0 12px rgba(52,185,238,0); }
+    }
+
+    /* ─── 7. NEXT STEPS ─────────────────────────────────────────── */
+    #next-steps {
+      padding: 96px 0;
+      background: rgba(29,53,86,0.4);
+    }
+
+    .section-title {
+      font-size: clamp(24px, 3vw, 36px);
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 56px;
+      color: var(--white);
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .step-card {
+      background: var(--deeper, rgba(21,38,63,0.7));
+      border-left: 4px solid var(--cyan);
+      border-radius: 12px;
+      padding: 28px 28px 28px 24px;
+    }
+
+    .step-number {
+      font-family: 'Syne', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      line-height: 1;
+    }
+
+    .step-card h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--white);
+    }
+
+    .step-card p {
+      font-size: 14px;
+      color: var(--pale-blue);
+      line-height: 1.6;
+    }
+
+    /* ─── 8. COMPARISON ─────────────────────────────────────────── */
+    #comparison {
+      padding: 96px 0;
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .compare-col {
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    .compare-col.before {
+      background: rgba(180,40,40,0.08);
+      border: 1px solid rgba(180,40,40,0.2);
+    }
+
+    .compare-col.after {
+      background: rgba(30,130,80,0.08);
+      border: 1px solid rgba(46,204,113,0.2);
+    }
+
+    .compare-col h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .compare-col.before h3 { color: #e57373; }
+    .compare-col.after h3 { color: var(--green); }
+
+    .compare-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .compare-list li {
+      font-size: 14px;
+      color: var(--pale-blue);
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .compare-list li span { flex-shrink: 0; }
+
+    /* ─── 9. TESTIMONIALS ───────────────────────────────────────── */
+    #testimonials {
+      padding: 96px 0;
+      background: rgba(29,53,86,0.3);
+    }
+
+    .testi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .testi-card {
+      background: rgba(21,38,63,0.7);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 28px 28px 24px;
+      position: relative;
+    }
+
+    .testi-card::before {
+      content: '"';
+      position: absolute;
+      top: 12px;
+      left: 20px;
+      font-size: 64px;
+      font-family: 'Syne', sans-serif;
+      color: rgba(52,185,238,0.15);
+      line-height: 1;
+    }
+
+    .testi-quote {
+      font-size: 15px;
+      font-style: italic;
+      color: var(--pale-blue);
+      margin-bottom: 20px;
+      line-height: 1.7;
+      padding-top: 12px;
+    }
+
+    .testi-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .testi-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--white);
+      flex-shrink: 0;
+    }
+
+    .testi-meta { flex: 1; }
+
+    .testi-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .testi-role {
+      font-size: 12px;
+      color: var(--gray);
+    }
+
+    .testi-stars {
+      font-size: 14px;
+      color: var(--cyan);
+      margin-top: 2px;
+    }
+
+    /* ─── 10. FAQ ────────────────────────────────────────────────── */
+    #faq {
+      padding: 96px 0;
+    }
+
+    .faq-list {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .faq-item {
+      background: rgba(27,53,86,0.5);
+      border: 1px solid rgba(52,185,238,0.1);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      cursor: pointer;
+      gap: 16px;
+      user-select: none;
+    }
+
+    .faq-question h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--white);
+      line-height: 1.4;
+    }
+
+    .faq-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(52,185,238,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--cyan);
+      font-size: 18px;
+      font-weight: 300;
+      transition: transform 0.3s, background 0.2s;
+    }
+
+    .faq-item.open .faq-icon {
+      transform: rotate(45deg);
+      background: rgba(52,185,238,0.2);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .faq-item.open .faq-answer { max-height: 300px; }
+
+    .faq-answer p {
+      padding: 0 24px 24px;
+      font-size: 15px;
+      color: var(--pale-blue);
+      line-height: 1.7;
+    }
+
+    /* ─── 11. FINAL CTA ─────────────────────────────────────────── */
+    #final-cta {
+      padding: 120px 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #final-cta::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 700px;
+      height: 500px;
+      background: radial-gradient(ellipse at center, rgba(52,185,238,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    #final-cta h2 {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800;
+      max-width: 680px;
+      margin: 0 auto 20px;
+      color: var(--white);
+      position: relative;
+    }
+
+    #final-cta .cta-sub {
+      font-size: 16px;
+      color: var(--pale-blue);
+      margin-bottom: 48px;
+      position: relative;
+    }
+
+    /* Mini form in final CTA */
+    .mini-form {
+      display: flex;
+      gap: 12px;
+      max-width: 600px;
+      margin: 0 auto 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      position: relative;
+    }
+
+    .mini-form input {
+      flex: 1;
+      min-width: 160px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .mini-form input::placeholder { color: var(--gray); }
+    .mini-form input:focus { border-color: var(--cyan); }
+
+    .mini-form button {
+      flex-shrink: 0;
+    }
+
+    /* ─── 12. FOOTER ─────────────────────────────────────────────── */
+    #footer {
+      padding: 40px 0;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: rgba(15,25,40,0.8);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--gray);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--gray);
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--pale-blue); }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      #urgency-bar p { font-size: 11px; }
+
+      #hero { padding-top: 140px; }
+
+      .proof-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+
+      .form-section-inner { flex-direction: column; align-items: center; }
+      .form-side-badge { display: none; }
+      .form-card { padding: 32px 24px; }
+      .form-row { grid-template-columns: 1fr; }
+
+      .steps-grid { grid-template-columns: 1fr; }
+
+      .compare-grid { grid-template-columns: 1fr; }
+
+      .testi-grid { grid-template-columns: 1fr; }
+
+      .mini-form { flex-direction: column; }
+      .mini-form input, .mini-form button { width: 100%; }
+
+      .footer-inner { flex-direction: column; text-align: center; }
+    }
+
+    @media (max-width: 480px) {
+      .proof-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
+      #urgency-bar .urgency-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 1. URGENCY BAR                                              -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div id="urgency-bar">
+    <p>
+      <span class="pulse-dot"></span>
+      <strong>Offre limitée</strong> — Le fondateur vous appelle personnellement dans les 48h pour configurer votre espace gratuitement
+    </p>
+    <button class="urgency-btn" onclick="scrollToForm()">Je profite →</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 2. NAVIGATION                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <nav id="navbar">
+    <div class="container nav-inner">
+      <div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+        Edu<span>Zen</span>
+      </div>
+      <button class="btn-primary" onclick="scrollToForm()" style="padding:10px 20px;font-size:14px;">
+        Essai gratuit 14 jours →
+      </button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 3. HERO                                                     -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="hero">
+    <div class="container">
+      <div class="hero-badge fade-up">
+        <span class="dot"></span>
+        Appel personnel garanti sous 48h
+      </div>
+
+      <h1 class="fade-up" style="transition-delay:0.1s;">
+        Gérez votre organisme de formation<br>
+        en <span class="gradient-text">2h par semaine</span> — au lieu de 8h.
+      </h1>
+
+      <p class="subtitle fade-up" style="transition-delay:0.2s;">
+        EduZen automatise vos conventions, émargements, Qualiopi, CPF et facturation — en un seul outil. Conçu pour les OF français. Essai gratuit 14 jours, sans carte bancaire.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 4. VSL PLAYER                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="vsl-section">
+    <div class="container">
+      <div class="vsl-wrapper fade-up">
+        <div class="vsl-container">
+          <!-- REMPLACER : URL vidéo VSL -->
+          <iframe
+            id="vsl-player"
+            src="VOTRE_URL_VIDEO"
+            frameborder="0"
+            allowfullscreen
+            allow="autoplay; encrypted-media"
+            style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;"
+          ></iframe>
+
+          <!-- Placeholder avant lecture -->
+          <div class="vsl-placeholder" id="vsl-placeholder" onclick="playVideo()">
+            <div class="vsl-logo">Edu<span>Zen</span></div>
+            <div class="play-btn">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <p class="vsl-duration">⏱ 5 min 30 — Regardez jusqu'à la fin</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 5. SOCIAL PROOF BAR                                         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="proof-bar">
+    <div class="container">
+      <div class="proof-grid">
+        <div class="proof-item fade-up">
+          <div class="value" data-count="17" data-suffix="">0</div>
+          <div class="label">Types de documents générés</div>
+        </div>
+        <div class="proof-item fade-up" style="transition-delay:0.1s;">
+          <div class="value" data-count="32" data-suffix="">0</div>
+          <div class="label">Indicateurs Qualiopi automatisés</div>
+        </div>
+        <div class="proof-item fade-up" style="transition-delay:0.2s;">
+          <div class="value" data-count="6" data-suffix="h+">0</div>
+          <div class="label">Récupérées par semaine en moyenne</div>
+        </div>
+        <div class="proof-item fade-up" style="transition-delay:0.3s;">
+          <div class="value" data-count="14" data-suffix="j">0</div>
+          <div class="label">D'essai gratuit sans CB</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 6. FORMULAIRE                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="formulaire">
+    <div class="container">
+      <div class="form-section-inner">
+
+        <div class="form-card fade-up">
+          <h2>Démarrez votre essai gratuit maintenant</h2>
+          <p class="form-subtitle">
+            Le fondateur vous appelle personnellement sous 48h pour configurer votre espace EduZen avec vous — gratuitement.
+          </p>
+
+          <!-- REMPLACER : action du formulaire (Tally, Typeform, ou votre backend) -->
+          <form id="signup-form" action="VOTRE_ACTION_FORMULAIRE" method="POST" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prenom">Prénom *</label>
+                <input type="text" id="prenom" name="prenom" placeholder="Jean" required />
+                <span class="field-error" id="err-prenom">Ce champ est requis</span>
+              </div>
+              <div class="form-group">
+                <label for="nom">Nom *</label>
+                <input type="text" id="nom" name="nom" placeholder="Dupont" required />
+                <span class="field-error" id="err-nom">Ce champ est requis</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email professionnel *</label>
+              <input type="email" id="email" name="email" placeholder="jean@mon-of.fr" required />
+              <span class="field-error" id="err-email">Email invalide</span>
+            </div>
+
+            <div class="form-group">
+              <label for="telephone">
+                Téléphone *
+                <span style="font-size:11px;color:var(--gray);font-weight:400;"> — pour votre appel personnalisé sous 48h</span>
+              </label>
+              <input type="tel" id="telephone" name="telephone" placeholder="06 12 34 56 78" required />
+              <span class="field-error" id="err-telephone">Téléphone requis pour l'appel 48h</span>
+            </div>
+
+            <div class="form-group">
+              <label for="organisme">Nom de votre organisme de formation *</label>
+              <input type="text" id="organisme" name="organisme" placeholder="Mon Organisme de Formation" required />
+              <span class="field-error" id="err-organisme">Ce champ est requis</span>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submit-btn">
+              <span class="btn-text">Je démarre mon essai gratuit →</span>
+              <span class="spinner"></span>
+            </button>
+
+            <p class="btn-subtext">Appel personnel sous 48h · 14 jours gratuits · Sans CB</p>
+
+            <p class="rgpd-mention">
+              Vos données sont utilisées uniquement pour vous contacter dans le cadre de votre essai. Aucun spam. Désinscription libre.
+            </p>
+          </form>
+
+          <div class="success-message" id="success-msg">
+            <h3>✅ Parfait ! Vérifiez votre email.</h3>
+            <p>Je vous appelle dans les 48 heures.</p>
+          </div>
+        </div>
+
+        <!-- Badge flottant (desktop uniquement) -->
+        <div class="form-side-badge">
+          <div class="limited-badge">
+            <div class="badge-icon">🔒</div>
+            <p>Places limitées pour l'appel personnalisé</p>
+          </div>
+          <div class="limited-badge" style="margin-top:8px;">
+            <div class="badge-icon">📞</div>
+            <p>Appel direct avec le fondateur — pas un commercial</p>
+          </div>
+          <div class="limited-badge" style="margin-top:8px;">
+            <div class="badge-icon">🛡️</div>
+            <p>14 jours gratuits — aucune CB requise</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 7. CE QUI SE PASSE APRÈS                                    -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="next-steps">
+    <div class="container">
+      <h2 class="section-title fade-up">Ce qui se passe quand vous vous inscrivez</h2>
+
+      <div class="steps-grid">
+        <div class="step-card fade-up">
+          <div class="step-number">01</div>
+          <h3>Vous recevez un email de confirmation</h3>
+          <p>Accès immédiat à votre espace EduZen. Essai 14 jours complet, toutes fonctionnalités débloquées.</p>
+        </div>
+        <div class="step-card fade-up" style="transition-delay:0.15s;">
+          <div class="step-number">02</div>
+          <h3>Le fondateur vous appelle sous 48h</h3>
+          <p>Un appel de 30 à 45 minutes avec moi personnellement. Pas un commercial. Pas un bot. Moi.</p>
+        </div>
+        <div class="step-card fade-up" style="transition-delay:0.3s;">
+          <div class="step-number">03</div>
+          <h3>Votre OF est configuré et opérationnel</h3>
+          <p>Conventions, Qualiopi, émargements — tout paramétré ensemble. Vous repartez opérationnel dès le premier jour.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 8. COMPARAISON AVANT/APRÈS                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="comparison">
+    <div class="container">
+      <h2 class="section-title fade-up">Un seul outil à la place de plusieurs</h2>
+
+      <div class="compare-grid">
+        <div class="compare-col before fade-up">
+          <h3>❌ Avant EduZen</h3>
+          <ul class="compare-list">
+            <li><span>❌</span> Word pour les conventions (20 min/document)</li>
+            <li><span>❌</span> Émargements papier ou outil supplémentaire payant</li>
+            <li><span>❌</span> Tableau Excel pour Qualiopi</li>
+            <li><span>❌</span> Saisie manuelle sur EDOF pour le CPF</li>
+            <li><span>❌</span> BPF rempli à la main chaque année</li>
+            <li><span>❌</span> 3 à 4 abonnements qui ne se parlent pas</li>
+            <li><span>❌</span> Portail apprenant avec création de compte obligatoire</li>
+            <li><span>❌</span> 200 à 400€/mois pour tout ça</li>
+          </ul>
+        </div>
+
+        <div class="compare-col after fade-up" style="transition-delay:0.15s;">
+          <h3>✅ Avec EduZen</h3>
+          <ul class="compare-list">
+            <li><span>✅</span> Convention générée en 45 secondes</li>
+            <li><span>✅</span> Émargements numériques inclus dans l'abonnement</li>
+            <li><span>✅</span> 32 indicateurs Qualiopi mis à jour automatiquement</li>
+            <li><span>✅</span> Synchronisation CPF/EDOF sans double saisie</li>
+            <li><span>✅</span> BPF prérempli automatiquement</li>
+            <li><span>✅</span> Un seul outil connecté</li>
+            <li><span>✅</span> Portail apprenant via lien — zéro mot de passe</li>
+            <li><span>✅</span> À partir de 79€/mois — tout inclus</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 9. TÉMOIGNAGES                                              -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="testimonials">
+    <div class="container">
+      <h2 class="section-title fade-up">Ce que disent nos premiers utilisateurs</h2>
+
+      <div class="testi-grid">
+        <div class="testi-card fade-up">
+          <p class="testi-quote">
+            "Je suis passée de 7h à moins de 2h d'admin par semaine. J'ai retrouvé mes soirées."
+          </p>
+          <div class="testi-footer">
+            <div class="testi-avatar">M</div>
+            <div class="testi-meta">
+              <div class="testi-name">Marie D.</div>
+              <div class="testi-role">Directrice OF Management, Île-de-France</div>
+              <div class="testi-stars">★★★★★</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card fade-up" style="transition-delay:0.1s;">
+          <p class="testi-quote">
+            "J'avais un autre outil avant. Je payais en plus pour les émargements. Avec EduZen tout est là — et je paie moins."
+          </p>
+          <div class="testi-footer">
+            <div class="testi-avatar">K</div>
+            <div class="testi-meta">
+              <div class="testi-name">Karim A.</div>
+              <div class="testi-role">Formateur indépendant, Paris</div>
+              <div class="testi-stars">★★★★★</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card fade-up" style="transition-delay:0.2s;">
+          <p class="testi-quote">
+            "L'accès auditeur directement dans EduZen — mon auditeur Qualiopi a dit que c'était la première fois qu'il voyait ça. Audit réussi du premier coup."
+          </p>
+          <div class="testi-footer">
+            <div class="testi-avatar">T</div>
+            <div class="testi-meta">
+              <div class="testi-name">Thomas M.</div>
+              <div class="testi-role">Directeur OF Développement personnel</div>
+              <div class="testi-stars">★★★★★</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card fade-up" style="transition-delay:0.3s;">
+          <p class="testi-quote">
+            "Avant j'utilisais 3 outils différents. Aujourd'hui j'en utilise un. Et il fait plus que les 3 réunis."
+          </p>
+          <div class="testi-footer">
+            <div class="testi-avatar">S</div>
+            <div class="testi-meta">
+              <div class="testi-name">Sophie R.</div>
+              <div class="testi-role">Directrice OF Sécurité au travail</div>
+              <div class="testi-stars">★★★★★</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 10. FAQ                                                     -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="faq">
+    <div class="container">
+      <h2 class="section-title fade-up">Questions fréquentes</h2>
+
+      <div class="faq-list">
+
+        <div class="faq-item fade-up">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <h3>L'essai gratuit est vraiment sans carte bancaire ?</h3>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>Oui, totalement. Vous créez votre espace en 2 minutes sans renseigner aucune information de paiement. L'essai dure 14 jours avec accès à toutes les fonctionnalités. À la fin, vous choisissez de continuer ou non.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-up" style="transition-delay:0.05s;">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <h3>Le fondateur m'appelle vraiment dans les 48h ?</h3>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>Oui. C'est un engagement personnel. Je réserve du temps chaque semaine pour appeler personnellement chaque nouvel inscrit. Cet appel dure 30 à 45 minutes — on configure votre espace ensemble, on importe vos données, on teste votre première convention. Vous repartez opérationnel.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-up" style="transition-delay:0.1s;">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <h3>Je dois migrer toutes mes données depuis mon outil actuel ?</h3>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>Non. On le fait ensemble lors de l'appel de configuration. Et si vous utilisez actuellement Word, Excel ou un autre logiciel — on importe ce qui peut l'être et on repart sur des bases propres. C'est plus simple qu'il n'y paraît.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-up" style="transition-delay:0.15s;">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <h3>EduZen est-il vraiment conforme Qualiopi ?</h3>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>Oui. Les 17 modèles de documents sont pré-configurés selon le Référentiel National Qualité. Le tableau de bord Qualiopi suit vos 32 indicateurs automatiquement. Vous pouvez générer un accès temporisé pour votre auditeur directement dans EduZen — une fonctionnalité unique sur le marché.</p>
+          </div>
+        </div>
+
+        <div class="faq-item fade-up" style="transition-delay:0.2s;">
+          <div class="faq-question" onclick="toggleFaq(this)">
+            <h3>Quel est le prix après l'essai gratuit ?</h3>
+            <span class="faq-icon">+</span>
+          </div>
+          <div class="faq-answer">
+            <p>EduZen commence à 79€/mois — tout inclus. Pas de module supplémentaire payant pour les émargements, pas de frais cachés. Un seul abonnement qui couvre l'intégralité de vos besoins administratifs.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 11. CTA FINAL                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="final-cta" style="background: var(--dark-blue);">
+    <div class="container">
+      <h2 class="fade-up">
+        Rejoignez les OF qui ont repris le contrôle<br>
+        <span class="gradient-text">de leur temps.</span>
+      </h2>
+      <p class="cta-sub fade-up" style="transition-delay:0.1s;">
+        Essai gratuit 14 jours · Appel personnel sous 48h · Configuration incluse · Sans carte bancaire
+      </p>
+
+      <!-- Mini formulaire CTA final -->
+      <form class="mini-form fade-up" id="mini-form" style="transition-delay:0.2s;" onsubmit="handleMiniForm(event)">
+        <input type="text" name="prenom_mini" placeholder="Prénom" required />
+        <input type="email" name="email_mini" placeholder="Email professionnel" required />
+        <!-- REMPLACER : numéro de téléphone de contact -->
+        <input type="tel" name="tel_mini" placeholder="Téléphone" required />
+        <button type="submit" class="btn-primary">Je démarre maintenant →</button>
+      </form>
+
+      <p class="fade-up" style="transition-delay:0.3s;font-size:13px;color:var(--gray);margin-top:12px;position:relative;">
+        Appel personnel sous 48h · Sans CB · Opérationnel dès le 1er jour
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- 12. FOOTER                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <footer id="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div>
+          <div class="logo" style="margin-bottom:8px;">Edu<span>Zen</span></div>
+          <p class="footer-copy">© 2026 EduZen · Logiciel de gestion pour Organismes de Formation · www.eduzen.io</p>
+        </div>
+        <nav class="footer-links">
+          <a href="#">Mentions légales</a>
+          <a href="#">Politique de confidentialité</a>
+          <!-- REMPLACER : numéro de téléphone de contact -->
+          <a href="mailto:contact@eduzen.io">Contact</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- JAVASCRIPT                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <script>
+    /* ── Scroll to form ──────────────────────────────────────── */
+    function scrollToForm() {
+      document.getElementById('formulaire').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /* ── Sticky nav ──────────────────────────────────────────── */
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 80);
+    }, { passive: true });
+
+    /* ── VSL Placeholder play ────────────────────────────────── */
+    function playVideo() {
+      const placeholder = document.getElementById('vsl-placeholder');
+      const player = document.getElementById('vsl-player');
+      placeholder.classList.add('hidden');
+      player.style.display = 'block';
+      // If URL is set, autoplay by adding ?autoplay=1
+      const src = player.getAttribute('src');
+      if (src && src !== 'VOTRE_URL_VIDEO') {
+        player.setAttribute('src', src + (src.includes('?') ? '&' : '?') + 'autoplay=1');
+      }
+    }
+
+    /* ── Fade-up on scroll (IntersectionObserver) ────────────── */
+    const fadeEls = document.querySelectorAll('.fade-up');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    fadeEls.forEach(el => observer.observe(el));
+
+    /* ── CountUp for stats ───────────────────────────────────── */
+    const countEls = document.querySelectorAll('[data-count]');
+    const countObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        const target = parseInt(el.getAttribute('data-count'));
+        const suffix = el.getAttribute('data-suffix') || '';
+        const duration = 1200;
+        const start = performance.now();
+        function update(now) {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = Math.floor(eased * target) + suffix;
+          if (progress < 1) requestAnimationFrame(update);
+          else el.textContent = target + suffix;
+        }
+        requestAnimationFrame(update);
+        countObserver.unobserve(el);
+      });
+    }, { threshold: 0.3 });
+    countEls.forEach(el => countObserver.observe(el));
+
+    /* ── FAQ accordion ───────────────────────────────────────── */
+    function toggleFaq(questionEl) {
+      const item = questionEl.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+      // Open clicked (if it wasn't open)
+      if (!isOpen) item.classList.add('open');
+    }
+
+    /* ── Form validation & submit ────────────────────────────── */
+    document.getElementById('signup-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      let valid = true;
+
+      const fields = [
+        { id: 'prenom', errId: 'err-prenom', validate: v => v.trim().length > 0 },
+        { id: 'nom', errId: 'err-nom', validate: v => v.trim().length > 0 },
+        { id: 'email', errId: 'err-email', validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+        { id: 'telephone', errId: 'err-telephone', validate: v => v.trim().length >= 10 },
+        { id: 'organisme', errId: 'err-organisme', validate: v => v.trim().length > 0 },
+      ];
+
+      fields.forEach(f => {
+        const input = document.getElementById(f.id);
+        const err = document.getElementById(f.errId);
+        const ok = f.validate(input.value);
+        input.classList.toggle('error', !ok);
+        err.classList.toggle('visible', !ok);
+        if (!ok) valid = false;
+      });
+
+      if (!valid) return;
+
+      // Show spinner
+      const btn = document.getElementById('submit-btn');
+      btn.classList.add('loading');
+
+      // Simulate submission (replace with real fetch/form action)
+      setTimeout(() => {
+        btn.classList.remove('loading');
+        document.getElementById('signup-form').style.display = 'none';
+        document.getElementById('success-msg').classList.add('visible');
+      }, 1800);
+    });
+
+    /* ── Mini CTA form ───────────────────────────────────────── */
+    function handleMiniForm(e) {
+      e.preventDefault();
+      // Scroll to main form and pre-fill if possible
+      scrollToForm();
+      const miniData = new FormData(e.target);
+      const prenom = miniData.get('prenom_mini');
+      const email = miniData.get('email_mini');
+      const tel = miniData.get('tel_mini');
+      if (prenom) document.getElementById('prenom').value = prenom;
+      if (email) document.getElementById('email').value = email;
+      if (tel) document.getElementById('telephone').value = tel;
+    }
+  </script>
+
+</body>
+</html>
