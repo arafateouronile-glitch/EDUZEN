@@ -447,6 +447,74 @@ export const AI_TOOLS: Tool[] = [
       required: ['document_type', 'session_id'],
     },
   },
+  {
+    name: 'search_sessions',
+    description: 'Rechercher des sessions par nom (partiel), ou par nom de formation parente. Utile pour retrouver une session quand on ne connaît pas son ID.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Terme de recherche dans le nom de la session ou de la formation',
+        },
+        status: {
+          type: 'string',
+          enum: ['planned', 'ongoing', 'completed', 'cancelled'],
+          description: 'Filtrer par statut (optionnel)',
+        },
+        limit: {
+          type: 'number',
+          description: 'Nombre maximum de résultats (défaut : 10)',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'update_session',
+    description: 'Modifier les champs d\'une session existante (nom, dates, lieu, capacité, statut). Confirme avec l\'utilisateur avant d\'agir.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        session_id: {
+          type: 'string',
+          description: 'UUID de la session à modifier',
+        },
+        name: { type: 'string', description: 'Nouveau nom (optionnel)' },
+        start_date: { type: 'string', description: 'Nouvelle date de début YYYY-MM-DD (optionnel)' },
+        end_date: { type: 'string', description: 'Nouvelle date de fin YYYY-MM-DD (optionnel)' },
+        location: { type: 'string', description: 'Nouveau lieu (optionnel)' },
+        capacity_max: { type: 'number', description: 'Nouvelle capacité maximale (optionnel)' },
+        status: {
+          type: 'string',
+          enum: ['planned', 'ongoing', 'completed', 'cancelled'],
+          description: 'Nouveau statut (optionnel)',
+        },
+      },
+      required: ['session_id'],
+    },
+  },
+  {
+    name: 'update_formation',
+    description: 'Modifier les champs d\'une formation existante (nom, description, durée, prix, catégorie, prérequis, activation). Confirme avec l\'utilisateur avant d\'agir.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        formation_id: {
+          type: 'string',
+          description: 'UUID de la formation à modifier',
+        },
+        name: { type: 'string', description: 'Nouveau nom (optionnel)' },
+        description: { type: 'string', description: 'Nouvelle description (optionnel)' },
+        duration_hours: { type: 'number', description: 'Nouvelle durée en heures (optionnel)' },
+        price: { type: 'number', description: 'Nouveau prix en EUR (optionnel)' },
+        category: { type: 'string', description: 'Nouvelle catégorie (optionnel)' },
+        prerequisites: { type: 'string', description: 'Nouveaux prérequis (optionnel)' },
+        is_active: { type: 'boolean', description: 'Activer ou désactiver la formation (optionnel)' },
+      },
+      required: ['formation_id'],
+    },
+  },
 ]
 
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -497,6 +565,12 @@ export async function executeTool(
         return await listEnrollments(toolInput, supabase)
       case 'send_bulk_documents':
         return await sendBulkDocuments(toolInput, supabase, organizationId)
+      case 'search_sessions':
+        return await searchSessions(toolInput, supabase, organizationId)
+      case 'update_session':
+        return await updateSession(toolInput, supabase)
+      case 'update_formation':
+        return await updateFormation(toolInput, supabase, organizationId)
       default:
         return `Outil inconnu : ${toolName}`
     }
@@ -1275,5 +1349,138 @@ async function sendBulkDocuments(input: ToolInput, supabase: SupabaseClient, org
     `• ⚠️ Ignorés (sans email) : ${skipped}\n` +
     `• ❌ Échecs : ${failed}\n\n` +
     `**Détail :**\n${results.join('\n')}`
+  )
+}
+
+async function searchSessions(input: ToolInput, supabase: SupabaseClient, orgId: string) {
+  const q = (input.query as string).trim()
+  const limit = (input.limit as number) ?? 10
+
+  // Search sessions by name
+  let sessionQuery = supabase
+    .from('sessions')
+    .select('id, name, start_date, end_date, status, location, formations!inner(name, organization_id)')
+    .eq('formations.organization_id', orgId)
+    .ilike('name', `%${q}%`)
+    .order('start_date', { ascending: false })
+    .limit(limit)
+
+  if (input.status) sessionQuery = sessionQuery.eq('status', input.status as string)
+  const { data: bySessionName } = await sessionQuery
+
+  // Also search sessions via formation name
+  const { data: formations } = await supabase
+    .from('formations')
+    .select('id')
+    .eq('organization_id', orgId)
+    .ilike('name', `%${q}%`)
+    .limit(5)
+
+  let byFormationName: typeof bySessionName = []
+  if (formations?.length) {
+    const formationIds = formations.map((f: Record<string, unknown>) => f.id as string)
+    const { data } = await supabase
+      .from('sessions')
+      .select('id, name, start_date, end_date, status, location, formations!inner(name, organization_id)')
+      .in('formation_id', formationIds)
+      .order('start_date', { ascending: false })
+      .limit(limit)
+    byFormationName = data ?? []
+  }
+
+  // Merge and deduplicate
+  const all = [...(bySessionName ?? []), ...(byFormationName ?? [])]
+  const seen = new Set<string>()
+  const data = all.filter((s: Record<string, unknown>) => {
+    if (seen.has(s.id as string)) return false
+    seen.add(s.id as string)
+    return true
+  }).slice(0, limit)
+
+  if (!data.length) return `Aucune session trouvée pour "${q}".`
+
+  const statusLabel: Record<string, string> = {
+    planned: 'Planifiée', ongoing: 'En cours', completed: 'Terminée', cancelled: 'Annulée',
+  }
+
+  const rows = data.map((s: Record<string, unknown>) => {
+    const fo = (Array.isArray(s.formations) ? s.formations[0] : s.formations) as Record<string, unknown> | null
+    return `• [${s.id}] **${s.name}** — ${s.start_date} → ${s.end_date}` +
+      ` — ${statusLabel[s.status as string] ?? s.status}` +
+      (s.location ? ` @ ${s.location}` : '') +
+      (fo ? ` (${fo.name})` : '') +
+      `\n  [Voir →](/dashboard/sessions/${s.id})`
+  })
+
+  return `${data.length} session(s) trouvée(s) pour "${q}" :\n${rows.join('\n')}`
+}
+
+async function updateSession(input: ToolInput, supabase: SupabaseClient) {
+  const sessionId = input.session_id as string
+
+  // Build update payload with only provided fields
+  const patch: Record<string, unknown> = {}
+  if (input.name !== undefined) patch.name = input.name
+  if (input.start_date !== undefined) patch.start_date = input.start_date
+  if (input.end_date !== undefined) patch.end_date = input.end_date
+  if (input.location !== undefined) patch.location = input.location
+  if (input.capacity_max !== undefined) patch.capacity_max = input.capacity_max
+  if (input.status !== undefined) patch.status = input.status
+
+  if (Object.keys(patch).length === 0) return 'Aucun champ à modifier fourni.'
+
+  const { data, error } = await supabase
+    .from('sessions')
+    .update(patch)
+    .eq('id', sessionId)
+    .select('id, name, start_date, end_date, location, status, capacity_max')
+    .single()
+
+  if (error) return `Erreur lors de la mise à jour : ${error.message}`
+
+  const updated = Object.keys(patch).join(', ')
+  return (
+    `Session mise à jour (${updated}) :\n` +
+    `• Nom : ${data.name}\n` +
+    `• Dates : ${data.start_date} → ${data.end_date}\n` +
+    `• Statut : ${data.status}` +
+    (data.location ? `\n• Lieu : ${data.location}` : '') +
+    (data.capacity_max ? `\n• Capacité : ${data.capacity_max}` : '') +
+    `\n[Voir la session →](/dashboard/sessions/${data.id})`
+  )
+}
+
+async function updateFormation(input: ToolInput, supabase: SupabaseClient, _orgId: string) {
+  const formationId = input.formation_id as string
+
+  const patch: Record<string, unknown> = {}
+  if (input.name !== undefined) patch.name = input.name
+  if (input.description !== undefined) patch.description = input.description
+  if (input.duration_hours !== undefined) patch.duration_hours = input.duration_hours
+  if (input.price !== undefined) patch.price = input.price
+  if (input.category !== undefined) patch.category = input.category
+  if (input.prerequisites !== undefined) patch.prerequisites = input.prerequisites
+  if (input.is_active !== undefined) patch.is_active = input.is_active
+
+  if (Object.keys(patch).length === 0) return 'Aucun champ à modifier fourni.'
+
+  const { data, error } = await supabase
+    .from('formations')
+    .update(patch)
+    .eq('id', formationId)
+    .select('id, name, duration_hours, price, category, is_active')
+    .single()
+
+  if (error) return `Erreur lors de la mise à jour : ${error.message}`
+
+  const updated = Object.keys(patch).join(', ')
+  return (
+    `Formation mise à jour (${updated}) :\n` +
+    `• Nom : ${data.name}\n` +
+    (data.duration_hours ? `• Durée : ${data.duration_hours}h\n` : '') +
+    (data.price ? `• Prix : ${data.price} EUR\n` : '') +
+    (data.category ? `• Catégorie : ${data.category}\n` : '') +
+    `• Statut : ${data.is_active ? 'Active' : 'Inactive'}\n` +
+    `[Voir la formation →](/dashboard/formations/${data.id})`
   )
 }

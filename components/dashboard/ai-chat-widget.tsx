@@ -42,6 +42,9 @@ const TOOL_LABELS: Record<string, string> = {
   update_entity_status: 'Mise à jour statut',
   list_enrollments: 'Inscriptions',
   send_bulk_documents: 'Envoi en masse',
+  search_sessions: 'Recherche session',
+  update_session: 'Modification session',
+  update_formation: 'Modification formation',
 }
 
 function formatRelativeTime(ts: number): string {
@@ -52,12 +55,75 @@ function formatRelativeTime(ts: number): string {
   return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 
-const SUGGESTIONS = [
-  'Crée un programme "Management" (PROG-MG), puis une formation de 35h et une session en juin',
+const DEFAULT_SUGGESTIONS = [
+  'Crée un programme "Management" (PROG-MG), une formation de 35h et une session en juin',
   'Quelles sessions sont prévues cette semaine ?',
   'Montre-moi les émargements non clôturés',
   'État de ma conformité Qualiopi',
 ]
+
+function getContextualSuggestions(pathname: string): string[] {
+  const segments = pathname.split('/').filter(Boolean)
+  const section = segments[1]
+  const entityId = segments[2]
+  const isEntity = !!entityId && /^[0-9a-f-]{36}$/i.test(entityId)
+
+  if (section === 'sessions' && isEntity) return [
+    'Qui est inscrit à cette session ?',
+    'Envoie la convention à tous les apprenants de cette session',
+    'Montre-moi les émargements de cette session',
+    'Passe cette session en statut "En cours"',
+  ]
+  if (section === 'sessions') return [
+    'Recherche une session par nom',
+    'Quelles sessions ont encore des places disponibles ?',
+    'Y a-t-il des sessions avec des émargements non clôturés ?',
+    'Crée une nouvelle session pour le mois prochain',
+  ]
+  if (section === 'formations' && isEntity) return [
+    'Quelles sessions ont été créées pour cette formation ?',
+    'Crée une nouvelle session pour cette formation',
+    'Modifie le prix de cette formation',
+    'Désactive cette formation',
+  ]
+  if (section === 'formations') return [
+    'Liste toutes les formations actives',
+    'Crée une nouvelle formation',
+    'Quelle formation a le plus de sessions ?',
+  ]
+  if (section === 'programs' && isEntity) return [
+    'Quelles formations sont rattachées à ce programme ?',
+    'Modifie le prix de ce programme',
+  ]
+  if (section === 'students' && isEntity) return [
+    "Quel est l'historique de formations de cet apprenant ?",
+    'Inscris cet apprenant à une session',
+    'Envoie un devis à cet apprenant',
+  ]
+  if (section === 'students' || section === 'my-students') return [
+    'Cherche un apprenant par nom ou email',
+    'Crée un nouvel apprenant',
+    "Quels apprenants ont des inscriptions en attente ?",
+  ]
+  if (section === 'qualiopi') return [
+    'Quel est mon état de conformité Qualiopi ?',
+    'Quels indicateurs sont non conformes ou à améliorer ?',
+    "Comment améliorer mon score sur le critère 1 ?",
+  ]
+  if (section === 'attendance') return [
+    "Quels émargements ne sont pas encore clôturés ?",
+    'Y a-t-il des sessions sans émargement cette semaine ?',
+  ]
+  if (section === 'calendar') return [
+    'Quels événements sont prévus ce mois-ci ?',
+    'Y a-t-il des sessions planifiées la semaine prochaine ?',
+  ]
+  if (section === 'crm') return [
+    'Cherche un contact par nom ou entreprise',
+    'Combien de prospects actifs avons-nous ?',
+  ]
+  return DEFAULT_SUGGESTIONS
+}
 
 function buildPageContext(pathname: string): string | undefined {
   const segments = pathname.split('/').filter(Boolean)
@@ -404,7 +470,7 @@ export function AiChatWidget() {
             <div className="pt-1 space-y-2">
               <p className="text-xs text-gray-400 text-center">Suggestions</p>
               <div className="flex flex-col gap-1.5">
-                {SUGGESTIONS.map((s) => (
+                {getContextualSuggestions(pathname).map((s) => (
                   <button
                     key={s}
                     onClick={() => sendMessage(s)}

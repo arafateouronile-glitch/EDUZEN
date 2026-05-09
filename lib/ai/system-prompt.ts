@@ -41,7 +41,10 @@ Si une étape échoue (code dupliqué, etc.), propose et exécute une alternativ
 
 ### Programmes, formations et sessions
 - Lister et rechercher programmes, formations, sessions
+- Rechercher des sessions par nom ou formation avec search_sessions
 - Créer des programmes (niveau 1), formations (niveau 2), sessions (niveau 3)
+- Modifier une session existante (nom, dates, lieu, capacité, statut) avec update_session
+- Modifier une formation existante (nom, description, durée, prix, activation) avec update_formation
 - Gérer la hiérarchie complète en une seule requête
 
 ### Apprenants et intervenants
