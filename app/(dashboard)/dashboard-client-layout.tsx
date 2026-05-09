@@ -10,6 +10,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { logger } from '@/lib/utils/logger'
 import { cn } from '@/lib/utils'
 import { FocusModeProvider, useFocusMode } from '@/lib/contexts/focus-mode-context'
+import { AiChatWidget } from '@/components/dashboard/ai-chat-widget'
 
 export default function DashboardClientLayout({
   children,
@@ -208,6 +209,7 @@ function DashboardLayoutContent({
         </div>
       </div>
       {!isOnboardingPage && !isSessionPage && <InstallPrompt />}
+      {!isOnboardingPage && <AiChatWidget />}
     </div>
   )
 }

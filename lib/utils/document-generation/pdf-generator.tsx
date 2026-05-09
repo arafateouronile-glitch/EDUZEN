@@ -187,7 +187,7 @@ async function generatePDFFromHTML(
   try {
     page = await createPage()
 
-    await page.setContent(fullHTML, { waitUntil: 'networkidle0' })
+    await page.setContent(fullHTML, { waitUntil: 'load', timeout: 30000 })
 
     const margins = template.margins || { top: 0, right: 0, bottom: 0, left: 0 }
     const pdfBuffer = await page.pdf({
