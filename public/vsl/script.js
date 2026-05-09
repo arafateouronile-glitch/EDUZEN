@@ -19,15 +19,18 @@ document.getElementById('nav-cta').addEventListener('click', scrollToForm);
 /* ── Urgency bar button ── */
 document.getElementById('urgency-cta').addEventListener('click', scrollToForm);
 
-/* ── VSL Placeholder play ── */
-var vslPlaceholder = document.getElementById('vsl-placeholder');
-if (vslPlaceholder) {
-  vslPlaceholder.addEventListener('click', function() {
+/* ── VSL play ── */
+var vslContainer = document.querySelector('.vsl-container');
+if (vslContainer) {
+  vslContainer.style.cursor = 'pointer';
+  vslContainer.addEventListener('click', function() {
     var player = document.getElementById('vsl-player');
+    if (!player) return;
     var dataSrc = player.getAttribute('data-src');
-    if (dataSrc) player.setAttribute('src', dataSrc);
-    player.style.display = 'block';
-    vslPlaceholder.classList.add('hidden');
+    if (!dataSrc) return;
+    // Remplacer tout le contenu du container par l'iframe
+    vslContainer.style.cursor = 'default';
+    vslContainer.innerHTML = '<iframe src="' + dataSrc + '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>';
   });
 }
 
