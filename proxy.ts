@@ -22,10 +22,11 @@ function isAllowedOrigin(origin: string | null): boolean {
 export async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
-  // Fichiers statiques : pas de traitement
+  // Fichiers statiques et pages marketing sans CSP nonce : pas de traitement
   if (
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/icons/') ||
+    pathname.startsWith('/vsl') ||
     pathname === '/manifest.json' ||
     pathname.startsWith('/favicon.ico') ||
     pathname.match(/\.(ico|png|jpg|jpeg|gif|svg|json|woff|woff2|ttf|eot|css|js|map)$/i)
