@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Shield, Key, Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { Shield, Key, Mail, Lock, ArrowRight, CheckCircle2, AlertTriangle, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -111,8 +111,11 @@ function Background3D() {
   )
 }
 
+type UrlBanner = { type: 'expired' | 'error'; message: string } | null
+
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login, isLoggingIn, loginError } = useAuth()
   const supabase = createClient()
   const [email, setEmail] = useState('')
@@ -122,6 +125,29 @@ export default function LoginPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [twoFactorCode, setTwoFactorCode] = useState('')
   const [isVerifying2FA, setIsVerifying2FA] = useState(false)
+  const [urlBanner, setUrlBanner] = useState<UrlBanner>(null)
+
+  useEffect(() => {
+    // Lire le hash (#error_code=otp_expired) — invisible côté serveur
+    const hash = window.location.hash
+    const params = new URLSearchParams(hash.replace(/^#/, ''))
+    const errorCode = params.get('error_code')
+    const queryError = searchParams.get('error')
+
+    if (errorCode === 'otp_expired') {
+      setUrlBanner({
+        type: 'expired',
+        message: 'Le lien de connexion a expiré (valable 1 heure). Définissez un mot de passe ou demandez un nouveau lien ci-dessous.',
+      })
+    } else if (queryError === 'confirmation-failed') {
+      setUrlBanner({
+        type: 'error',
+        message: 'Le lien est invalide ou a déjà été utilisé. Demandez un nouveau lien via "Mot de passe oublié".',
+      })
+    }
+    // Nettoyer le hash de l'URL sans recharger la page
+    if (hash) window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -258,6 +284,32 @@ export default function LoginPage() {
                     Connectez-vous à votre espace EduZen
                   </motion.p>
                 </div>
+
+                <AnimatePresence>
+                  {urlBanner && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className={cn(
+                        'mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm',
+                        urlBanner.type === 'expired'
+                          ? 'border-amber-200 bg-amber-50/80 text-amber-800'
+                          : 'border-red-200 bg-red-50/80 text-red-700'
+                      )}
+                    >
+                      {urlBanner.type === 'expired'
+                        ? <Clock className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                        : <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />}
+                      <span>
+                        {urlBanner.message}{' '}
+                        <Link href="/auth/forgot-password" className="font-semibold underline underline-offset-2">
+                          Mot de passe oublié&nbsp;→
+                        </Link>
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <motion.div 
