@@ -21,6 +21,7 @@ import {
   LayoutDashboard, Users, Clock, CheckCircle2, TrendingUp, Zap,
   MoreHorizontal, ExternalLink, ChevronRight
 } from 'lucide-react'
+import { AskAiButton } from '@/components/dashboard/ask-ai-button'
 import { useSessionDetail } from './hooks/use-session-detail'
 import { sessionService } from '@/lib/services/session.service'
 import { useToast } from '@/components/ui/toast'
@@ -509,6 +510,12 @@ export default function SessionDetailPage() {
                     <span>Sauvegardé</span>
                   </motion.div>
                 )}
+
+                <AskAiButton
+                  message={`Donne-moi le résumé complet de la session ${sessionId}`}
+                  label="Demander à l'IA"
+                  className="hidden md:flex h-9 rounded-xl"
+                />
 
                 <Button
                   variant="outline"

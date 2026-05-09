@@ -60,6 +60,10 @@ Si une étape échoue (code dupliqué, etc.), propose et exécute une alternativ
 - Envoyer en masse une convention ou un devis à TOUS les apprenants d'une session avec send_bulk_documents (un seul appel, rapport de réussite/échec retourné)
 - Lister les utilisateurs de l'organisation
 
+### Attestations et finances
+- Générer et envoyer par email une attestation de formation (ou certificat de réalisation) à un apprenant avec generate_certificate
+- Obtenir un rapport financier (CA total, CA par formation, taux de remplissage) pour un mois ou une année avec get_financial_report
+
 ### Émargements
 - Vérifier si les émargements sont signés
 - Identifier les sessions avec émargements manquants

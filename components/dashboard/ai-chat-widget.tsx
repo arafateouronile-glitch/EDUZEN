@@ -47,6 +47,8 @@ const TOOL_LABELS: Record<string, string> = {
   update_formation: 'Modification formation',
   get_student_details: 'Fiche apprenant',
   send_reminder: 'Rappel signature',
+  generate_certificate: 'Génération attestation',
+  get_financial_report: 'Rapport financier',
 }
 
 function formatRelativeTime(ts: number): string {
@@ -383,6 +385,18 @@ export function AiChatWidget() {
     setDraftContent('')
     setDraftSteps([])
   }
+
+  useEffect(() => {
+    function handleOpen(e: Event) {
+      const msg = (e as CustomEvent<{ message: string }>).detail?.message
+      setOpen(true)
+      if (msg) {
+        setTimeout(() => sendMessage(msg), 150)
+      }
+    }
+    window.addEventListener('ai-chat:open', handleOpen)
+    return () => window.removeEventListener('ai-chat:open', handleOpen)
+  }, [sendMessage])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

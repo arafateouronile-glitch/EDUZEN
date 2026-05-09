@@ -548,6 +548,47 @@ export const AI_TOOLS: Tool[] = [
       required: ['session_id'],
     },
   },
+  {
+    name: 'generate_certificate',
+    description: 'Générer et envoyer par email une attestation de formation (ou certificat de réalisation) à un apprenant. Si l\'apprenant a complété la session, génère le PDF et l\'envoie pour signature.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        student_id: {
+          type: 'string',
+          description: 'UUID de l\'apprenant',
+        },
+        session_id: {
+          type: 'string',
+          description: 'UUID de la session',
+        },
+        certificate_type: {
+          type: 'string',
+          enum: ['attestation', 'attestation_reussite', 'certificat_realisation'],
+          description: 'Type d\'attestation à générer (défaut : attestation)',
+        },
+      },
+      required: ['student_id', 'session_id'],
+    },
+  },
+  {
+    name: 'get_financial_report',
+    description: 'Obtenir un rapport financier : CA total, CA par formation, taux de remplissage moyen. Filtrable par période (mois ou année).',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        year: {
+          type: 'number',
+          description: 'Année (ex: 2025)',
+        },
+        month: {
+          type: 'number',
+          description: 'Mois (1-12, optionnel — si absent, rapport annuel)',
+        },
+      },
+      required: [],
+    },
+  },
 ]
 
 // ─── Tool handlers ────────────────────────────────────────────────────────────
@@ -608,6 +649,10 @@ export async function executeTool(
         return await getStudentDetails(toolInput, supabase)
       case 'send_reminder':
         return await sendReminder(toolInput, supabase, organizationId)
+      case 'generate_certificate':
+        return await generateCertificate(toolInput, supabase, organizationId)
+      case 'get_financial_report':
+        return await getFinancialReport(toolInput, supabase, organizationId)
       default:
         return `Outil inconnu : ${toolName}`
     }
@@ -1672,5 +1717,233 @@ async function sendReminder(input: ToolInput, supabase: SupabaseClient, _orgId: 
     `• ✅ Envoyés : ${sent}\n` +
     (failed > 0 ? `• ❌ Échecs : ${failed}\n` : '') +
     `\n${results.join('\n')}`
+  )
+}
+
+async function generateCertificate(input: ToolInput, supabase: SupabaseClient, orgId: string) {
+  const studentId = input.student_id as string
+  const sessionId = input.session_id as string
+  const certType = (input.certificate_type as string) ?? 'attestation'
+
+  const [studentRes, sessionRes, orgRes] = await Promise.all([
+    supabase.from('students').select('id, first_name, last_name, email, student_number').eq('id', studentId).single(),
+    supabase.from('sessions').select(`
+      id, name, start_date, end_date, location,
+      formations(name, duration_hours)
+    `).eq('id', sessionId).single(),
+    supabase.from('organizations').select('name, logo_url, address').eq('id', orgId).single(),
+  ])
+
+  if (studentRes.error || !studentRes.data) return `Apprenant introuvable (${studentId})`
+  if (sessionRes.error || !sessionRes.data) return `Session introuvable (${sessionId})`
+
+  const st = studentRes.data
+  const se = sessionRes.data
+  const fo = (Array.isArray(se.formations) ? se.formations[0] : se.formations) as Record<string, unknown> | null
+  const org = orgRes.data
+
+  const typeLabel: Record<string, string> = {
+    attestation: 'Attestation de formation',
+    attestation_reussite: 'Attestation de réussite',
+    certificat_realisation: 'Certificat de réalisation',
+  }
+
+  const { data: templateData } = await supabase
+    .from('document_templates')
+    .select('*')
+    .eq('organization_id', orgId)
+    .eq('type', certType)
+    .eq('is_active', true)
+    .single()
+
+  const dateStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const startDate = se.start_date ? new Date(se.start_date as string).toLocaleDateString('fr-FR') : '—'
+  const endDate = se.end_date ? new Date(se.end_date as string).toLocaleDateString('fr-FR') : '—'
+  const durationHours = fo?.duration_hours ?? ''
+
+  const builtInHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; border: 2px solid #333;">
+      <h1 style="text-align: center; font-size: 24px; margin-bottom: 8px;">${typeLabel[certType] ?? typeLabel.attestation}</h1>
+      <p style="text-align: center; color: #555; margin-bottom: 32px;">${org?.name ?? 'Organisme de formation'}</p>
+      <p>Nous soussignés, certifions que :</p>
+      <p style="font-size: 18px; font-weight: bold; margin: 16px 0;">{{student_name}}</p>
+      <p>a bien participé à la formation :</p>
+      <p style="font-size: 16px; font-weight: bold; margin: 16px 0;">{{session_name}}</p>
+      <p>Du <strong>${startDate}</strong> au <strong>${endDate}</strong>${durationHours ? ` — <strong>${durationHours}h</strong>` : ''}${se.location ? ` — ${se.location}` : ''}</p>
+      <p style="margin-top: 48px;">Fait le ${dateStr}</p>
+      <div style="margin-top: 32px; border-top: 1px solid #ccc; padding-top: 16px;">
+        <p style="color: #555; font-size: 12px;">Document généré par EDUZEN — ${org?.name ?? ''}</p>
+      </div>
+    </div>
+  `
+
+  const template = templateData ?? {
+    id: 'builtin',
+    type: certType,
+    content: { html: builtInHtml },
+    header: {},
+    footer: {},
+    page_size: 'A4',
+    margins: { top: 20, right: 20, bottom: 20, left: 20 },
+  }
+
+  const variables: import('@/lib/types/document-templates').DocumentVariables = {
+    etudiant_nom_complet: `${st.first_name} ${st.last_name}`,
+    etudiant_nom: st.last_name,
+    etudiant_prenom: st.first_name,
+    etudiant_email: st.email ?? '',
+    etudiant_numero: st.student_number ?? '',
+    session_nom: se.name as string,
+    session_date_debut: startDate,
+    session_date_fin: endDate,
+    session_lieu: (se.location as string) ?? '',
+    formation_nom: (fo?.name as string) ?? '',
+    heures_totales: durationHours ? String(durationHours) : '',
+    organisation_nom: org?.name ?? '',
+    ecole_nom: org?.name ?? '',
+    date_aujourd_hui: dateStr,
+    date_emission: dateStr,
+  }
+
+  try {
+    const { generatePDF } = await import('@/lib/utils/document-generation/pdf-generator')
+    const { blob } = await generatePDF(
+      template as import('@/lib/types/document-templates').DocumentTemplate,
+      variables,
+      undefined,
+      orgId
+    )
+
+    const fileName = `${certType}_${st.student_number ?? st.id}_${Date.now()}.pdf`
+    const filePath = `attestations/${orgId}/${fileName}`
+
+    const { error: uploadErr } = await supabase.storage.from('documents').upload(filePath, blob, {
+      contentType: 'application/pdf',
+    })
+    if (uploadErr) return `Erreur upload PDF : ${uploadErr.message}`
+
+    const { data: fileRecord, error: fileErr } = await supabase.from('documents').insert({
+      organization_id: orgId,
+      student_id: studentId,
+      type: certType,
+      file_path: filePath,
+      metadata: { session_id: sessionId, generated_by: 'ai_agent' },
+    }).select('id').single()
+
+    if (fileErr || !fileRecord) return `PDF généré mais erreur enregistrement : ${fileErr?.message}`
+
+    const { SignatureRequestService } = await import('@/lib/services/signature-request.service')
+    const service = new SignatureRequestService(supabase)
+    await service.createSignatureRequest({
+      documentId: fileRecord.id,
+      recipientName: `${st.first_name} ${st.last_name}`,
+      recipientEmail: st.email!,
+      recipientType: 'student',
+      subject: `${typeLabel[certType] ?? typeLabel.attestation} — ${se.name}`,
+      organizationId: orgId,
+    })
+
+    return (
+      `✅ **${typeLabel[certType] ?? typeLabel.attestation} générée et envoyée**\n` +
+      `• Apprenant : ${st.first_name} ${st.last_name} (${st.email})\n` +
+      `• Formation : ${se.name}\n` +
+      `• Email envoyé pour signature électronique\n` +
+      `[Voir l'apprenant →](/dashboard/students/${st.id})`
+    )
+  } catch (err) {
+    return `Erreur génération PDF : ${err instanceof Error ? err.message : String(err)}`
+  }
+}
+
+async function getFinancialReport(input: ToolInput, supabase: SupabaseClient, orgId: string) {
+  const now = new Date()
+  const year = (input.year as number) ?? now.getFullYear()
+  const month = input.month as number | undefined
+
+  let dateFrom: string
+  let dateTo: string
+  let periodLabel: string
+
+  if (month) {
+    dateFrom = new Date(year, month - 1, 1).toISOString().split('T')[0]
+    dateTo = new Date(year, month, 0).toISOString().split('T')[0]
+    periodLabel = new Date(year, month - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+  } else {
+    dateFrom = `${year}-01-01`
+    dateTo = `${year}-12-31`
+    periodLabel = String(year)
+  }
+
+  const { data: sessions, error: sessErr } = await supabase
+    .from('sessions')
+    .select(`
+      id, name, status, capacity_max, start_date,
+      formations!inner(name, organization_id, price, duration_hours)
+    `)
+    .eq('formations.organization_id', orgId)
+    .gte('start_date', dateFrom)
+    .lte('start_date', dateTo)
+
+  if (sessErr) return `Erreur : ${sessErr.message}`
+  if (!sessions?.length) return `Aucune session trouvée pour la période ${periodLabel}.`
+
+  const sessionIds = sessions.map((s: Record<string, unknown>) => s.id as string)
+
+  const { data: enrollments } = await supabase
+    .from('enrollments')
+    .select('session_id, status, total_amount')
+    .in('session_id', sessionIds)
+    .neq('status', 'cancelled')
+
+  const enrollsBySession: Record<string, Array<Record<string, unknown>>> = {}
+  for (const e of enrollments ?? []) {
+    const sid = e.session_id as string
+    if (!enrollsBySession[sid]) enrollsBySession[sid] = []
+    enrollsBySession[sid].push(e as Record<string, unknown>)
+  }
+
+  let totalCA = 0
+  let totalEnrolled = 0
+  let totalCapacity = 0
+  const byFormation: Record<string, { name: string; ca: number; sessions: number; enrolled: number }> = {}
+
+  for (const s of sessions) {
+    const se = s as Record<string, unknown>
+    const fo = (Array.isArray(se.formations) ? se.formations[0] : se.formations) as Record<string, unknown> | null
+    const formationName = (fo?.name as string) ?? 'Inconnu'
+    const enrs = enrollsBySession[se.id as string] ?? []
+    const enrolled = enrs.length
+    const capacity = (se.capacity_max as number) ?? 0
+    const caSession = enrs.reduce((acc: number, e: Record<string, unknown>) =>
+      acc + (typeof e.total_amount === 'number' ? e.total_amount : (fo?.price as number ?? 0)), 0)
+
+    totalCA += caSession
+    totalEnrolled += enrolled
+    totalCapacity += capacity
+
+    if (!byFormation[formationName]) byFormation[formationName] = { name: formationName, ca: 0, sessions: 0, enrolled: 0 }
+    byFormation[formationName].ca += caSession
+    byFormation[formationName].sessions += 1
+    byFormation[formationName].enrolled += enrolled
+  }
+
+  const fillRate = totalCapacity > 0 ? Math.round((totalEnrolled / totalCapacity) * 100) : 0
+
+  const formationLines = Object.values(byFormation)
+    .sort((a, b) => b.ca - a.ca)
+    .map(f => `  | ${f.name} | ${f.sessions} session(s) | ${f.enrolled} apprenants | ${f.ca.toLocaleString('fr-FR')} EUR |`)
+
+  return (
+    `## Rapport financier — ${periodLabel}\n\n` +
+    `| Indicateur | Valeur |\n` +
+    `|---|---|\n` +
+    `| CA total | **${totalCA.toLocaleString('fr-FR')} EUR** |\n` +
+    `| Sessions | ${sessions.length} |\n` +
+    `| Apprenants inscrits | ${totalEnrolled} |\n` +
+    `| Taux de remplissage moyen | ${fillRate}% |\n\n` +
+    `### CA par formation\n\n` +
+    `| Formation | Sessions | Apprenants | CA |\n` +
+    `|---|---|---|---|\n` +
+    formationLines.join('\n')
   )
 }
