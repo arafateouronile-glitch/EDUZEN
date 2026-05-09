@@ -628,25 +628,25 @@ export async function executeTool(
       case 'create_student':
         return await createStudent(toolInput, supabase, organizationId)
       case 'enroll_student':
-        return await enrollStudent(toolInput, supabase)
+        return await enrollStudent(toolInput, supabase, organizationId)
       case 'send_document_for_signature':
         return await sendDocumentForSignature(toolInput, supabase, organizationId)
       case 'get_session_details':
-        return await getSessionDetails(toolInput, supabase)
+        return await getSessionDetails(toolInput, supabase, organizationId)
       case 'update_entity_status':
-        return await updateEntityStatus(toolInput, supabase)
+        return await updateEntityStatus(toolInput, supabase, organizationId)
       case 'list_enrollments':
-        return await listEnrollments(toolInput, supabase)
+        return await listEnrollments(toolInput, supabase, organizationId)
       case 'send_bulk_documents':
         return await sendBulkDocuments(toolInput, supabase, organizationId)
       case 'search_sessions':
         return await searchSessions(toolInput, supabase, organizationId)
       case 'update_session':
-        return await updateSession(toolInput, supabase)
+        return await updateSession(toolInput, supabase, organizationId)
       case 'update_formation':
         return await updateFormation(toolInput, supabase, organizationId)
       case 'get_student_details':
-        return await getStudentDetails(toolInput, supabase)
+        return await getStudentDetails(toolInput, supabase, organizationId)
       case 'send_reminder':
         return await sendReminder(toolInput, supabase, organizationId)
       case 'generate_certificate':
@@ -726,7 +726,16 @@ async function listFormations(input: ToolInput, supabase: SupabaseClient, orgId:
   return `${data.length} formation(s) :\n${rows.join('\n')}`
 }
 
-async function createSession(input: ToolInput, supabase: SupabaseClient, _orgId: string) {
+async function createSession(input: ToolInput, supabase: SupabaseClient, orgId: string) {
+  // Verify the parent formation belongs to this organization
+  const { data: formationCheck } = await supabase
+    .from('formations')
+    .select('id')
+    .eq('id', input.formation_id as string)
+    .eq('organization_id', orgId)
+    .single()
+  if (!formationCheck) return `Formation introuvable ou n'appartient pas à votre organisation.`
+
   const { data, error } = await supabase
     .from('sessions')
     .insert({
@@ -862,6 +871,7 @@ async function listCalendarEvents(input: ToolInput, supabase: SupabaseClient, or
   const { data, error } = await supabase
     .from('calendar_events')
     .select('id, title, start_date, end_date, location, event_type')
+    .eq('organization_id', orgId)
     .gte('start_date', today)
     .lte('start_date', until)
     .order('start_date', { ascending: true })
@@ -1221,7 +1231,24 @@ async function sendDocumentForSignature(input: ToolInput, supabase: SupabaseClie
   }
 }
 
-async function enrollStudent(input: ToolInput, supabase: SupabaseClient) {
+async function enrollStudent(input: ToolInput, supabase: SupabaseClient, orgId: string) {
+  // Verify session and student belong to this organization
+  const { data: sessionCheck } = await supabase
+    .from('sessions')
+    .select('id, formations!inner(organization_id)')
+    .eq('id', input.session_id as string)
+    .eq('formations.organization_id', orgId)
+    .single()
+  if (!sessionCheck) return `Session introuvable ou n'appartient pas à votre organisation.`
+
+  const { data: studentCheck } = await supabase
+    .from('students')
+    .select('id')
+    .eq('id', input.student_id as string)
+    .eq('organization_id', orgId)
+    .single()
+  if (!studentCheck) return `Apprenant introuvable ou n'appartient pas à votre organisation.`
+
   // Check for existing enrollment to avoid duplicates
   const { data: existing } = await supabase
     .from('enrollments')
@@ -1255,14 +1282,15 @@ async function enrollStudent(input: ToolInput, supabase: SupabaseClient) {
   )
 }
 
-async function getSessionDetails(input: ToolInput, supabase: SupabaseClient) {
+async function getSessionDetails(input: ToolInput, supabase: SupabaseClient, orgId: string) {
   const sessionId = input.session_id as string
 
   const [sessionRes, enrollmentsRes, docsRes] = await Promise.all([
     supabase
       .from('sessions')
-      .select('id, name, start_date, end_date, location, status, capacity_max, formations(name, code, duration_hours, price, currency)')
+      .select('id, name, start_date, end_date, location, status, capacity_max, formations!inner(name, code, duration_hours, price, currency, organization_id)')
       .eq('id', sessionId)
+      .eq('formations.organization_id', orgId)
       .single(),
     supabase
       .from('enrollments')
@@ -1341,7 +1369,7 @@ async function getSessionDetails(input: ToolInput, supabase: SupabaseClient) {
   )
 }
 
-async function updateEntityStatus(input: ToolInput, supabase: SupabaseClient) {
+async function updateEntityStatus(input: ToolInput, supabase: SupabaseClient, orgId: string) {
   const entityType = input.entity_type as 'session' | 'enrollment'
   const entityId = input.entity_id as string
   const newStatus = input.new_status as string
@@ -1353,6 +1381,15 @@ async function updateEntityStatus(input: ToolInput, supabase: SupabaseClient) {
     if (!sessionStatuses.includes(newStatus)) {
       return `Statut invalide pour une session. Valeurs acceptées : ${sessionStatuses.join(', ')}`
     }
+    // Verify session belongs to org, then update
+    const { data: check } = await supabase
+      .from('sessions')
+      .select('id, formations!inner(organization_id)')
+      .eq('id', entityId)
+      .eq('formations.organization_id', orgId)
+      .single()
+    if (!check) return `Session introuvable ou n'appartient pas à votre organisation.`
+
     const { data, error } = await supabase
       .from('sessions')
       .update({ status: newStatus })
@@ -1367,6 +1404,15 @@ async function updateEntityStatus(input: ToolInput, supabase: SupabaseClient) {
     if (!enrollmentStatuses.includes(newStatus)) {
       return `Statut invalide pour une inscription. Valeurs acceptées : ${enrollmentStatuses.join(', ')}`
     }
+    // Verify enrollment belongs to a session of this org
+    const { data: check } = await supabase
+      .from('enrollments')
+      .select('id, sessions!inner(formations!inner(organization_id))')
+      .eq('id', entityId)
+      .eq('sessions.formations.organization_id', orgId)
+      .single()
+    if (!check) return `Inscription introuvable ou n'appartient pas à votre organisation.`
+
     const { data, error } = await supabase
       .from('enrollments')
       .update({ status: newStatus })
@@ -1380,12 +1426,13 @@ async function updateEntityStatus(input: ToolInput, supabase: SupabaseClient) {
   return `Type d'entité inconnu : ${entityType}. Utilisez "session" ou "enrollment".`
 }
 
-async function listEnrollments(input: ToolInput, supabase: SupabaseClient) {
+async function listEnrollments(input: ToolInput, supabase: SupabaseClient, orgId: string) {
   const limit = (input.limit as number) ?? 20
 
   let query = supabase
     .from('enrollments')
-    .select('id, status, total_amount, enrollment_date, students(id, first_name, last_name, student_number), sessions(id, name, start_date, end_date, formations(name))')
+    .select('id, status, total_amount, enrollment_date, students(id, first_name, last_name, student_number), sessions!inner(id, name, start_date, end_date, formations!inner(name, organization_id))')
+    .eq('sessions.formations.organization_id', orgId)
     .order('enrollment_date', { ascending: false })
     .limit(limit)
 
@@ -1417,6 +1464,15 @@ async function listEnrollments(input: ToolInput, supabase: SupabaseClient) {
 async function sendBulkDocuments(input: ToolInput, supabase: SupabaseClient, orgId: string) {
   const docType = input.document_type as 'convention' | 'devis'
   const sessionId = input.session_id as string
+
+  // Verify session belongs to this organization
+  const { data: sessionCheck } = await supabase
+    .from('sessions')
+    .select('id, formations!inner(organization_id)')
+    .eq('id', sessionId)
+    .eq('formations.organization_id', orgId)
+    .single()
+  if (!sessionCheck) return `Session introuvable ou n'appartient pas à votre organisation.`
 
   // Fetch non-cancelled enrollments with student info
   const { data: enrollments, error } = await supabase
@@ -1530,8 +1586,17 @@ async function searchSessions(input: ToolInput, supabase: SupabaseClient, orgId:
   return `${data.length} session(s) trouvée(s) pour "${q}" :\n${rows.join('\n')}`
 }
 
-async function updateSession(input: ToolInput, supabase: SupabaseClient) {
+async function updateSession(input: ToolInput, supabase: SupabaseClient, orgId: string) {
   const sessionId = input.session_id as string
+
+  // Verify session belongs to this organization
+  const { data: check } = await supabase
+    .from('sessions')
+    .select('id, formations!inner(organization_id)')
+    .eq('id', sessionId)
+    .eq('formations.organization_id', orgId)
+    .single()
+  if (!check) return `Session introuvable ou n'appartient pas à votre organisation.`
 
   // Build update payload with only provided fields
   const patch: Record<string, unknown> = {}
@@ -1565,7 +1630,7 @@ async function updateSession(input: ToolInput, supabase: SupabaseClient) {
   )
 }
 
-async function updateFormation(input: ToolInput, supabase: SupabaseClient, _orgId: string) {
+async function updateFormation(input: ToolInput, supabase: SupabaseClient, orgId: string) {
   const formationId = input.formation_id as string
 
   const patch: Record<string, unknown> = {}
@@ -1583,6 +1648,7 @@ async function updateFormation(input: ToolInput, supabase: SupabaseClient, _orgI
     .from('formations')
     .update(patch)
     .eq('id', formationId)
+    .eq('organization_id', orgId)
     .select('id, name, duration_hours, price, category, is_active')
     .single()
 
@@ -1600,7 +1666,7 @@ async function updateFormation(input: ToolInput, supabase: SupabaseClient, _orgI
   )
 }
 
-async function getStudentDetails(input: ToolInput, supabase: SupabaseClient) {
+async function getStudentDetails(input: ToolInput, supabase: SupabaseClient, orgId: string) {
   const studentId = input.student_id as string
 
   const [studentRes, enrollmentsRes, docsRes] = await Promise.all([
@@ -1608,6 +1674,7 @@ async function getStudentDetails(input: ToolInput, supabase: SupabaseClient) {
       .from('students')
       .select('id, first_name, last_name, email, phone, student_number, date_of_birth, address, created_at')
       .eq('id', studentId)
+      .eq('organization_id', orgId)
       .single(),
     supabase
       .from('enrollments')
@@ -1665,9 +1732,18 @@ async function getStudentDetails(input: ToolInput, supabase: SupabaseClient) {
   )
 }
 
-async function sendReminder(input: ToolInput, supabase: SupabaseClient, _orgId: string) {
+async function sendReminder(input: ToolInput, supabase: SupabaseClient, orgId: string) {
   const sessionId = input.session_id as string
   const docTypeFilter = input.document_type as string | undefined
+
+  // Verify session belongs to this organization
+  const { data: sessionCheck } = await supabase
+    .from('sessions')
+    .select('id, formations!inner(organization_id)')
+    .eq('id', sessionId)
+    .eq('formations.organization_id', orgId)
+    .single()
+  if (!sessionCheck) return `Session introuvable ou n'appartient pas à votre organisation.`
 
   const typesFilter = docTypeFilter ? [docTypeFilter] : ['convention', 'devis']
   const { data: docs, error: docsErr } = await supabase
