@@ -87,46 +87,64 @@ export async function POST(request: NextRequest) {
       .select('id, name, email, settings')
       .eq('id', userData.organization_id)
       .single()
-    
-    let customerId: string
-    
-    // Vérifier si l'organisation a déjà un customer Stripe
-    const { data: existingSubscription } = await supabase
-      .from('subscriptions')
-      .select('stripe_customer_id')
-      .eq('organization_id', userData.organization_id)
-      .not('stripe_customer_id', 'is', null)
-      .maybeSingle()
-    
-    if (existingSubscription?.stripe_customer_id) {
-      customerId = existingSubscription.stripe_customer_id
-    } else {
-      // Cookie d'affiliation, ou attribution sauvegardée (essai sans carte → conversion ultérieure) (O3)
+
+    const stripe = getStripe()
+
+    // Crée un customer Stripe frais
+    const createFreshCustomer = async () => {
       const cookieStore = await cookies()
       const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
       const savedAffiliateId = (organization?.settings as Record<string, unknown> | null)?.affiliate_id as string | undefined
       const affiliateId = affiliateRef || (savedAffiliateId && String(savedAffiliateId).trim()) || undefined
-
-      const stripe = getStripe()
-      const customerMetadata: Record<string, string> = {
-        organization_id: userData.organization_id,
-        user_id: user.id,
-      }
-      if (affiliateId) {
-        customerMetadata.affiliate_id = affiliateId
-      }
-
+      const metadata: Record<string, string> = { organization_id: userData.organization_id as string, user_id: user.id }
+      if (affiliateId) metadata.affiliate_id = affiliateId
       const customer = await stripe.customers.create({
-        email: organization?.email || user.email,
+        email: organization?.email || user.email || undefined,
         name: organization?.name || 'Organisation',
-        metadata: customerMetadata,
+        metadata,
       })
-
-      customerId = customer.id
+      return customer.id
     }
-    
+
+    let customerId: string
+
+    // Vérifier si l'organisation a déjà un customer Stripe
+    const { data: existingSubscription } = await supabase
+      .from('subscriptions')
+      .select('stripe_customer_id, id')
+      .eq('organization_id', userData.organization_id)
+      .not('stripe_customer_id', 'is', null)
+      .maybeSingle()
+
+    if (existingSubscription?.stripe_customer_id) {
+      // Vérifier que ce customer existe bien dans Stripe (évite l'erreur test→live)
+      try {
+        const existing = await stripe.customers.retrieve(existingSubscription.stripe_customer_id)
+        if ((existing as { deleted?: boolean }).deleted) {
+          customerId = await createFreshCustomer()
+        } else {
+          customerId = existingSubscription.stripe_customer_id
+        }
+      } catch {
+        // "No such customer" — customer issu du mauvais environnement Stripe (test vs live)
+        logger.warn('create-checkout: customer_id invalide (test→live ?), création d\'un nouveau', {
+          oldId: existingSubscription.stripe_customer_id,
+          organizationId: userData.organization_id,
+        })
+        customerId = await createFreshCustomer()
+        // Mettre à jour le record existant avec le nouveau customer ID
+        if (existingSubscription.id) {
+          await supabase
+            .from('subscriptions')
+            .update({ stripe_customer_id: customerId })
+            .eq('id', existingSubscription.id)
+        }
+      }
+    } else {
+      customerId = await createFreshCustomer()
+    }
+
     // Créer la session de checkout Stripe
-    const stripe = getStripe()
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
