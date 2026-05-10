@@ -13,6 +13,17 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
+
+type SettingItem = {
+  icon: LucideIcon
+  label: string
+  description: string
+  toggle: boolean
+  value?: boolean
+  onChange?: () => void
+  disabled?: boolean
+}
 
 const LEARNER_STORAGE_KEY = 'learner_student_id'
 
@@ -26,7 +37,7 @@ export default function LearnerSettingsPage() {
     window.location.href = '/'
   }
 
-  const sections = [
+  const sections: Array<{ title: string; items: SettingItem[] }> = [
     {
       title: 'Préférences',
       items: [
