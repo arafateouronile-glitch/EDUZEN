@@ -150,6 +150,7 @@ document.getElementById('signup-form').addEventListener('submit', function(e) {
       if (result.ok) {
         document.getElementById('signup-form').style.display = 'none';
         document.getElementById('success-msg').classList.add('visible');
+        if (typeof fbq === 'function') fbq('track', 'StartTrial');
       } else {
         var errorEl = document.getElementById('form-server-error');
         if (errorEl) {
