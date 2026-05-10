@@ -748,6 +748,92 @@ img { display: block; max-width: 100%; }
 .mini-form input:focus { border-color: var(--cyan); }
 .mini-form button { flex-shrink: 0; }
 
+/* ── 13. LEGAL SECTION ── */
+#legal {
+  padding: 56px 0 24px;
+  background: rgba(8, 18, 32, 0.95);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Disclaimer Meta */
+.meta-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(0, 180, 216, 0.06);
+  border: 1px solid rgba(0, 180, 216, 0.18);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 36px;
+}
+.meta-disclaimer-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.meta-disclaimer p {
+  font-size: 12px;
+  color: rgba(180, 210, 240, 0.75);
+  line-height: 1.65;
+  margin: 0;
+}
+.meta-disclaimer strong { color: rgba(200, 230, 255, 0.9); }
+
+/* Accordéons légaux */
+.legal-accordion-list { display: flex; flex-direction: column; gap: 8px; }
+
+.legal-item {
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.025);
+}
+
+.legal-question {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(180, 210, 240, 0.8);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: left;
+  transition: color 0.2s;
+}
+.legal-question:hover { color: var(--pale-blue); }
+.legal-icon {
+  font-size: 18px;
+  color: var(--cyan);
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.legal-item.open .legal-icon { transform: rotate(45deg); }
+
+.legal-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+.legal-item.open .legal-answer { max-height: 1200px; }
+
+.legal-answer-inner {
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.legal-answer-inner p {
+  font-size: 12px;
+  color: rgba(160, 190, 220, 0.7);
+  line-height: 1.75;
+  margin: 0;
+}
+.legal-answer-inner strong { color: rgba(200, 230, 255, 0.85); }
+.legal-answer-inner a { color: var(--cyan); text-decoration: none; }
+.legal-answer-inner a:hover { text-decoration: underline; }
+
 /* ── 12. FOOTER ── */
 #footer {
   padding: 40px 0;

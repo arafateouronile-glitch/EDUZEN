@@ -80,6 +80,33 @@ document.querySelectorAll('.faq-question').forEach(function(questionEl) {
   });
 });
 
+/* ── Legal accordion ── */
+document.querySelectorAll('.legal-question').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var item = btn.closest('.legal-item');
+    var isOpen = item.classList.contains('open');
+    // Fermer tous les autres
+    document.querySelectorAll('.legal-item.open').forEach(function(i) { i.classList.remove('open'); });
+    if (!isOpen) item.classList.add('open');
+    // Scroll doux vers l'item ouvert
+    if (!isOpen) setTimeout(function() { item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
+  });
+});
+
+/* ── Footer anchor links : ouvrir l'accordéon légal correspondant ── */
+document.querySelectorAll('a[href^="#mentions-legales"], a[href^="#politique-confidentialite"], a[href^="#cgv"]').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    var targetId = link.getAttribute('href').replace('#', '');
+    var target = document.getElementById(targetId);
+    if (!target) return;
+    // Ouvrir l'accordéon
+    var btn = target.querySelector('.legal-question');
+    if (btn && !target.classList.contains('open')) btn.click();
+    setTimeout(function() { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+  });
+});
+
 /* ── Form validation & submit ── */
 document.getElementById('signup-form').addEventListener('submit', function(e) {
   e.preventDefault();
