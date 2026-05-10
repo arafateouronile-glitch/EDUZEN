@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
-import { Search, Loader2, Upload } from 'lucide-react'
+import { Loader2, Upload } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/utils/logger'
 
@@ -32,57 +31,7 @@ export function OrganizationProfileStep({
 }: OrganizationProfileStepProps) {
   const { addToast } = useToast()
   const supabase = createClient()
-  const [searchingSirene, setSearchingSirene] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
-
-  // Recherche SIRENE
-  const handleSearchSirene = async () => {
-    if (!data.siret || data.siret.length !== 14) {
-      addToast({
-        title: 'SIRET invalide',
-        description: 'Le SIRET doit contenir 14 chiffres',
-        type: 'error',
-      })
-      return
-    }
-
-    setSearchingSirene(true)
-    try {
-      const response = await fetch(`/api/sirene/search?siret=${data.siret}`)
-      const result = await response.json()
-
-      if (response.ok) {
-        onChange({
-          ...data,
-          name: result.name || data.name,
-          siret: result.siret || data.siret,
-          address: result.address || data.address,
-          postalCode: result.postalCode || data.postalCode,
-          city: result.city || data.city,
-        })
-        addToast({
-          title: 'Informations récupérées',
-          description: 'Les données de l\'entreprise ont été chargées automatiquement',
-          type: 'success',
-        })
-      } else {
-        addToast({
-          title: 'Recherche échouée',
-          description: result.error || 'Impossible de récupérer les informations',
-          type: 'error',
-        })
-      }
-    } catch (error) {
-      logger.error('Erreur recherche SIRENE', error)
-      addToast({
-        title: 'Erreur',
-        description: 'Une erreur est survenue lors de la recherche',
-        type: 'error',
-      })
-    } finally {
-      setSearchingSirene(false)
-    }
-  }
 
   // Upload du logo
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,41 +83,19 @@ export function OrganizationProfileStep({
         </p>
       </div>
 
-      {/* SIRET avec recherche */}
-      <div className="bg-brand-blue/[0.02] rounded-xl p-5 border border-brand-blue/10">
-        <Label htmlFor="siret" className="text-brand-blue font-semibold flex items-center gap-2 mb-3">
-          <Search className="w-4 h-4" />
-          Recherche automatique par SIRET
+      {/* SIRET - champ discret sans bloc de recherche visible */}
+      <div>
+        <Label htmlFor="siret" className="font-semibold text-gray-700">
+          Numéro SIRET
         </Label>
-        <div className="flex gap-3">
-          <Input
-            id="siret"
-            value={data.siret}
-            onChange={(e) => onChange({ ...data, siret: e.target.value.replace(/\D/g, '') })}
-            placeholder="Entrez votre numéro SIRET (14 chiffres)"
-            maxLength={14}
-            className="text-lg tracking-wide font-mono"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleSearchSirene}
-            disabled={searchingSirene || data.siret.length !== 14}
-            className="px-6 border-brand-blue/30 text-brand-blue hover:bg-brand-blue hover:text-white transition-all"
-          >
-            {searchingSirene ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <Search className="w-4 h-4 mr-2" />
-                Rechercher
-              </>
-            )}
-          </Button>
-        </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Gagnez du temps : nous pré-remplissons automatiquement vos informations depuis l'INSEE
-        </p>
+        <Input
+          id="siret"
+          value={data.siret}
+          onChange={(e) => onChange({ ...data, siret: e.target.value.replace(/\D/g, '') })}
+          placeholder="14 chiffres"
+          maxLength={14}
+          className="mt-2 font-mono tracking-wide"
+        />
       </div>
 
       {/* Nom de l'organisme */}
