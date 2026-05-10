@@ -127,10 +127,10 @@ export function OrganizationProfileStep({
     <div className="space-y-8">
       <div className="text-center pb-2">
         <h3 className="font-display text-xl font-bold text-brand-blue mb-2 tracking-tight">
-          Présentez votre organisme de formation
+          Personnalisez votre espace EDUZEN
         </h3>
         <p className="text-gray-600 text-sm max-w-md mx-auto">
-          Ces informations seront utilisées pour personnaliser vos documents officiels et faciliter vos démarches Qualiopi
+          Ces informations configurent votre tableau de bord, personnalisent vos documents et optimisent votre utilisation de la plateforme
         </p>
       </div>
 

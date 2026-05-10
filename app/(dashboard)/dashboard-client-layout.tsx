@@ -188,7 +188,7 @@ function DashboardLayoutContent({
   return (
     <div className="min-h-screen bg-bg-gray-50">
       <div className="flex">
-        {!isOnboardingPage && !isSessionPage && (
+        {!isSessionPage && (
           <aside className={cn(
             "hidden md:flex md:flex-shrink-0 transition-all duration-300 ease-in-out",
             isFocusMode ? "w-0 -translate-x-full overflow-hidden opacity-0" : "w-72 opacity-100"
@@ -197,10 +197,12 @@ function DashboardLayoutContent({
           </aside>
         )}
         <div className="flex flex-col flex-1 overflow-hidden w-0 min-w-0">
-          {!isOnboardingPage && !isSessionPage && <Header />}
+          {!isSessionPage && <Header />}
           <main className={cn(
-            "flex-1 overflow-y-auto smooth-scroll-premium transition-all duration-300",
-            isSessionPage || isTemplateEditPage ? "p-0" : isFocusMode ? "p-2 md:p-4" : "p-4 md:p-6"
+            "flex-1 smooth-scroll-premium transition-all duration-300",
+            isSessionPage || isTemplateEditPage ? "p-0 overflow-y-auto" :
+            isOnboardingPage ? "p-0 overflow-hidden" :
+            isFocusMode ? "p-2 md:p-4 overflow-y-auto" : "p-4 md:p-6 overflow-y-auto"
           )}>
             <PageTransition>
               {children}

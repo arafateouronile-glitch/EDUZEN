@@ -43,8 +43,8 @@ const PaymentSetupStep = dynamic(
 type WizardStep = 1 | 2 | 3 | 4
 
 const steps = [
-  { number: 1, title: 'Votre organisme', subtitle: 'Identité & coordonnées', icon: Building2 },
-  { number: 2, title: 'Vos informations', subtitle: 'Contact principal', icon: User },
+  { number: 1, title: 'Mon espace', subtitle: 'Personnalisation', icon: User },
+  { number: 2, title: 'Vos informations', subtitle: 'Contact principal', icon: Building2 },
   { number: 3, title: 'Votre formule', subtitle: 'Choisissez votre plan', icon: Sparkles },
   { number: 4, title: 'Activation', subtitle: 'Démarrez votre essai', icon: CreditCard },
 ]
@@ -347,7 +347,8 @@ export function TrialOnboardingWizard({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-brand-blue/[0.02] to-brand-cyan/[0.05] flex items-center justify-center p-4 py-8">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/30 backdrop-blur-[3px]">
+      <div className="flex min-h-full items-center justify-center p-4 py-8">
       <div className={cn(
         "w-full transition-all duration-300",
         currentStep === 3 ? "max-w-6xl" : "max-w-4xl"
@@ -359,10 +360,13 @@ export function TrialOnboardingWizard({
             Essai gratuit · 14 jours · Sans engagement
           </div>
           <h1 className="font-display text-4xl md:text-5xl font-bold text-brand-blue mb-4 tracking-tight">
-            Bienvenue sur EDUZEN
+            {currentStep === 1 ? 'Votre espace personnel' : 'Bienvenue sur EDUZEN'}
           </h1>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto leading-relaxed">
-            Configurez votre espace en <span className="text-brand-blue font-semibold">quelques minutes</span> et rejoignez les organismes qui simplifient leur gestion administrative
+            {currentStep === 1
+              ? <>Configurons votre espace pour une <span className="text-brand-blue font-semibold">meilleure utilisation</span> de la plateforme — cela ne prend que quelques minutes</>
+              : <>Configurez votre espace en <span className="text-brand-blue font-semibold">quelques minutes</span> et rejoignez les organismes qui simplifient leur gestion administrative</>
+            }
           </p>
         </div>
 
@@ -433,10 +437,10 @@ export function TrialOnboardingWizard({
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="font-display text-2xl font-bold text-brand-blue tracking-tight">
-                  {steps.find((s) => s.number === currentStep)?.title}
+                  {currentStep === 1 ? 'Configuration de votre espace' : steps.find((s) => s.number === currentStep)?.title}
                 </CardTitle>
                 <CardDescription className="text-gray-600 mt-1">
-                  {steps.find((s) => s.number === currentStep)?.subtitle}
+                  {currentStep === 1 ? 'Personnalisez votre expérience pour une meilleure utilisation' : steps.find((s) => s.number === currentStep)?.subtitle}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 bg-white/80 px-4 py-2 rounded-full border border-gray-200">
@@ -573,6 +577,7 @@ export function TrialOnboardingWizard({
             Vos données sont sécurisées et hébergées en France
           </p>
         </div>
+      </div>
       </div>
     </div>
   )

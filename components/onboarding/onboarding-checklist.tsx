@@ -21,6 +21,8 @@ import Link from 'next/link'
 
 const STORAGE_HIDDEN = 'dashboard_checklist_hidden'
 const STORAGE_DISMISSED = 'dashboard_checklist_completed_dismissed'
+const STORAGE_FIRST_VISIT = 'dashboard_checklist_first_visit'
+const DELAY_MS = 2 * 60 * 1000 // 2 minutes
 
 interface ChecklistItem {
   id: string
@@ -57,11 +59,29 @@ export function OnboardingChecklist() {
   const [isHidden, setIsHidden] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [delayElapsed, setDelayElapsed] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     setIsHidden(getStoredHidden())
     setIsDismissed(getStoredDismissed())
+
+    try {
+      const stored = localStorage.getItem(STORAGE_FIRST_VISIT)
+      const firstVisit = stored ? parseInt(stored, 10) : Date.now()
+      if (!stored) localStorage.setItem(STORAGE_FIRST_VISIT, String(firstVisit))
+
+      const elapsed = Date.now() - firstVisit
+      if (elapsed >= DELAY_MS) {
+        setDelayElapsed(true)
+      } else {
+        const remaining = DELAY_MS - elapsed
+        const timer = setTimeout(() => setDelayElapsed(true), remaining)
+        return () => clearTimeout(timer)
+      }
+    } catch {
+      setDelayElapsed(true)
+    }
   }, [])
 
   const setHidden = (value: boolean) => {
@@ -165,20 +185,9 @@ export function OnboardingChecklist() {
   const progress = (completedCount / totalCount) * 100
   const isComplete = completedCount === totalCount
 
-  const handleToggle = (id: string) => {
-    setLocalCompleted((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
   if (!mounted) return null
   if (isDismissed) return null
+  if (!delayElapsed) return null
 
   if (isHidden) {
     return (
