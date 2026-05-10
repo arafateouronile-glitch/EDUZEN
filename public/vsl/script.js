@@ -93,16 +93,19 @@ document.querySelectorAll('.legal-question').forEach(function(btn) {
   });
 });
 
-/* ── Footer anchor links : ouvrir l'accordéon légal correspondant ── */
+/* ── Footer anchor links : révéler le panel légal et ouvrir l'accordéon ── */
 document.querySelectorAll('a[href^="#mentions-legales"], a[href^="#politique-confidentialite"], a[href^="#cgv"]').forEach(function(link) {
   link.addEventListener('click', function(e) {
     e.preventDefault();
     var targetId = link.getAttribute('href').replace('#', '');
+    var panel = document.getElementById('legal-panel');
     var target = document.getElementById(targetId);
-    if (!target) return;
-    // Ouvrir l'accordéon
-    var btn = target.querySelector('.legal-question');
-    if (btn && !target.classList.contains('open')) btn.click();
+    if (!panel || !target) return;
+    // Afficher le panel si caché
+    if (panel.style.display === 'none') panel.style.display = 'block';
+    // Fermer tous les accordéons puis ouvrir le bon
+    document.querySelectorAll('.legal-item.open').forEach(function(i) { i.classList.remove('open'); });
+    target.classList.add('open');
     setTimeout(function() { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
   });
 });
