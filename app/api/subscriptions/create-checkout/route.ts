@@ -157,9 +157,12 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     })
   } catch (error: unknown) {
-    logger.error('Erreur création checkout Stripe', error)
+    const message = error instanceof Error ? error.message : String(error)
+    logger.error('Erreur création checkout Stripe', error, { error: sanitizeError(error) })
+    // Stripe errors have a specific type — expose the message to the client for debugging
+    const stripeType = (error as { type?: string })?.type
     return NextResponse.json(
-      { error: (error instanceof Error ? error.message : null) || 'Erreur serveur' },
+      { error: message, ...(stripeType && { stripeType }) },
       { status: 500 }
     )
   }

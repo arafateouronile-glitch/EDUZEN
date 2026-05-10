@@ -109,8 +109,8 @@ export default function SubscribePage() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Erreur lors de la création du checkout')
+        const errorBody = await response.json()
+        throw new Error(errorBody.error || errorBody.message || 'Erreur lors de la création du checkout')
       }
 
       return response.json()
