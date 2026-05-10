@@ -247,7 +247,7 @@ export function AiChatWidget() {
       setMessages([{
         id: 'welcome',
         role: 'assistant',
-        content: 'Bonjour ! Je suis votre assistant EDUZEN. Je peux créer des programmes, formations et sessions, vérifier les émargements, suivre votre conformité Qualiopi et bien plus — en mode agent, je chaîne les actions automatiquement. Que puis-je faire pour vous ?',
+        content: 'Bonjour ! Je suis Jeane, votre assistante IA EDUZEN. Je peux créer des programmes, formations et sessions, vérifier les émargements, suivre votre conformité Qualiopi et bien plus — en mode agent, je chaîne les actions automatiquement. Que puis-je faire pour vous ?',
         createdAt: Date.now(),
       }])
     }
@@ -419,7 +419,7 @@ export function AiChatWidget() {
           'text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
           open && 'scale-95'
         )}
-        aria-label="Assistant IA"
+        aria-label="Jeane — Assistante IA"
       >
         {open ? <XIcon /> : <SparkleIcon />}
         {isStreaming && (
@@ -450,7 +450,7 @@ export function AiChatWidget() {
             <SparkleIcon className="h-5 w-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Agent EDUZEN</p>
+            <p className="font-semibold text-sm">Jeane</p>
             <p className="text-xs text-blue-100 flex items-center gap-1">
               {isStreaming
                 ? <><span className="h-1.5 w-1.5 rounded-full bg-green-300 animate-pulse inline-block" /> En cours...</>

@@ -86,8 +86,8 @@ function ChatMockup() {
           <Sparkles className="h-4 w-4 text-white" />
         </div>
         <div>
-          <p className="text-white text-sm font-semibold leading-none">Assistant EDUZEN</p>
-          <p className="text-white/70 text-[11px] mt-0.5">Agent IA · 26 outils disponibles</p>
+          <p className="text-white text-sm font-semibold leading-none">Jeane</p>
+          <p className="text-white/70 text-[11px] mt-0.5">Agente IA · 26 outils disponibles</p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-green-300 animate-pulse" />
@@ -147,7 +147,7 @@ export function AiAgent() {
           </div>
 
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-gray-900 mb-6 leading-tight">
-            Un agent IA qui pilote
+            Jeane pilote
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-brand-cyan">
               votre organisme de formation
