@@ -177,7 +177,10 @@ export function ConfigInitialisation({
                       <div className="w-6 h-6 rounded-full bg-brand-cyan/10 flex items-center justify-center">
                         <User className="w-3.5 h-3.5 text-brand-cyan" />
                       </div>
-                      <SelectValue placeholder="Sélectionner un gestionnaire" />
+                      <SelectValue
+                        placeholder="Sélectionner un gestionnaire"
+                        displayValue={users.find((u) => u.id === formData.manager1_id)?.full_name}
+                      />
                     </div>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl z-[100]">
@@ -204,7 +207,10 @@ export function ConfigInitialisation({
                       <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
                         <User className="w-3.5 h-3.5 text-gray-400" />
                       </div>
-                      <SelectValue placeholder="Optionnel" />
+                      <SelectValue
+                        placeholder="Optionnel"
+                        displayValue={users.find((u) => u.id === formData.manager2_id)?.full_name}
+                      />
                     </div>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl z-[100]">

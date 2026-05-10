@@ -5,6 +5,15 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 import type { CustomerEvent, OrganizationCrmSummary, HealthStatus } from '@/types/crm.types'
 
+export type DemoLead = {
+  id: string
+  first_name: string
+  last_name: string
+  company: string
+  email: string
+  created_at: string
+}
+
 async function ensureSuperAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -120,6 +129,28 @@ export async function getCrmOrganizations(): Promise<{
   } catch (err) {
     logger.error('[crm-actions] getCrmOrganizations', err)
     return { success: false, error: 'Impossible de charger les données CRM' }
+  }
+}
+
+export async function getDemoLeads(): Promise<{
+  success: boolean
+  data?: DemoLead[]
+  error?: string
+}> {
+  try {
+    const supabase = await ensureSuperAdmin()
+
+    const { data, error } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+      .from('demo_leads')
+      .select('id, first_name, last_name, company, email, created_at')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return { success: true, data: data ?? [] }
+  } catch (err) {
+    logger.error('[crm-actions] getDemoLeads', err)
+    return { success: false, error: 'Impossible de charger les leads' }
   }
 }
 

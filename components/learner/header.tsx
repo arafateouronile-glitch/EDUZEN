@@ -1,8 +1,7 @@
 'use client'
 
-import { useAuth } from '@/lib/hooks/use-auth'
-import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { useLearnerContext } from '@/lib/contexts/learner-context'
+import { secureSessionStorage } from '@/lib/utils/secure-storage'
 import { Bell, Menu, Search, Sparkles, ChevronDown, Settings, LogOut, User, Command } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,12 +14,20 @@ interface LearnerHeaderProps {
 }
 
 export function LearnerHeader({ onMenuClick }: LearnerHeaderProps) {
-  const { user, logout } = useAuth()
-  const supabase = createClient()
+  const { student } = useLearnerContext()
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
+
+  const learnerName = student ? `${student.first_name} ${student.last_name}`.trim() : ''
+  const userInitials = (learnerName || student?.email || 'A').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  const unreadCount = 0
+
+  const logout = () => {
+    try { secureSessionStorage.remove('learner_student_id') } catch {}
+    window.location.href = '/'
+  }
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -32,26 +39,6 @@ export function LearnerHeader({ onMenuClick }: LearnerHeaderProps) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  // Récupérer les notifications non lues
-  const { data: unreadCount } = useQuery({
-    queryKey: ['learner-notifications-count', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return 0
-
-      const { count } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('read', false)
-
-      return count || 0
-    },
-    enabled: !!user?.id,
-    staleTime: 30000,
-  })
-
-  const userInitials = (user?.full_name || user?.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   return (
     <header className="sticky top-0 z-40">
@@ -153,7 +140,7 @@ export function LearnerHeader({ onMenuClick }: LearnerHeaderProps) {
             >
               <div className="text-right">
                 <p className="text-sm font-semibold text-gray-900 group-hover:text-brand-blue transition-colors">
-                  {user?.full_name || user?.email?.split('@')[0] || 'Utilisateur'}
+                  {learnerName || student?.email?.split('@')[0] || 'Apprenant'}
                 </p>
                 <div className="flex items-center justify-end gap-1">
                   <Sparkles className="h-3 w-3 text-brand-cyan" />
@@ -198,9 +185,9 @@ export function LearnerHeader({ onMenuClick }: LearnerHeaderProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 truncate">
-                          {user?.full_name || 'Utilisateur'}
+                          {learnerName || 'Apprenant'}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                        <p className="text-xs text-gray-500 truncate">{student?.email}</p>
                       </div>
                     </div>
                   </div>

@@ -70,8 +70,20 @@ export default function LearnerDocumentsPage() {
         return
       }
 
+      // Résoudre les chemins storage relatifs (ni http ni data URI) en signed URL
+      let resolvedUrl = doc.file_url
+      if (!resolvedUrl.startsWith('http') && !resolvedUrl.startsWith('data:')) {
+        const params = new URLSearchParams({ path: resolvedUrl, studentId: studentId || '' })
+        const res = await fetch(`/api/learner/document-url?${params}`)
+        if (!res.ok) {
+          throw new Error(`Impossible de résoudre le lien (${res.status})`)
+        }
+        const json = await res.json()
+        resolvedUrl = json.url
+      }
+
       // Télécharger le fichier
-      const response = await fetch(doc.file_url)
+      const response = await fetch(resolvedUrl)
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`)
       }
@@ -108,12 +120,25 @@ export default function LearnerDocumentsPage() {
   }
 
   // Fonction pour ouvrir un document dans un nouvel onglet
-  const handlePreview = (doc: DocItem) => {
+  const handlePreview = async (doc: DocItem) => {
     if (!doc.file_url) {
       alert('URL du fichier non disponible')
       return
     }
-    window.open(doc.file_url, '_blank')
+
+    let resolvedUrl = doc.file_url
+    if (!resolvedUrl.startsWith('http') && !resolvedUrl.startsWith('data:')) {
+      const params = new URLSearchParams({ path: resolvedUrl, studentId: studentId || '' })
+      const res = await fetch(`/api/learner/document-url?${params}`)
+      if (!res.ok) {
+        alert('Impossible de résoudre le lien du document')
+        return
+      }
+      const json = await res.json()
+      resolvedUrl = json.url
+    }
+
+    window.open(resolvedUrl, '_blank')
     
     // Marquer comme vu si c'est un document learner_documents
     if (doc.source === 'learner_documents' && doc.id && supabase) {

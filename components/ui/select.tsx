@@ -186,6 +186,9 @@ interface SelectContextValue {
   open?: boolean
   setOpen?: (open: boolean) => void
   triggerRef?: React.RefObject<HTMLButtonElement | null>
+  labels?: Record<string, string>
+  registerLabel?: (value: string, label: string) => void
+  unregisterLabel?: (value: string) => void
 }
 
 const SelectContext = React.createContext<SelectContextValue>({})
@@ -202,15 +205,24 @@ export const SelectRoot = React.forwardRef<HTMLDivElement, SelectRootProps>(
   ({ value, defaultValue, onValueChange, children }, ref) => {
     const [open, setOpen] = React.useState(false)
     const [internalValue, setInternalValue] = React.useState<string | undefined>(value || defaultValue)
+    const [labels, setLabels] = React.useState<Record<string, string>>({})
     const triggerRef = React.useRef<HTMLButtonElement | null>(null)
-    
+
     const handleValueChange = (newValue: string) => {
       setInternalValue(newValue)
       onValueChange?.(newValue)
     }
-    
+
+    const registerLabel = React.useCallback((val: string, label: string) => {
+      setLabels(prev => prev[val] === label ? prev : { ...prev, [val]: label })
+    }, [])
+
+    const unregisterLabel = React.useCallback((val: string) => {
+      setLabels(prev => { const next = { ...prev }; delete next[val]; return next })
+    }, [])
+
     return (
-      <SelectContext.Provider value={{ value: value || internalValue, onValueChange: handleValueChange, open, setOpen, triggerRef }}>
+      <SelectContext.Provider value={{ value: value || internalValue, onValueChange: handleValueChange, open, setOpen, triggerRef, labels, registerLabel, unregisterLabel }}>
         <div className="relative" ref={ref}>{children}</div>
       </SelectContext.Provider>
     )
@@ -251,12 +263,14 @@ SelectTrigger.displayName = 'SelectTrigger'
 
 interface SelectValueProps {
   placeholder?: string
+  displayValue?: string
 }
 
 export const SelectValue = React.forwardRef<HTMLSpanElement, SelectValueProps>(
-  ({ placeholder }, ref) => {
-    const { value } = React.useContext(SelectContext)
-    return <span ref={ref}>{value || placeholder}</span>
+  ({ placeholder, displayValue }, ref) => {
+    const { value, labels } = React.useContext(SelectContext)
+    const display = displayValue || (value && labels?.[value]) || value || placeholder
+    return <span ref={ref}>{display}</span>
   }
 )
 SelectValue.displayName = 'SelectValue'
@@ -327,8 +341,14 @@ interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
   ({ value, children, className, ...props }, ref) => {
-    const { value: selectedValue, onValueChange, setOpen } = React.useContext(SelectContext)
+    const { value: selectedValue, onValueChange, setOpen, registerLabel, unregisterLabel } = React.useContext(SelectContext)
     const isSelected = selectedValue === value
+
+    React.useEffect(() => {
+      const label = typeof children === 'string' ? children : ''
+      if (label) registerLabel?.(value, label)
+      return () => unregisterLabel?.(value)
+    }, [value, children, registerLabel, unregisterLabel])
 
     const handleClick = () => {
       onValueChange?.(value)

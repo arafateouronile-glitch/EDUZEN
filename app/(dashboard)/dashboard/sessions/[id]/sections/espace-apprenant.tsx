@@ -33,12 +33,9 @@ import {
   Link2,
   Copy,
   Mail,
-  RefreshCw,
-  Loader2,
   Share2,
   Sparkles
 } from 'lucide-react'
-import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { StudentDocumentsSection } from '../components/student-documents-section'
@@ -106,74 +103,25 @@ export function EspaceApprenant({
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [showAccessLinks, setShowAccessLinks] = useState(false)
-  const [accessTokens, setAccessTokens] = useState<GeneratedAccessToken[]>([])
   const supabase = createClient()
 
-  // Mutation pour générer un token individuel
-  const generateTokenMutation = useMutation({
-    mutationFn: async ({ studentId, studentName, studentEmail }: { studentId: string; studentName: string; studentEmail: string }) => {
-      // Générer le lien directement (nouveau système simplifié)
-      const baseUrl = typeof window !== 'undefined' 
-        ? `${window.location.protocol}//${window.location.host}`
-        : 'http://localhost:3001'
+  const baseUrl = typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.host}`
+    : 'http://localhost:3001'
 
+  const accessTokens: GeneratedAccessToken[] = enrollments
+    .map((enrollment) => {
+      const student = enrollment.students as StudentWithRelations | null
+      if (!student) return null
       return {
-        studentId,
-        studentName,
-        studentEmail,
-        accessUrl: `${baseUrl}/learner/access/${studentId}`,
+        studentId: enrollment.student_id || '',
+        studentName: `${student.first_name} ${student.last_name}`,
+        studentEmail: student.email || '',
+        accessUrl: `${baseUrl}/learner/access/${student.id}`,
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       }
-    },
-    onSuccess: (newToken) => {
-      // Mettre à jour ou ajouter le lien
-      setAccessTokens(prev => {
-        const existing = prev.findIndex(t => t.studentId === newToken.studentId)
-        if (existing >= 0) {
-          const updated = [...prev]
-          updated[existing] = newToken
-          return updated
-        }
-        return [...prev, newToken]
-      })
-      toast.success(`Lien généré pour ${newToken.studentName}`)
-    },
-    onError: (error: Error) => {
-      toast.error(error.message)
-    },
-  })
-
-  // Mutation pour générer tous les liens en masse (nouveau système simplifié)
-  const generateBulkTokensMutation = useMutation({
-    mutationFn: async () => {
-      // Récupérer les étudiants de la session
-      if (!enrollments?.length) {
-        throw new Error('Aucun étudiant inscrit à cette session')
-      }
-
-      // Générer les liens directement avec les studentIds
-      const baseUrl = typeof window !== 'undefined' 
-        ? `${window.location.protocol}//${window.location.host}`
-        : 'http://localhost:3001'
-
-      const tokens = enrollments.map((enrollment: any) => ({
-        studentId: enrollment.students.id,
-        studentName: `${enrollment.students.first_name} ${enrollment.students.last_name}`,
-        studentEmail: enrollment.students.email,
-        accessUrl: `${baseUrl}/learner/access/${enrollment.students.id}`,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 jours
-      }))
-
-      return { tokens, count: tokens.length }
-    },
-    onSuccess: (data) => {
-      setAccessTokens(data.tokens || [])
-      toast.success(`${data.count} liens d'accès générés avec succès`)
-    },
-    onError: (error: Error) => {
-      toast.error(error.message)
-    },
-  })
+    })
+    .filter((t): t is GeneratedAccessToken => t !== null)
 
   // Copier un lien dans le presse-papiers
   const copyToClipboard = async (url: string, studentName: string) => {
@@ -926,144 +874,62 @@ export function EspaceApprenant({
               {/* Description */}
               <div className="text-sm text-muted-foreground bg-white/50 p-3 rounded-lg">
                 <p>
-                  Générez des liens d'accès personnalisés pour permettre aux stagiaires 
-                  d'accéder directement à leur espace personnel <strong>sans avoir besoin de se connecter</strong>.
-                </p>
-                <p className="mt-2 text-xs">
-                  ⏱️ Les liens expirent après 30 jours et peuvent être régénérés à tout moment.
+                  Partagez ces liens avec vos stagiaires pour leur permettre d'accéder directement
+                  à leur espace personnel <strong>sans avoir besoin de se connecter</strong>.
                 </p>
               </div>
 
-              {/* Actions globales */}
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => generateBulkTokensMutation.mutate()}
-                  disabled={generateBulkTokensMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {generateBulkTokensMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                  )}
-                  Générer tous les liens
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  ({enrollments.length} apprenant{enrollments.length > 1 ? 's' : ''})
-                </span>
-              </div>
-
-              {/* Liste des apprenants avec génération individuelle */}
-              <div className="space-y-2 mt-4">
-                <h4 className="text-sm font-medium mb-3">Générer des liens pour chaque apprenant :</h4>
+              {/* Liste des apprenants */}
+              {accessTokens.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Link2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">Aucun apprenant inscrit à cette session</p>
+                </div>
+              ) : (
                 <div className="max-h-96 overflow-y-auto space-y-2">
-                  {enrollments.map((enrollment) => {
-                    const student = enrollment.students as StudentWithRelations | null
-                    if (!student) return null
-                    
-                    const existingToken = accessTokens.find(t => t.studentId === enrollment.student_id)
-                    const studentName = `${student.first_name} ${student.last_name}`
-                    
-                    return (
-                      <div
-                        key={enrollment.student_id}
-                        className="flex items-center justify-between p-3 bg-white rounded-lg border"
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                            <User className="h-4 w-4 text-blue-600" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">{studentName}</p>
-                            {student.email && (
-                              <p className="text-xs text-muted-foreground truncate max-w-xs">
-                                {student.email}
-                              </p>
-                            )}
-                          </div>
+                  {accessTokens.map((token) => (
+                    <div
+                      key={token.studentId}
+                      className="flex items-center justify-between p-3 bg-white rounded-lg border"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <User className="h-4 w-4 text-blue-600" />
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {existingToken ? (
-                            <>
-                              <div className="flex items-center gap-2 min-w-0 max-w-xs">
-                                <p className="text-xs text-muted-foreground truncate hidden md:block">
-                                  {existingToken.accessUrl}
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyToClipboard(existingToken.accessUrl, studentName)}
-                                title="Copier le lien"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                asChild
-                                title="Ouvrir le lien"
-                              >
-                                <a href={existingToken.accessUrl} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateTokenMutation.mutate({
-                                  studentId: enrollment.student_id || '',
-                                  studentName,
-                                  studentEmail: student.email || ''
-                                })}
-                                disabled={generateTokenMutation.isPending}
-                                title="Régénérer le lien"
-                              >
-                                {generateTokenMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => generateTokenMutation.mutate({
-                                studentId: enrollment.student_id || '',
-                                studentName,
-                                studentEmail: student.email || ''
-                              })}
-                              disabled={generateTokenMutation.isPending}
-                              className="bg-blue-600 hover:bg-blue-700"
-                            >
-                              {generateTokenMutation.isPending ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Génération...
-                                </>
-                              ) : (
-                                <>
-                                  <Link2 className="h-4 w-4 mr-2" />
-                                  Générer
-                                </>
-                              )}
-                            </Button>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{token.studentName}</p>
+                          {token.studentEmail && (
+                            <p className="text-xs text-muted-foreground truncate max-w-xs">
+                              {token.studentEmail}
+                            </p>
                           )}
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Génération individuelle */}
-              {accessTokens.length === 0 && !generateBulkTokensMutation.isPending && (
-                <div className="text-center py-6 text-muted-foreground">
-                  <Link2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">Aucun lien généré pour cette session</p>
-                  <p className="text-xs mt-1">Cliquez sur "Générer tous les liens" pour créer les accès</p>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <p className="text-xs text-muted-foreground truncate hidden md:block max-w-xs">
+                          {token.accessUrl}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(token.accessUrl, token.studentName)}
+                          title="Copier le lien"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          title="Ouvrir le lien"
+                        >
+                          <a href={token.accessUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

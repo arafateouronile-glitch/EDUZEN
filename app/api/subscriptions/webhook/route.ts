@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'customer.subscription.trial_will_end': {
-        // O7 : L'essai gratuit se termine dans 3 jours — envoi email de rappel
+        // O7 : L'essai gratuit se termine dans 3 jours — envoi email de rappel avec liens checkout directs
         const subscription = event.data.object as Stripe.Subscription
         const organizationId = subscription.metadata?.organization_id as string | undefined
 
@@ -204,24 +204,65 @@ export async function POST(request: NextRequest) {
               ? new Date(subscription.trial_end * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
               : 'sous 3 jours'
 
+            // Créer des sessions checkout Stripe directes pour chaque plan actif
+            const stripe = getStripe()
+            const stripeCustomerId = typeof subscription.customer === 'string'
+              ? subscription.customer
+              : (subscription.customer as Stripe.Customer)?.id
+            type PlanLink = { name: string; priceHt: number; url: string }
+            const planLinks: PlanLink[] = []
+            if (stripeCustomerId) {
+              const { data: plans } = await admin
+                .from('plans')
+                .select('id, name, price_monthly_ht, stripe_price_id_monthly, stripe_price_id')
+                .eq('is_active', true)
+                .order('price_monthly_ht', { ascending: true })
+              for (const plan of plans ?? []) {
+                const priceId = plan.stripe_price_id_monthly ?? plan.stripe_price_id
+                if (!priceId) continue
+                try {
+                  const session = await stripe.checkout.sessions.create({
+                    customer: stripeCustomerId,
+                    payment_method_types: ['card'],
+                    line_items: [{ price: priceId, quantity: 1 }],
+                    mode: 'subscription',
+                    success_url: `${APP_URLS.getBaseUrl()}/dashboard/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: `${APP_URLS.getBaseUrl()}/dashboard/subscribe?canceled=true`,
+                    expires_at: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+                    metadata: { organization_id: organizationId, plan_id: plan.id, billing_period: 'monthly' },
+                  })
+                  if (session.url) {
+                    planLinks.push({ name: plan.name, priceHt: plan.price_monthly_ht ?? 0, url: session.url })
+                  }
+                } catch (planErr) {
+                  logger.warn('Impossible créer checkout pour plan email', { planId: plan.id, error: sanitizeError(planErr) })
+                }
+              }
+            }
+
+            const plansHtml = planLinks.length > 0
+              ? `<p style="margin: 20px 0 8px; font-weight: 600; color: #1a1a1a;">Choisissez votre plan et payez directement :</p>
+${planLinks.map(l => `<p style="margin: 6px 0;"><a href="${l.url}" style="display: block; background: #335ACF; color: white; padding: 13px 20px; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; font-size: 15px;">${escapeHtml(l.name)} — ${l.priceHt}&nbsp;€&nbsp;/&nbsp;mois HT</a></p>`).join('\n')}
+<p style="text-align: center; font-size: 13px; color: #888; margin-top: 8px;">ou <a href="${escapeHtml(dashboardUrl)}" style="color: #335ACF;">voir tous les plans</a></p>`
+              : `<p style="text-align: center; margin: 28px 0;"><a href="${escapeHtml(dashboardUrl)}" style="display: inline-block; background: #335ACF; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">Choisir mon abonnement</a></p>`
+
             if (uniqueEmails.length > 0) {
               await sendEmailViaResend({
                 to: uniqueEmails,
                 subject: `EDUZEN — Votre essai gratuit se termine le ${trialEndDate}`,
-                html: `
-<!DOCTYPE html>
+                html: `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1a1a1a; line-height: 1.6;">
   <p>Bonjour,</p>
   <p>Votre période d'essai gratuit d'EDUZEN pour <strong>${escapeHtml(orgName)}</strong> se termine dans 3 jours (le ${escapeHtml(trialEndDate)}).</p>
-  <p>Pour continuer à profiter de toutes les fonctionnalités sans interruption, ajoutez votre moyen de paiement avant cette date :</p>
-  <p style="text-align: center; margin: 28px 0;"><a href="${escapeHtml(dashboardUrl)}" style="display: inline-block; background: #335ACF; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">Ajouter ma carte et continuer</a></p>
+  <p>Pour continuer à profiter de toutes les fonctionnalités sans interruption :</p>
+  ${plansHtml}
   <p style="font-size: 14px; color: #666;">Vous pourrez annuler à tout moment. Aucun prélèvement avant la fin de votre essai.</p>
   <p>Cordialement,<br>L'équipe EDUZEN</p>
 </body>
 </html>`,
-                text: `Bonjour,\n\nVotre essai gratuit EDUZEN pour ${orgName} se termine le ${trialEndDate}. Ajoutez votre moyen de paiement ici : ${dashboardUrl}\n\nCordialement,\nL'équipe EDUZEN`,
+                text: `Bonjour,\n\nVotre essai gratuit EDUZEN pour ${orgName} se termine le ${trialEndDate}.\n\nChoisissez votre plan et payez directement :\n${planLinks.length > 0 ? planLinks.map(l => `- ${l.name} (${l.priceHt} €/mois HT) : ${l.url}`).join('\n') : dashboardUrl}\n\nCordialement,\nL'équipe EDUZEN`,
               })
               logger.info('Email fin d\'essai envoyé', { organizationId, to: uniqueEmails })
             }

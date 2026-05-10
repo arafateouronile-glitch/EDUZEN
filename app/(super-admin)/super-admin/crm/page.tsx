@@ -4,13 +4,15 @@ import { useEffect, useState, useTransition } from 'react'
 import { motion } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles } from 'lucide-react'
+import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { OrganizationHealthCard } from '@/components/super-admin/crm/organization-health-card'
-import { getCrmOrganizations } from '@/lib/actions/crm-actions'
+import { getCrmOrganizations, getDemoLeads } from '@/lib/actions/crm-actions'
 import type { OrganizationCrmSummary, HealthStatus } from '@/types/crm.types'
+import type { DemoLead } from '@/lib/actions/crm-actions'
 import { cn } from '@/lib/utils'
 
+type Tab = 'organisations' | 'leads'
 type Filter = 'all' | HealthStatus
 
 const FILTER_CONFIG: { value: Filter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -30,20 +32,29 @@ const FILTER_COLORS: Record<Filter, string> = {
 }
 
 export default function CrmPage() {
+  const [tab, setTab] = useState<Tab>('organisations')
   const [orgs, setOrgs] = useState<OrganizationCrmSummary[]>([])
+  const [leads, setLeads] = useState<DemoLead[]>([])
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
+  const [leadsSearch, setLeadsSearch] = useState('')
   const [isPending, startTransition] = useTransition()
 
   const load = () => {
     startTransition(async () => {
-      const result = await getCrmOrganizations()
-      if (result.success && result.data) {
-        setOrgs(result.data)
+      const [orgsResult, leadsResult] = await Promise.all([
+        getCrmOrganizations(),
+        getDemoLeads(),
+      ])
+      if (orgsResult.success && orgsResult.data) {
+        setOrgs(orgsResult.data)
         setError(null)
       } else {
-        setError(result.error ?? 'Erreur inconnue')
+        setError(orgsResult.error ?? 'Erreur inconnue')
+      }
+      if (leadsResult.success && leadsResult.data) {
+        setLeads(leadsResult.data)
       }
     })
   }
@@ -63,6 +74,11 @@ export default function CrmPage() {
     const matchesSearch = !search || o.organization_name.toLowerCase().includes(search.toLowerCase())
     return matchesFilter && matchesSearch
   })
+
+  const filteredLeads = leads.filter((l) =>
+    !leadsSearch ||
+    `${l.first_name} ${l.last_name} ${l.company} ${l.email}`.toLowerCase().includes(leadsSearch.toLowerCase())
+  )
 
   return (
     <div className="space-y-6">
@@ -97,81 +113,180 @@ export default function CrmPage() {
         </Button>
       </div>
 
-      {/* Stats summary */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: 'Actifs', count: counts.active, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/20' },
-          { label: 'À risque', count: counts.at_risk, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/20' },
-          { label: 'Inactifs', count: counts.inactive, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-950/20' },
-          { label: 'Nouveaux', count: counts.new, color: 'text-sky-600', bg: 'bg-sky-50 dark:bg-sky-950/20' },
-        ].map((stat) => (
-          <Card key={stat.label} className={cn('border-0', stat.bg)}>
-            <CardContent className="p-4">
-              <div className={cn('text-2xl font-bold', stat.color)}>{stat.count}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{stat.label}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Filters + Search */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un organisme..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {FILTER_CONFIG.map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              data-active={filter === value}
-              onClick={() => setFilter(value)}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
-                'border border-border bg-background text-muted-foreground hover:text-foreground',
-                FILTER_COLORS[value]
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-              <span className="rounded-full bg-black/10 dark:bg-white/10 px-1.5 py-0.5 text-[10px]">
-                {counts[value]}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* List */}
-      {error ? (
-        <Card className="border-rose-200 bg-rose-50 dark:bg-rose-950/20">
-          <CardContent className="p-4 text-sm text-rose-700 dark:text-rose-400">{error}</CardContent>
-        </Card>
-      ) : isPending ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-28 rounded-lg bg-muted animate-pulse" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Users className="h-10 w-10 text-muted-foreground/40 mb-3" />
-          <p className="text-sm text-muted-foreground">Aucun organisme trouvé</p>
-        </div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        <button
+          onClick={() => setTab('organisations')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+            tab === 'organisations'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
         >
-          {filtered.map((org) => (
-            <OrganizationHealthCard key={org.organization_id} org={org} />
-          ))}
+          Organisations
+          <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{orgs.length}</span>
+        </button>
+        <button
+          onClick={() => setTab('leads')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+            tab === 'leads'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Leads / Formulaires
+          <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{leads.length}</span>
+        </button>
+      </div>
+
+      {tab === 'organisations' && (
+        <>
+          {/* Stats summary */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Actifs', count: counts.active, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/20' },
+              { label: 'À risque', count: counts.at_risk, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/20' },
+              { label: 'Inactifs', count: counts.inactive, color: 'text-rose-600', bg: 'bg-rose-50 dark:bg-rose-950/20' },
+              { label: 'Nouveaux', count: counts.new, color: 'text-sky-600', bg: 'bg-sky-50 dark:bg-sky-950/20' },
+            ].map((stat) => (
+              <Card key={stat.label} className={cn('border-0', stat.bg)}>
+                <CardContent className="p-4">
+                  <div className={cn('text-2xl font-bold', stat.color)}>{stat.count}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{stat.label}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Filters + Search */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un organisme..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {FILTER_CONFIG.map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  data-active={filter === value}
+                  onClick={() => setFilter(value)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
+                    'border border-border bg-background text-muted-foreground hover:text-foreground',
+                    FILTER_COLORS[value]
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                  <span className="rounded-full bg-black/10 dark:bg-white/10 px-1.5 py-0.5 text-[10px]">
+                    {counts[value]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* List */}
+          {error ? (
+            <Card className="border-rose-200 bg-rose-50 dark:bg-rose-950/20">
+              <CardContent className="p-4 text-sm text-rose-700 dark:text-rose-400">{error}</CardContent>
+            </Card>
+          ) : isPending ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-28 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Users className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">Aucun organisme trouvé</p>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+            >
+              {filtered.map((org) => (
+                <OrganizationHealthCard key={org.organization_id} org={org} />
+              ))}
+            </motion.div>
+          )}
+        </>
+      )}
+
+      {tab === 'leads' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          {/* Search leads */}
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un lead..."
+              value={leadsSearch}
+              onChange={(e) => setLeadsSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {isPending ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-16 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : filteredLeads.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <UserRound className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">Aucun lead trouvé</p>
+            </div>
+          ) : (
+            <Card>
+              <div className="divide-y divide-border">
+                {filteredLeads.map((lead) => (
+                  <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                        {lead.first_name[0]}{lead.last_name[0]}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {lead.first_name} {lead.last_name}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{lead.company}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground sm:shrink-0">
+                      <a
+                        href={`mailto:${lead.email}`}
+                        className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                      >
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span>{lead.email}</span>
+                      </a>
+                      <span className="hidden sm:block shrink-0">
+                        {new Date(lead.created_at).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </motion.div>
       )}
     </div>

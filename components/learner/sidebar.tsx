@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/lib/hooks/use-auth'
+import { useLearnerContext } from '@/lib/contexts/learner-context'
+import { secureSessionStorage } from '@/lib/utils/secure-storage'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import {
   LayoutDashboard,
@@ -103,9 +104,15 @@ const secondaryNavigation = [
 
 export function LearnerSidebar({ isOpen, onClose }: LearnerSidebarProps) {
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const { student } = useLearnerContext()
 
-  const userInitials = (user?.full_name || user?.email || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+  const learnerName = student ? `${student.first_name} ${student.last_name}`.trim() : ''
+  const userInitials = (learnerName || student?.email || 'A').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+
+  const logout = () => {
+    try { secureSessionStorage.remove('learner_student_id') } catch {}
+    window.location.href = '/'
+  }
 
   const sidebarContent = (
     <div className="flex flex-col h-full relative">
@@ -178,9 +185,9 @@ export function LearnerSidebar({ isOpen, onClose }: LearnerSidebarProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate drop-shadow-md">
-                {user?.full_name || user?.email?.split('@')[0] || 'Utilisateur'}
+                {learnerName || student?.email?.split('@')[0] || 'Apprenant'}
               </p>
-              <p className="text-[11px] text-white/70 truncate">{user?.email}</p>
+              <p className="text-[11px] text-white/70 truncate">{student?.email}</p>
             </div>
             <motion.div
               className="p-1.5 bg-white/10 rounded-lg border border-white/20"

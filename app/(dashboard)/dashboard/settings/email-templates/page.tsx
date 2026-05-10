@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { emailTemplateService } from '@/lib/services/email-template.service.client'
@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
+import { EmailBodyEditor } from '@/components/ui/email-body-editor'
 import {
   Dialog,
   DialogContent,
@@ -30,9 +31,9 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
 import { Mail, Plus, Edit, Trash2, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react'
-import { motion, AnimatePresence } from '@/components/ui/motion'
+import { motion } from '@/components/ui/motion'
 
-/** Retourne le contenu HTML en texte brut (pas de rendu HTML). Supprime style/script. */
+/** Retourne le contenu HTML en texte brut. Supprime style/script. */
 function htmlToPlainText(html: string): string {
   if (!html || typeof html !== 'string') return ''
   const cleaned = html
@@ -48,8 +49,8 @@ function htmlToPlainText(html: string): string {
 }
 
 /**
- * Convertit le texte simple (format lisible) en HTML pour l'email.
- * Règles : **gras** → <strong>, *italique* → <em>, double retour à la ligne = paragraphe.
+ * Convertit le texte simple (markdown minimal) en HTML de base.
+ * Utilisé uniquement pour migrer d'anciens body_text vers HTML.
  */
 function simpleFormatToHtml(text: string): string {
   if (!text || typeof text !== 'string') return ''
@@ -197,15 +198,16 @@ export default function EmailTemplatesPage() {
   }
 
   const handleEdit = (template: import('@/lib/services/email-template.service').EmailTemplate) => {
-    const bodySource = template.body_text?.trim()
-      ? template.body_text
-      : htmlToPlainText(template.body_html || '')
+    // Préférer body_html (HTML TipTap), sinon convertir body_text en HTML basique
+    const editorContent = template.body_html?.trim()
+      ? template.body_html
+      : simpleFormatToHtml(template.body_text || '')
     setFormData({
       email_type: template.email_type as import('@/lib/services/email-template.service').EmailType,
       name: template.name,
       subject: template.subject,
-      body_html: template.body_html,
-      body_text: bodySource,
+      body_html: editorContent,
+      body_text: template.body_text || '',
       is_default: template.is_default ?? false,
       is_active: template.is_active ?? false,
       description: template.description || '',
@@ -217,8 +219,10 @@ export default function EmailTemplatesPage() {
   const handleSubmit = () => {
     const payload = {
       ...formData,
-      body_text: formData.body_text,
-      body_html: simpleFormatToHtml(formData.body_text),
+      // body_html est déjà mis à jour en temps réel par EmailBodyEditor (avec {variable} en texte)
+      body_html: formData.body_html,
+      // body_text = version texte brut pour les clients mail sans HTML
+      body_text: htmlToPlainText(formData.body_html),
     }
     if (editingTemplate) {
       updateMutation.mutate({ id: editingTemplate.id, data: payload })
@@ -530,31 +534,41 @@ export default function EmailTemplatesPage() {
                 placeholder="Ex: Votre {document_title}"
               />
               {selectedTypeInfo && selectedTypeInfo.defaultVariables.length > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Variables disponibles : {selectedTypeInfo.defaultVariables.join(', ')}
-                </p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  <span className="text-xs text-gray-500 self-center mr-0.5">Insérer :</span>
+                  {selectedTypeInfo.defaultVariables.map((varName) => (
+                    <button
+                      key={varName}
+                      type="button"
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          subject: prev.subject + `{${varName}}`,
+                        }))
+                      }
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 border border-blue-300 rounded hover:bg-blue-200 transition-colors"
+                      title={`Ajouter {${varName}} dans le sujet`}
+                    >
+                      <span className="text-blue-500">{'{'}</span>
+                      {varName}
+                      <span className="text-blue-500">{'}'}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Corps de l'email en texte simple (balises lisibles) */}
+            {/* Corps de l'email — éditeur riche avec variables */}
             <div>
-              <Label htmlFor="body_text">Corps de l'email *</Label>
-              <Textarea
-                id="body_text"
-                value={formData.body_text}
-                onChange={(e) => setFormData({ ...formData, body_text: e.target.value })}
-                placeholder={`Félicitations {student_name} !
-
-Votre certificat **{certificate_title}** a été délivré avec succès.
-
-Cordialement,
-L'équipe {organization_name}`}
-                rows={14}
-                className="font-sans text-sm whitespace-pre-wrap"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                <strong>Format simple :</strong> <code className="bg-muted px-1 rounded">**gras**</code> <code className="bg-muted px-1 rounded">*italique*</code> — Retour à la ligne = nouveau paragraphe. Utilisez les variables indiquées pour ce type d'email.
-              </p>
+              <Label>Corps de l'email *</Label>
+              <div className="mt-1">
+                <EmailBodyEditor
+                  value={formData.body_html}
+                  onChange={(html) => setFormData((prev) => ({ ...prev, body_html: html }))}
+                  availableVariables={selectedTypeInfo?.defaultVariables ?? []}
+                  placeholder="Rédigez le corps de votre email ici…"
+                />
+              </div>
             </div>
 
             {/* Options */}
@@ -589,7 +603,7 @@ L'équipe {organization_name}`}
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!formData.name || !formData.subject || !formData.body_text?.trim() || createMutation.isPending || updateMutation.isPending}
+              disabled={!formData.name || !formData.subject || !formData.body_html?.trim() || createMutation.isPending || updateMutation.isPending}
             >
               {editingTemplate ? 'Enregistrer' : 'Créer'}
             </Button>

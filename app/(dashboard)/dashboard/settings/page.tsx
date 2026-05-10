@@ -17,7 +17,7 @@ import {
   Layout, Code, Save, Building2, Mail, Phone, MapPin,
   Calendar, DollarSign, Languages, Moon, Sun, Key,
   Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image as ImageIcon, Award, Palette, X, Clock, Receipt, FileSignature, User,
-  Lock, FileDown, ClipboardCheck, Accessibility, Plug
+  Lock, FileDown, ClipboardCheck, Accessibility, Plug, Zap, ArrowRight
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -1890,16 +1890,29 @@ export default function SettingsPage() {
 
                                 <div className="flex flex-col gap-3 w-full md:w-auto">
                                   <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.98 }}>
-                                    <Button className="group relative overflow-hidden bg-white text-brand-blue hover:bg-white shadow-xl hover:shadow-2xl border-0 w-full md:w-auto font-bold">
-                                      <motion.div
-                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-blue/10 to-transparent"
-                                        initial={{ x: '-100%' }}
-                                        whileHover={{ x: '100%' }}
-                                        transition={{ duration: 0.6 }}
-                                      />
-                                      <span className="relative z-10">Changer de plan</span>
-                                    </Button>
+                                    <Link href="/dashboard/subscribe">
+                                      <Button className="group relative overflow-hidden bg-white text-brand-blue hover:bg-white shadow-xl hover:shadow-2xl border-0 w-full md:w-auto font-bold">
+                                        <motion.div
+                                          className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-blue/10 to-transparent"
+                                          initial={{ x: '-100%' }}
+                                          whileHover={{ x: '100%' }}
+                                          transition={{ duration: 0.6 }}
+                                        />
+                                        <span className="relative z-10">Changer de plan</span>
+                                      </Button>
+                                    </Link>
                                   </motion.div>
+                                  {(!subscriptionData || subscriptionData.status !== 'active') && (
+                                    <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.98 }}>
+                                      <Link href="/dashboard/subscribe">
+                                        <Button className="group relative overflow-hidden bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 shadow-xl hover:shadow-2xl border-0 w-full md:w-auto font-bold gap-2">
+                                          <Zap className="h-4 w-4" />
+                                          <span>Souscrire maintenant</span>
+                                          <ArrowRight className="h-4 w-4" />
+                                        </Button>
+                                      </Link>
+                                    </motion.div>
+                                  )}
                                 </div>
                               </div>
 
@@ -1988,6 +2001,33 @@ export default function SettingsPage() {
                           )
                         })()}
                       </motion.div>
+
+                      {/* CTA souscrire si pas d'abonnement actif */}
+                      {(!subscriptionData || subscriptionData.status !== 'active') && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2 }}
+                          className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200/60 flex flex-col md:flex-row items-center justify-between gap-4"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg flex-shrink-0">
+                              <Zap className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-gray-900 text-base">Passez à un plan payant</h4>
+                              <p className="text-sm text-gray-600">Débloquez toutes les fonctionnalités — sélectionnez et payez votre abonnement en quelques clics.</p>
+                            </div>
+                          </div>
+                          <Link href="/dashboard/subscribe" className="flex-shrink-0">
+                            <Button className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold shadow-lg hover:shadow-xl gap-2 px-6">
+                              <Zap className="h-4 w-4" />
+                              Choisir mon abonnement
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </motion.div>
+                      )}
                           </div>
                         )}
                 </GlassCard>
