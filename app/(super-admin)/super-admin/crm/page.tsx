@@ -4,15 +4,15 @@ import { useEffect, useState, useTransition } from 'react'
 import { motion } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound } from 'lucide-react'
+import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { OrganizationHealthCard } from '@/components/super-admin/crm/organization-health-card'
-import { getCrmOrganizations, getDemoLeads } from '@/lib/actions/crm-actions'
+import { getCrmOrganizations, getDemoLeads, getVslLeads } from '@/lib/actions/crm-actions'
 import type { OrganizationCrmSummary, HealthStatus } from '@/types/crm.types'
-import type { DemoLead } from '@/lib/actions/crm-actions'
+import type { DemoLead, VslLead } from '@/lib/actions/crm-actions'
 import { cn } from '@/lib/utils'
 
-type Tab = 'organisations' | 'leads'
+type Tab = 'organisations' | 'leads' | 'vsl'
 type Filter = 'all' | HealthStatus
 
 const FILTER_CONFIG: { value: Filter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -35,17 +35,20 @@ export default function CrmPage() {
   const [tab, setTab] = useState<Tab>('organisations')
   const [orgs, setOrgs] = useState<OrganizationCrmSummary[]>([])
   const [leads, setLeads] = useState<DemoLead[]>([])
+  const [vslLeads, setVslLeads] = useState<VslLead[]>([])
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [leadsSearch, setLeadsSearch] = useState('')
+  const [vslSearch, setVslSearch] = useState('')
   const [isPending, startTransition] = useTransition()
 
   const load = () => {
     startTransition(async () => {
-      const [orgsResult, leadsResult] = await Promise.all([
+      const [orgsResult, leadsResult, vslResult] = await Promise.all([
         getCrmOrganizations(),
         getDemoLeads(),
+        getVslLeads(),
       ])
       if (orgsResult.success && orgsResult.data) {
         setOrgs(orgsResult.data)
@@ -53,9 +56,8 @@ export default function CrmPage() {
       } else {
         setError(orgsResult.error ?? 'Erreur inconnue')
       }
-      if (leadsResult.success && leadsResult.data) {
-        setLeads(leadsResult.data)
-      }
+      if (leadsResult.success && leadsResult.data) setLeads(leadsResult.data)
+      if (vslResult.success && vslResult.data) setVslLeads(vslResult.data)
     })
   }
 
@@ -78,6 +80,11 @@ export default function CrmPage() {
   const filteredLeads = leads.filter((l) =>
     !leadsSearch ||
     `${l.first_name} ${l.last_name} ${l.company} ${l.email}`.toLowerCase().includes(leadsSearch.toLowerCase())
+  )
+
+  const filteredVslLeads = vslLeads.filter((l) =>
+    !vslSearch ||
+    `${l.full_name} ${l.organization_name ?? ''} ${l.email} ${l.phone ?? ''}`.toLowerCase().includes(vslSearch.toLowerCase())
   )
 
   return (
@@ -138,6 +145,21 @@ export default function CrmPage() {
         >
           Leads / Formulaires
           <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{leads.length}</span>
+        </button>
+        <button
+          onClick={() => setTab('vsl')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5',
+            tab === 'vsl'
+              ? 'border-violet-500 text-violet-700 dark:text-violet-400'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Video className="h-3.5 w-3.5" />
+          Leads VSL
+          <span className="ml-1 rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 px-1.5 py-0.5 text-[10px]">
+            {vslLeads.length}
+          </span>
         </button>
       </div>
 
@@ -221,6 +243,89 @@ export default function CrmPage() {
             </motion.div>
           )}
         </>
+      )}
+
+      {tab === 'vsl' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          {/* Header + search */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Rechercher un lead VSL..."
+                value={vslSearch}
+                onChange={(e) => setVslSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-violet-400"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {filteredVslLeads.length} inscription{filteredVslLeads.length !== 1 ? 's' : ''} via la page VSL
+            </p>
+          </div>
+
+          {isPending ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-16 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : filteredVslLeads.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Video className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">Aucun lead VSL pour le moment</p>
+            </div>
+          ) : (
+            <Card>
+              <div className="divide-y divide-border">
+                {filteredVslLeads.map((lead) => (
+                  <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3">
+                    {/* Avatar initiales */}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 font-semibold text-sm">
+                      {(lead.first_name?.[0] ?? '?')}{(lead.last_name?.[0] ?? '')}
+                    </div>
+
+                    {/* Nom + OF */}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm truncate">{lead.full_name}</p>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                        <Building2 className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{lead.organization_name ?? '—'}</span>
+                      </div>
+                    </div>
+
+                    {/* Contacts */}
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground sm:shrink-0">
+                      <a
+                        href={`mailto:${lead.email}`}
+                        className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                      >
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span>{lead.email}</span>
+                      </a>
+                      {lead.phone && (
+                        <a
+                          href={`tel:${lead.phone}`}
+                          className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                        >
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          <span>{lead.phone}</span>
+                        </a>
+                      )}
+                      <span className="hidden sm:block shrink-0 text-muted-foreground/60">
+                        {new Date(lead.created_at).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </motion.div>
       )}
 
       {tab === 'leads' && (

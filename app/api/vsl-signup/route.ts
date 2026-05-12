@@ -215,7 +215,8 @@ export async function POST(request: NextRequest) {
         phone: telephone,
         role: 'admin',
         is_active: true,
-      }, { onConflict: 'id' })
+        onboarding_source: 'vsl',
+      } as never, { onConflict: 'id' })
 
     if (userInsertError) {
       console.error('[vsl-signup] User profile creation error:', userInsertError)

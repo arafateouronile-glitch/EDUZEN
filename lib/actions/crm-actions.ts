@@ -14,6 +14,17 @@ export type DemoLead = {
   created_at: string
 }
 
+export type VslLead = {
+  id: string
+  full_name: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string | null
+  organization_name: string | null
+  created_at: string
+}
+
 async function ensureSuperAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -151,6 +162,101 @@ export async function getDemoLeads(): Promise<{
   } catch (err) {
     logger.error('[crm-actions] getDemoLeads', err)
     return { success: false, error: 'Impossible de charger les leads' }
+  }
+}
+
+export async function getVslLeads(): Promise<{
+  success: boolean
+  data?: VslLead[]
+  error?: string
+}> {
+  try {
+    const supabase = await ensureSuperAdmin()
+
+    // 1. Leads avec onboarding_source = 'vsl' dans la table users (futurs inscrits)
+    const { data: dbUsers, error: dbError } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+      .from('users')
+      .select('id, full_name, first_name, last_name, email, phone, organization_id, created_at, onboarding_source')
+      .eq('onboarding_source', 'vsl')
+      .order('created_at', { ascending: false })
+
+    if (dbError) throw dbError
+
+    // 2. Inscrits VSL existants identifiés via auth metadata (avant la migration)
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+    if (authError) throw authError
+
+    const authVslUserIds = new Set(
+      (authUsers ?? [])
+        .filter((u) => u.user_metadata?.onboarding_source === 'vsl')
+        .map((u) => u.id)
+    )
+
+    // Ids déjà récupérés via DB
+    const dbIds = new Set((dbUsers ?? []).map((u: { id: string }) => u.id))
+
+    // Ids présents dans auth mais pas encore en DB (avant migration)
+    const missingIds = [...authVslUserIds].filter((id) => !dbIds.has(id))
+
+    let missingUsers: VslLead[] = []
+    if (missingIds.length > 0) {
+      const { data: extra } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+        .from('users')
+        .select('id, full_name, first_name, last_name, email, phone, organization_id, created_at')
+        .in('id', missingIds)
+        .order('created_at', { ascending: false })
+
+      missingUsers = (extra ?? []).map((u: Record<string, string | null>) => ({
+        id: u.id!,
+        full_name: u.full_name ?? '',
+        first_name: u.first_name ?? '',
+        last_name: u.last_name ?? '',
+        email: u.email ?? '',
+        phone: u.phone ?? null,
+        organization_id: u.organization_id ?? null,
+        organization_name: null,
+        created_at: u.created_at ?? '',
+      }))
+    }
+
+    // Combiner les deux listes
+    const allUsers: (typeof dbUsers[number] & { organization_name?: string | null })[] = [
+      ...(dbUsers ?? []),
+      ...missingUsers.map((u) => ({ ...u, onboarding_source: 'vsl' })),
+    ]
+
+    if (allUsers.length === 0) return { success: true, data: [] }
+
+    // 3. Récupérer les noms d'organisations
+    const orgIds = [...new Set(allUsers.map((u) => u.organization_id).filter(Boolean))]
+    const orgMap = new Map<string, string>()
+
+    if (orgIds.length > 0) {
+      const { data: orgs } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+        .from('organizations')
+        .select('id, name')
+        .in('id', orgIds)
+
+      for (const org of orgs ?? []) {
+        orgMap.set(org.id, org.name)
+      }
+    }
+
+    const data: VslLead[] = allUsers.map((u) => ({
+      id: u.id,
+      full_name: u.full_name ?? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim(),
+      first_name: u.first_name ?? '',
+      last_name: u.last_name ?? '',
+      email: u.email,
+      phone: u.phone ?? null,
+      organization_name: u.organization_id ? (orgMap.get(u.organization_id) ?? null) : null,
+      created_at: u.created_at ?? '',
+    }))
+
+    return { success: true, data }
+  } catch (err) {
+    logger.error('[crm-actions] getVslLeads', err)
+    return { success: false, error: 'Impossible de charger les leads VSL' }
   }
 }
 
