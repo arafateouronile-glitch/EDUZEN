@@ -220,9 +220,21 @@ export async function getVslLeads(): Promise<{
     }
 
     // Combiner les deux listes
-    const allUsers: (typeof dbUsers[number] & { organization_name?: string | null })[] = [
-      ...(dbUsers ?? []),
-      ...missingUsers.map((u) => ({ ...u, onboarding_source: 'vsl' })),
+    type UserRow = {
+      id: string
+      full_name: string | null
+      first_name: string | null
+      last_name: string | null
+      email: string
+      phone: string | null
+      organization_id?: string | null
+      onboarding_source?: string | null
+      created_at: string
+      organization_name?: string | null
+    }
+    const allUsers: UserRow[] = [
+      ...(dbUsers ?? []).map((u) => ({ ...u, organization_id: u.organization_id ?? null })),
+      ...missingUsers.map((u) => ({ ...u, onboarding_source: 'vsl' as const })),
     ]
 
     if (allUsers.length === 0) return { success: true, data: [] }
