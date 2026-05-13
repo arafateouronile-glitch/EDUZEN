@@ -138,9 +138,13 @@ export default async function RootLayout({
         {/* DNS prefetch pour améliorer les performances */}
         <link rel="dns-prefetch" href="https://*.supabase.co" />
         <link rel="dns-prefetch" href="https://*.sentry.io" />
-        {/* Preload fonts critiques pour améliorer LCP */}
-        {/* Note: Les polices sont chargées via @fontsource, les preloads sont optionnels */}
-        {/* Les chemins exacts seront générés au build par Next.js */}
+        {/* Apollo website tracker — doit être dans <head> selon les instructions Apollo */}
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: `function initApollo(){var n=Math.random().toString(36).substring(7),o=document.createElement("script");o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n,o.async=!0,o.defer=!0,o.onload=function(){window.trackingFunctions.onLoad({appId:"69d0f88d36754e001939badf"})},document.head.appendChild(o)}initApollo();`
+          }}
+        />
       </head>
       <body className={cn('smooth-scroll-premium relative selection:bg-brand-blue-pale/50 selection:text-brand-blue-darker')}>
         <Preloader />
