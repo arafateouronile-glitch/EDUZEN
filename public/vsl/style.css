@@ -431,6 +431,13 @@ img { display: block; max-width: 100%; }
   margin-top: 16px;
   line-height: 1.5;
 }
+.field-reassurance {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 6px;
+  line-height: 1.5;
+  font-style: italic;
+}
 .success-message {
   display: none;
   background: rgba(30,110,90,0.2);
@@ -847,6 +854,42 @@ img { display: block; max-width: 100%; }
 .footer-links a:hover { color: var(--pale-blue); }
 .footer-inner { padding-bottom: 28px; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 28px; }
 
+/* ── REASSURANCE BAR ── */
+#reassurance-bar {
+  padding: 60px 0;
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.reassurance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.reassurance-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.reassurance-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.reassurance-item strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+.reassurance-item p {
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   #urgency-bar p { font-size: 11px; }
@@ -862,6 +905,7 @@ img { display: block; max-width: 100%; }
   .mini-form { flex-direction: column; }
   .mini-form input, .mini-form button { width: 100%; }
   .footer-inner { flex-direction: column; text-align: center; }
+  .reassurance-grid { grid-template-columns: 1fr; gap: 24px; }
 }
 @media (max-width: 480px) {
   .proof-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
