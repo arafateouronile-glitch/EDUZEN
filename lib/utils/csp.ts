@@ -117,7 +117,7 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://www.google-analytics.com',
     'https://unpkg.com',
     'https://js.stripe.com',
-    'https://assets.apollo.io',
+    'https://*.apollo.io',
     ...additionalScriptSrc
   )
 
@@ -160,6 +160,7 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://api.stripe.com',
     'https://*.stripe.com',
     'https://*.stripe.network',
+    'https://*.apollo.io',
     ...additionalConnectSrc,
   ]
 
