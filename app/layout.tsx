@@ -138,6 +138,14 @@ export default async function RootLayout({
         {/* DNS prefetch pour améliorer les performances */}
         <link rel="dns-prefetch" href="https://*.supabase.co" />
         <link rel="dns-prefetch" href="https://*.sentry.io" />
+        {/* Google Analytics 4 */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q2F5169TSG" nonce={nonce} />
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-Q2F5169TSG');`
+          }}
+        />
         {/* Google Tag Manager */}
         <script
           nonce={nonce}
