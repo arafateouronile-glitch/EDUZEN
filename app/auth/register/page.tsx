@@ -11,7 +11,8 @@ import { motion, AnimatePresence } from '@/components/ui/motion'
 import {
   Building2, User, Mail, Lock, ArrowRight, CheckCircle2,
   Phone, Shield, Star, BadgeCheck, Clock, Zap, HeartHandshake,
-  ChevronDown, ChevronUp, MapPin,
+  ChevronDown, ChevronUp, MapPin, Receipt, Users, BookOpen,
+  PenLine, FileOutput, Globe, CreditCard, FileCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -52,10 +53,23 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   )
 }
 
+const FEATURES = [
+  { icon: FileOutput,  label: 'Génération de documents' },
+  { icon: PenLine,     label: 'Émargements numériques' },
+  { icon: Shield,      label: '33 indicateurs Qualiopi' },
+  { icon: CreditCard,  label: 'CPF / EDOF synchronisé' },
+  { icon: Receipt,     label: 'Facturation automatisée' },
+  { icon: Users,       label: 'CRM intégré' },
+  { icon: BookOpen,    label: 'E-learning inclus' },
+  { icon: Globe,       label: 'Catalogue public' },
+  { icon: FileCheck,   label: 'Conventions en 45s' },
+  { icon: Zap,         label: 'Devis & contrats' },
+]
+
 const BENEFITS = [
   { icon: Zap,           text: 'Conventions générées en 45 secondes' },
   { icon: BadgeCheck,    text: 'Émargements numériques inclus' },
-  { icon: Shield,        text: '32 indicateurs Qualiopi automatisés' },
+  { icon: Shield,        text: '33 indicateurs Qualiopi automatisés' },
   { icon: ArrowRight,    text: 'CPF/EDOF synchronisé sans double saisie' },
   { icon: Clock,         text: '14 jours gratuits · Sans carte bancaire' },
 ]
@@ -93,7 +107,7 @@ const TESTIMONIALS = [
 
 const STATS = [
   { value: '17',  label: 'Documents automatisés' },
-  { value: '32',  label: 'Indicateurs Qualiopi' },
+  { value: '33',  label: 'Indicateurs Qualiopi' },
   { value: '6h+', label: 'Récupérées / semaine' },
 ]
 
@@ -220,16 +234,19 @@ export default function RegisterPage() {
             </div>
           </GlassCard>
 
-          {/* Benefits */}
-          <div className="space-y-2">
-            {BENEFITS.map(({ icon: Icon, text }, i) => (
-              <motion.div key={text} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 + i * 0.05 }} className="flex items-center gap-3">
-                <div className="w-5 h-5 bg-brand-cyan/10 border border-brand-cyan/25 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-3 w-3 text-brand-cyan" />
+          {/* Features grid */}
+          <div>
+            <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-widest mb-2.5">Tout ce qui est inclus</p>
+            <div className="grid grid-cols-2 gap-2">
+              {FEATURES.map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 bg-white/50 border border-gray-100 rounded-lg px-3 py-2">
+                  <div className="w-6 h-6 bg-brand-blue/8 border border-brand-blue/15 rounded-md flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-3.5 w-3.5 text-brand-blue" />
+                  </div>
+                  <span className="text-gray-700 text-xs font-medium leading-tight">{label}</span>
                 </div>
-                <span className="text-gray-600 text-sm">{text}</span>
-              </motion.div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Testimonials — detailed */}
@@ -307,6 +324,21 @@ export default function RegisterPage() {
                 <div className="text-gray-400 text-[9px] mt-0.5 font-medium leading-tight">{stat.label}</div>
               </GlassCard>
             ))}
+          </div>
+
+          {/* Features grid mobile */}
+          <div className="mb-4">
+            <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-widest mb-2">Tout ce qui est inclus</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {FEATURES.map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 bg-white/50 border border-gray-100 rounded-lg px-2.5 py-1.5">
+                  <div className="w-5 h-5 bg-brand-blue/8 border border-brand-blue/15 rounded-md flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-3 w-3 text-brand-blue" />
+                  </div>
+                  <span className="text-gray-700 text-[11px] font-medium leading-tight">{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Mobile testimonials — horizontal scroll */}
