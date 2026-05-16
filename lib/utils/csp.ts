@@ -109,6 +109,7 @@ export function generateCSP(config: CSPConfig = {}): string {
   // Note: avec strict-dynamic, ces domaines sont ignorés mais gardés pour fallback
   // https://unpkg.com : worker PDF.js (page signature) quand worker-src blob: est utilisé en fallback
   // https://js.stripe.com : Stripe.js pour les paiements
+  // https://scripts.clarity.ms : Microsoft Clarity chargé via GTM
   scriptSrc.push(
     'https://*.supabase.co',
     'https://*.sentry.io',
@@ -118,6 +119,8 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://unpkg.com',
     'https://js.stripe.com',
     'https://*.apollo.io',
+    'https://scripts.clarity.ms',
+    'https://*.clarity.ms',
     ...additionalScriptSrc
   )
 
@@ -157,10 +160,15 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://plausible.io',
     'https://www.google-analytics.com',
     'https://analytics.google.com',
+    'https://region1.google-analytics.com',
+    'https://region1.analytics.google.com',
     'https://api.stripe.com',
     'https://*.stripe.com',
     'https://*.stripe.network',
     'https://*.apollo.io',
+    'https://aplo-evnt.com',
+    'https://*.clarity.ms',
+    'https://www.clarity.ms',
     ...additionalConnectSrc,
   ]
 

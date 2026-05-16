@@ -125,7 +125,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className="scroll-smooth relative" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <head>
+      <head suppressHydrationWarning>
         <link rel="icon" href="/icons/icon-192x192.png" type="image/png" />
         <link rel="shortcut icon" href="/icons/icon-192x192.png" type="image/png" />
         <link rel="manifest" href="/manifest.json" />
