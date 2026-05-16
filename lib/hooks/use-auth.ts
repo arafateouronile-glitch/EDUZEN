@@ -545,6 +545,11 @@ export function useAuth() {
       }
 
       if (userError) {
+        // Conflit : utilisateur déjà existant (unique violation Postgres ou 409 HTTP)
+        if (userError.code === '23505' || (userError as unknown as { status?: number }).status === 409) {
+          throw new Error('Un compte existe déjà avec cette adresse email. Essayez de vous connecter ou de réinitialiser votre mot de passe.')
+        }
+
         // Si l'erreur est RLS, donner des instructions
         if (userError.code === '42501') {
           throw new Error(
@@ -553,7 +558,7 @@ export function useAuth() {
             'ou utilisez supabase/fix_existing_user.sql pour créer l\'utilisateur manuellement.'
           )
         }
-        
+
         throw userError
       }
 
