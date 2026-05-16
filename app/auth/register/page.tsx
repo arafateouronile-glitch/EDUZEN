@@ -462,7 +462,7 @@ export default function RegisterPage() {
             <div className="mt-4 flex items-center gap-3 bg-green-50/70 border border-green-100 rounded-xl px-4 py-3">
               <BadgeCheck className="h-5 w-5 text-green-600 flex-shrink-0" />
               <p className="text-green-800 text-xs font-medium leading-snug">
-                <span className="font-bold">Garantie satisfait 30 jours</span> — si EduZen ne vous fait pas gagner du temps, on vous rembourse intégralement.
+                <span className="font-bold">Annulation gratuite en 1 clic</span> — aucun engagement, aucune carte bancaire requise.
               </p>
             </div>
 
