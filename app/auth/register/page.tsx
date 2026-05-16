@@ -80,46 +80,58 @@ export default function RegisterPage() {
       <FloatingBlob className="top-[40%] left-[40%] w-64 h-64 rounded-full bg-gradient-to-t from-blue-300 to-cyan-200" delay={8} duration={28} />
 
       {/* ── LEFT COLUMN — value proposition ── */}
-      <div className="hidden lg:flex lg:w-[48%] relative z-10 flex-col justify-between p-12 bg-gradient-to-br from-brand-blue via-brand-blue-dark to-primary-darker overflow-hidden">
-        {/* Inner decorative blur */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-cyan/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-2xl" />
+      <div className="hidden lg:flex lg:w-[48%] relative z-10 flex-col justify-between p-12 bg-gradient-to-br from-brand-blue via-brand-blue-dark to-[#15263f] overflow-hidden">
+        {/* Inner decorative orbs */}
+        <div className="absolute top-0 right-0 w-72 h-72 bg-brand-cyan/8 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 left-0 w-56 h-56 bg-white/4 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Logo */}
+        {/* Logo + tagline */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <span className="font-display font-bold text-2xl text-white tracking-tight">
-            Edu<span className="text-brand-cyan">Zen</span>
-          </span>
-          <p className="text-brand-blue-pale text-sm mt-1 font-medium">Logiciel de gestion pour OF français</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 bg-gradient-to-br from-brand-cyan to-brand-blue-light rounded-lg flex items-center justify-center shadow-lg shadow-brand-cyan/30">
+              <Building2 className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-display font-bold text-xl text-white tracking-tight">
+              Edu<span className="text-brand-cyan">Zen</span>
+            </span>
+          </div>
+          <p className="text-white/50 text-xs font-medium ml-9">Logiciel de gestion pour OF français</p>
         </motion.div>
 
-        {/* Hero text */}
+        {/* Hero + all middle content */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="space-y-8"
+          className="space-y-6"
         >
+          {/* Title */}
           <div>
-            <h1 className="font-display font-bold text-4xl text-white leading-tight mb-4">
+            <h1 className="font-display font-bold text-[2rem] leading-[1.2] text-white mb-3">
               Gérez votre OF<br />en 2h par semaine<br />
               <span className="text-brand-cyan">au lieu de 8h.</span>
             </h1>
-            <p className="text-blue-200 text-base leading-relaxed">
+            <p className="text-white/60 text-sm leading-relaxed">
               Conventions, émargements, Qualiopi, CPF —<br />tout automatisé en un seul outil.
             </p>
           </div>
 
-          {/* Founder call badge */}
-          <div className="flex items-start gap-3 bg-white/10 border border-white/20 rounded-2xl px-5 py-4 backdrop-blur-sm">
-            <Phone className="h-5 w-5 text-brand-cyan mt-0.5 flex-shrink-0" />
-            <p className="text-white text-sm leading-relaxed font-medium">
-              Le fondateur vous appelle personnellement dans les <span className="text-brand-cyan font-bold">48h</span> pour configurer votre espace.
-            </p>
-          </div>
+          {/* Founder call — GlassCard sur fond sombre */}
+          <GlassCard className="bg-white/8 border-white/15 p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-brand-cyan/20 border border-brand-cyan/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Phone className="h-4 w-4 text-brand-cyan" />
+              </div>
+              <p className="text-white/90 text-sm leading-relaxed font-medium">
+                Le fondateur vous appelle personnellement dans les{' '}
+                <span className="text-brand-cyan font-bold">48h</span>{' '}
+                pour configurer votre espace.
+              </p>
+            </div>
+          </GlassCard>
 
           {/* Benefits */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {BENEFITS.map((benefit, i) => (
               <motion.div
                 key={benefit}
@@ -128,25 +140,27 @@ export default function RegisterPage() {
                 transition={{ delay: 0.3 + i * 0.06 }}
                 className="flex items-center gap-3"
               >
-                <CheckCircle2 className="h-4 w-4 text-brand-cyan flex-shrink-0" />
-                <span className="text-blue-100 text-sm">{benefit}</span>
+                <div className="w-5 h-5 bg-brand-cyan/15 border border-brand-cyan/30 rounded-full flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="h-3 w-3 text-brand-cyan" />
+                </div>
+                <span className="text-white/75 text-sm">{benefit}</span>
               </motion.div>
             ))}
           </div>
 
-          {/* Testimonial */}
-          <div className="border-l-4 border-brand-cyan pl-5 bg-white/5 rounded-r-xl py-4 pr-4">
-            <p className="text-white text-sm italic leading-relaxed mb-3">
+          {/* Testimonial — GlassCard sur fond sombre */}
+          <GlassCard className="bg-white/6 border-l-4 border-l-brand-cyan border-y-white/10 border-r-white/10 rounded-l-none p-5">
+            <p className="text-white/85 text-sm italic leading-relaxed mb-3">
               &ldquo;Je suis passée de 7h à moins de 2h d&apos;administratif par semaine. J&apos;ai retrouvé mes soirées.&rdquo;
             </p>
-            <p className="text-blue-300 text-xs font-medium">— Marie D., Directrice OF, Île-de-France</p>
-            <div className="flex gap-0.5 mt-1">
+            <p className="text-white/50 text-xs font-medium mb-1.5">— Marie D., Directrice OF, Île-de-France</p>
+            <div className="flex gap-0.5">
               {[...Array(5)].map((_, i) => <Star key={i} className="h-3 w-3 fill-brand-cyan text-brand-cyan" />)}
             </div>
-          </div>
+          </GlassCard>
         </motion.div>
 
-        {/* Stats */}
+        {/* Stats — GlassCard sur fond sombre */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -154,10 +168,12 @@ export default function RegisterPage() {
           className="flex gap-3"
         >
           {STATS.map((stat) => (
-            <div key={stat.label} className="flex-1 bg-white/10 border border-white/15 rounded-xl py-4 px-3 text-center backdrop-blur-sm">
-              <div className="font-display font-bold text-3xl text-brand-cyan">{stat.value}</div>
-              <div className="text-blue-300 text-xs mt-1 font-medium leading-tight">{stat.label}</div>
-            </div>
+            <GlassCard key={stat.label} className="flex-1 bg-white/8 border-white/12 py-4 px-3 text-center">
+              <div className="font-display font-bold text-2xl bg-gradient-to-r from-brand-cyan to-brand-cyan-light bg-clip-text text-transparent">
+                {stat.value}
+              </div>
+              <div className="text-white/45 text-[11px] mt-1 font-medium leading-tight">{stat.label}</div>
+            </GlassCard>
           ))}
         </motion.div>
       </div>
