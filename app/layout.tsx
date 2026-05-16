@@ -139,9 +139,10 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://*.supabase.co" />
         <link rel="dns-prefetch" href="https://*.sentry.io" />
         {/* Google Analytics 4 */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q2F5169TSG" nonce={nonce} />
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q2F5169TSG" nonce={nonce} suppressHydrationWarning />
         <script
           nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-Q2F5169TSG');`
           }}
@@ -149,6 +150,7 @@ export default async function RootLayout({
         {/* Google Tag Manager */}
         <script
           nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-5L6NJZ5P');`
           }}
@@ -156,6 +158,7 @@ export default async function RootLayout({
         {/* Apollo website tracker — doit être dans <head> selon les instructions Apollo */}
         <script
           nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `function initApollo(){var n=Math.random().toString(36).substring(7),o=document.createElement("script");o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n,o.async=!0,o.defer=!0,o.onload=function(){window.trackingFunctions.onLoad({appId:"69d0f88d36754e001939badf"})},document.head.appendChild(o)}initApollo();`
           }}
