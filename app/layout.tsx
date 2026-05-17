@@ -163,12 +163,23 @@ export default async function RootLayout({
             __html: `function initApollo(){var n=Math.random().toString(36).substring(7),o=document.createElement("script");o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n,o.async=!0,o.defer=!0,o.onload=function(){window.trackingFunctions.onLoad({appId:"69d0f88d36754e001939badf"})},document.head.appendChild(o)}initApollo();`
           }}
         />
+        {/* Meta Pixel */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','977662918296647');fbq('track','PageView');`
+          }}
+        />
       </head>
       <body className={cn('smooth-scroll-premium relative selection:bg-brand-blue-pale/50 selection:text-brand-blue-darker')}>
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5L6NJZ5P" height="0" width="0" style={{ display: 'none', visibility: 'hidden' }} />
         </noscript>
+        {/* Meta Pixel (noscript) */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <noscript><img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=977662918296647&ev=PageView&noscript=1" alt="" /></noscript>
         <Preloader />
         <Noise />
         <NonceProvider nonce={nonce}>

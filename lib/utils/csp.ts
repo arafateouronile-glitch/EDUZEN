@@ -121,6 +121,7 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://*.apollo.io',
     'https://scripts.clarity.ms',
     'https://*.clarity.ms',
+    'https://connect.facebook.net',
     ...additionalScriptSrc
   )
 
@@ -144,7 +145,7 @@ export function generateCSP(config: CSPConfig = {}): string {
   directives.push(`style-src ${styleSrc.join(' ')}`)
 
   // img-src: Images autorisées
-  directives.push("img-src 'self' data: https: blob: https://*.supabase.co")
+  directives.push("img-src 'self' data: https: blob: https://*.supabase.co https://www.facebook.com")
 
   // font-src: Polices autorisées (Stripe charge des polices depuis plusieurs domaines)
   directives.push("font-src 'self' data: https://fonts.gstatic.com https://*.stripe.com https://js.stripe.com https://checkout.stripe.com https://m.stripe.network https://*.stripe.network")
@@ -169,6 +170,9 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://aplo-evnt.com',
     'https://*.clarity.ms',
     'https://www.clarity.ms',
+    'https://www.facebook.com',
+    'https://*.facebook.com',
+    'https://connect.facebook.net',
     ...additionalConnectSrc,
   ]
 
