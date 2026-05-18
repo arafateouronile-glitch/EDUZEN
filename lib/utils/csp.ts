@@ -183,8 +183,8 @@ export function generateCSP(config: CSPConfig = {}): string {
 
   directives.push(`connect-src ${connectSrc.join(' ')}`)
 
-  // frame-src: Iframes autorisées (Stripe pour 3D Secure, CardElement et Checkout + YouTube pour la démo)
-  directives.push("frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://*.stripe.network https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com")
+  // frame-src: Iframes autorisées (Stripe pour 3D Secure, CardElement et Checkout + YouTube pour la démo + Meta Pixel via GTM)
+  directives.push("frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://*.stripe.network https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://www.facebook.com https://*.facebook.com")
 
   // media-src: Médias autorisés
   directives.push("media-src 'self' https://*.supabase.co blob:")
@@ -195,8 +195,8 @@ export function generateCSP(config: CSPConfig = {}): string {
   // base-uri: Limiter à self pour prévenir injection de base
   directives.push("base-uri 'self'")
 
-  // form-action: Actions de formulaire limitées à self
-  directives.push("form-action 'self'")
+  // form-action: Actions de formulaire limitées à self + Meta Pixel (GTM envoie vers facebook.com/tr/)
+  directives.push("form-action 'self' https://www.facebook.com")
 
   // frame-ancestors: Interdire l'embedding (prévenir clickjacking)
   directives.push("frame-ancestors 'none'")
