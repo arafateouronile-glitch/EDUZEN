@@ -166,6 +166,10 @@ export default function RegisterPage() {
         fullName: formData.fullName,
         organizationName: formData.organizationName,
       })
+      // Inscription réussie — déclencher l'événement Meta Pixel StartTrial
+      if (typeof window !== 'undefined' && (window as Window & { fbq?: (...args: unknown[]) => void }).fbq) {
+        (window as Window & { fbq?: (...args: unknown[]) => void }).fbq!('track', 'StartTrial', { value: '0.00', currency: 'EUR', predicted_ltv: '0.00' })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
