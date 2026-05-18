@@ -117,7 +117,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok) {
+        // Ne pas mettre en cache les réponses partielles (206) — Cache API les rejette
+        if (response.ok && response.status !== 206) {
           const responseClone = response.clone()
           caches.open(RUNTIME_CACHE).then((cache) => {
             cache.put(request, responseClone)
