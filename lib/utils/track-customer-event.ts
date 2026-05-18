@@ -13,6 +13,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 import type { CustomerEventType } from '@/types/crm.types'
+import { sendMetaCrmEvent, getCrmEventName } from '@/lib/utils/meta-capi'
 
 export async function trackCustomerEvent(
   organizationId: string,
@@ -34,6 +35,22 @@ export async function trackCustomerEvent(
         organizationId,
         eventType: eventType as string,
         error: error.message,
+      })
+    }
+
+    // Envoyer les événements clés à Meta Conversions API (fire-and-forget)
+    const metaEventName = getCrmEventName(eventType)
+    if (metaEventName && userId) {
+      const { data: user } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+        .from('users')
+        .select('email, phone')
+        .eq('id', userId)
+        .maybeSingle()
+
+      void sendMetaCrmEvent({
+        eventName: metaEventName,
+        email: user?.email ?? null,
+        phone: user?.phone ?? null,
       })
     }
   } catch {
