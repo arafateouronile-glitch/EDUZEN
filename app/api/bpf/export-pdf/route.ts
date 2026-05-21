@@ -28,9 +28,13 @@ interface DrawOpts {
   size: number
 }
 
-/** Formate un entier selon la locale française (séparateur de milliers) */
+/** Formate un entier selon la locale française.
+ *  Remplace l'espace fine insécable   par un espace normal —
+ *  Helvetica (WinAnsi) ne peut pas encoder  . */
 function fmt(n: number): string {
-  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n || 0))
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
+    .format(Math.round(n || 0))
+    .replace(/\u202F/g, ' ')
 }
 
 /** Formate un SIRET en "XXX XXX XXX XXXXX" */
