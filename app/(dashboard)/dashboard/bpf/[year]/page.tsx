@@ -260,7 +260,7 @@ export default function BPFDetailPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `BPF_${year}.pdf`
+      a.download = `CERFA_10443_BPF_${year}.pdf`
       a.click()
       URL.revokeObjectURL(url)
 

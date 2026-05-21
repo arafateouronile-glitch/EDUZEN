@@ -454,7 +454,7 @@ export function AiChatWidget() {
             <p className="text-xs text-blue-100 flex items-center gap-1">
               {isStreaming
                 ? <><span className="h-1.5 w-1.5 rounded-full bg-green-300 animate-pulse inline-block" /> En cours...</>
-                : 'Alimenté par Claude'}
+                : 'Assistante IA'}
             </p>
           </div>
           <button

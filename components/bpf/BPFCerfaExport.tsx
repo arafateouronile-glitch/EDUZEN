@@ -82,10 +82,10 @@ export function BPFCerfaExport({
             </div>
             <div>
               <DialogTitle className="text-xl font-bold text-gray-900">
-                Export Cerfa BPF {data.year}
+                Cerfa BPF {data.year} — Formulaire officiel
               </DialogTitle>
               <DialogDescription className="text-sm">
-                Formulaire Cerfa 10443 - Bilan Pédagogique et Financier
+                Cerfa n°10443*17 — Vos données sont injectées dans le formulaire officiel
               </DialogDescription>
             </div>
           </div>
@@ -290,11 +290,12 @@ export function BPFCerfaExport({
             <div className="flex items-start gap-3">
               <FileText className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-blue-700">
-                <p className="font-medium mb-1">À propos de l'export</p>
+                <p className="font-medium mb-1">Formulaire officiel pré-rempli</p>
                 <p className="text-blue-600">
-                  Le PDF généré reprend la structure du Cerfa 10443 officiel. Vous pourrez le
-                  consulter avant de recopier les informations sur le formulaire en ligne de la
-                  DREETS.
+                  Le PDF téléchargé <strong>est le vrai Cerfa 10443*17</strong> avec vos données
+                  inscrites directement dans les cases. Complétez les sous-détails manquants
+                  (types de stagiaires, spécialités) puis déposez-le sur{' '}
+                  <span className="font-medium">monactiviteformation.emploi.gouv.fr</span>.
                 </p>
               </div>
             </div>

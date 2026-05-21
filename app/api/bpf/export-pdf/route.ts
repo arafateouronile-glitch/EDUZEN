@@ -1,217 +1,162 @@
 /**
  * POST /api/bpf/export-pdf
  *
- * Génère le PDF du Bilan Pédagogique et Financier (Cerfa 2486) pour une année donnée.
- * Nécessite une session authentifiée admin.
+ * Remplit le vrai formulaire CERFA 10443 (BPF) avec les données de l'organisation
+ * et retourne un PDF prêt à télécharger / déposer sur monactiviteformation.emploi.gouv.fr
  */
 
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from 'pdf-lib'
+import fs from 'fs/promises'
+import path from 'path'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BPFService } from '@/lib/services/bpf.service'
 import { logger } from '@/lib/utils/logger'
-import { isGotenbergConfigured, htmlToPdf } from '@/lib/services/gotenberg.service'
-import { createPage } from '@/lib/utils/puppeteer-pool'
-import type { BPFCerfaData } from '@/lib/services/bpf.service'
 import { heavyRateLimiter, createRateLimitResponse } from '@/lib/utils/rate-limiter'
+import type { BPFCerfaData } from '@/lib/services/bpf.service'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 30
 
-// ── HTML Cerfa ─────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(amount)
+const BLUE = rgb(0.08, 0.18, 0.62)
+interface DrawOpts {
+  font: PDFFont
+  size: number
 }
 
-function formatNumber(num: number): string {
-  return new Intl.NumberFormat('fr-FR').format(num)
+/** Formate un entier selon la locale française (séparateur de milliers) */
+function fmt(n: number): string {
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n || 0))
 }
 
-function generateCerfaHTML(data: BPFCerfaData): string {
-  const { organization, year, cadreF, cadreG, cadreH } = data
+/** Formate un SIRET en "XXX XXX XXX XXXXX" */
+function fmtSiret(siret: string): string {
+  const s = siret.replace(/\s/g, '')
+  if (s.length !== 14) return siret
+  return `${s.slice(0, 3)} ${s.slice(3, 6)} ${s.slice(6, 9)} ${s.slice(9)}`
+}
 
-  const row = (label: string, ref: string, value: string) => `
-    <tr>
-      <td class="ref">${ref}</td>
-      <td class="label">${label}</td>
-      <td class="value">${value}</td>
-    </tr>`
+/**
+ * Écrit du texte aligné à droite à l'intérieur d'une case dont on connaît le bord droit (x1).
+ * Compatible avec le système de coordonnées pdf-lib (y = depuis le bas de la page).
+ */
+function drawRight(page: PDFPage, text: string, x1: number, y: number, opts: DrawOpts, padding = 3) {
+  if (!text || text === '0') return
+  const w = opts.font.widthOfTextAtSize(text, opts.size)
+  page.drawText(text, { x: x1 - w - padding, y, font: opts.font, size: opts.size, color: BLUE })
+}
 
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8"/>
-  <title>BPF ${year} — ${organization.name}</title>
-  <style>
-    @page { size: A4; margin: 15mm 15mm 15mm 15mm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 9pt; color: #1a1a1a; background: #fff; }
+/** Écrit du texte aligné à gauche (champs texte libres : nom, adresse…) */
+function drawText(page: PDFPage, text: string, x: number, y: number, opts: DrawOpts) {
+  if (!text) return
+  page.drawText(text, { x, y, font: opts.font, size: opts.size, color: BLUE })
+}
 
-    .page-header { display: flex; justify-content: space-between; align-items: flex-start;
-      border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 12px; }
-    .page-header h1 { font-size: 13pt; font-weight: 700; color: #1e3a5f; }
-    .page-header .cerfa-ref { font-size: 8pt; color: #666; text-align: right; }
+// ── Remplissage du CERFA ───────────────────────────────────────────────────────
 
-    .org-block { background: #f5f7fa; border: 1px solid #cdd5e0; border-radius: 4px;
-      padding: 10px 14px; margin-bottom: 14px; display: grid;
-      grid-template-columns: 1fr 1fr; gap: 4px 24px; }
-    .org-block .field { display: flex; gap: 6px; }
-    .org-block .field-label { color: #555; font-size: 8pt; min-width: 100px; }
-    .org-block .field-value { font-weight: 600; font-size: 8.5pt; }
+async function fillCerfa(data: BPFCerfaData): Promise<Uint8Array> {
+  const cerfaPath = path.join(process.cwd(), 'public', 'cerfa', 'cerfa_10443.pdf')
+  const existingPdfBytes = await fs.readFile(cerfaPath)
 
-    .section { margin-bottom: 14px; }
-    .section-title { background: #1e3a5f; color: #fff; padding: 5px 10px;
-      font-size: 9pt; font-weight: 700; margin-bottom: 0; }
-    .section-sub { font-size: 7.5pt; font-weight: 400; opacity: 0.85; }
+  const pdfDoc = await PDFDocument.load(existingPdfBytes)
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
-    table.cerfa { width: 100%; border-collapse: collapse; }
-    table.cerfa td, table.cerfa th { border: 1px solid #c0c8d4; padding: 4px 8px; }
-    table.cerfa thead tr { background: #dbe4f0; }
-    table.cerfa thead th { font-size: 8pt; font-weight: 700; text-align: left; }
-    table.cerfa td.ref { width: 48px; font-weight: 700; color: #1e3a5f; text-align: center; font-size: 8pt; }
-    table.cerfa td.label { color: #333; }
-    table.cerfa td.value { width: 120px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
-    table.cerfa tr.total { background: #eef2f8; font-weight: 700; }
-    table.cerfa tr.total td.value { color: #1e3a5f; }
-    table.cerfa tr:nth-child(even) { background: #f9fafb; }
-    table.cerfa tr.total { background: #dbe4f0 !important; }
+  const page1 = pdfDoc.getPage(0) // Cadre A, B, C, D
+  const page2 = pdfDoc.getPage(1) // Cadre E, F, G, H
 
-    .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  const s8: DrawOpts = { font, size: 8 }
+  const s8b: DrawOpts = { font: fontBold, size: 8 }
+  const s9: DrawOpts = { font, size: 9 }
 
-    .footer { margin-top: 18px; border-top: 1px solid #cdd5e0; padding-top: 8px;
-      font-size: 7.5pt; color: #888; display: flex; justify-content: space-between; }
+  // ── PAGE 1 ──────────────────────────────────────────────────────────────────
 
-    .warnings { margin-bottom: 12px; }
-    .warning-item { border-left: 3px solid #f59e0b; background: #fffbeb;
-      padding: 5px 10px; margin-bottom: 4px; font-size: 8pt; color: #92400e; }
-    .warning-item.critical { border-color: #ef4444; background: #fef2f2; color: #991b1b; }
-  </style>
-</head>
-<body>
+  // A. Identification de l'organisme
+  const { organization: org, year } = data
 
-  <div class="page-header">
-    <div>
-      <h1>Bilan Pédagogique et Financier — ${year}</h1>
-      <div style="font-size:8pt;color:#555;margin-top:3px;">Cerfa n° 2486 — Article L.6352-11 du Code du travail</div>
-    </div>
-    <div class="cerfa-ref">
-      <div>Généré le ${new Date().toLocaleDateString('fr-FR')}</div>
-      <div style="margin-top:2px;">EDUZEN</div>
-    </div>
-  </div>
+  // Numéro de déclaration d'activité (NDA) — cases |___|___| ... à x≈120, y≈674
+  drawText(page1, org.nda_number || '', 120, 674, s8)
 
-  <div class="org-block">
-    <div class="field"><span class="field-label">Organisme :</span><span class="field-value">${organization.name}</span></div>
-    <div class="field"><span class="field-label">SIRET :</span><span class="field-value">${organization.siret || '—'}</span></div>
-    <div class="field"><span class="field-label">Adresse :</span><span class="field-value">${organization.address || '—'}</span></div>
-    <div class="field"><span class="field-label">N° DA :</span><span class="field-value">${organization.nda_number || '—'}</span></div>
-    <div class="field"><span class="field-label">Ville :</span><span class="field-value">${[organization.postal_code, organization.city].filter(Boolean).join(' ') || '—'}</span></div>
-    <div class="field"><span class="field-label">Année :</span><span class="field-value">${year}</span></div>
-  </div>
+  // SIRET — cases |___|___| ... à x≈300, y≈660
+  drawText(page1, fmtSiret(org.siret || ''), 300, 660, s8)
 
-  ${data.hasWarnings ? `
-  <div class="warnings">
-    ${data.inconsistencies.slice(0, 5).map(inc => `
-      <div class="warning-item${inc.severity === 'critical' ? ' critical' : ''}">
-        ⚠ ${inc.description}
-      </div>`).join('')}
-    ${data.inconsistencies.length > 5 ? `<div class="warning-item">… et ${data.inconsistencies.length - 5} autre(s) incohérence(s)</div>` : ''}
-  </div>` : ''}
+  // Nom/dénomination — à droite du libellé (x≈220, y≈643)
+  drawText(page1, org.name || '', 220, 643, s9)
 
-  <!-- CADRE F -->
-  <div class="section">
-    <div class="section-title">CADRE F — Produits de la formation professionnelle
-      <span class="section-sub">(hors taxes)</span>
-    </div>
-    <table class="cerfa">
-      <thead><tr>
-        <th style="width:48px">Réf.</th>
-        <th>Source de financement</th>
-        <th style="width:120px;text-align:right">Montant (€)</th>
-      </tr></thead>
-      <tbody>
-        ${row('Mon Compte Formation (CPF)', 'F1', formatCurrency(cadreF.cpf))}
-        ${row('Opérateurs de Compétences (OPCO)', 'F2', formatCurrency(cadreF.opco))}
-        ${row('Entreprises', 'F3', formatCurrency(cadreF.companies))}
-        ${row('Particuliers', 'F4', formatCurrency(cadreF.individuals))}
-        ${row('Pôle Emploi / France Travail', 'F5', formatCurrency(cadreF.pole_emploi))}
-        ${row('Conseils régionaux', 'F6', formatCurrency(cadreF.regions))}
-        ${row('État', 'F7', formatCurrency(cadreF.state))}
-        ${row('Autres financements', 'F8', formatCurrency(cadreF.other))}
-        <tr class="total">
-          <td class="ref">F9</td>
-          <td class="label"><strong>Total des produits</strong></td>
-          <td class="value">${formatCurrency(cadreF.total)}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  // Adresse
+  if (org.address) drawText(page1, org.address, 70, 611, s8)
+  const cityLine = [org.postal_code, org.city].filter(Boolean).join(' ')
+  if (cityLine) drawText(page1, cityLine, 70, 597, s8)
 
-  <div class="two-cols">
-    <!-- CADRE G -->
-    <div class="section">
-      <div class="section-title">CADRE G — Stagiaires formés</div>
-      <table class="cerfa">
-        <thead><tr><th>Réf.</th><th>Catégorie</th><th style="text-align:right">Nb</th></tr></thead>
-        <tbody>
-          ${row('Hommes', 'G1', formatNumber(cadreG.men))}
-          ${row('Femmes', 'G2', formatNumber(cadreG.women))}
-          ${row('Moins de 26 ans', 'G3', formatNumber(cadreG.under_26))}
-          ${row('45 ans et plus', 'G4', formatNumber(cadreG.over_45))}
-          ${row('Personnes handicapées', 'G5', formatNumber(cadreG.disabled))}
-          <tr class="total">
-            <td class="ref">G6</td>
-            <td class="label"><strong>Total stagiaires</strong></td>
-            <td class="value">${formatNumber(cadreG.total)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  // B. Exercice comptable — année
+  drawText(page1, `01  01  ${year}`, 281, 508, s8)
+  drawText(page1, `31  12  ${year}`, 388, 508, s8)
 
-    <!-- CADRE H -->
-    <div class="section">
-      <div class="section-title">CADRE H — Activité de formation</div>
-      <table class="cerfa">
-        <thead><tr><th>Réf.</th><th>Indicateur</th><th style="text-align:right">Valeur</th></tr></thead>
-        <tbody>
-          ${row('Heures de formation dispensées', 'H1', formatNumber(cadreH.total_hours))}
-          ${row('Heures-stagiaires', 'H2', formatNumber(cadreH.trainee_hours))}
-          ${row('Nombre de sessions', 'H3', formatNumber(cadreH.sessions_count))}
-          ${row('Nombre de programmes', 'H4', formatNumber(cadreH.programs_count))}
-          ${row("Taux d'assiduité moyen", 'H5', `${cadreH.attendance_rate.toFixed(1)} %`)}
-        </tbody>
-      </table>
-    </div>
-  </div>
+  // ── CADRE C — Bilan financier : Origine des produits ──────────────────────
+  //
+  // Coordonnées mesurées sur le CERFA 10443*17 (page 1)
+  // x1 = bord droit de la case (pdfplumber), y = baseline pypdf (depuis bas page)
+  //
+  // L1  — Entreprises (plan de développement / contrat direct)
+  drawRight(page1, fmt(data.cadreF.companies), 557.7, 442, s8b)
 
-  <div class="footer">
-    <span>Document généré automatiquement par EDUZEN — à vérifier avant dépôt officiel</span>
-    <span>${organization.name} — BPF ${year}</span>
-  </div>
+  // L2  — Organismes gestionnaires des fonds (OPCO, etc.)
+  //   L2e — CPF (compte personnel de formation)
+  drawRight(page1, fmt(data.cadreF.cpf), 530.9, 358, s8)
+  //   Total L2 — tous fonds OPCO/FAF/CPF/Pro-A…
+  drawRight(page1, fmt(data.cadreF.opco), 557.7, 302, s8b)
 
-</body>
-</html>`
+  // L5  — État (financement public direct)
+  drawRight(page1, fmt(data.cadreF.state), 557.7, 260, s8)
+
+  // L6  — Conseils régionaux
+  drawRight(page1, fmt(data.cadreF.regions), 557.7, 246, s8)
+
+  // L7  — France Travail (ex Pôle emploi)
+  drawRight(page1, fmt(data.cadreF.pole_emploi), 557.7, 232, s8)
+
+  // L9  — Contrats avec des personnes à titre individuel (particuliers)
+  drawRight(page1, fmt(data.cadreF.individuals), 557.7, 204, s8)
+
+  // L11 — Autres produits au titre de la FP
+  drawRight(page1, fmt(data.cadreF.other), 557.7, 176, s8)
+
+  // TOTAL général (case large)
+  drawRight(page1, fmt(data.cadreF.total), 561.1, 159, s8b)
+
+  // ── PAGE 2 ──────────────────────────────────────────────────────────────────
+  //
+  // F-1. Type de stagiaires — TOTAL (a+b+c+d+e)
+  //   Nb stagiaires  x1=442.6, y≈561
+  drawRight(page2, fmt(data.cadreG.total), 442.6, 561, s8b)
+  //   Nb heures      x1=572.2, y≈561
+  drawRight(page2, fmt(data.cadreH.total_hours), 572.2, 561, s8b)
+
+  // F-3. Objectif général — TOTAL (a+b+c+d+e+f)
+  //   On inscrit le total global (les sous-lignes restent à compléter manuellement)
+  drawRight(page2, fmt(data.cadreG.total), 442.6, 322, s8b)
+  drawRight(page2, fmt(data.cadreH.total_hours), 572.2, 322, s8b)
+
+  // F-4. Spécialités — TOTAL
+  drawRight(page2, fmt(data.cadreG.total), 442.6, 183, s8b)
+  drawRight(page2, fmt(data.cadreH.total_hours), 572.2, 183, s8b)
+
+  return pdfDoc.save()
 }
 
 // ── Route handler ──────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  // Rate limiting — 5 req/min (génération PDF lourde)
   const rl = await heavyRateLimiter.check(request)
   if (!rl.allowed) {
     return createRateLimitResponse(rl.remaining, rl.resetTime) as unknown as NextResponse
   }
 
-  let page: Awaited<ReturnType<typeof createPage>> | null = null
-
   try {
-    // Auth
     const supabaseAuth = await createClient()
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
     if (authError || !user) {
@@ -220,12 +165,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { year } = body as { year?: number }
-
     if (!year || typeof year !== 'number') {
       return NextResponse.json({ error: 'Paramètre "year" requis' }, { status: 400 })
     }
 
-    // Récupérer l'organisation de l'utilisateur
     const supabase = createAdminClient()
     const { data: userRow } = await supabase
       .from('users')
@@ -237,71 +180,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
-    // Préparer les données Cerfa
     const bpfService = new BPFService(supabase)
     const cerfaData = await bpfService.prepareCerfaData(userRow.organization_id, year)
-    const html = generateCerfaHTML(cerfaData)
-    const filename = `BPF_${year}_${cerfaData.organization.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
 
-    // Gotenberg (moteur principal)
-    if (isGotenbergConfigured()) {
-      try {
-        const pdfBuffer = await htmlToPdf(html, {
-          format: 'A4',
-          marginTop: '0.59in',
-          marginBottom: '0.59in',
-          marginLeft: '0.59in',
-          marginRight: '0.59in',
-        })
+    const pdfBytes = await fillCerfa(cerfaData)
+    const filename = `BPF_CERFA10443_${year}_${cerfaData.organization.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
 
-        if (pdfBuffer && pdfBuffer.length > 0) {
-          logger.info('[BPF PDF] Généré via Gotenberg', { year, org: cerfaData.organization.name })
-          return new NextResponse(new Uint8Array(pdfBuffer), {
-            headers: {
-              'Content-Type': 'application/pdf',
-              'Content-Disposition': `attachment; filename="${filename}"`,
-              'X-PDF-Engine': 'gotenberg',
-            },
-          })
-        }
-      } catch (err) {
-        logger.warn('[BPF PDF] Gotenberg échoué, bascule Puppeteer', {
-          error: err instanceof Error ? err.message : String(err),
-        })
-      }
-    }
+    logger.info('[BPF CERFA] Formulaire rempli', { year, org: cerfaData.organization.name })
 
-    // Puppeteer (fallback)
-    page = await createPage()
-    await page.setContent(html, { waitUntil: 'domcontentloaded' })
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' },
-    })
-    await page.close()
-    page = null
-
-    if (!pdf || pdf.length === 0) {
-      return NextResponse.json({ error: 'PDF généré vide' }, { status: 500 })
-    }
-
-    logger.info('[BPF PDF] Généré via Puppeteer', { year, org: cerfaData.organization.name })
-    return new NextResponse(new Uint8Array(pdf), {
+    return new NextResponse(Buffer.from(pdfBytes), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'X-PDF-Engine': 'puppeteer',
+        'X-PDF-Engine': 'pdf-lib-cerfa',
       },
     })
   } catch (error) {
-    logger.error('[BPF PDF] Erreur', error instanceof Error ? error : new Error(String(error)))
-    if (page) {
-      try { await page.close() } catch { /* ignore */ }
-    }
+    logger.error('[BPF CERFA] Erreur', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur interne' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
