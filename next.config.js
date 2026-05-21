@@ -23,6 +23,10 @@ if (process.env.ANALYZE === 'true' || process.env.NODE_ENV === 'development') {
 
 const nextConfig = {
   reactStrictMode: true,
+  // Inclure le CERFA PDF dans le bundle de la fonction serverless Vercel
+  outputFileTracingIncludes: {
+    '/api/bpf/export-pdf': ['./public/cerfa/**'],
+  },
   // jsdom et ses dépendances (html-encoding-sniffer → @exodus/bytes ESM) doivent rester
   // en tant que packages externes côté serveur pour que Node.js gère l'ESM correctement.
   serverExternalPackages: ['canvas'],

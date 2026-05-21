@@ -58,9 +58,23 @@ function drawText(page: PDFPage, text: string, x: number, y: number, opts: DrawO
 
 // ── Remplissage du CERFA ───────────────────────────────────────────────────────
 
-async function fillCerfa(data: BPFCerfaData): Promise<Uint8Array> {
+async function loadCerfaTemplate(): Promise<Buffer> {
   const cerfaPath = path.join(process.cwd(), 'public', 'cerfa', 'cerfa_10443.pdf')
-  const existingPdfBytes = await fs.readFile(cerfaPath)
+  try {
+    return await fs.readFile(cerfaPath)
+  } catch {
+    // Fallback : récupère le template via l'URL publique (cas Vercel serverless)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000'
+    const res = await fetch(`${baseUrl}/cerfa/cerfa_10443.pdf`)
+    if (!res.ok) throw new Error(`Impossible de charger le template CERFA (${res.status})`)
+    return Buffer.from(await res.arrayBuffer())
+  }
+}
+
+async function fillCerfa(data: BPFCerfaData): Promise<Uint8Array> {
+  const existingPdfBytes = await loadCerfaTemplate()
 
   const pdfDoc = await PDFDocument.load(existingPdfBytes)
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
