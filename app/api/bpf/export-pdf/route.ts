@@ -58,23 +58,25 @@ function drawText(page: PDFPage, text: string, x: number, y: number, opts: DrawO
 
 // ── Remplissage du CERFA ───────────────────────────────────────────────────────
 
-async function loadCerfaTemplate(): Promise<Buffer> {
+/**
+ * Charge le template CERFA.
+ * Essaie d'abord le filesystem (dev), puis l'URL statique dérivée de la requête
+ * entrante (prod Vercel — les fichiers public/ ne sont pas toujours bundlés avec
+ * la fonction serverless mais sont toujours servis en CDN).
+ */
+async function loadCerfaTemplate(requestOrigin: string): Promise<Buffer> {
   const cerfaPath = path.join(process.cwd(), 'public', 'cerfa', 'cerfa_10443.pdf')
   try {
     return await fs.readFile(cerfaPath)
   } catch {
-    // Fallback : récupère le template via l'URL publique (cas Vercel serverless)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000'
-    const res = await fetch(`${baseUrl}/cerfa/cerfa_10443.pdf`)
+    const res = await fetch(`${requestOrigin}/cerfa/cerfa_10443.pdf`)
     if (!res.ok) throw new Error(`Impossible de charger le template CERFA (${res.status})`)
     return Buffer.from(await res.arrayBuffer())
   }
 }
 
-async function fillCerfa(data: BPFCerfaData): Promise<Uint8Array> {
-  const existingPdfBytes = await loadCerfaTemplate()
+async function fillCerfa(data: BPFCerfaData, requestOrigin: string): Promise<Uint8Array> {
+  const existingPdfBytes = await loadCerfaTemplate(requestOrigin)
 
   const pdfDoc = await PDFDocument.load(existingPdfBytes)
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
@@ -197,7 +199,8 @@ export async function POST(request: NextRequest) {
     const bpfService = new BPFService(supabase)
     const cerfaData = await bpfService.prepareCerfaData(userRow.organization_id, year)
 
-    const pdfBytes = await fillCerfa(cerfaData)
+    const origin = new URL(request.url).origin
+    const pdfBytes = await fillCerfa(cerfaData, origin)
     const filename = `BPF_CERFA10443_${year}_${cerfaData.organization.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
 
     logger.info('[BPF CERFA] Formulaire rempli', { year, org: cerfaData.organization.name })
