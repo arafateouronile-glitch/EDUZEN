@@ -66,6 +66,11 @@ export default function SubscribeSuccessPage() {
         title: 'Abonnement activé !',
         description: 'Votre abonnement est maintenant actif',
       })
+      // Conversion Google Ads — souscription payante confirmée
+      const w = window as unknown as { gtag?: (...args: unknown[]) => void }
+      if (typeof w.gtag === 'function') {
+        w.gtag('event', 'conversion_event_subscribe_paid', {})
+      }
     }
   }, [subscription, isVerifying, addToast])
 
