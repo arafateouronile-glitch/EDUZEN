@@ -134,16 +134,20 @@ async function getRelatedPosts(postId: string, categoryId: string | null, limit:
   // Si pas assez d'articles dans la même catégorie, on complète sans filtre
   if ((data || []).length < limit && categoryId) {
     const existing = (data || []).map((p) => p.id)
-    const { data: more } = await supabase
+    let moreQuery = supabase
       .from('blog_posts')
       .select('id, title, slug, excerpt, featured_image_url, published_at, reading_time_minutes, category_id')
       .eq('status', 'published')
       .or(`published_at.is.null,published_at.lte.${now}`)
       .neq('id', postId)
-      .not('id', 'in', `(${existing.join(',')})`)
       .order('published_at', { ascending: false, nullsFirst: false })
       .limit(limit - (data || []).length)
 
+    if (existing.length > 0) {
+      moreQuery = moreQuery.not('id', 'in', `(${existing.join(',')})`)
+    }
+
+    const { data: more } = await moreQuery
     return [...(data || []), ...(more || [])] as Partial<BlogPost>[]
   }
 

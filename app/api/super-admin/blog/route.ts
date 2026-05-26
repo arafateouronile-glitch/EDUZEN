@@ -20,12 +20,14 @@ export async function GET(request: NextRequest) {
     // Vérifier les permissions
     const { data: admin } = await supabase
       .from('platform_admins')
-      .select('permissions')
+      .select('role, permissions')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as Record<string, unknown>)?.manage_blog) {
+    const isBlogAdmin = admin?.role === 'super_admin' || admin?.role === 'content_admin' ||
+      !!(admin?.permissions as Record<string, unknown>)?.manage_blog
+    if (!admin || !isBlogAdmin) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
@@ -89,14 +91,19 @@ export async function POST(request: NextRequest) {
     // Vérifier les permissions
     const { data: admin } = await supabase
       .from('platform_admins')
-      .select('permissions')
+      .select('role, permissions')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .maybeSingle()
 
-    if (!admin || !(admin.permissions as Record<string, unknown>)?.manage_blog) {
+    const isBlogAdmin = admin?.role === 'super_admin' || admin?.role === 'content_admin' ||
+      !!(admin?.permissions as Record<string, unknown>)?.manage_blog
+    if (!admin || !isBlogAdmin) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
+
+    // S'assurer que l'auteur existe dans public.users (les admins invités peuvent ne pas y être)
+    await supabase.rpc('sync_user_from_auth', { user_id: user.id })
 
     const body: CreateBlogPostInput = await request.json()
 

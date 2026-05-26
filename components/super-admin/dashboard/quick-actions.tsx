@@ -47,14 +47,14 @@ const quickActions: QuickAction[] = [
     label: 'Inviter un admin',
     description: 'Ajouter un administrateur',
     icon: <UserPlus className="h-5 w-5" />,
-    href: '/super-admin/team/invite',
+    href: '/super-admin/team',
     color: 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20',
   },
   {
     label: 'Exporter les données',
     description: 'Export CSV des métriques',
     icon: <Download className="h-5 w-5" />,
-    href: '/super-admin/analytics/export',
+    href: '/super-admin/analytics',
     color: 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20',
   },
 ]
