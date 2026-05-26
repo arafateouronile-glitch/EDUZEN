@@ -14,25 +14,21 @@
 // isomorphic-dompurify charge jsdom côté serveur, ce qui échoue sur Vercel
 // (jsdom → html-encoding-sniffer → @exodus/bytes ESM non compatible CJS).
 // On utilise DOMPurify côté client et la librairie xss (pur JS) côté serveur.
+// Import statique : le require() dynamique peut ne pas être bundlé correctement par
+// le compilateur Next.js en production (Vercel serverless).
+import { filterXSS } from 'xss'
+
 const _isServer = typeof window === 'undefined'
 
 function _sanitizeServer(dirty: string, opts: { allowTags?: boolean; stripAll?: boolean }): string {
-  // Utiliser la librairie xss (pur JS, compatible Edge/SSR)
-  // require synchrone nécessaire : cette fonction est appelée dans un contexte non-async
-  const xssLib = require('xss') as typeof import('xss')
-
   if (opts.stripAll) {
-    return xssLib.filterXSS(dirty, { whiteList: {}, stripIgnoreTag: true, stripIgnoreTagBody: ['script'] })
+    return filterXSS(dirty, { whiteList: {}, stripIgnoreTag: true, stripIgnoreTagBody: ['script'] })
   }
 
-  return xssLib.filterXSS(dirty, {
-    // Conserver les balises HTML courantes, bloquer les vecteurs XSS
+  return filterXSS(dirty, {
     onTagAttr(_tag: string, name: string, value: string) {
-      // Bloquer les event handlers (onclick, onload, etc.)
       if (/^on\w+$/i.test(name)) return ''
-      // Bloquer javascript: dans href/src/action
       if (['href', 'src', 'action'].includes(name) && /^\s*javascript\s*:/i.test(value)) return ''
-      // Conserver les autres attributs (xss gère déjà les cas critiques)
       return undefined
     },
   })
