@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { PlatformAdminGuard } from '@/components/super-admin/platform-admin-guard'
 import { motion } from '@/components/ui/motion'
@@ -90,8 +90,10 @@ const statusConfig: Record<BlogPostStatus, { label: string; color: string; icon:
 
 export default function BlogPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const supabase = createClient()
   const [searchQuery, setSearchQuery] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
@@ -146,6 +148,22 @@ export default function BlogPage() {
       month: 'short',
       year: 'numeric',
     })
+  }
+
+  const handleDelete = async (post: BlogPost) => {
+    if (!window.confirm(`Supprimer définitivement "${post.title}" ?`)) return
+    setDeletingId(post.id)
+    try {
+      const res = await fetch(`/api/super-admin/blog/${post.id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erreur inconnue')
+      toast.success('Article supprimé')
+      queryClient.invalidateQueries({ queryKey: ['super-admin-blog-posts'] })
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Erreur lors de la suppression')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -385,9 +403,13 @@ export default function BlogPage() {
                                 Copier le lien
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600">
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                disabled={deletingId === post.id}
+                                onClick={() => handleDelete(post)}
+                              >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Supprimer
+                                {deletingId === post.id ? 'Suppression...' : 'Supprimer'}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
