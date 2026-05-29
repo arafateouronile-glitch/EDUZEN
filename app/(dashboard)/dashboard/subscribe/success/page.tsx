@@ -69,7 +69,7 @@ export default function SubscribeSuccessPage() {
       // Conversion Google Ads — souscription payante confirmée
       const w = window as unknown as { gtag?: (...args: unknown[]) => void }
       if (typeof w.gtag === 'function') {
-        w.gtag('event', 'conversion_event_subscribe_paid', {})
+        w.gtag('event', 'conversion_event_subscribe_paid_1', {})
       }
     }
   }, [subscription, isVerifying, addToast])
