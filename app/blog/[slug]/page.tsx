@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import Image from 'next/image'
+
 import { notFound } from 'next/navigation'
 import { formatDate } from '@/lib/utils/format'
 import { Badge } from '@/components/ui/badge'
@@ -245,13 +245,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         {post.featured_image_url && (
           <div className="max-w-4xl mx-auto mb-12">
             <div className="relative w-full h-64 md:h-96 lg:h-[480px] rounded-2xl overflow-hidden shadow-lg">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={post.featured_image_url}
                 alt={post.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                priority
+                className="w-full h-full object-cover"
               />
             </div>
           </div>
