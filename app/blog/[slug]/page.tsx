@@ -154,13 +154,22 @@ async function getRelatedPosts(postId: string, categoryId: string | null, limit:
   return (data || []) as Partial<BlogPost>[]
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = await getBlogPost(slug)
+
+  const post = await getBlogPost(slug).catch((err: unknown) => {
+    logger.error('[BlogPostPage] getBlogPost threw', err, { slug })
+    throw err
+  })
 
   if (!post) notFound()
 
-  const relatedPosts = await getRelatedPosts(post.id, post.category_id || null)
+  const relatedPosts = await getRelatedPosts(post.id, post.category_id || null).catch((err: unknown) => {
+    logger.error('[BlogPostPage] getRelatedPosts threw', err, { slug })
+    return [] as Partial<BlogPost>[]
+  })
 
   return (
     <div className="min-h-screen bg-white">

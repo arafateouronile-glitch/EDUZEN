@@ -89,15 +89,13 @@ export function generateCSP(config: CSPConfig = {}): string {
   const scriptSrc = ["'self'"]
 
   // Avec nonce : les navigateurs modernes honorent le nonce et ignorent unsafe-inline.
-  // 'strict-dynamic' propage la confiance aux scripts créés dynamiquement par un script noncé
-  // (GTM → Clarity, Apollo, Meta Pixel, etc.) sans avoir besoin d'unsafe-inline pour eux.
-  // 'unsafe-inline' reste en fallback CSP2 (ignoré par les browsers CSP3 qui ont nonce).
-  // L'allowlist de domaines est ignorée par strict-dynamic sur CSP3, mais les scripts sont
-  // couverts par la chaîne de confiance nonce → strict-dynamic.
+  // On garde unsafe-inline comme fallback CSP2 pour les vieux browsers.
+  // strict-dynamic désactive l'allowlist de domaines et bloque les scripts externes
+  // chargés par GTM/Apollo/Clarity qui ne passent pas par la chaîne de confiance nonce
+  // → intentionnellement omis.
   if (scriptNonce) {
     scriptSrc.push(`'nonce-${scriptNonce}'`)
-    scriptSrc.push("'strict-dynamic'")
-    scriptSrc.push("'unsafe-inline'") // fallback CSP2 uniquement
+    scriptSrc.push("'unsafe-inline'") // ignoré par CSP3 (nonce présent), fallback CSP2
   } else {
     scriptSrc.push("'unsafe-inline'")
   }
