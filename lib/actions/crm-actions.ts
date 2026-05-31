@@ -272,6 +272,57 @@ export async function getVslLeads(): Promise<{
   }
 }
 
+export type ContactSubmission = {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  company: string
+  reason: string
+  message: string
+  status: 'new' | 'read' | 'replied' | 'archived'
+  created_at: string
+}
+
+export async function getContactSubmissions(): Promise<{
+  success: boolean
+  data?: ContactSubmission[]
+  error?: string
+}> {
+  try {
+    const supabase = await ensureSuperAdmin()
+    const { data, error } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+      .from('contact_submissions')
+      .select('id, first_name, last_name, email, company, reason, message, status, created_at')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return { success: true, data: data ?? [] }
+  } catch (err) {
+    logger.error('[crm-actions] getContactSubmissions', err)
+    return { success: false, error: 'Impossible de charger les messages' }
+  }
+}
+
+export async function updateContactStatus(
+  id: string,
+  status: ContactSubmission['status']
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await ensureSuperAdmin()
+    const { error } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
+      .from('contact_submissions')
+      .update({ status })
+      .eq('id', id)
+
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    logger.error('[crm-actions] updateContactStatus', err)
+    return { success: false, error: 'Impossible de mettre à jour le statut' }
+  }
+}
+
 export async function getOrganizationTimeline(organizationId: string): Promise<{
   success: boolean
   data?: CustomerEvent[]

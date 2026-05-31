@@ -4,15 +4,16 @@ import { useEffect, useState, useTransition } from 'react'
 import { motion } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video } from 'lucide-react'
+import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video, MessageSquare, ChevronDown } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { OrganizationHealthCard } from '@/components/super-admin/crm/organization-health-card'
-import { getCrmOrganizations, getDemoLeads, getVslLeads } from '@/lib/actions/crm-actions'
+import { getCrmOrganizations, getDemoLeads, getVslLeads, getContactSubmissions, updateContactStatus } from '@/lib/actions/crm-actions'
 import type { OrganizationCrmSummary, HealthStatus } from '@/types/crm.types'
-import type { DemoLead, VslLead } from '@/lib/actions/crm-actions'
+import type { DemoLead, VslLead, ContactSubmission } from '@/lib/actions/crm-actions'
 import { cn } from '@/lib/utils'
 
-type Tab = 'organisations' | 'leads' | 'vsl'
+type Tab = 'organisations' | 'leads' | 'vsl' | 'contact'
 type Filter = 'all' | HealthStatus
 
 const FILTER_CONFIG: { value: Filter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -36,19 +37,23 @@ export default function CrmPage() {
   const [orgs, setOrgs] = useState<OrganizationCrmSummary[]>([])
   const [leads, setLeads] = useState<DemoLead[]>([])
   const [vslLeads, setVslLeads] = useState<VslLead[]>([])
+  const [contacts, setContacts] = useState<ContactSubmission[]>([])
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [leadsSearch, setLeadsSearch] = useState('')
   const [vslSearch, setVslSearch] = useState('')
+  const [contactSearch, setContactSearch] = useState('')
+  const [expandedContact, setExpandedContact] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const load = () => {
     startTransition(async () => {
-      const [orgsResult, leadsResult, vslResult] = await Promise.all([
+      const [orgsResult, leadsResult, vslResult, contactResult] = await Promise.all([
         getCrmOrganizations(),
         getDemoLeads(),
         getVslLeads(),
+        getContactSubmissions(),
       ])
       if (orgsResult.success && orgsResult.data) {
         setOrgs(orgsResult.data)
@@ -58,7 +63,13 @@ export default function CrmPage() {
       }
       if (leadsResult.success && leadsResult.data) setLeads(leadsResult.data)
       if (vslResult.success && vslResult.data) setVslLeads(vslResult.data)
+      if (contactResult.success && contactResult.data) setContacts(contactResult.data)
     })
+  }
+
+  const handleContactStatus = async (id: string, status: ContactSubmission['status']) => {
+    await updateContactStatus(id, status)
+    setContacts((prev) => prev.map((c) => c.id === id ? { ...c, status } : c))
   }
 
   useEffect(() => { load() }, [])
@@ -160,6 +171,23 @@ export default function CrmPage() {
           <span className="ml-1 rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 px-1.5 py-0.5 text-[10px]">
             {vslLeads.length}
           </span>
+        </button>
+        <button
+          onClick={() => setTab('contact')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5',
+            tab === 'contact'
+              ? 'border-brand-blue text-brand-blue'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          Messages contact
+          {contacts.filter((c) => c.status === 'new').length > 0 && (
+            <span className="ml-1 rounded-full bg-brand-blue text-white px-1.5 py-0.5 text-[10px]">
+              {contacts.filter((c) => c.status === 'new').length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -394,6 +422,139 @@ export default function CrmPage() {
           )}
         </motion.div>
       )}
+      {tab === 'contact' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          {/* Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Rechercher un message..."
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-brand-blue"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground shrink-0">
+              {contacts.filter((c) => c.status === 'new').length} non lu(s) · {contacts.length} total
+            </p>
+          </div>
+
+          {isPending ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-16 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : contacts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <MessageSquare className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">Aucun message reçu</p>
+            </div>
+          ) : (
+            <Card>
+              <div className="divide-y divide-border">
+                {contacts
+                  .filter((c) =>
+                    !contactSearch ||
+                    `${c.first_name} ${c.last_name} ${c.email} ${c.company} ${c.message}`
+                      .toLowerCase()
+                      .includes(contactSearch.toLowerCase())
+                  )
+                  .map((contact) => (
+                    <div key={contact.id} className="px-4 py-3">
+                      {/* Header ligne */}
+                      <div
+                        className="flex flex-col sm:flex-row sm:items-center gap-2 cursor-pointer"
+                        onClick={() => setExpandedContact(expandedContact === contact.id ? null : contact.id)}
+                      >
+                        {/* Avatar */}
+                        <div className={cn(
+                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-semibold text-sm',
+                          contact.status === 'new'
+                            ? 'bg-brand-blue text-white'
+                            : 'bg-muted text-muted-foreground'
+                        )}>
+                          {contact.first_name[0]}{contact.last_name[0]}
+                        </div>
+
+                        {/* Nom + raison */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className={cn('font-medium text-sm', contact.status === 'new' && 'font-semibold')}>
+                              {contact.first_name} {contact.last_name}
+                            </p>
+                            <Badge variant="outline" className="text-[10px] py-0 h-4 font-normal">
+                              {REASON_LABELS[contact.reason] ?? contact.reason}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                            <a href={`mailto:${contact.email}`} className="hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
+                              {contact.email}
+                            </a>
+                            {contact.company && (
+                              <>
+                                <span>·</span>
+                                <span className="flex items-center gap-1">
+                                  <Building2 className="h-3 w-3" />{contact.company}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Date + statut + chevron */}
+                        <div className="flex items-center gap-3 sm:shrink-0 text-xs">
+                          <span className="text-muted-foreground">
+                            {new Date(contact.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                          <select
+                            value={contact.status}
+                            onChange={(e) => {
+                              e.stopPropagation()
+                              handleContactStatus(contact.id, e.target.value as ContactSubmission['status'])
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={cn(
+                              'text-xs border rounded px-1.5 py-0.5 bg-background cursor-pointer',
+                              contact.status === 'new' && 'border-brand-blue text-brand-blue',
+                              contact.status === 'read' && 'border-gray-300 text-gray-600',
+                              contact.status === 'replied' && 'border-emerald-500 text-emerald-700',
+                              contact.status === 'archived' && 'border-gray-200 text-gray-400',
+                            )}
+                          >
+                            <option value="new">Nouveau</option>
+                            <option value="read">Lu</option>
+                            <option value="replied">Répondu</option>
+                            <option value="archived">Archivé</option>
+                          </select>
+                          <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', expandedContact === contact.id && 'rotate-180')} />
+                        </div>
+                      </div>
+
+                      {/* Message déroulant */}
+                      {expandedContact === contact.id && (
+                        <div className="mt-3 ml-11 p-3 bg-muted/50 rounded-lg text-sm text-foreground whitespace-pre-wrap">
+                          {contact.message}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </Card>
+          )}
+        </motion.div>
+      )}
     </div>
   )
+}
+
+const REASON_LABELS: Record<string, string> = {
+  demo:        'Démo',
+  question:    'Fonctionnalités',
+  pricing:     'Tarifs',
+  support:     'Support',
+  partnership: 'Partenariat',
+  other:       'Autre',
 }

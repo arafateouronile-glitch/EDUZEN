@@ -72,15 +72,27 @@ export const ContactContent = memo(function ContactContent() {
     }))
   }
 
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setSubmitError(null)
 
-    // Simuler l'envoi (à remplacer par une vraie API)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    setIsSubmitting(false)
-    setIsSubmitted(true)
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formState),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erreur lors de l\'envoi')
+      setIsSubmitted(true)
+    } catch (err: unknown) {
+      setSubmitError((err as Error).message || 'Une erreur est survenue, veuillez réessayer.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -276,6 +288,13 @@ export const ContactContent = memo(function ContactContent() {
                       className="rounded-xl resize-none"
                     />
                   </div>
+
+                  {/* Error */}
+                  {submitError && (
+                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      {submitError}
+                    </p>
+                  )}
 
                   {/* Submit Button */}
                   <Button
