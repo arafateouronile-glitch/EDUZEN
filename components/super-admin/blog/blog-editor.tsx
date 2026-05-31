@@ -10,11 +10,19 @@ import { useEffect, useState, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import {
   Bold,
   Italic,
@@ -36,6 +44,7 @@ import {
   Image as ImageIcon,
   Minus,
   RemoveFormatting,
+  FileCode,
 } from 'lucide-react'
 
 interface BlogEditorProps {
@@ -78,6 +87,8 @@ function ToolbarDivider() {
 export function BlogEditor({ value, onChange, placeholder = 'Commencez à écrire…', minHeight = '400px' }: BlogEditorProps) {
   const [linkUrl, setLinkUrl] = useState('')
   const [imageUrl, setImageUrl] = useState('')
+  const [htmlImportOpen, setHtmlImportOpen] = useState(false)
+  const [htmlImportContent, setHtmlImportContent] = useState('')
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -133,6 +144,14 @@ export function BlogEditor({ value, onChange, placeholder = 'Commencez à écrir
     editor.chain().focus().setImage({ src: imageUrl }).run()
     setImageUrl('')
   }, [editor, imageUrl])
+
+  const importHtml = useCallback(() => {
+    if (!editor || !htmlImportContent.trim()) return
+    editor.commands.setContent(htmlImportContent)
+    onChange(editor.getHTML())
+    setHtmlImportContent('')
+    setHtmlImportOpen(false)
+  }, [editor, htmlImportContent, onChange])
 
   if (!editor) return null
 
@@ -278,7 +297,48 @@ export function BlogEditor({ value, onChange, placeholder = 'Commencez à écrir
             </div>
           </PopoverContent>
         </Popover>
+
+        <ToolbarDivider />
+
+        {/* Import HTML */}
+        <button
+          type="button"
+          title="Importer du HTML"
+          onClick={() => setHtmlImportOpen(true)}
+          className="h-8 w-8 flex items-center justify-center rounded text-sm transition-colors hover:bg-gray-100"
+        >
+          <FileCode className="h-4 w-4" />
+        </button>
       </div>
+
+      {/* HTML Import Dialog */}
+      <Dialog open={htmlImportOpen} onOpenChange={setHtmlImportOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Importer du HTML</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Collez votre code HTML ci-dessous. Le contenu actuel de l&apos;éditeur sera remplacé.
+            </p>
+            <Textarea
+              value={htmlImportContent}
+              onChange={(e) => setHtmlImportContent(e.target.value)}
+              placeholder="<h1>Mon article</h1><p>Contenu...</p>"
+              className="font-mono text-sm min-h-[300px] resize-y"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setHtmlImportOpen(false); setHtmlImportContent('') }}>
+              Annuler
+            </Button>
+            <Button onClick={importHtml} disabled={!htmlImportContent.trim()}>
+              Importer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Editor area */}
       <div
