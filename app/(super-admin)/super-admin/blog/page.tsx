@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -56,6 +56,7 @@ import {
   TrendingUp,
   Calendar,
   Filter,
+  Upload,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { BlogPost, BlogPostStatus } from '@/types/super-admin.types'
@@ -96,6 +97,51 @@ export default function BlogPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [isImporting, setIsImporting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleHtmlFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    setIsImporting(true)
+    try {
+      const html = await file.text()
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(html, 'text/html')
+
+      // Extract title
+      const titleEl = doc.querySelector('title')
+      const h1El = doc.querySelector('h1')
+      const title =
+        titleEl?.textContent?.trim() ||
+        h1El?.textContent?.trim() ||
+        file.name.replace(/\.html?$/i, '')
+
+      // Extract body content (full doc) or use as-is (fragment)
+      const bodyContent = doc.body ? doc.body.innerHTML : html
+
+      const response = await fetch('/api/super-admin/blog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content: bodyContent, status: 'draft' }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.error || 'Erreur lors de l\'import')
+      }
+
+      const result = await response.json()
+      toast.success('Article importé — brouillon créé')
+      router.push(`/super-admin/blog/${result.post.id}`)
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Erreur lors de l\'import')
+    } finally {
+      setIsImporting(false)
+    }
+  }
 
   const { data: allPosts = [] } = useQuery({
     queryKey: ['super-admin-blog-posts'],
@@ -192,7 +238,24 @@ export default function BlogPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
+            className="flex items-center gap-2"
           >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".html,.htm"
+              className="hidden"
+              onChange={handleHtmlFileImport}
+            />
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={isImporting}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              {isImporting ? 'Import...' : 'Importer HTML'}
+            </Button>
             <Button onClick={() => router.push('/super-admin/blog/new')} className="gap-2">
               <Plus className="h-4 w-4" />
               Nouvel article
