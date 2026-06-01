@@ -4,6 +4,15 @@ import { memo, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   ArrowRight,
   Gift,
@@ -24,6 +33,8 @@ import {
   Wallet,
   Clock,
   Shield,
+  Send,
+  Loader2,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -156,6 +167,178 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   )
 }
 
+function AffiliationForm() {
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    companyName: '',
+    profileType: '',
+    website: '',
+    message: '',
+  })
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.value }))
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.firstName || !form.lastName || !form.email || !form.profileType) return
+    setStatus('loading')
+    setErrorMsg('')
+    try {
+      const res = await fetch('/api/affiliate/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erreur inconnue')
+      setStatus('success')
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message)
+      setStatus('error')
+    }
+  }
+
+  if (status === 'success') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-green-50 border border-green-200 rounded-3xl p-12 text-center"
+      >
+        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+          <CheckCircle2 className="w-8 h-8 text-green-600" />
+        </div>
+        <h3 className="text-2xl font-black text-gray-900 mb-3">Candidature envoyée !</h3>
+        <p className="text-gray-600 max-w-md mx-auto">
+          Merci pour votre intérêt. Notre équipe étudie votre candidature et vous contacte sous 48 h avec votre lien affilié.
+        </p>
+      </motion.div>
+    )
+  }
+
+  return (
+    <motion.form
+      onSubmit={handleSubmit}
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="bg-white rounded-3xl border border-gray-200 shadow-xl shadow-gray-100 p-8 md:p-10 space-y-6"
+    >
+      {/* Name */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className="text-sm font-semibold text-gray-700">Prénom *</label>
+          <Input
+            placeholder="Marie"
+            value={form.firstName}
+            onChange={set('firstName')}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-semibold text-gray-700">Nom *</label>
+          <Input
+            placeholder="Dupont"
+            value={form.lastName}
+            onChange={set('lastName')}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Email */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-semibold text-gray-700">Email professionnel *</label>
+        <Input
+          type="email"
+          placeholder="marie.dupont@exemple.fr"
+          value={form.email}
+          onChange={set('email')}
+          required
+        />
+      </div>
+
+      {/* Company */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-semibold text-gray-700">Organisme / Entreprise</label>
+        <Input
+          placeholder="Mon Organisme de Formation"
+          value={form.companyName}
+          onChange={set('companyName')}
+        />
+      </div>
+
+      {/* Profile type */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-semibold text-gray-700">Votre profil *</label>
+        <Select
+          value={form.profileType}
+          onValueChange={(v) => setForm((prev) => ({ ...prev, profileType: v }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sélectionnez votre profil…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="formateur">Formateur indépendant</SelectItem>
+            <SelectItem value="consultant">Consultant en formation</SelectItem>
+            <SelectItem value="blogueur">Blogueur / Influenceur EdTech</SelectItem>
+            <SelectItem value="conseiller">Conseiller OPCO / Expert Qualiopi</SelectItem>
+            <SelectItem value="autre">Autre</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Website */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-semibold text-gray-700">Site web / Profil LinkedIn</label>
+        <Input
+          placeholder="https://..."
+          value={form.website}
+          onChange={set('website')}
+        />
+      </div>
+
+      {/* Message */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-semibold text-gray-700">Comment comptez-vous promouvoir EduZen ?</label>
+        <Textarea
+          placeholder="Décrivez votre audience, vos canaux de diffusion…"
+          value={form.message}
+          onChange={set('message')}
+          rows={4}
+        />
+      </div>
+
+      {status === 'error' && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          {errorMsg}
+        </p>
+      )}
+
+      <Button
+        type="submit"
+        disabled={status === 'loading' || !form.firstName || !form.lastName || !form.email || !form.profileType}
+        className="w-full h-12 rounded-xl text-base font-semibold gap-2 bg-gradient-to-r from-brand-blue to-brand-blue-dark hover:opacity-90 transition-opacity"
+      >
+        {status === 'loading' ? (
+          <><Loader2 className="w-4 h-4 animate-spin" /> Envoi en cours…</>
+        ) : (
+          <><Send className="w-4 h-4" /> Envoyer ma candidature</>
+        )}
+      </Button>
+
+      <p className="text-xs text-center text-gray-400">
+        Gratuit • Sans engagement • Réponse sous 48 h
+      </p>
+    </motion.form>
+  )
+}
+
 export const AffiliationContent = memo(function AffiliationContent() {
   return (
     <div className="min-h-screen bg-white">
@@ -192,7 +375,7 @@ export const AffiliationContent = memo(function AffiliationContent() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/contact?subject=affiliation">
+              <a href="#candidature">
                 <motion.div
                   whileHover={{ scale: 1.02, y: -1 }}
                   whileTap={{ scale: 0.98 }}
@@ -205,7 +388,7 @@ export const AffiliationContent = memo(function AffiliationContent() {
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </motion.div>
-              </Link>
+              </a>
               <a
                 href="#comment-ca-marche"
                 className="px-8 py-4 rounded-full border border-gray-200 text-gray-700 font-semibold hover:border-brand-blue/30 hover:text-brand-blue transition-all duration-300"
@@ -458,42 +641,28 @@ export const AffiliationContent = memo(function AffiliationContent() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
-        <div className="container mx-auto px-4 md:px-6 max-w-3xl text-center">
+      {/* Application Form */}
+      <section id="candidature" className="py-24 bg-gradient-to-b from-gray-50 to-white">
+        <div className="container mx-auto px-4 md:px-6 max-w-2xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            className="text-center mb-12"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full mb-6">
               <CheckCircle2 className="w-4 h-4 text-green-600" />
               <span className="text-sm font-semibold text-green-700">Programme 100 % gratuit • Aucun engagement</span>
             </div>
-
-            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tightest mb-6">
-              Prêt à générer des revenus passifs ?
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tightest mb-4">
+              Rejoindre le programme
             </h2>
-            <p className="text-lg text-gray-600 mb-10 max-w-xl mx-auto">
-              Rejoignez le programme d&apos;affiliation EduZen dès aujourd&apos;hui.
-              Inscription en 2 minutes, commissions à vie.
+            <p className="text-lg text-gray-600 max-w-xl mx-auto">
+              Remplissez le formulaire ci-dessous. Notre équipe vous contacte sous 48 h avec votre lien affilié.
             </p>
-
-            <Link href="/contact?subject=affiliation">
-              <motion.div
-                whileHover={{ scale: 1.02, y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex relative group"
-              >
-                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-brand-blue to-brand-cyan opacity-0 group-hover:opacity-30 blur-lg transition-opacity duration-500" />
-                <div className="relative flex items-center gap-2 px-10 py-4 rounded-full bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white font-semibold text-lg shadow-xl shadow-brand-blue/25 group-hover:shadow-2xl transition-all duration-500">
-                  <Gift className="w-5 h-5" />
-                  Rejoindre le programme
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </motion.div>
-            </Link>
           </motion.div>
+
+          <AffiliationForm />
         </div>
       </section>
 
