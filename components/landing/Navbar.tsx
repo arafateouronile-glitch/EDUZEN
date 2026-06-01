@@ -20,6 +20,7 @@ export function Navbar() {
   const navItems = [
     { label: 'Fonctionnalités', href: '#features' },
     { label: 'Tarifs', href: '#tarifs' },
+    { label: 'Affiliation', href: '/affiliation' },
     { label: 'FAQ', href: '#faq' },
     { label: 'Contact', href: '/contact' },
   ]

@@ -54,8 +54,8 @@ export function Footer() {
                 links: [
                   { label: "Blog", href: "/blog" },
                   { label: "À propos", href: "/a-propos" },
+                  { label: "Programme d'affiliation", href: "/affiliation" },
                   { label: "Centre d'aide", href: "/contact" },
-                  { label: "Demander une démo", href: "/demo" },
                 ]
               },
               {
