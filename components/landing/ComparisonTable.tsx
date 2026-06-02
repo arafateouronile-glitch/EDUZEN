@@ -6,27 +6,31 @@ import { Check, X, Minus, ArrowRight, Zap, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
 
 const competitors = [
-  { name: 'EduZen',   highlight: true,  tag: 'Meilleur choix', priceNote: 'Dès 79 €/mois' },
-  { name: 'Dendreo',  highlight: false, tag: '',               priceNote: 'Dès 119 €/mois' },
-  { name: 'Digiforma',highlight: false, tag: '',               priceNote: 'Dès 89 €/mois' },
-  { name: 'Yparéo',   highlight: false, tag: '',               priceNote: 'Sur devis' },
-  { name: 'Syforma',  highlight: false, tag: '',               priceNote: 'Dès 59 €/mois' },
+  { name: 'EduZen',    highlight: true,  tag: 'Meilleur choix', priceNote: 'Dès 79 €/mois' },
+  { name: 'Dendreo',   highlight: false, tag: '',               priceNote: 'Dès 119 €/mois' },
+  { name: 'Digiforma', highlight: false, tag: '',               priceNote: 'Dès 89 €/mois' },
+  { name: 'Yparéo',    highlight: false, tag: '',               priceNote: 'Sur devis' },
+  { name: 'Syforma',   highlight: false, tag: '',               priceNote: 'Dès 59 €/mois' },
 ]
 
-// 'yes'      → ✓ vert  (inclus dans le plan de base)
-// 'yes-paid' → ✓ ambre (la fonctionnalité existe mais en option payante)
-// 'partial'  → ○ ambre (présent mais limité / basique)
-// 'no'       → ✗ gris  (absent)
-type CellValue = 'yes' | 'yes-paid' | 'partial' | 'no'
+// Types de cellule
+// 'yes'      → ✓ vert        inclus dans le plan de base
+// 'yes-paid' → ✓ ambre       la fonctionnalité existe mais en option payante
+// 'partial'  → ○ gris        présent mais limité / basique
+// 'no'       → ✗             absent
+// string     → pill coloré   valeur textuelle (rapport Q/P)
+type CellValue = 'yes' | 'yes-paid' | 'partial' | 'no' | string
 
 interface Criterion {
   label: string
   sub: string
   values: CellValue[]
-  highlight?: boolean // met en avant les critères où EduZen est seul
+  badge?: string    // badge "Exclusif", "Nouveau", etc.
+  noScore?: boolean // exclure du comptage (lignes textuelles)
 }
 
 const criteria: Criterion[] = [
+  // ── Fonctionnalités cœur ───────────────────────────────────────────────
   {
     label: 'Conformité Qualiopi',
     sub: 'Génération automatique des documents obligatoires',
@@ -34,7 +38,7 @@ const criteria: Criterion[] = [
   },
   {
     label: 'Émargement QR code',
-    sub: 'Signature des présences par QR ou tactile',
+    sub: 'Signature des présences par QR code ou tactile',
     values: ['yes', 'yes', 'yes', 'yes', 'yes-paid'],
   },
   {
@@ -47,12 +51,26 @@ const criteria: Criterion[] = [
     sub: 'Subrogations et suivi des encaissements',
     values: ['yes', 'yes', 'yes', 'yes', 'partial'],
   },
+
+  // ── Automatisation ────────────────────────────────────────────────────
+  {
+    label: 'Automatisation des relances',
+    sub: 'Convocations, rappels J-1, enquêtes de satisfaction',
+    values: ['yes', 'yes', 'yes', 'yes', 'partial'],
+  },
+  {
+    label: 'Génération auto post-formation',
+    sub: 'Attestations, certificats, bilans après chaque session',
+    values: ['yes', 'yes', 'yes', 'yes', 'partial'],
+  },
   {
     label: 'Agent IA intégré',
-    sub: 'Programmes pédagogiques, bilans, supports',
+    sub: 'Programmes, bilans pédagogiques, supports de cours',
     values: ['yes', 'no', 'no', 'no', 'no'],
-    highlight: true,
+    badge: 'Exclusif',
   },
+
+  // ── Plateforme ────────────────────────────────────────────────────────
   {
     label: 'Portail e-learning / LMS',
     sub: 'Formations en ligne incluses de base',
@@ -60,31 +78,54 @@ const criteria: Criterion[] = [
   },
   {
     label: 'API & intégrations tierces',
-    sub: 'Connexion comptabilité, CRM, outils métiers',
+    sub: 'Comptabilité, CRM, outils métiers',
     values: ['yes', 'yes', 'partial', 'yes', 'no'],
   },
+
+  // ── Relation client ───────────────────────────────────────────────────
   {
-    label: 'Application mobile',
-    sub: 'Gestion et émargement depuis le terrain',
-    values: ['yes', 'yes', 'yes', 'yes', 'partial'],
+    label: 'Support client réactif',
+    sub: 'Chat + email en français, réponse sous 24 h',
+    values: ['yes', 'yes', 'yes', 'yes-paid', 'partial'],
   },
   {
     label: 'Sans engagement mensuel',
     sub: 'Résiliation libre à tout moment',
     values: ['yes', 'no', 'yes', 'no', 'partial'],
   },
+
+  // ── Évaluation synthétique ────────────────────────────────────────────
+  {
+    label: 'Rapport qualité / prix',
+    sub: 'Tout inclus vs. options cachées',
+    values: ['Excellent', 'Moyen', 'Bon', 'Opaque', 'Basique'],
+    noScore: true,
+  },
 ]
 
-// Compte uniquement les 'yes' (vraiment inclus) pour la ligne score
+// Compte uniquement les 'yes' (inclus d'office) pour le score
 function countIncluded(colIdx: number) {
-  return criteria.filter((c) => c.values[colIdx] === 'yes').length
+  return criteria.filter((c) => !c.noScore && c.values[colIdx] === 'yes').length
 }
 
-const LEGEND: { type: CellValue; label: string }[] = [
-  { type: 'yes',      label: 'Inclus de base' },
-  { type: 'yes-paid', label: 'Option payante' },
-  { type: 'partial',  label: 'Limité / basique' },
-  { type: 'no',       label: 'Non disponible' },
+function totalScored() {
+  return criteria.filter((c) => !c.noScore).length
+}
+
+// Couleur de la pill pour les valeurs textuelles
+const TEXT_COLORS: Record<string, string> = {
+  Excellent: 'text-emerald-400 bg-emerald-500/10 ring-1 ring-emerald-500/20',
+  Bon:       'text-blue-400   bg-blue-500/10   ring-1 ring-blue-500/20',
+  Moyen:     'text-amber-400  bg-amber-500/10  ring-1 ring-amber-500/20',
+  Opaque:    'text-gray-400   bg-gray-500/10   ring-1 ring-gray-500/20',
+  Basique:   'text-gray-500   bg-gray-500/[.07] ring-1 ring-gray-500/10',
+}
+
+const LEGEND = [
+  { type: 'yes'      as CellValue, label: 'Inclus de base' },
+  { type: 'yes-paid' as CellValue, label: 'Option payante' },
+  { type: 'partial'  as CellValue, label: 'Limité / basique' },
+  { type: 'no'       as CellValue, label: 'Non disponible' },
 ]
 
 function CellIcon({ value, highlight }: { value: CellValue; highlight: boolean }) {
@@ -118,10 +159,18 @@ function CellIcon({ value, highlight }: { value: CellValue; highlight: boolean }
       </span>
     )
   }
-  // 'no'
+  if (value === 'no') {
+    return (
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/[0.03] text-gray-700">
+        <X className="w-4 h-4" strokeWidth={1.5} />
+      </span>
+    )
+  }
+  // Valeur textuelle (rapport Q/P)
+  const colorClass = TEXT_COLORS[value as string] ?? 'text-gray-400 bg-gray-500/10'
   return (
-    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/[0.03] text-gray-700">
-      <X className="w-4 h-4" strokeWidth={1.5} />
+    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${colorClass}`}>
+      {value}
     </span>
   )
 }
@@ -137,6 +186,7 @@ function Cell({ value, highlight }: { value: CellValue; highlight: boolean }) {
 export function ComparisonTable() {
   const containerRef = useRef<HTMLDivElement>(null)
   const isInView = useInView(containerRef, { once: true, margin: '-80px' })
+  const total = totalScored()
 
   return (
     <section className="relative py-24 md:py-32 overflow-hidden bg-gray-950">
@@ -182,9 +232,7 @@ export function ComparisonTable() {
             className="text-lg text-gray-400 leading-relaxed"
           >
             Un comparatif honnête des principaux logiciels du marché.{' '}
-            <span className="text-white font-medium">
-              EduZen est le seul à tout inclure d'emblée
-            </span>{' '}
+            <span className="text-white font-medium">EduZen est le seul à tout inclure d'emblée</span>{' '}
             — sans surprises sur la facture.
           </motion.p>
         </div>
@@ -196,10 +244,10 @@ export function ComparisonTable() {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0"
         >
-          <div className="min-w-[760px]">
+          <div className="min-w-[780px]">
 
             {/* En-têtes colonnes */}
-            <div className="grid grid-cols-[2.2fr_repeat(5,1fr)] mb-1">
+            <div className="grid grid-cols-[2.4fr_repeat(5,1fr)] mb-1">
               <div />
               {competitors.map((c) => (
                 <div
@@ -230,8 +278,8 @@ export function ComparisonTable() {
             {criteria.map((row, rowIdx) => (
               <div
                 key={row.label}
-                className={`grid grid-cols-[2.2fr_repeat(5,1fr)] transition-colors group ${
-                  row.highlight
+                className={`grid grid-cols-[2.4fr_repeat(5,1fr)] transition-colors group ${
+                  row.badge
                     ? 'bg-brand-cyan/[0.04] hover:bg-brand-cyan/[0.07]'
                     : rowIdx % 2 === 0
                     ? 'bg-white/[0.02] hover:bg-white/[0.04]'
@@ -240,13 +288,13 @@ export function ComparisonTable() {
               >
                 {/* Critère */}
                 <div className="flex flex-col justify-center py-4 pl-4 pr-4 border-r border-white/5">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold leading-snug ${row.highlight ? 'text-brand-cyan' : 'text-gray-200'}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-sm font-semibold leading-snug ${row.badge ? 'text-brand-cyan' : 'text-gray-200'}`}>
                       {row.label}
                     </span>
-                    {row.highlight && (
+                    {row.badge && (
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-brand-cyan/20 text-brand-cyan uppercase tracking-wider">
-                        Exclusif
+                        {row.badge}
                       </span>
                     )}
                   </div>
@@ -268,14 +316,13 @@ export function ComparisonTable() {
             ))}
 
             {/* Ligne score */}
-            <div className="grid grid-cols-[2.2fr_repeat(5,1fr)] mt-1 bg-white/[0.03]">
+            <div className="grid grid-cols-[2.4fr_repeat(5,1fr)] mt-1 bg-white/[0.03]">
               <div className="flex flex-col justify-center py-4 pl-4 pr-4 border-r border-white/5">
                 <span className="text-sm font-bold text-gray-200">Fonctionnalités incluses</span>
-                <span className="text-xs text-gray-500 mt-0.5">Sans option payante</span>
+                <span className="text-xs text-gray-500 mt-0.5">Sans supplément ni option</span>
               </div>
               {competitors.map((c, colIdx) => {
                 const count = countIncluded(colIdx)
-                const total = criteria.length
                 return (
                   <div
                     key={c.name}
@@ -284,18 +331,18 @@ export function ComparisonTable() {
                     }`}
                   >
                     <span
-                      className={`text-sm font-black ${
+                      className={`text-sm font-black tabular-nums ${
                         c.highlight
                           ? 'text-brand-cyan'
-                          : count >= 7
+                          : count >= 8
                           ? 'text-emerald-400'
-                          : count >= 4
+                          : count >= 5
                           ? 'text-gray-300'
                           : 'text-gray-600'
                       }`}
                     >
                       {count}
-                      <span className="text-xs font-normal opacity-50"> / {total}</span>
+                      <span className="text-xs font-normal opacity-40"> /{total}</span>
                     </span>
                   </div>
                 )
@@ -303,7 +350,7 @@ export function ComparisonTable() {
             </div>
 
             {/* CTA footer */}
-            <div className="grid grid-cols-[2.2fr_repeat(5,1fr)] mt-1">
+            <div className="grid grid-cols-[2.4fr_repeat(5,1fr)] mt-1">
               <div />
               {competitors.map((c) => (
                 <div
@@ -328,6 +375,7 @@ export function ComparisonTable() {
                 </div>
               ))}
             </div>
+
           </div>
         </motion.div>
 
