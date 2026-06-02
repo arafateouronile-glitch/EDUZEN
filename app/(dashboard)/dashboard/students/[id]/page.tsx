@@ -9,7 +9,7 @@ import { paymentService } from '@/lib/services/payment.service.client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Users, FileText, DollarSign, Link as LinkIcon, Copy, Check, UserCheck, Loader2 } from 'lucide-react'
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Users, FileText, DollarSign, Link as LinkIcon, Copy, Check, UserCheck, UserX, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { useState } from 'react'
@@ -25,6 +25,20 @@ export default function StudentDetailPage() {
   const queryClient = useQueryClient()
   const [copiedLink, setCopiedLink] = useState(false)
   const [isReactivating, setIsReactivating] = useState(false)
+  const [isDeactivating, setIsDeactivating] = useState(false)
+
+  const handleDeactivate = async () => {
+    setIsDeactivating(true)
+    try {
+      await studentService.update(studentId, { status: 'inactive' })
+      await queryClient.invalidateQueries({ queryKey: ['student', studentId] })
+      addToast({ title: 'Apprenant désactivé', description: 'Le statut a été passé à inactif.', type: 'success' })
+    } catch {
+      addToast({ title: 'Erreur', description: "Impossible de désactiver l'apprenant.", type: 'error' })
+    } finally {
+      setIsDeactivating(false)
+    }
+  }
 
   const handleReactivate = async () => {
     setIsReactivating(true)
@@ -236,6 +250,21 @@ export default function StudentDetailPage() {
                 <UserCheck className="mr-2 h-4 w-4" />
               )}
               Réactiver
+            </Button>
+          )}
+          {student.status === 'active' && (
+            <Button
+              variant="outline"
+              className="border-rose-300 text-rose-700 hover:bg-rose-50"
+              onClick={handleDeactivate}
+              disabled={isDeactivating}
+            >
+              {isDeactivating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <UserX className="mr-2 h-4 w-4" />
+              )}
+              Désactiver
             </Button>
           )}
           <Link href={`/dashboard/students/${studentId}/edit`}>

@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/toast'
@@ -20,6 +21,8 @@ import {
   CreditCard,
   FileCheck,
   PenLine,
+  Send,
+  Loader2,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -141,6 +144,26 @@ export function GestionAutomatisation({ sessionId }: GestionAutomatisationProps)
   })
 
   const isMutating = toggleActiveMutation.isPending || createScheduleMutation.isPending
+
+  const handleTestEmargement = async () => {
+    try {
+      const res = await fetch(`/api/dashboard/sessions/${sessionId}/test-emargement`, {
+        method: 'POST',
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        addToast({ title: 'Erreur', description: json.error || 'Erreur inconnue', type: 'error' })
+      } else {
+        addToast({
+          title: 'Emails envoyés',
+          description: `${json.emailsSent} email(s) d'émargement envoyé(s) avec succès.`,
+          type: 'success',
+        })
+      }
+    } catch (err) {
+      addToast({ title: 'Erreur', description: (err as Error).message || 'Erreur réseau', type: 'error' })
+    }
+  }
 
   const handleTogglePreset = (preset: PresetAutomation) => {
     const existing = schedules?.find(
@@ -264,6 +287,11 @@ export function GestionAutomatisation({ sessionId }: GestionAutomatisationProps)
                     isActive={isActive}
                     isLoading={isMutating}
                     onToggle={() => handleTogglePreset(preset)}
+                    onTest={
+                      preset.email_type === 'emargement_auto' && isActive
+                        ? handleTestEmargement
+                        : undefined
+                    }
                   />
                 )
               })}
@@ -306,12 +334,15 @@ function PresetCard({
   isActive,
   isLoading,
   onToggle,
+  onTest,
 }: {
   preset: PresetAutomation
   isActive: boolean
   isLoading: boolean
   onToggle: () => void
+  onTest?: () => Promise<void>
 }) {
+  const [isTesting, setIsTesting] = React.useState(false)
   const Icon = PRESET_ICONS[preset.email_type] ?? FileText
 
   const recipients = [
@@ -383,6 +414,31 @@ function PresetCard({
             </span>
           )}
         </div>
+        {onTest && (
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isTesting}
+              onClick={async () => {
+                setIsTesting(true)
+                try {
+                  await onTest()
+                } finally {
+                  setIsTesting(false)
+                }
+              }}
+              className="h-7 text-xs gap-1.5"
+            >
+              {isTesting ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Send className="h-3 w-3" />
+              )}
+              Tester l'envoi
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

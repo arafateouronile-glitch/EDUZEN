@@ -57,6 +57,7 @@ import {
   Calendar,
   Filter,
   Upload,
+  Globe,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { BlogPost, BlogPostStatus } from '@/types/super-admin.types'
@@ -138,6 +139,46 @@ export default function BlogPage() {
       router.push(`/super-admin/blog/${result.post.id}`)
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Erreur lors de l\'import')
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  const handleUrlImport = async () => {
+    const url = window.prompt("URL de l'article à importer :", 'https://')
+    if (!url) return
+
+    setIsImporting(true)
+    try {
+      const importRes = await fetch('/api/super-admin/blog/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!importRes.ok) {
+        const err = await importRes.json()
+        throw new Error(err.error || "Erreur lors de l'import URL")
+      }
+
+      const { title, html } = await importRes.json()
+
+      const createRes = await fetch('/api/super-admin/blog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, content: html, status: 'draft' }),
+      })
+
+      if (!createRes.ok) {
+        const err = await createRes.json()
+        throw new Error(err.error || 'Erreur lors de la création du brouillon')
+      }
+
+      const result = await createRes.json()
+      toast.success('Article importé depuis URL — brouillon créé')
+      router.push(`/super-admin/blog/${result.post.id}`)
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Erreur lors de l'import URL")
     } finally {
       setIsImporting(false)
     }
@@ -255,6 +296,15 @@ export default function BlogPage() {
             >
               <Upload className="h-4 w-4" />
               {isImporting ? 'Import...' : 'Importer HTML'}
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={isImporting}
+              onClick={handleUrlImport}
+            >
+              <Globe className="h-4 w-4" />
+              {isImporting ? 'Import...' : 'Importer depuis URL'}
             </Button>
             <Button onClick={() => router.push('/super-admin/blog/new')} className="gap-2">
               <Plus className="h-4 w-4" />
