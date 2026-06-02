@@ -126,6 +126,18 @@ export default async function RootLayout({
   return (
     <html lang={locale} className="scroll-smooth relative" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head suppressHydrationWarning>
+        {/*
+          ChunkLoadError guard — recharge automatiquement quand Vercel déploie
+          une nouvelle version et que les anciens chunks JS ne sont plus disponibles.
+          Protection anti-boucle : un seul rechargement toutes les 15 secondes.
+        */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: `(function(){window.addEventListener('unhandledrejection',function(e){var r=e.reason;if(r&&(r.name==='ChunkLoadError'||/Loading chunk/.test(r.message)||/Failed to load chunk/.test(r.message))){var k='__chunkReload';var last=parseInt(sessionStorage.getItem(k)||'0');var now=Date.now();if(now-last>15000){sessionStorage.setItem(k,now);window.location.reload();}}});})();`
+          }}
+        />
         <link rel="icon" href="/icons/icon-192x192.png" type="image/png" />
         <link rel="shortcut icon" href="/icons/icon-192x192.png" type="image/png" />
         <link rel="manifest" href="/manifest.json" />

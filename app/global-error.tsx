@@ -15,7 +15,22 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Logger l'erreur globale
+    const isChunkError =
+      error.name === 'ChunkLoadError' ||
+      /Loading chunk/.test(error.message) ||
+      /Failed to load chunk/.test(error.message)
+
+    if (isChunkError) {
+      // Rechargement silencieux après déploiement Vercel, avec protection anti-boucle
+      const key = '__chunkReload'
+      const last = parseInt(sessionStorage.getItem(key) || '0')
+      if (Date.now() - last > 15000) {
+        sessionStorage.setItem(key, Date.now().toString())
+        window.location.reload()
+        return
+      }
+    }
+
     logger.error('Next.js Global Error Boundary caught an error', error, {
       digest: error.digest,
       globalErrorBoundary: true,
