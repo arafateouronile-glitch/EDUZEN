@@ -125,6 +125,7 @@ export const Hero = memo(function Hero() {
 
           {/* Titre Principal avec Mask Reveal */}
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tightest leading-[0.95] md:leading-[0.9] font-display text-gray-900 mb-8 md:mb-10">
+            <span className="sr-only">EduZen, logiciel organisme de formation : </span>
             <div className="overflow-hidden">
               <motion.span custom={0} variants={textVariants} initial="hidden" animate="visible" className="block pb-2">
                 Gérez votre organisme

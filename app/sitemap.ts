@@ -4,7 +4,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
   const currentDate = new Date()
 
-  // Pages principales du site
   const routes: MetadataRoute.Sitemap = [
     // Page d'accueil - priorité maximale
     {
@@ -13,39 +12,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 1,
     },
-    // Pages de fonctionnalités
+    // Tarification - page dédiée
     {
-      url: `${baseUrl}/#features`,
+      url: `${baseUrl}/pricing`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.9,
     },
+    // Démo
     {
-      url: `${baseUrl}/#benefices`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    // Tarification
-    {
-      url: `${baseUrl}/#tarifs`,
+      url: `${baseUrl}/demo`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.8,
-    },
-    // FAQ
-    {
-      url: `${baseUrl}/#faq`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    // À propos
-    {
-      url: `${baseUrl}/a-propos`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.7,
     },
     // Contact
     {
@@ -54,44 +33,52 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.8,
     },
-    // Blog (si existant)
+    // Blog
     {
       url: `${baseUrl}/blog`,
       lastModified: currentDate,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
-    // Pages légales
+    // À propos
     {
-      url: `${baseUrl}/mentions-legales`,
+      url: `${baseUrl}/a-propos`,
       lastModified: currentDate,
-      changeFrequency: 'yearly',
-      priority: 0.3,
+      changeFrequency: 'monthly',
+      priority: 0.7,
     },
+    // Affiliation
     {
-      url: `${baseUrl}/politique-confidentialite`,
+      url: `${baseUrl}/affiliation`,
       lastModified: currentDate,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/cgv`,
-      lastModified: currentDate,
-      changeFrequency: 'yearly',
-      priority: 0.3,
+      changeFrequency: 'monthly',
+      priority: 0.6,
     },
     // Authentification (pages publiques)
+    {
+      url: `${baseUrl}/auth/register`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
     {
       url: `${baseUrl}/auth/login`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.6,
     },
+    // Pages légales (vraies URLs)
     {
-      url: `${baseUrl}/auth/register`,
+      url: `${baseUrl}/legal/privacy`,
       lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.7,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/legal/terms`,
+      lastModified: currentDate,
+      changeFrequency: 'yearly',
+      priority: 0.3,
     },
   ]
 

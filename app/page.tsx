@@ -150,6 +150,181 @@ export default function HomePage() {
         {/* Hero - SSR activé, critique pour LCP */}
         <Hero />
 
+        {/*
+          Contenu SEO structuré — rendu en SSR, invisible visuellement (sr-only),
+          accessible aux lecteurs d'écran et indexé par Google.
+          Ne pas supprimer : c'est le contenu textuel principal pour le référencement.
+        */}
+        <div className="sr-only" role="region" aria-label="Présentation complète d'EduZen">
+          <h2>EduZen : Le Logiciel de Gestion Tout-en-Un pour Organismes de Formation</h2>
+          <p>
+            EduZen est la plateforme SaaS de gestion de la formation professionnelle conçue pour
+            les organismes de formation en France. Que vous soyez formateur indépendant, centre de
+            formation ou organisme en pleine croissance, EduZen automatise l'ensemble de vos tâches
+            administratives pour vous faire gagner jusqu'à 10 heures par semaine. Conçu par des
+            professionnels de la formation, pour des professionnels de la formation, EduZen est le
+            logiciel organisme de formation de référence sur le marché français.
+          </p>
+
+          <h2>Conformité Qualiopi Automatique — Passez votre Audit Sereinement</h2>
+          <p>
+            La certification Qualiopi est une obligation légale pour tout organisme de formation
+            souhaitant accéder aux financements publics et mutualisés : CPF (Compte Personnel de
+            Formation), OPCO (Opérateurs de Compétences), France Travail et financements régionaux.
+            EduZen génère automatiquement 100&nbsp;% des documents exigés par le référentiel national
+            qualité Qualiopi&nbsp;: contrats de formation, conventions de formation, programmes
+            pédagogiques détaillés, feuilles de présence signées électroniquement, évaluations à chaud
+            et à froid, certificats de réalisation et attestations de formation. Votre tableau de bord
+            de conformité Qualiopi est mis à jour en temps réel&nbsp;: vous abordez chaque audit avec
+            la certitude d'être à 100&nbsp;% conforme.
+          </p>
+
+          <h2>Émargement Numérique par QR Code — Fini les Feuilles Papier</h2>
+          <p>
+            L'émargement numérique EduZen révolutionne la gestion des feuilles de présence pour les
+            organismes de formation. Vos stagiaires signent leur présence en 2 secondes via QR code,
+            signature tactile sur tablette ou smartphone, ou géolocalisation pour les formations en
+            présentiel. Les feuilles de présence sont automatiquement générées, horodatées et
+            archivées en PDF. Conformes aux exigences Qualiopi et reconnues par tous les OPCO, elles
+            sont infalsifiables. Économisez 5 heures par semaine rien que sur la gestion de
+            l'émargement&nbsp;: plus de feuilles papier perdues, de signatures manquantes ni de saisie
+            manuelle. L'émargement numérique EduZen est compatible avec les formations en présentiel,
+            en distanciel et en format blended learning.
+          </p>
+
+          <h2>Facturation CPF et OPCO en 1 Clic — Simplifiez votre Gestion Financière</h2>
+          <p>
+            La facturation des formations financées est souvent complexe et chronophage pour les
+            organismes de formation. EduZen simplifie radicalement ce processus. Générez vos factures
+            CPF conformes à Mon Compte Formation (EDOF) en un seul clic. Gérez les subrogations de
+            paiement OPCO (AFDAS, OPCO Atlas, CONSTRUCTYS, AKTO, OCAPIAT, etc.) et suivez vos
+            encaissements en temps réel. L'export comptable automatisé vers vos outils de
+            comptabilité évite toute double saisie. EduZen gère également la facturation France
+            Travail, les prises en charge régionales et la facturation inter-entreprises.
+          </p>
+
+          <h2>Signature Électronique Certifiée eIDAS — Valeur Juridique Garantie</h2>
+          <p>
+            La signature électronique EduZen est certifiée eIDAS (règlement européen 910/2014 sur
+            l'identification électronique). Vos contrats de formation, conventions de formation et
+            documents administratifs ont la même valeur juridique qu'un acte signé devant notaire.
+            Chaque signature est horodatée, traçable et infalsifiable. Signez vos documents à
+            distance sans jamais imprimer ni scanner, et gagnez 3 jours par contrat. La signature
+            électronique eIDAS EduZen est reconnue par tous les OPCO, les plateformes CPF et
+            France Travail. Elle répond aux exigences du Code du Travail et du Code de la
+            Consommation.
+          </p>
+
+          <h2>Gestion Complète des Formations, Sessions et Stagiaires</h2>
+          <p>
+            EduZen centralise l'ensemble de la gestion de vos formations dans une interface
+            intuitive et ergonomique. Créez vos programmes de formation avec leurs objectifs
+            pédagogiques, planifiez vos sessions en présentiel ou en distanciel, gérez vos
+            formateurs et vos salles de formation. Suivez les inscriptions de vos stagiaires,
+            leurs progressions pédagogiques, leurs évaluations et leurs résultats. Automatisez
+            vos communications&nbsp;: emails de convocation, rappels de session, enquêtes de
+            satisfaction, attestations de fin de formation. Le CRM intégré vous permet de gérer
+            vos prospects, vos clients entreprises et vos relations avec les financeurs.
+          </p>
+
+          <h2>Portail E-Learning et LMS Intégré — Formez en Ligne 24h/24</h2>
+          <p>
+            EduZen intègre un LMS (Learning Management System) complet pour proposer des
+            formations 100&nbsp;% en ligne ou en format mixte (blended learning). Créez vos modules
+            e-learning, déposez vos supports pédagogiques (PDF, vidéos, présentations), configurez
+            des quiz et des évaluations en ligne. Vos apprenants accèdent à leur espace personnel
+            24h/24, 7j/7, depuis leur ordinateur, tablette ou smartphone. Le portail apprenant
+            EduZen est inclus dans tous les plans sans surcoût, vous permettant de multiplier vos
+            sessions de formation sans frais supplémentaires et d'atteindre des apprenants partout
+            en France.
+          </p>
+
+          <h2>Intelligence Artificielle pour Organismes de Formation</h2>
+          <p>
+            EduZen intègre un agent d'intelligence artificielle spécialement entraîné sur la
+            formation professionnelle française. L'IA EduZen génère automatiquement vos programmes
+            de formation conformes au référentiel Qualiopi, rédige vos objectifs pédagogiques selon
+            la taxonomie de Bloom, crée vos supports de cours et vos évaluations. Elle analyse les
+            performances de vos stagiaires et vous suggère des améliorations pédagogiques
+            personnalisées. L'agent IA comprend le vocabulaire spécifique de la formation
+            professionnelle française&nbsp;: ingénierie pédagogique, référentiel de compétences,
+            modalités pédagogiques, évaluation des acquis.
+          </p>
+
+          <h2>Sécurité Maximale et Conformité RGPD</h2>
+          <p>
+            La protection des données personnelles de vos stagiaires et de votre organisme de
+            formation est au cœur d'EduZen. Toutes les données sont hébergées en France et en
+            Europe sur des serveurs certifiés ISO&nbsp;27001, chiffrées avec le standard bancaire
+            AES-256. Plus de 992 tests de sécurité automatisés sont exécutés quotidiennement pour
+            garantir l'intégrité de votre espace. EduZen est 100&nbsp;% conforme au RGPD (Règlement
+            Général sur la Protection des Données), avec des sauvegardes automatiques quotidiennes,
+            une politique de conservation transparente et un DPO disponible sur demande. Vous restez
+            propriétaire de vos données et pouvez les exporter à tout moment au format CSV ou Excel.
+          </p>
+
+          <h2>Tarifs Adaptés à Tous les Types d'Organismes de Formation</h2>
+          <p>
+            EduZen propose trois plans tarifaires adaptés à chaque stade de développement de votre
+            organisme de formation. Le plan Starter à 39€/mois est conçu pour les formateurs
+            indépendants et les petits organismes de formation&nbsp;: gestion illimitée des formations,
+            émargement numérique, génération de documents Qualiopi. Le plan Pro à 84€/mois est
+            idéal pour les organismes en croissance avec plusieurs formateurs&nbsp;: toutes les
+            fonctionnalités Starter plus le CRM avancé, l'API et les intégrations comptables. Le
+            plan Enterprise à partir de 349€/mois offre la solution complète pour les grands centres
+            de formation et les réseaux de franchise. Tous les plans incluent un essai gratuit de
+            14 jours sans carte bancaire et sont sans engagement de durée.
+          </p>
+
+          <h2>Organismes de Formation Accompagnés par EduZen</h2>
+          <p>
+            EduZen accompagne tous les types d'organismes de formation professionnelle continue&nbsp;:
+            centres de formation professionnelle continue (FPC), organismes certifiés Qualiopi,
+            formateurs indépendants et consultants, CFA (Centres de Formation par Apprentissage),
+            organismes de formation en management et leadership, centres de formation aux métiers
+            du numérique et de l'informatique, organismes spécialisés en formation réglementaire
+            (sécurité, habilitations électriques, CACES, etc.), instituts de formation continue
+            universitaires, chambres consulaires et organismes de branche, organismes de formation
+            spécialisés en langues étrangères, et organismes de formation sanitaire et social.
+          </p>
+
+          <h3>Questions Fréquentes sur EduZen — Logiciel Organisme de Formation</h3>
+
+          <h4>Quel est le meilleur logiciel pour gérer un organisme de formation en France&nbsp;?</h4>
+          <p>
+            EduZen est le logiciel de référence pour les organismes de formation en France. Conçu
+            par des professionnels de la formation, il automatise la conformité Qualiopi,
+            l'émargement numérique, la facturation CPF et OPCO. Les utilisateurs gagnent en moyenne
+            10 heures par semaine sur les tâches administratives.
+          </p>
+
+          <h4>Comment EduZen aide-t-il à passer l'audit Qualiopi&nbsp;?</h4>
+          <p>
+            EduZen génère automatiquement 100&nbsp;% des documents exigés lors d'un audit Qualiopi&nbsp;:
+            contrats et conventions de formation, feuilles de présence signées électroniquement,
+            évaluations à chaud et à froid, certificats de réalisation. Le tableau de bord de
+            conformité Qualiopi vous permet de suivre votre taux de conformité en temps réel et de
+            préparer sereinement votre audit.
+          </p>
+
+          <h4>EduZen est-il adapté aux formateurs indépendants&nbsp;?</h4>
+          <p>
+            Oui, le plan Starter à 39€/mois est spécialement conçu pour les formateurs indépendants.
+            Il inclut la gestion illimitée des formations, l'émargement numérique par QR code, la
+            génération automatique des documents Qualiopi et la signature électronique eIDAS, sans
+            engagement de durée et avec un essai gratuit de 14 jours.
+          </p>
+
+          <h4>EduZen fonctionne-t-il pour les formations en distanciel et en blended learning&nbsp;?</h4>
+          <p>
+            Absolument. EduZen est conçu pour tous les formats de formation&nbsp;: présentiel,
+            distanciel (classe virtuelle, e-learning) et blended learning. L'émargement numérique
+            fonctionne pour toutes les modalités pédagogiques. Le LMS intégré permet de diffuser
+            des contenus e-learning accessibles 24h/24. Les documents générés (attestations,
+            feuilles de présence) sont conformes Qualiopi pour toutes les modalités.
+          </p>
+        </div>
+
         {/* Aperçu vidéo — courte présentation de l'app (~1 min) */}
         <section className="pt-4 pb-16 bg-white">
           <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl">
