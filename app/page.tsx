@@ -84,6 +84,11 @@ const Pricing = dynamic(
   { loading: () => <SectionSkeleton /> }
 )
 
+const ComparisonTable = dynamic(
+  () => import('@/components/landing/ComparisonTable').then(mod => ({ default: mod.ComparisonTable })),
+  { loading: () => <SectionSkeleton /> }
+)
+
 const FAQ = dynamic(
   () => import('@/components/landing/FAQ').then(mod => ({ default: mod.FAQ })),
   { loading: () => <SectionSkeleton /> }
@@ -388,10 +393,17 @@ export default function HomePage() {
           </Suspense>
         </DeferredSection>
 
-        {/* Répétition sociale avant FAQ */}
+        {/* Répétition sociale avant comparatif */}
         <DeferredSection>
           <Suspense fallback={<SectionSkeleton />}>
             <LogoCloud />
+          </Suspense>
+        </DeferredSection>
+
+        {/* Tableau comparatif EduZen vs concurrents */}
+        <DeferredSection>
+          <Suspense fallback={<SectionSkeleton />}>
+            <ComparisonTable />
           </Suspense>
         </DeferredSection>
 
