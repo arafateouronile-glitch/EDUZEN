@@ -4,16 +4,16 @@ import { useEffect, useState, useTransition } from 'react'
 import { motion } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video, MessageSquare, ChevronDown } from 'lucide-react'
+import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video, MessageSquare, ChevronDown, Link2, Check, Ban, Clock, ExternalLink } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { OrganizationHealthCard } from '@/components/super-admin/crm/organization-health-card'
-import { getCrmOrganizations, getDemoLeads, getVslLeads, getContactSubmissions, updateContactStatus } from '@/lib/actions/crm-actions'
+import { getCrmOrganizations, getDemoLeads, getVslLeads, getContactSubmissions, updateContactStatus, getAffiliateApplications, updateAffiliateApplicationStatus } from '@/lib/actions/crm-actions'
 import type { OrganizationCrmSummary, HealthStatus } from '@/types/crm.types'
-import type { DemoLead, VslLead, ContactSubmission } from '@/lib/actions/crm-actions'
+import type { DemoLead, VslLead, ContactSubmission, AffiliateApplication } from '@/lib/actions/crm-actions'
 import { cn } from '@/lib/utils'
 
-type Tab = 'organisations' | 'leads' | 'vsl' | 'contact'
+type Tab = 'organisations' | 'leads' | 'vsl' | 'contact' | 'affiliation'
 type Filter = 'all' | HealthStatus
 
 const FILTER_CONFIG: { value: Filter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -38,6 +38,10 @@ export default function CrmPage() {
   const [leads, setLeads] = useState<DemoLead[]>([])
   const [vslLeads, setVslLeads] = useState<VslLead[]>([])
   const [contacts, setContacts] = useState<ContactSubmission[]>([])
+  const [affiliateApps, setAffiliateApps] = useState<AffiliateApplication[]>([])
+  const [affiliateSearch, setAffiliateSearch] = useState('')
+  const [affiliateStatusFilter, setAffiliateStatusFilter] = useState<string>('all')
+  const [expandedAffiliate, setExpandedAffiliate] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
@@ -49,11 +53,12 @@ export default function CrmPage() {
 
   const load = () => {
     startTransition(async () => {
-      const [orgsResult, leadsResult, vslResult, contactResult] = await Promise.all([
+      const [orgsResult, leadsResult, vslResult, contactResult, affiliateResult] = await Promise.all([
         getCrmOrganizations(),
         getDemoLeads(),
         getVslLeads(),
         getContactSubmissions(),
+        getAffiliateApplications(),
       ])
       if (orgsResult.success && orgsResult.data) {
         setOrgs(orgsResult.data)
@@ -64,12 +69,18 @@ export default function CrmPage() {
       if (leadsResult.success && leadsResult.data) setLeads(leadsResult.data)
       if (vslResult.success && vslResult.data) setVslLeads(vslResult.data)
       if (contactResult.success && contactResult.data) setContacts(contactResult.data)
+      if (affiliateResult.success && affiliateResult.data) setAffiliateApps(affiliateResult.data)
     })
   }
 
   const handleContactStatus = async (id: string, status: ContactSubmission['status']) => {
     await updateContactStatus(id, status)
     setContacts((prev) => prev.map((c) => c.id === id ? { ...c, status } : c))
+  }
+
+  const handleAffiliateStatus = async (id: string, status: 'pending' | 'approved' | 'banned') => {
+    await updateAffiliateApplicationStatus(id, status)
+    setAffiliateApps((prev) => prev.map((a) => a.id === id ? { ...a, status } : a))
   }
 
   useEffect(() => { load() }, [])
@@ -97,6 +108,13 @@ export default function CrmPage() {
     !vslSearch ||
     `${l.full_name} ${l.organization_name ?? ''} ${l.email} ${l.phone ?? ''}`.toLowerCase().includes(vslSearch.toLowerCase())
   )
+
+  const filteredAffiliateApps = affiliateApps.filter((a) => {
+    const matchesSearch = !affiliateSearch ||
+      `${a.full_name ?? ''} ${a.email} ${a.company_name ?? ''}`.toLowerCase().includes(affiliateSearch.toLowerCase())
+    const matchesStatus = affiliateStatusFilter === 'all' || a.status === affiliateStatusFilter
+    return matchesSearch && matchesStatus
+  })
 
   return (
     <div className="space-y-6">
@@ -186,6 +204,23 @@ export default function CrmPage() {
           {contacts.filter((c) => c.status === 'new').length > 0 && (
             <span className="ml-1 rounded-full bg-brand-blue text-white px-1.5 py-0.5 text-[10px]">
               {contacts.filter((c) => c.status === 'new').length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setTab('affiliation')}
+          className={cn(
+            'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5',
+            tab === 'affiliation'
+              ? 'border-emerald-500 text-emerald-700'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Link2 className="h-3.5 w-3.5" />
+          Candidatures affiliation
+          {affiliateApps.filter((a) => a.status === 'pending').length > 0 && (
+            <span className="ml-1 rounded-full bg-emerald-600 text-white px-1.5 py-0.5 text-[10px]">
+              {affiliateApps.filter((a) => a.status === 'pending').length}
             </span>
           )}
         </button>
@@ -546,8 +581,160 @@ export default function CrmPage() {
           )}
         </motion.div>
       )}
+      {tab === 'affiliation' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Rechercher nom, email, société…"
+                value={affiliateSearch}
+                onChange={(e) => setAffiliateSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <select
+              value={affiliateStatusFilter}
+              onChange={(e) => setAffiliateStatusFilter(e.target.value)}
+              className="text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              <option value="all">Tous ({affiliateApps.length})</option>
+              <option value="pending">En attente ({affiliateApps.filter((a) => a.status === 'pending').length})</option>
+              <option value="approved">Validés ({affiliateApps.filter((a) => a.status === 'approved').length})</option>
+              <option value="banned">Bannis ({affiliateApps.filter((a) => a.status === 'banned').length})</option>
+            </select>
+          </div>
+
+          {isPending ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-16 rounded-lg bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : filteredAffiliateApps.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Link2 className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">Aucune candidature</p>
+            </div>
+          ) : (
+            <Card>
+              <div className="divide-y divide-border">
+                {filteredAffiliateApps.map((app) => (
+                  <div key={app.id} className="px-4 py-3">
+                    <div
+                      className="flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer"
+                      onClick={() => setExpandedAffiliate(expandedAffiliate === app.id ? null : app.id)}
+                    >
+                      {/* Avatar */}
+                      <div className={cn(
+                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-semibold text-sm uppercase',
+                        app.status === 'pending' ? 'bg-emerald-100 text-emerald-700' :
+                        app.status === 'approved' ? 'bg-brand-blue/10 text-brand-blue' :
+                        'bg-rose-100 text-rose-700'
+                      )}>
+                        {(app.full_name ?? app.email).slice(0, 2)}
+                      </div>
+
+                      {/* Identité */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-sm">{app.full_name ?? '—'}</p>
+                          {app.metadata?.profile_type && (
+                            <Badge variant="outline" className="text-[10px] py-0 h-4 font-normal">
+                              {PROFILE_LABELS[app.metadata.profile_type] ?? app.metadata.profile_type}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                          <a href={`mailto:${app.email}`} className="hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
+                            {app.email}
+                          </a>
+                          {app.company_name && (
+                            <><span>·</span><span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{app.company_name}</span></>
+                          )}
+                          {app.metadata?.website && (
+                            <a
+                              href={app.metadata.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 hover:text-foreground transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <ExternalLink className="h-3 w-3" />Site
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Date + statut + actions */}
+                      <div className="flex items-center gap-2 sm:shrink-0 text-xs">
+                        <span className="text-muted-foreground hidden sm:block">
+                          {new Date(app.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                        <Badge className={cn(
+                          'text-[10px] py-0',
+                          app.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                          app.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                          'bg-rose-100 text-rose-700 border-rose-200'
+                        )}>
+                          {app.status === 'pending' ? 'En attente' : app.status === 'approved' ? 'Validé' : 'Banni'}
+                        </Badge>
+                        {app.status === 'pending' && (
+                          <>
+                            <button
+                              title="Valider"
+                              onClick={(e) => { e.stopPropagation(); handleAffiliateStatus(app.id, 'approved') }}
+                              className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              title="Refuser"
+                              onClick={(e) => { e.stopPropagation(); handleAffiliateStatus(app.id, 'banned') }}
+                              className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
+                        {app.status === 'approved' && (
+                          <button
+                            title="Remettre en attente"
+                            onClick={(e) => { e.stopPropagation(); handleAffiliateStatus(app.id, 'pending') }}
+                            className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+                          >
+                            <Clock className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', expandedAffiliate === app.id && 'rotate-180')} />
+                      </div>
+                    </div>
+
+                    {/* Message déroulant */}
+                    {expandedAffiliate === app.id && app.metadata?.message && (
+                      <div className="mt-3 ml-12 p-3 bg-muted/50 rounded-lg text-sm text-foreground whitespace-pre-wrap">
+                        {app.metadata.message}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </motion.div>
+      )}
     </div>
   )
+}
+
+const PROFILE_LABELS: Record<string, string> = {
+  formateur:  'Formateur indépendant',
+  consultant: 'Consultant en formation',
+  blogueur:   'Blogueur / EdTech',
+  conseiller: 'Conseiller OPCO',
+  autre:      'Autre',
 }
 
 const REASON_LABELS: Record<string, string> = {

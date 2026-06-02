@@ -323,6 +323,59 @@ export async function updateContactStatus(
   }
 }
 
+export type AffiliateApplication = {
+  id: string
+  full_name: string | null
+  email: string
+  company_name: string | null
+  status: string
+  created_at: string
+  metadata: {
+    profile_type?: string
+    website?: string | null
+    message?: string | null
+  } | null
+}
+
+export async function getAffiliateApplications(): Promise<{
+  success: boolean
+  data?: AffiliateApplication[]
+  error?: string
+}> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('affiliates')
+      .select('id, full_name, email, company_name, status, created_at, metadata')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return { success: true, data: (data ?? []) as AffiliateApplication[] }
+  } catch (err) {
+    logger.error('[crm-actions] getAffiliateApplications', err)
+    return { success: false, error: 'Impossible de charger les candidatures' }
+  }
+}
+
+export async function updateAffiliateApplicationStatus(
+  id: string,
+  status: 'pending' | 'approved' | 'banned'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('affiliates')
+      .update({ status })
+      .eq('id', id)
+
+    if (error) throw error
+    return { success: true }
+  } catch (err) {
+    logger.error('[crm-actions] updateAffiliateApplicationStatus', err)
+    return { success: false, error: 'Impossible de mettre à jour le statut' }
+  }
+}
+
 export async function getOrganizationTimeline(organizationId: string): Promise<{
   success: boolean
   data?: CustomerEvent[]
