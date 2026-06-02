@@ -306,7 +306,9 @@ export default function SignPage() {
       })
     : null
 
-  const isDocument = !isAttendance && (!!doc?.file_url || isProcess)
+  // Montrer le viewer dès qu'un document est associé (même sans file_url connu côté client).
+  // Le viewer gère lui-même l'état d'erreur si le PDF ne peut pas être chargé.
+  const isDocument = !isAttendance && (doc !== null || isProcess)
 
   return (
     <SignPortalLayout>

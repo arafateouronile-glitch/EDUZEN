@@ -67,13 +67,14 @@ export async function GET(request: NextRequest) {
 
     const doc = sr.document as Record<string, unknown> | null
     const fileUrl = doc?.file_url as string | null | undefined
-    if (!fileUrl || typeof fileUrl !== 'string') {
-      return new NextResponse('Document sans fichier PDF', { status: 404 })
+    if (!fileUrl || typeof fileUrl !== 'string' || fileUrl.trim() === '') {
+      return new NextResponse('Document sans fichier PDF attaché', { status: 404 })
     }
 
     const path = extractStoragePathFromPublicUrl(fileUrl, supabaseUrl)
     if (!path) {
-      return new NextResponse('URL du document non supportée', { status: 400 })
+      logger.error('document-pdf: URL non parseable', { fileUrl, supabaseUrl })
+      return new NextResponse('Format d\'URL du document non supporté', { status: 400 })
     }
 
     const { data, error } = await supabase.storage.from('documents').download(path)

@@ -10,10 +10,36 @@ export function extractStoragePathFromPublicUrl(
 ): string | null {
   try {
     const base = supabaseUrl.replace(/\/$/, '')
-    const prefix = `${base}/storage/v1/object/public/documents/`
-    if (!fileUrl.startsWith(prefix)) return null
-    const path = fileUrl.slice(prefix.length)
-    return path && !path.includes('..') ? path : null
+
+    // Prefixes Supabase supportés : public, signed, authenticated
+    const prefixes = [
+      `${base}/storage/v1/object/public/documents/`,
+      `${base}/storage/v1/object/sign/documents/`,
+      `${base}/storage/v1/object/authenticated/documents/`,
+    ]
+
+    for (const prefix of prefixes) {
+      if (fileUrl.startsWith(prefix)) {
+        // Supprimer les query params (tokens signés, etc.)
+        const raw = fileUrl.slice(prefix.length).split('?')[0].split('#')[0]
+        return raw && !raw.includes('..') ? raw : null
+      }
+    }
+
+    // Fallback : si c'est une URL Supabase avec un format légèrement différent
+    // (ex: storage.url != supabaseUrl), tenter l'extraction via URL parsing
+    try {
+      const parsed = new URL(fileUrl)
+      const match = parsed.pathname.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/documents\/(.+)/)
+      if (match?.[1]) {
+        const path = match[1].split('?')[0]
+        return path && !path.includes('..') ? path : null
+      }
+    } catch {
+      // URL invalide
+    }
+
+    return null
   } catch {
     return null
   }
