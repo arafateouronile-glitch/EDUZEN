@@ -5,7 +5,7 @@
 
 import { logger } from '@/lib/utils/logger'
 
-const FROM_DEFAULT = process.env.EMAIL_FROM || 'EDUZEN <noreply@eduzen.io>'
+const FROM_DEFAULT = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'EDUZEN <noreply@eduzen.io>'
 const RESEND_SANDBOX_FROM = 'EDUZEN <onboarding@resend.dev>'
 
 function isDomainNotVerifiedError(err: { statusCode?: number; message?: string }): boolean {

@@ -151,8 +151,18 @@ export function GestionAutomatisation({ sessionId }: GestionAutomatisationProps)
         method: 'POST',
       })
       const json = await res.json()
-      if (!res.ok) {
-        addToast({ title: 'Erreur', description: json.error || 'Erreur inconnue', type: 'error' })
+      if (!res.ok || json.emailsSent === 0) {
+        addToast({
+          title: 'Échec envoi émargement',
+          description: json.error || 'Aucun email n\'a pu être envoyé. Vérifiez la configuration Resend.',
+          type: 'error',
+        })
+      } else if (json.failures?.length > 0) {
+        addToast({
+          title: `${json.emailsSent} envoyé(s), ${json.failures.length} échec(s)`,
+          description: json.error || 'Certains emails n\'ont pas pu être envoyés.',
+          type: 'warning',
+        })
       } else {
         addToast({
           title: 'Emails envoyés',

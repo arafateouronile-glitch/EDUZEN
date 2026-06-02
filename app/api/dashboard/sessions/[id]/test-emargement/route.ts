@@ -195,7 +195,7 @@ export async function POST(
       (createdRequests ?? []).map(async (req) => {
         const token = (req as { access_token?: string; signature_token: string }).access_token ?? req.signature_token
         const attendanceUrl = `${baseUrl}/sign/${token}`
-        return sendEmailViaResend({
+        const result = await sendEmailViaResend({
           to: req.student_email,
           subject: `[TEST] Émargement : ${sessionTitle} — ${new Date(todayStr).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}`,
           html: buildAttendanceEmailHtml({
@@ -206,12 +206,30 @@ export async function POST(
             attendanceUrl,
           }),
         })
+        return { email: req.student_email, ...result }
       })
     )
 
-    const emailsSent = emailResults.filter((r) => r.status === 'fulfilled').length
+    const successes = emailResults
+      .filter((r): r is PromiseFulfilledResult<{ email: string; success: boolean; error?: string }> =>
+        r.status === 'fulfilled' && r.value.success === true
+      )
+      .map((r) => r.value.email)
 
-    return NextResponse.json({ success: true, emailsSent })
+    const failures = emailResults
+      .filter((r): r is PromiseFulfilledResult<{ email: string; success: boolean; error?: string }> =>
+        r.status === 'fulfilled' && r.value.success === false
+      )
+      .map((r) => ({ email: r.value.email, error: r.value.error }))
+
+    return NextResponse.json({
+      success: failures.length === 0,
+      emailsSent: successes.length,
+      failures,
+      ...(failures.length > 0 && {
+        error: `${failures.length} email(s) non envoyé(s) : ${failures.map((f) => `${f.email} (${f.error})`).join(', ')}`,
+      }),
+    })
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Erreur inconnue' },
