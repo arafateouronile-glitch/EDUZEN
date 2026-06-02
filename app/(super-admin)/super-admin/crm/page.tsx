@@ -4,9 +4,11 @@ import { useEffect, useState, useTransition } from 'react'
 import { motion } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video, MessageSquare, ChevronDown, Link2, Check, Ban, Clock, ExternalLink } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video, MessageSquare, ChevronDown, Link2, Check, Ban, Clock, ExternalLink, Loader2, Send } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { OrganizationHealthCard } from '@/components/super-admin/crm/organization-health-card'
 import { getCrmOrganizations, getDemoLeads, getVslLeads, getContactSubmissions, updateContactStatus, getAffiliateApplications, updateAffiliateApplicationStatus } from '@/lib/actions/crm-actions'
 import type { OrganizationCrmSummary, HealthStatus } from '@/types/crm.types'
@@ -81,6 +83,60 @@ export default function CrmPage() {
   const handleAffiliateStatus = async (id: string, status: 'pending' | 'approved' | 'banned') => {
     await updateAffiliateApplicationStatus(id, status)
     setAffiliateApps((prev) => prev.map((a) => a.id === id ? { ...a, status } : a))
+  }
+
+  // ── Prospect email dialog ────────────────────────────────────────────────
+  const [prospectDialog, setProspectDialog] = useState<{
+    open: boolean
+    orgId: string
+    orgName: string
+    recipientEmail: string
+    recipientName: string
+    subject: string
+    body: string
+  } | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isSendingProspect, setIsSendingProspect] = useState(false)
+  const [prospectSent, setProspectSent] = useState(false)
+
+  const handleContactOrg = async (org: OrganizationCrmSummary) => {
+    setIsGenerating(true)
+    setProspectDialog({ open: true, orgId: org.organization_id, orgName: org.organization_name, recipientEmail: '', recipientName: '', subject: '', body: '' })
+    try {
+      const res = await fetch('/api/super-admin/crm/generate-prospect-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: org.organization_id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erreur génération')
+      setProspectDialog({ open: true, orgId: org.organization_id, orgName: org.organization_name, recipientEmail: data.recipientEmail, recipientName: data.recipientName, subject: data.subject, body: data.body })
+    } catch (err: unknown) {
+      setProspectDialog(null)
+      alert((err as Error).message || 'Erreur lors de la génération de l\'email')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleSendProspectEmail = async () => {
+    if (!prospectDialog) return
+    setIsSendingProspect(true)
+    try {
+      const res = await fetch('/api/super-admin/crm/send-prospect-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientEmail: prospectDialog.recipientEmail, subject: prospectDialog.subject, body: prospectDialog.body }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erreur envoi')
+      setProspectSent(true)
+      setTimeout(() => { setProspectDialog(null); setProspectSent(false) }, 1800)
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Erreur lors de l\'envoi')
+    } finally {
+      setIsSendingProspect(false)
+    }
   }
 
   useEffect(() => { load() }, [])
@@ -301,7 +357,7 @@ export default function CrmPage() {
               className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
             >
               {filtered.map((org) => (
-                <OrganizationHealthCard key={org.organization_id} org={org} />
+                <OrganizationHealthCard key={org.organization_id} org={org} onContact={handleContactOrg} />
               ))}
             </motion.div>
           )}
@@ -581,6 +637,17 @@ export default function CrmPage() {
           )}
         </motion.div>
       )}
+      {/* Dialog email prospect */}
+      <ProspectEmailDialog
+        dialog={prospectDialog}
+        isGenerating={isGenerating}
+        isSending={isSendingProspect}
+        sent={prospectSent}
+        onChange={(field, value) => setProspectDialog((prev) => prev ? { ...prev, [field]: value } : prev)}
+        onSend={handleSendProspectEmail}
+        onClose={() => { setProspectDialog(null); setProspectSent(false) }}
+      />
+
       {tab === 'affiliation' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           {/* Filters */}
@@ -726,6 +793,108 @@ export default function CrmPage() {
         </motion.div>
       )}
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dialog prévisualisation email prospect
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ProspectEmailDialog({
+  dialog,
+  isGenerating,
+  isSending,
+  sent,
+  onChange,
+  onSend,
+  onClose,
+}: {
+  dialog: { open: boolean; orgName: string; recipientEmail: string; recipientName: string; subject: string; body: string } | null
+  isGenerating: boolean
+  isSending: boolean
+  sent: boolean
+  onChange: (field: 'subject' | 'body' | 'recipientEmail', value: string) => void
+  onSend: () => void
+  onClose: () => void
+}) {
+  if (!dialog) return null
+  return (
+    <Dialog open={dialog.open} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-brand-blue" />
+            Email de contact — {dialog.orgName}
+          </DialogTitle>
+        </DialogHeader>
+
+        {isGenerating ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-blue" />
+            <p className="text-sm text-muted-foreground">Génération de l&apos;email par l&apos;IA…</p>
+          </div>
+        ) : sent ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            <p className="text-sm font-semibold text-emerald-700">Email envoyé avec succès !</p>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+            {/* Destinataire */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Destinataire</label>
+              <Input
+                value={dialog.recipientEmail}
+                onChange={(e) => onChange('recipientEmail', e.target.value)}
+                placeholder="email@exemple.fr"
+                className="text-sm"
+              />
+              {dialog.recipientName && (
+                <p className="text-xs text-muted-foreground">{dialog.recipientName}</p>
+              )}
+            </div>
+
+            {/* Objet */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Objet</label>
+              <Input
+                value={dialog.subject}
+                onChange={(e) => onChange('subject', e.target.value)}
+                className="text-sm font-medium"
+              />
+            </div>
+
+            {/* Corps */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Corps de l&apos;email</label>
+              <Textarea
+                value={dialog.body}
+                onChange={(e) => onChange('body', e.target.value)}
+                className="text-sm min-h-[280px] resize-y font-mono leading-relaxed"
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              ✏️ Vous pouvez modifier l&apos;objet et le corps avant l&apos;envoi. L&apos;email sera envoyé en votre nom depuis noreply@eduzen.io.
+            </p>
+          </div>
+        )}
+
+        {!isGenerating && !sent && (
+          <DialogFooter className="pt-4 border-t">
+            <Button variant="outline" onClick={onClose}>Annuler</Button>
+            <Button
+              onClick={onSend}
+              disabled={isSending || !dialog.recipientEmail || !dialog.subject || !dialog.body}
+              className="gap-2"
+            >
+              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {isSending ? 'Envoi…' : 'Envoyer l\'email'}
+            </Button>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
   )
 }
 
