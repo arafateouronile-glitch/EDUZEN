@@ -19,6 +19,7 @@ import {
   RefreshCw,
   CreditCard,
   FileCheck,
+  PenLine,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -39,6 +40,7 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PRESET_ICONS: Record<string, React.ElementType> = {
+  emargement_auto: PenLine,
   convocation_j14: FileText,
   rappel_j7: Bell,
   rappel_j3: Clock,
@@ -56,6 +58,7 @@ const CATEGORIES: {
   color: string
 }[] = [
   { key: 'avant', label: 'Avant la session', icon: Calendar, color: 'text-blue-600' },
+  { key: 'pendant', label: 'Pendant la séance', icon: PenLine, color: 'text-teal-600' },
   { key: 'apres', label: 'Après la session', icon: CheckCircle2, color: 'text-green-600' },
   { key: 'paiement', label: 'Paiement', icon: CreditCard, color: 'text-red-600' },
 ]
@@ -322,7 +325,9 @@ function PresetCard({
       ? `${preset.trigger_days}j avant le début`
       : preset.trigger_type === 'after_session_end'
         ? `${preset.trigger_days}j après la fin`
-        : ''
+        : preset.trigger_type === 'after_seance_start'
+          ? '5 min après le début de séance'
+          : ''
 
   return (
     <div

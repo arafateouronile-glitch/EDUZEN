@@ -19,7 +19,7 @@ export interface PresetAutomation {
   send_to_teachers: boolean
   send_to_coordinators: boolean
   target_type: EmailScheduleTargetType
-  category: 'avant' | 'apres' | 'paiement'
+  category: 'avant' | 'pendant' | 'apres' | 'paiement'
   /** Couleur Tailwind bg pour l'icône (ex: 'bg-blue-100') */
   colorClass: string
   /** Couleur Tailwind text pour l'icône (ex: 'text-blue-600') */
@@ -27,6 +27,22 @@ export interface PresetAutomation {
 }
 
 export const PRESET_AUTOMATIONS: PresetAutomation[] = [
+  // ── Pendant la séance ────────────────────────────────────────────────────
+  {
+    email_type: 'emargement_auto',
+    name: 'Signature émargement (5 min)',
+    description: "Envoie automatiquement le lien de signature d'émargement aux apprenants 5 minutes après le début de chaque séance.",
+    trigger_type: 'after_seance_start',
+    trigger_days: 0,
+    trigger_time: '',
+    send_to_students: true,
+    send_to_teachers: false,
+    send_to_coordinators: false,
+    target_type: 'session',
+    category: 'pendant',
+    colorClass: 'bg-teal-100',
+    textColorClass: 'text-teal-600',
+  },
   // ── Avant la session ─────────────────────────────────────────────────────
   {
     email_type: 'convocation_j14',
@@ -159,6 +175,7 @@ export const PRESET_CATEGORIES: {
   label: string
 }[] = [
   { key: 'avant', label: 'Avant la session' },
+  { key: 'pendant', label: 'Pendant la séance' },
   { key: 'apres', label: 'Après la session' },
   { key: 'paiement', label: 'Paiement' },
 ]

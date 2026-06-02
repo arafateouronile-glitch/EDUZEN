@@ -13,12 +13,13 @@ type EmailScheduleUpdate = Database['public']['Tables']['email_schedules']['Upda
 type EmailScheduleLog = Database['public']['Tables']['email_schedule_logs']['Row']
 type EmailScheduleLogInsert = Database['public']['Tables']['email_schedule_logs']['Insert']
 
-export type EmailScheduleTriggerType = 
+export type EmailScheduleTriggerType =
   | 'before_session_start'
   | 'after_session_end'
   | 'before_evaluation_start'
   | 'after_evaluation_end'
   | 'fixed_date'
+  | 'after_seance_start'
 
 export type EmailScheduleTargetType = 
   | 'session'

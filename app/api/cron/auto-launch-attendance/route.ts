@@ -176,7 +176,24 @@ export async function GET(request: NextRequest) {
 
       if (!sessions?.length) continue
 
+      // Charger les toggles par session (email_type = 'emargement_auto')
+      const sessionIds = (sessions as SessionRow[]).map((s) => s.id)
+      const { data: sessionToggles } = await supabaseAdmin
+        .from('email_schedules')
+        .select('session_id, is_active')
+        .eq('email_type', 'emargement_auto')
+        .in('session_id', sessionIds)
+
+      const toggleMap = new Map(
+        (sessionToggles ?? []).map((t) => [t.session_id, t.is_active])
+      )
+
       for (const session of sessions as SessionRow[]) {
+        // Si un toggle par session existe et est désactivé → on skip
+        if (toggleMap.has(session.id) && toggleMap.get(session.id) === false) {
+          results.push({ sessionId: session.id, organizationId: org.id, launched: false, emailsSent: 0, skipped: 'disabled_by_session_toggle' })
+          continue
+        }
         const result: {
           sessionId: string
           organizationId: string
