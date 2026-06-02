@@ -1,6 +1,6 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { studentService } from '@/lib/services/student.service.client'
@@ -9,7 +9,7 @@ import { paymentService } from '@/lib/services/payment.service.client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Users, FileText, DollarSign, Link as LinkIcon, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Users, FileText, DollarSign, Link as LinkIcon, Copy, Check, UserCheck, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { useState } from 'react'
@@ -22,7 +22,22 @@ export default function StudentDetailPage() {
   const studentId = params.id as string
   const supabase = createClient()
   const { addToast } = useToast()
+  const queryClient = useQueryClient()
   const [copiedLink, setCopiedLink] = useState(false)
+  const [isReactivating, setIsReactivating] = useState(false)
+
+  const handleReactivate = async () => {
+    setIsReactivating(true)
+    try {
+      await studentService.update(studentId, { status: 'active' })
+      await queryClient.invalidateQueries({ queryKey: ['student', studentId] })
+      addToast({ title: 'Apprenant réactivé', description: 'Le statut a été remis à actif.', type: 'success' })
+    } catch {
+      addToast({ title: 'Erreur', description: 'Impossible de réactiver l\'apprenant.', type: 'error' })
+    } finally {
+      setIsReactivating(false)
+    }
+  }
 
   // Récupérer l'élève
   const { data: student, isLoading } = useQuery({
@@ -208,6 +223,21 @@ export default function StudentDetailPage() {
               </>
             )}
           </Button>
+          {student.status === 'inactive' && (
+            <Button
+              variant="outline"
+              className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              onClick={handleReactivate}
+              disabled={isReactivating}
+            >
+              {isReactivating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <UserCheck className="mr-2 h-4 w-4" />
+              )}
+              Réactiver
+            </Button>
+          )}
           <Link href={`/dashboard/students/${studentId}/edit`}>
             <Button>
               <Edit className="mr-2 h-4 w-4" />
