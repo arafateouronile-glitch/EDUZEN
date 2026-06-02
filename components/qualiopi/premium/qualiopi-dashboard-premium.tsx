@@ -514,15 +514,19 @@ export function QualiopiDashboardPremium() {
     await refetchEvidenceList()
   }, [queryClient, refetchEvidenceList])
 
-  // Au premier chargement : lancer le sync des preuves auto puis mettre à jour le tableau de bord
+  // Au premier chargement : lancer les deux syncs en parallèle puis rafraîchir
   useEffect(() => {
     if (!user?.organization_id) return
     let cancelled = false
-    fetch('/api/qualiopi/sync-evidence', { method: 'POST' })
+    Promise.all([
+      fetch('/api/qualiopi/sync-evidence', { method: 'POST' }),
+      fetch('/api/qualiopi/sync-questionnaire-analysis', { method: 'POST' }),
+    ])
       .then(async () => {
         if (cancelled) return
         queryClient.invalidateQueries({ queryKey: ['compliance-evidence-premium'] })
         queryClient.invalidateQueries({ queryKey: ['qualiopi-compliance-rate'] })
+        queryClient.invalidateQueries({ queryKey: ['questionnaire-analysis'] })
         await refetchEvidenceList()
       })
       .catch(() => {})
@@ -760,6 +764,12 @@ export function QualiopiDashboardPremium() {
             <Link href="/dashboard/qualiopi/actions">
               <Sparkles className="h-4 w-4 mr-2" />
               Actions correctives
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/qualiopi/questionnaire-analysis">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Analyse questionnaires
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
