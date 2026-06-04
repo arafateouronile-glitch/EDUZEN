@@ -47,8 +47,48 @@ function buildFounderWelcomeEmail({ prenom, organisme }: { prenom: string; organ
 </html>`
 }
 
+function buildCheckInEmail({ prenom }: { prenom: string }): string {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Comment ça se passe ?</title></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour ${prenom},</p>
+
+            <p style="margin:0 0 20px;">C'est Airtone. Ça fait maintenant 48 heures que vous avez rejoint EduZen — je voulais juste prendre de vos nouvelles.</p>
+
+            <p style="margin:0 0 20px;">Est-ce que tout se passe bien ? Avez-vous réussi à configurer votre organisme et à créer vos premières formations ?</p>
+
+            <p style="margin:0 0 20px;">Si vous avez des questions, si quelque chose bloque, ou si vous voulez juste vous assurer que vous tirez le meilleur parti de l'application pour votre organisme — je vous propose qu'on prenne <strong>10 minutes ensemble</strong>.</p>
+
+            <p style="margin:0 0 20px;">Pas de présentation, pas de démo. Juste un appel rapide pour débloquer ce dont vous avez besoin et vous montrer ce qui peut vraiment faire la différence pour vous.</p>
+
+            <p style="margin:0 0 20px;">Répondez simplement à cet email avec vos disponibilités, et je m'adapte à votre agenda.</p>
+
+            <p style="margin:0 0 40px;">À très vite,</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              Airtone NILE<br>
+              <span style="font-size:14px;color:#555;">Fondateur, EduZen</span><br>
+              <span style="font-size:14px;color:#555;"><a href="tel:+33610441324" style="color:#555;text-decoration:none;">06 10 44 13 24</a> · <a href="https://www.eduzen.io" style="color:#555;text-decoration:none;">eduzen.io</a></span>
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+}
+
 // POST /api/users/post-signup
-// Appelé une fois après l'inscription pour : seeder les templates + planifier l'email fondateur
+// Appelé une fois après l'inscription pour : seeder les templates + planifier les emails fondateur
 export async function POST(_request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -84,16 +124,27 @@ export async function POST(_request: NextRequest) {
       logger.error('[post-signup] Error seeding templates:', err)
     )
 
+    const recipient = email ?? user.email ?? ''
+
     // Email fondateur planifié 15 min après inscription
-    const scheduledAt = new Date(Date.now() + 15 * 60_000).toISOString()
     sendEmailViaResend({
-      to: email ?? user.email ?? '',
+      to: recipient,
       from: 'Airtone NILE — EduZen <contact@eduzen.io>',
       replyTo: 'contact@eduzen.io',
       subject: `${prenom}, bienvenue dans l'écosystème EduZen 👋`,
       html: buildFounderWelcomeEmail({ prenom, organisme: orgName }),
-      scheduledAt,
-    }).catch(err => logger.error('[post-signup] Error scheduling founder email:', err))
+      scheduledAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+    }).catch(err => logger.error('[post-signup] Error scheduling welcome email:', err))
+
+    // Email check-in planifié 48h après inscription
+    sendEmailViaResend({
+      to: recipient,
+      from: 'Airtone NILE — EduZen <contact@eduzen.io>',
+      replyTo: 'contact@eduzen.io',
+      subject: `${prenom}, comment ça se passe ?`,
+      html: buildCheckInEmail({ prenom }),
+      scheduledAt: new Date(Date.now() + 48 * 60 * 60_000).toISOString(),
+    }).catch(err => logger.error('[post-signup] Error scheduling check-in email:', err))
 
     return NextResponse.json({ success: true })
   } catch (error) {
