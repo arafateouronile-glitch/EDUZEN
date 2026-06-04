@@ -76,6 +76,14 @@
     {
       "path": "/api/cron/auto-launch-attendance",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/onboarding-activation",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/onboarding-reengagement",
+      "schedule": "0 10 * * *"
     }
   ],
   "functions": {

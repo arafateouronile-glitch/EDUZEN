@@ -6,6 +6,49 @@ import { createServiceRoleClient } from '@/lib/supabase/service'
 import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
 import { z } from 'zod'
+import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
+
+function buildPostConversionEmail(prenom: string, planName: string): string {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour ${prenom},</p>
+
+            <p style="margin:0 0 20px;">Votre abonnement ${planName} est actif. Merci de votre confiance — c'est une vraie joie de vous compter parmi nos clients.</p>
+
+            <p style="margin:0 0 20px;">Maintenant que vous êtes lancé, voici les 3 choses que les clients les plus efficaces font en premier :</p>
+
+            <p style="margin:0 0 12px;">1. <strong>Finalisez la configuration de votre organisme</strong> — logo, NDA, adresse. Ces infos apparaissent sur tous vos documents.</p>
+
+            <p style="margin:0 0 12px;">2. <strong>Créez un modèle de convention personnalisé</strong> dans les réglages → Modèles de documents. Une fois fait, chaque nouvelle convention se génère en 45 secondes.</p>
+
+            <p style="margin:0 0 20px;">3. <strong>Invitez votre équipe</strong> si vous avez des formateurs ou une assistante — chacun peut avoir son propre accès.</p>
+
+            <p style="margin:0 0 20px;">Si vous avez des questions ou si vous voulez qu'on fasse un point ensemble pour aller plus loin, répondez à cet email ou appelez-moi au <a href="tel:+33610441324" style="color:#1a1a1a;">06 10 44 13 24</a>.</p>
+
+            <p style="margin:0 0 40px;">Merci encore,</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              Airtone NILE<br>
+              <span style="font-size:14px;color:#555;">Fondateur, EduZen</span><br>
+              <span style="font-size:14px;color:#555;"><a href="tel:+33610441324" style="color:#555;text-decoration:none;">06 10 44 13 24</a> · <a href="https://www.eduzen.io" style="color:#555;text-decoration:none;">eduzen.io</a></span>
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+}
 
 // Initialiser Stripe uniquement si la clé est disponible
 const getStripe = () => {
@@ -345,6 +388,25 @@ export async function POST(request: NextRequest) {
       subscriptionId: subscription.id,
       trialEndAt: stripeTrialEndAt.toISOString(),
     })
+
+    // Email post-conversion (non bloquant)
+    {
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('email, full_name')
+        .eq('id', user.id)
+        .single()
+      if (userProfile?.email) {
+        const prenom = (userProfile.full_name ?? userProfile.email).split(' ')[0]
+        sendEmailViaResend({
+          to: userProfile.email,
+          from: 'Airtone NILE — EduZen <contact@eduzen.io>',
+          replyTo: 'contact@eduzen.io',
+          subject: `${prenom}, votre abonnement EduZen est actif`,
+          html: buildPostConversionEmail(prenom, plan.name),
+        }).catch(err => logger.error('[create-trial-subscription] Error sending conversion email:', err))
+      }
+    }
 
     return NextResponse.json({
       success: true,
