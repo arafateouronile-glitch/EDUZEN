@@ -459,102 +459,45 @@ export class SignatureRequestService {
       year: 'numeric',
     })
 
-    const htmlBody = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-              padding: 30px;
-              border-radius: 8px 8px 0 0;
-              text-align: center;
-            }
-            .content {
-              background: #f9fafb;
-              padding: 30px;
-              border-radius: 0 0 8px 8px;
-            }
-            .button {
-              display: inline-block;
-              background: #667eea;
-              color: white;
-              padding: 14px 32px;
-              text-decoration: none;
-              border-radius: 6px;
-              margin: 20px 0;
-              font-weight: 600;
-            }
-            .button:hover {
-              background: #5568d3;
-            }
-            .info-box {
-              background: white;
-              border-left: 4px solid #667eea;
-              padding: 16px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #6b7280;
-              font-size: 14px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1 style="margin: 0;">📝 Demande de signature</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour <strong>${params.recipientName}</strong>,</p>
+    const htmlBody = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
 
-            <p>${params.requesterName} vous demande de signer le document suivant :</p>
+            <p style="margin:0 0 20px;">Bonjour ${params.recipientName},</p>
 
-            <div class="info-box">
-              <strong>📄 ${params.documentTitle}</strong>
-            </div>
+            <p style="margin:0 0 20px;">${params.requesterName} vous demande de signer le document suivant : <strong>${params.documentTitle}</strong>.</p>
 
-            ${params.message ? `<p><em>${params.message}</em></p>` : ''}
+            ${params.message ? `<p style="margin:0 0 20px;font-style:italic;">${params.message}</p>` : ''}
 
-            <p>Pour consulter et signer ce document, veuillez cliquer sur le bouton ci-dessous :</p>
-
-            <div style="text-align: center;">
-              <a href="${params.signatureUrl}" class="button">Signer le document</a>
-            </div>
-
-            <p style="font-size: 14px; color: #6b7280;">
-              Ou copiez ce lien dans votre navigateur :<br>
-              <a href="${params.signatureUrl}" style="color: #667eea;">${params.signatureUrl}</a>
+            <p style="margin:0 0 20px;">
+              <a href="${params.signatureUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Signer le document</a>
             </p>
 
-            <div class="info-box" style="background: #fef3c7; border-left-color: #f59e0b;">
-              <strong>⏰ Date d'expiration :</strong> ${expirationDate}
-            </div>
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Ou copiez ce lien dans votre navigateur : <a href="${params.signatureUrl}" style="color:#555;word-break:break-all;">${params.signatureUrl}</a></p>
 
-            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
-              Cette demande de signature est conforme aux normes eIDAS et garantit la validité juridique de votre signature électronique.
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Date d'expiration : ${expirationDate}</p>
+
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Cette demande de signature est conforme aux normes eIDAS et garantit la validité juridique de votre signature électronique.</p>
+
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Si vous n'êtes pas le destinataire de ce message, veuillez l'ignorer.</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
             </p>
-          </div>
 
-          <div class="footer">
-            <p>EDUZEN - Plateforme de gestion de formation</p>
-            <p style="font-size: 12px;">Si vous n'êtes pas le destinataire de ce message, veuillez l'ignorer.</p>
-          </div>
-        </body>
-      </html>
-    `
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
     const textBody = `
 Bonjour ${params.recipientName},
@@ -573,7 +516,7 @@ Date d'expiration : ${expirationDate}
 Cette demande de signature est conforme aux normes eIDAS et garantit la validité juridique de votre signature électronique.
 
 ---
-EDUZEN - Plateforme de gestion de formation
+EduZen - Plateforme de gestion de formation
 Si vous n'êtes pas le destinataire de ce message, veuillez l'ignorer.
     `
 
@@ -603,81 +546,41 @@ Si vous n'êtes pas le destinataire de ce message, veuillez l'ignorer.
       ? `Expire le ${new Date(params.expiresAt).toLocaleDateString('fr-FR')}`
       : ''
 
-    const htmlBody = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
-              color: white;
-              padding: 30px;
-              border-radius: 8px 8px 0 0;
-              text-align: center;
-            }
-            .content {
-              background: #f9fafb;
-              padding: 30px;
-              border-radius: 0 0 8px 8px;
-            }
-            .button {
-              display: inline-block;
-              background: #f59e0b;
-              color: white;
-              padding: 14px 32px;
-              text-decoration: none;
-              border-radius: 6px;
-              margin: 20px 0;
-              font-weight: 600;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #6b7280;
-              font-size: 14px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1 style="margin: 0;">🔔 Rappel de signature</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour <strong>${params.recipientName}</strong>,</p>
+    const htmlBody = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
 
-            <p>Ceci est un rappel concernant la demande de signature du document suivant :</p>
+            <p style="margin:0 0 20px;">Bonjour ${params.recipientName},</p>
 
-            <p><strong>📄 ${params.documentTitle}</strong></p>
+            <p style="margin:0 0 20px;">Ceci est un rappel concernant la demande de signature du document suivant : <strong>${params.documentTitle}</strong>.</p>
 
-            <p>Ce document est en attente de votre signature.</p>
+            <p style="margin:0 0 20px;">Ce document est en attente de votre signature.</p>
 
-            ${expirationText ? `<p style="color: #f59e0b;"><strong>⏰ ${expirationText}</strong></p>` : ''}
+            ${expirationText ? `<p style="margin:0 0 20px;font-size:14px;color:#555;">${expirationText}</p>` : ''}
 
-            <div style="text-align: center;">
-              <a href="${params.signatureUrl}" class="button">Signer maintenant</a>
-            </div>
-
-            <p style="font-size: 14px; color: #6b7280;">
-              Lien de signature :<br>
-              <a href="${params.signatureUrl}" style="color: #f59e0b;">${params.signatureUrl}</a>
+            <p style="margin:0 0 20px;">
+              <a href="${params.signatureUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Signer maintenant</a>
             </p>
-          </div>
 
-          <div class="footer">
-            <p>EDUZEN - Plateforme de gestion de formation</p>
-          </div>
-        </body>
-      </html>
-    `
+            <p style="margin:0 0 40px;font-size:14px;color:#555;">Lien de signature : <a href="${params.signatureUrl}" style="color:#555;word-break:break-all;">${params.signatureUrl}</a></p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
     const textBody = `
 Bonjour ${params.recipientName},
@@ -694,7 +597,7 @@ Pour signer ce document, veuillez cliquer sur ce lien :
 ${params.signatureUrl}
 
 ---
-EDUZEN - Plateforme de gestion de formation
+EduZen - Plateforme de gestion de formation
     `
 
     await this.emailService.sendEmail({

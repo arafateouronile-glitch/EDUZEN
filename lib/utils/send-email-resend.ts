@@ -23,6 +23,9 @@ export interface SendEmailViaResendOptions {
   html?: string
   text?: string
   replyTo?: string
+  from?: string
+  /** ISO 8601 — date d'envoi planifié (ex: new Date(Date.now() + 15 * 60_000).toISOString()) */
+  scheduledAt?: string
 }
 
 /**
@@ -48,26 +51,25 @@ export async function sendEmailViaResend(
   try {
     const { Resend } = await import('resend')
     const resend = new Resend(resendApiKey)
-    let from = FROM_DEFAULT
-    let { data, error } = await resend.emails.send({
+    let from = options.from ?? FROM_DEFAULT
+    const emailPayload = {
       from,
       to: recipients,
       subject: options.subject,
       html: options.html ?? undefined,
       text: options.text ?? (options.html ? options.html.replace(/<[^>]*>/g, '') : undefined),
       replyTo: options.replyTo ?? undefined,
-    } as Parameters<typeof resend.emails.send>[0])
+      ...(options.scheduledAt ? { scheduledAt: options.scheduledAt } : {}),
+    } as Parameters<typeof resend.emails.send>[0]
+
+    let { data, error } = await resend.emails.send(emailPayload)
 
     if (error && process.env.NODE_ENV === 'development' && isDomainNotVerifiedError(error as { statusCode?: number; message?: string })) {
       logger.warn('Email (Resend server) - Domaine non vérifié, nouvel essai avec onboarding@resend.dev')
       from = RESEND_SANDBOX_FROM
       const retry = await resend.emails.send({
+        ...emailPayload,
         from,
-        to: recipients,
-        subject: options.subject,
-        html: options.html ?? undefined,
-        text: options.text ?? (options.html ? options.html.replace(/<[^>]*>/g, '') : undefined),
-        replyTo: options.replyTo ?? undefined,
       } as Parameters<typeof resend.emails.send>[0])
       error = retry.error ?? null
       data = retry.data

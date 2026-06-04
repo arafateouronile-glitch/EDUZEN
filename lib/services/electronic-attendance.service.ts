@@ -742,93 +742,42 @@ export class ElectronicAttendanceService {
 
     const timeText = startTime ? ` à ${startTime}` : ''
 
-    const htmlBody = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-              color: white;
-              padding: 30px;
-              border-radius: 8px 8px 0 0;
-              text-align: center;
-            }
-            .content {
-              background: #f9fafb;
-              padding: 30px;
-              border-radius: 0 0 8px 8px;
-            }
-            .button {
-              display: inline-block;
-              background: #10b981;
-              color: white;
-              padding: 14px 32px;
-              text-decoration: none;
-              border-radius: 6px;
-              margin: 20px 0;
-              font-weight: 600;
-            }
-            .info-box {
-              background: white;
-              border-left: 4px solid #10b981;
-              padding: 16px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #6b7280;
-              font-size: 14px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1 style="margin: 0;">✍️ Émargement électronique</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour <strong>${studentName}</strong>,</p>
+    const htmlBody = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
 
-            <p>Vous êtes invité(e) à émarger électroniquement pour la session suivante :</p>
+            <p style="margin:0 0 20px;">Bonjour ${studentName},</p>
 
-            <div class="info-box">
-              <strong>📚 ${sessionTitle}</strong><br>
-              <strong>📅 ${formattedDate}${timeText}</strong>
-            </div>
+            <p style="margin:0 0 20px;">Vous êtes invité(e) à émarger électroniquement pour la session suivante :</p>
 
-            <p>Pour valider votre présence, veuillez cliquer sur le bouton ci-dessous :</p>
+            <p style="margin:0 0 8px;"><strong>${sessionTitle}</strong></p>
+            <p style="margin:0 0 20px;">${formattedDate}${timeText}</p>
 
-            <div style="text-align: center;">
-              <a href="${attendanceUrl}" class="button">Émarger maintenant</a>
-            </div>
-
-            <p style="font-size: 14px; color: #6b7280;">
-              Ou copiez ce lien dans votre navigateur :<br>
-              <a href="${attendanceUrl}" style="color: #10b981;">${attendanceUrl}</a>
+            <p style="margin:0 0 20px;">
+              <a href="${attendanceUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Émarger maintenant</a>
             </p>
 
-            <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
-              Votre signature électronique sera enregistrée de manière sécurisée et conforme aux normes en vigueur.
-            </p>
-          </div>
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Ou copiez ce lien dans votre navigateur : <a href="${attendanceUrl}" style="color:#555;word-break:break-all;">${attendanceUrl}</a></p>
 
-          <div class="footer">
-            <p>EDUZEN - Plateforme de gestion de formation</p>
-          </div>
-        </body>
-      </html>
-    `
+            <p style="margin:0 0 40px;font-size:14px;color:#555;">Votre signature électronique sera enregistrée de manière sécurisée et conforme aux normes en vigueur.</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
     const textBody = `
 Bonjour ${studentName},
@@ -844,7 +793,7 @@ ${attendanceUrl}
 Votre signature électronique sera enregistrée de manière sécurisée et conforme aux normes en vigueur.
 
 ---
-EDUZEN - Plateforme de gestion de formation
+EduZen - Plateforme de gestion de formation
     `
 
     const result = await sendEmailViaResend({
@@ -874,80 +823,42 @@ EDUZEN - Plateforme de gestion de formation
       year: 'numeric',
     })
 
-    const htmlBody = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
-              color: white;
-              padding: 30px;
-              border-radius: 8px 8px 0 0;
-              text-align: center;
-            }
-            .content {
-              background: #f9fafb;
-              padding: 30px;
-              border-radius: 0 0 8px 8px;
-            }
-            .button {
-              display: inline-block;
-              background: #f59e0b;
-              color: white;
-              padding: 14px 32px;
-              text-decoration: none;
-              border-radius: 6px;
-              margin: 20px 0;
-              font-weight: 600;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #6b7280;
-              font-size: 14px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1 style="margin: 0;">🔔 Rappel d'émargement</h1>
-          </div>
-          <div class="content">
-            <p>Bonjour <strong>${studentName}</strong>,</p>
+    const htmlBody = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
 
-            <p>Ceci est un rappel concernant l'émargement électronique de la session :</p>
+            <p style="margin:0 0 20px;">Bonjour ${studentName},</p>
 
-            <p><strong>📚 ${sessionTitle}</strong><br>
-            <strong>📅 ${formattedDate}</strong></p>
+            <p style="margin:0 0 20px;">Ceci est un rappel concernant l'émargement électronique de la session :</p>
 
-            <p>Vous n'avez pas encore validé votre présence. Merci d'émarger dès que possible.</p>
+            <p style="margin:0 0 8px;"><strong>${sessionTitle}</strong></p>
+            <p style="margin:0 0 20px;">${formattedDate}</p>
 
-            <div style="text-align: center;">
-              <a href="${attendanceUrl}" class="button">Émarger maintenant</a>
-            </div>
+            <p style="margin:0 0 20px;">Vous n'avez pas encore validé votre présence. Merci d'émarger dès que possible.</p>
 
-            <p style="font-size: 14px; color: #6b7280;">
-              Lien d'émargement :<br>
-              <a href="${attendanceUrl}" style="color: #f59e0b;">${attendanceUrl}</a>
+            <p style="margin:0 0 20px;">
+              <a href="${attendanceUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Émarger maintenant</a>
             </p>
-          </div>
 
-          <div class="footer">
-            <p>EDUZEN - Plateforme de gestion de formation</p>
-          </div>
-        </body>
-      </html>
-    `
+            <p style="margin:0 0 40px;font-size:14px;color:#555;">Lien d'émargement : <a href="${attendanceUrl}" style="color:#555;word-break:break-all;">${attendanceUrl}</a></p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
     const textBody = `
 Bonjour ${studentName},

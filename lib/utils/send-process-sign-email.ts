@@ -25,23 +25,39 @@ export async function sendProcessSignEmail(params: SendProcessSignEmailParams): 
     return false
   }
 
-  const html = `
-<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #274472 0%, #1e3a5f 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-    <h1 style="margin: 0;">Signature requise</h1>
-  </div>
-  <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
-    <p>Bonjour ${params.recipientName},</p>
-    <p>Un document vous attend : <strong>${params.documentTitle}</strong>${params.positionLabel ? ` (${params.positionLabel})` : ''}.</p>
-    ${params.message ? `<p>${params.message}</p>` : ''}
-    <p style="text-align: center; margin: 24px 0;">
-      <a href="${params.signUrl}" style="display: inline-block; background: #34B9EE; color: #0f2847; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">Signer le document</a>
-    </p>
-  </div>
-  <p style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 14px;">${APP_NAME} – Plateforme de gestion de formation</p>
-</body></html>`
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour ${params.recipientName},</p>
+
+            <p style="margin:0 0 20px;">Un document vous attend : <strong>${params.documentTitle}</strong>${params.positionLabel ? ` (${params.positionLabel})` : ''}.</p>
+
+            ${params.message ? `<p style="margin:0 0 20px;">${params.message}</p>` : ''}
+
+            <p style="margin:0 0 20px;">
+              <a href="${params.signUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Signer le document</a>
+            </p>
+
+            <p style="margin:0 0 40px;">Cordialement,</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
   try {
     const { Resend } = await import('resend')

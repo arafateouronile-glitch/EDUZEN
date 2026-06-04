@@ -603,6 +603,9 @@ export function useAuth() {
         queryClient.invalidateQueries({ queryKey: ['user', authData.user.id] })
       }
 
+      // Déclencher les actions post-inscription (templates par défaut + email fondateur) en arrière-plan
+      fetch('/api/users/post-signup', { method: 'POST' }).catch(() => {})
+
       if (authUser) {
         router.push('/dashboard/onboarding')
       } else {

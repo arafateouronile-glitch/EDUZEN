@@ -299,40 +299,47 @@ async function postCreateUser(request: NextRequest) {
               from: fromEmail,
               to: String(email),
               subject: `Votre compte EDUZEN a été créé - ${organization?.name || 'EDUZEN'}`,
-              html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                </head>
-                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <div style="background: linear-gradient(135deg, #335ACF 0%, #6B46C1 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                    <h1 style="color: white; margin: 0;">Bienvenue sur EDUZEN</h1>
-                  </div>
-                  <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-                    <p>Bonjour ${String(full_name)},</p>
-                    <p>Votre compte a été créé avec succès sur <strong>${organization?.name || 'EDUZEN'}</strong> en tant que <strong>${roleLabel}</strong>.</p>
-                    <p>Vous pouvez maintenant accéder à votre compte en utilisant :</p>
-                    <ul style="background: white; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                      <li><strong>Email :</strong> ${String(email)}</li>
-                      <li><strong>Mot de passe :</strong> Le mot de passe qui vous a été assigné</li>
-                    </ul>
-                    <p>Pour vous connecter, cliquez sur le bouton ci-dessous :</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                      <a href="${loginUrl}" style="display: inline-block; background: #335ACF; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Accéder à mon compte</a>
-                    </div>
-                    <p style="font-size: 12px; color: #666; margin-top: 30px;">Ou copiez-collez ce lien dans votre navigateur :</p>
-                    <p style="font-size: 12px; color: #335ACF; word-break: break-all;">${loginUrl}</p>
-                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                      <p style="margin: 0; font-size: 14px;"><strong>💡 Astuce :</strong> Si vous souhaitez changer votre mot de passe, vous pouvez utiliser la fonctionnalité "Mot de passe oublié" sur la page de connexion.</p>
-                    </div>
-                    <p style="margin-top: 30px;">Si vous n'avez pas demandé la création de ce compte, veuillez contacter l'administrateur.</p>
-                    <p style="margin-top: 20px;">Cordialement,<br>L'équipe EDUZEN</p>
-                  </div>
-                </body>
-                </html>
-              `,
+              html: `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour ${String(full_name)},</p>
+
+            <p style="margin:0 0 20px;">Votre compte a été créé sur <strong>${organization?.name || 'EduZen'}</strong> en tant que <strong>${roleLabel}</strong>.</p>
+
+            <p style="margin:0 0 20px;">Vous pouvez vous connecter avec :<br>
+            Email : ${String(email)}<br>
+            Mot de passe : le mot de passe qui vous a été assigné</p>
+
+            <p style="margin:0 0 20px;">
+              <a href="${loginUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Accéder à mon compte</a>
+            </p>
+
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Ou copiez-collez ce lien dans votre navigateur : <a href="${loginUrl}" style="color:#555;word-break:break-all;">${loginUrl}</a></p>
+
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Si vous souhaitez changer votre mot de passe, utilisez la fonctionnalité "Mot de passe oublié" sur la page de connexion.</p>
+
+            <p style="margin:0 0 20px;">Si vous n'avez pas demandé la création de ce compte, veuillez contacter l'administrateur.</p>
+
+            <p style="margin:0 0 40px;">Cordialement,</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
               text: `
                 Bienvenue sur EDUZEN
 

@@ -19,89 +19,53 @@ function buildWelcomeEmail({
   passwordUrl: string | undefined
 }): string {
   const loginBtn = loginUrl
-    ? `<a href="${loginUrl}" style="display:inline-block;background:linear-gradient(135deg,#0052b4,#00b4d8);color:#ffffff;font-family:'DM Sans',Arial,sans-serif;font-size:16px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:8px;margin:8px 0;">Accéder à mon espace EduZen →</a>`
-    : '<p style="color:#555;">Le lien de connexion n\'a pas pu être généré. Contactez le support.</p>'
+    ? `<a href="${loginUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Accéder à mon espace EduZen</a>`
+    : '<p style="margin:0 0 20px;color:#555;">Le lien de connexion n\'a pas pu être généré. Contactez le support.</p>'
 
   const passwordBtn = passwordUrl
-    ? `<a href="${passwordUrl}" style="display:inline-block;background:#ffffff;color:#0052b4;font-family:'DM Sans',Arial,sans-serif;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:8px;border:2px solid #0052b4;margin:8px 0;">Définir mon mot de passe</a>`
+    ? `<a href="${passwordUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Définir mon mot de passe</a>`
     : ''
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Bienvenue sur EduZen</title></head>
-<body style="margin:0;padding:0;background:#f0f4f8;font-family:'DM Sans',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;padding:40px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-
-        <!-- Header -->
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
         <tr>
-          <td style="background:linear-gradient(135deg,#0a1628 0%,#0d2240 60%,#0a2a4a 100%);padding:40px 48px 36px;text-align:center;">
-            <div style="font-family:'Syne',Arial,sans-serif;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">
-              Edu<span style="color:#00b4d8;">Zen</span>
-            </div>
-            <p style="color:#93c5fd;font-size:13px;margin:8px 0 0;letter-spacing:1px;text-transform:uppercase;">Plateforme de gestion d'organismes de formation</p>
-          </td>
-        </tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
 
-        <!-- Body -->
-        <tr>
-          <td style="padding:48px 48px 32px;">
-            <h1 style="font-size:26px;font-weight:700;color:#0a1628;margin:0 0 16px;line-height:1.3;">
-              Bienvenue, ${prenom}&nbsp;! 🎉
-            </h1>
-            <p style="font-size:16px;color:#4b5563;line-height:1.7;margin:0 0 8px;">
-              Votre espace EduZen est prêt. Cliquez sur le bouton ci-dessous pour vous connecter directement et commencer la configuration de votre organisme de formation.
-            </p>
-            <p style="font-size:14px;color:#9ca3af;margin:0 0 32px;">Ce lien de connexion est à usage unique et valable 24&nbsp;heures.</p>
+            <p style="margin:0 0 20px;">Bonjour ${prenom},</p>
 
-            <div style="text-align:center;margin:0 0 40px;">
+            <p style="margin:0 0 20px;">Votre espace EduZen est prêt. Cliquez sur le lien ci-dessous pour vous connecter directement et commencer la configuration de votre organisme de formation.</p>
+
+            <p style="margin:0 0 8px;font-size:14px;color:#555;">Ce lien de connexion est à usage unique et valable 24 heures.</p>
+
+            <p style="margin:0 0 32px;">
               ${loginBtn}
-            </div>
-
-            <!-- Divider -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 36px;">
-              <tr>
-                <td style="border-top:1px solid #e5e7eb;"></td>
-                <td style="padding:0 16px;white-space:nowrap;color:#9ca3af;font-size:13px;">ou</td>
-                <td style="border-top:1px solid #e5e7eb;"></td>
-              </tr>
-            </table>
-
-            <!-- Password section -->
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f9ff;border-radius:12px;border:1px solid #bae6fd;margin:0 0 32px;">
-              <tr>
-                <td style="padding:28px 32px;">
-                  <p style="font-size:17px;font-weight:700;color:#0052b4;margin:0 0 10px;">🔐 Définissez votre mot de passe</p>
-                  <p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 20px;">
-                    Pour vous connecter à tout moment avec votre adresse email et un mot de passe de votre choix, cliquez sur le lien ci-dessous. Cela prend moins d'une minute.
-                  </p>
-                  <div style="text-align:center;">
-                    ${passwordBtn}
-                  </div>
-                  <p style="font-size:12px;color:#9ca3af;margin:16px 0 0;text-align:center;">
-                    Ce lien est valable 24&nbsp;heures et n'est utilisable qu'une seule fois.
-                  </p>
-                </td>
-              </tr>
-            </table>
-
-            <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0;">
-              Si vous n'avez pas rempli ce formulaire, ignorez simplement cet email — aucun compte ne sera activé sans confirmation.
             </p>
+
+            <p style="margin:0 0 20px;">Pour vous connecter à tout moment avec votre adresse email et un mot de passe de votre choix, vous pouvez également définir votre mot de passe ici :</p>
+
+            <p style="margin:0 0 8px;">
+              ${passwordBtn}
+            </p>
+
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Ce lien est valable 24 heures et n'est utilisable qu'une seule fois.</p>
+
+            <p style="margin:0 0 20px;font-size:14px;color:#555;">Si vous n'avez pas rempli ce formulaire, ignorez simplement cet email — aucun compte ne sera activé sans confirmation.</p>
+
+            <p style="margin:0 0 40px;">Bienvenue,</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              Airtone NILE<br>
+              <span style="font-size:14px;color:#555;">Fondateur, EduZen</span><br>
+              <span style="font-size:14px;color:#555;"><a href="tel:+33610441324" style="color:#555;text-decoration:none;">06 10 44 13 24</a> · <a href="https://www.eduzen.io" style="color:#555;text-decoration:none;">eduzen.io</a></span>
+            </p>
+
           </td>
         </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f8fafc;padding:24px 48px;border-top:1px solid #e5e7eb;">
-            <p style="font-size:12px;color:#9ca3af;margin:0;text-align:center;line-height:1.6;">
-              EduZen — La plateforme tout-en-un pour les organismes de formation<br>
-              <a href="https://www.eduzen.io" style="color:#0052b4;text-decoration:none;">www.eduzen.io</a>
-            </p>
-          </td>
-        </tr>
-
       </table>
     </td></tr>
   </table>

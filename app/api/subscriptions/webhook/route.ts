@@ -241,28 +241,47 @@ export async function POST(request: NextRequest) {
             }
 
             const plansHtml = planLinks.length > 0
-              ? `<p style="margin: 20px 0 8px; font-weight: 600; color: #1a1a1a;">Choisissez votre plan et payez directement :</p>
-${planLinks.map(l => `<p style="margin: 6px 0;"><a href="${l.url}" style="display: block; background: #335ACF; color: white; padding: 13px 20px; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; font-size: 15px;">${escapeHtml(l.name)} — ${l.priceHt}&nbsp;€&nbsp;/&nbsp;mois HT</a></p>`).join('\n')}
-<p style="text-align: center; font-size: 13px; color: #888; margin-top: 8px;">ou <a href="${escapeHtml(dashboardUrl)}" style="color: #335ACF;">voir tous les plans</a></p>`
-              : `<p style="text-align: center; margin: 28px 0;"><a href="${escapeHtml(dashboardUrl)}" style="display: inline-block; background: #335ACF; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600;">Choisir mon abonnement</a></p>`
+              ? `<p style="margin:0 0 12px;">Choisissez votre plan et accédez directement au paiement :</p>
+${planLinks.map(l => `<p style="margin:0 0 8px;"><a href="${l.url}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">${escapeHtml(l.name)} — ${l.priceHt} €/mois HT</a></p>`).join('\n')}
+<p style="margin:8px 0 0;font-size:14px;color:#555;">ou <a href="${escapeHtml(dashboardUrl)}" style="color:#1a1a1a;">voir tous les plans</a></p>`
+              : `<p style="margin:0 0 20px;"><a href="${escapeHtml(dashboardUrl)}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Choisir mon abonnement</a></p>`
 
             if (uniqueEmails.length > 0) {
               await sendEmailViaResend({
                 to: uniqueEmails,
                 subject: `EDUZEN — Votre essai gratuit se termine le ${trialEndDate}`,
                 html: `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1a1a1a; line-height: 1.6;">
-  <p>Bonjour,</p>
-  <p>Votre période d'essai gratuit d'EDUZEN pour <strong>${escapeHtml(orgName)}</strong> se termine dans 3 jours (le ${escapeHtml(trialEndDate)}).</p>
-  <p>Pour continuer à profiter de toutes les fonctionnalités sans interruption :</p>
-  ${plansHtml}
-  <p style="font-size: 14px; color: #666;">Vous pourrez annuler à tout moment. Aucun prélèvement avant la fin de votre essai.</p>
-  <p>Cordialement,<br>L'équipe EDUZEN</p>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour,</p>
+
+            <p style="margin:0 0 20px;">Votre période d'essai gratuit d'EduZen pour <strong>${escapeHtml(orgName)}</strong> se termine dans 3 jours, le ${escapeHtml(trialEndDate)}.</p>
+
+            <p style="margin:0 0 20px;">Pour continuer à profiter de toutes les fonctionnalités sans interruption :</p>
+
+            ${plansHtml}
+
+            <p style="margin:20px 0 40px;font-size:14px;color:#555;">Aucun prélèvement avant la fin de votre essai. Annulation possible à tout moment.</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`,
-                text: `Bonjour,\n\nVotre essai gratuit EDUZEN pour ${orgName} se termine le ${trialEndDate}.\n\nChoisissez votre plan et payez directement :\n${planLinks.length > 0 ? planLinks.map(l => `- ${l.name} (${l.priceHt} €/mois HT) : ${l.url}`).join('\n') : dashboardUrl}\n\nCordialement,\nL'équipe EDUZEN`,
+                text: `Bonjour,\n\nVotre essai gratuit EduZen pour ${orgName} se termine le ${trialEndDate}.\n\nChoisissez votre plan et payez directement :\n${planLinks.length > 0 ? planLinks.map(l => `- ${l.name} (${l.priceHt} €/mois HT) : ${l.url}`).join('\n') : dashboardUrl}\n\nCordialement,\nL'équipe EduZen`,
               })
               logger.info('Email fin d\'essai envoyé', { organizationId, to: uniqueEmails })
             }

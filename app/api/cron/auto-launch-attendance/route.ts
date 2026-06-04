@@ -64,39 +64,38 @@ function buildAttendanceEmailHtml(params: {
   const timeText = startTime ? ` à ${startTime.substring(0, 5)}` : ''
 
   return `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <style>
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-      .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }
-      .header h1 { margin: 0; font-size: 24px; }
-      .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-      .info-box { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #10b981; }
-      .cta-button { display: inline-block; background: #10b981; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin: 20px 0; }
-      .footer { text-align: center; margin-top: 20px; color: #6b7280; font-size: 12px; }
-    </style>
-  </head>
-  <body>
-    <div class="header">
-      <h1>✍️ Émargement numérique</h1>
-    </div>
-    <div class="content">
-      <p>Bonjour <strong>${studentName}</strong>,</p>
-      <p>Votre séance de formation vient de commencer. Merci de signer votre feuille d'émargement.</p>
-      <div class="info-box">
-        <p><strong>📚 Formation :</strong> ${sessionTitle}</p>
-        <p><strong>📅 Date :</strong> ${formattedDate}${timeText}</p>
-      </div>
-      <p style="text-align:center;">
-        <a href="${attendanceUrl}" class="cta-button">Signer mon émargement</a>
-      </p>
-      <p style="color:#6b7280;font-size:13px;">Ce lien est valable 4 heures. Si vous ne pouvez pas cliquer, copiez-collez l'URL suivante dans votre navigateur :<br>${attendanceUrl}</p>
-    </div>
-    <div class="footer">
-      <p>EDUZEN — Plateforme de gestion de formations</p>
-    </div>
-  </body>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour ${studentName},</p>
+
+            <p style="margin:0 0 20px;">Votre séance de formation vient de commencer. Merci de signer votre feuille d'émargement.</p>
+
+            <p style="margin:0 0 8px;"><strong>Formation :</strong> ${sessionTitle}</p>
+            <p style="margin:0 0 20px;"><strong>Date :</strong> ${formattedDate}${timeText}</p>
+
+            <p style="margin:0 0 20px;">
+              <a href="${attendanceUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:4px;">Signer mon émargement</a>
+            </p>
+
+            <p style="margin:0 0 40px;font-size:14px;color:#555;">Ce lien est valable 4 heures. Si vous ne pouvez pas cliquer, copiez-collez cette URL dans votre navigateur : <a href="${attendanceUrl}" style="color:#555;word-break:break-all;">${attendanceUrl}</a></p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
 </html>`
 }
 

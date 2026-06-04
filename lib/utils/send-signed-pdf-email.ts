@@ -43,20 +43,33 @@ export async function sendSignedPdfEmails(params: SendSignedPdfParams): Promise<
   }
 
   const content = Buffer.from(params.signedPdfBuffer)
-  const html = `
-<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #274472 0%, #1e3a5f 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-    <h1 style="margin: 0;">Document signé</h1>
-  </div>
-  <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
-    <p>Bonjour,</p>
-    <p>Veuillez trouver ci-joint votre copie du document signé : <strong>${params.documentTitle}</strong>.</p>
-    <p>Ce document a été scellé électroniquement et constitue une preuve conforme aux exigences en vigueur.</p>
-  </div>
-  <p style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 14px;">${APP_NAME} – Plateforme de gestion de formation</p>
-</body></html>`
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour,</p>
+
+            <p style="margin:0 0 20px;">Veuillez trouver ci-joint votre copie du document signé : <strong>${params.documentTitle}</strong>.</p>
+
+            <p style="margin:0 0 40px;">Ce document a été scellé électroniquement et constitue une preuve conforme aux exigences en vigueur.</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
   const { Resend } = await import('resend')
   const resend = new Resend(RESEND_API_KEY)
@@ -115,20 +128,33 @@ export async function sendSignatureNotificationEmails(params: {
   const { RESEND_API_KEY } = process.env
   if (!RESEND_API_KEY) return
 
-  const html = `
-<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #274472 0%, #1e3a5f 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-    <h1 style="margin: 0;">Document signé</h1>
-  </div>
-  <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
-    <p>Bonjour,</p>
-    <p>Le document <strong>${params.documentTitle}</strong> a bien été signé électroniquement.</p>
-    <p>La copie signée sera disponible prochainement dans votre espace.</p>
-  </div>
-  <p style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 14px;">${APP_NAME} – Plateforme de gestion de formation</p>
-</body></html>`
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour,</p>
+
+            <p style="margin:0 0 20px;">Le document <strong>${params.documentTitle}</strong> a bien été signé électroniquement.</p>
+
+            <p style="margin:0 0 40px;">La copie signée sera disponible prochainement dans votre espace.</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
   const { Resend } = await import('resend')
   const resend = new Resend(RESEND_API_KEY)
@@ -164,19 +190,31 @@ export async function sendSignedPdfToRecipients(params: {
   }
 
   const content = Buffer.from(params.signedPdfBuffer)
-  const html = `
-<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #274472 0%, #1e3a5f 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-    <h1 style="margin: 0;">Convention signée</h1>
-  </div>
-  <div style="background: #f9fafb; padding: 24px; border-radius: 0 0 8px 8px;">
-    <p>Bonjour,</p>
-    <p>La convention <strong>${params.documentTitle}</strong> a été signée par toutes les parties. Veuillez trouver ci-joint votre copie.</p>
-  </div>
-  <p style="text-align: center; margin-top: 24px; color: #9ca3af; font-size: 14px;">EDUZEN – Plateforme de gestion de formation</p>
-</body></html>`
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:48px 24px;">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+        <tr>
+          <td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
+
+            <p style="margin:0 0 20px;">Bonjour,</p>
+
+            <p style="margin:0 0 20px;">La convention <strong>${params.documentTitle}</strong> a été signée par toutes les parties. Veuillez trouver ci-joint votre copie.</p>
+
+            <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
+              L'équipe EduZen
+            </p>
+
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
 
   const { Resend } = await import('resend')
   const resend = new Resend(RESEND_API_KEY)
