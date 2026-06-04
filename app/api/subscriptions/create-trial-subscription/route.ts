@@ -223,6 +223,25 @@ export async function POST(request: NextRequest) {
         trialEndAt: trialEndAt.toISOString(),
       })
 
+      // Email post-conversion (non bloquant)
+      {
+        const { data: userProfile } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', user.id)
+          .single()
+        if (userProfile?.email) {
+          const prenom = (userProfile.full_name ?? userProfile.email).split(' ')[0]
+          sendEmailViaResend({
+            to: userProfile.email,
+            from: 'Airtone NILE — EduZen <contact@eduzen.io>',
+            replyTo: 'contact@eduzen.io',
+            subject: `${prenom}, votre abonnement EduZen est actif`,
+            html: buildPostConversionEmail(prenom, plan.name),
+          }).catch(err => logger.error('[create-trial-subscription] Error sending conversion email:', err))
+        }
+      }
+
       return NextResponse.json({
         success: true,
         subscriptionId: null,
@@ -230,7 +249,7 @@ export async function POST(request: NextRequest) {
         trialEndAt: trialEndAt.toISOString(),
         status: 'trialing',
         planName: plan.name,
-        paymentMethodRequired: true, // Indique que la carte sera nécessaire
+        paymentMethodRequired: true,
       })
     }
 
