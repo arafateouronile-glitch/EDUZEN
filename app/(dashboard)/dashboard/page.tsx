@@ -93,6 +93,10 @@ const DemoDocumentButton = dynamic(() => import('@/components/dashboard/demo-doc
   ssr: false,
 })
 
+const TrialEndingBanner = dynamic(() => import('@/components/dashboard/trial-ending-banner').then((mod) => mod.TrialEndingBanner), {
+  ssr: false,
+})
+
 const QualiopiComplianceScore = dynamic(() => import('@/components/qualiopi/compliance-score').then((mod) => mod.QualiopiComplianceScore), {
   ssr: false,
   loading: () => <div className="h-48 bg-gray-100 rounded-lg animate-pulse" />
@@ -1142,6 +1146,9 @@ export default function DashboardPage() {
           },
         ] satisfies AdminHeroKPI[]}
       />
+
+      {/* Bannière fin d'essai — visible ≤ 3 jours avant expiration */}
+      <TrialEndingBanner />
 
       {/* Bouton démo document — visible tant qu'aucun document n'a été généré */}
       <DemoDocumentButton />
