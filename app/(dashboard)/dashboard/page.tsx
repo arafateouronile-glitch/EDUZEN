@@ -89,6 +89,10 @@ const OnboardingChecklist = dynamic(() => import('@/components/onboarding/onboar
   ssr: false,
 })
 
+const DemoDocumentButton = dynamic(() => import('@/components/dashboard/demo-document-button').then((mod) => mod.DemoDocumentButton), {
+  ssr: false,
+})
+
 const QualiopiComplianceScore = dynamic(() => import('@/components/qualiopi/compliance-score').then((mod) => mod.QualiopiComplianceScore), {
   ssr: false,
   loading: () => <div className="h-48 bg-gray-100 rounded-lg animate-pulse" />
@@ -1138,6 +1142,9 @@ export default function DashboardPage() {
           },
         ] satisfies AdminHeroKPI[]}
       />
+
+      {/* Bouton démo document — visible tant qu'aucun document n'a été généré */}
+      <DemoDocumentButton />
 
       {/* Bento Grid Layout Principal avec animations améliorées */}
       <BentoGrid columns={4} gap="lg">
