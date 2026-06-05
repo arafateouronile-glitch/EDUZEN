@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Circle,
   X,
-  Gift,
   ChevronDown,
   ChevronUp,
   ListChecks,
@@ -27,35 +26,20 @@ const DELAY_MS = 2 * 60 * 1000 // 2 minutes
 interface ChecklistItem {
   id: string
   label: string
-  description?: string
-  link?: string
-  reward?: string
+  description: string
+  link: string
   completed: boolean
 }
 
-function getStoredHidden(): boolean {
+function getStored(key: string): boolean {
   if (typeof window === 'undefined') return false
-  try {
-    return localStorage.getItem(STORAGE_HIDDEN) === 'true'
-  } catch {
-    return false
-  }
-}
-
-function getStoredDismissed(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return localStorage.getItem(STORAGE_DISMISSED) === 'true'
-  } catch {
-    return false
-  }
+  try { return localStorage.getItem(key) === 'true' } catch { return false }
 }
 
 export function OnboardingChecklist() {
   const { user } = useAuth()
   const supabase = createClient()
   const [isExpanded, setIsExpanded] = useState(true)
-  const [localCompleted, setLocalCompleted] = useState<Set<string>>(new Set())
   const [isHidden, setIsHidden] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -63,20 +47,18 @@ export function OnboardingChecklist() {
 
   useEffect(() => {
     setMounted(true)
-    setIsHidden(getStoredHidden())
-    setIsDismissed(getStoredDismissed())
+    setIsHidden(getStored(STORAGE_HIDDEN))
+    setIsDismissed(getStored(STORAGE_DISMISSED))
 
     try {
       const stored = localStorage.getItem(STORAGE_FIRST_VISIT)
       const firstVisit = stored ? parseInt(stored, 10) : Date.now()
       if (!stored) localStorage.setItem(STORAGE_FIRST_VISIT, String(firstVisit))
-
       const elapsed = Date.now() - firstVisit
       if (elapsed >= DELAY_MS) {
         setDelayElapsed(true)
       } else {
-        const remaining = DELAY_MS - elapsed
-        const timer = setTimeout(() => setDelayElapsed(true), remaining)
+        const timer = setTimeout(() => setDelayElapsed(true), DELAY_MS - elapsed)
         return () => clearTimeout(timer)
       }
     } catch {
@@ -100,94 +82,126 @@ export function OnboardingChecklist() {
     } catch {}
   }
 
-  // Récupérer les données pour vérifier l'état de complétion
-  const { data: students } = useQuery({
-    queryKey: ['students-count', user?.organization_id],
+  // ① Organisme configuré (logo + NDA renseignés)
+  const { data: org } = useQuery({
+    queryKey: ['org-setup', user?.organization_id],
     queryFn: async () => {
-      if (!user?.organization_id) return 0
-      const { count } = await supabase
-        .from('students')
-        .select('*', { count: 'exact', head: true })
-        .eq('organization_id', user.organization_id)
-      return count || 0
+      if (!user?.organization_id) return null
+      const { data } = await supabase
+        .from('organizations')
+        .select('logo_url, nda_number, address')
+        .eq('id', user.organization_id)
+        .single()
+      return data
     },
     enabled: !!user?.organization_id,
   })
 
-  const { data: programs } = useQuery({
+  // ② Modèles de documents présents
+  const { data: templatesCount } = useQuery({
+    queryKey: ['templates-count', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return 0
+      const { count } = await supabase
+        .from('document_templates')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', user.organization_id)
+      return count ?? 0
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // ③ Programme créé
+  const { data: programsCount } = useQuery({
     queryKey: ['programs-count', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return 0
       const { count } = await supabase
         .from('programs')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('organization_id', user.organization_id)
-      return count || 0
+      return count ?? 0
     },
     enabled: !!user?.organization_id,
   })
 
-  const { data: documents } = useQuery({
+  // ④ Session créée
+  const { data: sessionsCount } = useQuery({
+    queryKey: ['sessions-count', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return 0
+      const { count } = await supabase
+        .from('sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', user.organization_id)
+      return count ?? 0
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // ⑤ Premier document généré
+  const { data: documentsCount } = useQuery({
     queryKey: ['documents-count', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return 0
       const { count } = await supabase
         .from('documents')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('organization_id', user.organization_id)
-      return count || 0
+      return count ?? 0
     },
     enabled: !!user?.organization_id,
   })
 
-  // Définir les items de la checklist
+  const orgConfigured = !!(org?.logo_url && org?.nda_number && org?.address)
+
   const checklistItems: ChecklistItem[] = [
     {
+      id: 'configure-org',
+      label: 'Configurer votre organisme',
+      description: 'Logo, adresse, NDA et coordonnées de contact',
+      link: '/dashboard/settings',
+      completed: orgConfigured,
+    },
+    {
+      id: 'document-templates',
+      label: 'Vérifier vos modèles de documents',
+      description: 'Vos 17 modèles sont prêts — personnalisez-les avec les infos de votre organisme',
+      link: '/dashboard/settings/document-templates',
+      completed: (templatesCount ?? 0) > 0,
+    },
+    {
       id: 'create-program',
-      label: 'Créer mon premier programme',
-      description: 'Définissez votre premier parcours de formation',
+      label: 'Créer votre premier programme',
+      description: 'La base de votre catalogue de formations',
       link: '/dashboard/programs/new',
-      completed: (programs || 0) > 0,
+      completed: (programsCount ?? 0) > 0,
     },
     {
-      id: 'import-students',
-      label: 'Inscrire mon premier stagiaire',
-      description: 'Ajoutez vos apprenants à la plateforme',
-      link: '/dashboard/students/new',
-      reward: 'Gagnez 10 jours d\'essai gratuit en complétant cette étape',
-      completed: (students || 0) > 0,
+      id: 'create-session',
+      label: 'Créer votre première session',
+      description: 'Planifiez une date, un lieu et vos apprenants',
+      link: '/dashboard/sessions',
+      completed: (sessionsCount ?? 0) > 0,
     },
     {
-      id: 'generate-convention',
-      label: 'Générer ma première convention',
-      description: 'Créez votre premier document de formation',
+      id: 'generate-document',
+      label: 'Générer votre premier document',
+      description: 'Convention, attestation ou facture en quelques secondes',
       link: '/dashboard/documents/generate',
-      completed: (documents || 0) > 0,
-    },
-    {
-      id: 'configure-qualiopi',
-      label: 'Configurer Qualiopi',
-      description: 'Paramétrez vos indicateurs de conformité',
-      link: '/dashboard/qualiopi',
-      completed: localCompleted.has('configure-qualiopi'),
-    },
-    {
-      id: 'setup-payments',
-      label: 'Configurer les paiements',
-      description: 'Activez Stripe ou SEPA pour recevoir les paiements',
-      link: '/dashboard/settings/payments',
-      completed: localCompleted.has('setup-payments'),
+      completed: (documentsCount ?? 0) > 0,
     },
   ]
 
-  const completedCount = checklistItems.filter((item) => item.completed).length
+  const completedCount = checklistItems.filter(i => i.completed).length
   const totalCount = checklistItems.length
   const progress = (completedCount / totalCount) * 100
   const isComplete = completedCount === totalCount
 
-  if (!mounted) return null
-  if (isDismissed) return null
-  if (!delayElapsed) return null
+  // Trouver la prochaine étape non complétée (pour mettre en avant)
+  const nextItem = checklistItems.find(i => !i.completed)
+
+  if (!mounted || isDismissed || !delayElapsed) return null
 
   if (isHidden) {
     return (
@@ -198,144 +212,120 @@ export function OnboardingChecklist() {
         className="fixed bottom-4 right-4 z-50 shadow-lg bg-white hover:bg-gray-50 border-gray-200 gap-2"
       >
         <ListChecks className="w-4 h-4" />
-        Afficher la checklist de démarrage
+        <span>{completedCount}/{totalCount}</span>
       </Button>
     )
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 w-80 shadow-xl z-50">
+    <Card className="fixed bottom-4 right-4 w-80 shadow-xl z-50 border-0 overflow-hidden">
       <CardContent className="p-0">
         {/* Header */}
         <div
-          className="p-4 bg-gradient-to-r from-brand-blue to-brand-cyan text-white cursor-pointer"
+          className="px-4 py-3 bg-gradient-to-r from-brand-blue to-brand-cyan text-white cursor-pointer select-none"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold">Checklist de démarrage</h3>
-              <p className="text-sm opacity-90">
-                {completedCount}/{totalCount} complétés
-              </p>
+              <div className="flex items-center gap-2">
+                <ListChecks className="w-4 h-4 shrink-0" />
+                <span className="font-semibold text-sm">Démarrage</span>
+                <span className="text-xs opacity-80 font-medium">{completedCount}/{totalCount}</span>
+              </div>
+              {/* Progress bar */}
+              <div className="mt-2 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-white rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {isComplete && (
-                <Gift className="w-5 h-5 text-yellow-300" />
-              )}
+            <div className="flex items-center gap-1 shrink-0 ml-2">
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setHidden(true)
-                }}
+                onClick={e => { e.stopPropagation(); setHidden(true) }}
                 className="p-1 rounded hover:bg-white/20 transition-colors"
-                aria-label="Masquer la checklist"
+                aria-label="Masquer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
-              {isExpanded ? (
-                <ChevronDown className="w-5 h-5" />
-              ) : (
-                <ChevronUp className="w-5 h-5" />
-              )}
+              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
             </div>
-          </div>
-          {/* Progress Bar */}
-          <div className="mt-3 h-2 bg-white/20 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-white rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5 }}
-            />
           </div>
         </div>
 
-        {/* Content */}
+        {/* Items */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.25 }}
               className="overflow-hidden"
             >
-              <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-                {checklistItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className={cn(
-                      'flex items-start gap-3 p-3 rounded-lg border transition-colors',
-                      item.completed
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-white border-gray-200 hover:border-brand-blue'
-                    )}
-                  >
-                    <div className="pt-0.5">
-                      {item.completed ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-gray-400" />
+              <div className="divide-y divide-gray-100 max-h-[340px] overflow-y-auto">
+                {checklistItems.map(item => {
+                  const isNext = item.id === nextItem?.id
+                  return (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        'flex items-start gap-3 px-4 py-3 transition-colors',
+                        item.completed ? 'bg-white' : isNext ? 'bg-blue-50/60' : 'bg-white'
                       )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <p
-                            className={cn(
-                              'font-medium text-sm',
-                              item.completed ? 'text-green-800 line-through' : 'text-gray-900'
-                            )}
-                          >
-                            {item.label}
-                          </p>
-                          {item.description && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {item.description}
-                            </p>
-                          )}
-                          {item.reward && !item.completed && (
-                            <p className="text-xs text-brand-cyan font-medium mt-1 flex items-center gap-1">
-                              <Gift className="w-3 h-3" />
-                              {item.reward}
-                            </p>
-                          )}
-                        </div>
-                        {!item.completed && item.link && (
-                          <Link href={item.link}>
-                            <Button size="sm" variant="ghost" className="text-xs">
-                              Faire
-                            </Button>
-                          </Link>
+                    >
+                      <div className="pt-0.5 shrink-0">
+                        {item.completed
+                          ? <CheckCircle2 className="w-4.5 h-4.5 text-green-500" />
+                          : <Circle className={cn('w-4.5 h-4.5', isNext ? 'text-brand-blue' : 'text-gray-300')} />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          'text-sm font-medium leading-snug',
+                          item.completed ? 'text-gray-400 line-through' : isNext ? 'text-brand-blue' : 'text-gray-700'
+                        )}>
+                          {item.label}
+                        </p>
+                        {!item.completed && (
+                          <p className="text-xs text-gray-400 mt-0.5 leading-snug">{item.description}</p>
                         )}
                       </div>
+                      {!item.completed && (
+                        <Link href={item.link} className="shrink-0">
+                          <Button
+                            size="sm"
+                            variant={isNext ? 'default' : 'ghost'}
+                            className={cn(
+                              'text-xs h-7 px-2.5',
+                              isNext && 'bg-brand-blue hover:bg-brand-blue/90 text-white'
+                            )}
+                          >
+                            Faire
+                          </Button>
+                        </Link>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
-              {/* Footer */}
-              <div className="p-4 border-t bg-gray-50 flex flex-col gap-2">
-                {isComplete ? (
+              {isComplete && (
+                <div className="px-4 py-3 border-t bg-green-50 flex items-center justify-between gap-2">
+                  <p className="text-xs text-green-700 font-medium">🎉 Vous êtes prêt !</p>
                   <Button
                     size="sm"
-                    className="w-full text-xs bg-green-600 hover:bg-green-700 text-white"
+                    variant="ghost"
+                    className="text-xs h-7 text-green-700 hover:text-green-800 hover:bg-green-100"
                     onClick={setDismissed}
                   >
-                    Masquer définitivement
+                    Fermer
                   </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-xs"
-                    onClick={() => setIsExpanded(false)}
-                  >
-                    Réduire
-                  </Button>
-                )}
-              </div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
