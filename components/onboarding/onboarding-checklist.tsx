@@ -125,7 +125,21 @@ export function OnboardingChecklist() {
     enabled: !!user?.organization_id,
   })
 
-  // ④ Session créée
+  // ④ Formation créée
+  const { data: formationsCount } = useQuery({
+    queryKey: ['formations-count', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return 0
+      const { count } = await supabase
+        .from('formations')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', user.organization_id)
+      return count ?? 0
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // ⑤ Session créée
   const { data: sessionsCount } = useQuery({
     queryKey: ['sessions-count', user?.organization_id],
     queryFn: async () => {
@@ -139,7 +153,7 @@ export function OnboardingChecklist() {
     enabled: !!user?.organization_id,
   })
 
-  // ⑤ Premier document généré
+  // ⑥ Premier document généré
   const { data: documentsCount } = useQuery({
     queryKey: ['documents-count', user?.organization_id],
     queryFn: async () => {
@@ -176,6 +190,13 @@ export function OnboardingChecklist() {
       description: 'La base de votre catalogue de formations',
       link: '/dashboard/programs/new',
       completed: (programsCount ?? 0) > 0,
+    },
+    {
+      id: 'create-formation',
+      label: 'Créer votre première formation',
+      description: 'Rattachez une formation à votre programme',
+      link: '/dashboard/formations',
+      completed: (formationsCount ?? 0) > 0,
     },
     {
       id: 'create-session',
