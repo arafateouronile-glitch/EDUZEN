@@ -27,7 +27,8 @@ interface ChecklistItem {
   id: string
   label: string
   description: string
-  link: string
+  link?: string
+  onClick?: () => void
   completed: boolean
 }
 
@@ -125,7 +126,7 @@ export function OnboardingChecklist() {
     enabled: !!user?.organization_id,
   })
 
-  // ④ Formation créée
+  // ③ Programme + formation + session créés (step Jeane)
   const { data: formationsCount } = useQuery({
     queryKey: ['formations-count', user?.organization_id],
     queryFn: async () => {
@@ -139,7 +140,6 @@ export function OnboardingChecklist() {
     enabled: !!user?.organization_id,
   })
 
-  // ⑤ Session créée
   const { data: sessionsCount } = useQuery({
     queryKey: ['sessions-count', user?.organization_id],
     queryFn: async () => {
@@ -153,7 +153,7 @@ export function OnboardingChecklist() {
     enabled: !!user?.organization_id,
   })
 
-  // ⑥ Premier document généré
+  // ④ Premier document généré
   const { data: documentsCount } = useQuery({
     queryKey: ['documents-count', user?.organization_id],
     queryFn: async () => {
@@ -168,6 +168,13 @@ export function OnboardingChecklist() {
   })
 
   const orgConfigured = !!(org?.logo_url && org?.nda_number && org?.address)
+  const catalogueReady = (programsCount ?? 0) > 0 && (formationsCount ?? 0) > 0 && (sessionsCount ?? 0) > 0
+
+  const openJeane = () => {
+    window.dispatchEvent(new CustomEvent('ai-chat:open', {
+      detail: { message: 'Crée-moi un programme de formation, une formation et une session.' },
+    }))
+  }
 
   const checklistItems: ChecklistItem[] = [
     {
@@ -185,25 +192,11 @@ export function OnboardingChecklist() {
       completed: (templatesCount ?? 0) > 0,
     },
     {
-      id: 'create-program',
-      label: 'Créer votre premier programme',
-      description: 'La base de votre catalogue de formations',
-      link: '/dashboard/programs/new',
-      completed: (programsCount ?? 0) > 0,
-    },
-    {
-      id: 'create-formation',
-      label: 'Créer votre première formation',
-      description: 'Rattachez une formation à votre programme',
-      link: '/dashboard/formations',
-      completed: (formationsCount ?? 0) > 0,
-    },
-    {
-      id: 'create-session',
-      label: 'Créer votre première session',
-      description: 'Planifiez une date, un lieu et vos apprenants',
-      link: '/dashboard/sessions',
-      completed: (sessionsCount ?? 0) > 0,
+      id: 'ask-jeane',
+      label: 'Demander à Jeane de tout créer',
+      description: 'Jeane crée votre programme, votre formation et votre session en quelques secondes',
+      onClick: openJeane,
+      completed: catalogueReady,
     },
     {
       id: 'generate-document',
@@ -316,18 +309,32 @@ export function OnboardingChecklist() {
                         )}
                       </div>
                       {!item.completed && (
-                        <Link href={item.link} className="shrink-0">
+                        item.onClick ? (
                           <Button
                             size="sm"
                             variant={isNext ? 'default' : 'ghost'}
                             className={cn(
-                              'text-xs h-7 px-2.5',
+                              'text-xs h-7 px-2.5 shrink-0',
                               isNext && 'bg-brand-blue hover:bg-brand-blue/90 text-white'
                             )}
+                            onClick={item.onClick}
                           >
-                            Faire
+                            Demander
                           </Button>
-                        </Link>
+                        ) : item.link ? (
+                          <Link href={item.link} className="shrink-0">
+                            <Button
+                              size="sm"
+                              variant={isNext ? 'default' : 'ghost'}
+                              className={cn(
+                                'text-xs h-7 px-2.5',
+                                isNext && 'bg-brand-blue hover:bg-brand-blue/90 text-white'
+                              )}
+                            >
+                              Faire
+                            </Button>
+                          </Link>
+                        ) : null
                       )}
                     </div>
                   )
