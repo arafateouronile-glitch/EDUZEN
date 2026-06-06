@@ -295,11 +295,15 @@ export async function POST(request: NextRequest) {
       organizationId: userData.organization_id,
     })
 
-    // Créer l'abonnement avec période d'essai de 14 jours
+    // Premier cycle de facturation = 37 jours (reward pour avoir ajouté sa carte)
+    // billing_cycle_anchor remplace trial_period_days : la première facture arrive à J+37
+    const firstCycleAnchor = Math.floor((Date.now() + 37 * 24 * 60 * 60_000) / 1000)
+
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: stripePriceId }],
-      trial_period_days: 14,
+      billing_cycle_anchor: firstCycleAnchor,
+      proration_behavior: 'none',
       default_payment_method: paymentMethodId,
       metadata: {
         organization_id: userData.organization_id,
@@ -319,10 +323,10 @@ export async function POST(request: NextRequest) {
       trialEnd: subscription.trial_end,
     })
 
-    // Mettre à jour la date de fin de trial depuis Stripe
-    const stripeTrialEndAt = subscription.trial_end
-      ? new Date(subscription.trial_end * 1000)
-      : trialEndAt
+    // La date de fin = billing_cycle_anchor (premier cycle 37j)
+    const stripeTrialEndAt = subscription.billing_cycle_anchor
+      ? new Date(subscription.billing_cycle_anchor * 1000)
+      : new Date(firstCycleAnchor * 1000)
 
     // Utiliser la fonction RPC pour compléter l'onboarding (fonction peut ne pas être dans les types générés)
     const { error: rpcError } = await (supabase.rpc as (name: string, args: Record<string, unknown>) => ReturnType<typeof supabase.rpc>)(

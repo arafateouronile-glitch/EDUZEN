@@ -42,9 +42,14 @@ export function TrialSummaryBanner() {
 
   return (
     <div className="mb-10 rounded-2xl border border-brand-blue/20 bg-gradient-to-r from-brand-blue/5 via-white to-brand-cyan/5 px-6 py-5">
-      <p className="text-sm font-semibold text-brand-blue mb-3">
-        Ce que vous avez construit pendant votre essai — ne perdez pas ce travail.
-      </p>
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <p className="text-sm font-semibold text-brand-blue">
+          Ce que vous avez construit pendant votre essai — ne perdez pas ce travail.
+        </p>
+        <span className="shrink-0 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1 whitespace-nowrap">
+          🎁 Premier cycle : 37 jours
+        </span>
+      </div>
       <div className="flex flex-wrap gap-4">
         {items.map(({ icon: Icon, count, label }) => (
           <div key={label} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-100 shadow-sm">

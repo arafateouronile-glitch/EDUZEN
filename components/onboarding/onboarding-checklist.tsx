@@ -73,9 +73,7 @@ export function OnboardingChecklist() {
   const [mounted, setMounted] = useState(false)
   const [delayElapsed, setDelayElapsed] = useState(false)
   const [celebratingStep, setCelebratingStep] = useState<string | null>(null)
-  const [extensionGranted, setExtensionGranted] = useState(false)
   const prevCompleted = useRef<Set<string>>(new Set())
-  const extensionAttempted = useRef(false)
 
   useEffect(() => {
     setMounted(true)
@@ -250,14 +248,6 @@ export function OnboardingChecklist() {
     }
     prevCompleted.current = completedIds
 
-    // Déclencher l'extension +7 jours quand tout est complété
-    if (completedIds.size === steps.length && !extensionAttempted.current) {
-      extensionAttempted.current = true
-      fetch('/api/trial/extend', { method: 'POST' })
-        .then(r => r.json())
-        .then(data => { if (data.success) setExtensionGranted(true) })
-        .catch(() => {})
-    }
   }, [orgConfigured, templatesCount, catalogueReady, documentsCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mounted || isDismissed || !delayElapsed) return null
@@ -456,7 +446,7 @@ export function OnboardingChecklist() {
                 animate={{ opacity: 1 }}
                 className="px-4 py-3 border-t bg-gradient-to-r from-amber-50 to-yellow-50"
               >
-                <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center justify-between gap-2 mb-2">
                   <p className="text-sm font-bold text-amber-700">🏆 Badge Fondateur débloqué !</p>
                   <Button
                     size="sm"
@@ -467,11 +457,14 @@ export function OnboardingChecklist() {
                     Fermer
                   </Button>
                 </div>
-                {extensionGranted && (
-                  <p className="text-xs text-green-700 font-medium mt-1">
-                    🎁 +7 jours offerts — votre essai a été prolongé en récompense !
-                  </p>
-                )}
+                <p className="text-xs text-amber-800 mb-2">
+                  🎁 Abonnez-vous maintenant et votre premier cycle de facturation sera de <strong>37 jours</strong> au lieu de 30.
+                </p>
+                <Link href="/dashboard/subscribe">
+                  <Button size="sm" className="w-full text-xs h-8 bg-amber-600 hover:bg-amber-700 text-white">
+                    Choisir ma formule →
+                  </Button>
+                </Link>
               </motion.div>
             )}
           </motion.div>
