@@ -170,6 +170,25 @@ export function OnboardingChecklist() {
   const orgConfigured = !!(org?.logo_url && org?.nda_number && org?.address)
   const catalogueReady = (programsCount ?? 0) > 0 && (formationsCount ?? 0) > 0 && (sessionsCount ?? 0) > 0
 
+  // Sauvegarder en DB les étapes complétées pour mesurer le dropout
+  useEffect(() => {
+    const steps = [
+      { id: 'configure-org', completed: orgConfigured },
+      { id: 'document-templates', completed: (templatesCount ?? 0) > 0 },
+      { id: 'ask-jeane', completed: catalogueReady },
+      { id: 'generate-document', completed: (documentsCount ?? 0) > 0 },
+    ]
+    for (const step of steps) {
+      if (step.completed) {
+        fetch('/api/onboarding/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stepId: step.id, completed: true }),
+        }).catch(() => {})
+      }
+    }
+  }, [orgConfigured, templatesCount, catalogueReady, documentsCount])
+
   const openJeane = () => {
     window.dispatchEvent(new CustomEvent('ai-chat:open', {
       detail: { message: 'Crée-moi un programme de formation, une formation et une session.' },
