@@ -122,47 +122,24 @@ export async function GET(_request: NextRequest) {
     const htmlResult = await generateHTML(template as unknown as Parameters<typeof generateHTML>[0], variables, undefined, orgId)
     const { html, margins } = htmlResult
 
-    if (isGotenbergConfigured()) {
-      const pdfBuffer = await htmlToPdf(html, {
-        format: 'A4',
-        marginTop: mmToInch(margins.top),
-        marginBottom: mmToInch(margins.bottom),
-        marginLeft: mmToInch(margins.left),
-        marginRight: mmToInch(margins.right),
-      })
-
-      return new NextResponse(new Uint8Array(pdfBuffer), {
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `inline; filename="Convention-Demo-${(org?.name ?? 'EduZen').replace(/\s+/g, '-')}.pdf"`,
-        },
-      })
+    if (!isGotenbergConfigured()) {
+      return NextResponse.json({ error: 'Service de génération PDF non configuré (GOTENBERG_URL manquant)' }, { status: 503 })
     }
 
-    // Fallback Puppeteer (import dynamique pour éviter le crash module au démarrage)
-    const { createPage } = await import('@/lib/utils/puppeteer-pool')
-    const page = await createPage()
-    try {
-      await page.setContent(html, { waitUntil: 'networkidle0' })
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: `${margins.top}mm`,
-          bottom: `${margins.bottom}mm`,
-          left: `${margins.left}mm`,
-          right: `${margins.right}mm`,
-        },
-      })
-      return new NextResponse(new Uint8Array(pdfBuffer), {
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `inline; filename="Convention-Demo-${(org?.name ?? 'EduZen').replace(/\s+/g, '-')}.pdf"`,
-        },
-      })
-    } finally {
-      await page.close()
-    }
+    const pdfBuffer = await htmlToPdf(html, {
+      format: 'A4',
+      marginTop: mmToInch(margins.top),
+      marginBottom: mmToInch(margins.bottom),
+      marginLeft: mmToInch(margins.left),
+      marginRight: mmToInch(margins.right),
+    })
+
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="Convention-Demo-${(org?.name ?? 'EduZen').replace(/\s+/g, '-')}.pdf"`,
+      },
+    })
   } catch (error) {
     logger.error('[generate-demo] Error generating PDF', error)
     return NextResponse.json({ error: 'Erreur lors de la génération du document démo' }, { status: 500 })
