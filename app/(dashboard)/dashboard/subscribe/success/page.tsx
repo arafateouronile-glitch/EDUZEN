@@ -70,6 +70,7 @@ export default function SubscribeSuccessPage() {
       const w = window as unknown as { gtag?: (...args: unknown[]) => void }
       if (typeof w.gtag === 'function') {
         w.gtag('event', 'conversion_event_subscribe_paid_1', {})
+        w.gtag('event', 'conversion_event_subscribe_paid_2', {})
       }
     }
   }, [subscription, isVerifying, addToast])
