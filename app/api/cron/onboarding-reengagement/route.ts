@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
 
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, email, full_name, organization_id, created_at')
+      .select('id, email, full_name, organization_id, created_at, last_login_at')
       .eq('role', 'admin')
       .eq('is_active', true)
       .gte('created_at', trialStart)
