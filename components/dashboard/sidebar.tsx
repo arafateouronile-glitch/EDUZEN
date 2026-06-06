@@ -44,6 +44,7 @@ import {
   Plug,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { useTrial } from '@/lib/hooks/use-trial'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { UsageIndicator } from '@/components/quota/usage-indicator'
 
@@ -51,13 +52,14 @@ type NavigationItem = {
   name: string
   href?: string
   icon: React.ComponentType<{ className?: string }>
-  // Rôles autorisés à voir cet élément (si non défini, visible par tous)
   allowedRoles?: string[]
+  trialLocked?: boolean
   children?: Array<{
     name: string
     href: string
     icon: React.ComponentType<{ className?: string }>
     allowedRoles?: string[]
+    trialLocked?: boolean
   }>
 }
 
@@ -136,7 +138,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
         children: [
           { name: vocab.payments, href: '/dashboard/payments', icon: CreditCard },
           { name: t('navigation.financialReports'), href: '/dashboard/financial-reports', icon: BarChart3 },
-          { name: 'Bilan Pédagogique Financier', href: '/dashboard/bpf', icon: BarChart3 },
+          { name: 'Bilan Pédagogique Financier', href: '/dashboard/bpf', icon: BarChart3, trialLocked: true },
         ],
       },
       { name: t('navigation.documents'), href: '/dashboard/documents', icon: FileText },
@@ -201,6 +203,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { logout, user } = useAuth()
+  const { isTrial } = useTrial()
   const vocab = useVocabulary() || getVocabulary('school')
   const t = useTranslations()
   const [mounted, setMounted] = useState(false)
@@ -518,6 +521,11 @@ export function Sidebar() {
                                               />
                                             </motion.div>
                                             <span className="relative z-10 tracking-tight">{child.name}</span>
+                                            {isTrial && child.trialLocked && (
+                                              <span className="relative z-10 ml-auto shrink-0">
+                                                <Lock className="h-3 w-3 text-gray-400" />
+                                              </span>
+                                            )}
 
                                             {/* Active indicator */}
                                             {isChildActive && (

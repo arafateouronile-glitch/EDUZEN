@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
+import { TrialGate } from '@/components/trial/trial-gate'
 
 export default function APISettingsPage() {
   const { user } = useAuth()
@@ -123,6 +124,10 @@ export default function APISettingsPage() {
   ]
 
   return (
+    <TrialGate
+      featureName="Accès API & Webhooks"
+      featureDescription="L'accès à l'API EduZen permet d'intégrer vos outils métier et d'automatiser vos workflows. Disponible avec les formules Premium et Enterprise."
+    >
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
@@ -601,6 +606,7 @@ export default function APISettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </TrialGate>
   )
 }
 

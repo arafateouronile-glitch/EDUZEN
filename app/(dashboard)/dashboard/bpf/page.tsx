@@ -28,6 +28,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import Link from 'next/link'
+import { TrialGate } from '@/components/trial/trial-gate'
 
 export default function BPFPage() {
   const { user } = useAuth()
@@ -133,6 +134,10 @@ export default function BPFPage() {
   }
 
   return (
+    <TrialGate
+      featureName="Bilan Pédagogique et Financier"
+      featureDescription="Le BPF est le rapport annuel obligatoire pour les organismes de formation certifiés Qualiopi. Disponible avec un abonnement payant."
+    >
     <div className="p-6 space-y-8 animate-in fade-in duration-500">
       {/* Header amélioré */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -462,5 +467,6 @@ export default function BPFPage() {
         </div>
       )}
     </div>
+    </TrialGate>
   )
 }
