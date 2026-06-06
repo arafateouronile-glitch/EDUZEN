@@ -60,8 +60,11 @@ function buildWinBackJ3Email(prenom: string): string {
         <tr><td style="font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.8;">
           <p style="margin:0 0 20px;">Bonjour ${prenom},</p>
           <p style="margin:0 0 20px;">C'est Airtone. Votre essai s'est terminé il y a quelques jours — je voulais vous donner un dernier coup de main avant que vous preniez votre décision.</p>
-          <p style="margin:0 0 20px;">Si vous n'avez pas eu le temps de tout tester, je vous propose 20 minutes ensemble pour faire une démonstration personnalisée sur votre propre compte. Vous repartez avec EduZen configuré pour votre organisme, prêt à générer vos premiers documents.</p>
-          <p style="margin:0 0 20px;">Répondez avec vos disponibilités ou appelez-moi au <a href="tel:+33610441324" style="color:#1a1a1a;">06 10 44 13 24</a>.</p>
+          <p style="margin:0 0 20px;">Si vous n'avez pas eu le temps de tout tester, je vous propose 30 minutes ensemble pour faire une démonstration personnalisée sur votre propre compte. Vous repartez avec EduZen configuré pour votre organisme, prêt à générer vos premiers documents.</p>
+          <p style="margin:0 0 20px;text-align:center;">
+            <a href="https://calendly.com/airtonenile/30min" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">📅 Réserver 30 minutes →</a>
+          </p>
+          <p style="margin:0 0 20px;">Ou si vous êtes prêt à reprendre :</p>
           <p style="margin:0 0 28px;text-align:center;">
             <a href="${APP_URL}/dashboard/subscribe" style="display:inline-block;background:#274472;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:16px;font-weight:bold;text-decoration:none;padding:14px 32px;border-radius:6px;">Reprendre mon compte →</a>
           </p>
@@ -93,6 +96,10 @@ function buildWinBackJ7Email(prenom: string): string {
           <p style="margin:0 0 20px;">Votre essai EduZen est terminé depuis une semaine. Je ne vais pas vous relancer après ce message — mais avant de partir définitivement, je voulais vous poser une question directe : qu'est-ce qui vous a retenu ?</p>
           <p style="margin:0 0 20px;">Le prix ? Une fonctionnalité manquante ? Le manque de temps pour tout configurer ? Votre retour m'aide vraiment à améliorer le produit pour les prochains organismes.</p>
           <p style="margin:0 0 20px;">Et si c'est juste une question de timing — votre compte est toujours là si vous changez d'avis.</p>
+          <p style="margin:0 0 20px;text-align:center;">
+            <a href="https://calendly.com/airtonenile/30min" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">📅 Réserver 30 minutes →</a>
+          </p>
+          <p style="margin:0 0 20px;">Ou directement :</p>
           <p style="margin:0 0 28px;text-align:center;">
             <a href="${APP_URL}/dashboard/subscribe" style="display:inline-block;background:#274472;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:16px;font-weight:bold;text-decoration:none;padding:14px 32px;border-radius:6px;">Revenir sur EduZen →</a>
           </p>

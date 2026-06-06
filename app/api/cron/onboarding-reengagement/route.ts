@@ -59,8 +59,11 @@ function buildJ4Email(prenom: string): string {
             <p style="margin:0 0 20px;">Bonjour ${prenom},</p>
             <p style="margin:0 0 20px;">On ne vous a plus vu sur EduZen depuis quelques jours — je voulais juste m'assurer que tout allait bien.</p>
             <p style="margin:0 0 20px;">Est-ce qu'il y a quelque chose qui vous a bloqué ? Un problème technique, une fonctionnalité pas claire, ou simplement le manque de temps ?</p>
-            <p style="margin:0 0 20px;">Si vous avez 10 minutes cette semaine, je vous propose qu'on se parle. Je peux vous montrer en direct comment configurer EduZen pour qu'il corresponde exactement à votre façon de travailler. Beaucoup de nos clients ont eu le déclic lors de ce type d'appel.</p>
-            <p style="margin:0 0 20px;">Répondez à cet email avec vos disponibilités, ou appelez-moi directement au <a href="tel:+33610441324" style="color:#1a1a1a;">06 10 44 13 24</a>.</p>
+            <p style="margin:0 0 20px;">Je vous propose qu'on se parle 30 minutes. Je peux vous montrer en direct comment configurer EduZen pour votre organisme — beaucoup de clients ont eu le déclic lors de ce type d'appel.</p>
+            <p style="margin:0 0 20px;text-align:center;">
+              <a href="https://calendly.com/airtonenile/30min" style="display:inline-block;background:#1a1a1a;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:bold;text-decoration:none;padding:12px 28px;border-radius:6px;">📅 Réserver 30 minutes →</a>
+            </p>
+            <p style="margin:0 0 20px;">Ou répondez à cet email — je m'adapte à votre agenda.</p>
             <p style="margin:0 0 40px;">À bientôt j'espère,</p>
             <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:16px;color:#1a1a1a;line-height:1.6;">
               Airtone NILE<br>
