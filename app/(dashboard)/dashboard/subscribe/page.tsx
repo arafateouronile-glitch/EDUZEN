@@ -25,6 +25,7 @@ import { motion } from '@/components/ui/motion'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { TrialSummaryBanner } from '@/components/subscribe/trial-summary-banner'
 
 type Plan = {
   id: string
@@ -250,6 +251,9 @@ export default function SubscribePage() {
             </span>
           </div>
         </motion.div>
+
+        {/* Résumé de l'essai — ancre émotionnelle */}
+        <TrialSummaryBanner />
 
         {/* Plans Grid */}
         {plans && plans.length > 0 ? (

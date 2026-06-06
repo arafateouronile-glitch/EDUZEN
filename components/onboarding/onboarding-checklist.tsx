@@ -73,7 +73,9 @@ export function OnboardingChecklist() {
   const [mounted, setMounted] = useState(false)
   const [delayElapsed, setDelayElapsed] = useState(false)
   const [celebratingStep, setCelebratingStep] = useState<string | null>(null)
+  const [extensionGranted, setExtensionGranted] = useState(false)
   const prevCompleted = useRef<Set<string>>(new Set())
+  const extensionAttempted = useRef(false)
 
   useEffect(() => {
     setMounted(true)
@@ -247,6 +249,15 @@ export function OnboardingChecklist() {
       }
     }
     prevCompleted.current = completedIds
+
+    // Déclencher l'extension +7 jours quand tout est complété
+    if (completedIds.size === steps.length && !extensionAttempted.current) {
+      extensionAttempted.current = true
+      fetch('/api/trial/extend', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => { if (data.success) setExtensionGranted(true) })
+        .catch(() => {})
+    }
   }, [orgConfigured, templatesCount, catalogueReady, documentsCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mounted || isDismissed || !delayElapsed) return null
@@ -443,17 +454,24 @@ export function OnboardingChecklist() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="px-4 py-3 border-t bg-gradient-to-r from-amber-50 to-yellow-50 flex items-center justify-between gap-2"
+                className="px-4 py-3 border-t bg-gradient-to-r from-amber-50 to-yellow-50"
               >
-                <p className="text-sm font-bold text-amber-700">🏆 Badge Fondateur débloqué !</p>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs h-7 text-amber-700 hover:bg-amber-100"
-                  onClick={setDismissed}
-                >
-                  Fermer
-                </Button>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-sm font-bold text-amber-700">🏆 Badge Fondateur débloqué !</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs h-7 text-amber-700 hover:bg-amber-100"
+                    onClick={setDismissed}
+                  >
+                    Fermer
+                  </Button>
+                </div>
+                {extensionGranted && (
+                  <p className="text-xs text-green-700 font-medium mt-1">
+                    🎁 +7 jours offerts — votre essai a été prolongé en récompense !
+                  </p>
+                )}
               </motion.div>
             )}
           </motion.div>
