@@ -41,13 +41,13 @@ export async function POST(_request: NextRequest) {
     const prenom = firstName(full_name, email ?? user.email ?? null)
     const recipient = email ?? user.email ?? ''
 
-    // Seeder les modèles de documents par défaut avec le client admin (bypass RLS)
+    // Seeder les modèles AVANT de répondre — Vercel coupe la fonction dès le return
     const adminClient = createAdminClient()
-    seedDefaultTemplatesForOrg(adminClient, orgId)
-      .then(({ created }) => logger.info('[post-signup] Templates seeded', { orgId, created }))
-      .catch(err => logger.error('[post-signup] Error seeding templates:', err))
+    const seedResult = await seedDefaultTemplatesForOrg(adminClient, orgId)
+      .catch(err => { logger.error('[post-signup] Error seeding templates:', err); return null })
+    logger.info('[post-signup] Templates seeded', { orgId, created: seedResult?.created ?? 0 })
 
-    // Email de bienvenue immédiat (pas de scheduledAt — Resend exige min 30min pour les emails planifiés)
+    // Email de bienvenue (non bloquant — ok car email est fire-and-forget)
     sendEmailViaResend({
       to: recipient,
       from: 'Airtone NILE — EduZen <contact@eduzen.io>',
@@ -56,7 +56,7 @@ export async function POST(_request: NextRequest) {
       html: buildWelcomeEmail({ prenom, organisme: orgName }),
     }).catch(err => logger.error('[post-signup] Error sending welcome email:', err))
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, templatesCreated: seedResult?.created ?? 0 })
   } catch (error) {
     logger.error('[post-signup] Unexpected error:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
