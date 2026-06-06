@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/server'
 import { AI_TOOLS, executeTool } from '@/lib/ai/tools'
 import { AI_CHAT_SYSTEM_PROMPT } from '@/lib/ai/system-prompt'
 
+// Tools avec cache_control sur le dernier — Anthropic cache tout jusqu'à ce bloc
+const CACHED_TOOLS = AI_TOOLS.map((tool, i) =>
+  i === AI_TOOLS.length - 1
+    ? { ...tool, cache_control: { type: 'ephemeral' as const } }
+    : tool
+)
+
 export const runtime = 'nodejs'
 export const maxDuration = 120
 
@@ -39,22 +46,29 @@ export async function POST(req: NextRequest) {
 
       let currentMessages: MessageParam[] = messages
       let iterations = 0
-      const maxIterations = 15
+      const maxIterations = 10
 
       try {
         while (iterations < maxIterations) {
           iterations++
 
-          // Use streaming to get real-time text deltas
-          const systemPrompt = pageContext
-            ? `${AI_CHAT_SYSTEM_PROMPT}\n\n## Contexte de la page actuelle\n${pageContext}`
-            : AI_CHAT_SYSTEM_PROMPT
+          // Système prompt : partie statique cachée + contexte de page dynamique non caché
+          const systemBlocks: Anthropic.TextBlockParam[] = [
+            {
+              type: 'text',
+              text: AI_CHAT_SYSTEM_PROMPT,
+              cache_control: { type: 'ephemeral' },
+            },
+          ]
+          if (pageContext) {
+            systemBlocks.push({ type: 'text', text: `## Contexte de la page actuelle\n${pageContext}` })
+          }
 
           const stream = anthropic.messages.stream({
             model: 'claude-sonnet-4-6',
-            max_tokens: 4096,
-            system: systemPrompt,
-            tools: AI_TOOLS,
+            max_tokens: 2048,
+            system: systemBlocks,
+            tools: CACHED_TOOLS,
             messages: currentMessages,
           })
 
