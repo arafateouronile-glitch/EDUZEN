@@ -49,7 +49,7 @@ export default function SubscribePage() {
   const { addToast } = useToast()
   const queryClient = useQueryClient()
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly')
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly')
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Récupérer les plans disponibles
@@ -154,6 +154,14 @@ export default function SubscribePage() {
     return plan.price_monthly_ht || 0
   }
 
+  const getYearlySavings = (plan: Plan): number => {
+    if (!plan.price_monthly_ht || !plan.price_yearly_ht) return 0
+    return Math.round(plan.price_monthly_ht * 12 - plan.price_yearly_ht)
+  }
+
+  // Économies max parmi tous les plans (pour l'encart d'incitation)
+  const maxSavings = plans ? Math.max(...plans.map(getYearlySavings)) : 0
+
   const getPlanFeatures = (plan: Plan) => {
     const features = plan.features || {}
     return [
@@ -227,28 +235,47 @@ export default function SubscribePage() {
           </div>
 
           {/* Toggle Billing Period */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <span className={cn('text-sm font-medium', billingPeriod === 'monthly' ? 'text-brand-blue' : 'text-gray-500')}>
-              Mensuel
-            </span>
-            <button
-              onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-              className={cn(
-                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                billingPeriod === 'yearly' ? 'bg-brand-blue' : 'bg-gray-300'
-              )}
-            >
-              <span
+          <div className="flex flex-col items-center gap-3 mb-8">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setBillingPeriod('monthly')}
+                className={cn('text-sm font-medium transition-colors', billingPeriod === 'monthly' ? 'text-brand-blue' : 'text-gray-400 hover:text-gray-600')}
+              >
+                Mensuel
+              </button>
+              <button
+                onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
                 className={cn(
-                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                  billingPeriod === 'yearly' ? 'translate-x-6' : 'translate-x-1'
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                  billingPeriod === 'yearly' ? 'bg-brand-blue' : 'bg-gray-300'
                 )}
-              />
-            </button>
-            <span className={cn('text-sm font-medium', billingPeriod === 'yearly' ? 'text-brand-blue' : 'text-gray-500')}>
-              Annuel
-              <Badge className="ml-2 bg-green-100 text-green-700 border-green-300">-20%</Badge>
-            </span>
+              >
+                <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform', billingPeriod === 'yearly' ? 'translate-x-6' : 'translate-x-1')} />
+              </button>
+              <button
+                onClick={() => setBillingPeriod('yearly')}
+                className={cn('text-sm font-medium transition-colors', billingPeriod === 'yearly' ? 'text-brand-blue' : 'text-gray-400 hover:text-gray-600')}
+              >
+                Annuel
+                {maxSavings > 0 && (
+                  <Badge className="ml-2 bg-green-100 text-green-700 border-green-300 font-bold">
+                    jusqu'à {formatCurrency(maxSavings)} économisés
+                  </Badge>
+                )}
+              </button>
+            </div>
+
+            {/* Encart d'incitation — visible seulement en mensuel */}
+            {billingPeriod === 'monthly' && maxSavings > 0 && (
+              <motion.button
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => setBillingPeriod('yearly')}
+                className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-4 py-1.5 font-medium hover:bg-green-100 transition-colors"
+              >
+                💡 Passez à l'annuel et économisez jusqu'à {formatCurrency(maxSavings)}/an →
+              </motion.button>
+            )}
           </div>
         </motion.div>
 
@@ -307,9 +334,24 @@ export default function SubscribePage() {
                           </span>
                         </div>
                         {billingPeriod === 'yearly' && plan.price_monthly_ht && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            Soit {formatCurrency(plan.price_monthly_ht * 0.8)}/mois
-                          </p>
+                          <div className="mt-1 space-y-0.5">
+                            <p className="text-sm text-gray-500">
+                              Soit {formatCurrency(plan.price_monthly_ht * 0.8)}/mois
+                            </p>
+                            {getYearlySavings(plan) > 0 && (
+                              <p className="text-sm font-semibold text-green-600">
+                                🎉 {formatCurrency(getYearlySavings(plan))} économisés vs mensuel
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {billingPeriod === 'monthly' && plan.price_yearly_ht && getYearlySavings(plan) > 0 && (
+                          <button
+                            onClick={() => setBillingPeriod('yearly')}
+                            className="mt-1.5 text-xs text-green-700 underline underline-offset-2 hover:text-green-800"
+                          >
+                            Annuel → économisez {formatCurrency(getYearlySavings(plan))}/an
+                          </button>
                         )}
                       </div>
 
