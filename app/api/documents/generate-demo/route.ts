@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { isGotenbergConfigured, htmlToPdf } from '@/lib/services/gotenberg.service'
-import { createPage } from '@/lib/utils/puppeteer-pool'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -140,7 +139,8 @@ export async function GET(_request: NextRequest) {
       })
     }
 
-    // Fallback Puppeteer
+    // Fallback Puppeteer (import dynamique pour éviter le crash module au démarrage)
+    const { createPage } = await import('@/lib/utils/puppeteer-pool')
     const page = await createPage()
     try {
       await page.setContent(html, { waitUntil: 'networkidle0' })

@@ -102,6 +102,10 @@
       "maxDuration": 60,
       "memory": 1024
     },
+    "app/api/documents/generate-demo/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
     "app/api/webhooks/stripe/route.ts": {
       "maxDuration": 30
     },
