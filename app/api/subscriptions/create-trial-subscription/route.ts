@@ -295,9 +295,27 @@ export async function POST(request: NextRequest) {
       organizationId: userData.organization_id,
     })
 
-    // Premier cycle de facturation = 37 jours (reward pour avoir ajouté sa carte)
-    // billing_cycle_anchor remplace trial_period_days : la première facture arrive à J+37
-    const firstCycleAnchor = Math.floor((Date.now() + 37 * 24 * 60 * 60_000) / 1000)
+    // Vérifier si la checklist est complète pour accorder 7 jours bonus
+    const { data: orgForChecklist } = await supabase
+      .from('organizations')
+      .select('settings')
+      .eq('id', userData.organization_id)
+      .single()
+
+    const orgSettings = (orgForChecklist?.settings as Record<string, unknown>) || {}
+    const checklistSteps = (orgSettings.onboarding_checklist_steps as Record<string, string>) || {}
+    const REQUIRED_STEPS = ['configure-org', 'document-templates', 'ask-jeane', 'generate-document']
+    const checklistComplete = REQUIRED_STEPS.every(id => !!checklistSteps[id])
+
+    // 37 jours si checklist complète, 30 jours sinon
+    const firstCycleDays = checklistComplete ? 37 : 30
+    const firstCycleAnchor = Math.floor((Date.now() + firstCycleDays * 24 * 60 * 60_000) / 1000)
+
+    logger.info('Création abonnement', {
+      organizationId: userData.organization_id,
+      checklistComplete,
+      firstCycleDays,
+    })
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
@@ -309,6 +327,7 @@ export async function POST(request: NextRequest) {
         organization_id: userData.organization_id,
         plan_id: planId,
         billing_period: billingPeriod,
+        checklist_complete: String(checklistComplete),
       },
       payment_settings: {
         payment_method_types: ['card'],

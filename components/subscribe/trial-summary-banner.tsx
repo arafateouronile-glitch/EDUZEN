@@ -5,6 +5,8 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { BookOpen, Users, FileText, Calendar } from 'lucide-react'
 
+const REQUIRED_STEPS = ['configure-org', 'document-templates', 'ask-jeane', 'generate-document']
+
 export function TrialSummaryBanner() {
   const { user } = useAuth()
   const supabase = createClient()
@@ -13,17 +15,22 @@ export function TrialSummaryBanner() {
     queryKey: ['trial-summary', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
-      const [programs, formations, sessions, documents] = await Promise.all([
+      const [programs, formations, sessions, documents, org] = await Promise.all([
         supabase.from('programs').select('id', { count: 'exact', head: true }).eq('organization_id', user.organization_id),
         supabase.from('formations').select('id', { count: 'exact', head: true }).eq('organization_id', user.organization_id),
         supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('organization_id', user.organization_id),
         supabase.from('documents').select('id', { count: 'exact', head: true }).eq('organization_id', user.organization_id),
+        supabase.from('organizations').select('settings').eq('id', user.organization_id).single(),
       ])
+      const settings = (org.data?.settings as Record<string, unknown>) || {}
+      const steps = (settings.onboarding_checklist_steps as Record<string, string>) || {}
+      const allStepsComplete = REQUIRED_STEPS.every(id => !!steps[id])
       return {
         programs: programs.count ?? 0,
         formations: formations.count ?? 0,
         sessions: sessions.count ?? 0,
         documents: documents.count ?? 0,
+        allStepsComplete,
       }
     },
     enabled: !!user?.organization_id,
@@ -46,9 +53,11 @@ export function TrialSummaryBanner() {
         <p className="text-sm font-semibold text-brand-blue">
           Ce que vous avez construit pendant votre essai — ne perdez pas ce travail.
         </p>
-        <span className="shrink-0 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1 whitespace-nowrap">
-          🎁 Premier cycle : 37 jours
-        </span>
+        {data.allStepsComplete && (
+          <span className="shrink-0 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1 whitespace-nowrap">
+            🎁 Premier cycle : 37 jours
+          </span>
+        )}
       </div>
       <div className="flex flex-wrap gap-4">
         {items.map(({ icon: Icon, count, label }) => (
@@ -59,6 +68,11 @@ export function TrialSummaryBanner() {
           </div>
         ))}
       </div>
+      {data.allStepsComplete && (
+        <p className="text-xs text-amber-700 mt-3 font-medium">
+          🎁 Vous avez complété votre checklist d'activation — votre premier mois sera de <strong>37 jours</strong> au lieu de 30.
+        </p>
+      )}
     </div>
   )
 }
