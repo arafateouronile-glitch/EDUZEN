@@ -413,7 +413,7 @@ export function AiChatWidget() {
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg',
+          'fixed bottom-6 left-6 z-50 h-14 w-14 rounded-full shadow-lg',
           'flex items-center justify-center transition-all duration-200',
           'bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800',
           'text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
@@ -439,7 +439,7 @@ export function AiChatWidget() {
           'transition-all duration-300',
           fullscreen
             ? 'inset-[5%] rounded-2xl'
-            : 'bottom-24 right-6 w-[400px] max-w-[calc(100vw-24px)] rounded-2xl origin-bottom-right',
+            : 'bottom-24 left-6 w-[400px] max-w-[calc(100vw-24px)] rounded-2xl origin-bottom-left',
           open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
         )}
         style={fullscreen ? undefined : { height: '560px' }}
