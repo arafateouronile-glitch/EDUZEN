@@ -84,15 +84,17 @@ export async function checkJeaneLimit(
   const remaining = Math.max(0, limit - current)
 
   if (current >= limit) {
-    const labels: Record<JeaneResourceType, string> = {
-      programs: 'programmes',
-      formations: 'formations',
-      sessions: 'sessions',
+    const labels: Record<JeaneResourceType, [string, string]> = {
+      programs:   ['programme',  'programmes'],
+      formations: ['formation',  'formations'],
+      sessions:   ['session',    'sessions'],
     }
+    const [singular, plural] = labels[resource]
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io').replace(/\/$/, '')
     return {
       allowed: false,
       remaining: 0,
-      message: `Limite atteinte : vous avez utilisé vos ${limit} ${labels[resource]} Jeane inclus dans l'essai gratuit. Passez à une formule payante pour créer sans limite.`,
+      message: `Vous avez utilisé vos ${limit} ${plural} inclus dans l'essai gratuit — c'est la limite pour les comptes en essai.\n\nPour créer des ${plural} sans limite, choisissez votre formule ici : ${appUrl}/dashboard/subscribe\n\nSi vous avez des questions avant de vous décider, répondez à l'email d'Airtone ou appelez le 06 10 44 13 24.`,
     }
   }
 
