@@ -384,7 +384,7 @@ export async function updateAffiliateApplicationStatus(
     // Envoyer l'email selon le statut
     if (app?.email) {
       const appFullName = app.full_name ?? 'cher affilié'
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.eduzen.io'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://eduzen.io'
 
       if (status === 'approved') {
         const html = `<!DOCTYPE html>

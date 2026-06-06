@@ -21,7 +21,7 @@ import Link from 'next/link'
 const STORAGE_HIDDEN = 'dashboard_checklist_hidden'
 const STORAGE_DISMISSED = 'dashboard_checklist_completed_dismissed'
 const STORAGE_FIRST_VISIT = 'dashboard_checklist_first_visit'
-const DELAY_MS = 2 * 60 * 1000 // 2 minutes
+const DELAY_MS = 5 * 1000 // 5 secondes
 
 interface ChecklistItem {
   id: string

@@ -84,6 +84,10 @@
     {
       "path": "/api/cron/onboarding-reengagement",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/onboarding-sequence",
+      "schedule": "30 8 * * *"
     }
   ],
   "functions": {

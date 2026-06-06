@@ -22,7 +22,7 @@ import { fr } from 'date-fns/locale'
 
 const CRON_SECRET  = process.env.CRON_SECRET
 const ALLOWED_IPS  = process.env.CRON_ALLOWED_IPS?.split(',').map((ip) => ip.trim()) || []
-const APP_URL      = process.env.NEXT_PUBLIC_APP_URL || 'https://app.eduzen.io'
+const APP_URL      = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
 
 export async function GET(request: NextRequest) {
   if (!CRON_SECRET) {

@@ -225,7 +225,7 @@ export default function IntegrationsPage() {
     addToast({ title: 'Copi\u00e9', description: 'Copi\u00e9 dans le presse-papiers.', type: 'success' })
   }
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.eduzen.io'
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://eduzen.io'
 
   if (planLoading) {
     return (

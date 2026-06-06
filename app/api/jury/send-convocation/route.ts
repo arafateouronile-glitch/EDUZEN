@@ -12,7 +12,7 @@ import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.eduzen.io'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
 
 export async function POST(request: NextRequest) {
   try {

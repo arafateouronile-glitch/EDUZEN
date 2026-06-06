@@ -28,8 +28,8 @@ export function TrialEndingBanner() {
     queryFn: async () => {
       if (!user?.organization_id) return null
       const { data } = await supabase
-        .from('organization_subscriptions')
-        .select('status, trial_ends_at')
+        .from('subscriptions')
+        .select('status, trial_end_at')
         .eq('organization_id', user.organization_id)
         .in('status', ['trialing', 'active'])
         .order('created_at', { ascending: false })
@@ -41,9 +41,9 @@ export function TrialEndingBanner() {
   })
 
   if (dismissed || user?.role === 'teacher') return null
-  if (!sub?.trial_ends_at) return null
+  if (!sub?.trial_end_at) return null
 
-  const trialEnd = new Date(sub.trial_ends_at)
+  const trialEnd = new Date(sub.trial_end_at)
   const daysLeft = Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
   // Afficher seulement si ≤ 3 jours restants et encore en essai

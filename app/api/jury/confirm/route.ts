@@ -15,7 +15,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.eduzen.io'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)

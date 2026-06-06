@@ -299,7 +299,7 @@ export async function GET(request: NextRequest) {
             }
 
             // Envoyer les emails de signature
-            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.eduzen.io'
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
             const emailResults = await Promise.allSettled(
               (createdRequests ?? []).map(async (req) => {
                 const token = (req as { access_token?: string; signature_token: string }).access_token ?? req.signature_token

@@ -7,7 +7,6 @@ import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
 import { z } from 'zod'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
-
 function buildPostConversionEmail(prenom: string, planName: string): string {
   return `<!DOCTYPE html>
 <html lang="fr">
