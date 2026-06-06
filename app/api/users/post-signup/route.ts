@@ -19,17 +19,26 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id, email, full_name')
-      .eq('id', user.id)
-      .single()
+    // Lire organization_id depuis les métadonnées auth en priorité (dispo immédiatement)
+    // puis fallback sur la table users si besoin
+    let orgId = user.user_metadata?.organization_id as string | undefined
+    let email: string | null = user.email ?? null
+    let full_name: string | null = (user.user_metadata?.full_name as string) ?? null
 
-    if (userError || !userData?.organization_id) {
-      return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
+    if (!orgId) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id, email, full_name')
+        .eq('id', user.id)
+        .maybeSingle()
+      orgId = userData?.organization_id ?? undefined
+      email = userData?.email ?? email
+      full_name = userData?.full_name ?? full_name
     }
 
-    const { organization_id: orgId, email, full_name } = userData
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organisation introuvable' }, { status: 404 })
+    }
 
     const { data: orgData } = await supabase
       .from('organizations')

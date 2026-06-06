@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
@@ -265,16 +265,23 @@ export default function DocumentTemplatesPage() {
       }
       return response.json()
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['document-templates', user?.organization_id] })
       queryClient.invalidateQueries({ queryKey: ['document-templates-by-type', user?.organization_id] })
-      alert(`${data.summary.created} modèle(s) créé(s) avec succès !${data.summary.skipped > 0 ? ` (${data.summary.skipped} déjà existant(s))` : ''}`)
     },
     onError: (error) => {
       logger.error('Erreur lors de la création des modèles par défaut:', error)
-      alert(error instanceof Error ? error.message : 'Erreur lors de la création des modèles')
     },
   })
+
+  // Auto-seeder les modèles si aucun n'existe (nouveaux comptes ou comptes existants sans modèles)
+  const autoSeeded = useRef(false)
+  useEffect(() => {
+    if (!isLoading && templates !== undefined && templates.length === 0 && !autoSeeded.current && !seedDefaultsMutation.isPending) {
+      autoSeeded.current = true
+      seedDefaultsMutation.mutate()
+    }
+  }, [isLoading, templates, seedDefaultsMutation])
 
   // Mutation pour réinitialiser facture/devis/contrat avec le nouveau design
   const resetDefaultsMutation = useMutation({
