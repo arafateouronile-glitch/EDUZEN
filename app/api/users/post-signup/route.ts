@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { seedDefaultTemplatesForOrg } from '@/lib/utils/seed-default-templates'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { logger } from '@/lib/utils/logger'
@@ -40,10 +41,11 @@ export async function POST(_request: NextRequest) {
     const prenom = firstName(full_name, email ?? user.email ?? null)
     const recipient = email ?? user.email ?? ''
 
-    // Seeder les modèles de documents par défaut (non bloquant)
-    seedDefaultTemplatesForOrg(supabase, orgId).catch(err =>
-      logger.error('[post-signup] Error seeding templates:', err)
-    )
+    // Seeder les modèles de documents par défaut avec le client admin (bypass RLS)
+    const adminClient = createAdminClient()
+    seedDefaultTemplatesForOrg(adminClient, orgId)
+      .then(({ created }) => logger.info('[post-signup] Templates seeded', { orgId, created }))
+      .catch(err => logger.error('[post-signup] Error seeding templates:', err))
 
     // Email de bienvenue immédiat (pas de scheduledAt — Resend exige min 30min pour les emails planifiés)
     sendEmailViaResend({
