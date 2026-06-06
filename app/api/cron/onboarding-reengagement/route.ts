@@ -112,6 +112,9 @@ type Window = {
   html: (prenom: string) => string
 }
 
+// J+7 supprimé — couvert par onboarding-sequence (mi-essai)
+// J+2 uniquement pour les users qui sont revenus au moins une fois après signup
+// J+4 reste — tombe entre J+2 et J+7 séquence, aucun overlap
 const WINDOWS: Window[] = [
   {
     daysInactive: 2,
@@ -124,12 +127,6 @@ const WINDOWS: Window[] = [
     label: 'J+4',
     subject: (p) => `${p}, on ne vous a plus vu sur EduZen`,
     html: buildJ4Email,
-  },
-  {
-    daysInactive: 7,
-    label: 'J+7',
-    subject: (p) => `${p}, une semaine sans EduZen`,
-    html: buildJ7Email,
   },
 ]
 
@@ -150,7 +147,7 @@ export async function GET(request: NextRequest) {
 
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, email, full_name, organization_id')
+      .select('id, email, full_name, organization_id, created_at')
       .eq('role', 'admin')
       .eq('is_active', true)
       .gte('created_at', trialStart)
@@ -165,8 +162,17 @@ export async function GET(request: NextRequest) {
 
     let sent = 0, errors = 0
 
+    const FOUR_HOURS_MS = 4 * 60 * 60_000
+
     for (const u of users ?? []) {
       if (!u.email) continue
+
+      // J+2 : exclure les users qui n'ont jamais rouvert l'app après signup
+      // (last_login ≈ created_at → déjà couverts par onboarding-sequence J+2)
+      if (window.daysInactive === 2 && u.created_at && u.last_login_at) {
+        const gap = new Date(u.last_login_at).getTime() - new Date(u.created_at).getTime()
+        if (gap < FOUR_HOURS_MS) continue
+      }
 
       // Ne pas envoyer si l'org a déjà converti
       if (u.organization_id) {

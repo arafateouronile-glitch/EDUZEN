@@ -221,7 +221,7 @@ export function OnboardingChecklist() {
       unlock: '🏆 Accès complet débloqué — badge Fondateur',
       link: '/dashboard/documents/generate',
       completed: (documentsCount ?? 0) > 0,
-      locked: !catalogueReady,
+      locked: false,
     },
   ]
 
