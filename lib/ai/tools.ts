@@ -595,6 +595,12 @@ export const AI_TOOLS: Tool[] = [
 
 type ToolInput = Record<string, unknown>
 
+const JEANE_CREATE_TOOLS: Record<string, 'programs' | 'formations' | 'sessions'> = {
+  create_program: 'programs',
+  create_formation: 'formations',
+  create_session: 'sessions',
+}
+
 export async function executeTool(
   toolName: string,
   toolInput: ToolInput,
@@ -602,6 +608,22 @@ export async function executeTool(
   organizationId: string
 ): Promise<string> {
   try {
+    // Vérification quota Jeane pour les outils de création (trial uniquement)
+    const resourceType = JEANE_CREATE_TOOLS[toolName]
+    if (resourceType) {
+      const { checkJeaneLimit, incrementJeaneUsage } = await import('@/lib/services/jeane-limits')
+      const check = await checkJeaneLimit(supabase, organizationId, resourceType)
+      if (!check.allowed) return check.message!
+      const handlers: Record<string, () => Promise<string>> = {
+        create_program: () => createProgram(toolInput, supabase, organizationId),
+        create_formation: () => createFormation(toolInput, supabase, organizationId),
+        create_session: () => createSession(toolInput, supabase, organizationId),
+      }
+      const result = await handlers[toolName]()
+      if (!result.startsWith('Erreur')) await incrementJeaneUsage(supabase, organizationId, resourceType)
+      return result
+    }
+
     switch (toolName) {
       case 'list_sessions':
         return await listSessions(toolInput, supabase, organizationId)
