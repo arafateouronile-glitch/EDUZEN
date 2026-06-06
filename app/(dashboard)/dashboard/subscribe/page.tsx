@@ -325,24 +325,31 @@ export default function SubscribePage() {
                       </div>
 
                       <div className="mb-6">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-4xl font-bold text-brand-blue">
-                            {formatCurrency(price)}
-                          </span>
-                          <span className="text-gray-500">
-                            /{billingPeriod === 'monthly' ? 'mois' : 'an'}
-                          </span>
-                        </div>
-                        {billingPeriod === 'yearly' && plan.price_monthly_ht && (
-                          <div className="mt-1 space-y-0.5">
-                            <p className="text-sm text-gray-500">
-                              Soit {formatCurrency(plan.price_monthly_ht * 0.8)}/mois
-                            </p>
-                            {getYearlySavings(plan) > 0 && (
-                              <p className="text-sm font-semibold text-green-600">
-                                🎉 {formatCurrency(getYearlySavings(plan))} économisés vs mensuel
+                        {billingPeriod === 'yearly' && plan.price_monthly_ht ? (
+                          <>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-4xl font-bold text-brand-blue">
+                                {formatCurrency(plan.price_monthly_ht * 0.8)}
+                              </span>
+                              <span className="text-gray-500">/mois</span>
+                            </div>
+                            <div className="mt-1 space-y-0.5">
+                              <p className="text-sm text-gray-400">
+                                Facturé {formatCurrency(price)}/an
                               </p>
-                            )}
+                              {getYearlySavings(plan) > 0 && (
+                                <p className="text-sm font-semibold text-green-600">
+                                  🎉 {formatCurrency(getYearlySavings(plan))} économisés vs mensuel
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-bold text-brand-blue">
+                              {formatCurrency(price)}
+                            </span>
+                            <span className="text-gray-500">/mois</span>
                           </div>
                         )}
                         {billingPeriod === 'monthly' && plan.price_yearly_ht && getYearlySavings(plan) > 0 && (
