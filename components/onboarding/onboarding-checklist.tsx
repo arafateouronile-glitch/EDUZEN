@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { X, ChevronDown, ChevronUp, Lock, CheckCircle2, Sparkles, Zap, Rocket, Trophy } from 'lucide-react'
+import { X, ChevronDown, ChevronUp, Lock, CheckCircle2, Sparkles, Zap, Rocket, Trophy, Phone } from 'lucide-react'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -18,10 +18,14 @@ const DELAY_MS = 5 * 1000
 
 const LEVELS = [
   { level: 1, label: 'Démarrage',  icon: Sparkles, color: 'text-gray-500',   bg: 'bg-gray-100',   border: 'border-gray-200' },
-  { level: 2, label: 'En route',   icon: Zap,       color: 'text-blue-600',  bg: 'bg-blue-50',    border: 'border-blue-200' },
-  { level: 3, label: 'Actif',      icon: Rocket,    color: 'text-indigo-600',bg: 'bg-indigo-50',  border: 'border-indigo-200' },
-  { level: 4, label: 'Prêt',       icon: Trophy,    color: 'text-amber-600', bg: 'bg-amber-50',   border: 'border-amber-200' },
+  { level: 2, label: 'En route',   icon: Phone,     color: 'text-blue-600',  bg: 'bg-blue-50',    border: 'border-blue-200' },
+  { level: 3, label: 'Actif',      icon: Zap,       color: 'text-indigo-600',bg: 'bg-indigo-50',  border: 'border-indigo-200' },
+  { level: 4, label: 'Lancé',      icon: Rocket,    color: 'text-violet-600',bg: 'bg-violet-50',  border: 'border-violet-200' },
+  { level: 5, label: 'Prêt',       icon: Trophy,    color: 'text-amber-600', bg: 'bg-amber-50',   border: 'border-amber-200' },
 ]
+
+const CALENDLY = 'https://calendly.com/airtonenile/30min'
+const CALL_CLICKED_KEY = 'onboarding_call_clicked'
 
 function getStored(key: string): boolean {
   if (typeof window === 'undefined') return false
@@ -73,12 +77,14 @@ export function OnboardingChecklist() {
   const [mounted, setMounted] = useState(false)
   const [delayElapsed, setDelayElapsed] = useState(false)
   const [celebratingStep, setCelebratingStep] = useState<string | null>(null)
+  const [callClicked, setCallClicked] = useState(false)
   const prevCompleted = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     setMounted(true)
     setIsHidden(getStored(STORAGE_HIDDEN))
     setIsDismissed(getStored(STORAGE_DISMISSED))
+    setCallClicked(getStored(CALL_CLICKED_KEY))
     try {
       const stored = localStorage.getItem(STORAGE_FIRST_VISIT)
       const firstVisit = stored ? parseInt(stored, 10) : Date.now()
@@ -113,11 +119,19 @@ export function OnboardingChecklist() {
     queryKey: ['org-setup', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
-      const { data } = await supabase.from('organizations').select('logo_url, nda_number, address').eq('id', user.organization_id).single()
+      const { data } = await supabase
+        .from('organizations')
+        .select('logo_url, nda_number, address, settings')
+        .eq('id', user.organization_id)
+        .single()
       return data
     },
     enabled: !!user?.organization_id,
   })
+
+  const callBooked = !!((org?.settings as Record<string, unknown>
+    )?.onboarding_checklist_steps as Record<string, string>
+  )?.['book-call']
 
   const { data: templatesCount } = useQuery({
     queryKey: ['templates-count', user?.organization_id],
@@ -183,7 +197,26 @@ export function OnboardingChecklist() {
   const orgConfigured = !!(org?.logo_url && org?.nda_number && org?.address)
   const catalogueReady = (programsCount ?? 0) > 0 && (formationsCount ?? 0) > 0 && (sessionsCount ?? 0) > 0
 
+  const confirmCall = () => {
+    fetch('/api/onboarding/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stepId: 'book-call', completed: true }),
+    }).catch(() => {})
+    try { localStorage.setItem(CALL_CLICKED_KEY, 'true') } catch {}
+    setCallClicked(false)
+  }
+
   const steps = [
+    {
+      id: 'book-call',
+      label: 'Réserver votre appel de démarrage',
+      description: '30 min avec Airtone — configurez EduZen pour votre organisme',
+      unlock: '✨ Onboarding personnalisé activé',
+      completed: callBooked,
+      locked: false,
+      isCall: true,
+    },
     {
       id: 'configure-org',
       label: 'Configurer votre organisme',
@@ -228,7 +261,7 @@ export function OnboardingChecklist() {
   const completedCount = steps.filter(s => s.completed).length
   const progress = (completedCount / steps.length) * 100
   const isComplete = completedCount === steps.length
-  const currentLevel = LEVELS[Math.min(completedCount, 3)]
+  const currentLevel = LEVELS[Math.min(completedCount, 4)]
   const LevelIcon = currentLevel.icon
   const nextStep = steps.find(s => !s.completed)
 
@@ -300,7 +333,7 @@ export function OnboardingChecklist() {
               </div>
               <div className="mt-1 h-1.5 bg-white/60 rounded-full overflow-hidden">
                 <motion.div
-                  className={cn('h-full rounded-full', completedCount === 4 ? 'bg-amber-500' : completedCount >= 2 ? 'bg-indigo-500' : 'bg-blue-500')}
+                  className={cn('h-full rounded-full', completedCount === 5 ? 'bg-amber-500' : completedCount >= 3 ? 'bg-violet-500' : completedCount >= 2 ? 'bg-indigo-500' : 'bg-blue-500')}
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -403,15 +436,39 @@ export function OnboardingChecklist() {
                       {/* Bouton action */}
                       {!step.completed && !step.locked && (
                         <div className="shrink-0">
-                          {step.onClick ? (
+                          {(step as { isCall?: boolean }).isCall ? (
+                            callClicked ? (
+                              <Button
+                                size="sm"
+                                onClick={confirmCall}
+                                className="text-xs h-7 px-2.5 bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                J'ai réservé ✓
+                              </Button>
+                            ) : (
+                              <a href={CALENDLY} target="_blank" rel="noopener noreferrer">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setCallClicked(true)
+                                    try { localStorage.setItem(CALL_CLICKED_KEY, 'true') } catch {}
+                                  }}
+                                  className={cn(
+                                    'text-xs h-7 px-2.5',
+                                    isCurrent ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'variant-ghost'
+                                  )}
+                                >
+                                  📅 Réserver
+                                </Button>
+                              </a>
+                            )
+                          ) : step.onClick ? (
                             <Button
                               size="sm"
                               onClick={step.onClick}
                               className={cn(
                                 'text-xs h-7 px-3',
-                                isCurrent
-                                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                  : 'variant-ghost'
+                                isCurrent ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'variant-ghost'
                               )}
                             >
                               Lancer
@@ -422,9 +479,7 @@ export function OnboardingChecklist() {
                                 size="sm"
                                 className={cn(
                                   'text-xs h-7 px-3',
-                                  isCurrent
-                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                    : 'variant-ghost'
+                                  isCurrent ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'variant-ghost'
                                 )}
                               >
                                 Ouvrir
