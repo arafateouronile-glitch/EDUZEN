@@ -50,7 +50,6 @@ export default function CrmPage() {
   const [leadsSearch, setLeadsSearch] = useState('')
   const [vslSearch, setVslSearch] = useState('')
   const [contactSearch, setContactSearch] = useState('')
-  const [expandedContact, setExpandedContact] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const load = () => {
@@ -554,79 +553,67 @@ export default function CrmPage() {
                       .includes(contactSearch.toLowerCase())
                   )
                   .map((contact) => (
-                    <div key={contact.id} className="px-4 py-3">
-                      {/* Header ligne */}
-                      <div
-                        className="flex flex-col sm:flex-row sm:items-center gap-2 cursor-pointer"
-                        onClick={() => setExpandedContact(expandedContact === contact.id ? null : contact.id)}
-                      >
+                    <div key={contact.id} className={cn(
+                      'px-4 py-4 space-y-3',
+                      contact.status === 'new' && 'bg-brand-blue/[0.02] border-l-2 border-brand-blue'
+                    )}>
+                      {/* Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                         {/* Avatar */}
                         <div className={cn(
                           'flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-semibold text-sm',
-                          contact.status === 'new'
-                            ? 'bg-brand-blue text-white'
-                            : 'bg-muted text-muted-foreground'
+                          contact.status === 'new' ? 'bg-brand-blue text-white' : 'bg-muted text-muted-foreground'
                         )}>
                           {contact.first_name[0]}{contact.last_name[0]}
                         </div>
 
-                        {/* Nom + raison */}
+                        {/* Identité */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className={cn('font-medium text-sm', contact.status === 'new' && 'font-semibold')}>
+                            <p className={cn('font-semibold text-sm', contact.status === 'new' && 'text-foreground')}>
                               {contact.first_name} {contact.last_name}
                             </p>
                             <Badge variant="outline" className="text-[10px] py-0 h-4 font-normal">
                               {REASON_LABELS[contact.reason] ?? contact.reason}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                            <a href={`mailto:${contact.email}`} className="hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
-                              {contact.email}
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                            <a href={`mailto:${contact.email}`} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                              <Mail className="h-3 w-3" />{contact.email}
                             </a>
                             {contact.company && (
-                              <>
-                                <span>·</span>
-                                <span className="flex items-center gap-1">
-                                  <Building2 className="h-3 w-3" />{contact.company}
-                                </span>
-                              </>
+                              <span className="flex items-center gap-1">
+                                <Building2 className="h-3 w-3" />{contact.company}
+                              </span>
                             )}
+                            <span className="text-muted-foreground/60">
+                              {new Date(contact.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
                           </div>
                         </div>
 
-                        {/* Date + statut + chevron */}
-                        <div className="flex items-center gap-3 sm:shrink-0 text-xs">
-                          <span className="text-muted-foreground">
-                            {new Date(contact.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </span>
-                          <select
-                            value={contact.status}
-                            onChange={(e) => {
-                              e.stopPropagation()
-                              handleContactStatus(contact.id, e.target.value as ContactSubmission['status'])
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className={cn(
-                              'text-xs border rounded px-1.5 py-0.5 bg-background cursor-pointer',
-                              contact.status === 'new' && 'border-brand-blue text-brand-blue',
-                              contact.status === 'read' && 'border-gray-300 text-gray-600',
-                              contact.status === 'replied' && 'border-emerald-500 text-emerald-700',
-                              contact.status === 'archived' && 'border-gray-200 text-gray-400',
-                            )}
-                          >
-                            <option value="new">Nouveau</option>
-                            <option value="read">Lu</option>
-                            <option value="replied">Répondu</option>
-                            <option value="archived">Archivé</option>
-                          </select>
-                          <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', expandedContact === contact.id && 'rotate-180')} />
-                        </div>
+                        {/* Statut */}
+                        <select
+                          value={contact.status}
+                          onChange={(e) => handleContactStatus(contact.id, e.target.value as ContactSubmission['status'])}
+                          className={cn(
+                            'text-xs border rounded px-1.5 py-0.5 bg-background cursor-pointer shrink-0',
+                            contact.status === 'new' && 'border-brand-blue text-brand-blue',
+                            contact.status === 'read' && 'border-gray-300 text-gray-600',
+                            contact.status === 'replied' && 'border-emerald-500 text-emerald-700',
+                            contact.status === 'archived' && 'border-gray-200 text-gray-400',
+                          )}
+                        >
+                          <option value="new">Nouveau</option>
+                          <option value="read">Lu</option>
+                          <option value="replied">Répondu</option>
+                          <option value="archived">Archivé</option>
+                        </select>
                       </div>
 
-                      {/* Message déroulant */}
-                      {expandedContact === contact.id && (
-                        <div className="mt-3 ml-11 p-3 bg-muted/50 rounded-lg text-sm text-foreground whitespace-pre-wrap">
+                      {/* Message — toujours visible */}
+                      {contact.message && (
+                        <div className="ml-12 p-3 bg-muted/50 rounded-lg text-sm text-foreground whitespace-pre-wrap leading-relaxed border border-border/50">
                           {contact.message}
                         </div>
                       )}
