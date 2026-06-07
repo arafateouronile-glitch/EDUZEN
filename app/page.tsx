@@ -3,7 +3,6 @@
 import dynamic from 'next/dynamic'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Navbar } from '@/components/landing/Navbar'
-import { SalesChatbot } from '@/components/landing/sales-chatbot'
 import { JsonLd } from '@/components/seo/JsonLd'
 
 // ============================================
@@ -423,9 +422,6 @@ export default function HomePage() {
           </Suspense>
         </DeferredSection>
       </main>
-
-      {/* Chatbot commercial — bottom left pour ne pas gêner le support */}
-      <SalesChatbot />
     </ParallaxProvider>
   )
 }

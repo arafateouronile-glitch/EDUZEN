@@ -17,6 +17,7 @@ import { CSP_NONCE_HEADER } from '@/lib/utils/csp'
 import { NonceProvider } from '@/lib/contexts/nonce-context'
 import { Noise } from '@/components/ui/Noise'
 import { Preloader } from '@/components/ui/Preloader'
+import { PublicChatbotWrapper } from '@/components/landing/public-chatbot-wrapper'
 
 export const metadata: Metadata = {
   title: {
@@ -200,6 +201,7 @@ export default async function RootLayout({
           <NextIntlClientProvider messages={messages}>
             <Providers>
               {children}
+              <PublicChatbotWrapper />
               <AnalyticsLoader />
             </Providers>
           </NextIntlClientProvider>
