@@ -1,0 +1,3 @@
+ALTER TABLE public.demo_leads
+  ADD COLUMN IF NOT EXISTS phone TEXT,
+  ADD COLUMN IF NOT EXISTS message TEXT;

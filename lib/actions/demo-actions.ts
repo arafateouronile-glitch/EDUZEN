@@ -7,6 +7,8 @@ export type DemoLeadInput = {
   last_name: string
   company: string
   email: string
+  phone?: string
+  message?: string
 }
 
 export async function submitDemoLead(input: DemoLeadInput): Promise<{ success: boolean; error?: string }> {
@@ -19,6 +21,8 @@ export async function submitDemoLead(input: DemoLeadInput): Promise<{ success: b
       last_name: input.last_name.trim(),
       company: input.company.trim(),
       email: input.email.trim().toLowerCase(),
+      phone: input.phone?.trim() || null,
+      message: input.message?.trim() || null,
     })
 
   if (error) {

@@ -473,37 +473,38 @@ export default function CrmPage() {
             <Card>
               <div className="divide-y divide-border">
                 {filteredLeads.map((lead) => (
-                  <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div key={lead.id} className="px-4 py-4 space-y-3 border-l-2 border-brand-blue/30">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
                         {lead.first_name[0]}{lead.last_name[0]}
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {lead.first_name} {lead.last_name}
-                        </p>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                          <Building2 className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{lead.company}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm">{lead.first_name} {lead.last_name}</p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                          {lead.company && (
+                            <span className="flex items-center gap-1">
+                              <Building2 className="h-3 w-3" />{lead.company}
+                            </span>
+                          )}
+                          <a href={`mailto:${lead.email}`} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                            <Mail className="h-3 w-3" />{lead.email}
+                          </a>
+                          {lead.phone && (
+                            <a href={`tel:${lead.phone}`} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                              <Phone className="h-3 w-3" />{lead.phone}
+                            </a>
+                          )}
+                          <span className="text-muted-foreground/60">
+                            {new Date(lead.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground sm:shrink-0">
-                      <a
-                        href={`mailto:${lead.email}`}
-                        className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-                      >
-                        <Mail className="h-3.5 w-3.5 shrink-0" />
-                        <span>{lead.email}</span>
-                      </a>
-                      <span className="hidden sm:block shrink-0">
-                        {new Date(lead.created_at).toLocaleDateString('fr-FR', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    </div>
+                    {lead.message && (
+                      <div className="ml-12 p-3 bg-muted/50 rounded-lg text-sm text-foreground whitespace-pre-wrap leading-relaxed border border-border/50">
+                        {lead.message}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

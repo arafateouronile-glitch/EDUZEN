@@ -23,6 +23,8 @@ export function DemoContent() {
       last_name: (form.elements.namedItem('last_name') as HTMLInputElement).value,
       company: (form.elements.namedItem('company') as HTMLInputElement).value,
       email: (form.elements.namedItem('email') as HTMLInputElement).value,
+      phone: (form.elements.namedItem('phone') as HTMLInputElement).value || undefined,
+      message: (form.elements.namedItem('message') as HTMLTextAreaElement).value || undefined,
     }
 
     const result = await submitDemoLead(data)
@@ -95,17 +97,44 @@ export function DemoContent() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    Email professionnel
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="marie@monorganisme.fr"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                    Téléphone <span className="text-gray-400 font-normal">(facultatif)</span>
+                  </label>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="06 12 34 56 78"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                  />
+                </div>
+              </div>
+
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  Email professionnel
+                <label htmlFor="message" className="text-sm font-medium text-gray-700">
+                  Votre situation actuelle <span className="text-gray-400 font-normal">(facultatif)</span>
                 </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  placeholder="marie@monorganisme.fr"
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
+                <textarea
+                  id="message"
+                  name="message"
+                  rows={3}
+                  placeholder="Ex : Je gère 50 apprenants/an, j'utilise actuellement Excel et Word..."
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all resize-none"
                 />
               </div>
 

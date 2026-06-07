@@ -12,6 +12,8 @@ export type DemoLead = {
   last_name: string
   company: string
   email: string
+  phone: string | null
+  message: string | null
   created_at: string
 }
 
@@ -154,7 +156,7 @@ export async function getDemoLeads(): Promise<{
 
     const { data, error } = await (supabase as unknown as import('@supabase/supabase-js').SupabaseClient)
       .from('demo_leads')
-      .select('id, first_name, last_name, company, email, created_at')
+      .select('id, first_name, last_name, company, email, phone, message, created_at')
       .order('created_at', { ascending: false })
 
     if (error) throw error
