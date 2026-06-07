@@ -5,7 +5,7 @@ import { motion } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video, MessageSquare, ChevronDown, Link2, Check, Ban, Clock, ExternalLink, Loader2, Send } from 'lucide-react'
+import { RefreshCw, Search, Users, CheckCircle2, AlertTriangle, XCircle, Sparkles, Mail, Building2, UserRound, Phone, Video, MessageSquare, Link2, Check, Ban, Clock, ExternalLink, Loader2, Send } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -43,7 +43,6 @@ export default function CrmPage() {
   const [affiliateApps, setAffiliateApps] = useState<AffiliateApplication[]>([])
   const [affiliateSearch, setAffiliateSearch] = useState('')
   const [affiliateStatusFilter, setAffiliateStatusFilter] = useState<string>('all')
-  const [expandedAffiliate, setExpandedAffiliate] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
@@ -676,11 +675,12 @@ export default function CrmPage() {
             <Card>
               <div className="divide-y divide-border">
                 {filteredAffiliateApps.map((app) => (
-                  <div key={app.id} className="px-4 py-3">
-                    <div
-                      className="flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer"
-                      onClick={() => setExpandedAffiliate(expandedAffiliate === app.id ? null : app.id)}
-                    >
+                  <div key={app.id} className={cn(
+                    'px-4 py-4 space-y-3',
+                    app.status === 'pending' && 'bg-amber-50/40 border-l-2 border-amber-400'
+                  )}>
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                       {/* Avatar */}
                       <div className={cn(
                         'flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-semibold text-sm uppercase',
@@ -694,39 +694,35 @@ export default function CrmPage() {
                       {/* Identité */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-medium text-sm">{app.full_name ?? '—'}</p>
+                          <p className="font-semibold text-sm">{app.full_name ?? '—'}</p>
                           {app.metadata?.profile_type && (
                             <Badge variant="outline" className="text-[10px] py-0 h-4 font-normal">
                               {PROFILE_LABELS[app.metadata.profile_type] ?? app.metadata.profile_type}
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                          <a href={`mailto:${app.email}`} className="hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
-                            {app.email}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                          <a href={`mailto:${app.email}`} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                            <Mail className="h-3 w-3" />{app.email}
                           </a>
                           {app.company_name && (
-                            <><span>·</span><span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{app.company_name}</span></>
+                            <span className="flex items-center gap-1">
+                              <Building2 className="h-3 w-3" />{app.company_name}
+                            </span>
                           )}
                           {app.metadata?.website && (
-                            <a
-                              href={app.metadata.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 hover:text-foreground transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
+                            <a href={app.metadata.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-foreground transition-colors">
                               <ExternalLink className="h-3 w-3" />Site
                             </a>
                           )}
+                          <span className="text-muted-foreground/60">
+                            {new Date(app.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Date + statut + actions */}
-                      <div className="flex items-center gap-2 sm:shrink-0 text-xs">
-                        <span className="text-muted-foreground hidden sm:block">
-                          {new Date(app.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
+                      {/* Statut + actions */}
+                      <div className="flex items-center gap-2 shrink-0">
                         <Badge className={cn(
                           'text-[10px] py-0',
                           app.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
@@ -737,38 +733,25 @@ export default function CrmPage() {
                         </Badge>
                         {app.status === 'pending' && (
                           <>
-                            <button
-                              title="Valider"
-                              onClick={(e) => { e.stopPropagation(); handleAffiliateStatus(app.id, 'approved') }}
-                              className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                            >
+                            <button title="Valider" onClick={() => handleAffiliateStatus(app.id, 'approved')} className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
                               <Check className="h-3.5 w-3.5" />
                             </button>
-                            <button
-                              title="Refuser"
-                              onClick={(e) => { e.stopPropagation(); handleAffiliateStatus(app.id, 'banned') }}
-                              className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
-                            >
+                            <button title="Refuser" onClick={() => handleAffiliateStatus(app.id, 'banned')} className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors">
                               <Ban className="h-3.5 w-3.5" />
                             </button>
                           </>
                         )}
                         {app.status === 'approved' && (
-                          <button
-                            title="Remettre en attente"
-                            onClick={(e) => { e.stopPropagation(); handleAffiliateStatus(app.id, 'pending') }}
-                            className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
-                          >
+                          <button title="Remettre en attente" onClick={() => handleAffiliateStatus(app.id, 'pending')} className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors">
                             <Clock className="h-3.5 w-3.5" />
                           </button>
                         )}
-                        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', expandedAffiliate === app.id && 'rotate-180')} />
                       </div>
                     </div>
 
-                    {/* Message déroulant */}
-                    {expandedAffiliate === app.id && app.metadata?.message && (
-                      <div className="mt-3 ml-12 p-3 bg-muted/50 rounded-lg text-sm text-foreground whitespace-pre-wrap">
+                    {/* Message — toujours visible */}
+                    {app.metadata?.message && (
+                      <div className="ml-12 p-3 bg-muted/50 rounded-lg text-sm text-foreground whitespace-pre-wrap leading-relaxed border border-border/50">
                         {app.metadata.message}
                       </div>
                     )}
