@@ -132,6 +132,12 @@ const navigation: NavSection[] = [
         permission: 'view_dashboard',
       },
       {
+        name: 'Funnel Onboarding',
+        href: '/super-admin/onboarding-funnel',
+        icon: BarChart3,
+        permission: 'view_dashboard',
+      },
+      {
         name: 'Emails',
         href: '/super-admin/email-logs',
         icon: Mail,
