@@ -1920,11 +1920,15 @@ async function generateCertificate(input: ToolInput, supabase: SupabaseClient, o
     })
     if (uploadErr) return `Erreur upload PDF : ${uploadErr.message}`
 
+    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath)
+    const docTitle = `${typeLabel[certType] ?? typeLabel.attestation} — ${st.first_name} ${st.last_name} — ${se.name}`
+
     const { data: fileRecord, error: fileErr } = await supabase.from('documents').insert({
       organization_id: orgId,
       student_id: studentId,
+      title: docTitle,
       type: certType,
-      file_path: filePath,
+      file_url: urlData.publicUrl,
       metadata: { session_id: sessionId, generated_by: 'ai_agent' },
     }).select('id').single()
 
