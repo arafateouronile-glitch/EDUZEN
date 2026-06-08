@@ -313,14 +313,14 @@ export const AI_TOOLS: Tool[] = [
   },
   {
     name: 'send_document_for_signature',
-    description: 'Générer un document (devis ou convention de formation) et l\'envoyer par email à l\'apprenant pour signature électronique.',
+    description: 'Générer un document (convention, devis ou convocation) et l\'envoyer par email à l\'apprenant. Convention et devis sont envoyés pour signature électronique ; la convocation est envoyée directement en pièce jointe.',
     input_schema: {
       type: 'object' as const,
       properties: {
         document_type: {
           type: 'string',
-          enum: ['convention', 'devis'],
-          description: 'Type de document à envoyer : "convention" pour une convention de formation, "devis" pour un devis',
+          enum: ['convention', 'devis', 'convocation'],
+          description: 'Type de document : "convention" pour une convention de formation, "devis" pour un devis, "convocation" pour une convocation (envoyée en pièce jointe, sans signature)',
         },
         student_id: {
           type: 'string',
@@ -430,13 +430,13 @@ export const AI_TOOLS: Tool[] = [
   },
   {
     name: 'send_bulk_documents',
-    description: 'Envoyer un document (devis ou convention) à TOUS les apprenants inscrits d\'une session en une seule opération. Envoie uniquement aux apprenants non annulés ayant une adresse email.',
+    description: 'Envoyer un document (devis, convention ou convocation) à TOUS les apprenants inscrits d\'une session en une seule opération. Envoie uniquement aux apprenants non annulés ayant une adresse email.',
     input_schema: {
       type: 'object' as const,
       properties: {
         document_type: {
           type: 'string',
-          enum: ['convention', 'devis'],
+          enum: ['convention', 'devis', 'convocation'],
           description: 'Type de document à envoyer',
         },
         session_id: {
@@ -1086,26 +1086,26 @@ async function createFormation(input: ToolInput, supabase: SupabaseClient, orgId
 }
 
 async function sendDocumentForSignature(input: ToolInput, supabase: SupabaseClient, orgId: string) {
-  const docType = input.document_type as 'convention' | 'devis'
+  const docType = input.document_type as 'convention' | 'devis' | 'convocation'
   const studentId = input.student_id as string
   const sessionId = input.session_id as string
   const enrollmentId = (input.enrollment_id as string) ?? null
 
-  // Fetch all data in parallel
-  const [studentRes, sessionRes, orgRes, templateRes] = await Promise.all([
+  // Fetch all data in parallel — même sélection que le dashboard
+  const [studentRes, sessionRes, orgRes, templateRes, enrollmentRes] = await Promise.all([
     supabase
       .from('students')
-      .select('id, first_name, last_name, email, student_number, phone, address, date_of_birth')
+      .select('id, first_name, last_name, email, student_number, phone, address, date_of_birth, company_name')
       .eq('id', studentId)
       .single(),
     supabase
       .from('sessions')
-      .select('id, name, start_date, end_date, location, formations(id, name, code, duration_hours, price, currency, pedagogical_objectives, modalities)')
+      .select('id, name, start_date, end_date, location, start_time, end_time, formations(id, name, code, duration_hours, price, currency, pedagogical_objectives, modalities, program_id, programs(id, name, description, objectives, target_audience, prerequisites))')
       .eq('id', sessionId)
       .single(),
     supabase
       .from('organizations')
-      .select('id, name, email, phone, address, logo_url, website, siret, nda_number, representative_name')
+      .select('id, name, email, phone, address, logo_url, website, siret, nda_number, representative_name, city, postal_code, region')
       .eq('id', orgId)
       .single(),
     supabase
@@ -1116,65 +1116,54 @@ async function sendDocumentForSignature(input: ToolInput, supabase: SupabaseClie
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    enrollmentId
+      ? supabase.from('enrollments').select('id, total_amount, paid_amount, enrollment_date').eq('id', enrollmentId).single()
+      : Promise.resolve({ data: null, error: null }),
   ])
 
   const student = studentRes.data
   const session = sessionRes.data
   const org = orgRes.data
   const template = templateRes.data
+  const enrollment = enrollmentRes.data
 
   if (!student) return `Apprenant introuvable (ID: ${studentId})`
   if (!session) return `Session introuvable (ID: ${sessionId})`
   if (!student.email) return `L'apprenant ${student.first_name} ${student.last_name} n'a pas d'adresse email.`
   if (!template) {
-    const label = docType === 'convention' ? 'convention de formation' : 'devis'
-    return `Aucun modèle de ${label} configuré. Créez-en un dans Paramètres → Modèles de documents avant de pouvoir envoyer ce document.`
+    const labels: Record<string, string> = { convention: 'convention de formation', devis: 'devis', convocation: 'convocation' }
+    return `Aucun modèle de ${labels[docType] ?? docType} configuré. Créez-en un dans Paramètres → Modèles de documents avant de pouvoir envoyer ce document.`
   }
 
+  // Extraire programme et formation depuis la session
   const formationRaw = session.formations
-  const formation: Record<string, unknown> = (
-    Array.isArray(formationRaw) ? formationRaw[0] : formationRaw
-  ) as Record<string, unknown> ?? {}
+  const formationObj = (Array.isArray(formationRaw) ? formationRaw[0] : formationRaw) as Record<string, unknown> | null ?? {}
+  const programRaw = (formationObj as Record<string, unknown>)?.programs
+  const programObj = (Array.isArray(programRaw) ? programRaw[0] : programRaw) as Record<string, unknown> | null ?? null
 
-  // Build document variables
-  const today = new Date()
-  const variables = {
-    organisation_nom: org?.name ?? '',
-    organisation_email: org?.email ?? '',
-    organisation_telephone: org?.phone ?? '',
-    organisation_adresse: org?.address ?? '',
-    organisation_siret: (org as Record<string, unknown> | null)?.siret ?? '',
-    organisation_numero_declaration: (org as Record<string, unknown> | null)?.nda_number ?? '',
-    organisation_representant: (org as Record<string, unknown> | null)?.representative_name ?? '',
-    etudiant_nom: student.last_name ?? '',
-    etudiant_prenom: student.first_name ?? '',
-    etudiant_nom_complet: `${student.first_name} ${student.last_name}`,
-    etudiant_numero: student.student_number ?? '',
-    etudiant_email: student.email ?? '',
-    etudiant_telephone: student.phone ?? '',
-    etudiant_adresse: student.address ?? '',
-    session_nom: session.name ?? '',
-    session_date_debut: session.start_date ?? '',
-    session_debut: session.start_date ?? '',
-    session_date_fin: session.end_date ?? '',
-    session_fin: session.end_date ?? '',
-    session_lieu: session.location ?? '',
-    formation_nom: (formation.name as string) ?? '',
-    formation_code: (formation.code as string) ?? '',
-    formation_duree: formation.duration_hours ? `${formation.duration_hours}h` : '',
-    formation_prix: formation.price ? `${formation.price} ${formation.currency ?? 'EUR'}` : '',
-    montant: formation.price ? String(formation.price) : '0',
-    facture_devise: (formation.currency as string) ?? 'EUR',
-    date_jour: today.toLocaleDateString('fr-FR'),
-    date_aujourd_hui: today.toLocaleDateString('fr-FR'),
-    date_emission: today.toLocaleDateString('fr-FR'),
-    annee_actuelle: String(today.getFullYear()),
-    numero_devis: `D-${Date.now().toString().slice(-8)}`,
-    reference_devis: `D-${Date.now().toString().slice(-8)}`,
-    validite_devis: new Date(Date.now() + 30 * 86400000).toLocaleDateString('fr-FR'),
-  }
+  // Construire les variables avec le même extracteur que le dashboard
+  const { extractDocumentVariables } = await import('@/lib/utils/document-generation/variable-extractor')
+  const variables = extractDocumentVariables({
+    student: student as any,
+    session: {
+      ...session,
+      formations: formationObj as any,
+    } as any,
+    organization: {
+      ...org,
+      siret: (org as any)?.siret ?? null,
+      nda_number: (org as any)?.nda_number ?? null,
+      representative_name: (org as any)?.representative_name ?? null,
+      city: (org as any)?.city ?? null,
+      postal_code: (org as any)?.postal_code ?? null,
+      region: (org as any)?.region ?? null,
+    } as any,
+    program: programObj ? { ...programObj, id: String(programObj.id ?? ''), name: String(programObj.name ?? '') } as any : undefined,
+    language: 'fr',
+    issueDate: new Date().toISOString(),
+  })
 
-  // Generate PDF server-side
+  // Generate PDF — même moteur (Puppeteer/Gotenberg) que le dashboard
   const { generatePDF } = await import('@/lib/utils/document-generation/pdf-generator')
   let pdfBuffer: Buffer
   try {
@@ -1190,10 +1179,57 @@ async function sendDocumentForSignature(input: ToolInput, supabase: SupabaseClie
     return `Erreur lors de la génération du PDF : ${msg}. Vérifiez que le modèle de document contient du contenu.`
   }
 
-  // Upload to Supabase Storage
   const timestamp = Date.now()
-  const docLabel = docType === 'convention' ? 'convention' : 'devis'
-  const fileName = `${docLabel}_${student.student_number || studentId.slice(0, 8)}_${timestamp}.pdf`
+  const docLabels: Record<string, string> = { convention: 'Convention', devis: 'Devis', convocation: 'Convocation' }
+  const docTitle = `${docLabels[docType] ?? docType} — ${student.first_name} ${student.last_name} — ${session.name}`
+
+  // ── Convocation : envoi direct par email (pièce jointe, sans signature) ──
+  if (docType === 'convocation') {
+    const { sendEmailViaResend } = await import('@/lib/utils/send-email-resend')
+    const startDate = session.start_date ? new Date(session.start_date).toLocaleDateString('fr-FR') : '—'
+    const endDate = session.end_date ? new Date(session.end_date).toLocaleDateString('fr-FR') : '—'
+    const html = `<!DOCTYPE html><html lang="fr"><body style="font-family:Arial,sans-serif;color:#222;">
+      <p>Bonjour ${student.first_name} ${student.last_name},</p>
+      <p>Vous êtes convoqué(e) pour la session de formation suivante :</p>
+      <ul>
+        <li><strong>Formation :</strong> ${String(formationObj?.name ?? session.name)}</li>
+        <li><strong>Session :</strong> ${session.name}</li>
+        <li><strong>Date de début :</strong> ${startDate}</li>
+        <li><strong>Date de fin :</strong> ${endDate}</li>
+        ${session.location ? `<li><strong>Lieu :</strong> ${session.location}</li>` : ''}
+      </ul>
+      <p>Veuillez trouver ci-joint votre convocation en PDF.</p>
+      <p>Cordialement,<br>${org?.name ?? ''}</p>
+    </body></html>`
+
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const FROM_EMAIL = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'EDUZEN <noreply@eduzen.io>'
+    const fileName = `convocation_${student.last_name}_${student.first_name}.pdf`
+    const { error: emailErr } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [student.email],
+      subject: `Convocation - ${session.name}`,
+      html,
+      attachments: [{ filename: fileName, content: pdfBuffer }],
+    } as Parameters<typeof resend.emails.send>[0])
+
+    if (emailErr) {
+      const msg = typeof emailErr === 'object' && emailErr !== null && 'message' in emailErr ? String((emailErr as { message: unknown }).message) : 'Erreur Resend'
+      return `PDF généré mais erreur d'envoi email : ${msg}`
+    }
+
+    return (
+      `✅ Convocation envoyée par email !\n` +
+      `• Destinataire : ${student.first_name} ${student.last_name} (${student.email})\n` +
+      `• Session : ${session.name}\n` +
+      `• Pièce jointe : ${fileName}`
+    )
+  }
+
+  // ── Convention / Devis : upload + demande de signature ──
+  const docSlug = docType === 'convention' ? 'convention' : 'devis'
+  const fileName = `${docSlug}_${student.student_number || studentId.slice(0, 8)}_${timestamp}.pdf`
   const filePath = `signatures/${orgId}/${fileName}`
 
   const { error: uploadError } = await supabase.storage
@@ -1204,8 +1240,6 @@ async function sendDocumentForSignature(input: ToolInput, supabase: SupabaseClie
 
   const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath)
 
-  // Create document record
-  const docTitle = `${docType === 'convention' ? 'Convention' : 'Devis'} — ${student.first_name} ${student.last_name} — ${session.name}`
   const { data: document, error: docError } = await supabase
     .from('documents')
     .insert({
@@ -1221,10 +1255,10 @@ async function sendDocumentForSignature(input: ToolInput, supabase: SupabaseClie
 
   if (docError || !document) return `Erreur lors de la création du document : ${docError?.message}`
 
-  // Create signature request (sends email automatically via SignatureRequestService)
   const { SignatureRequestService } = await import('@/lib/services/signature-request.service')
   const signatureService = new SignatureRequestService(supabase)
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const typeLabel = docType === 'convention' ? 'convention de formation' : 'devis'
 
   try {
     const sigRequest = await signatureService.createSignatureRequest({
@@ -1235,7 +1269,7 @@ async function sendDocumentForSignature(input: ToolInput, supabase: SupabaseClie
       recipientType: 'student',
       recipientId: studentId,
       subject: `Demande de signature : ${docTitle}`,
-      message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre ${docType === 'convention' ? 'convention de formation' : 'devis'} pour la session "${session.name}". Merci de le signer électroniquement via le lien ci-dessous.`,
+      message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre ${typeLabel} pour la session "${session.name}". Merci de le signer électroniquement via le lien ci-dessous.`,
       expiresAt,
     })
 
@@ -1484,7 +1518,7 @@ async function listEnrollments(input: ToolInput, supabase: SupabaseClient, orgId
 }
 
 async function sendBulkDocuments(input: ToolInput, supabase: SupabaseClient, orgId: string) {
-  const docType = input.document_type as 'convention' | 'devis'
+  const docType = input.document_type as 'convention' | 'devis' | 'convocation'
   const sessionId = input.session_id as string
 
   // Verify session belongs to this organization
@@ -1506,7 +1540,8 @@ async function sendBulkDocuments(input: ToolInput, supabase: SupabaseClient, org
   if (error) return `Erreur lors de la récupération des inscriptions : ${error.message}`
   if (!enrollments?.length) return 'Aucun apprenant inscrit (non annulé) pour cette session.'
 
-  const docLabel = docType === 'convention' ? 'convention' : 'devis'
+  const docLabels: Record<string, string> = { convention: 'convention', devis: 'devis', convocation: 'convocation' }
+  const docLabel = docLabels[docType] ?? docType
   const results: string[] = []
   let sent = 0
   let skipped = 0
@@ -1527,7 +1562,7 @@ async function sendBulkDocuments(input: ToolInput, supabase: SupabaseClient, org
       orgId
     )
 
-    if (result.startsWith('Document envoyé')) {
+    if (result.startsWith('Document envoyé') || result.startsWith('✅')) {
       results.push(`✅ ${st.first_name} ${st.last_name} (${st.email})`)
       sent++
     } else {
