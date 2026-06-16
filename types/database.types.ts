@@ -11324,6 +11324,8 @@ export type Database = {
           is_completed: boolean | null
           last_accessed_at: string | null
           lesson_id: string
+          quiz_responses: Json | null
+          poll_votes: Json | null
           started_at: string | null
           student_id: string
           time_spent_minutes: number | null
@@ -11335,6 +11337,8 @@ export type Database = {
           is_completed?: boolean | null
           last_accessed_at?: string | null
           lesson_id: string
+          quiz_responses?: Json | null
+          poll_votes?: Json | null
           started_at?: string | null
           student_id: string
           time_spent_minutes?: number | null
@@ -11346,6 +11350,8 @@ export type Database = {
           is_completed?: boolean | null
           last_accessed_at?: string | null
           lesson_id?: string
+          quiz_responses?: Json | null
+          poll_votes?: Json | null
           started_at?: string | null
           student_id?: string
           time_spent_minutes?: number | null

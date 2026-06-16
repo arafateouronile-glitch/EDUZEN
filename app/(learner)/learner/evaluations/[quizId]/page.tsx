@@ -76,6 +76,11 @@ export default function LearnerQuizPage() {
   } | null>(null)
   /** Mode quiz pour une évaluation (grade) avec modèle : l'apprenant passe le quiz */
   const [gradeQuizMode, setGradeQuizMode] = useState(false)
+  /** Mode entraînement : feedback immédiat après chaque réponse */
+  const [immediateFeedback, setImmediateFeedback] = useState(false)
+  /** ID de la question dont le feedback est actuellement affiché */
+  const [feedbackQuestionId, setFeedbackQuestionId] = useState<string | null>(null)
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sur mobile/desktop, certains environnements déclenchent pointer + click (double).
   // On évite un double toggle en ignorant le click après un pointer.
@@ -501,6 +506,12 @@ export default function LearnerQuizPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  // Nettoyage du timer feedback au démontage
+  useEffect(() => {
+    return () => { if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const currentQuestion = questions[currentQuestionIndex]
   const totalQuestions = questions.length
   const answeredCount = Object.keys(answers).length
@@ -539,15 +550,21 @@ export default function LearnerQuizPage() {
   )
 
   const handleAnswer = (questionId: string, answer: string | string[]) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }))
+    setAnswers((prev) => ({ ...prev, [questionId]: answer }))
+    if (immediateFeedback && !isSatisfactionEvaluation) {
+      setFeedbackQuestionId(questionId)
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current)
+      feedbackTimerRef.current = setTimeout(() => {
+        setFeedbackQuestionId(null)
+        setCurrentQuestionIndex((prev) => Math.min(prev + 1, totalQuestions - 1))
+      }, 1800)
+    }
   }
 
   const selectOption = useCallback(
     (questionId: string, option: string, isMulti: boolean) => {
       if (!questionId) return
+      if (feedbackQuestionId === questionId) return // locked while showing feedback
       if (!isMulti) {
         handleAnswer(questionId, option)
         return
@@ -561,7 +578,8 @@ export default function LearnerQuizPage() {
         return { ...prev, [questionId]: arr }
       })
     },
-    [setAnswers]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [feedbackQuestionId, setAnswers]
   )
 
   const handleSubmit = async () => {
@@ -1355,9 +1373,30 @@ export default function LearnerQuizPage() {
           <span className="text-sm font-medium text-gray-600">
             Question {currentQuestionIndex + 1} sur {totalQuestions}
           </span>
-          <span className="text-sm text-gray-500">
-            {answeredCount} répondu{answeredCount > 1 ? 'es' : 'e'}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">
+              {answeredCount} répondu{answeredCount > 1 ? 'es' : 'e'}
+            </span>
+            {!isSatisfactionEvaluation && answeredCount === 0 && (
+              <button
+                type="button"
+                onClick={() => setImmediateFeedback((v) => !v)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+                  immediateFeedback
+                    ? 'bg-indigo-100 border-indigo-300 text-indigo-700'
+                    : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'
+                }`}
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                {immediateFeedback ? 'Mode entraînement ✓' : 'Mode entraînement'}
+              </button>
+            )}
+            {immediateFeedback && answeredCount > 0 && (
+              <span className="text-xs text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded-full">
+                Entraînement
+              </span>
+            )}
+          </div>
         </div>
         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
           <motion.div
@@ -1553,6 +1592,55 @@ export default function LearnerQuizPage() {
                 )}
               </div>
             )}
+
+            {/* Feedback immédiat */}
+            {immediateFeedback && feedbackQuestionId === currentQuestion?.id && (() => {
+              const q = currentQuestion
+              const userAnswer = answers[q.id]
+              const correctAnswer = q.correct_answer
+              const isRating = q.type === 'rating'
+              if (isRating || !correctAnswer) return null
+              let isCorrect = false
+              if (Array.isArray(correctAnswer)) {
+                isCorrect = Array.isArray(userAnswer)
+                  ? correctAnswer.every((a) => (userAnswer as string[]).includes(a)) && (userAnswer as string[]).length === correctAnswer.length
+                  : correctAnswer.includes(userAnswer as string)
+              } else {
+                isCorrect = userAnswer === correctAnswer
+              }
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`mt-4 p-4 rounded-xl border-2 ${
+                    isCorrect ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {isCorrect
+                      ? <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                      : <XCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    }
+                    <div>
+                      <p className={`font-semibold ${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                        {isCorrect ? 'Bonne réponse !' : 'Mauvaise réponse'}
+                      </p>
+                      {!isCorrect && (
+                        <p className="text-sm text-gray-700 mt-0.5">
+                          Réponse correcte : <strong>{Array.isArray(correctAnswer) ? correctAnswer.join(', ') : correctAnswer}</strong>
+                        </p>
+                      )}
+                      {q.explanation && (
+                        <p className="text-sm text-gray-600 mt-1 italic">{q.explanation}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-2">
+                        Passage à la question suivante...
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )
+            })()}
           </GlassCard>
         </motion.div>
       </AnimatePresence>

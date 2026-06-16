@@ -161,6 +161,15 @@ const nextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
+      {
+        // Studio e-learning : COEP relâché pour autoriser les iframes YouTube/Vimeo dans les blocs média.
+        source: '/dashboard/elearning/courses/:slug/edit',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
     ]
   },
   // Configuration pour Puppeteer

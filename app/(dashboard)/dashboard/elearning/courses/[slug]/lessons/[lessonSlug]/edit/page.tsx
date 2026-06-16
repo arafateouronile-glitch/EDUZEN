@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -26,6 +26,8 @@ import {
   Upload,
   Loader2,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   BookOpen,
   Settings,
   Layers,
@@ -43,7 +45,30 @@ import {
   CheckCircle2,
   XCircle,
   Award,
+  Code2,
+  Info,
+  Lightbulb,
+  AlertTriangle,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -62,7 +87,7 @@ const lessonSchema = z.object({
 type LessonFormData = z.infer<typeof lessonSchema>
 
 // Types de blocs de contenu
-type ContentBlockType = 'text' | 'media' | 'quiz' | 'poll'
+type ContentBlockType = 'text' | 'media' | 'quiz' | 'poll' | 'code' | 'callout' | 'accordion'
 
 interface ContentBlock {
   id: string
@@ -78,6 +103,12 @@ interface ContentBlock {
     points?: number
     pollQuestion?: string
     pollOptions?: { id: string; text: string }[]
+    language?: string
+    quizType?: 'multiple_choice' | 'true_false'
+    correctAnswer?: string
+    calloutType?: 'info' | 'tip' | 'warning' | 'danger'
+    calloutTitle?: string
+    items?: { id: string; title: string; content: string }[]
   }
 }
 
@@ -125,7 +156,53 @@ const blockTypes = [
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-600',
   },
+  {
+    type: 'code' as const,
+    label: 'Code',
+    description: 'Bloc de code avec syntaxe',
+    icon: Code2,
+    color: 'from-violet-500 to-purple-600',
+    bgColor: 'bg-violet-50',
+    textColor: 'text-violet-600',
+  },
+  {
+    type: 'callout' as const,
+    label: 'Encadré',
+    description: 'Info, astuce, avertissement',
+    icon: Info,
+    color: 'from-sky-500 to-blue-600',
+    bgColor: 'bg-sky-50',
+    textColor: 'text-sky-600',
+  },
+  {
+    type: 'accordion' as const,
+    label: 'Accordéon',
+    description: 'Sections repliables',
+    icon: ChevronDown,
+    color: 'from-teal-500 to-emerald-600',
+    bgColor: 'bg-teal-50',
+    textColor: 'text-teal-600',
+  },
 ]
+
+function SortableBlockShell({
+  id,
+  children,
+}: {
+  id: string
+  children: (handle: Record<string, unknown>) => React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={isDragging ? 'opacity-50 z-50 relative' : 'relative'}
+    >
+      {children({ ...attributes, ...listeners })}
+    </div>
+  )
+}
 
 export default function EditLessonPage() {
   const params = useParams()
@@ -141,6 +218,28 @@ export default function EditLessonPage() {
   const [uploadingImages, setUploadingImages] = useState<Record<string, boolean>>({})
   const [activeTab, setActiveTab] = useState('info')
   const [isDraggingMedia, setIsDraggingMedia] = useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setContentBlocks((blocks) => {
+        const oldIndex = blocks.findIndex((b) => b.id === active.id)
+        const newIndex = blocks.findIndex((b) => b.id === over.id)
+        return arrayMove(blocks, oldIndex, newIndex)
+      })
+    }
+  }
+
+  const moveBlock = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    if (newIndex < 0 || newIndex >= contentBlocks.length) return
+    setContentBlocks((blocks) => arrayMove(blocks, index, newIndex))
+  }
 
   // Récupérer le cours
   const { data: course } = useQuery<{ id: string; title?: string; [key: string]: any } | null>({
@@ -253,22 +352,32 @@ export default function EditLessonPage() {
 
   // Ajouter un bloc de contenu
   const addContentBlock = (type: ContentBlockType) => {
-    const newBlock: ContentBlock = {
-      id: Math.random().toString(36).substr(2, 9),
-      type,
-      data: {
-        content: type === 'text' ? '' : undefined,
-        mediaType: type === 'media' ? 'image' : undefined,
-        question: type === 'quiz' ? '' : undefined,
-        pollQuestion: type === 'poll' ? '' : undefined,
-        options: type === 'quiz' ? [{ id: '1', text: '', isCorrect: false }] : undefined,
-        pollOptions: type === 'poll' ? [{ id: '1', text: '' }] : undefined,
-        points: type === 'quiz' ? 1 : undefined,
-      },
+    const id = Math.random().toString(36).substr(2, 9)
+    let data: ContentBlock['data'] = {}
+    if (type === 'text') data = { content: '' }
+    else if (type === 'media') data = { mediaType: 'image' }
+    else if (type === 'quiz') data = {
+      question: '',
+      options: [
+        { id: Math.random().toString(36).substr(2, 9), text: '', isCorrect: false },
+        { id: Math.random().toString(36).substr(2, 9), text: '', isCorrect: false },
+      ],
+      points: 1,
     }
-    setContentBlocks([...contentBlocks, newBlock])
+    else if (type === 'poll') data = {
+      pollQuestion: '',
+      pollOptions: [
+        { id: Math.random().toString(36).substr(2, 9), text: '' },
+        { id: Math.random().toString(36).substr(2, 9), text: '' },
+      ],
+    }
+    else if (type === 'code') data = { content: '', language: 'javascript' }
+    else if (type === 'callout') data = { calloutType: 'info', calloutTitle: '', content: '' }
+    else if (type === 'accordion') data = {
+      items: [{ id: Math.random().toString(36).substr(2, 9), title: '', content: '' }],
+    }
+    setContentBlocks([...contentBlocks, { id, type, data }])
     setShowBlockSelector(false)
-    // Switch to content tab after adding
     setActiveTab('content')
   }
 
@@ -460,11 +569,11 @@ export default function EditLessonPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
       {/* Hero Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-700">
+      <div className="relative overflow-hidden bg-gradient-to-br from-brand-blue via-brand-blue-dark to-brand-blue-darker">
         {/* Decorative elements */}
         <div className="absolute inset-0 opacity-20">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-pink-400 to-rose-300 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full blur-3xl" />
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-brand-cyan to-brand-cyan-light rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-brand-blue-light to-brand-cyan-dark rounded-full blur-3xl" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
@@ -546,21 +655,21 @@ export default function EditLessonPage() {
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2.5 px-6 py-4 text-sm font-medium transition-all relative",
                     activeTab === tab.id
-                      ? "text-indigo-600"
+                      ? "text-brand-blue"
                       : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                   )}
                 >
                   <tab.icon className="h-4 w-4" />
                   {tab.label}
                   {tab.id === 'content' && contentBlocks.length > 0 && (
-                    <span className="ml-1 px-2 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-600 rounded-full">
+                    <span className="ml-1 px-2 py-0.5 text-xs font-bold bg-brand-blue-ghost text-brand-blue rounded-full">
                       {contentBlocks.length}
                     </span>
                   )}
                   {activeTab === tab.id && (
                     <motion.div
                       layoutId="activeLessonTab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-600"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-brand-blue to-brand-cyan"
                     />
                   )}
                 </button>
@@ -724,7 +833,7 @@ export default function EditLessonPage() {
                     </div>
                   </div>
                   <div className="p-5">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                       {blockTypes.map((blockType) => (
                         <motion.button
                           key={blockType.type}
@@ -751,26 +860,27 @@ export default function EditLessonPage() {
                 </GlassCard>
 
                 {/* Content Blocks */}
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={contentBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-4">
-                  <AnimatePresence>
                     {contentBlocks.map((block, index) => {
                       const config = getBlockConfig(block.type)
                       return (
+                        <SortableBlockShell key={block.id} id={block.id}>
+                          {(dragHandleProps) => (
                         <motion.div
-                          key={block.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                          transition={{ delay: index * 0.05 }}
+                          transition={{ delay: Math.min(index * 0.05, 0.3) }}
                         >
                           <GlassCard variant="premium" className="overflow-hidden border border-gray-200/50 shadow-xl shadow-gray-200/20 group">
                             {/* Block Header */}
-                            <div className={cn(
-                              "p-4 border-b border-gray-100 flex items-center justify-between",
-                              `bg-gradient-to-r from-white via-${config.bgColor.replace('bg-', '')}/30 to-white`
-                            )}>
+                            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-white to-gray-50/50">
                               <div className="flex items-center gap-3">
-                                <div className="p-1.5 text-gray-400 cursor-grab hover:text-gray-600 transition-colors">
+                                <div
+                                  className="p-1.5 text-gray-400 cursor-grab active:cursor-grabbing hover:text-gray-600 transition-colors touch-none"
+                                  {...dragHandleProps}
+                                >
                                   <GripVertical className="h-5 w-5" />
                                 </div>
                                 <div className={cn("p-2 rounded-lg", config.bgColor)}>
@@ -784,17 +894,42 @@ export default function EditLessonPage() {
                                         {block.data.points} pt{block.data.points > 1 ? 's' : ''}
                                       </span>
                                     )}
+                                    {block.type === 'code' && block.data.language && (
+                                      <span className="ml-2 text-xs font-mono text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full">
+                                        {block.data.language}
+                                      </span>
+                                    )}
                                   </p>
                                   <p className="text-xs text-gray-500">Bloc #{index + 1}</p>
                                 </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => removeBlock(block.id)}
-                                className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  onClick={() => moveBlock(index, 'up')}
+                                  disabled={index === 0}
+                                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Monter"
+                                >
+                                  <ArrowUp className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveBlock(index, 'down')}
+                                  disabled={index === contentBlocks.length - 1}
+                                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                  title="Descendre"
+                                >
+                                  <ArrowDown className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeBlock(block.id)}
+                                  className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
 
                             {/* Block Content */}
@@ -950,6 +1085,31 @@ export default function EditLessonPage() {
                               {/* Quiz Block */}
                               {block.type === 'quiz' && (
                                 <div className="space-y-5">
+                                  {/* Type de question */}
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Type de question</label>
+                                    <div className="flex gap-2">
+                                      {[
+                                        { value: 'multiple_choice', label: 'Choix multiple' },
+                                        { value: 'true_false', label: 'Vrai / Faux' },
+                                      ].map((t) => (
+                                        <button
+                                          key={t.value}
+                                          type="button"
+                                          onClick={() => updateBlock(block.id, { quizType: t.value as 'multiple_choice' | 'true_false' })}
+                                          className={cn(
+                                            'flex-1 py-2 rounded-xl border-2 text-sm font-medium transition-all',
+                                            (block.data.quizType || 'multiple_choice') === t.value
+                                              ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                              : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                          )}
+                                        >
+                                          {t.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+
                                   <div className="grid md:grid-cols-4 gap-4">
                                     <div className="md:col-span-3">
                                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -975,6 +1135,31 @@ export default function EditLessonPage() {
                                     </div>
                                   </div>
 
+                                  {/* Vrai / Faux */}
+                                  {(block.data.quizType || 'multiple_choice') === 'true_false' ? (
+                                    <div>
+                                      <label className="block text-sm font-semibold text-gray-700 mb-2">Bonne réponse</label>
+                                      <div className="flex gap-3">
+                                        {['vrai', 'faux'].map((val) => (
+                                          <button
+                                            key={val}
+                                            type="button"
+                                            onClick={() => updateBlock(block.id, { correctAnswer: val })}
+                                            className={cn(
+                                              'flex-1 py-3 rounded-xl border-2 text-sm font-semibold capitalize transition-all',
+                                              block.data.correctAnswer === val
+                                                ? val === 'vrai'
+                                                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                                  : 'border-rose-500 bg-rose-50 text-rose-700'
+                                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                            )}
+                                          >
+                                            {val === 'vrai' ? '✓ Vrai' : '✗ Faux'}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ) : (
                                   <div>
                                     <div className="flex items-center justify-between mb-3">
                                       <label className="block text-sm font-semibold text-gray-700">
@@ -1046,6 +1231,7 @@ export default function EditLessonPage() {
                                       Cliquez sur le cercle pour marquer la bonne réponse
                                     </p>
                                   </div>
+                                  )}
 
                                   <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">Explication (optionnel)</label>
@@ -1131,12 +1317,174 @@ export default function EditLessonPage() {
                                   </div>
                                 </div>
                               )}
+
+                              {/* Code Block */}
+                              {block.type === 'code' && (
+                                <div className="space-y-4">
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Langage</label>
+                                    <select
+                                      value={block.data.language || 'javascript'}
+                                      onChange={(e) => updateBlock(block.id, { language: e.target.value })}
+                                      className="w-full max-w-xs px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all"
+                                    >
+                                      {['javascript', 'typescript', 'python', 'html', 'css', 'sql', 'bash', 'json', 'java', 'php', 'rust', 'go', 'c', 'cpp', 'markdown'].map((lang) => (
+                                        <option key={lang} value={lang}>{lang}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Code</label>
+                                    <textarea
+                                      value={block.data.content || ''}
+                                      onChange={(e) => updateBlock(block.id, { content: e.target.value })}
+                                      rows={10}
+                                      spellCheck={false}
+                                      className="w-full px-4 py-3.5 border-2 border-violet-200 rounded-xl focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all font-mono text-sm bg-gray-900 text-green-400 resize-y"
+                                      placeholder="// Votre code ici..."
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Callout Block */}
+                              {block.type === 'callout' && (
+                                <div className="space-y-4">
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Type d'encadré</label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                      {[
+                                        { value: 'info' as const, label: 'Info', icon: Info, active: 'border-sky-500 bg-sky-50 text-sky-600' },
+                                        { value: 'tip' as const, label: 'Astuce', icon: Lightbulb, active: 'border-emerald-500 bg-emerald-50 text-emerald-600' },
+                                        { value: 'warning' as const, label: 'Attention', icon: AlertTriangle, active: 'border-amber-500 bg-amber-50 text-amber-600' },
+                                        { value: 'danger' as const, label: 'Danger', icon: AlertCircle, active: 'border-rose-500 bg-rose-50 text-rose-600' },
+                                      ].map((t) => (
+                                        <button
+                                          key={t.value}
+                                          type="button"
+                                          onClick={() => updateBlock(block.id, { calloutType: t.value })}
+                                          className={cn(
+                                            'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all',
+                                            block.data.calloutType === t.value ? t.active : 'border-gray-200 hover:border-gray-300 text-gray-500'
+                                          )}
+                                        >
+                                          <t.icon className="h-5 w-5" />
+                                          <span className="text-xs font-medium">{t.label}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Titre (optionnel)</label>
+                                    <input
+                                      type="text"
+                                      value={block.data.calloutTitle || ''}
+                                      onChange={(e) => updateBlock(block.id, { calloutTitle: e.target.value })}
+                                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all hover:border-gray-300"
+                                      placeholder="Titre de l'encadré..."
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Contenu</label>
+                                    <textarea
+                                      value={block.data.content || ''}
+                                      onChange={(e) => updateBlock(block.id, { content: e.target.value })}
+                                      rows={4}
+                                      className="w-full px-4 py-3.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all resize-none hover:border-gray-300"
+                                      placeholder="Contenu de l'encadré (Markdown supporté)..."
+                                    />
+                                  </div>
+                                  {(block.data.calloutTitle || block.data.content) && (
+                                    <div className={cn(
+                                      'border-l-4 rounded-r-xl p-4',
+                                      block.data.calloutType === 'tip' ? 'border-l-emerald-500 bg-emerald-50' :
+                                      block.data.calloutType === 'warning' ? 'border-l-amber-500 bg-amber-50' :
+                                      block.data.calloutType === 'danger' ? 'border-l-rose-500 bg-rose-50' :
+                                      'border-l-sky-500 bg-sky-50'
+                                    )}>
+                                      <p className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide">Aperçu</p>
+                                      {block.data.calloutTitle && <p className="font-semibold text-gray-900 mb-1">{block.data.calloutTitle}</p>}
+                                      {block.data.content && <p className="text-sm text-gray-700">{block.data.content}</p>}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Accordion Block */}
+                              {block.type === 'accordion' && (
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between">
+                                    <label className="block text-sm font-semibold text-gray-700">Items de l'accordéon</label>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const newItem = { id: Math.random().toString(36).substr(2, 9), title: '', content: '' }
+                                        updateBlock(block.id, { items: [...(block.data.items || []), newItem] })
+                                      }}
+                                      className="text-sm text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                      Ajouter un item
+                                    </button>
+                                  </div>
+                                  <div className="space-y-3">
+                                    {(block.data.items || []).map((item, itemIndex) => (
+                                      <div key={item.id} className="border-2 border-gray-200 rounded-xl overflow-hidden">
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-200">
+                                          <div className="w-6 h-6 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600 font-bold text-xs shrink-0">
+                                            {itemIndex + 1}
+                                          </div>
+                                          <input
+                                            type="text"
+                                            value={item.title}
+                                            onChange={(e) => {
+                                              const newItems = block.data.items?.map((i) =>
+                                                i.id === item.id ? { ...i, title: e.target.value } : i
+                                              )
+                                              updateBlock(block.id, { items: newItems })
+                                            }}
+                                            className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 transition-all text-sm"
+                                            placeholder={`Titre de l'item ${itemIndex + 1}...`}
+                                          />
+                                          {(block.data.items?.length || 0) > 1 && (
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const newItems = block.data.items?.filter((i) => i.id !== item.id)
+                                                updateBlock(block.id, { items: newItems })
+                                              }}
+                                              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                            >
+                                              <X className="h-4 w-4" />
+                                            </button>
+                                          )}
+                                        </div>
+                                        <div className="p-3">
+                                          <textarea
+                                            value={item.content}
+                                            onChange={(e) => {
+                                              const newItems = block.data.items?.map((i) =>
+                                                i.id === item.id ? { ...i, content: e.target.value } : i
+                                              )
+                                              updateBlock(block.id, { items: newItems })
+                                            }}
+                                            rows={3}
+                                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 transition-all resize-none text-sm"
+                                            placeholder="Contenu de cet item (Markdown supporté)..."
+                                          />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </GlassCard>
                         </motion.div>
+                          )}
+                        </SortableBlockShell>
                       )
                     })}
-                  </AnimatePresence>
 
                   {contentBlocks.length === 0 && (
                     <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
@@ -1148,6 +1496,8 @@ export default function EditLessonPage() {
                     </div>
                   )}
                 </div>
+                  </SortableContext>
+                </DndContext>
               </motion.div>
             )}
           </AnimatePresence>

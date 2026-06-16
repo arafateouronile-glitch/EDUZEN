@@ -58,7 +58,9 @@ export default function LessonPage() {
   const queryClient = useQueryClient()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [contentBlocks, setContentBlocks] = useState<ContentBlock[]>([])
-  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({})
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({})       // réponses validées
+  const [pendingQuizAnswers, setPendingQuizAnswers] = useState<Record<string, string>>({}) // sélection en attente
+  const [submittedQuizzes, setSubmittedQuizzes] = useState<Set<string>>(new Set()) // IDs soumis
   const [pollVotes, setPollVotes] = useState<Record<string, string>>({})
 
   // Récupérer le cours
@@ -87,34 +89,72 @@ export default function LessonPage() {
   })
 
   // Parser le contenu JSON pour charger les blocs
+  // Normalise le format studio → format LessonPage
   useEffect(() => {
-    if (lesson?.content) {
-      try {
-        const parsedContent = JSON.parse(lesson.content)
-        if (Array.isArray(parsedContent)) {
-          setContentBlocks(parsedContent)
-        } else {
-          // Si ce n'est pas un tableau, créer un bloc texte avec le contenu brut
-          setContentBlocks([
-            {
-              id: '1',
-              type: 'text',
-              data: { content: lesson.content },
-            },
-          ])
-        }
-      } catch (error) {
-        // Si le parsing échoue, créer un bloc texte avec le contenu brut
-        if (lesson.content) {
-          setContentBlocks([
-            {
-              id: '1',
-              type: 'text',
-              data: { content: lesson.content },
-            },
-          ])
-        }
+    if (!lesson?.content) return
+    try {
+      const raw = JSON.parse(lesson.content)
+      if (!Array.isArray(raw)) {
+        setContentBlocks([{ id: '1', type: 'text', data: { content: lesson.content } }])
+        return
       }
+      const normalized: ContentBlock[] = raw.map((block: any, idx: number) => {
+        const id: string = block.id || `block-${idx}`
+        switch (block.type) {
+          case 'text':
+            return {
+              id, type: 'text' as const,
+              data: {
+                content: [block.data?.heading, block.data?.body].filter(Boolean).join('\n\n') || block.data?.content || '',
+              },
+            }
+          case 'image':
+            return {
+              id, type: 'media' as const,
+              data: { mediaType: 'image' as const, mediaUrl: block.data?.url || '', caption: block.data?.caption || '' },
+            }
+          case 'media':
+            return {
+              id, type: 'media' as const,
+              data: { mediaType: 'video' as const, mediaUrl: block.data?.url || '', caption: block.data?.caption || '' },
+            }
+          case 'interaction':
+            return {
+              id, type: 'text' as const,
+              data: { content: [block.data?.emoji, block.data?.text].filter(Boolean).join(' ') || '' },
+            }
+          case 'quiz':
+            return {
+              id, type: 'quiz' as const,
+              data: {
+                question: block.data?.question || '',
+                options: (block.data?.options ?? []).map((opt: any, i: number) => ({
+                  id: opt.id || `${id}-opt-${i}`,
+                  text: opt.text || '',
+                  isCorrect: opt.isCorrect ?? opt.correct ?? false,
+                })),
+                explanation: block.data?.explanation || '',
+                points: block.data?.points,
+              },
+            }
+          case 'poll':
+            return {
+              id, type: 'poll' as const,
+              data: {
+                pollQuestion: block.data?.question || block.data?.pollQuestion || '',
+                pollOptions: (block.data?.options ?? block.data?.pollOptions ?? []).map((opt: any, i: number) => ({
+                  id: opt.id || `${id}-poll-${i}`,
+                  text: opt.text || '',
+                })),
+              },
+            }
+          default:
+            return { id, type: 'text' as const, data: { content: '' } }
+        }
+      })
+      setContentBlocks(normalized)
+    } catch {
+      setContentBlocks([{ id: '1', type: 'text', data: { content: lesson.content } }])
     }
   }, [lesson])
 
@@ -143,6 +183,8 @@ export default function LessonPage() {
         loadedQuizAnswers[blockId] = response.answer
       })
       setQuizAnswers(loadedQuizAnswers)
+      // Marquer comme déjà soumis tous les blocs avec une réponse enregistrée
+      setSubmittedQuizzes(new Set(Object.keys(loadedQuizAnswers)))
 
       const loadedPollVotes: Record<string, string> = {}
       Object.entries(pollVotes).forEach(([blockId, vote]) => {
@@ -228,8 +270,24 @@ export default function LessonPage() {
     },
   })
 
-  // Gérer les réponses aux quiz
+  // Sélection en attente (avant validation)
+  const handleQuizSelect = (blockId: string, optionId: string) => {
+    if (submittedQuizzes.has(blockId)) return // déjà soumis → verrouillé
+    setPendingQuizAnswers(prev => ({ ...prev, [blockId]: optionId }))
+  }
+
+  // Validation définitive
+  const handleQuizSubmit = (blockId: string) => {
+    const answer = pendingQuizAnswers[blockId]
+    if (!answer || submittedQuizzes.has(blockId)) return
+    setQuizAnswers(prev => ({ ...prev, [blockId]: answer }))
+    setSubmittedQuizzes(prev => new Set([...prev, blockId]))
+    saveResponseMutation.mutate({ blockId, answer, type: 'quiz' })
+  }
+
+  // Gérer les votes aux sondages
   const handleQuizAnswer = (blockId: string, answer: string) => {
+    // Conservé pour compatibilité (non utilisé directement)
     setQuizAnswers({ ...quizAnswers, [blockId]: answer })
     saveResponseMutation.mutate({ blockId, answer, type: 'quiz' })
   }
@@ -350,8 +408,11 @@ export default function LessonPage() {
           </motion.div>
         )
 
-      case 'quiz':
-        const selectedAnswer = quizAnswers[block.id]
+      case 'quiz': {
+        const isSubmitted = submittedQuizzes.has(block.id)
+        const submittedAnswer = quizAnswers[block.id]          // réponse verrouillée
+        const pendingAnswer = pendingQuizAnswers[block.id]     // sélection en cours
+        const displayAnswer = isSubmitted ? submittedAnswer : pendingAnswer
         return (
           <motion.div
             key={block.id}
@@ -373,38 +434,47 @@ export default function LessonPage() {
               <p className="text-gray-700 mb-4 font-medium">{block.data.question}</p>
               <div className="space-y-2 mb-4">
                 {block.data.options?.map((option) => {
-                  const isSelected = selectedAnswer === option.id
+                  const isSelected = displayAnswer === option.id
                   const isCorrect = option.isCorrect
+                  // Feedback couleur seulement après validation
+                  const showFeedback = isSubmitted && isSelected
                   return (
                     <button
                       key={option.id}
-                      onClick={() => handleQuizAnswer(block.id, option.id)}
+                      type="button"
+                      disabled={isSubmitted}
+                      onClick={() => handleQuizSelect(block.id, option.id)}
                       className={cn(
                         "w-full text-left p-3 border rounded-lg transition-all",
-                        isSelected
+                        isSubmitted && "cursor-default",
+                        showFeedback
                           ? scoresEnabled
                             ? isCorrect
                               ? "bg-green-50 border-green-500 text-green-900"
                               : "bg-red-50 border-red-500 text-red-900"
                             : "bg-brand-blue-ghost border-brand-blue text-brand-blue"
+                          : isSelected
+                          ? "bg-brand-blue-ghost border-brand-blue text-brand-blue"
+                          : isSubmitted
+                          ? "bg-white border-gray-100 text-gray-400"
                           : "bg-white border-gray-200 hover:border-brand-blue hover:bg-brand-blue-ghost"
                       )}
                     >
                       <div className="flex items-center gap-2">
                         <div className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                          isSelected
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                          showFeedback
                             ? scoresEnabled
-                              ? isCorrect
-                                ? "border-green-500 bg-green-500"
-                                : "border-red-500 bg-red-500"
+                              ? isCorrect ? "border-green-500 bg-green-500" : "border-red-500 bg-red-500"
                               : "border-brand-blue bg-brand-blue"
+                            : isSelected
+                            ? "border-brand-blue bg-brand-blue"
                             : "border-gray-300"
                         )}>
                           {isSelected && <CheckCircle className="h-3 w-3 text-white" />}
                         </div>
                         <span>{option.text}</span>
-                        {scoresEnabled && isSelected && isCorrect && (
+                        {showFeedback && scoresEnabled && isCorrect && (
                           <CheckCircle className="h-4 w-4 text-green-600 ml-auto" />
                         )}
                       </div>
@@ -412,7 +482,21 @@ export default function LessonPage() {
                   )
                 })}
               </div>
-              {scoresEnabled && selectedAnswer && block.data.explanation && (
+
+              {/* Bouton Valider — visible uniquement avant soumission */}
+              {!isSubmitted && (
+                <button
+                  type="button"
+                  onClick={() => handleQuizSubmit(block.id)}
+                  disabled={!pendingAnswer || saveResponseMutation.isPending}
+                  className="w-full py-2.5 rounded-lg bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Valider ma réponse
+                </button>
+              )}
+
+              {/* Explication — visible uniquement après soumission */}
+              {isSubmitted && scoresEnabled && block.data.explanation && (
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-900">
                     <strong>Explication :</strong> {block.data.explanation}
@@ -422,9 +506,11 @@ export default function LessonPage() {
             </GlassCard>
           </motion.div>
         )
+      }
 
-      case 'poll':
+      case 'poll': {
         const selectedVote = pollVotes[block.id]
+        const isVoted = !!selectedVote
         return (
           <motion.div
             key={block.id}
@@ -436,7 +522,7 @@ export default function LessonPage() {
             <GlassCard variant="premium" className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <BarChart3 className="h-5 w-5 text-brand-blue" />
-                <h3 className="text-lg font-bold text-gray-900">Sondage (non évaluable)</h3>
+                <h3 className="text-lg font-bold text-gray-900">Sondage</h3>
               </div>
               <p className="text-gray-700 mb-4 font-medium">{block.data.pollQuestion}</p>
               <div className="space-y-2">
@@ -445,35 +531,38 @@ export default function LessonPage() {
                   return (
                     <button
                       key={option.id}
-                      onClick={() => handlePollVote(block.id, option.id)}
-                      disabled={!!selectedVote}
+                      type="button"
+                      onClick={() => !isVoted && handlePollVote(block.id, option.id)}
+                      disabled={isVoted}
                       className={cn(
                         "w-full text-left p-3 border rounded-lg transition-all",
+                        isVoted ? "cursor-default" : "cursor-pointer",
                         isSelected
                           ? "bg-brand-blue-ghost border-brand-blue text-brand-blue"
-                          : "bg-white border-gray-200 hover:border-brand-blue hover:bg-brand-blue-ghost",
-                        selectedVote && !isSelected && "opacity-50 cursor-not-allowed"
+                          : isVoted
+                          ? "bg-white border-gray-100 text-gray-400"
+                          : "bg-white border-gray-200 hover:border-brand-blue hover:bg-brand-blue-ghost"
                       )}
                     >
                       <div className="flex items-center gap-2">
                         <div className={cn(
-                          "w-4 h-4 rounded-full border-2",
-                          isSelected
-                            ? "border-brand-blue bg-brand-blue"
-                            : "border-gray-300"
+                          "w-4 h-4 rounded-full border-2 flex-shrink-0",
+                          isSelected ? "border-brand-blue bg-brand-blue" : "border-gray-300"
                         )} />
                         <span>{option.text}</span>
-                        {isSelected && (
-                          <CheckCircle className="h-4 w-4 text-brand-blue ml-auto" />
-                        )}
+                        {isSelected && <CheckCircle className="h-4 w-4 text-brand-blue ml-auto" />}
                       </div>
                     </button>
                   )
                 })}
               </div>
+              {isVoted && (
+                <p className="mt-3 text-xs text-gray-400 text-center">Votre réponse a été enregistrée.</p>
+              )}
             </GlassCard>
           </motion.div>
         )
+      }
 
       default:
         return null

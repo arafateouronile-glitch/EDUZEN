@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Play,
   Pause,
   Lock,
@@ -27,10 +29,17 @@ import {
   Download,
   Share2,
   RotateCcw,
+  PenLine,
+  Timer,
+  Code2,
+  Info,
+  Lightbulb,
+  AlertTriangle,
+  AlertCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useMemo, useState, useEffect, useRef } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 
@@ -46,6 +55,11 @@ export default function LearnerCourseDetailPage() {
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const [openAccordionItems, setOpenAccordionItems] = useState<Record<string, boolean>>({})
+  const [lessonNotes, setLessonNotes] = useState<Record<string, string>>({})
+  const [timeSpent, setTimeSpent] = useState<Record<string, number>>({})
+  const [activeContentTab, setActiveContentTab] = useState<'content' | 'notes'>('content')
+  const restoredLastLesson = useRef(false)
 
   // Réponses aux quiz intégrés dans le contenu des leçons (blocs "quiz")
   // Format: { [lessonId]: { [blockId]: selectedOptionIdOrText } }
@@ -55,6 +69,37 @@ export default function LearnerCourseDetailPage() {
     if (!studentId) return null
     return `eduzen.inlineQuizAnswers.${studentId}`
   }, [studentId])
+
+  const notesStorageKey = useMemo(() => (studentId ? `eduzen.lessonNotes.${studentId}` : null), [studentId])
+  const timeStorageKey = useMemo(() => (studentId ? `eduzen.lessonTime.${studentId}` : null), [studentId])
+  const lastLessonStorageKey = useMemo(
+    () => (studentId && slug ? `eduzen.lastLesson.${studentId}.${slug}` : null),
+    [studentId, slug]
+  )
+
+  const loadNoteFromStorage = (lessonId: string): string => {
+    if (!notesStorageKey) return ''
+    try {
+      const raw = localStorage.getItem(notesStorageKey)
+      if (!raw) return ''
+      return JSON.parse(raw)?.[lessonId] || ''
+    } catch { return '' }
+  }
+
+  const saveNoteToStorage = (lessonId: string, note: string) => {
+    if (!notesStorageKey) return
+    try {
+      const raw = localStorage.getItem(notesStorageKey)
+      const parsed = raw ? JSON.parse(raw) : {}
+      localStorage.setItem(notesStorageKey, JSON.stringify({ ...parsed, [lessonId]: note }))
+    } catch { /* ignore */ }
+  }
+
+  const formatTimeSpent = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}s`
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}min`
+    return `${Math.floor(seconds / 3600)}h${Math.floor((seconds % 3600) / 60)}min`
+  }
 
   const loadInlineAnswersFromStorage = (lessonId: string) => {
     if (!inlineQuizStorageKey) return null
@@ -270,6 +315,64 @@ export default function LearnerCourseDetailPage() {
     }
   }, [currentLessonIndex, totalLessons])
 
+  // Reprendre à la dernière leçon visitée (une seule fois après chargement)
+  useEffect(() => {
+    if (!allLessons.length || !lastLessonStorageKey || restoredLastLesson.current) return
+    restoredLastLesson.current = true
+    try {
+      const savedId = localStorage.getItem(lastLessonStorageKey)
+      if (savedId) {
+        const idx = allLessons.findIndex((l: any) => l.id === savedId)
+        if (idx > 0) setCurrentLessonIndex(idx)
+      }
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLessons.length, lastLessonStorageKey])
+
+  // Sauvegarder la leçon courante comme "dernière visitée"
+  useEffect(() => {
+    if (!currentLesson?.id || !lastLessonStorageKey) return
+    try { localStorage.setItem(lastLessonStorageKey, currentLesson.id) } catch { /* ignore */ }
+  }, [currentLesson?.id, lastLessonStorageKey])
+
+  // Réinitialiser l'onglet contenu et charger les notes à chaque changement de leçon
+  useEffect(() => {
+    if (!currentLesson?.id) return
+    setActiveContentTab('content')
+    const note = loadNoteFromStorage(currentLesson.id)
+    setLessonNotes((prev) => ({ ...prev, [currentLesson.id]: note }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLesson?.id, notesStorageKey])
+
+  // Charger le temps passé depuis localStorage au montage
+  useEffect(() => {
+    if (!timeStorageKey) return
+    try {
+      const raw = localStorage.getItem(timeStorageKey)
+      if (raw) setTimeSpent(JSON.parse(raw))
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeStorageKey])
+
+  // Tracker le temps passé sur la leçon courante (toutes les 10s)
+  useEffect(() => {
+    if (!currentLesson?.id || !timeStorageKey) return
+    const lessonId = currentLesson.id
+    const intervalId = setInterval(() => {
+      setTimeSpent((prev) => {
+        const updated = { ...prev, [lessonId]: (prev[lessonId] || 0) + 10 }
+        try {
+          const raw = localStorage.getItem(timeStorageKey)
+          const stored = raw ? JSON.parse(raw) : {}
+          localStorage.setItem(timeStorageKey, JSON.stringify({ ...stored, [lessonId]: (updated as Record<string, number>)[lessonId] }))
+        } catch { /* ignore */ }
+        return updated
+      })
+    }, 10000)
+    return () => clearInterval(intervalId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLesson?.id, timeStorageKey])
+
   // Mutation pour marquer une leçon comme terminée
   const completeLessonMutation = useMutation({
     mutationFn: async (lessonId: string) => {
@@ -474,6 +577,75 @@ export default function LearnerCourseDetailPage() {
                 const selected =
                   (lessonId && inlineQuizAnswers?.[lessonId]?.[blockId]) || ''
 
+                const isVF = block?.data?.quizType === 'true_false'
+
+                // Vrai / Faux
+                if (isVF) {
+                  const correctAnswer = block?.data?.correctAnswer || ''
+                  const isAnswered = !!selected
+                  const isCorrect = isAnswered && selected === correctAnswer
+                  const isGraded = !!correctAnswer
+
+                  return (
+                    <div key={block.id || idx} className="p-4 border rounded-lg bg-white">
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <h4 className="font-semibold text-gray-900">
+                          {scoresEnabled && isGraded ? 'Vrai / Faux (noté)' : 'Vrai / Faux'}
+                        </h4>
+                        {scoresEnabled && isGraded && (
+                          <Badge className={isAnswered ? (isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') : 'bg-gray-100 text-gray-700'}>
+                            {isAnswered ? (isCorrect ? '1/1' : '0/1') : '0/1'}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-700 mb-3">{block?.data?.question || ''}</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {['vrai', 'faux'].map((val) => {
+                          const isSelected = selected === val
+                          const isLocked = isAnswered
+                          const showAsCorrect = isLocked && isGraded && val === correctAnswer
+                          const showAsWrong = isLocked && isGraded && isSelected && !isCorrect
+
+                          return (
+                            <button
+                              key={val}
+                              type="button"
+                              disabled={isLocked}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                if (isLocked || !lessonId) return
+                                const nextLessonAnswers = { ...(inlineQuizAnswers?.[lessonId] || {}), [blockId]: val }
+                                saveInlineAnswersToStorage(lessonId, nextLessonAnswers)
+                                setInlineQuizAnswers((prev) => ({ ...prev, [lessonId]: nextLessonAnswers }))
+                              }}
+                              className={`py-3 rounded-xl border-2 text-sm font-semibold capitalize transition-colors ${
+                                showAsCorrect
+                                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                  : showAsWrong
+                                  ? 'border-rose-500 bg-rose-50 text-rose-700'
+                                  : isSelected
+                                  ? 'border-brand-blue bg-brand-blue/10 text-gray-900'
+                                  : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                              }`}
+                            >
+                              {val === 'vrai' ? '✓ Vrai' : '✗ Faux'}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {isAnswered && isGraded && (
+                        <p className={`mt-3 text-sm font-medium ${isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          {isCorrect ? 'Bonne réponse !' : `Mauvaise réponse — la bonne réponse est "${correctAnswer}".`}
+                        </p>
+                      )}
+                      {selected && (
+                        <p className="mt-2 text-xs text-gray-500">Réponse verrouillée.</p>
+                      )}
+                    </div>
+                  )
+                }
+
                 const options = (block?.data?.options || []).map((opt: any, optIdx: number) => ({
                   id: String(opt?.id || `${blockId}-opt-${optIdx}`),
                   text: String(opt?.text || ''),
@@ -570,6 +742,87 @@ export default function LearnerCourseDetailPage() {
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )
+              }
+
+              if (block.type === 'code') {
+                const lang = block?.data?.language || 'code'
+                return (
+                  <div key={block.id || idx} className="rounded-xl overflow-hidden border border-gray-700">
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-800">
+                      <div className="flex gap-1.5">
+                        <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                        <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                        <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                      </div>
+                      <span className="text-xs text-gray-400 ml-2 font-mono">{lang}</span>
+                    </div>
+                    <pre className="p-4 bg-gray-900 overflow-x-auto">
+                      <code className="text-sm text-green-400 font-mono whitespace-pre">
+                        {block?.data?.content || ''}
+                      </code>
+                    </pre>
+                  </div>
+                )
+              }
+
+              if (block.type === 'callout') {
+                const calloutType = block?.data?.calloutType || 'info'
+                const calloutStyles: Record<string, { border: string; bg: string; icon: React.ReactNode; titleColor: string }> = {
+                  info: { border: 'border-l-sky-500', bg: 'bg-sky-50', titleColor: 'text-sky-700', icon: <Info className="h-5 w-5 text-sky-500 shrink-0 mt-0.5" /> },
+                  tip: { border: 'border-l-emerald-500', bg: 'bg-emerald-50', titleColor: 'text-emerald-700', icon: <Lightbulb className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" /> },
+                  warning: { border: 'border-l-amber-500', bg: 'bg-amber-50', titleColor: 'text-amber-700', icon: <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" /> },
+                  danger: { border: 'border-l-rose-500', bg: 'bg-rose-50', titleColor: 'text-rose-700', icon: <AlertCircle className="h-5 w-5 text-rose-500 shrink-0 mt-0.5" /> },
+                }
+                const style = calloutStyles[calloutType] || calloutStyles.info
+                return (
+                  <div key={block.id || idx} className={`border-l-4 ${style.border} ${style.bg} rounded-r-xl p-4`}>
+                    <div className="flex items-start gap-3">
+                      {style.icon}
+                      <div className="min-w-0 flex-1">
+                        {block?.data?.calloutTitle && (
+                          <p className={`font-semibold mb-1 ${style.titleColor}`}>{block.data.calloutTitle}</p>
+                        )}
+                        <div className="prose prose-sm max-w-none text-gray-700">
+                          <ReactMarkdown>{block?.data?.content || ''}</ReactMarkdown>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              if (block.type === 'accordion') {
+                const blockId = String(block?.id || `acc-${idx}`)
+                return (
+                  <div key={block.id || idx} className="space-y-2">
+                    {(block?.data?.items || []).map((item: any, itemIdx: number) => {
+                      const itemKey = `${blockId}-${item.id || itemIdx}`
+                      const isOpen = !!openAccordionItems[itemKey]
+                      return (
+                        <div key={itemKey} className="border border-gray-200 rounded-xl overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setOpenAccordionItems((prev) => ({ ...prev, [itemKey]: !isOpen }))}
+                            className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left bg-white hover:bg-gray-50 transition-colors"
+                          >
+                            <span className="font-semibold text-gray-900 text-sm">{item.title}</span>
+                            {isOpen
+                              ? <ChevronUp className="h-4 w-4 text-gray-500 shrink-0" />
+                              : <ChevronDown className="h-4 w-4 text-gray-500 shrink-0" />
+                            }
+                          </button>
+                          {isOpen && (
+                            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
+                              <div className="prose prose-sm max-w-none">
+                                <ReactMarkdown>{item.content || ''}</ReactMarkdown>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )
               }
@@ -680,10 +933,19 @@ export default function LearnerCourseDetailPage() {
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 line-clamp-1">
             {course.title}
           </h1>
-          <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+          <div className="flex items-center gap-4 text-sm text-gray-500 mt-1 flex-wrap">
             <span>{progressPercentage}% complété</span>
             <span>•</span>
             <span>{completedLessons}/{totalLessons} leçons</span>
+            {Object.keys(timeSpent).length > 0 && (
+              <>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Timer className="h-3.5 w-3.5" />
+                  {formatTimeSpent(Object.values(timeSpent).reduce((a, b) => a + b, 0))} passées
+                </span>
+              </>
+            )}
           </div>
         </div>
         {progressPercentage >= 100 && (
@@ -781,8 +1043,65 @@ export default function LearnerCourseDetailPage() {
                   <p className="text-gray-600 mb-4">{currentLesson.description}</p>
                 )}
 
+                {/* Onglets contenu / notes */}
+                <div className="flex border-b border-gray-100 mb-5 -mx-6 px-6">
+                  <button
+                    type="button"
+                    onClick={() => setActiveContentTab('content')}
+                    className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors mr-1 ${
+                      activeContentTab === 'content'
+                        ? 'border-brand-blue text-brand-blue'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Contenu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveContentTab('notes')}
+                    className={`flex items-center gap-2 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                      activeContentTab === 'notes'
+                        ? 'border-brand-blue text-brand-blue'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <PenLine className="h-4 w-4" />
+                    Mes notes
+                    {lessonNotes[currentLesson.id]?.trim() && (
+                      <span className="w-2 h-2 bg-brand-blue rounded-full shrink-0" />
+                    )}
+                  </button>
+                </div>
+
                 {/* Contenu de la leçon */}
-                {renderLessonContent(currentLesson.content, currentLesson.id)}
+                {activeContentTab === 'content' && renderLessonContent(currentLesson.content, currentLesson.id)}
+
+                {/* Notes personnelles */}
+                {activeContentTab === 'notes' && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                      <Timer className="h-3.5 w-3.5" />
+                      Notes sauvegardées localement sur cet appareil
+                    </p>
+                    <textarea
+                      value={lessonNotes[currentLesson.id] || ''}
+                      onChange={(e) => {
+                        const note = e.target.value
+                        setLessonNotes((prev) => ({ ...prev, [currentLesson.id]: note }))
+                        saveNoteToStorage(currentLesson.id, note)
+                      }}
+                      rows={14}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-brand-blue/10 focus:border-brand-blue transition-all resize-none text-sm text-gray-800 placeholder-gray-400"
+                      placeholder="Prenez vos notes ici (idées, résumés, questions)..."
+                    />
+                    {lessonNotes[currentLesson.id]?.trim() && (
+                      <p className="text-xs text-gray-400 text-right">
+                        {lessonNotes[currentLesson.id].length} caractères
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Navigation */}
                 <div className="flex items-center justify-between mt-6 pt-6 border-t">
@@ -841,6 +1160,19 @@ export default function LearnerCourseDetailPage() {
 
         {/* Sidebar - Liste des leçons */}
         <div className="space-y-4">
+          {/* Stats rapides */}
+          {Object.keys(timeSpent).length > 0 && (
+            <GlassCard className="p-3">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Timer className="h-3.5 w-3.5 text-brand-blue" />
+                <span>Temps total passé :</span>
+                <span className="font-semibold text-gray-700">
+                  {formatTimeSpent(Object.values(timeSpent).reduce((a, b) => a + b, 0))}
+                </span>
+              </div>
+            </GlassCard>
+          )}
+
           <GlassCard className="p-4">
             <h3 className="font-bold text-gray-900 mb-4">Contenu du cours</h3>
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
@@ -886,13 +1218,15 @@ export default function LearnerCourseDetailPage() {
                                 }`}>
                                   {lesson.title}
                                 </p>
-                                {lesson.video_duration_minutes && (
-                                  <p className={`text-xs ${
-                                    isActive ? 'text-white/70' : 'text-gray-400'
-                                  }`}>
-                                  {lesson.video_duration_minutes} min
-                                  </p>
-                                )}
+                                <div className={`flex items-center gap-2 text-xs ${isActive ? 'text-white/70' : 'text-gray-400'}`}>
+                                  {lesson.video_duration_minutes && <span>{lesson.video_duration_minutes} min</span>}
+                                  {timeSpent[lesson.id] > 0 && (
+                                    <span className="flex items-center gap-0.5">
+                                      <Timer className="h-2.5 w-2.5" />
+                                      {formatTimeSpent(timeSpent[lesson.id])}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               {isActive && (
                                 <PlayCircle className="h-5 w-5 text-white" />
@@ -938,11 +1272,15 @@ export default function LearnerCourseDetailPage() {
                               <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : ''}`}>
                                 {lesson.title}
                               </p>
-                              {lesson.video_duration_minutes && (
-                                <p className={`text-xs ${isActive ? 'text-white/70' : 'text-gray-400'}`}>
-                                  {lesson.video_duration_minutes} min
-                                </p>
-                              )}
+                              <div className={`flex items-center gap-2 text-xs ${isActive ? 'text-white/70' : 'text-gray-400'}`}>
+                                {lesson.video_duration_minutes && <span>{lesson.video_duration_minutes} min</span>}
+                                {timeSpent[lesson.id] > 0 && (
+                                  <span className="flex items-center gap-0.5">
+                                    <Timer className="h-2.5 w-2.5" />
+                                    {formatTimeSpent(timeSpent[lesson.id])}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             {isActive && <PlayCircle className="h-5 w-5 text-white" />}
                           </button>
