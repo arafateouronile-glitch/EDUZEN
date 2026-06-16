@@ -1315,6 +1315,18 @@ export default function EditPage() {
     return raw ? [...raw].sort((a, b) => a.order_index - b.order_index) : []
   }, [course])
 
+  // Sync estimated_duration_hours with actual lesson sum on load
+  useEffect(() => {
+    if (!course?.id || !courseLoaded || lessons.length === 0) return
+    const totalMinutes = lessons.reduce((sum, l) => sum + (l.video_duration_minutes ?? 0), 0)
+    const totalHours = totalMinutes > 0 ? Math.round((totalMinutes / 60) * 100) / 100 : 0
+    if (Math.abs(((course as any).estimated_duration_hours ?? 0) - totalHours) > 0.01) {
+      elearningService.updateCourse(course.id, { estimated_duration_hours: totalHours })
+    }
+  // Run only once after initial load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseLoaded])
+
   // ── Lesson editor state (center panel) ───────────────────────────
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)
   const [loadedLessonId, setLoadedLessonId] = useState<string | null>(null)
@@ -1432,10 +1444,21 @@ export default function EditPage() {
     },
   })
 
+  const syncCourseDuration = async (updatedLessons: LessonItem[]) => {
+    if (!course?.id) return
+    const totalMinutes = updatedLessons.reduce((sum, l) => sum + (l.video_duration_minutes ?? 0), 0)
+    const totalHours = totalMinutes > 0 ? Math.round((totalMinutes / 60) * 100) / 100 : 0
+    await elearningService.updateCourse(course.id, { estimated_duration_hours: totalHours })
+  }
+
   const updateDurationMutation = useMutation({
     mutationFn: ({ id, minutes }: { id: string; minutes: number | null }) =>
       elearningService.updateLesson(id, { video_duration_minutes: minutes }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['course-edit', slug] }),
+    onSuccess: async (_, { id, minutes }) => {
+      const updatedLessons = lessons.map(l => l.id === id ? { ...l, video_duration_minutes: minutes } : l)
+      await syncCourseDuration(updatedLessons)
+      queryClient.invalidateQueries({ queryKey: ['course-edit', slug] })
+    },
   })
 
   const updateSettingsMutation = useMutation({
@@ -1446,7 +1469,7 @@ export default function EditPage() {
 
   const deleteLessonMutation = useMutation({
     mutationFn: (id: string) => elearningService.deleteLesson(id),
-    onSuccess: (_, deletedId) => {
+    onSuccess: async (_, deletedId) => {
       if (selectedLessonId === deletedId) {
         setSelectedLessonId(null)
         setLoadedLessonId(null)
@@ -1455,6 +1478,7 @@ export default function EditPage() {
         setLessonTitle('')
         setSavedLessonTitle('')
       }
+      await syncCourseDuration(lessons.filter(l => l.id !== deletedId))
       queryClient.invalidateQueries({ queryKey: ['course-edit', slug] })
     },
   })
@@ -1477,7 +1501,10 @@ export default function EditPage() {
         resources: source.resources as any,
       })
     },
-    onSuccess: (newLesson) => {
+    onSuccess: async (newLesson) => {
+      if (newLesson?.video_duration_minutes) {
+        await syncCourseDuration([...lessons, newLesson as LessonItem])
+      }
       queryClient.invalidateQueries({ queryKey: ['course-edit', slug] })
       if (newLesson?.id) setSelectedLessonId(newLesson.id)
     },
