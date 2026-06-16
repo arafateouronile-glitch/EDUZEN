@@ -57,9 +57,11 @@ export async function GET(request: NextRequest) {
           id,
           student_name,
           student_email,
+          student_id,
           status,
           signed_at,
-          location_verified
+          location_verified,
+          signature_data
         )
       `)
       .eq('organization_id', userData.organization_id)

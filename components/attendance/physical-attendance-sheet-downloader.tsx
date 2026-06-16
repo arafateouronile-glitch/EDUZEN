@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,9 +17,12 @@ import {
   Printer,
   CheckCircle,
   Download,
+  PenLine,
+  Send,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { DigitalAttendanceSheet, type AttendancePerson } from './digital-attendance-sheet'
 import { generatePDFBlobFromHTML } from '@/lib/utils/pdf-generator'
 import { escapeHtml } from '@/lib/utils/sanitize-html'
 import { cn, formatDate } from '@/lib/utils'
@@ -48,6 +51,25 @@ interface PhysicalAttendanceSheetDownloaderProps {
 const DEEP_BLUE = '#274472'
 const ELECTRIC_CYAN = '#34B9EE'
 
+interface ElectronicRequest {
+  id: string
+  student_id: string | null
+  student_name: string
+  student_email: string
+  status: string
+  signed_at: string | null
+  signature_data: string | null
+  location_verified: boolean | null
+}
+
+interface ElectronicSession {
+  id: string
+  date: string
+  start_time: string | null
+  time_slot?: string | null
+  requests: ElectronicRequest[]
+}
+
 export function PhysicalAttendanceSheetDownloader({
   sessionId,
   sessionName,
@@ -60,6 +82,17 @@ export function PhysicalAttendanceSheetDownloader({
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatingSlotId, setGeneratingSlotId] = useState<string | null>(null)
+  const [generatingDigitalSlotId, setGeneratingDigitalSlotId] = useState<string | null>(null)
+  const [electronicSessions, setElectronicSessions] = useState<ElectronicSession[]>([])
+  const [sendingSlotId, setSendingSlotId] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/electronic-attendance/sessions?sessionId=${sessionId}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: ElectronicSession[]) => setElectronicSessions(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [sessionId])
 
   const sortedSlots = [...sessionSlots].sort((a, b) => {
     const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -243,6 +276,150 @@ export function PhysicalAttendanceSheetDownloader({
     `
   }
 
+  const generateDigitalSheetHTML = (slot: SessionSlot, learners: AttendancePerson[]) => {
+    const formattedDate = format(new Date(slot.date), 'EEEE d MMMM yyyy', { locale: fr })
+    const timeLabel = getTimeSlotLabel(slot)
+
+    const rows = learners.map((p, i) => {
+      const isAbsent = p.status === 'absent'
+      const hasTimestamp = !!p.timestamp
+      const parts = hasTimestamp && p.timestamp.includes(' - ') ? p.timestamp.split(' - ') : [p.timestamp, '']
+      const date = parts[0]
+      const time = parts[1] ?? ''
+
+      const signatureCell = isAbsent
+        ? `<span style="border:1px solid #ef4444;color:#ef4444;font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;letter-spacing:2px;display:inline-block;">ABSENT</span>`
+        : p.signatureUrl
+          ? `<img src="${p.signatureUrl}" alt="Signature" style="max-width:80px;max-height:36px;object-fit:contain;display:block;margin:auto;">`
+          : `<div style="height:36px;"></div>`
+
+      return `
+        <tr style="border-bottom:1px solid #f3f4f6;${i % 2 === 0 ? 'background:white;' : 'background:#fafafa;'}">
+          <td style="padding:14px 16px;font-weight:600;color:#1f2937;font-size:10pt;">${escapeHtml(p.name)}</td>
+          <td style="padding:14px 16px;color:#9ca3af;font-size:9pt;">${escapeHtml(p.email)}</td>
+          <td style="padding:14px 16px;text-align:center;width:120px;">${signatureCell}</td>
+          <td style="padding:14px 16px;text-align:right;font-size:9pt;color:${isAbsent ? '#ef4444' : '#9ca3af'};white-space:nowrap;line-height:1.4;">${hasTimestamp ? `${date}${time ? `<br>${time}` : ''}` : ''}</td>
+        </tr>`
+    }).join('')
+
+    return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11pt; color: #333; line-height: 1.4; margin: 0; padding: 0; }
+    table { border-collapse: collapse; width: 100%; }
+  </style>
+</head>
+<body>
+  <div style="border-bottom:3px solid ${ELECTRIC_CYAN};padding-bottom:20px;margin-bottom:20px;">
+    <h1 style="margin:0 0 4px 0;font-size:18pt;font-weight:700;color:${DEEP_BLUE};text-transform:uppercase;letter-spacing:0.5px;">Émargement Numérique</h1>
+    <p style="margin:0;font-size:11pt;color:#4b5563;font-weight:500;">${escapeHtml(organizationName)}</p>
+    ${organizationAddress ? `<p style="margin:2px 0 0 0;font-size:9pt;color:#6b7280;">${escapeHtml(organizationAddress)}</p>` : ''}
+  </div>
+  <div style="background:linear-gradient(135deg,${DEEP_BLUE} 0%,#41729F 100%);color:white;padding:16px 20px;border-radius:8px;margin-bottom:16px;">
+    <p style="margin:0 0 2px 0;font-size:8pt;text-transform:uppercase;letter-spacing:1px;opacity:0.8;">Formation</p>
+    <p style="margin:0;font-size:13pt;font-weight:600;">${escapeHtml(formationName || sessionName)}</p>
+  </div>
+  <div style="background:#f8fafc;padding:12px 16px;border-radius:8px;margin-bottom:24px;border:1px solid #e2e8f0;display:flex;gap:24px;align-items:center;">
+    <div>
+      <p style="margin:0;font-size:8pt;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Date</p>
+      <p style="margin:0;font-weight:600;color:#1e293b;text-transform:capitalize;">${formattedDate}</p>
+    </div>
+    <div>
+      <p style="margin:0;font-size:8pt;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Horaire</p>
+      <p style="margin:0;font-weight:600;color:#1e293b;">${timeLabel}${slot.start_time ? ` (${slot.start_time}${slot.end_time ? ` – ${slot.end_time}` : ''})` : ''}</p>
+    </div>
+    ${slot.location ? `<div><p style="margin:0;font-size:8pt;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Lieu</p><p style="margin:0;font-weight:600;color:#1e293b;">${escapeHtml(slot.location)}</p></div>` : ''}
+  </div>
+  <p style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${DEEP_BLUE};margin:0 0 8px 0;">Apprenants <span style="color:${ELECTRIC_CYAN};">(${learners.length})</span></p>
+  <table style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:30px;">
+    <thead>
+      <tr style="background:${DEEP_BLUE};color:white;">
+        <th style="padding:10px 16px;text-align:left;font-weight:600;font-size:9pt;">NOM</th>
+        <th style="padding:10px 16px;text-align:left;font-weight:600;font-size:9pt;">EMAIL</th>
+        <th style="padding:10px 16px;text-align:center;font-weight:600;font-size:9pt;width:120px;">SIGNATURE</th>
+        <th style="padding:10px 16px;text-align:right;font-weight:600;font-size:9pt;white-space:nowrap;">DATE / HEURE</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+      ${learners.length === 0 ? `<tr><td colspan="4" style="padding:40px;text-align:center;color:#9ca3af;">Aucun apprenant inscrit</td></tr>` : ''}
+    </tbody>
+  </table>
+  <div style="margin-top:30px;padding:12px 16px;border-top:2px solid ${DEEP_BLUE};background:rgba(39,68,114,0.04);">
+    <p style="margin:0 0 4px 0;font-size:8pt;font-weight:600;color:${DEEP_BLUE};text-transform:uppercase;letter-spacing:0.5px;">Mentions légales</p>
+    <p style="margin:0;font-size:8pt;color:#6b7280;line-height:1.5;">La signature de cette feuille atteste de la présence effective du stagiaire à la formation. Document conforme aux exigences Qualiopi et OPCO.</p>
+    <p style="margin:8px 0 0 0;font-size:8pt;color:#9ca3af;">Généré le ${format(new Date(), "d MMMM yyyy 'à' HH:mm", { locale: fr })} — EDUZEN</p>
+  </div>
+</body>
+</html>`
+  }
+
+  const downloadDigitalSheet = async (slot: SessionSlot, learners: AttendancePerson[]) => {
+    setGeneratingDigitalSlotId(slot.id)
+    try {
+      const html = generateDigitalSheetHTML(slot, learners)
+      const filename = `Emargement_Numerique_${sessionName.replace(/[^a-zA-Z0-9]/g, '_')}_${format(new Date(slot.date), 'yyyy-MM-dd')}_${slot.time_slot}.pdf`
+
+      const containerId = `digital-attendance-${slot.id}-${Date.now()}`
+      const container = document.createElement('div')
+      container.id = containerId
+      const parsed = new DOMParser().parseFromString(html, 'text/html')
+      container.appendChild(parsed.documentElement)
+      container.style.cssText = 'position:absolute;left:-9999px;top:0;width:210mm;min-height:297mm;background:white;'
+      document.body.appendChild(container)
+
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      try {
+        const blob = await generatePDFBlobFromHTML(containerId)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        a.click()
+        URL.revokeObjectURL(url)
+      } finally {
+        document.body.removeChild(container)
+      }
+    } catch (error) {
+      logger.error('Erreur génération PDF numérique', error instanceof Error ? error : new Error(String(error)))
+    } finally {
+      setGeneratingDigitalSlotId(null)
+    }
+  }
+
+  const launchSlot = async (slot: SessionSlot) => {
+    setSendingSlotId(slot.id)
+    setSendError(null)
+    try {
+      const res = await fetch('/api/electronic-attendance/launch-slot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          date: slot.date,
+          startTime: slot.start_time,
+          endTime: slot.end_time,
+          timeSlot: slot.time_slot,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erreur envoi')
+      // Rafraîchir les sessions électroniques pour mettre à jour l'état du bouton
+      const refreshed = await fetch(`/api/electronic-attendance/sessions?sessionId=${sessionId}`)
+      if (refreshed.ok) {
+        const updatedSessions: ElectronicSession[] = await refreshed.json()
+        setElectronicSessions(Array.isArray(updatedSessions) ? updatedSessions : [])
+      }
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'Erreur inconnue')
+    } finally {
+      setSendingSlotId(null)
+    }
+  }
+
   const downloadSingleSheet = async (slot: SessionSlot) => {
     setGeneratingSlotId(slot.id)
     try {
@@ -398,20 +575,51 @@ export function PhysicalAttendanceSheetDownloader({
       </div>
 
       {/* Liste des séances */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {sortedSlots.map((slot) => {
           const formattedDate = format(new Date(slot.date), 'EEEE d MMMM yyyy', { locale: fr })
           const isSelected = selectedSlots.has(slot.id)
           const isCurrentlyGenerating = generatingSlotId === slot.id
 
+          // Trouver la session électronique correspondant à ce créneau (par date)
+          const eSession = electronicSessions.find((es) => es.date === slot.date)
+          const eRequests = eSession?.requests ?? []
+
+          const learners = students.map((s) => {
+            // Correspondance par student_id, puis par email, puis par nom
+            const req = eRequests.find(
+              (r) =>
+                (s.id && r.student_id === s.id) ||
+                (s.email && r.student_email?.toLowerCase() === s.email.toLowerCase()) ||
+                (s.last_name &&
+                  r.student_name
+                    ?.toLowerCase()
+                    .includes(s.last_name.toLowerCase()))
+            )
+            const isSigned = req?.status === 'signed'
+            const signedAt = req?.signed_at
+              ? format(new Date(req.signed_at), 'dd/MM/yyyy - HH:mm')
+              : null
+
+            return {
+              id: s.id,
+              name: `${(s.last_name || '').toUpperCase()} ${s.first_name || ''}`.trim(),
+              email: s.email || '',
+              status: (isSigned ? 'present' : req ? 'absent' : 'present') as 'present' | 'absent',
+              timestamp: signedAt ?? '',
+              signatureUrl: isSigned && req?.signature_data ? req.signature_data : undefined,
+            }
+          })
+
           return (
             <Card
               key={slot.id}
               className={cn(
-                'transition-all duration-200',
+                'overflow-hidden transition-all duration-200',
                 isSelected && 'ring-2 ring-brand-blue ring-offset-2'
               )}
             >
+              {/* Header de séance */}
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
                   <Checkbox
@@ -457,26 +665,94 @@ export function PhysicalAttendanceSheetDownloader({
                     </div>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadSingleSheet(slot)}
-                    disabled={isCurrentlyGenerating || isGenerating}
-                    className="gap-2"
-                  >
-                    {isCurrentlyGenerating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileDown className="h-4 w-4" />
-                    )}
-                    PDF
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {/* Bouton envoi demandes d'émargement numérique */}
+                    {(() => {
+                      const isSending = sendingSlotId === slot.id
+                      const isActive = eSession?.status === 'active'
+                      const isClosed = eSession?.status === 'closed'
+
+                      if (isActive || isClosed) {
+                        return (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="gap-2 border-green-200 text-green-700 bg-green-50"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            {isActive ? 'Envoyé' : 'Terminé'}
+                          </Button>
+                        )
+                      }
+
+                      return (
+                        <Button
+                          size="sm"
+                          onClick={() => launchSlot(slot)}
+                          disabled={isSending}
+                          className="gap-2 bg-brand-blue hover:bg-brand-blue/90 text-white"
+                          title="Envoyer les demandes d'émargement aux apprenants et formateurs"
+                        >
+                          {isSending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                          {isSending ? 'Envoi…' : 'Envoyer'}
+                        </Button>
+                      )
+                    })()}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadSingleSheet(slot)}
+                      disabled={isCurrentlyGenerating || isGenerating}
+                      className="gap-2"
+                      title="Télécharger la feuille physique"
+                    >
+                      {isCurrentlyGenerating && generatingDigitalSlotId !== slot.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileDown className="h-4 w-4" />
+                      )}
+                      PDF
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadDigitalSheet(slot, learners)}
+                      disabled={generatingDigitalSlotId === slot.id || isGenerating}
+                      className="gap-2"
+                      title="Télécharger l'émargement numérique signé"
+                    >
+                      {generatingDigitalSlotId === slot.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <PenLine className="h-4 w-4" />
+                      )}
+                      PDF signé
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
+
+              {/* Émargement numérique — toujours visible */}
+              <div className="border-t border-gray-100 bg-gray-50/50">
+                <DigitalAttendanceSheet learners={learners} trainers={[]} />
+              </div>
             </Card>
           )
         })}
       </div>
+
+      {sendError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          {sendError}
+        </div>
+      )}
 
       {/* Info */}
       <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
