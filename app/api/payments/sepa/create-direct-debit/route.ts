@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { withRateLimit, mutationRateLimiter } from '@/lib/utils/rate-limiter'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
@@ -60,17 +61,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Identifiant créancier requis' }, { status: 400 })
     }
 
-    // Enregistrer le prélèvement
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
+    const orgId = await getUserOrgId(supabase, user.id)
 
     const { data: paymentRecord, error: dbError } = await supabase
       .from('payments')
       .insert({
-        organization_id: userData?.organization_id,
+        organization_id: orgId,
         amount: amount.toString(),
         currency: currency.toUpperCase(),
         status: 'pending',

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
@@ -28,11 +29,7 @@ export async function POST(req: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return NextResponse.json({ ok: false }, { status: 401 })
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', user.id)
-    .single()
+  const orgId = await getUserOrgId(supabase, user.id)
 
   const { messages } = (await req.json()) as { messages: unknown[] }
 
@@ -42,7 +39,7 @@ export async function POST(req: NextRequest) {
     .upsert(
       {
         user_id: user.id,
-        organization_id: profile?.organization_id ?? '',
+        organization_id: orgId ?? '',
         messages,
         updated_at: new Date().toISOString(),
       },

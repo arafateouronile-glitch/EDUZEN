@@ -30,6 +30,7 @@ describe('API POST /api/documents/schedule-send', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116' } }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           }),
         }),
       }),
@@ -51,6 +52,10 @@ describe('API POST /api/documents/schedule-send', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
+              data: { organization_id: 'org-1', role: 'teacher' },
+              error: null,
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({
               data: { organization_id: 'org-1', role: 'teacher' },
               error: null,
             }),

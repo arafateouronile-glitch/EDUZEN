@@ -40,7 +40,7 @@ export async function PATCH(
     // Vérifier que l'admin existe
     const { data: existingAdmin } = await supabase
       .from('platform_admins')
-      .select('*')
+      .select('id, role, permissions')
       .eq('id', id)
       .maybeSingle()
 

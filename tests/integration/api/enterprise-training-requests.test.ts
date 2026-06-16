@@ -41,9 +41,9 @@ describe('API /api/enterprise/training-requests', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             eq: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({
+              maybeSingle: vi.fn().mockResolvedValue({
                 data: null,
-                error: { code: 'PGRST116', message: 'No rows' },
+                error: null,
               }),
             }),
           }),

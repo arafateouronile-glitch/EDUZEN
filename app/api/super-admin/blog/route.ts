@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreateBlogPostInput, UpdateBlogPostInput } from '@/types/super-admin.types'
 import type { Json } from '@/types/database.types'
+import { logger } from '@/lib/utils/logger'
 
 // GET - Liste des articles
 export async function GET(request: NextRequest) {
@@ -63,7 +64,8 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Blog] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({ posts: data || [] })
@@ -107,6 +109,10 @@ export async function POST(request: NextRequest) {
 
     const body: CreateBlogPostInput = await request.json()
 
+    if (body.metadata && JSON.stringify(body.metadata).length > 5000) {
+      return NextResponse.json({ error: 'metadata trop volumineux (max 5 Ko)' }, { status: 400 })
+    }
+
     // Générer le slug si non fourni
     let slug = body.slug
     if (!slug) {
@@ -142,7 +148,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Blog] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     // Ajouter les tags si fournis

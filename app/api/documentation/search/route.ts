@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { DocumentationService } from '@/lib/services/documentation.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import {
@@ -40,19 +41,12 @@ export async function GET(request: NextRequest) {
         return createUnauthorizedResponse()
       }
 
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('id', user.id)
-        .single()
-      const userOrgId = userRow?.organization_id
-      if (!userOrgId) {
+      const organizationId = await getUserOrgId(supabase, user.id)
+      if (!organizationId) {
         return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
       }
 
       const query = data.q as string
-      // Sécurité cross-tenant : ignorer organization_id du client, utiliser celui de l'utilisateur
-      const organizationId = userOrgId
 
       const documentationService = new DocumentationService(supabase)
       const results = await documentationService.searchArticles(query, organizationId)

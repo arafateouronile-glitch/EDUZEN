@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { validateMcpToken } from '@/lib/mcp-auth'
+import { logger } from '@/lib/utils/logger'
 
 const TagCreateSchema = z.object({
   name: z.string().min(1).max(100),
@@ -22,7 +23,10 @@ export async function GET(request: NextRequest) {
       .select('id, name, slug, color')
       .order('name', { ascending: true })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      logger.error('[MCP] Error fetching tags:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    }
 
     return NextResponse.json({ tags: data ?? [] })
   } catch {

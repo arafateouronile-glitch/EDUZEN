@@ -9,6 +9,7 @@ import { generateHTML } from '@/lib/utils/document-generation/html-generator'
 import { mapDataToVariables } from '@/lib/utils/document-generation/variable-mapper'
 import { emailService } from '@/lib/services/email.service'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 // GET /api/documents/scheduled - Récupère les générations programmées
@@ -33,18 +34,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', authUser.id)
-      .single()
-
-    if (!user?.organization_id) {
+    const orgId = await getUserOrgId(supabase, authUser.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
     const scheduledGenerationService = new ScheduledGenerationService(supabase)
-    const generations = await scheduledGenerationService.getAll(user.organization_id)
+    const generations = await scheduledGenerationService.getAll(orgId)
     return NextResponse.json(generations)
   } catch (error) {
     logger.error('Erreur lors de la récupération des générations programmées:', error)
@@ -77,20 +73,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', authUser.id)
-      .single()
-
-    if (!user?.organization_id) {
+    const orgId = await getUserOrgId(supabase, authUser.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
     const body = await request.json()
     const scheduledGenerationService = new ScheduledGenerationService(supabase)
     const config: ScheduledGenerationConfig = {
-      organization_id: user.organization_id,
+      organization_id: orgId,
       template_id: body.template_id,
       schedule_type: body.schedule_type,
       schedule_config: body.schedule_config ?? {},

@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { withRateLimit, mutationRateLimiter } from '@/lib/utils/rate-limiter'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'
 import { logger, maskId, maskEmail, sanitizeError } from '@/lib/utils/logger'
@@ -94,16 +95,11 @@ export async function POST(request: NextRequest) {
     const paymentIntentId = `pi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const clientSecret = `pi_${paymentIntentId}_secret_${Math.random().toString(36).substr(2, 9)}`
 
-    // Récupérer l'organization_id
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
+    const orgId = await getUserOrgId(supabase, user.id)
 
     // Enregistrer dans la base de données
     const paymentInsert: TableInsert<'payments'> = {
-      organization_id: userData?.organization_id || null,
+      organization_id: orgId,
       amount,
       currency: currency.toUpperCase(),
       status: 'pending',

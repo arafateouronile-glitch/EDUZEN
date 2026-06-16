@@ -27,6 +27,9 @@ export async function POST(request: NextRequest) {
       if (!code || typeof code !== 'string') {
         return NextResponse.json({ error: 'Code requis' }, { status: 400 })
       }
+      if (!/^\d{6}$/.test(code)) {
+        return NextResponse.json({ error: 'Format de code invalide (6 chiffres attendus)' }, { status: 400 })
+      }
 
       // Vérifier le code d'activation
       const twoFactorAuthService = new TwoFactorAuthService(supabase)
@@ -42,8 +45,7 @@ export async function POST(request: NextRequest) {
       })
     } catch (error: unknown) {
       logger.error('Error verifying 2FA activation:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
-      return NextResponse.json({ error: errorMessage }, { status: 500 })
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
   })
 }

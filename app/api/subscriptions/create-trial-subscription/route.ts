@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
@@ -91,18 +92,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Récupérer l'organisation de l'utilisateur
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.organization_id) {
-      return NextResponse.json(
-        { error: 'Organisation non trouvée' },
-        { status: 404 }
-      )
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
     // Valider le body
@@ -121,7 +113,7 @@ export async function POST(request: NextRequest) {
     // Récupérer le plan
     const { data: plan, error: planError } = await supabase
       .from('plans')
-      .select('*')
+      .select('id, name, stripe_price_id, stripe_price_id_yearly, stripe_price_id_monthly')
       .eq('id', planId)
       .eq('is_active', true)
       .single()
@@ -139,11 +131,11 @@ export async function POST(request: NextRequest) {
 
     // Vérifier que les variables d'environnement Supabase admin sont disponibles
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('[create-trial-subscription] SUPABASE_SERVICE_ROLE_KEY non configurée')
+      logger.error('[create-trial-subscription] SUPABASE_SERVICE_ROLE_KEY non configurée')
       return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY non configurée sur le serveur' }, { status: 500 })
     }
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      console.error('[create-trial-subscription] NEXT_PUBLIC_SUPABASE_URL non configurée')
+      logger.error('[create-trial-subscription] NEXT_PUBLIC_SUPABASE_URL non configurée')
       return NextResponse.json({ error: 'NEXT_PUBLIC_SUPABASE_URL non configurée sur le serveur' }, { status: 500 })
     }
 
@@ -152,7 +144,7 @@ export async function POST(request: NextRequest) {
     // ========================================
     if (skipPaymentMethod) {
       logger.info('Démarrage essai sans carte', {
-        organizationId: userData.organization_id,
+        organizationId: orgId,
         planId,
       })
 
@@ -167,7 +159,7 @@ export async function POST(request: NextRequest) {
       const { data: orgData } = await adminClient
         .from('organizations')
         .select('settings')
-        .eq('id', userData.organization_id)
+        .eq('id', orgId)
         .single()
 
       const currentSettings = (orgData?.settings as Record<string, unknown>) || {}
@@ -186,7 +178,7 @@ export async function POST(request: NextRequest) {
           subscription_status: 'active',
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userData.organization_id)
+        .eq('id', orgId)
 
       if (orgUpdateError) {
         logger.error('Erreur mise à jour organisation (skip payment)', { error: orgUpdateError.message })
@@ -197,7 +189,7 @@ export async function POST(request: NextRequest) {
       const { error: subError } = await adminClient
         .from('subscriptions')
         .upsert({
-          organization_id: userData.organization_id,
+          organization_id: orgId,
           plan_id: planId,
           status: 'trialing',
           stripe_customer_id: null,
@@ -218,7 +210,7 @@ export async function POST(request: NextRequest) {
       }
 
       logger.info('Essai démarré sans carte', {
-        organizationId: userData.organization_id,
+        organizationId: orgId,
         trialEndAt: trialEndAt.toISOString(),
       })
 
@@ -292,14 +284,14 @@ export async function POST(request: NextRequest) {
     logger.info('Payment method attachée au customer', {
       paymentMethodId,
       customerId,
-      organizationId: userData.organization_id,
+      organizationId: orgId,
     })
 
     // Vérifier si la checklist est complète pour accorder 7 jours bonus
     const { data: orgForChecklist } = await supabase
       .from('organizations')
       .select('settings')
-      .eq('id', userData.organization_id)
+      .eq('id', orgId)
       .single()
 
     const orgSettings = (orgForChecklist?.settings as Record<string, unknown>) || {}
@@ -312,7 +304,7 @@ export async function POST(request: NextRequest) {
     const firstCycleAnchor = Math.floor((Date.now() + firstCycleDays * 24 * 60 * 60_000) / 1000)
 
     logger.info('Création abonnement', {
-      organizationId: userData.organization_id,
+      organizationId: orgId,
       checklistComplete,
       firstCycleDays,
     })
@@ -324,7 +316,7 @@ export async function POST(request: NextRequest) {
       proration_behavior: 'none',
       default_payment_method: paymentMethodId,
       metadata: {
-        organization_id: userData.organization_id,
+        organization_id: orgId,
         plan_id: planId,
         billing_period: billingPeriod,
         checklist_complete: String(checklistComplete),
@@ -338,7 +330,7 @@ export async function POST(request: NextRequest) {
     logger.info('Abonnement créé avec essai gratuit', {
       subscriptionId: subscription.id,
       customerId,
-      organizationId: userData.organization_id,
+      organizationId: orgId,
       trialEnd: subscription.trial_end,
     })
 
@@ -351,7 +343,7 @@ export async function POST(request: NextRequest) {
     const { error: rpcError } = await (supabase.rpc as (name: string, args: Record<string, unknown>) => ReturnType<typeof supabase.rpc>)(
       'complete_onboarding_with_payment',
       {
-        p_organization_id: userData.organization_id,
+        p_organization_id: orgId,
         p_plan_id: planId,
         p_payment_method_id: paymentMethodId,
         p_stripe_customer_id: customerId,
@@ -372,7 +364,7 @@ export async function POST(request: NextRequest) {
       const { data: orgData } = await adminClient
         .from('organizations')
         .select('settings')
-        .eq('id', userData.organization_id)
+        .eq('id', orgId)
         .single()
 
       const currentSettings = (orgData?.settings as Record<string, unknown>) || {}
@@ -392,7 +384,7 @@ export async function POST(request: NextRequest) {
           subscription_status: 'active',
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userData.organization_id)
+        .eq('id', orgId)
 
       if (orgUpdateError) {
         logger.error('Erreur mise à jour organisation (with payment)', { error: orgUpdateError.message })
@@ -403,7 +395,7 @@ export async function POST(request: NextRequest) {
       const { error: subError } = await adminClient
         .from('subscriptions')
         .upsert({
-          organization_id: userData.organization_id,
+          organization_id: orgId,
           plan_id: planId,
           status: 'trialing',
           stripe_customer_id: customerId,
@@ -425,7 +417,7 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Onboarding complété avec succès', {
-      organizationId: userData.organization_id,
+      organizationId: orgId,
       subscriptionId: subscription.id,
       trialEndAt: stripeTrialEndAt.toISOString(),
     })
@@ -459,7 +451,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
-    console.error('[create-trial-subscription] ERREUR:', errorMessage, error)
+    logger.error('[create-trial-subscription] ERREUR:', errorMessage, error)
     logger.error('Erreur création abonnement trial', { error: errorMessage })
 
     // Gérer les erreurs Stripe spécifiques

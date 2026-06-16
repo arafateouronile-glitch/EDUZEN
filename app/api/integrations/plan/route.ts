@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { getOrganizationPlanFeatures } from '@/lib/services/plan-limits'
 
 export async function GET() {
@@ -10,17 +11,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', authUser.id)
-      .single()
-
-    if (!user?.organization_id) {
+    const orgId = await getUserOrgId(supabase, authUser.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'No organization' }, { status: 404 })
     }
 
-    const planInfo = await getOrganizationPlanFeatures(supabase, user.organization_id)
+    const planInfo = await getOrganizationPlanFeatures(supabase, orgId)
 
     return NextResponse.json({ data: planInfo })
   } catch (error) {

@@ -62,8 +62,8 @@ describe('API /api/auth/check', () => {
     expect(data).toHaveProperty('timestamp')
     expect(data).toHaveProperty('cookies')
     expect(data).toHaveProperty('standardAuth')
-    expect(data.standardAuth.id).toBe('user-123')
-    expect(data.standardAuth.email).toBe('test@example.com')
+    expect(data.standardAuth.authenticated).toBe(true)
+    expect(data.standardAuth.error).toBeNull()
   })
 
   it('devrait gérer l\'absence de cookies Supabase', async () => {
@@ -88,7 +88,7 @@ describe('API /api/auth/check', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.standardAuth.id).toBeNull()
+    expect(data.standardAuth.authenticated).toBe(false)
     expect(data.manualSessionAuth.hasTokens).toBe(false)
   })
 

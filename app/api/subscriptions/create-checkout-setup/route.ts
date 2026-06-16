@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
 
@@ -26,15 +27,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // Étape 2: Organisation
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.organization_id) {
-      return NextResponse.json({ error: `Organisation non trouvée: ${userError?.message ?? 'pas de org_id'}` }, { status: 404 })
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
     // Étape 3: Body
@@ -57,7 +52,7 @@ export async function POST(request: NextRequest) {
     const { data: organization } = await supabase
       .from('organizations')
       .select('id, name')
-      .eq('id', userData.organization_id)
+      .eq('id', orgId)
       .single()
 
     // Étape 6: Customer Stripe
@@ -65,7 +60,7 @@ export async function POST(request: NextRequest) {
     const { data: existingSubscription } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id')
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
       .not('stripe_customer_id', 'is', null)
       .maybeSingle()
 
@@ -73,7 +68,7 @@ export async function POST(request: NextRequest) {
       const cookieStore = await cookies()
       const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
       const metadata: Record<string, string> = {
-        organization_id: userData.organization_id!,
+        organization_id: orgId!,
         user_id: user.id,
       }
       if (affiliateRef) metadata.affiliate_id = affiliateRef
@@ -116,7 +111,7 @@ export async function POST(request: NextRequest) {
       success_url: `${origin}/dashboard/onboarding?step=4&session_id={CHECKOUT_SESSION_ID}&planId=${encodeURIComponent(planId)}&billingPeriod=${encodeURIComponent(billingPeriod)}`,
       cancel_url: `${origin}/dashboard/onboarding?step=4&canceled=1`,
       metadata: {
-        organization_id: userData.organization_id,
+        organization_id: orgId,
         user_id: user.id,
         plan_id: planId,
         billing_period: billingPeriod,
@@ -126,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     logger.info('Checkout setup session créée', {
       sessionId: session.id,
-      organizationId: userData.organization_id,
+      organizationId: orgId,
     })
 
     return NextResponse.json({ url: session.url, sessionId: session.id })

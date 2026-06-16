@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import Stripe from 'stripe'
 import { logger } from '@/lib/utils/logger'
 
@@ -35,25 +36,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Récupérer l'organisation de l'utilisateur
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.organization_id) {
-      return NextResponse.json(
-        { error: 'Organisation non trouvée' },
-        { status: 404 }
-      )
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
     // Récupérer les infos de l'organisation
     const { data: organization } = await supabase
       .from('organizations')
       .select('id, name')
-      .eq('id', userData.organization_id)
+      .eq('id', orgId)
       .single()
 
     let customerId: string
@@ -62,7 +54,7 @@ export async function POST(request: NextRequest) {
     const { data: existingSubscription } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id')
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
       .not('stripe_customer_id', 'is', null)
       .maybeSingle()
 
@@ -74,7 +66,7 @@ export async function POST(request: NextRequest) {
       const cookieStore = await cookies()
       const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
       const metadata: Record<string, string> = {
-        organization_id: userData.organization_id,
+        organization_id: orgId,
         user_id: user.id,
       }
       if (affiliateRef) metadata.affiliate_id = affiliateRef
@@ -90,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       logger.info('Stripe customer créé pour onboarding', {
         customerId,
-        organizationId: userData.organization_id,
+        organizationId: orgId,
       })
     }
 
@@ -100,7 +92,7 @@ export async function POST(request: NextRequest) {
       payment_method_types: ['card'],
       usage: 'off_session', // Permet les paiements récurrents
       metadata: {
-        organization_id: userData.organization_id,
+        organization_id: orgId,
         user_id: user.id,
         purpose: 'trial_onboarding',
       },
@@ -109,7 +101,7 @@ export async function POST(request: NextRequest) {
     logger.info('SetupIntent créé pour onboarding', {
       setupIntentId: setupIntent.id,
       customerId,
-      organizationId: userData.organization_id,
+      organizationId: orgId,
     })
 
     return NextResponse.json({

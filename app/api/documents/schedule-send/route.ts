@@ -6,6 +6,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId, getUserProfile } from '@/lib/utils/with-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -19,19 +20,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    // Récupérer l'utilisateur et son organisation
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const userProfile = await getUserProfile(supabase, user.id)
+    if (!userProfile?.organization_id) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 400 })
     }
 
     // Vérifier les permissions (admin uniquement)
-    if (!['super_admin', 'admin', 'secretary'].includes(userData.role)) {
+    if (!['super_admin', 'admin', 'secretary'].includes(userProfile.role)) {
       return NextResponse.json({ error: 'Permissions insuffisantes' }, { status: 403 })
     }
 
@@ -66,7 +61,7 @@ export async function POST(request: NextRequest) {
       .from('documents')
       .select('id, name, organization_id')
       .eq('id', document_id)
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', userProfile.organization_id)
       .single()
 
     if (!document) {
@@ -79,7 +74,7 @@ export async function POST(request: NextRequest) {
     const { data: scheduled, error: insertError } = await supabaseAdmin
       .from('scheduled_document_sends')
       .insert({
-        organization_id: userData.organization_id,
+        organization_id: userProfile.organization_id,
         document_id,
         recipient_type: recipient_type || 'all',
         recipient_ids: recipient_ids || [],
@@ -100,7 +95,7 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       logger.error('Insert error:', insertError)
       return NextResponse.json(
-        { error: 'Erreur lors de la planification', details: insertError.message },
+        { error: 'Erreur lors de la planification' },
         { status: 500 }
       )
     }
@@ -112,10 +107,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     logger.error('Schedule document send error:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur interne' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
 
@@ -131,13 +123,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 400 })
     }
 
@@ -151,7 +138,7 @@ export async function GET(request: NextRequest) {
         *,
         documents(id, name, type)
       `)
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
       .order('scheduled_at', { ascending: false })
       .limit(limit)
 
@@ -162,7 +149,8 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('Get scheduled sends error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -171,10 +159,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     logger.error('Get scheduled sends error:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur interne' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
 
@@ -190,13 +175,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 400 })
     }
 
@@ -212,11 +192,12 @@ export async function DELETE(request: NextRequest) {
       .from('scheduled_document_sends')
       .update({ status: 'cancelled' })
       .eq('id', id)
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
       .eq('status', 'pending')
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+      logger.error('Cancel scheduled send error:', updateError)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -225,10 +206,7 @@ export async function DELETE(request: NextRequest) {
     })
   } catch (error) {
     logger.error('Cancel scheduled send error:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur interne' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
 

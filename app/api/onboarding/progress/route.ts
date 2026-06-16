@@ -6,6 +6,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { logger } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
@@ -19,20 +20,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'stepId et completed requis' }, { status: 400 })
     }
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 404 })
     }
 
     const { data: org } = await supabase
       .from('organizations')
       .select('settings')
-      .eq('id', userData.organization_id)
+      .eq('id', orgId)
       .single()
 
     const settings = (org?.settings as Record<string, unknown>) || {}
@@ -45,7 +41,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('organizations')
       .update({ settings: { ...settings, onboarding_checklist_steps: steps } })
-      .eq('id', userData.organization_id)
+      .eq('id', orgId)
 
     return NextResponse.json({ success: true })
   } catch (error) {

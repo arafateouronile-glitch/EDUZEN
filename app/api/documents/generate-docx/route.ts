@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { generateWordDocument } from '@/lib/services/auto-docx-generator.service'
 import type { DocumentVariables, DocumentTemplate } from '@/lib/types/document-templates'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { generateDocxBodySchema } from '@/lib/validations/schemas'
 
@@ -48,14 +49,8 @@ export async function POST(request: NextRequest) {
     const { templateId, variables, filename: rawFilename } = parsed.data
     const filename = rawFilename.replace(/[^\w.\-]/g, '_')
 
-    // Récupérer le template depuis la base de données
     logger.info('[Generate DOCX] 📋 Récupération du template', { templateId })
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-    const userOrgId = userRow?.organization_id
+    const userOrgId = await getUserOrgId(supabase, user.id)
     if (!userOrgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }

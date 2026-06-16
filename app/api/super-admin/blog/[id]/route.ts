@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { UpdateBlogPostInput } from '@/types/super-admin.types'
+import { logger } from '@/lib/utils/logger'
 
 // GET - Récupérer un article
 export async function GET(
@@ -34,7 +35,8 @@ export async function GET(
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Blog] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({ post: data })
@@ -101,7 +103,12 @@ export async function PATCH(
     if (body.category_id !== undefined) updates.category_id = body.category_id || null
     if (body.allow_comments !== undefined) updates.allow_comments = body.allow_comments
     if (body.is_featured !== undefined) updates.is_featured = body.is_featured
-    if (body.metadata) updates.metadata = body.metadata
+    if (body.metadata) {
+      if (JSON.stringify(body.metadata).length > 5000) {
+        return NextResponse.json({ error: 'metadata trop volumineux (max 5 Ko)' }, { status: 400 })
+      }
+      updates.metadata = body.metadata
+    }
 
     const { data, error } = await supabase
       .from('blog_posts')
@@ -111,7 +118,8 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Blog] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     // Mettre à jour les tags si fournis
@@ -181,7 +189,8 @@ export async function DELETE(
       .eq('id', id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Blog] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({ message: 'Article supprimé avec succès' })

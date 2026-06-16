@@ -1,7 +1,7 @@
 'use client'
 
 import { motion, useInView } from '@/components/ui/motion'
-import { useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
   Sparkles, Zap, Shield, BarChart3, FileCheck, Users,
   MessageSquare, ArrowRight, CheckCircle2, Bot,
@@ -47,6 +47,12 @@ const chatMessages = [
   { role: 'assistant', content: '**Rapport financier — janvier 2025**\n• CA total : 12 400 EUR\n• Sessions : 4\n• Taux de remplissage : 87%' },
 ]
 
+function renderBold(text: string): React.ReactNode[] {
+  return text.split(/\*\*(.*?)\*\*/g).map((part, i) =>
+    i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+  )
+}
+
 function ChatBubble({ message, index }: { message: typeof chatMessages[0]; index: number }) {
   const isUser = message.role === 'user'
   return (
@@ -68,10 +74,9 @@ function ChatBubble({ message, index }: { message: typeof chatMessages[0]; index
             : 'bg-white border border-gray-100 text-gray-700 rounded-tl-sm shadow-sm'
         }`}
       >
-        {message.content.split('\n').map((line, i) => {
-          const bold = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          return <p key={i} dangerouslySetInnerHTML={{ __html: bold }} />
-        })}
+        {message.content.split('\n').map((line, i) => (
+          <p key={i}>{renderBold(line)}</p>
+        ))}
       </div>
     </motion.div>
   )

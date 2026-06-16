@@ -6,6 +6,8 @@ import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-t
 import { logger } from '@/lib/utils/logger'
 import { createPage } from '@/lib/utils/puppeteer-pool'
 import { isGotenbergConfigured, htmlToPdf } from '@/lib/services/gotenberg.service'
+import { pdfRateLimiter } from '@/lib/utils/rate-limiter-distributed'
+import { applyRateLimit, RATE_LIMITS } from '@/lib/utils/rate-limit'
 
 const mmToInch = (mm: number) => `${(mm * 0.03937).toFixed(4)}`
 
@@ -32,6 +34,27 @@ export async function POST(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
+
+  // Rate limiting : 5 PDF par 2 minutes par utilisateur
+  if (pdfRateLimiter) {
+    const { success, remaining, reset } = await pdfRateLimiter.limit(`pdf:${user.id}`)
+    if (!success) {
+      const retryAfter = Math.ceil((reset - Date.now()) / 1000)
+      return NextResponse.json(
+        { error: 'Trop de générations PDF. Réessayez dans quelques instants.' },
+        { status: 429, headers: { 'Retry-After': String(retryAfter), 'X-RateLimit-Remaining': String(remaining) } }
+      )
+    }
+  } else {
+    // Fallback in-memory si Upstash non configuré
+    const rl = applyRateLimit(request, RATE_LIMITS.DOCUMENT_GENERATION, user.id)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de générations PDF. Réessayez dans quelques instants.' },
+        { status: 429, headers: { ...rl.headers, ...(rl.retryAfter ? { 'Retry-After': String(rl.retryAfter) } : {}) } }
+      )
+    }
   }
 
   try {
@@ -80,7 +103,7 @@ export async function POST(request: NextRequest) {
       html = htmlResult.html
     } catch (error) {
       logger.error('[PDF API] Erreur lors de la génération du HTML:', error)
-      const errorDetails: any = {
+      const errorDetails: Record<string, unknown> = {
         error: 'Erreur lors de la génération du HTML',
         message: error instanceof Error ? error.message : String(error),
         type: error instanceof Error ? error.constructor.name : typeof error,
@@ -211,17 +234,18 @@ export async function POST(request: NextRequest) {
       const stack = err.stack ? err.stack.split('\n').slice(0, 8).join('\n') : undefined
 
       return NextResponse.json(
-        {
-          error: 'Impossible de générer le PDF',
-          details: errorMessage,
-          stack: process.env.NODE_ENV === 'development' ? stack : undefined,
-          type: isTimeout ? 'timeout' : isExecutable ? 'executable' : 'unknown',
-          hint: isExecutable
-            ? 'Sur Vercel: vérifier @sparticuz/chromium-min et mémoire de la fonction (1024 MB min).'
-            : isTimeout
-            ? 'Le lancement de Chrome a pris trop de temps (augmenter maxDuration ou mémoire).'
-            : 'Vérifiez les logs serveur pour plus de détails.',
-        },
+        process.env.NODE_ENV === 'development'
+          ? {
+              error: 'Impossible de générer le PDF',
+              details: errorMessage,
+              stack,
+              hint: isExecutable
+                ? 'Sur Vercel: vérifier @sparticuz/chromium-min et mémoire de la fonction (1024 MB min).'
+                : isTimeout
+                ? 'Le lancement de Chrome a pris trop de temps (augmenter maxDuration ou mémoire).'
+                : 'Vérifiez les logs serveur pour plus de détails.',
+            }
+          : { error: 'Impossible de générer le PDF' },
         { status: 500 }
       )
     }

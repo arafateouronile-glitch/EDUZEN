@@ -9,6 +9,7 @@ import { templateAnalyticsService } from '@/lib/services/template-analytics.serv
 import type { GenerateDocumentInput, DocumentTemplate } from '@/lib/types/document-templates'
 import type { Database } from '@/types/database.types'
 import { withRateLimit, mutationRateLimiter } from '@/app/api/_middleware/rate-limit'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import type { CookieOptions } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -162,13 +163,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
       }
 
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('organization_id')
-        .eq('id', user.id)
-        .single()
-
-      if (userError || !userData?.organization_id) {
+      const orgId = await getUserOrgId(supabase, user.id)
+      if (!orgId) {
         return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
       }
 
@@ -185,7 +181,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Template non trouvé' }, { status: 404 })
       }
 
-      if (template.organization_id !== userData.organization_id) {
+      if (template.organization_id !== orgId) {
         return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
       }
 
@@ -214,7 +210,7 @@ export async function POST(request: NextRequest) {
       let fileName: string
 
       try {
-        const result = await generateDocumentBlob(template as unknown as DocumentTemplate, body, userData.organization_id)
+        const result = await generateDocumentBlob(template as unknown as DocumentTemplate, body, orgId)
         fileBlob  = result.blob
         pageCount = result.pageCount
         fileName  = result.fileName
@@ -233,14 +229,14 @@ export async function POST(request: NextRequest) {
       const { data: organization } = await supabase
         .from('organizations')
         .select('name, email')
-        .eq('id', userData.organization_id)
+        .eq('id', orgId)
         .single()
 
       // Enregistrement du document généré
       const { data: generatedDocument, error: docError } = await supabase
         .from('generated_documents')
         .insert({
-          organization_id:     userData.organization_id,
+          organization_id:     orgId,
           template_id:         template.id,
           type:                template.type,
           file_name:           fileName,
@@ -262,7 +258,7 @@ export async function POST(request: NextRequest) {
 
       // Analytics (non-bloquant)
       templateAnalyticsService.logEvent(template.id, 'generate', {
-        organization_id:     userData.organization_id,
+        organization_id:     orgId,
         user_id:             user.id,
         format:              body.format,
         variablesCount:      Object.keys(body.variables || {}).length,

@@ -11,7 +11,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import * as fs from 'fs'
+import { promises as fs } from 'fs'
 import * as path from 'path'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
         const templatePath = path.join(process.cwd(), 'public', 'docx-templates', `template_${type}.docx`)
         
         // Vérifier si le fichier existe
-        if (!fs.existsSync(templatePath)) {
+        try {
+          await fs.access(templatePath)
+        } catch {
           results.push({
             type,
             success: false,
@@ -62,9 +64,9 @@ export async function POST(request: NextRequest) {
           })
           continue
         }
-        
+
         // Lire le fichier
-        const buffer = fs.readFileSync(templatePath)
+        const buffer = await fs.readFile(templatePath)
         
         // Générer un nom de fichier unique
         const timestamp = Date.now()

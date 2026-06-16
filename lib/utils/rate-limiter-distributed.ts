@@ -99,6 +99,32 @@ export const strictRateLimiter = redis
   : null
 
 /**
+ * Rate limiter landing chat — 30 messages par heure par IP (clé publique exposée)
+ * Distribué pour survivre aux cold starts Vercel.
+ */
+export const landingChatRateLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(30, '1 h'),
+      analytics: true,
+      prefix: 'ratelimit:landing-chat',
+    })
+  : null
+
+/**
+ * Rate limiter PDF — 5 générations par 2 minutes par utilisateur
+ * Clé : pdf:<userId> (pas par IP, pour éviter les faux positifs en entreprise)
+ */
+export const pdfRateLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, '2 m'),
+      analytics: true,
+      prefix: 'ratelimit:pdf',
+    })
+  : null
+
+/**
  * Rate limiter pour les routes publiques à token (20 req/min par IP, anti brute-force)
  */
 export const publicRouteRateLimiter = redis

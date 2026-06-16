@@ -76,14 +76,21 @@ export async function GET(request: NextRequest) {
       
       const tokenInfo = tokenData[0]
       const studentId = tokenInfo.student_id
-      logger.info('[API Learner Data] Token valid', { studentId })
-      
+      const sessionId = tokenInfo.session_id
+      const organizationId = tokenInfo.organization_id
+      logger.info('[API Learner Data] Token valid', { studentId, sessionId })
+
+      const ALLOWED_TYPES = ['student', 'enrollments', 'courses', 'documents', 'certificates'] as const
+      if (!dataType || !ALLOWED_TYPES.includes(dataType as typeof ALLOWED_TYPES[number])) {
+        return NextResponse.json({ error: 'Type de données non supporté' }, { status: 400 })
+      }
+
       // Récupérer les données selon le type demandé
       switch (dataType) {
         case 'student': {
           const { data, error } = await supabaseAdmin
             .from('students')
-            .select('*')
+            .select('id, first_name, last_name, email, phone, photo_url, student_number, status')
             .eq('id', studentId)
             .single()
           
@@ -126,6 +133,7 @@ export async function GET(request: NextRequest) {
               )
             `)
             .eq('student_id', studentId)
+            .eq('session_id', sessionId)
             .order('created_at', { ascending: false })
           
           if (error) {
@@ -173,10 +181,11 @@ export async function GET(request: NextRequest) {
           const { data, error } = await supabaseAdmin
             .from('documents')
             .select(`
-              *,
+              id, title, type, status, file_url, signed_file_url, created_at, expires_at,
               sessions(name, formations(name))
             `)
             .eq('student_id', studentId)
+            .eq('organization_id', organizationId)
             .order('created_at', { ascending: false })
           
           if (error) {

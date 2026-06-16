@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import Stripe from 'stripe'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { APP_URLS } from '@/lib/config/app-config'
@@ -30,18 +31,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Récupérer l'organisation de l'utilisateur
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-    
-    if (userError || !userData?.organization_id) {
-      return NextResponse.json(
-        { error: 'Organisation non trouvée' },
-        { status: 404 }
-      )
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
     
     const { planId, billingPeriod } = await request.json()
@@ -56,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Récupérer le plan
     const { data: plan, error: planError } = await supabase
       .from('plans')
-      .select('*')
+      .select('id, stripe_price_id_yearly, stripe_price_id_monthly, stripe_price_id')
       .eq('id', planId)
       .eq('is_active', true)
       .single()
@@ -85,7 +77,7 @@ export async function POST(request: NextRequest) {
     const { data: organization } = await supabase
       .from('organizations')
       .select('id, name, email, settings')
-      .eq('id', userData.organization_id)
+      .eq('id', orgId)
       .single()
 
     const stripe = getStripe()
@@ -96,7 +88,7 @@ export async function POST(request: NextRequest) {
       const affiliateRef = cookieStore.get('eduzen_affiliate_ref')?.value?.trim()
       const savedAffiliateId = (organization?.settings as Record<string, unknown> | null)?.affiliate_id as string | undefined
       const affiliateId = affiliateRef || (savedAffiliateId && String(savedAffiliateId).trim()) || undefined
-      const metadata: Record<string, string> = { organization_id: userData.organization_id as string, user_id: user.id }
+      const metadata: Record<string, string> = { organization_id: orgId as string, user_id: user.id }
       if (affiliateId) metadata.affiliate_id = affiliateId
       const customer = await stripe.customers.create({
         email: organization?.email || user.email || undefined,
@@ -112,7 +104,7 @@ export async function POST(request: NextRequest) {
     const { data: existingSubscription } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id, id')
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
       .not('stripe_customer_id', 'is', null)
       .maybeSingle()
 
@@ -129,7 +121,7 @@ export async function POST(request: NextRequest) {
         // "No such customer" — customer issu du mauvais environnement Stripe (test vs live)
         logger.warn('create-checkout: customer_id invalide (test→live ?), création d\'un nouveau', {
           oldId: existingSubscription.stripe_customer_id,
-          organizationId: userData.organization_id,
+          organizationId: orgId,
         })
         customerId = await createFreshCustomer()
         // Mettre à jour le record existant avec le nouveau customer ID
@@ -158,13 +150,13 @@ export async function POST(request: NextRequest) {
       success_url: `${APP_URLS.getBaseUrl()}/dashboard/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${APP_URLS.getBaseUrl()}/dashboard/subscribe?canceled=true`,
       metadata: {
-        organization_id: userData.organization_id,
+        organization_id: orgId,
         plan_id: planId,
         billing_period: billingPeriod,
       },
       subscription_data: {
         metadata: {
-          organization_id: userData.organization_id,
+          organization_id: orgId,
           plan_id: planId,
         },
       },

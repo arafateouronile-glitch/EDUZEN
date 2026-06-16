@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const supabaseCpf = supabase as SupabaseClient<DbWithCpf>
     const { data: config, error: configError } = await supabaseCpf
       .from('cpf_configurations')
-      .select('*')
+      .select('id, is_active')
       .eq('organization_id', organizationId)
       .single()
 

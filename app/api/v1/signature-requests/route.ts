@@ -113,7 +113,7 @@ async function createOne(params: {
       reminder_frequency: 'none',
       requester_id: null,
     })
-    .select('*')
+    .select('id, signature_token, status, expires_at, recipient_email, recipient_name, recipient_type, document_id, organization_id')
     .single()
 
   if (error) throw new Error(error.message)

@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { z } from 'zod'
 import { logger } from '@/lib/utils/logger'
 import { auditLog, getClientIp } from '@/lib/utils/audit'
@@ -30,14 +31,8 @@ export async function GET(request: NextRequest) {
 
     if (!companyId) return NextResponse.json({ error: 'company_id requis' }, { status: 400 })
 
-    // Récupérer l'organisation de l'utilisateur
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
@@ -45,7 +40,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('v_employee_diploma_compliance')
       .select('*')
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
       .eq('company_id', companyId)
       .order('expiry_date', { ascending: true })
 
@@ -99,13 +94,8 @@ export async function POST(request: NextRequest) {
     }
     const { company_employee_id, diploma_type_id, company_id, expiry_date, issued_at, document_url, notes } = parsed.data
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
@@ -114,7 +104,7 @@ export async function POST(request: NextRequest) {
       .from('companies')
       .select('id')
       .eq('id', company_id)
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
       .maybeSingle()
 
     if (!company) {
@@ -124,7 +114,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('employee_diplomas')
       .insert({
-        organization_id:     userData.organization_id,
+        organization_id:     orgId,
         company_id,
         company_employee_id,
         diploma_type_id,
@@ -141,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     auditLog({
       actorId:        user.id,
-      organizationId: userData.organization_id,
+      organizationId: orgId,
       action:         'create',
       tableName:      'employee_diplomas',
       recordId:       (data as { id?: string })?.id,
@@ -169,13 +159,8 @@ export async function DELETE(request: NextRequest) {
     if (!UUID_RE.test(id)) return NextResponse.json({ error: 'id invalide' }, { status: 400 })
 
     // Récupérer l'organisation de l'utilisateur pour scoper la suppression
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
@@ -183,13 +168,13 @@ export async function DELETE(request: NextRequest) {
       .from('employee_diplomas')
       .delete()
       .eq('id', id)
-      .eq('organization_id', userData.organization_id) // Scoper à l'organisation
+      .eq('organization_id', orgId) // Scoper à l'organisation
 
     if (error) throw error
 
     auditLog({
       actorId:        user.id,
-      organizationId: userData.organization_id,
+      organizationId: orgId,
       action:         'delete',
       tableName:      'employee_diplomas',
       recordId:       id,

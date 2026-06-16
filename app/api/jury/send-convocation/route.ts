@@ -7,6 +7,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
@@ -64,13 +65,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Sécurité multi-tenant : vérifier que la session appartient à l'org de l'utilisateur
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userRow?.organization_id && session.organization_id !== userRow.organization_id) {
+    const userOrgId = await getUserOrgId(supabase, user.id)
+    if (userOrgId && session.organization_id !== userOrgId) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 

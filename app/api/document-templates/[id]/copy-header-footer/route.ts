@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { CopyHeaderFooterInput } from '@/lib/types/document-templates'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -22,33 +23,28 @@ export async function POST(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    // Vérifier que l'utilisateur a accès au template cible
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+    }
+
     const documentTemplateService = new DocumentTemplateService(supabase)
     const targetTemplate = await documentTemplateService.getTemplateById(id)
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
 
     if (!targetTemplate) {
       return NextResponse.json({ error: 'Template non trouvé' }, { status: 404 })
     }
-    if (userData?.organization_id !== targetTemplate.organization_id) {
+    if (orgId !== targetTemplate.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
     const body: CopyHeaderFooterInput = await request.json()
 
-    // Vérifier que l'utilisateur a accès au template source
-    if (!userData) {
-      return NextResponse.json({ error: 'Données utilisateur non trouvées' }, { status: 404 })
-    }
     const sourceTemplate = await documentTemplateService.getTemplateById(body.sourceTemplateId)
     if (!sourceTemplate) {
       return NextResponse.json({ error: 'Template source non trouvé' }, { status: 404 })
     }
-    if (userData.organization_id !== sourceTemplate.organization_id) {
+    if (orgId !== sourceTemplate.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé au template source' }, { status: 403 })
     }
 

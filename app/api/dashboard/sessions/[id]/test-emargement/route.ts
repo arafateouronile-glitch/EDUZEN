@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import type { Database } from '@/types/database.types'
@@ -81,14 +82,8 @@ export async function POST(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // Récupérer l'organization_id de l'utilisateur
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (!userRow?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
@@ -106,7 +101,7 @@ export async function POST(
     }
 
     // Vérifier que la session appartient bien à l'organisation de l'utilisateur
-    if (session.organization_id !== userRow.organization_id) {
+    if (session.organization_id !== orgId) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 

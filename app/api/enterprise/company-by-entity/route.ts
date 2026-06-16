@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     let company: { id: string; [key: string]: unknown } | null = null
     const { data: existingCompany } = await supabase
       .from('companies')
-      .select('*')
+      .select('id, organization_id, external_entity_id, name, siret, siren, email, phone, address, city, postal_code, country, website, legal_form, is_active, created_at')
       .eq('external_entity_id', entityId)
       .maybeSingle()
 
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
           legal_form: externalEntityRow.legal_form ?? null,
           is_active: true,
         })
-        .select('*')
+        .select('id, organization_id, external_entity_id, name, siret, siren, email, phone, address, city, postal_code, country, website, legal_form, is_active, created_at')
         .single()
 
       if (insertError) {

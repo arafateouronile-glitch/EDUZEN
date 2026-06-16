@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreatePromoCodeInput } from '@/types/super-admin.types'
 import type { TableInsert } from '@/lib/types/supabase-helpers'
+import { logger } from '@/lib/utils/logger'
 
 // GET - Liste des codes promo
 export async function GET(request: NextRequest) {
@@ -50,7 +51,8 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Promo] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({ codes: data || [] })
@@ -90,6 +92,10 @@ export async function POST(request: NextRequest) {
 
     const body: CreatePromoCodeInput = await request.json()
 
+    if (body.metadata && JSON.stringify(body.metadata).length > 5000) {
+      return NextResponse.json({ error: 'metadata trop volumineux (max 5 Ko)' }, { status: 400 })
+    }
+
     const promoInsert: TableInsert<'promo_codes'> = {
       code: body.code,
       description: body.description || null,
@@ -114,7 +120,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Promo] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({ code: data, message: 'Code promo créé avec succès' })

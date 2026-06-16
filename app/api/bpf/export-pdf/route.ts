@@ -11,6 +11,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from 'pdf
 import fs from 'fs/promises'
 import path from 'path'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BPFService } from '@/lib/services/bpf.service'
 import { logger } from '@/lib/utils/logger'
@@ -190,18 +191,13 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAdminClient()
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userRow?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
     const bpfService = new BPFService(supabase)
-    const cerfaData = await bpfService.prepareCerfaData(userRow.organization_id, year)
+    const cerfaData = await bpfService.prepareCerfaData(orgId, year)
 
     const origin = new URL(request.url).origin
     const pdfBytes = await fillCerfa(cerfaData, origin)

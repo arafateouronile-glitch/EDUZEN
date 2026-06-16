@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -25,13 +26,9 @@ export async function GET(
     const template = await documentTemplateService.getTemplateById(id)
 
     // Vérifier que l'utilisateur a accès à ce template
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
+    const orgId = await getUserOrgId(supabase, user.id)
 
-    if (!template || userData?.organization_id !== template.organization_id) {
+    if (!template || orgId !== template.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
@@ -65,13 +62,9 @@ export async function PUT(
     // Vérifier que l'utilisateur a accès à ce template
     const documentTemplateService = new DocumentTemplateService(supabase)
     const template = await documentTemplateService.getTemplateById(id)
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
+    const orgId = await getUserOrgId(supabase, user.id)
 
-    if (!template || userData?.organization_id !== template.organization_id) {
+    if (!template || orgId !== template.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
@@ -111,16 +104,12 @@ export async function DELETE(
     // Vérifier que l'utilisateur a accès à ce template
     const documentTemplateService = new DocumentTemplateService(supabase)
     const template = await documentTemplateService.getTemplateById(id)
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
+    const orgId = await getUserOrgId(supabase, user.id)
 
     if (!template) {
       return NextResponse.json({ error: 'Template non trouvé' }, { status: 404 })
     }
-    if (userData?.organization_id !== template.organization_id) {
+    if (orgId !== template.organization_id) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 

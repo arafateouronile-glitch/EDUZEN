@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -37,13 +38,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'organization_id requis' }, { status: 400 })
     }
 
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', authUser.id)
-      .single()
-
-    if (!userRow?.organization_id || userRow.organization_id !== organizationId) {
+    const userOrgId = await getUserOrgId(supabase, authUser.id)
+    if (!userOrgId || userOrgId !== organizationId) {
       return NextResponse.json({ error: 'Non autorisé pour cette organisation' }, { status: 403 })
     }
 

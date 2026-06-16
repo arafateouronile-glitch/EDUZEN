@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // Récupérer tous les admins
     const { data: admins, error } = await supabase
       .from('platform_admins')
-      .select('*')
+      .select('id, user_id, role, permissions, is_active, invited_by, invited_at, accepted_at, created_at, updated_at')
       .order('created_at', { ascending: false })
 
     if (error) {

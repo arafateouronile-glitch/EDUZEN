@@ -1,23 +1,21 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { landingChatRateLimiter, getRateLimitKeyByIp } from '@/lib/utils/rate-limiter-distributed'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-// Rate limiting simple par IP (in-memory, reset à chaque cold start)
-const ipRequestCount = new Map<string, { count: number; resetAt: number }>()
+// Fallback in-memory si Upstash non configuré (dev uniquement)
+const _memoryStore = new Map<string, { count: number; resetAt: number }>()
 
-function checkRateLimit(ip: string): boolean {
+function checkMemoryRateLimit(ip: string): boolean {
   const now = Date.now()
-  const windowMs = 60 * 60_000 // 1 heure
-  const maxPerHour = 30 // 30 messages max par IP par heure
-
-  const entry = ipRequestCount.get(ip)
+  const entry = _memoryStore.get(ip)
   if (!entry || entry.resetAt < now) {
-    ipRequestCount.set(ip, { count: 1, resetAt: now + windowMs })
+    _memoryStore.set(ip, { count: 1, resetAt: now + 60 * 60_000 })
     return true
   }
-  if (entry.count >= maxPerHour) return false
+  if (entry.count >= 30) return false
   entry.count++
   return true
 }
@@ -80,9 +78,18 @@ EduZen est un logiciel tout-en-un qui permet aux organismes de formation de :
 type Message = { role: 'user' | 'assistant'; content: string }
 
 export async function POST(request: NextRequest) {
-  // Rate limiting
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-  if (!checkRateLimit(ip)) {
+  // Rate limiting — distribué (Upstash) ou in-memory en fallback
+  const ip = getRateLimitKeyByIp(request)
+  if (landingChatRateLimiter) {
+    const { success, reset } = await landingChatRateLimiter.limit(ip)
+    if (!success) {
+      const retryAfter = Math.ceil((reset - Date.now()) / 1000)
+      return NextResponse.json(
+        { error: 'Trop de requêtes. Réessayez dans une heure.' },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+      )
+    }
+  } else if (!checkMemoryRateLimit(ip)) {
     return NextResponse.json({ error: 'Trop de requêtes. Réessayez dans une heure.' }, { status: 429 })
   }
 

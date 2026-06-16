@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
         try {
           const { data: basicSessions, error: basicError } = await supabase
             .from('electronic_attendance_sessions')
-            .select('*')
+            .select('id, organization_id, session_id, title, date, start_time, end_time, status, mode, qr_code_enabled, created_at')
             .eq('organization_id', userData.organization_id)
             .order('date', { ascending: false })
           

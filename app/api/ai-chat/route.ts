@@ -34,7 +34,29 @@ export async function POST(req: NextRequest) {
     return new Response('Organisation introuvable', { status: 400 })
   }
 
-  const { messages, pageContext } = (await req.json()) as { messages: MessageParam[]; pageContext?: string }
+  const rawBody = await req.json()
+  const messages = rawBody.messages as MessageParam[]
+  const pageContext = rawBody.pageContext as string | undefined
+
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return new Response('Messages invalides', { status: 400 })
+  }
+  if (messages.length > 50) {
+    return new Response('Trop de messages (max 50)', { status: 400 })
+  }
+  if (pageContext && typeof pageContext === 'string' && pageContext.length > 2000) {
+    return new Response('pageContext trop long (max 2000 caractères)', { status: 400 })
+  }
+  // Validate individual message structure
+  for (const msg of messages) {
+    if (!msg.role || !['user', 'assistant'].includes(msg.role)) {
+      return new Response('Structure de message invalide', { status: 400 })
+    }
+    const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
+    if (content.length > 50_000) {
+      return new Response('Message trop long (max 50 000 caractères)', { status: 400 })
+    }
+  }
 
   const encoder = new TextEncoder()
 

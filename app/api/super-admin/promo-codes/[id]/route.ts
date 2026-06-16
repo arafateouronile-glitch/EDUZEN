@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CreatePromoCodeInput } from '@/types/super-admin.types'
+import { logger } from '@/lib/utils/logger'
 
 // PATCH - Modifier un code promo
 export async function PATCH(
@@ -52,7 +53,12 @@ export async function PATCH(
     if (body.applicable_plans !== undefined) updates.applicable_plans = body.applicable_plans
     if (body.first_subscription_only !== undefined) updates.first_subscription_only = body.first_subscription_only
     if (body.is_active !== undefined) updates.is_active = body.is_active
-    if (body.metadata) updates.metadata = body.metadata
+    if (body.metadata) {
+      if (JSON.stringify(body.metadata).length > 5000) {
+        return NextResponse.json({ error: 'metadata trop volumineux (max 5 Ko)' }, { status: 400 })
+      }
+      updates.metadata = body.metadata
+    }
 
     const { data, error } = await supabase
       .from('promo_codes')
@@ -62,7 +68,8 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Promo] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({ code: data, message: 'Code promo modifié avec succès' })
@@ -110,7 +117,8 @@ export async function DELETE(
       .eq('id', id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logger.error('[Promo] DB error:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
 
     return NextResponse.json({ message: 'Code promo supprimé avec succès' })

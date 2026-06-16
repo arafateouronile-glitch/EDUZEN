@@ -49,6 +49,7 @@ describe('API /api/compliance/reports/generate', () => {
               data: null,
               error: { code: 'PGRST116', message: 'No rows' },
             }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           }),
         }),
       }),

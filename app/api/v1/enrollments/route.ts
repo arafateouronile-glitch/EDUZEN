@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
         funding_type_id: funding_type_id || null,
         enrollment_date: enrollment_date || new Date().toISOString(),
       })
-      .select('*')
+      .select('id, student_id, session_id, status, total_amount, funding_type_id, enrollment_date, created_at')
       .single()
 
     if (error) throw new Error(error.message)

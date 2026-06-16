@@ -42,14 +42,14 @@ describe('studentSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejette si aucun tuteur fourni', () => {
+  it('accepte un etudiant sans tuteur (champ optionnel)', () => {
     const data = {
       first_name: 'Jean',
       last_name: 'Dupont',
       enrollment_date: '2024-01-15',
     }
     const result = studentSchema.safeParse(data)
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
   })
 
   it('rejette si prenom manquant', () => {

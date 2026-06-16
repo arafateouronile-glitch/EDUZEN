@@ -51,6 +51,10 @@ describe('API /api/payments/stripe/create-intent', () => {
               data: { organization_id: 'org-123' },
               error: null,
             }),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { organization_id: 'org-123' },
+              error: null,
+            }),
           }),
         }),
         insert: vi.fn().mockReturnValue({
@@ -134,6 +138,10 @@ describe('API /api/payments/stripe/create-intent', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
+              data: { organization_id: 'org-123' },
+              error: null,
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({
               data: { organization_id: 'org-123' },
               error: null,
             }),

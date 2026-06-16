@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { CreateTemplateInput, UpdateTemplateInput, DocumentType } from '@/lib/types/document-templates'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -18,14 +19,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    // Récupérer l'organisation de l'utilisateur
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
@@ -34,7 +29,7 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive')
 
     const documentTemplateService = new DocumentTemplateService(supabase)
-    const templates = await documentTemplateService.getAllTemplates(userData.organization_id, {
+    const templates = await documentTemplateService.getAllTemplates(orgId, {
       type: type as DocumentType | undefined,
       isActive: isActive ? isActive === 'true' : undefined,
     })
@@ -42,10 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(templates)
   } catch (error) {
     logger.error('Erreur lors de la récupération des templates:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
 
@@ -62,21 +54,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    // Récupérer l'organisation de l'utilisateur
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
     const body: CreateTemplateInput = await request.json()
 
     // S'assurer que l'organization_id correspond
-    if (body.organization_id !== userData.organization_id) {
+    if (body.organization_id !== orgId) {
       return NextResponse.json({ error: 'Organisation non autorisée' }, { status: 403 })
     }
 
@@ -86,10 +72,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(template, { status: 201 })
   } catch (error) {
     logger.error('Erreur lors de la création du template:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
 

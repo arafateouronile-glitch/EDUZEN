@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { logger } from '@/lib/utils/logger'
 
 export async function GET() {
@@ -8,13 +9,8 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
@@ -22,16 +18,16 @@ export async function GET() {
     const { count } = await supabase
       .from('diploma_types')
       .select('id', { count: 'exact', head: true })
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
 
     if (count === 0) {
-      await supabase.rpc('seed_default_diploma_types', { org_id: userData.organization_id })
+      await supabase.rpc('seed_default_diploma_types', { org_id: orgId })
     }
 
     const { data, error } = await supabase
       .from('diploma_types')
       .select('*')
-      .eq('organization_id', userData.organization_id)
+      .eq('organization_id', orgId)
       .eq('is_active', true)
       .order('name')
 

@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createClient as createStorageClient, type SupabaseClient } from '@supabase/supabase-js'
 import { withRateLimit, uploadRateLimiter } from '@/app/api/_middleware/rate-limit'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -24,12 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-    const userOrgId = userRow?.organization_id
+    const userOrgId = await getUserOrgId(supabase, user.id)
     if (!userOrgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }

@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { ComplianceService } from '@/lib/services/compliance.service'
 import { PushNotificationsService } from '@/lib/services/push-notifications.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -25,19 +26,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Récupérer l'organization_id
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    // Récupérer les risques critiques
-    const criticalRisks = await complianceService.getCriticalRisks(userData.organization_id)
+    const criticalRisks = await complianceService.getCriticalRisks(orgId)
 
     // Envoyer des alertes pour chaque risque critique
     const alerts = []
@@ -47,7 +41,7 @@ export async function GET(request: NextRequest) {
         const { data: admins } = await supabase
           .from('users')
           .select('id')
-          .eq('organization_id', userData.organization_id)
+          .eq('organization_id', orgId)
           .in('role', ['super_admin', 'admin'])
 
         const userIds = new Set<string>()

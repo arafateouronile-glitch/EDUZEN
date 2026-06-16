@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
 
@@ -23,22 +24,16 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: userRow, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (userError || !userRow?.organization_id) {
+    const userOrgId = await getUserOrgId(supabase, user.id)
+    if (!userOrgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
-    // Récupérer depuis la base de données (filtré par organisation)
     const { data: payment, error } = await supabase
       .from('payments')
-      .select('*')
+      .select('id, status, amount, currency, paid_at, receipt_url')
       .eq('id', paymentId)
-      .eq('organization_id', userRow.organization_id)
+      .eq('organization_id', userOrgId)
       .single()
 
     if (error || !payment) {

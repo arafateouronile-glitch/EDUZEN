@@ -29,7 +29,7 @@ export async function GET(
     }
     const { data: resource, error } = await (supabase as unknown as ResourcesQuery)
       .from('resources')
-      .select('*')
+      .select('id, external_url, file_url')
       .eq('id', resourceId)
       .single()
 

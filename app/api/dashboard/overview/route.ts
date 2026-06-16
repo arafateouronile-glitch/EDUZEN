@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type OverviewStats = {
@@ -28,17 +29,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { data: userRow, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (userError || !userRow?.organization_id) {
+    const organizationId = await getUserOrgId(supabase, user.id)
+    if (!organizationId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
-
-    const organizationId = userRow.organization_id
     const currentMonth = new Date()
     currentMonth.setDate(1)
     const monthIso = currentMonth.toISOString()

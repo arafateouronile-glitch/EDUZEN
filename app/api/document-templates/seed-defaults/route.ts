@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { seedDefaultTemplatesForOrg } from '@/lib/utils/seed-default-templates'
 import { logger } from '@/lib/utils/logger'
 
@@ -17,17 +18,12 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
-    const result = await seedDefaultTemplatesForOrg(supabase, userData.organization_id)
+    const result = await seedDefaultTemplatesForOrg(supabase, orgId)
 
     return NextResponse.json({
       success: true,

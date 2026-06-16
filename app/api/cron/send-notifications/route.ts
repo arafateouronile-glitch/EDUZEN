@@ -18,6 +18,9 @@ interface OrgSettings {
   whatsapp?: {
     phone_number_id?: string
     access_token?: string
+    account_sid?: string
+    auth_token?: string
+    from_number?: string
   }
   [key: string]: unknown
 }
@@ -164,7 +167,7 @@ async function sendWhatsAppMessage(
   phone: string,
   message: string,
   organizationId: string,
-  orgSettings: any
+  orgSettings: OrgSettings | undefined
 ): Promise<boolean> {
   const whatsappConfig = orgSettings?.whatsapp || {}
 

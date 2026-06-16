@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
       if (!code || typeof code !== 'string') {
         return NextResponse.json({ error: 'Code requis' }, { status: 400 })
       }
+      // TOTP : 6 chiffres. Backup codes : format alphanumérique court (ex: "abc123")
+      if (!/^\d{6}$/.test(code) && !/^[a-z0-9]{8,12}$/.test(code)) {
+        return NextResponse.json({ error: 'Format de code invalide' }, { status: 400 })
+      }
 
       // Récupérer l'IP et le user agent
       const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
@@ -50,8 +54,7 @@ export async function POST(request: NextRequest) {
       })
     } catch (error: unknown) {
       logger.error('Error verifying 2FA code:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
-      return NextResponse.json({ error: errorMessage }, { status: 500 })
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
     }
   })
 }

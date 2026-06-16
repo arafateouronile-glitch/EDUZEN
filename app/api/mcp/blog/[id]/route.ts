@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { validateMcpToken } from '@/lib/mcp-auth'
+import { logger } from '@/lib/utils/logger'
 
 const BLOG_STATUS = ['draft', 'published', 'archived', 'scheduled'] as const
 
@@ -44,7 +45,10 @@ export async function GET(
       .eq('id', id)
       .single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 404 })
+    if (error) {
+      logger.error('[MCP] Error fetching blog post:', error)
+      return NextResponse.json({ error: 'Article introuvable' }, { status: 404 })
+    }
 
     return NextResponse.json({ post: data })
   } catch {
@@ -135,7 +139,10 @@ export async function DELETE(
 
     const { error } = await supabase.from('blog_posts').delete().eq('id', id)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      logger.error('[MCP] Error deleting blog post:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    }
 
     return NextResponse.json({ message: 'Article supprimé avec succès' })
   } catch {

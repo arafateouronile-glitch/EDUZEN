@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { PushNotificationsService } from '@/lib/services/push-notifications.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -30,17 +31,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Récupérer l'organization_id de l'utilisateur
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
+    const orgId = await getUserOrgId(supabase, user.id)
 
     const pushNotificationsService = new PushNotificationsService(supabase)
     const device = await pushNotificationsService.registerDevice({
       user_id: user.id,
-      organization_id: userData?.organization_id || null,
+      organization_id: orgId,
       device_token: deviceToken,
       device_type: deviceType,
       platform,
@@ -53,6 +49,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ device })
   } catch (error: unknown) {
     logger.error('Error registering device:', error)
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Erreur inconnue' }, { status: 500 })
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

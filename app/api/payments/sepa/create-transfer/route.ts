@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { logger, maskId, maskEmail, sanitizeError } from '@/lib/utils/logger'
 import { getPublicErrorMessage } from '@/lib/utils/api-error-response'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'
@@ -120,18 +121,13 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        // ✅ Données validées et sanitizées
-        const { data: userData } = await supabase
-          .from('users')
-          .select('organization_id')
-          .eq('id', user.id)
-          .single()
+        const orgId = await getUserOrgId(supabase, user.id)
 
         const amount = typeof validatedData.amount === 'number' ? validatedData.amount : parseFloat(String(validatedData.amount));
         const currency = typeof validatedData.currency === 'string' ? validatedData.currency : 'EUR';
-        
+
         const sepaInsert: TableInsert<'payments'> = {
-          organization_id: userData?.organization_id || null,
+          organization_id: orgId,
           amount,
           currency: currency.toUpperCase(),
           status: 'pending',

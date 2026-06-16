@@ -2,6 +2,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { generateWordBodySchema } from '@/lib/validations/schemas'
 
@@ -18,13 +19,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-    const userOrgId = userRow?.organization_id
-    if (!userOrgId) {
+    const organizationId = await getUserOrgId(supabase, user.id)
+    if (!organizationId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
@@ -39,7 +35,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    
+
     const parsed = generateWordBodySchema.safeParse(body)
     if (!parsed.success) {
       const msg = parsed.error.flatten().formErrors[0] || parsed.error.message
@@ -49,7 +45,6 @@ export async function POST(request: NextRequest) {
       )
     }
     const { template, variables, documentId } = parsed.data
-    const organizationId = userOrgId
 
     logger.info('[Word API] Template', { templateName: template?.name || 'N/A', type: template?.type || 'N/A' })
     logger.info('[Word API] Variables count', { count: Object.keys(variables).length })

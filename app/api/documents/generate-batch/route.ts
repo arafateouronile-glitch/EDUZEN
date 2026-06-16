@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { generatePDF } from '@/lib/utils/document-generation/pdf-generator'
 import { generateDOCX } from '@/lib/utils/document-generation/docx-generator'
 import type { DocumentTemplate, DocumentVariables } from '@/lib/types/document-templates'
@@ -68,14 +69,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    // Récupérer l'organisation
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
 
@@ -106,7 +101,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Template non trouvé' }, { status: 404 })
     }
 
-    if (template.organization_id !== userData.organization_id) {
+    if (template.organization_id !== orgId) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 })
     }
 
@@ -115,7 +110,7 @@ export async function POST(request: NextRequest) {
       templateId: maskId(String(validatedData.template_id)),
       format: validatedData.format,
       count: items.length,
-      organizationId: maskId(userData.organization_id),
+      organizationId: maskId(orgId),
     })
 
     const zip = new JSZip()
@@ -140,11 +135,11 @@ export async function POST(request: NextRequest) {
         let fileName: string
 
         if (validatedData.format === 'PDF') {
-          const result = await generatePDF(template as unknown as DocumentTemplate, item.variables, undefined, userData.organization_id)
+          const result = await generatePDF(template as unknown as DocumentTemplate, item.variables, undefined, orgId)
           fileBlob = result.blob
           fileName = `${template.type}_${item.related_entity_id || i + 1}_${Date.now()}.pdf`
         } else {
-          const result = await generateDOCX(template as unknown as DocumentTemplate, item.variables, undefined, userData.organization_id)
+          const result = await generateDOCX(template as unknown as DocumentTemplate, item.variables, undefined, orgId)
           fileBlob = result.blob
           fileName = `${template.type}_${item.related_entity_id || i + 1}_${Date.now()}.docx`
         }
@@ -157,7 +152,7 @@ export async function POST(request: NextRequest) {
         const fileUrl = `data:application/${String(validatedData.format).toLowerCase()};base64,${Buffer.from(arrayBuffer).toString('base64')}`
 
         documentsToInsert.push({
-          organization_id: userData.organization_id,
+          organization_id: orgId,
           template_id: template.id,
           type: template.type,
           file_name: fileName,
@@ -204,7 +199,7 @@ export async function POST(request: NextRequest) {
 
         logger.info('Batch document insert successful', {
           count: documentsToInsert.length,
-          organizationId: maskId(userData.organization_id),
+          organizationId: maskId(orgId),
         })
       } catch (error) {
         logger.error('Failed to save generated documents to database', error, {
@@ -226,7 +221,7 @@ export async function POST(request: NextRequest) {
       success: successCount,
       errors: errorCount,
       templateId: maskId(String(validatedData.template_id)),
-      organizationId: maskId(userData.organization_id),
+      organizationId: maskId(orgId),
     })
 
     const zipFilename = validatedData.zip_filename

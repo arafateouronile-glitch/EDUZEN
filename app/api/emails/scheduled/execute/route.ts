@@ -11,6 +11,11 @@ import { EmailTemplateService, type EmailType } from '@/lib/services/email-templ
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.types'
+
+type EmailSchedule = Database['public']['Tables']['email_schedules']['Row']
+type Recipient = { email: string; name?: string; type: string; context?: Record<string, unknown> }
 
 // Clé secrète pour sécuriser l'endpoint (obligatoire en production)
 const CRON_SECRET = process.env.CRON_SECRET || process.env.EMAIL_SCHEDULE_SECRET
@@ -18,7 +23,7 @@ const CRON_SECRET = process.env.CRON_SECRET || process.env.EMAIL_SCHEDULE_SECRET
 /**
  * Détermine si une règle doit être exécutée maintenant
  */
-function shouldExecuteSchedule(schedule: any, now: Date = new Date()): boolean {
+function shouldExecuteSchedule(schedule: EmailSchedule, now: Date = new Date()): boolean {
   const { trigger_type, trigger_datetime, trigger_days, trigger_time } = schedule
 
   if (trigger_type === 'fixed_date') {
@@ -37,11 +42,13 @@ function shouldExecuteSchedule(schedule: any, now: Date = new Date()): boolean {
  * Récupère les sessions qui correspondent aux critères de la règle
  */
 async function getMatchingSessions(
-  schedule: any,
+  schedule: EmailSchedule,
+
   supabase: any,
   now: Date
+
 ): Promise<any[]> {
-  // eslint-disable-next-line
+
   let query: any = supabase
     .from('sessions')
     .select('*, formations(*), programs(*)')
@@ -70,7 +77,8 @@ async function getMatchingSessions(
   if (!sessions) return []
 
   // Filtrer selon le type de déclencheur
-  const matchingSessions = sessions.filter((session: any) => {
+
+  const matchingSessions = (sessions as any[]).filter((session: any) => {
     if (!session.start_date || !session.end_date) return false
 
     const startDate = new Date(session.start_date)
@@ -132,11 +140,13 @@ async function getMatchingSessions(
  * Récupère les évaluations qui correspondent aux critères de la règle
  */
 async function getMatchingEvaluations(
-  schedule: any,
+  schedule: EmailSchedule,
+
   supabase: any,
   now: Date
+
 ): Promise<any[]> {
-  // eslint-disable-next-line
+
   let query: any = supabase
     .from('evaluations')
     .select('*, sessions(*), formations(*)')
@@ -152,7 +162,8 @@ async function getMatchingEvaluations(
   if (!evaluations) return []
 
   // Filtrer selon le type de déclencheur
-  const matchingEvaluations = evaluations.filter((evaluation: any) => {
+
+  const matchingEvaluations = (evaluations as any[]).filter((evaluation: any) => {
     if (!evaluation.start_date || !evaluation.end_date) return false
 
     const startDate = new Date(evaluation.start_date)
@@ -212,17 +223,18 @@ async function getMatchingEvaluations(
  * Récupère les destinataires pour une règle donnée
  */
 async function getRecipientsForSchedule(
-  schedule: any,
+  schedule: EmailSchedule,
+
   supabase: any,
   now: Date
-): Promise<Array<{ email: string; name?: string; type: string; context?: any }>> {
-  const recipients: Array<{ email: string; name?: string; type: string; context?: any }> = []
+): Promise<Recipient[]> {
+  const recipients: Recipient[] = []
 
   try {
     // Récupérer l'organisation pour les emails
     const { data: organization } = await supabase
       .from('organizations')
-      .select('*')
+      .select('id, name, email, phone')
       .eq('id', schedule.organization_id)
       .single()
 
@@ -259,7 +271,7 @@ async function getRecipientsForSchedule(
         if (schedule.send_to_teachers && session.teacher_id) {
           const { data: teacher } = await supabase
             .from('users')
-            .select('*')
+            .select('id, email, first_name, last_name')
             .eq('id', session.teacher_id)
             .single()
 
@@ -277,7 +289,7 @@ async function getRecipientsForSchedule(
         if (schedule.send_to_coordinators) {
           const { data: coordinators } = await supabase
             .from('users')
-            .select('*')
+            .select('id, email, first_name, last_name')
             .eq('organization_id', schedule.organization_id)
             .in('role', ['admin', 'super_admin', 'coordinator'])
 
@@ -494,7 +506,7 @@ export async function POST(request: NextRequest) {
           // Récupérer l'organisation
           const { data: organization } = await adminSupabase
             .from('organizations')
-            .select('*')
+            .select('id, name, email, phone')
             .eq('id', schedule.organization_id)
             .single()
 

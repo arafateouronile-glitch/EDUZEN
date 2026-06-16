@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { ComplianceAlertsService } from '@/lib/services/compliance-alerts.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -19,18 +20,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userData?.organization_id) {
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
     const complianceAlertsService = new ComplianceAlertsService(supabase)
-    const results = await complianceAlertsService.runAllChecks(userData.organization_id)
+    const results = await complianceAlertsService.runAllChecks(orgId)
 
     return NextResponse.json({
       success: true,

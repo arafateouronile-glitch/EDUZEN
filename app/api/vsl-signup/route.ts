@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
+import { logger } from '@/lib/utils/logger'
 
 function generatePassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (orgInsertError || !orgData) {
-        console.error('[vsl-signup] Org creation error:', orgInsertError)
+        logger.error('[vsl-signup] Org creation error:', orgInsertError)
         return NextResponse.json({ error: 'Erreur lors de la création de votre espace.' }, { status: 500 })
       }
       orgId = orgData.id
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
       } as never, { onConflict: 'id' })
 
     if (userInsertError) {
-      console.error('[vsl-signup] User profile creation error:', userInsertError)
+      logger.error('[vsl-signup] User profile creation error:', userInsertError)
     }
 
     // Stocker organization_id dans les métadonnées auth
@@ -229,7 +230,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[vsl-signup] Unexpected error:', error)
+    logger.error('[vsl-signup] Unexpected error:', error)
     return NextResponse.json({ error: 'Une erreur inattendue est survenue.' }, { status: 500 })
   }
 }

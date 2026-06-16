@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/service'
 import { validateMcpToken } from '@/lib/mcp-auth'
+import { logger } from '@/lib/utils/logger'
 
 // GET /api/mcp/categories
 export async function GET(request: NextRequest) {
@@ -17,7 +18,10 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .order('display_order', { ascending: true })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      logger.error('[MCP] Error fetching categories:', error)
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+    }
 
     return NextResponse.json({ categories: data ?? [] })
   } catch {

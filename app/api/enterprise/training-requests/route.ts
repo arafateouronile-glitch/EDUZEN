@@ -4,6 +4,69 @@ import { createClient } from '@/lib/supabase/server'
 import { createSecureErrorResponse } from '@/lib/utils/api-error-response'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { NotificationService } from '@/lib/services/notification.service'
+import type { Json } from '@/types/database.types'
+
+const VALID_REQUEST_TYPES = ['formation', 'bilan_competences', 'vae', 'autre'] as const
+const VALID_URGENCY = ['normal', 'urgent', 'very_urgent'] as const
+const VALID_FORMATS = ['présentiel', 'distanciel', 'hybride'] as const
+const VALID_FUNDING = ['opco', 'cpf', 'entreprise', 'autre'] as const
+const VALID_STATUS = ['all', 'pending', 'approved', 'rejected', 'in_progress', 'completed', 'cancelled'] as const
+
+function validatePostBody(raw: unknown): { ok: true; body: Record<string, unknown> } | { ok: false; error: string } {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, error: 'Corps de requête invalide' }
+  }
+  const b = raw as Record<string, unknown>
+
+  if (typeof b.title !== 'string' || b.title.trim().length === 0) {
+    return { ok: false, error: 'Le titre est requis' }
+  }
+  if (b.title.length > 255) {
+    return { ok: false, error: 'Titre trop long (max 255 caractères)' }
+  }
+  if (!VALID_REQUEST_TYPES.includes(b.request_type as typeof VALID_REQUEST_TYPES[number])) {
+    return { ok: false, error: `Type invalide. Valeurs : ${VALID_REQUEST_TYPES.join(', ')}` }
+  }
+  if (b.description != null && (typeof b.description !== 'string' || b.description.length > 5000)) {
+    return { ok: false, error: 'Description trop longue (max 5000 caractères)' }
+  }
+  if (b.employee_ids != null) {
+    if (!Array.isArray(b.employee_ids)) return { ok: false, error: 'employee_ids doit être un tableau' }
+    if (b.employee_ids.length > 500) return { ok: false, error: 'employee_ids : maximum 500 participants' }
+    if (!b.employee_ids.every(id => typeof id === 'string' && /^[0-9a-f-]{1,36}$/i.test(id))) {
+      return { ok: false, error: 'employee_ids : identifiants invalides' }
+    }
+  }
+  if (b.attachments != null) {
+    if (!Array.isArray(b.attachments)) return { ok: false, error: 'attachments doit être un tableau' }
+    if (b.attachments.length > 20) return { ok: false, error: 'Maximum 20 pièces jointes' }
+  }
+  if (b.metadata != null) {
+    if (typeof b.metadata !== 'object' || Array.isArray(b.metadata)) {
+      return { ok: false, error: 'metadata doit être un objet' }
+    }
+    if (JSON.stringify(b.metadata).length > 5000) {
+      return { ok: false, error: 'metadata trop volumineux (max 5 Ko)' }
+    }
+  }
+  if (b.number_of_participants != null) {
+    const n = Number(b.number_of_participants)
+    if (!Number.isInteger(n) || n < 1 || n > 10000) {
+      return { ok: false, error: 'Nombre de participants invalide (1–10 000)' }
+    }
+  }
+  if (b.urgency != null && !VALID_URGENCY.includes(b.urgency as typeof VALID_URGENCY[number])) {
+    return { ok: false, error: `Urgence invalide. Valeurs : ${VALID_URGENCY.join(', ')}` }
+  }
+  if (b.preferred_format != null && !VALID_FORMATS.includes(b.preferred_format as typeof VALID_FORMATS[number])) {
+    return { ok: false, error: `Format invalide. Valeurs : ${VALID_FORMATS.join(', ')}` }
+  }
+  if (b.funding_type != null && !VALID_FUNDING.includes(b.funding_type as typeof VALID_FUNDING[number])) {
+    return { ok: false, error: `Type de financement invalide. Valeurs : ${VALID_FUNDING.join(', ')}` }
+  }
+
+  return { ok: true, body: b }
+}
 
 /**
  * GET /api/enterprise/training-requests
@@ -31,9 +94,10 @@ export async function GET(request: NextRequest) {
     }
 
     const url = new URL(request.url)
-    const status = url.searchParams.get('status') || 'all'
-    const page = parseInt(url.searchParams.get('page') || '1')
-    const limit = parseInt(url.searchParams.get('limit') || '20')
+    const statusParam = url.searchParams.get('status') || 'all'
+    const status = VALID_STATUS.includes(statusParam as typeof VALID_STATUS[number]) ? statusParam : 'all'
+    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
+    const limit = Math.min(Math.max(1, parseInt(url.searchParams.get('limit') || '20')), 100)
     const offset = (page - 1) * limit
 
     let query = supabase
@@ -106,29 +170,34 @@ export async function POST(request: NextRequest) {
       return createSecureErrorResponse(new Error('You do not have permission to create training requests'), { status: 403 })
     }
 
-    const body = await request.json()
+    const raw = await request.json()
+    const validation = validatePostBody(raw)
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
+    }
+    const body = validation.body
 
     const { data, error } = await supabase
       .from('training_requests')
       .insert({
         company_id: manager.company_id,
         requested_by: manager.id,
-        request_type: body.request_type,
-        title: body.title,
-        description: body.description,
-        formation_id: body.formation_id,
-        employee_ids: body.employee_ids || [],
-        number_of_participants: body.number_of_participants || 1,
-        preferred_start_date: body.preferred_start_date,
-        preferred_end_date: body.preferred_end_date,
-        preferred_format: body.preferred_format,
-        budget_range: body.budget_range,
-        funding_type: body.funding_type,
-        opco_pre_approved: body.opco_pre_approved || false,
-        urgency: body.urgency || 'normal',
+        request_type: body.request_type as string,
+        title: (body.title as string).trim(),
+        description: (body.description as string | null | undefined) ?? null,
+        formation_id: (body.formation_id as string | null | undefined) ?? null,
+        employee_ids: (body.employee_ids as string[]) ?? [],
+        number_of_participants: Number(body.number_of_participants) || 1,
+        preferred_start_date: (body.preferred_start_date as string) ?? null,
+        preferred_end_date: (body.preferred_end_date as string) ?? null,
+        preferred_format: (body.preferred_format as string) ?? null,
+        budget_range: (body.budget_range as string) ?? null,
+        funding_type: (body.funding_type as string) ?? null,
+        opco_pre_approved: Boolean(body.opco_pre_approved),
+        urgency: (body.urgency as string) ?? 'normal',
         status: 'pending',
-        attachments: body.attachments || [],
-        metadata: body.metadata || {},
+        attachments: ((body.attachments ?? []) as unknown) as Json,
+        metadata: ((body.metadata ?? {}) as unknown) as Json,
       })
       .select()
       .single()

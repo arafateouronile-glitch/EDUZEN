@@ -89,11 +89,9 @@ export function verifyOrigin(req: NextRequest): boolean {
   const referer = req.headers.get('referer')
   const host = req.headers.get('host')
 
-  // En développement, autoriser localhost
+  // En développement, autoriser uniquement localhost
+  // Note: pour tester sans navigateur, ajouter Origin: http://localhost:3000 à la requête
   if (process.env.NODE_ENV === 'development') {
-    if (!origin && !referer) {
-      return true // Autoriser les requêtes sans origin en dev (ex: Postman)
-    }
     if (origin?.includes('localhost') || origin?.includes('127.0.0.1')) {
       return true
     }

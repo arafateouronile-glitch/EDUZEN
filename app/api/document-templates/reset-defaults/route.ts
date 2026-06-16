@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getUserOrgId } from '@/lib/utils/with-auth'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import type { DocumentType } from '@/lib/types/document-templates'
 import { getDefaultTemplateContent } from '@/lib/utils/document-template-defaults'
@@ -19,18 +20,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
-    // Récupérer l'organisation de l'utilisateur
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single()
-
-    if (userError || !userData?.organization_id) {
+    const organizationId = await getUserOrgId(supabase, user.id)
+    if (!organizationId) {
       return NextResponse.json({ error: 'Organisation non trouvée' }, { status: 404 })
     }
-
-    const organizationId = userData.organization_id
     const documentTemplateService = new DocumentTemplateService(supabase)
 
     // Récupérer le body de la requête
