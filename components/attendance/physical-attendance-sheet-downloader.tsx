@@ -67,6 +67,7 @@ interface ElectronicSession {
   date: string
   start_time: string | null
   time_slot?: string | null
+  status?: string | null
   requests: ElectronicRequest[]
 }
 
