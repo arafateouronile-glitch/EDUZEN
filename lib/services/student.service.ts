@@ -452,34 +452,36 @@ export class StudentService {
 
       const orgCode = org?.code || 'ORG'
       const year = new Date().getFullYear().toString().slice(-2)
+      const prefix = 'EDU'
 
-      // Générer les numéros d'étudiants pour ceux qui n'en ont pas
-      const studentsWithNumbers = await Promise.all(
-        students.map(async (student) => {
-          if (student.student_number && student.student_number.trim() !== '') {
-            return student
-          }
+      // Une seule requête pour trouver le dernier numéro existant
+      let nextSequence = 1
+      const needsNumber = students.some(s => !s.student_number || s.student_number.trim() === '')
+      if (needsNumber) {
+        const pattern = `${prefix}-${orgCode}-${year}-%`
+        const { data: lastRecord } = await this.supabase
+          .from('students')
+          .select('student_number')
+          .eq('organization_id', organizationId)
+          .like('student_number', pattern)
+          .order('student_number', { ascending: false })
+          .limit(1)
+          .maybeSingle()
 
-          // Générer un numéro unique
-          const studentNumber = await generateUniqueNumber(
-            this.supabase,
-            'students',
-            organizationId,
-            {
-              prefix: 'EDU',
-              orgCode,
-              year,
-              padding: 6,
-              fieldName: 'student_number',
-            }
-          )
+        if (lastRecord?.student_number) {
+          const parts = (lastRecord.student_number as string).split('-')
+          nextSequence = parseInt(parts[parts.length - 1] || '0', 10) + 1
+        }
+      }
 
-          return {
-            ...student,
-            student_number: studentNumber,
-          }
-        })
-      )
+      // Assigner les numéros localement sans requêtes supplémentaires
+      const studentsWithNumbers = students.map((student) => {
+        if (student.student_number && student.student_number.trim() !== '') {
+          return student
+        }
+        const num = String(nextSequence++).padStart(6, '0')
+        return { ...student, student_number: `${prefix}-${orgCode}-${year}-${num}` }
+      })
 
       const { data, error } = await this.supabase
         .from('students')
