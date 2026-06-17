@@ -413,7 +413,7 @@ export default function EditProgramPage() {
                             value={formData.lieu}
                             onChange={(e) => setFormData({ ...formData, lieu: e.target.value })}
                             className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                            placeholder="Ex : INSSI FORMATION"
+                            placeholder="Ex : 12 rue de Rivoli, 75001 Paris"
                           />
                         </div>
                         {/* Délai d'accès */}
