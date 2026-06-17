@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { studentService } from '@/lib/services/student.service'
+import { studentService } from '@/lib/services/student.service.client'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
