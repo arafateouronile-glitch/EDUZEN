@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { programService } from '@/lib/services/program.service'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Save, Plus, Settings, Upload, Image as ImageIcon, Download, FileText, FileType, Check, ChevronRight, LayoutDashboard, BookOpen, GraduationCap, Clock, Calendar, Euro, Globe, Shield, FileCheck, ListChecks, Award, Sparkles } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Settings, Upload, Image as ImageIcon, Download, FileText, FileType, Check, ChevronRight, LayoutDashboard, BookOpen, GraduationCap, Clock, Calendar, Euro, Globe, Shield, FileCheck, ListChecks, Award, Sparkles, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import { programSchema, type ProgramFormData } from '@/lib/validations/schemas'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -339,6 +339,13 @@ export default function ProgramDetailPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Link href={`/dashboard/programs/${programId}/edit`}>
+              <Button variant="outline" className="bg-white hover:bg-gray-50 border-gray-200 shadow-sm transition-all duration-200">
+                <Pencil className="h-4 w-4 mr-2 text-gray-500" />
+                Modifier
+              </Button>
+            </Link>
 
             <Link href={`/dashboard/programs/${programId}/enrollments`}>
               <Button variant="outline" className="bg-white hover:bg-gray-50 border-gray-200 shadow-sm transition-all duration-200">
