@@ -451,7 +451,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erreur serveur'
-    logger.error('[create-trial-subscription] ERREUR:', errorMessage, error)
+    logger.error('[create-trial-subscription] ERREUR:', errorMessage)
     logger.error('Erreur création abonnement trial', { error: errorMessage })
 
     // Gérer les erreurs Stripe spécifiques
