@@ -131,6 +131,10 @@ async function parseExcelFile(file: File): Promise<any[]> {
         if (header === 'gender' && value) {
           value = normalizeGender(value)
         }
+        // Tronquer postal_code à 10 chars (contrainte DB VARCHAR(10))
+        if (header === 'postal_code' && value) {
+          value = value.replace(/\s+/g, '').slice(0, 10)
+        }
         // Ne pas inclure les valeurs vides (évite erreurs Supabase sur champs typés)
         if (value !== '') {
           rowData[header] = value
@@ -183,6 +187,10 @@ async function parseCSVFile(file: File): Promise<any[]> {
         // Convertir le genre
         if (header === 'gender' && value) {
           value = normalizeGender(value)
+        }
+        // Tronquer postal_code à 10 chars (contrainte DB VARCHAR(10))
+        if (header === 'postal_code' && value) {
+          value = value.replace(/\s+/g, '').slice(0, 10)
         }
         // Ne pas inclure les valeurs vides (évite erreurs Supabase sur champs typés)
         if (value !== '') {
