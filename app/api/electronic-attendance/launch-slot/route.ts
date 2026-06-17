@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       const trainerRequests = trainers.map((t) => ({
         organization_id: organizationId,
         attendance_session_id: attendanceSessionId,
-        student_id: null,
+        student_id: null as unknown as string,
         user_id: t.id,
         student_email: t.email,
         student_name: t.full_name ?? t.email,
