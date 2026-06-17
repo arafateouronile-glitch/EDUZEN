@@ -25,6 +25,11 @@ export default function EditProgramPage() {
   ])
   const [activeObjectiveTab, setActiveObjectiveTab] = useState('1')
 
+  const [learnerProfileTabs, setLearnerProfileTabs] = useState<{ id: string; title: string; content: string }[]>([
+    { id: '1', title: 'Profil', content: '' },
+  ])
+  const [activeLearnerProfileTab, setActiveLearnerProfileTab] = useState('1')
+
   // Tous les hooks doivent être appelés de manière inconditionnelle, avant les retours conditionnels
   const [formData, setFormData] = useState({
     code: '',
@@ -136,6 +141,12 @@ export default function EditProgramPage() {
         setObjectiveTabs(savedTabs)
         setActiveObjectiveTab(savedTabs[0].id)
       }
+      // Charger les onglets de profil apprenant depuis la DB
+      const savedLearnerTabs = (program as any).learner_profile_tabs
+      if (Array.isArray(savedLearnerTabs) && savedLearnerTabs.length > 0) {
+        setLearnerProfileTabs(savedLearnerTabs)
+        setActiveLearnerProfileTab(savedLearnerTabs[0].id)
+      }
     }
   }, [program])
 
@@ -172,6 +183,7 @@ export default function EditProgramPage() {
         // Objectifs et contenu
         pedagogical_objectives_tabs: objectiveTabs as any,
         pedagogical_objectives: formData.pedagogical_objectives || null,
+        learner_profile_tabs: learnerProfileTabs as any,
         learner_profile: formData.learner_profile || null,
         training_content: formData.training_content || null,
         execution_follow_up: formData.execution_follow_up || null,
@@ -681,17 +693,82 @@ export default function EditProgramPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Public visé</CardTitle>
+                  <CardTitle>Profil des apprenants</CardTitle>
                   <CardDescription>À qui s'adresse cette formation</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <textarea
-                    value={formData.learner_profile}
-                    onChange={(e) => setFormData({ ...formData, learner_profile: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder="Développeurs juniors, reconversion professionnelle, étudiants en informatique..."
-                  />
+                  <div className="border rounded-xl overflow-hidden">
+                    <div className="flex items-center border-b bg-gray-50 overflow-x-auto">
+                      {learnerProfileTabs.map((tab) => (
+                        <div
+                          key={tab.id}
+                          className={`group flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-r cursor-pointer whitespace-nowrap transition-colors flex-shrink-0 ${
+                            activeLearnerProfileTab === tab.id
+                              ? 'bg-white text-primary border-b-2 border-b-primary'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
+                          onClick={() => setActiveLearnerProfileTab(tab.id)}
+                        >
+                          <input
+                            type="text"
+                            value={tab.title}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) =>
+                              setLearnerProfileTabs((tabs) =>
+                                tabs.map((t) => (t.id === tab.id ? { ...t, title: e.target.value } : t))
+                              )
+                            }
+                            className="bg-transparent border-none outline-none w-20 text-sm font-medium cursor-text"
+                          />
+                          {learnerProfileTabs.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const remaining = learnerProfileTabs.filter((t) => t.id !== tab.id)
+                                setLearnerProfileTabs(remaining)
+                                if (activeLearnerProfileTab === tab.id) setActiveLearnerProfileTab(remaining[0].id)
+                              }}
+                              className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity ml-1"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newId = Date.now().toString()
+                          const newTab = { id: newId, title: 'Profil', content: '' }
+                          setLearnerProfileTabs((tabs) => [...tabs, newTab])
+                          setActiveLearnerProfileTab(newId)
+                        }}
+                        className="flex-shrink-0 px-3 py-2.5 text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Ajouter un profil"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {learnerProfileTabs.map((tab) =>
+                      tab.id === activeLearnerProfileTab ? (
+                        <div key={tab.id} className="bg-white p-4">
+                          <textarea
+                            value={tab.content}
+                            onChange={(e) =>
+                              setLearnerProfileTabs((tabs) =>
+                                tabs.map((t) => (t.id === tab.id ? { ...t, content: e.target.value } : t))
+                              )
+                            }
+                            rows={5}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            placeholder="Développeurs juniors, reconversion professionnelle, étudiants en informatique..."
+                          />
+                          <p className="text-xs text-gray-400 mt-2">Séparez chaque profil par une nouvelle ligne</p>
+                        </div>
+                      ) : null
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
