@@ -51,6 +51,10 @@ export default function EditProgramPage() {
     access_delay_days: '15',
     accessibility_info: 'Formation accessible aux personnes en situation de handicap. Pour toutes demandes d\'adaptation, veuillez contacter notre référent handicap.',
     edof_hours: '',
+    // Type d'action de formation
+    training_action_type: '',
+    rs_title_name: '',
+    rs_code: '',
     // Objectifs et contenu
     pedagogical_objectives: '',
     learner_profile: '',
@@ -105,6 +109,10 @@ export default function EditProgramPage() {
         access_delay_days: (program as any).access_delay_days?.toString() || '15',
         accessibility_info: (program as any).accessibility_info || 'Formation accessible aux personnes en situation de handicap. Pour toutes demandes d\'adaptation, veuillez contacter notre référent handicap.',
         edof_hours: (program as any).edof_hours?.toString() || '',
+        // Type d'action de formation
+        training_action_type: (program as any).training_action_type || '',
+        rs_title_name: (program as any).rs_title_name || '',
+        rs_code: (program as any).rs_code || '',
         // Objectifs et contenu
         pedagogical_objectives: (program as any).pedagogical_objectives || '',
         learner_profile: (program as any).learner_profile || '',
@@ -146,6 +154,10 @@ export default function EditProgramPage() {
         accessibility_info: formData.accessibility_info || null,
         edof_hours: formData.edof_hours ? parseInt(formData.edof_hours) : null,
         capacity_min: formData.capacity_min ? parseInt(formData.capacity_min) : null,
+        // Type d'action de formation
+        training_action_type: formData.training_action_type || null,
+        rs_title_name: formData.rs_title_name || null,
+        rs_code: formData.rs_code || null,
         // Objectifs et contenu
         pedagogical_objectives: formData.pedagogical_objectives || null,
         learner_profile: formData.learner_profile || null,
@@ -452,6 +464,58 @@ export default function EditProgramPage() {
                       <option value="days">Jours</option>
                       <option value="hours">Heures</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Type d'action de formation */}
+                <div>
+                  <label className="block text-sm font-medium mb-3">Type d'action de formation</label>
+                  <div className="border rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-2 border-b bg-gray-50">
+                      {[
+                        { value: 'action_formation', label: 'Action de formation' },
+                        { value: 'bloc_competences', label: 'Bloc de compétences' },
+                        { value: 'specialite', label: 'Spécialité de formation' },
+                        { value: 'certification_rs', label: 'Certification / RS' },
+                      ].map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, training_action_type: t.value })}
+                          className={`px-4 py-2.5 text-sm font-medium text-left transition-colors border-b border-r last:border-r-0 ${
+                            formData.training_action_type === t.value
+                              ? 'bg-white text-primary border-b-2 border-b-primary'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    {formData.training_action_type === 'certification_rs' && (
+                      <div className="p-4 space-y-4 bg-white">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Nom du titre visé</label>
+                          <input
+                            type="text"
+                            value={formData.rs_title_name}
+                            onChange={(e) => setFormData({ ...formData, rs_title_name: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Ex : Titre Professionnel Développeur Web"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Code RS</label>
+                          <input
+                            type="text"
+                            value={formData.rs_code}
+                            onChange={(e) => setFormData({ ...formData, rs_code: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Ex : RS12345"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
