@@ -15,6 +15,7 @@ import { mapDataToVariables } from '@/lib/utils/document-generation/variable-map
 import { EmailService } from '@/lib/services/email.service'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { uploadGeneratedDocument } from '@/lib/utils/document-storage'
 
 // POST /api/documents/scheduled/execute - Exécute les générations programmées
 export async function POST(request: NextRequest) {
@@ -120,8 +121,14 @@ export async function POST(request: NextRequest) {
 
             // Enregistrer le document généré
             const arrayBuffer = await fileBlob.arrayBuffer()
-            const base64 = Buffer.from(arrayBuffer).toString('base64')
-            const fileUrl = `data:application/${generation.format.toLowerCase()};base64,${base64}`
+            const docBuffer = Buffer.from(arrayBuffer)
+            let fileUrl: string
+            try {
+              const storageUrl = await uploadGeneratedDocument(docBuffer, fileName, generation.organization_id, generation.format)
+              fileUrl = storageUrl ?? `data:application/${generation.format.toLowerCase()};base64,${docBuffer.toString('base64')}`
+            } catch {
+              fileUrl = `data:application/${generation.format.toLowerCase()};base64,${docBuffer.toString('base64')}`
+            }
 
             await (supabase as unknown as { from: (table: string) => { insert: (data: unknown) => Promise<{ error: unknown }> } })
               .from('generated_documents')

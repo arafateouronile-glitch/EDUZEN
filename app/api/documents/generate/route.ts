@@ -13,6 +13,7 @@ import { getUserOrgId } from '@/lib/utils/with-auth'
 import type { CookieOptions } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { uploadGeneratedDocument } from '@/lib/utils/document-storage'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -220,10 +221,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: msg }, { status: 500 })
       }
 
-      // Encode en base64 pour la réponse
+      // Upload dans Supabase Storage (fallback base64 si échec)
       const arrayBuffer = await fileBlob.arrayBuffer()
-      const base64  = Buffer.from(arrayBuffer).toString('base64')
-      const fileUrl = `data:application/${body.format.toLowerCase()};base64,${base64}`
+      const docBuffer = Buffer.from(arrayBuffer)
+      let fileUrl: string
+      try {
+        const storageUrl = await uploadGeneratedDocument(docBuffer, fileName, orgId, body.format)
+        fileUrl = storageUrl ?? `data:application/${body.format.toLowerCase()};base64,${docBuffer.toString('base64')}`
+      } catch (storageErr) {
+        logger.warn('Storage upload failed, fallback base64', sanitizeError(storageErr))
+        fileUrl = `data:application/${body.format.toLowerCase()};base64,${docBuffer.toString('base64')}`
+      }
 
       // Récupérer l'organisation pour l'email
       const { data: organization } = await supabase

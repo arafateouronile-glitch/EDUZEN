@@ -9,6 +9,7 @@ import type { Database } from '@/types/database.types'
 import type { TableInsert } from '@/lib/types/supabase-helpers'
 import JSZip from 'jszip'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+import { uploadGeneratedDocument } from '@/lib/utils/document-storage'
 import { withBodyValidation, type ValidationSchema } from '@/lib/utils/api-validation'
 import { withRateLimit, mutationRateLimiter } from '@/lib/utils/rate-limiter'
 
@@ -149,7 +150,13 @@ export async function POST(request: NextRequest) {
         zip.file(fileName, arrayBuffer)
 
         // Créer l'enregistrement pour le batch insert
-        const fileUrl = `data:application/${String(validatedData.format).toLowerCase()};base64,${Buffer.from(arrayBuffer).toString('base64')}`
+        let fileUrl: string
+        try {
+          const storageUrl = await uploadGeneratedDocument(Buffer.from(arrayBuffer), fileName, orgId, String(validatedData.format))
+          fileUrl = storageUrl ?? `data:application/${String(validatedData.format).toLowerCase()};base64,${Buffer.from(arrayBuffer).toString('base64')}`
+        } catch {
+          fileUrl = `data:application/${String(validatedData.format).toLowerCase()};base64,${Buffer.from(arrayBuffer).toString('base64')}`
+        }
 
         documentsToInsert.push({
           organization_id: orgId,
