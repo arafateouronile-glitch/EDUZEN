@@ -131,7 +131,10 @@ async function parseExcelFile(file: File): Promise<any[]> {
         if (header === 'gender' && value) {
           value = normalizeGender(value)
         }
-        rowData[header] = value
+        // Ne pas inclure les valeurs vides (évite erreurs Supabase sur champs typés)
+        if (value !== '') {
+          rowData[header] = value
+        }
       }
     })
 
@@ -181,7 +184,10 @@ async function parseCSVFile(file: File): Promise<any[]> {
         if (header === 'gender' && value) {
           value = normalizeGender(value)
         }
-        rowData[header] = value
+        // Ne pas inclure les valeurs vides (évite erreurs Supabase sur champs typés)
+        if (value !== '') {
+          rowData[header] = value
+        }
       }
     })
 
