@@ -64,17 +64,26 @@ const COLUMN_MAPPING: Record<string, string> = {
   'Date de naissance (JJ/MM/AAAA)': 'date_of_birth',
   'Genre': 'gender',
   'genre': 'gender',
+  'Genre (M/F/Autre)': 'gender',
   'Sexe': 'gender',
   'Adresse': 'address',
   'adresse': 'address',
+  'Rue': 'address',
   'Ville': 'city',
   'ville': 'city',
+  'Adresse (Ville)': 'city',
+  'adresse (ville)': 'city',
   'Code postal': 'postal_code',
   'code postal': 'postal_code',
   'Code Postal': 'postal_code',
+  'Adresse (Code Postal)': 'postal_code',
+  'adresse (code postal)': 'postal_code',
+  'Adresse (code postal)': 'postal_code',
   'CP': 'postal_code',
   'cp': 'postal_code',
 }
+
+const KNOWN_FIELDS = new Set<string>(EXPECTED_COLUMNS)
 
 /**
  * Parse un fichier Excel (.xlsx)
@@ -96,9 +105,9 @@ async function parseExcelFile(file: File): Promise<any[]> {
   // Lire les en-têtes
   headerRow.eachCell((cell, colNumber) => {
     const header = cell.value?.toString()?.trim() || ''
-    // Mapper le header français vers le nom de colonne
     const mappedHeader = COLUMN_MAPPING[header] || header.toLowerCase().replace(/\s+/g, '_')
-    headers[colNumber - 1] = mappedHeader
+    // Ignorer les colonnes inconnues pour éviter des erreurs Supabase
+    headers[colNumber - 1] = KNOWN_FIELDS.has(mappedHeader) ? mappedHeader : ''
   })
 
   // Lire les données (à partir de la ligne 2)
@@ -148,7 +157,8 @@ async function parseCSVFile(file: File): Promise<any[]> {
   // Parser la première ligne (en-têtes)
   const headers = parseCSVLine(lines[0]).map(header => {
     const trimmed = header.trim()
-    return COLUMN_MAPPING[trimmed] || trimmed.toLowerCase().replace(/\s+/g, '_')
+    const mapped = COLUMN_MAPPING[trimmed] || trimmed.toLowerCase().replace(/\s+/g, '_')
+    return KNOWN_FIELDS.has(mapped) ? mapped : ''
   })
 
   // Parser les lignes de données
