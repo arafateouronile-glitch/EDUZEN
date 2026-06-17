@@ -30,6 +30,16 @@ export default function EditProgramPage() {
   ])
   const [activeLearnerProfileTab, setActiveLearnerProfileTab] = useState('1')
 
+  const [trainingContentTabs, setTrainingContentTabs] = useState<{ id: string; title: string; content: string }[]>([
+    { id: '1', title: 'Module 1', content: '' },
+  ])
+  const [activeTrainingContentTab, setActiveTrainingContentTab] = useState('1')
+
+  const [executionFollowUpTabs, setExecutionFollowUpTabs] = useState<{ id: string; title: string; content: string }[]>([
+    { id: '1', title: 'Suivi', content: '' },
+  ])
+  const [activeExecutionFollowUpTab, setActiveExecutionFollowUpTab] = useState('1')
+
   // Tous les hooks doivent être appelés de manière inconditionnelle, avant les retours conditionnels
   const [formData, setFormData] = useState({
     code: '',
@@ -147,6 +157,18 @@ export default function EditProgramPage() {
         setLearnerProfileTabs(savedLearnerTabs)
         setActiveLearnerProfileTab(savedLearnerTabs[0].id)
       }
+      // Charger les onglets de contenu de formation depuis la DB
+      const savedContentTabs = (program as any).training_content_tabs
+      if (Array.isArray(savedContentTabs) && savedContentTabs.length > 0) {
+        setTrainingContentTabs(savedContentTabs)
+        setActiveTrainingContentTab(savedContentTabs[0].id)
+      }
+      // Charger les onglets de suivi de l'exécution depuis la DB
+      const savedFollowUpTabs = (program as any).execution_follow_up_tabs
+      if (Array.isArray(savedFollowUpTabs) && savedFollowUpTabs.length > 0) {
+        setExecutionFollowUpTabs(savedFollowUpTabs)
+        setActiveExecutionFollowUpTab(savedFollowUpTabs[0].id)
+      }
     }
   }, [program])
 
@@ -184,6 +206,8 @@ export default function EditProgramPage() {
         pedagogical_objectives_tabs: objectiveTabs as any,
         pedagogical_objectives: formData.pedagogical_objectives || null,
         learner_profile_tabs: learnerProfileTabs as any,
+        training_content_tabs: trainingContentTabs as any,
+        execution_follow_up_tabs: executionFollowUpTabs as any,
         learner_profile: formData.learner_profile || null,
         training_content: formData.training_content || null,
         execution_follow_up: formData.execution_follow_up || null,
@@ -774,17 +798,82 @@ export default function EditProgramPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Prérequis</CardTitle>
-                  <CardDescription>Connaissances nécessaires avant la formation</CardDescription>
+                  <CardTitle>Suivi de l'exécution</CardTitle>
+                  <CardDescription>Modalités de suivi et d'accompagnement des apprenants</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <textarea
-                    value={formData.execution_follow_up}
-                    onChange={(e) => setFormData({ ...formData, execution_follow_up: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder="Connaissances de base en HTML/CSS, logique de programmation..."
-                  />
+                  <div className="border rounded-xl overflow-hidden">
+                    <div className="flex items-center border-b bg-gray-50 overflow-x-auto">
+                      {executionFollowUpTabs.map((tab) => (
+                        <div
+                          key={tab.id}
+                          className={`group flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-r cursor-pointer whitespace-nowrap transition-colors flex-shrink-0 ${
+                            activeExecutionFollowUpTab === tab.id
+                              ? 'bg-white text-primary border-b-2 border-b-primary'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
+                          onClick={() => setActiveExecutionFollowUpTab(tab.id)}
+                        >
+                          <input
+                            type="text"
+                            value={tab.title}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) =>
+                              setExecutionFollowUpTabs((tabs) =>
+                                tabs.map((t) => (t.id === tab.id ? { ...t, title: e.target.value } : t))
+                              )
+                            }
+                            className="bg-transparent border-none outline-none w-20 text-sm font-medium cursor-text"
+                          />
+                          {executionFollowUpTabs.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const remaining = executionFollowUpTabs.filter((t) => t.id !== tab.id)
+                                setExecutionFollowUpTabs(remaining)
+                                if (activeExecutionFollowUpTab === tab.id) setActiveExecutionFollowUpTab(remaining[0].id)
+                              }}
+                              className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity ml-1"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newId = Date.now().toString()
+                          const newTab = { id: newId, title: 'Suivi', content: '' }
+                          setExecutionFollowUpTabs((tabs) => [...tabs, newTab])
+                          setActiveExecutionFollowUpTab(newId)
+                        }}
+                        className="flex-shrink-0 px-3 py-2.5 text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
+                        title="Ajouter un suivi"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {executionFollowUpTabs.map((tab) =>
+                      tab.id === activeExecutionFollowUpTab ? (
+                        <div key={tab.id} className="bg-white p-4">
+                          <textarea
+                            value={tab.content}
+                            onChange={(e) =>
+                              setExecutionFollowUpTabs((tabs) =>
+                                tabs.map((t) => (t.id === tab.id ? { ...t, content: e.target.value } : t))
+                              )
+                            }
+                            rows={5}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            placeholder="- Entretiens individuels réguliers&#10;- Points de progression hebdomadaires&#10;- Rapport de fin de formation"
+                          />
+                          <p className="text-xs text-gray-400 mt-2">Séparez chaque modalité par une nouvelle ligne</p>
+                        </div>
+                      ) : null
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -792,17 +881,82 @@ export default function EditProgramPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Contenu de la formation</CardTitle>
-                <CardDescription>Programme détaillé (modules, chapitres...)</CardDescription>
+                <CardDescription>Progression pédagogique (modules, chapitres...)</CardDescription>
               </CardHeader>
               <CardContent>
-                <textarea
-                  value={formData.training_content}
-                  onChange={(e) => setFormData({ ...formData, training_content: e.target.value })}
-                  rows={8}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Module 1 : Introduction&#10;- Présentation du framework&#10;- Installation de l'environnement&#10;&#10;Module 2 : Les bases&#10;- Composants React&#10;- État et props"
-                />
-                <p className="text-xs text-gray-500 mt-2">Commencez par "Module", "Chapitre", "Partie" ou "Jour" pour créer des sections</p>
+                <div className="border rounded-xl overflow-hidden">
+                  <div className="flex items-center border-b bg-gray-50 overflow-x-auto">
+                    {trainingContentTabs.map((tab) => (
+                      <div
+                        key={tab.id}
+                        className={`group flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-r cursor-pointer whitespace-nowrap transition-colors flex-shrink-0 ${
+                          activeTrainingContentTab === tab.id
+                            ? 'bg-white text-primary border-b-2 border-b-primary'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
+                        onClick={() => setActiveTrainingContentTab(tab.id)}
+                      >
+                        <input
+                          type="text"
+                          value={tab.title}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) =>
+                            setTrainingContentTabs((tabs) =>
+                              tabs.map((t) => (t.id === tab.id ? { ...t, title: e.target.value } : t))
+                            )
+                          }
+                          className="bg-transparent border-none outline-none w-20 text-sm font-medium cursor-text"
+                        />
+                        {trainingContentTabs.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const remaining = trainingContentTabs.filter((t) => t.id !== tab.id)
+                              setTrainingContentTabs(remaining)
+                              if (activeTrainingContentTab === tab.id) setActiveTrainingContentTab(remaining[0].id)
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity ml-1"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newId = Date.now().toString()
+                        const idx = trainingContentTabs.length + 1
+                        const newTab = { id: newId, title: `Module ${idx}`, content: '' }
+                        setTrainingContentTabs((tabs) => [...tabs, newTab])
+                        setActiveTrainingContentTab(newId)
+                      }}
+                      className="flex-shrink-0 px-3 py-2.5 text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
+                      title="Ajouter un module"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {trainingContentTabs.map((tab) =>
+                    tab.id === activeTrainingContentTab ? (
+                      <div key={tab.id} className="bg-white p-4">
+                        <textarea
+                          value={tab.content}
+                          onChange={(e) =>
+                            setTrainingContentTabs((tabs) =>
+                              tabs.map((t) => (t.id === tab.id ? { ...t, content: e.target.value } : t))
+                            )
+                          }
+                          rows={7}
+                          className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                          placeholder="- Présentation du module&#10;- Objectif spécifique&#10;- Exercices pratiques"
+                        />
+                        <p className="text-xs text-gray-400 mt-2">Séparez chaque point par une nouvelle ligne</p>
+                      </div>
+                    ) : null
+                  )}
+                </div>
               </CardContent>
             </Card>
 
