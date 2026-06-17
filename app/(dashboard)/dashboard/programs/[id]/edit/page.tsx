@@ -38,6 +38,7 @@ export default function EditProgramPage() {
     payment_plan: 'full',
     prerequisites: '',
     capacity_max: '',
+    capacity_min: '',
     age_min: '',
     age_max: '',
     certification_issued: false,
@@ -45,6 +46,11 @@ export default function EditProgramPage() {
     is_public: false,
     eligible_cpf: false,
     cpf_code: '',
+    // Modalité détaillée
+    lieu: '',
+    access_delay_days: '15',
+    accessibility_info: 'Formation accessible aux personnes en situation de handicap. Pour toutes demandes d\'adaptation, veuillez contacter notre référent handicap.',
+    edof_hours: '',
     // Objectifs et contenu
     pedagogical_objectives: '',
     learner_profile: '',
@@ -86,6 +92,7 @@ export default function EditProgramPage() {
         payment_plan: (firstFormation as any)?.payment_plan || 'full',
         prerequisites: (firstFormation as any)?.prerequisites || '',
         capacity_max: (firstFormation as any)?.capacity_max?.toString() || '',
+        capacity_min: (program as any).capacity_min?.toString() || '',
         age_min: (firstFormation as any)?.age_min?.toString() || '',
         age_max: (firstFormation as any)?.age_max?.toString() || '',
         certification_issued: (firstFormation as any)?.certification_issued || false,
@@ -93,6 +100,11 @@ export default function EditProgramPage() {
         is_public: (program as any).is_public ?? false,
         eligible_cpf: (program as any).eligible_cpf ?? false,
         cpf_code: (program as any).cpf_code || '',
+        // Modalité détaillée
+        lieu: (program as any).lieu || '',
+        access_delay_days: (program as any).access_delay_days?.toString() || '15',
+        accessibility_info: (program as any).accessibility_info || 'Formation accessible aux personnes en situation de handicap. Pour toutes demandes d\'adaptation, veuillez contacter notre référent handicap.',
+        edof_hours: (program as any).edof_hours?.toString() || '',
         // Objectifs et contenu
         pedagogical_objectives: (program as any).pedagogical_objectives || '',
         learner_profile: (program as any).learner_profile || '',
@@ -128,6 +140,12 @@ export default function EditProgramPage() {
         is_public: formData.is_public,
         eligible_cpf: formData.eligible_cpf,
         cpf_code: formData.cpf_code || null,
+        // Modalité détaillée
+        lieu: formData.lieu || null,
+        access_delay_days: formData.access_delay_days ? parseInt(formData.access_delay_days) : null,
+        accessibility_info: formData.accessibility_info || null,
+        edof_hours: formData.edof_hours ? parseInt(formData.edof_hours) : null,
+        capacity_min: formData.capacity_min ? parseInt(formData.capacity_min) : null,
         // Objectifs et contenu
         pedagogical_objectives: formData.pedagogical_objectives || null,
         learner_profile: formData.learner_profile || null,
@@ -306,23 +324,114 @@ export default function EditProgramPage() {
                       placeholder="Ex: Informatique, Management..."
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Modalité</label>
-                    <select
-                      value={formData.modalities}
-                      onChange={(e) => setFormData({ ...formData, modalities: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      <option value="">Sélectionner...</option>
-                      <option value="présentiel">Présentiel</option>
-                      <option value="distanciel">Distanciel</option>
-                      <option value="hybride">Hybride</option>
-                      <option value="e-learning">E-learning</option>
-                    </select>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-3">Modalité</label>
+                    {/* Sous-onglets modalité */}
+                    <div className="border rounded-xl overflow-hidden">
+                      <div className="flex border-b bg-gray-50">
+                        {['présentiel', 'distanciel', 'hybride', 'e-learning'].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, modalities: m })}
+                            className={`flex-1 px-4 py-2.5 text-sm font-medium capitalize transition-colors ${
+                              formData.modalities === m
+                                ? 'bg-white text-primary border-b-2 border-primary'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            {m.charAt(0).toUpperCase() + m.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="p-4 space-y-4 bg-white">
+                        {/* Lieu */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Lieu</label>
+                          <input
+                            type="text"
+                            value={formData.lieu}
+                            onChange={(e) => setFormData({ ...formData, lieu: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Ex : INSSI FORMATION"
+                          />
+                        </div>
+                        {/* Délai d'accès */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Délai d'accès</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              value={formData.access_delay_days}
+                              onChange={(e) => setFormData({ ...formData, access_delay_days: e.target.value })}
+                              className="w-24 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="15"
+                            />
+                            <span className="text-sm text-gray-500">jours</span>
+                          </div>
+                        </div>
+                        {/* Accessibilité */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Accessibilité</label>
+                          <textarea
+                            value={formData.accessibility_info}
+                            onChange={(e) => setFormData({ ...formData, accessibility_info: e.target.value })}
+                            rows={3}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            placeholder="Formation accessible aux personnes en situation de handicap..."
+                          />
+                        </div>
+                        {/* EDOF */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">EDOF</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={250}
+                              value={formData.edof_hours}
+                              onChange={(e) => setFormData({ ...formData, edof_hours: e.target.value })}
+                              className="w-24 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                              placeholder="0"
+                            />
+                            <span className="text-sm text-gray-400">/ 250</span>
+                          </div>
+                        </div>
+                        {/* Limites d'effectif */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Limites d'effectif</label>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">Min</span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={formData.capacity_min}
+                                onChange={(e) => setFormData({ ...formData, capacity_min: e.target.value })}
+                                className="w-20 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                placeholder="—"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">Max</span>
+                              <input
+                                type="number"
+                                min={0}
+                                value={formData.capacity_max}
+                                onChange={(e) => setFormData({ ...formData, capacity_max: e.target.value })}
+                                className="w-20 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                placeholder="—"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Durée</label>
                     <input
@@ -343,16 +452,6 @@ export default function EditProgramPage() {
                       <option value="days">Jours</option>
                       <option value="hours">Heures</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Capacité max</label>
-                    <input
-                      type="number"
-                      value={formData.capacity_max}
-                      onChange={(e) => setFormData({ ...formData, capacity_max: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Ex: 12"
-                    />
                   </div>
                 </div>
 
