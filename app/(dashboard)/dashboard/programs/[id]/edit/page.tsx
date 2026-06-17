@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { programService } from '@/lib/services/program.service'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { ArrowLeft, TrendingUp, Users, Star, Award, Eye, EyeOff, Globe, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, TrendingUp, Users, Star, Award, Eye, EyeOff, Globe, Image as ImageIcon, Plus, X } from 'lucide-react'
 import Link from 'next/link'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +19,11 @@ export default function EditProgramPage() {
   const programId = params.id as string
   const queryClient = useQueryClient()
   const { user, isLoading: userLoading } = useAuth()
+
+  const [objectiveTabs, setObjectiveTabs] = useState<{ id: string; title: string; content: string }[]>([
+    { id: '1', title: 'Objectifs', content: '' },
+  ])
+  const [activeObjectiveTab, setActiveObjectiveTab] = useState('1')
 
   // Tous les hooks doivent être appelés de manière inconditionnelle, avant les retours conditionnels
   const [formData, setFormData] = useState({
@@ -125,6 +130,12 @@ export default function EditProgramPage() {
         total_learners: (program as any).total_learners?.toString() || '',
         completion_rate: (program as any).completion_rate?.toString() || '',
       })
+      // Charger les onglets d'objectifs depuis la DB
+      const savedTabs = (program as any).pedagogical_objectives_tabs
+      if (Array.isArray(savedTabs) && savedTabs.length > 0) {
+        setObjectiveTabs(savedTabs)
+        setActiveObjectiveTab(savedTabs[0].id)
+      }
     }
   }, [program])
 
@@ -159,6 +170,7 @@ export default function EditProgramPage() {
         rs_title_name: formData.rs_title_name || null,
         rs_code: formData.rs_code || null,
         // Objectifs et contenu
+        pedagogical_objectives_tabs: objectiveTabs as any,
         pedagogical_objectives: formData.pedagogical_objectives || null,
         learner_profile: formData.learner_profile || null,
         training_content: formData.training_content || null,
@@ -582,19 +594,87 @@ export default function EditProgramPage() {
           {/* Onglet Contenu */}
           <TabsContent value="content" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle>Objectifs pédagogiques</CardTitle>
-                <CardDescription>Ce que les apprenants sauront faire à l'issue de la formation</CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Objectifs pédagogiques</CardTitle>
+                  <CardDescription>Ce que les apprenants sauront faire à l'issue de la formation</CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
-                <textarea
-                  value={formData.pedagogical_objectives}
-                  onChange={(e) => setFormData({ ...formData, pedagogical_objectives: e.target.value })}
-                  rows={5}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="- Maîtriser les fondamentaux du développement web&#10;- Créer des applications React performantes&#10;- Déployer des applications en production"
-                />
-                <p className="text-xs text-gray-500 mt-2">Séparez chaque objectif par une nouvelle ligne</p>
+                <div className="border rounded-xl overflow-hidden">
+                  {/* Barre d'onglets */}
+                  <div className="flex items-center border-b bg-gray-50 overflow-x-auto">
+                    {objectiveTabs.map((tab) => (
+                      <div
+                        key={tab.id}
+                        className={`group flex items-center gap-1 px-4 py-2.5 text-sm font-medium border-r cursor-pointer whitespace-nowrap transition-colors flex-shrink-0 ${
+                          activeObjectiveTab === tab.id
+                            ? 'bg-white text-primary border-b-2 border-b-primary'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                        }`}
+                        onClick={() => setActiveObjectiveTab(tab.id)}
+                      >
+                        <input
+                          type="text"
+                          value={tab.title}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) =>
+                            setObjectiveTabs((tabs) =>
+                              tabs.map((t) => (t.id === tab.id ? { ...t, title: e.target.value } : t))
+                            )
+                          }
+                          className="bg-transparent border-none outline-none w-24 text-sm font-medium cursor-text"
+                        />
+                        {objectiveTabs.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const remaining = objectiveTabs.filter((t) => t.id !== tab.id)
+                              setObjectiveTabs(remaining)
+                              if (activeObjectiveTab === tab.id) setActiveObjectiveTab(remaining[0].id)
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity ml-1"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newId = Date.now().toString()
+                        const newTab = { id: newId, title: 'Objectifs', content: '' }
+                        setObjectiveTabs((tabs) => [...tabs, newTab])
+                        setActiveObjectiveTab(newId)
+                      }}
+                      className="flex-shrink-0 px-3 py-2.5 text-gray-400 hover:text-primary hover:bg-gray-100 transition-colors"
+                      title="Ajouter un groupe d'objectifs"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {/* Contenu de l'onglet actif */}
+                  {objectiveTabs.map((tab) =>
+                    tab.id === activeObjectiveTab ? (
+                      <div key={tab.id} className="bg-white p-4">
+                        <textarea
+                          value={tab.content}
+                          onChange={(e) =>
+                            setObjectiveTabs((tabs) =>
+                              tabs.map((t) => (t.id === tab.id ? { ...t, content: e.target.value } : t))
+                            )
+                          }
+                          rows={6}
+                          className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                          placeholder="- Maîtriser les fondamentaux du développement web&#10;- Créer des applications React performantes&#10;- Déployer des applications en production"
+                        />
+                        <p className="text-xs text-gray-400 mt-2">Séparez chaque objectif par une nouvelle ligne · Double-cliquez sur le nom de l'onglet pour le renommer</p>
+                      </div>
+                    ) : null
+                  )}
+                </div>
               </CardContent>
             </Card>
 
