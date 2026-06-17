@@ -22,11 +22,11 @@ import type { CrmStatus, LearnerCard, LearnerPipelineData } from '@/lib/actions/
 // ─── Configuration des colonnes ───────────────────────────────────────────────
 
 const COLUMNS: { id: CrmStatus; label: string; color: string; bg: string; border: string }[] = [
-  { id: 'prospect',  label: 'Prospects',    color: 'text-slate-600',  bg: 'bg-slate-50',   border: 'border-slate-200' },
-  { id: 'inscrit',   label: 'Inscrits',     color: 'text-blue-700',   bg: 'bg-blue-50',    border: 'border-blue-200' },
-  { id: 'en_cours',  label: 'En Formation', color: 'text-green-700',  bg: 'bg-green-50',   border: 'border-green-200' },
-  { id: 'termine',   label: 'Terminés',     color: 'text-violet-700', bg: 'bg-violet-50',  border: 'border-violet-200' },
-  { id: 'abandon',   label: 'Abandons',     color: 'text-red-600',    bg: 'bg-red-50',     border: 'border-red-200' },
+  { id: 'prospect',  label: 'Prospects',    color: 'text-gray-600',          bg: 'bg-gray-50',           border: 'border-gray-200' },
+  { id: 'inscrit',   label: 'Inscrits',     color: 'text-brand-blue',        bg: 'bg-brand-blue-ghost',  border: 'border-brand-blue-pale' },
+  { id: 'en_cours',  label: 'En Formation', color: 'text-brand-cyan-dark',   bg: 'bg-brand-cyan-ghost',  border: 'border-brand-cyan-pale' },
+  { id: 'termine',   label: 'Terminés',     color: 'text-brand-blue-dark',   bg: 'bg-brand-blue-pale',   border: 'border-brand-blue-pale' },
+  { id: 'abandon',   label: 'Abandons',     color: 'text-red-600',           bg: 'bg-red-50',            border: 'border-red-200' },
 ]
 
 // ─── Carte apprenant draggable ────────────────────────────────────────────────
@@ -48,7 +48,7 @@ function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard
         <div className="min-w-0 flex-1">
           <Link
             href={`/dashboard/crm/${learner.id}`}
-            className="block truncate text-sm font-semibold text-slate-800 hover:text-blue-600"
+            className="block truncate text-sm font-semibold text-gray-800 hover:text-brand-blue"
             onClick={e => e.stopPropagation()}
           >
             {learner.first_name} {learner.last_name}

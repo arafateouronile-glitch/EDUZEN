@@ -1777,7 +1777,7 @@ export default function SettingsPage() {
                 <GlassCard variant="premium" className="relative overflow-hidden p-8 border-2 border-gray-100/50 hover:border-brand-blue/20 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)]">
                   <div className="mb-8 flex items-center gap-4">
                     <motion.div
-                      className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-xl"
+                      className="p-3 bg-gradient-to-br from-brand-blue to-brand-blue-dark rounded-2xl shadow-xl"
                       whileHover={{ rotate: 10, scale: 1.1 }}
                       transition={{ type: "spring", stiffness: 500, damping: 15 }}
                     >
@@ -1790,217 +1790,166 @@ export default function SettingsPage() {
                   </div>
 
                   {organization && (
-                    <div className="space-y-8">
-                      <motion.div
-                        className="p-8 bg-gradient-to-br from-brand-blue via-brand-blue-light to-brand-cyan rounded-2xl text-white shadow-xl shadow-brand-blue/30 relative overflow-hidden"
-                        whileHover={{ scale: 1.01 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      >
-                        {/* Animated gradient overlay */}
-                        <motion.div
-                          className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"
-                          animate={{
-                            scale: [1, 1.2, 1],
-                            opacity: [0.5, 0.8, 0.5],
-                          }}
-                          transition={{
-                            duration: 4,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                        />
+                    <div className="space-y-6">
+                      {/* Carte plan actuel */}
+                      <div className="rounded-2xl overflow-hidden border border-brand-blue/20 shadow-md">
+                        {/* Header coloré */}
+                        <div className="p-6 bg-gradient-to-r from-brand-blue to-brand-blue-light relative overflow-hidden">
+                          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #34B9EE 0%, transparent 60%)' }} />
+                          {(() => {
+                            const plan = subscriptionData
+                              ? (Array.isArray((subscriptionData as any).subscription_plans)
+                                  ? (subscriptionData as any).subscription_plans[0]
+                                  : (subscriptionData as any).subscription_plans)
+                              : null
+                            const renewalDate = subscriptionData?.current_period_end
+                              ? new Date(subscriptionData.current_period_end).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                              : null
+                            const tierLabel = plan?.name
+                              ?? (organization.subscription_tier === 'free' ? 'Gratuit'
+                                : organization.subscription_tier === 'starter' ? 'Starter'
+                                : organization.subscription_tier === 'professional' ? 'Professionnel'
+                                : organization.subscription_tier === 'enterprise' ? 'Enterprise'
+                                : organization.subscription_tier ?? 'Gratuit')
 
-                        {/* Floating orb */}
-                        <motion.div
-                          className="absolute bottom-0 left-0 w-48 h-48 bg-brand-cyan/20 rounded-full blur-3xl"
-                          animate={{
-                            y: [0, -20, 0],
-                            x: [0, 20, 0],
-                          }}
-                          transition={{
-                            duration: 6,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                        />
-
-                        {(() => {
-                          const plan = subscriptionData
-                            ? (Array.isArray((subscriptionData as any).subscription_plans)
-                                ? (subscriptionData as any).subscription_plans[0]
-                                : (subscriptionData as any).subscription_plans)
-                            : null
-                          const renewalDate = subscriptionData?.current_period_end
-                            ? new Date(subscriptionData.current_period_end).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                            : null
-                          const planFeatures: string[] = Array.isArray(plan?.features)
-                            ? plan.features as string[]
-                            : plan?.features && typeof plan.features === 'object'
-                              ? Object.values(plan.features as Record<string, string>)
-                              : []
-                          const tierLabel = plan?.name
-                            ?? (organization.subscription_tier === 'free' ? 'Gratuit'
-                              : organization.subscription_tier === 'starter' ? 'Starter'
-                              : organization.subscription_tier === 'professional' ? 'Professionnel'
-                              : organization.subscription_tier === 'enterprise' ? 'Enterprise'
-                              : organization.subscription_tier ?? 'Gratuit')
-
-                          return (
-                            <>
-                              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            return (
+                              <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                 <div>
-                                  <div className="flex items-center gap-3 mb-3">
-                                    <motion.span
-                                      className="text-sm font-bold bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/30 shadow-lg"
-                                      whileHover={{ scale: 1.05 }}
-                                    >
-                                      Plan Actuel
-                                    </motion.span>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-semibold text-white/70 uppercase tracking-widest">Plan actuel</span>
                                     {(organization.subscription_status === 'active' || subscriptionData?.status === 'active') && (
-                                      <motion.span
-                                        className="flex items-center gap-2 text-sm font-bold text-emerald-300 bg-emerald-900/40 px-4 py-1.5 rounded-full backdrop-blur-sm border border-emerald-400/40 shadow-lg"
-                                        whileHover={{ scale: 1.05 }}
-                                      >
-                                        <motion.span
-                                          className="w-2 h-2 rounded-full bg-emerald-400"
-                                          animate={{ scale: [1, 1.2, 1], opacity: [1, 0.5, 1] }}
-                                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                                        />
+                                      <span className="flex items-center gap-1.5 text-xs font-semibold text-brand-cyan bg-white/10 px-2.5 py-1 rounded-full border border-brand-cyan/30">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-brand-cyan" />
                                         Actif
-                                      </motion.span>
+                                      </span>
                                     )}
                                     {subscriptionData?.billing_cycle && (
-                                      <span className="text-xs bg-white/10 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 text-white/80">
+                                      <span className="text-xs text-white/60 bg-white/10 px-2.5 py-1 rounded-full border border-white/15">
                                         {subscriptionData.billing_cycle === 'yearly' ? 'Annuel' : 'Mensuel'}
                                       </span>
                                     )}
                                   </div>
-                                  <motion.h3
-                                    className="text-5xl font-display font-bold mb-2 tracking-tight drop-shadow-lg"
-                                    whileHover={{ scale: 1.02 }}
-                                  >
+                                  <h3 className="text-3xl font-display font-bold text-white tracking-tight">
                                     {tierLabel}
-                                  </motion.h3>
-                                  {renewalDate ? (
-                                    <p className="text-white/90 font-semibold drop-shadow-md">Renouvellement le {renewalDate}</p>
-                                  ) : (
-                                    <p className="text-white/60 font-medium drop-shadow-md text-sm">Aucun renouvellement planifié</p>
-                                  )}
+                                  </h3>
+                                  <p className="text-white/60 text-sm mt-1">
+                                    {renewalDate ? `Renouvellement le ${renewalDate}` : 'Aucun renouvellement planifié'}
+                                  </p>
                                 </div>
-
-                                <div className="flex flex-col gap-3 w-full md:w-auto">
-                                  <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.98 }}>
-                                    <Link href="/dashboard/subscribe">
-                                      <Button className="group relative overflow-hidden bg-white text-brand-blue hover:bg-white shadow-xl hover:shadow-2xl border-0 w-full md:w-auto font-bold">
-                                        <motion.div
-                                          className="absolute inset-0 bg-gradient-to-r from-transparent via-brand-blue/10 to-transparent"
-                                          initial={{ x: '-100%' }}
-                                          whileHover={{ x: '100%' }}
-                                          transition={{ duration: 0.6 }}
-                                        />
-                                        <span className="relative z-10">Changer de plan</span>
-                                      </Button>
-                                    </Link>
-                                  </motion.div>
-                                  {(!subscriptionData || subscriptionData.status !== 'active') && (
-                                    <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.98 }}>
-                                      <Link href="/dashboard/subscribe">
-                                        <Button className="group relative overflow-hidden bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 shadow-xl hover:shadow-2xl border-0 w-full md:w-auto font-bold gap-2">
-                                          <Zap className="h-4 w-4" />
-                                          <span>Souscrire maintenant</span>
-                                          <ArrowRight className="h-4 w-4" />
-                                        </Button>
-                                      </Link>
-                                    </motion.div>
-                                  )}
-                                </div>
+                                <Link href="/dashboard/subscribe">
+                                  <Button className="bg-white text-brand-blue hover:bg-brand-blue-ghost font-semibold shadow-sm border-0 shrink-0">
+                                    Changer de plan
+                                  </Button>
+                                </Link>
                               </div>
+                            )
+                          })()}
+                        </div>
 
-                              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Fonctionnalités du plan */}
-                                <div className="p-6 border border-gray-100 rounded-xl bg-gray-50/50">
-                                  <h4 className="font-semibold text-gray-900 mb-4">Inclus dans votre offre</h4>
-                                  {planFeatures.length > 0 ? (
-                                    <ul className="space-y-3 text-sm text-gray-600">
-                                      {planFeatures.map((feature, i) => (
-                                        <li key={i} className="flex items-center gap-2">
-                                          <Shield className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                                          <span>{feature}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  ) : (
-                                    <ul className="space-y-3 text-sm text-gray-600">
-                                      {plan?.max_users && (
-                                        <li className="flex items-center gap-2">
-                                          <Users className="h-4 w-4 text-emerald-600" />
-                                          <span>{plan.max_users === -1 ? 'Utilisateurs illimités' : `${plan.max_users} utilisateurs max`}</span>
-                                        </li>
-                                      )}
-                                      {plan?.max_students && (
-                                        <li className="flex items-center gap-2">
-                                          <GraduationCap className="h-4 w-4 text-emerald-600" />
-                                          <span>{plan.max_students === -1 ? 'Apprenants illimités' : `${plan.max_students} apprenants max`}</span>
-                                        </li>
-                                      )}
-                                      {plan?.max_storage_gb && (
-                                        <li className="flex items-center gap-2">
-                                          <Globe className="h-4 w-4 text-emerald-600" />
-                                          <span>{plan.max_storage_gb} Go de stockage</span>
-                                        </li>
-                                      )}
-                                      {!plan && (
-                                        <li className="text-gray-400 text-sm italic">Aucune information disponible</li>
-                                      )}
-                                    </ul>
-                                  )}
-                                </div>
+                        {/* Body avec fonctionnalités et factures */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100 bg-white">
+                          {/* Fonctionnalités du plan */}
+                          <div className="p-6">
+                            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Inclus dans votre offre</h4>
+                            {(() => {
+                              const plan = subscriptionData
+                                ? (Array.isArray((subscriptionData as any).subscription_plans)
+                                    ? (subscriptionData as any).subscription_plans[0]
+                                    : (subscriptionData as any).subscription_plans)
+                                : null
+                              const planFeatures: string[] = Array.isArray(plan?.features)
+                                ? plan.features as string[]
+                                : plan?.features && typeof plan.features === 'object'
+                                  ? Object.values(plan.features as Record<string, string>)
+                                  : []
 
-                                {/* Historique des factures */}
-                                <div className="p-6 border border-gray-100 rounded-xl bg-gray-50/50">
-                                  <h4 className="font-semibold text-gray-900 mb-4">Historique des factures</h4>
-                                  {invoices && invoices.length > 0 ? (
-                                    <ul className="space-y-2 text-sm">
-                                      {invoices.map((inv) => (
-                                        <li key={inv.id} className="flex items-center justify-between gap-2 py-2 border-b border-gray-100 last:border-0">
-                                          <div className="flex flex-col">
-                                            <span className="font-medium text-gray-800">{inv.invoice_number}</span>
-                                            <span className="text-xs text-gray-400">
-                                              {inv.billing_period_start
-                                                ? new Date(inv.billing_period_start).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
-                                                : inv.paid_at
-                                                  ? new Date(inv.paid_at).toLocaleDateString('fr-FR')
-                                                  : '—'}
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-3">
-                                            <span className="font-semibold text-gray-900">
-                                              {(inv.amount / 100).toLocaleString('fr-FR', { style: 'currency', currency: inv.currency?.toUpperCase() ?? 'EUR' })}
-                                            </span>
-                                            <span className={cn(
-                                              'text-xs px-2 py-0.5 rounded-full font-medium',
-                                              inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'
-                                            )}>
-                                              {inv.status === 'paid' ? 'Payée' : inv.status}
-                                            </span>
-                                            {inv.pdf_url && (
-                                              <a href={inv.pdf_url} target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline text-xs">
-                                                PDF
-                                              </a>
-                                            )}
-                                          </div>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  ) : (
-                                    <p className="text-sm text-gray-400 italic">Aucune facture disponible</p>
+                              return planFeatures.length > 0 ? (
+                                <ul className="space-y-2.5 text-sm text-gray-700">
+                                  {planFeatures.map((feature, i) => (
+                                    <li key={i} className="flex items-center gap-2.5">
+                                      <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
+                                        <Shield className="h-3 w-3 text-brand-blue" />
+                                      </div>
+                                      <span>{feature}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <ul className="space-y-2.5 text-sm text-gray-700">
+                                  {plan?.max_users && (
+                                    <li className="flex items-center gap-2.5">
+                                      <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
+                                        <Users className="h-3 w-3 text-brand-blue" />
+                                      </div>
+                                      <span>{plan.max_users === -1 ? 'Utilisateurs illimités' : `${plan.max_users} utilisateurs max`}</span>
+                                    </li>
                                   )}
-                                </div>
-                              </div>
-                            </>
-                          )
-                        })()}
-                      </motion.div>
+                                  {plan?.max_students && (
+                                    <li className="flex items-center gap-2.5">
+                                      <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
+                                        <GraduationCap className="h-3 w-3 text-brand-blue" />
+                                      </div>
+                                      <span>{plan.max_students === -1 ? 'Apprenants illimités' : `${plan.max_students} apprenants max`}</span>
+                                    </li>
+                                  )}
+                                  {plan?.max_storage_gb && (
+                                    <li className="flex items-center gap-2.5">
+                                      <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
+                                        <Globe className="h-3 w-3 text-brand-blue" />
+                                      </div>
+                                      <span>{plan.max_storage_gb} Go de stockage</span>
+                                    </li>
+                                  )}
+                                  {!plan && (
+                                    <li className="text-gray-400 text-sm italic">Aucune information disponible</li>
+                                  )}
+                                </ul>
+                              )
+                            })()}
+                          </div>
+
+                          {/* Historique des factures */}
+                          <div className="p-6">
+                            <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Historique des factures</h4>
+                            {invoices && invoices.length > 0 ? (
+                              <ul className="space-y-1 text-sm">
+                                {invoices.map((inv) => (
+                                  <li key={inv.id} className="flex items-center justify-between gap-2 py-2 border-b border-gray-50 last:border-0">
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="font-medium text-gray-800 truncate">{inv.invoice_number}</span>
+                                      <span className="text-xs text-gray-400">
+                                        {inv.billing_period_start
+                                          ? new Date(inv.billing_period_start).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
+                                          : inv.paid_at
+                                            ? new Date(inv.paid_at).toLocaleDateString('fr-FR')
+                                            : '—'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      <span className="font-semibold text-gray-900 text-sm">
+                                        {(inv.amount / 100).toLocaleString('fr-FR', { style: 'currency', currency: inv.currency?.toUpperCase() ?? 'EUR' })}
+                                      </span>
+                                      <span className={cn(
+                                        'text-xs px-2 py-0.5 rounded-full font-medium',
+                                        inv.status === 'paid' ? 'bg-brand-blue-ghost text-brand-blue' : 'bg-gray-100 text-gray-600'
+                                      )}>
+                                        {inv.status === 'paid' ? 'Payée' : inv.status}
+                                      </span>
+                                      {inv.pdf_url && (
+                                        <a href={inv.pdf_url} target="_blank" rel="noopener noreferrer" className="text-brand-cyan hover:text-brand-cyan-dark text-xs font-medium">
+                                          PDF
+                                        </a>
+                                      )}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-gray-400 italic">Aucune facture disponible</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
                       {/* CTA souscrire si pas d'abonnement actif */}
                       {(!subscriptionData || subscriptionData.status !== 'active') && (
@@ -2008,19 +1957,19 @@ export default function SettingsPage() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.2 }}
-                          className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200/60 flex flex-col md:flex-row items-center justify-between gap-4"
+                          className="p-6 rounded-2xl bg-brand-blue-ghost border border-brand-blue/15 flex flex-col md:flex-row items-center justify-between gap-4"
                         >
                           <div className="flex items-center gap-4">
-                            <div className="p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-lg flex-shrink-0">
-                              <Zap className="h-5 w-5 text-white" />
+                            <div className="p-3 bg-brand-blue/10 rounded-xl flex-shrink-0">
+                              <Zap className="h-5 w-5 text-brand-blue" />
                             </div>
                             <div>
-                              <h4 className="font-bold text-gray-900 text-base">Passez à un plan payant</h4>
+                              <h4 className="font-semibold text-gray-900 text-base">Passez à un plan payant</h4>
                               <p className="text-sm text-gray-600">Débloquez toutes les fonctionnalités — sélectionnez et payez votre abonnement en quelques clics.</p>
                             </div>
                           </div>
                           <Link href="/dashboard/subscribe" className="flex-shrink-0">
-                            <Button className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold shadow-lg hover:shadow-xl gap-2 px-6">
+                            <Button className="bg-brand-blue hover:bg-brand-blue-dark text-white font-semibold shadow-sm gap-2 px-6">
                               <Zap className="h-4 w-4" />
                               Choisir mon abonnement
                               <ArrowRight className="h-4 w-4" />
@@ -2028,8 +1977,8 @@ export default function SettingsPage() {
                           </Link>
                         </motion.div>
                       )}
-                          </div>
-                        )}
+                    </div>
+                  )}
                 </GlassCard>
               </motion.div>
             )}

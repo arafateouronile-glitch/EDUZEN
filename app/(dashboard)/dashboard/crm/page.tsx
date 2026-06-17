@@ -19,11 +19,11 @@ export default function CrmPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-blue-50 p-2">
-            <Activity className="h-6 w-6 text-blue-600" />
+          <div className="rounded-xl bg-brand-blue p-2.5">
+            <Activity className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">CRM Apprenants</h1>
+            <h1 className="text-2xl font-bold text-gray-900">CRM Apprenants</h1>
             <p className="text-sm text-muted-foreground">
               Pipeline de formation — suivi du parcours de chaque apprenant
             </p>

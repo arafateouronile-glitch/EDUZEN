@@ -486,40 +486,35 @@ export default function DocumentsPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* Header Premium */}
+      {/* Header */}
       <motion.div variants={itemVariants} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-xl shadow-lg">
-              <FileText className="h-7 w-7 text-white" />
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-brand-blue rounded-xl shadow-md">
+              <FileText className="h-6 w-6 text-white" />
             </div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">
-                Documents
-              </h1>
+              <h1 className="text-3xl font-bold text-gray-900">Documents</h1>
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-gradient-to-r from-brand-blue-ghost to-brand-cyan-ghost text-brand-blue rounded-full text-sm font-medium border border-brand-blue/20">
+                <span className="px-2.5 py-1 bg-brand-blue-ghost text-brand-blue rounded-full text-sm font-medium border border-brand-blue/15">
                   {filteredDocuments?.length || 0} total
                 </span>
                 {expectedDocuments && expectedDocuments.filter((d: { isGenerated?: boolean }) => !d.isGenerated).length > 0 && (
-                  <span className="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full text-sm font-bold border border-amber-600 shadow-md">
+                  <span className="px-2.5 py-1 bg-brand-blue-ghost text-brand-blue rounded-full text-sm font-semibold border border-brand-blue/20">
                     {expectedDocuments.filter((d: { isGenerated?: boolean }) => !d.isGenerated).length} à générer
                   </span>
                 )}
               </div>
             </div>
           </div>
-          <p className="text-gray-600 text-sm lg:text-base ml-1">
+          <p className="text-gray-500 text-sm ml-1">
             Gérez, générez et organisez tous vos documents administratifs
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Link href="/dashboard/settings/document-templates">
-            <Button
-              variant="outline"
-              className="hover:bg-brand-blue-ghost hover:border-brand-blue/30 hover:text-brand-blue transition-all"
-            >
+            <Button variant="outline" className="hover:bg-brand-blue-ghost hover:border-brand-blue/30 hover:text-brand-blue transition-colors">
               <FileText className="mr-2 h-4 w-4" />
               Templates
             </Button>
@@ -527,25 +522,25 @@ export default function DocumentsPage() {
           <Button
             onClick={() => setShowUploadModal(true)}
             variant="outline"
-            className="hover:bg-brand-cyan-ghost hover:border-brand-cyan/30 hover:text-brand-cyan transition-all"
+            className="hover:bg-brand-blue-ghost hover:border-brand-blue/30 hover:text-brand-blue transition-colors"
           >
             <Upload className="mr-2 h-4 w-4" />
             Uploader
           </Button>
           <Link href="/dashboard/documents/generate">
-            <Button variant="outline" className="hover:bg-brand-blue-ghost hover:border-brand-blue/30 hover:text-brand-blue transition-all">
+            <Button variant="outline" className="hover:bg-brand-blue-ghost hover:border-brand-blue/30 hover:text-brand-blue transition-colors">
               <Plus className="mr-2 h-4 w-4" />
               Générer
             </Button>
           </Link>
           <Link href="/dashboard/documents/generate-batch">
-            <Button className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <Button className="bg-brand-blue hover:bg-brand-blue-dark text-white shadow-md transition-colors">
               <Users className="mr-2 h-4 w-4" />
               Génération en masse
             </Button>
           </Link>
           <Link href="/dashboard/signing-processes">
-            <Button variant="outline" className="hover:bg-brand-cyan-ghost hover:border-brand-cyan/30 hover:text-brand-cyan transition-all">
+            <Button variant="outline" className="hover:bg-brand-blue-ghost hover:border-brand-blue/30 hover:text-brand-blue transition-colors">
               <PenTool className="mr-2 h-4 w-4" />
               Tour de contrôle (signature en cascade)
             </Button>
@@ -553,88 +548,42 @@ export default function DocumentsPage() {
         </div>
       </motion.div>
 
-      {/* Stats Premium */}
-      <BentoGrid columns={4} gap="md">
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          {
-            title: 'Total Documents',
-            value: stats.total,
-            icon: FileText,
-            color: 'text-brand-blue',
-            bg: 'bg-gradient-to-br from-brand-blue-ghost to-brand-blue-ghost/50',
-            borderColor: 'border-brand-blue/20',
-            desc: 'Documents existants'
-          },
-          {
-            title: 'Documents Générés',
-            value: stats.generated,
-            icon: FileCheck,
-            color: 'text-brand-cyan',
-            bg: 'bg-gradient-to-br from-brand-cyan-ghost to-brand-cyan-ghost/50',
-            borderColor: 'border-brand-cyan/20',
-            desc: 'Depuis les templates'
-          },
-          {
-            title: 'À Générer',
-            value: stats.toGenerate,
-            icon: FileOutput,
-            color: 'text-amber-600',
-            bg: 'bg-gradient-to-br from-amber-50 to-amber-100/50',
-            borderColor: 'border-amber-200',
-            desc: 'Documents attendus',
-            urgent: stats.toGenerate > 0
-          },
-          {
-            title: 'Uploadés',
-            value: stats.uploaded,
-            icon: Upload,
-            color: 'text-brand-blue',
-            bg: 'bg-gradient-to-br from-brand-blue-ghost to-brand-blue-ghost/50',
-            borderColor: 'border-brand-blue/20',
-            desc: 'Importés manuellement'
-          },
-        ].map((stat, index) => (
-          <BentoCard key={stat.title} span={1} className="min-w-[200px]">
-            <GlassCard
-              variant="premium"
-              hoverable
-              className={cn("h-full p-5 border-2 transition-all duration-300", stat.borderColor)}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <motion.div
-                  className={cn("p-2.5 rounded-xl transition-all duration-300 border", stat.bg, stat.borderColor)}
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                >
-                  <stat.icon className={cn("h-5 w-5", stat.color)} />
-                </motion.div>
-                <span className={cn("text-2xl font-bold",
-                  index === 0 || index === 3 ? "text-brand-blue" :
-                  index === 1 ? "text-brand-cyan" :
-                  "text-amber-600")}>
-                  {stat.value}
-                </span>
+          { title: 'Total',     value: stats.total,       icon: FileText,   iconCls: 'bg-brand-blue text-white',      accent: 'bg-brand-blue',      desc: 'Documents existants' },
+          { title: 'Générés',   value: stats.generated,   icon: FileCheck,  iconCls: 'bg-brand-blue-light text-white', accent: 'bg-brand-blue-light', desc: 'Depuis les templates' },
+          { title: 'À générer', value: stats.toGenerate,  icon: FileOutput, iconCls: 'bg-brand-cyan-dark text-white', accent: 'bg-brand-cyan',       desc: 'Documents attendus' },
+          { title: 'Uploadés',  value: stats.uploaded,    icon: Upload,     iconCls: 'bg-brand-blue-dark text-white', accent: 'bg-brand-blue-dark',  desc: 'Importés manuellement' },
+        ].map((stat) => (
+          <motion.div key={stat.title} whileHover={{ y: -3 }} transition={{ duration: 0.2 }}>
+            <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-3">
+                <div className={cn('p-2.5 rounded-xl', stat.iconCls)}>
+                  <stat.icon className="h-5 w-5" />
+                </div>
+                <span className="text-3xl font-display font-bold text-gray-900">{stat.value}</span>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{stat.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{stat.desc}</p>
-              </div>
-            </GlassCard>
-          </BentoCard>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{stat.title}</p>
+              <p className="text-xs text-gray-400 mb-3">{stat.desc}</p>
+              <div className={cn('h-1 rounded-full opacity-60', stat.accent)} />
+            </div>
+          </motion.div>
         ))}
-      </BentoGrid>
+      </div>
 
-      {/* Filtres et Recherche Premium */}
+      {/* Filtres et Recherche */}
       <motion.div variants={itemVariants}>
-        <GlassCard variant="default" className="p-2 border-2 border-brand-blue/20 bg-gradient-to-br from-brand-blue-ghost/20 to-brand-cyan-ghost/20">
+        <GlassCard variant="default" className="p-3 border border-gray-100">
           <div className="flex flex-col md:flex-row gap-2">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-blue group-focus-within:text-brand-cyan transition-colors" />
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Rechercher un document..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border-2 border-brand-blue/20 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 transition-all outline-none text-sm"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all outline-none text-sm"
               />
             </div>
 
@@ -642,16 +591,14 @@ export default function DocumentsPage() {
               variant="ghost"
               onClick={() => setShowFilters(!showFilters)}
               className={cn(
-                "gap-2 transition-all",
-                showFilters ? "bg-gradient-to-r from-brand-blue-ghost to-brand-cyan-ghost text-brand-blue border-2 border-brand-blue/30" : "text-gray-600 hover:bg-brand-blue-ghost hover:text-brand-blue"
+                "gap-2 transition-colors",
+                showFilters ? "bg-brand-blue-ghost text-brand-blue border border-brand-blue/20" : "text-gray-600 hover:bg-brand-blue-ghost hover:text-brand-blue"
               )}
             >
               <SlidersHorizontal className="h-4 w-4" />
               Filtres
               {typeFilter !== 'all' && (
-                <span className="w-5 h-5 bg-gradient-to-r from-brand-blue to-brand-cyan text-white text-[10px] font-bold flex items-center justify-center rounded-full ml-1">
-                  !
-                </span>
+                <span className="w-5 h-5 bg-brand-blue text-white text-[10px] font-bold flex items-center justify-center rounded-full ml-1">!</span>
               )}
             </Button>
           </div>
@@ -664,18 +611,16 @@ export default function DocumentsPage() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="p-4 border-t border-brand-blue/20 mt-2">
+                <div className="p-3 border-t border-gray-100 mt-2">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-brand-blue uppercase tracking-wider">Type de document</label>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Type de document</label>
                     <select
                       value={typeFilter}
                       onChange={(e) => setTypeFilter(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-white border-2 border-brand-blue/20 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/10 outline-none text-sm transition-all"
+                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 outline-none text-sm transition-all"
                     >
                       {documentTypes.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
+                        <option key={type.value} value={type.value}>{type.label}</option>
                       ))}
                     </select>
                   </div>
@@ -691,8 +636,8 @@ export default function DocumentsPage() {
         {isLoading ? (
           <SkeletonList count={5} />
         ) : documents && documents.length > 0 ? (
-          <GlassCard variant="default" className="overflow-hidden p-0 border-2 border-brand-blue/10 bg-gradient-to-br from-white to-brand-blue-ghost/5">
-            <div className="divide-y divide-brand-blue/10">
+          <GlassCard variant="default" className="overflow-hidden p-0 border border-gray-100">
+            <div className="divide-y divide-gray-100">
               {documents.map((document) => {
                 const TypeIcon = getTypeIcon(document.type)
                 return (
@@ -701,105 +646,80 @@ export default function DocumentsPage() {
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}
                     viewport={{ once: true }}
-                    className="p-4 hover:bg-gradient-to-r hover:from-brand-blue-ghost/30 hover:to-brand-cyan-ghost/20 transition-all duration-300 flex items-center justify-between group"
+                    className="p-4 hover:bg-brand-blue-ghost/20 transition-colors duration-200 flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-4 flex-1">
-                      <motion.div
-                        whileHover={{ scale: 1.05, rotate: 3 }}
-                        className="h-12 w-12 rounded-xl bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost flex items-center justify-center text-brand-blue border border-brand-blue/20 shadow-sm"
-                      >
-                        <TypeIcon className="h-6 w-6" />
-                      </motion.div>
-                      
+                      <div className="h-10 w-10 rounded-xl bg-brand-blue-ghost flex items-center justify-center text-brand-blue border border-brand-blue/15 shrink-0">
+                        <TypeIcon className="h-5 w-5" />
+                      </div>
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-gray-900 truncate group-hover:text-brand-blue transition-colors">
+                          <h3 className="font-semibold text-gray-900 truncate group-hover:text-brand-blue transition-colors text-sm">
                             {document.title}
                           </h3>
-                          <span className="px-2.5 py-0.5 text-xs bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost text-brand-blue rounded-lg font-semibold uppercase tracking-wide border border-brand-blue/20">
+                          <span className="px-2 py-0.5 text-xs bg-brand-blue-ghost text-brand-blue rounded-md font-medium border border-brand-blue/15 shrink-0">
                             {getTypeLabel(document.type)}
                           </span>
                           {(document as { status?: string }).status === 'signed' && (
-                            <span className="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-lg border border-green-200 flex items-center gap-1">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span className="px-2 py-0.5 text-xs font-medium text-brand-blue bg-brand-blue-ghost rounded-md border border-brand-blue/20 flex items-center gap-1 shrink-0">
+                              <CheckCircle2 className="h-3 w-3" />
                               Signé
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
                           {document.students && (
                             <div className="flex items-center gap-1.5">
-                              <Users className="h-3.5 w-3.5 text-brand-cyan" />
-                              <span className="font-medium text-gray-700">
+                              <Users className="h-3.5 w-3.5 text-brand-blue" />
+                              <span className="font-medium text-gray-600">
                                 {document.students.first_name} {document.students.last_name}
                               </span>
                             </div>
                           )}
                           <div className="flex items-center gap-1.5">
-                            <FileText className="h-3.5 w-3.5 text-brand-blue" />
-                            <span className="font-medium">Généré le {formatDate(document.created_at)}</span>
+                            <FileText className="h-3.5 w-3.5 text-gray-400" />
+                            <span>Généré le {formatDate(document.created_at)}</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       {document.file_url && (
                         <>
                           <Link href={`/dashboard/documents/${document.id}`}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-gray-600 hover:text-brand-blue hover:bg-brand-blue-ghost transition-all"
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost transition-colors text-xs">
+                              <Eye className="mr-1.5 h-3.5 w-3.5" />
                               Voir
                             </Button>
                           </Link>
-
-                          <a
-                            href={document.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download
-                          >
-                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-brand-cyan hover:bg-brand-cyan-ghost transition-all">
-                              <Download className="mr-2 h-4 w-4" />
+                          <a href={document.file_url} target="_blank" rel="noopener noreferrer" download>
+                            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost transition-colors text-xs">
+                              <Download className="mr-1.5 h-3.5 w-3.5" />
                               Télécharger
                             </Button>
                           </a>
-
                           <Link href={`/dashboard/documents/${document.id}/sign`}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-all"
-                            >
-                              <PenTool className="mr-2 h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost transition-colors text-xs">
+                              <PenTool className="mr-1.5 h-3.5 w-3.5" />
                               Signer
                             </Button>
                           </Link>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenEmailModal(document)}
-                            className="text-gray-600 hover:text-brand-blue hover:bg-brand-blue-ghost transition-all"
-                          >
-                            <Mail className="mr-2 h-4 w-4" />
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenEmailModal(document)} className="text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost transition-colors text-xs">
+                            <Mail className="mr-1.5 h-3.5 w-3.5" />
                             Email
                           </Button>
-
                           {document.student_id && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => sendToLearnerSpaceMutation.mutate(document)}
                               disabled={sendToLearnerSpaceMutation.isPending}
-                              className="text-gray-600 hover:text-brand-cyan hover:bg-brand-cyan-ghost transition-all"
+                              className="text-gray-500 hover:text-brand-blue hover:bg-brand-blue-ghost transition-colors text-xs"
                             >
-                              <Send className="mr-2 h-4 w-4" />
+                              <Send className="mr-1.5 h-3.5 w-3.5" />
                               Espace
                             </Button>
                           )}
@@ -813,9 +733,9 @@ export default function DocumentsPage() {
                             deleteMutation.mutate(document.id)
                           }
                         }}
-                        className="text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                        className="text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors h-8 w-8"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </motion.div>
@@ -824,26 +744,19 @@ export default function DocumentsPage() {
             </div>
           </GlassCard>
         ) : (
-          <GlassCard variant="default" className="p-12 text-center border-2 border-brand-blue/20 bg-gradient-to-br from-brand-blue-ghost/30 to-brand-cyan-ghost/30">
-            <div className="relative inline-block mb-6">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-24 h-24 bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost rounded-full opacity-50 blur-2xl"></div>
-              </div>
-              <div className="relative p-6 bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost rounded-2xl inline-block">
-                <FileText className="h-16 w-16 mx-auto text-brand-blue" />
-              </div>
+          <GlassCard variant="default" className="p-12 text-center border border-gray-100">
+            <div className="p-5 bg-brand-blue-ghost rounded-2xl inline-block mb-5">
+              <FileText className="h-12 w-12 mx-auto text-brand-blue" />
             </div>
-            <div className="space-y-2 mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Aucun document trouvé</h3>
-              <p className="text-gray-600">
-                {search || typeFilter !== 'all'
-                  ? 'Aucun document ne correspond à vos critères.'
-                  : 'Commencez par générer ou uploader votre premier document.'}
-              </p>
-            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Aucun document trouvé</h3>
+            <p className="text-gray-500 mb-6">
+              {search || typeFilter !== 'all'
+                ? 'Aucun document ne correspond à vos critères.'
+                : 'Commencez par générer ou uploader votre premier document.'}
+            </p>
             {!search && typeFilter === 'all' && (
               <Link href="/dashboard/documents/generate">
-                <Button className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-md hover:shadow-lg transition-all">
+                <Button className="bg-brand-blue hover:bg-brand-blue-dark text-white shadow-md">
                   <Plus className="mr-2 h-4 w-4" />
                   Générer un document
                 </Button>
@@ -1025,8 +938,8 @@ export default function DocumentsPage() {
             >
               <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <Mail className="h-5 w-5 text-blue-600" />
+                  <div className="p-2 bg-brand-blue-ghost rounded-lg">
+                    <Mail className="h-5 w-5 text-brand-blue" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">Envoyer par email</h2>
@@ -1053,7 +966,7 @@ export default function DocumentsPage() {
                     type="email"
                     value={emailForm.to}
                     onChange={(e) => setEmailForm((prev) => ({ ...prev, to: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/10 focus:border-brand-blue outline-none transition-all"
                     placeholder="email@example.com"
                   />
                 </div>
@@ -1064,7 +977,7 @@ export default function DocumentsPage() {
                     type="text"
                     value={emailForm.subject}
                     onChange={(e) => setEmailForm((prev) => ({ ...prev, subject: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/10 focus:border-brand-blue outline-none transition-all"
                     placeholder="Objet de l'email"
                   />
                 </div>
@@ -1075,7 +988,7 @@ export default function DocumentsPage() {
                     value={emailForm.message}
                     onChange={(e) => setEmailForm((prev) => ({ ...prev, message: e.target.value }))}
                     rows={6}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/10 focus:border-brand-blue outline-none transition-all resize-none"
                     placeholder="Votre message..."
                   />
                 </div>
@@ -1106,7 +1019,7 @@ export default function DocumentsPage() {
                   <Button
                     onClick={handleSendEmail}
                     disabled={sendingEmail || !emailForm.to || !emailForm.subject}
-                    className="bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20"
+                    className="bg-brand-blue hover:bg-brand-blue-dark shadow-md"
                   >
                     {sendingEmail ? (
                       <>

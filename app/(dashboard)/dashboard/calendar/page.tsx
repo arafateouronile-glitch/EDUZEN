@@ -349,183 +349,112 @@ export default function CalendarPage() {
       initial="hidden"
       animate="visible"
     >
-      {/* En-tête Ultra-Premium */}
+      {/* En-tête */}
       <motion.div variants={itemVariants} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-4 mb-3">
             <motion.div
-              className="p-3 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-2xl shadow-lg shadow-brand-blue/20"
-              whileHover={{ scale: 1.1, rotate: 5 }}
+              className="p-3 bg-brand-blue rounded-2xl shadow-lg shadow-brand-blue/20"
+              whileHover={{ scale: 1.05 }}
               transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
               <CalendarIcon className="h-8 w-8 text-white" />
             </motion.div>
-            <h1 className="text-4xl md:text-6xl font-display font-bold text-gray-900 tracking-tighter leading-none">
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-gray-900 tracking-tighter leading-none">
               Calendrier
             </h1>
             {unreadCount && unreadCount > 0 && (
-              <motion.span
-                className="px-3 py-1.5 bg-red-100 text-red-600 rounded-full text-sm font-bold flex items-center gap-2 shadow-sm"
-                whileHover={{ scale: 1.1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
+              <span className="px-3 py-1.5 bg-brand-blue-ghost text-brand-blue rounded-full text-sm font-semibold flex items-center gap-2">
                 <Bell className="h-4 w-4" />
                 {unreadCount}
-              </motion.span>
+              </span>
             )}
           </div>
-          <p className="text-gray-600 font-medium text-lg tracking-tight">
-            Sessions, formations et tâches - tout en un seul endroit
+          <p className="text-gray-500 font-medium text-base tracking-tight">
+            Sessions, formations et tâches — tout en un seul endroit
           </p>
         </div>
 
-        <motion.div whileHover={{ scale: 1.05, y: -3 }} whileTap={{ scale: 0.98 }}>
-          <Button
-            onClick={() => handleAddEvent()}
-            className="bg-gradient-to-br from-brand-blue to-brand-cyan text-white hover:from-brand-blue-dark hover:to-brand-cyan-dark shadow-xl shadow-brand-blue/20 hover:shadow-2xl hover:shadow-brand-cyan/30 transition-all duration-500 font-semibold tracking-tight px-6 py-6 text-base"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Nouvelle tâche
-          </Button>
-        </motion.div>
+        <Button
+          onClick={() => handleAddEvent()}
+          className="bg-brand-blue hover:bg-brand-blue-dark text-white shadow-md font-semibold px-6 py-5"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Nouvelle tâche
+        </Button>
       </motion.div>
 
-      {/* Statistiques Ultra-Premium - 2 lignes de 3 carreaux */}
+      {/* Statistiques */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
             {
-              title: 'Total tâches',
+              title: 'Total',
               value: stats.totalTodos,
               icon: ListTodo,
-              iconBg: 'bg-gradient-to-br from-brand-blue to-brand-blue-dark',
-              cardBg: 'bg-gradient-to-br from-brand-blue/5 via-brand-blue/10 to-brand-cyan/5',
-              borderColor: 'border-brand-blue/20',
-              glowColor: 'rgba(39, 68, 114, 0.15)',
+              iconCls: 'bg-brand-blue text-white',
+              accentCls: 'bg-brand-blue',
             },
             {
               title: "Aujourd'hui",
               value: stats.todayTodos,
               icon: CalendarIcon,
-              iconBg: 'bg-gradient-to-br from-brand-cyan to-brand-cyan-dark',
-              cardBg: 'bg-gradient-to-br from-brand-cyan/5 via-brand-cyan/10 to-brand-blue/5',
-              borderColor: 'border-brand-cyan/20',
-              glowColor: 'rgba(52, 185, 238, 0.15)',
+              iconCls: 'bg-brand-cyan text-white',
+              accentCls: 'bg-brand-cyan',
             },
             {
               title: 'En attente',
               value: stats.pendingTodos,
               icon: Clock,
-              iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
-              cardBg: 'bg-gradient-to-br from-amber-50 via-amber-100/50 to-orange-50',
-              borderColor: 'border-amber-200',
-              glowColor: 'rgba(245, 158, 11, 0.15)',
+              iconCls: 'bg-brand-blue-light text-white',
+              accentCls: 'bg-brand-blue-light',
             },
             {
               title: 'En retard',
               value: stats.overdueTodos,
               icon: AlertTriangle,
-              iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
-              cardBg: 'bg-gradient-to-br from-red-50 via-red-100/50 to-pink-50',
-              borderColor: 'border-red-200',
-              glowColor: 'rgba(239, 68, 68, 0.2)',
-              highlight: stats.overdueTodos > 0,
+              iconCls: stats.overdueTodos > 0 ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-500',
+              accentCls: stats.overdueTodos > 0 ? 'bg-red-400' : 'bg-gray-200',
+              alert: stats.overdueTodos > 0,
             },
             {
               title: 'Terminées',
               value: stats.completedTodos,
               icon: CheckCircle2,
-              iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-              cardBg: 'bg-gradient-to-br from-emerald-50 via-emerald-100/50 to-teal-50',
-              borderColor: 'border-emerald-200',
-              glowColor: 'rgba(16, 185, 129, 0.15)',
+              iconCls: 'bg-brand-blue-dark text-white',
+              accentCls: 'bg-brand-blue-dark',
             },
             {
               title: 'À venir',
               value: stats.upcomingTodos,
               icon: TrendingUp,
-              iconBg: 'bg-gradient-to-br from-brand-blue-light to-brand-cyan',
-              cardBg: 'bg-gradient-to-br from-brand-blue-pale/30 via-brand-blue-pale/50 to-brand-cyan-pale/30',
-              borderColor: 'border-brand-blue-light/20',
-              glowColor: 'rgba(75, 116, 157, 0.15)',
+              iconCls: 'bg-brand-blue/70 text-white',
+              accentCls: 'bg-brand-blue/70',
             },
           ].map((stat, index) => (
             <motion.div
               key={stat.title}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: index * 0.05,
-                ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
-              }}
-              whileHover={{ y: -6, scale: 1.02 }}
-              className="group relative"
+              transition={{ duration: 0.4, delay: index * 0.05 }}
+              whileHover={{ y: -3 }}
+              className={cn(
+                'bg-white rounded-2xl p-5 border shadow-sm hover:shadow-md transition-all duration-300',
+                stat.alert ? 'border-red-200' : 'border-gray-100'
+              )}
             >
-              <div
-                className={cn(
-                  "relative overflow-hidden rounded-2xl p-6 border-2 transition-all duration-500 shadow-lg hover:shadow-2xl",
-                  stat.cardBg,
-                  stat.borderColor,
-                  stat.highlight && "ring-2 ring-red-500/20 animate-pulse-premium"
-                )}
-                style={{
-                  boxShadow: `0 10px 40px -10px ${stat.glowColor}, 0 0 0 1px rgba(255, 255, 255, 0.1)`
-                }}
-              >
-                {/* Shine effect */}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  initial={{ x: '-100%' }}
-                  whileHover={{ x: '100%' }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }}
-                />
-
-                {/* Content */}
-                <div className="relative z-10">
-                  <div className="flex items-start justify-between mb-4">
-                    <motion.div
-                      className={cn('p-3.5 rounded-2xl shadow-xl', stat.iconBg)}
-                      whileHover={{ rotate: 12, scale: 1.15 }}
-                      transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                    >
-                      <stat.icon className="h-6 w-6 text-white" />
-                    </motion.div>
-                    <motion.div
-                      className="text-right"
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: index * 0.05 + 0.2, duration: 0.5 }}
-                    >
-                      <div className="text-4xl font-display font-bold tracking-tighter text-gray-900 leading-none mb-1">
-                        {stat.value}
-                      </div>
-                      <p className="text-xs font-bold text-gray-600 uppercase tracking-widest">
-                        {stat.title}
-                      </p>
-                    </motion.div>
-                  </div>
-
-                  {/* Bottom accent bar */}
-                  <motion.div
-                    className="h-1.5 rounded-full mt-4"
-                    style={{
-                      background: stat.iconBg.replace('bg-gradient-to-br', 'linear-gradient(to right,')
-                    }}
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: 1 }}
-                    transition={{ delay: index * 0.05 + 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                  />
+              <div className="flex items-start justify-between mb-3">
+                <div className={cn('p-2.5 rounded-xl', stat.iconCls)}>
+                  <stat.icon className="h-5 w-5" />
                 </div>
-
-                {/* Glow effect on hover */}
-                <div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{
-                    background: `radial-gradient(circle at 50% 50%, ${stat.glowColor} 0%, transparent 70%)`
-                  }}
-                />
+                <span className="text-3xl font-display font-bold text-gray-900 leading-none">
+                  {stat.value}
+                </span>
               </div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                {stat.title}
+              </p>
+              <div className={cn('h-1 rounded-full w-full opacity-60', stat.accentCls)} />
             </motion.div>
           ))}
         </div>
@@ -548,21 +477,17 @@ export default function CalendarPage() {
 
         {/* Sidebar - Tâches du jour */}
         <div className="space-y-6">
-          <GlassCard variant="premium" className="p-6 border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
+          <GlassCard variant="premium" className="p-6 border border-gray-100 hover:border-brand-blue/15 transition-all duration-300">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <motion.div
-                  className="p-2.5 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-2xl shadow-lg shadow-brand-blue/20"
-                  whileHover={{ rotate: 5, scale: 1.1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
+                <div className="p-2.5 bg-brand-blue rounded-xl">
                   <CalendarIcon className="h-5 w-5 text-white" />
-                </motion.div>
-                <h3 className="font-display font-bold text-gray-900 text-xl tracking-tight">
+                </div>
+                <h3 className="font-display font-bold text-gray-900 text-lg tracking-tight">
                   Aujourd&apos;hui
                 </h3>
               </div>
-              <span className="text-sm text-gray-600 font-medium tracking-tight">
+              <span className="text-xs text-gray-400 font-medium">
                 {new Date().toLocaleDateString('fr-FR', {
                   weekday: 'long',
                   day: 'numeric',
@@ -597,13 +522,12 @@ export default function CalendarPage() {
                           handleCompleteTodo(todo.id)
                         }}
                         className={cn(
-                          'mt-0.5 rounded-full p-0.5 transition-all duration-300',
+                          'mt-0.5 rounded-full p-0.5 transition-all duration-200',
                           todo.status === 'completed'
-                            ? 'bg-emerald-500 text-white shadow-md'
-                            : 'border-2 hover:bg-white/50'
+                            ? 'bg-brand-blue text-white'
+                            : 'border-2 border-brand-blue/30 hover:border-brand-blue'
                         )}
-                        style={{ borderColor: todo.color }}
-                        whileHover={{ scale: 1.2, rotate: 10 }}
+                        whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
                         {todo.status === 'completed' ? (
@@ -651,58 +575,49 @@ export default function CalendarPage() {
           </GlassCard>
 
           {/* Légende */}
-          <GlassCard variant="premium" className="p-6 border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
+          <GlassCard variant="premium" className="p-6 border border-gray-100 hover:border-brand-blue/15 transition-all duration-300">
             <div className="flex items-center gap-3 mb-4">
-              <motion.div
-                className="p-2 bg-gradient-to-br from-brand-blue-light to-brand-cyan rounded-xl shadow-md"
-                whileHover={{ rotate: 5, scale: 1.1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                <Filter className="h-4 w-4 text-white" />
-              </motion.div>
-              <h3 className="font-display font-bold text-gray-900 text-lg tracking-tight">Légende</h3>
+              <div className="p-2 bg-brand-blue-ghost rounded-xl">
+                <Filter className="h-4 w-4 text-brand-blue" />
+              </div>
+              <h3 className="font-display font-bold text-gray-900 text-base tracking-tight">Légende</h3>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {[
                 { icon: Users, label: 'Sessions', color: '#10B981' },
                 { icon: BookOpen, label: 'Formations', color: '#8B5CF6' },
                 { icon: ListTodo, label: 'Tâches', color: '#3B82F6' },
               ].map(({ icon: Icon, label, color }) => (
-                <motion.div
+                <div
                   key={label}
-                  className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50/50 transition-colors"
-                  whileHover={{ x: 4 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div
-                    className="w-4 h-4 rounded-full shadow-sm"
-                    style={{ backgroundColor: color }}
-                  />
-                  <Icon className="h-5 w-5" style={{ color }} />
-                  <span className="text-sm text-gray-700 font-medium tracking-tight">{label}</span>
-                </motion.div>
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <Icon className="h-4 w-4 flex-shrink-0" style={{ color }} />
+                  <span className="text-sm text-gray-600 font-medium">{label}</span>
+                </div>
               ))}
             </div>
           </GlassCard>
 
           {/* Raccourcis clavier */}
-          <GlassCard variant="premium" className="p-6 border-2 border-transparent hover:border-brand-blue/10 transition-all duration-500">
-            <h3 className="font-display font-bold text-gray-900 mb-4 text-lg tracking-tight">Raccourcis</h3>
-            <div className="space-y-2.5 text-sm text-gray-700">
-              <div className="flex items-center gap-2">
-                <kbd className="px-2.5 py-1.5 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg text-xs font-bold shadow-sm border border-gray-300">T</kbd>
-                <span className="font-medium tracking-tight">Aujourd&apos;hui</span>
+          <GlassCard variant="premium" className="p-6 border border-gray-100 hover:border-brand-blue/15 transition-all duration-300">
+            <h3 className="font-display font-bold text-gray-900 mb-4 text-base tracking-tight">Raccourcis</h3>
+            <div className="space-y-2.5 text-sm text-gray-600">
+              <div className="flex items-center gap-3">
+                <kbd className="px-2.5 py-1 bg-gray-100 rounded-md text-xs font-semibold text-gray-700 border border-gray-200">T</kbd>
+                <span>Aujourd&apos;hui</span>
               </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2.5 py-1.5 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg text-xs font-bold shadow-sm border border-gray-300">N</kbd>
-                <span className="font-medium tracking-tight">Nouvelle tâche</span>
+              <div className="flex items-center gap-3">
+                <kbd className="px-2.5 py-1 bg-gray-100 rounded-md text-xs font-semibold text-gray-700 border border-gray-200">N</kbd>
+                <span>Nouvelle tâche</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <kbd className="px-2.5 py-1.5 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg text-xs font-bold shadow-sm border border-gray-300">←</kbd>
-                  <kbd className="px-2.5 py-1.5 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg text-xs font-bold shadow-sm border border-gray-300">→</kbd>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1">
+                  <kbd className="px-2 py-1 bg-gray-100 rounded-md text-xs font-semibold text-gray-700 border border-gray-200">←</kbd>
+                  <kbd className="px-2 py-1 bg-gray-100 rounded-md text-xs font-semibold text-gray-700 border border-gray-200">→</kbd>
                 </div>
-                <span className="font-medium tracking-tight">Navigation</span>
+                <span>Navigation</span>
               </div>
             </div>
           </GlassCard>
