@@ -85,6 +85,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_public_catalog_settings_updated_at ON public.public_catalog_settings;
 CREATE TRIGGER update_public_catalog_settings_updated_at
   BEFORE UPDATE ON public.public_catalog_settings
   FOR EACH ROW
@@ -94,6 +95,7 @@ CREATE TRIGGER update_public_catalog_settings_updated_at
 ALTER TABLE public.public_catalog_settings ENABLE ROW LEVEL SECURITY;
 
 -- Les utilisateurs authentifiés peuvent voir les settings de leur organisation
+DROP POLICY IF EXISTS "Users can view their organization catalog settings" ON public.public_catalog_settings;
 CREATE POLICY "Users can view their organization catalog settings"
   ON public.public_catalog_settings
   FOR SELECT
@@ -104,18 +106,20 @@ CREATE POLICY "Users can view their organization catalog settings"
   );
 
 -- Les admins peuvent modifier les settings de leur organisation
+DROP POLICY IF EXISTS "Admins can manage their organization catalog settings" ON public.public_catalog_settings;
 CREATE POLICY "Admins can manage their organization catalog settings"
   ON public.public_catalog_settings
   FOR ALL
   USING (
     organization_id IN (
-      SELECT organization_id FROM public.users 
-      WHERE id = auth.uid() 
+      SELECT organization_id FROM public.users
+      WHERE id = auth.uid()
       AND role IN ('super_admin', 'admin')
     )
   );
 
 -- Le catalogue public est visible par tous (lecture seule pour non authentifiés)
+DROP POLICY IF EXISTS "Public catalog settings are readable by everyone" ON public.public_catalog_settings;
 CREATE POLICY "Public catalog settings are readable by everyone"
   ON public.public_catalog_settings
   FOR SELECT
