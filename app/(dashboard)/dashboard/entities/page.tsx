@@ -10,11 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
-import { 
-  Building2, Plus, Search, Edit, Trash2, Users, Mail, Phone, MapPin, 
+import {
+  Building2, Plus, Search, Edit, Trash2, Users, Mail, Phone, MapPin,
   Briefcase, Save, Loader2, Filter, Globe, Building, School, MoreHorizontal,
-  User
+  User, Upload, Download
 } from 'lucide-react'
+import ExcelJS from 'exceljs'
+import { EntityImportDialog } from '@/components/entities/entity-import-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
@@ -71,6 +73,7 @@ function EntitiesPageContent() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
   const [editingEntity, setEditingEntity] = useState<ExternalEntity | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -315,6 +318,52 @@ function EntitiesPageContent() {
     })
   }
 
+  const handleExport = async () => {
+    if (!entities || entities.length === 0) {
+      addToast({ type: 'warning', title: 'Aucune donnée', description: 'Aucune entité à exporter.' })
+      return
+    }
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Entités')
+
+    const headers = [
+      'Nom', 'Type', 'Email', 'Téléphone', 'Adresse', 'Ville', 'Code postal', 'Pays',
+      'SIRET', 'SIREN', 'N° TVA', 'Forme juridique', 'Site web', "Secteur d'activité", 'Effectif',
+      'Contact prénom', 'Contact nom', 'Contact email', 'Contact téléphone', 'Contact poste', 'Actif',
+    ]
+    worksheet.addRow(headers)
+    const headerRow = worksheet.getRow(1)
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } }
+    worksheet.columns.forEach(col => { col.width = 20 })
+
+    const typeLabel: Record<string, string> = {
+      company: 'Entreprise', organization: 'Organisme',
+      institution: 'Établissement', partner: 'Partenaire', other: 'Autre',
+    }
+
+    entities.forEach(e => {
+      worksheet.addRow([
+        e.name, typeLabel[e.type] || e.type, e.email, e.phone, e.address, e.city,
+        e.postal_code, e.country, e.siret, e.siren, e.vat_number, e.legal_form,
+        e.website, e.activity_sector, e.employee_count,
+        e.contact_first_name, e.contact_last_name, e.contact_email,
+        e.contact_phone, e.contact_job_title, e.is_active ? 'Oui' : 'Non',
+      ])
+    })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `entites_${new Date().toISOString().split('T')[0]}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   const getTypeLabel = (type: ExternalEntity['type']) => {
     const labels: Record<ExternalEntity['type'], string> = {
       company: 'Entreprise',
@@ -395,8 +444,25 @@ function EntitiesPageContent() {
             </p>
           </motion.div>
           
-          <motion.div variants={itemVariants}>
-            <Button 
+          <motion.div variants={itemVariants} className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsImportOpen(true)}
+              className="gap-2 rounded-xl"
+            >
+              <Upload className="h-4 w-4" />
+              Importer
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={!entities || entities.length === 0}
+              className="gap-2 rounded-xl"
+            >
+              <Download className="h-4 w-4" />
+              Exporter
+            </Button>
+            <Button
               onClick={() => { resetForm(); setIsDialogOpen(true) }}
               className="bg-gradient-to-r from-brand-blue to-brand-blue-dark hover:from-brand-blue-dark hover:to-brand-blue-darker text-white shadow-lg shadow-brand-blue/25 transition-all hover:scale-[1.02] rounded-xl px-6 py-6 h-auto text-base"
             >
@@ -878,6 +944,8 @@ function EntitiesPageContent() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <EntityImportDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
     </motion.div>
   )
 }
