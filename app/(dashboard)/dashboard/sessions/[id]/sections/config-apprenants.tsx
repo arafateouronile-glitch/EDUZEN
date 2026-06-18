@@ -217,6 +217,27 @@ export function ConfigApprenants({
 
   const allStudents = useMemo(() => allStudentsResult?.data || [], [allStudentsResult?.data])
 
+  // Recherche server-side dans TOUTE la base quand l'utilisateur tape (bypass la pagination de 50)
+  const { data: searchStudentsResult, isFetching: isSearching } = useQuery({
+    queryKey: ['students-search', user?.organization_id, searchQuery],
+    queryFn: async () => {
+      if (!user?.organization_id || searchQuery.length < 2) return []
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('organization_id', user.organization_id)
+        .eq('is_active', true)
+        .or(
+          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,student_number.ilike.%${searchQuery}%`
+        )
+        .order('last_name', { ascending: true })
+        .limit(100)
+      if (error) throw error
+      return (data || []) as StudentWithRelations[]
+    },
+    enabled: !!user?.organization_id && searchQuery.length >= 2,
+  })
+
   // Récupérer les entités externes (entreprises/organismes)
   const { data: externalEntities } = useQuery({
     queryKey: ['external-entities', user?.organization_id],
@@ -276,18 +297,12 @@ export function ConfigApprenants({
   }, [filteredCandidates])
 
   const filteredAllStudents = useMemo(() => {
+    // Si l'utilisateur a tapé au moins 2 caractères, utiliser les résultats server-side
+    // (couvre toute la base, pas seulement les 50 premiers)
+    if (searchQuery.length >= 2 && searchStudentsResult) return searchStudentsResult
     if (!allStudents || !Array.isArray(allStudents)) return []
-    if (!searchQuery) return allStudents
-
-    const query = searchQuery.toLowerCase()
-    return allStudents.filter(
-      (student) =>
-        student.first_name?.toLowerCase().includes(query) ||
-        student.last_name?.toLowerCase().includes(query) ||
-        student.student_number?.toLowerCase().includes(query) ||
-        student.email?.toLowerCase().includes(query)
-    )
-  }, [allStudents, searchQuery])
+    return allStudents
+  }, [allStudents, searchQuery, searchStudentsResult])
 
   // IDs des étudiants déjà inscrits
   const enrolledStudentIds = useMemo(
@@ -543,8 +558,11 @@ export function ConfigApprenants({
                 placeholder="Rechercher un apprenant, une entreprise ou un organisme..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-8"
               />
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
+              )}
             </div>
             <Button
               onClick={() => {
