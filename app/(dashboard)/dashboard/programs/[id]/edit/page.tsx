@@ -115,7 +115,7 @@ export default function EditProgramPage() {
         currency: (firstFormation as any)?.currency || 'EUR',
         payment_plan: (firstFormation as any)?.payment_plan || 'full',
         prerequisites: (firstFormation as any)?.prerequisites || '',
-        capacity_max: (firstFormation as any)?.capacity_max?.toString() || '',
+        capacity_max: (program as any).capacity_max?.toString() || '',
         capacity_min: (program as any).capacity_min?.toString() || '',
         age_min: (firstFormation as any)?.age_min?.toString() || '',
         age_max: (firstFormation as any)?.age_max?.toString() || '',
@@ -198,6 +198,7 @@ export default function EditProgramPage() {
         accessibility_info: formData.accessibility_info || null,
         edof_hours: formData.edof_hours ? parseInt(formData.edof_hours) : null,
         capacity_min: formData.capacity_min ? parseInt(formData.capacity_min) : null,
+        capacity_max: formData.capacity_max ? parseInt(formData.capacity_max) : null,
         // Type d'action de formation
         training_action_type: formData.training_action_type || null,
         rs_title_name: formData.rs_title_name || null,
