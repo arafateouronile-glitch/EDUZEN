@@ -952,17 +952,17 @@ export function ConfigApprenants({
         </GlassCard>
       )}
 
-      {/* Autres étudiants disponibles */}
-      {allOtherStudents.length > 0 && (searchMode === 'all' || searchMode === 'students') && (
+      {/* Résultats de recherche — tous les apprenants de la base */}
+      {searchQuery.length >= 2 && allOtherStudents.length > 0 && (searchMode === 'all' || searchMode === 'students') && (
         <GlassCard variant="default" className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Users className="h-5 w-5 text-brand-blue" />
-                Autres étudiants
+                Résultats de recherche
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Étudiants actifs de l'organisation
+                Apprenants trouvés dans la base
               </p>
             </div>
             <Badge variant="outline" className="text-brand-blue border-brand-blue-200">
@@ -971,93 +971,71 @@ export function ConfigApprenants({
           </div>
 
           <div className="space-y-4">
-            {/* Étudiants disponibles (non inscrits) */}
             {availableStudents.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">
-                  Disponibles ({availableStudents.length})
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {availableStudents.slice(0, 12).map((student) => {
-                    const firstName = student.first_name || ''
-                    const lastName = student.last_name || ''
-                    const studentNumber = student.student_number || ''
-                    const email = student.email || ''
-                    const phone = student.phone || ''
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {availableStudents.map((student) => {
+                  const firstName = student.first_name || ''
+                  const lastName = student.last_name || ''
+                  const studentNumber = student.student_number || ''
+                  const email = student.email || ''
+                  const phone = student.phone || ''
 
-                    return (
-                      <motion.div
-                        key={student.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-4 rounded-lg border border-gray-200 hover:border-brand-blue-300 hover:shadow-md transition-all bg-white"
-                      >
-                        <div className="flex items-start gap-3">
-                          <Avatar
-                            fallback={`${firstName[0] || ''}${lastName[0] || ''}`}
-                            userId={student.id}
-                            size="md"
-                            src={student.photo_url || undefined}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-gray-900 truncate">
-                                  {firstName} {lastName}
-                                </p>
-                                {studentNumber && (
-                                  <p className="text-xs text-gray-500 mt-0.5 font-mono">
-                                    #{studentNumber}
-                                  </p>
-                                )}
+                  return (
+                    <motion.div
+                      key={student.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-lg border border-gray-200 hover:border-brand-blue-300 hover:shadow-md transition-all bg-white"
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar
+                          fallback={`${firstName[0] || ''}${lastName[0] || ''}`}
+                          userId={student.id}
+                          size="md"
+                          src={student.photo_url || undefined}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{firstName} {lastName}</p>
+                          {studentNumber && <p className="text-xs text-gray-500 mt-0.5 font-mono">#{studentNumber}</p>}
+                          <div className="mt-2 space-y-1">
+                            {email && (
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <Mail className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{email}</span>
                               </div>
-                            </div>
-                            <div className="mt-2 space-y-1">
-                              {email && (
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                  <Mail className="h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate">{email}</span>
-                                </div>
-                              )}
-                              {phone && (
-                                <div className="flex items-center gap-1 text-xs text-gray-500">
-                                  <Phone className="h-3 w-3 flex-shrink-0" />
-                                  <span>{phone}</span>
-                                </div>
-                              )}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="w-full mt-3"
-                              onClick={() => handleEnrollCandidate(student.id)}
-                              disabled={createEnrollmentMutation.isPending}
-                            >
-                              <UserPlus className="h-3 w-3 mr-1" />
-                              Inscrire
-                            </Button>
+                            )}
+                            {phone && (
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <Phone className="h-3 w-3 flex-shrink-0" />
+                                <span>{phone}</span>
+                              </div>
+                            )}
                           </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full mt-3"
+                            onClick={() => handleEnrollCandidate(student.id)}
+                            disabled={createEnrollmentMutation.isPending}
+                          >
+                            <UserPlus className="h-3 w-3 mr-1" />
+                            Inscrire
+                          </Button>
                         </div>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-                {availableStudents.length > 12 && (
-                  <p className="text-center text-sm text-gray-500 mt-4">
-                    + {availableStudents.length - 12} autre{availableStudents.length - 12 > 1 ? 's' : ''} étudiant{availableStudents.length - 12 > 1 ? 's' : ''}
-                  </p>
-                )}
+                      </div>
+                    </motion.div>
+                  )
+                })}
               </div>
             )}
-            
-            {/* Étudiants déjà inscrits */}
+            {/* Étudiants déjà inscrits dans les résultats */}
             {enrolledOtherStudents.length > 0 && (
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-3">
                   Déjà inscrits ({enrolledOtherStudents.length})
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {enrolledOtherStudents.slice(0, 12).map((student) => {
+                  {enrolledOtherStudents.slice(0, 50).map((student) => {
                     const firstName = student.first_name || ''
                     const lastName = student.last_name || ''
                     const studentNumber = student.student_number || ''
@@ -1144,9 +1122,9 @@ export function ConfigApprenants({
                     )
                   })}
                 </div>
-                {enrolledOtherStudents.length > 12 && (
+                {enrolledOtherStudents.length > 50 && (
                   <p className="text-center text-sm text-gray-500 mt-4">
-                    + {enrolledOtherStudents.length - 12} autre{enrolledOtherStudents.length - 12 > 1 ? 's' : ''} étudiant{enrolledOtherStudents.length - 12 > 1 ? 's' : ''}
+                    + {enrolledOtherStudents.length - 50} autre{enrolledOtherStudents.length - 50 > 1 ? 's' : ''} résultat{enrolledOtherStudents.length - 50 > 1 ? 's' : ''}
                   </p>
                 )}
               </div>
