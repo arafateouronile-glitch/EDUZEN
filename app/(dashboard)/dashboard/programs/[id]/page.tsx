@@ -534,14 +534,155 @@ export default function ProgramDetailPage() {
             <motion.div variants={itemVariants}>
               <GlassCard variant="default" className="overflow-hidden">
                 <Accordion type="multiple" className="w-full divide-y divide-gray-100">
+
+                  {/* Description */}
+                  <AccordionItem value="description" className="border-none">
+                    <AccordionTrigger className="px-6 py-4 hover:bg-gray-50/50 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors"><FileText className="h-4 w-4" /></div>
+                        <span className="font-medium text-gray-900 group-hover:text-brand-blue transition-colors">Description du programme</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <textarea {...register('description')} rows={6} className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all duration-200 resize-y" placeholder="Description du programme..." />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Objectifs pédagogiques — onglets JSONB */}
+                  <AccordionItem value="objectives" className="border-none">
+                    <AccordionTrigger className="px-6 py-4 hover:bg-gray-50/50 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors"><ListChecks className="h-4 w-4" /></div>
+                        <span className="font-medium text-gray-900 group-hover:text-brand-blue transition-colors">Objectifs pédagogiques</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      {(() => {
+                        const tabs = (program as any)?.pedagogical_objectives_tabs
+                        if (!Array.isArray(tabs) || tabs.length === 0) return <p className="text-sm text-gray-400 italic">Aucun objectif renseigné</p>
+                        return <div className="space-y-4">{tabs.map((tab: { id: string; title: string; content: string }) => (
+                          <div key={tab.id} className="rounded-xl border border-gray-100 overflow-hidden">
+                            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-sm font-medium text-brand-blue">{tab.title}</div>
+                            <pre className="px-4 py-3 text-sm text-gray-700 whitespace-pre-wrap font-sans">{tab.content || <span className="text-gray-400 italic">Vide</span>}</pre>
+                          </div>
+                        ))}</div>
+                      })()}
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Contenu de la formation — onglets JSONB */}
+                  <AccordionItem value="content" className="border-none">
+                    <AccordionTrigger className="px-6 py-4 hover:bg-gray-50/50 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors"><BookOpen className="h-4 w-4" /></div>
+                        <span className="font-medium text-gray-900 group-hover:text-brand-blue transition-colors">Contenu de la formation</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      {(() => {
+                        const tabs = (program as any)?.training_content_tabs
+                        if (!Array.isArray(tabs) || tabs.length === 0) return <p className="text-sm text-gray-400 italic">Aucun contenu renseigné</p>
+                        return <div className="space-y-4">{tabs.map((tab: { id: string; title: string; content: string }) => (
+                          <div key={tab.id} className="rounded-xl border border-gray-100 overflow-hidden">
+                            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-sm font-medium text-brand-blue">{tab.title}</div>
+                            <pre className="px-4 py-3 text-sm text-gray-700 whitespace-pre-wrap font-sans">{tab.content || <span className="text-gray-400 italic">Vide</span>}</pre>
+                          </div>
+                        ))}</div>
+                      })()}
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Modalités — données plates JSONB */}
+                  <AccordionItem value="modalities" className="border-none">
+                    <AccordionTrigger className="px-6 py-4 hover:bg-gray-50/50 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors"><Settings className="h-4 w-4" /></div>
+                        <span className="font-medium text-gray-900 group-hover:text-brand-blue transition-colors">Modalités</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        {(program as any)?.modalities && <div><span className="text-gray-500">Type</span><p className="font-medium capitalize mt-0.5">{(program as any).modalities}</p></div>}
+                        {(program as any)?.lieu && <div><span className="text-gray-500">Lieu</span><p className="font-medium mt-0.5">{(program as any).lieu}</p></div>}
+                        {(program as any)?.access_delay_days != null && <div><span className="text-gray-500">Délai d'accès</span><p className="font-medium mt-0.5">{(program as any).access_delay_days} jours</p></div>}
+                        {(program as any)?.edof_hours != null && <div><span className="text-gray-500">EDOF</span><p className="font-medium mt-0.5">{(program as any).edof_hours} / 250 h</p></div>}
+                        {((program as any)?.capacity_min != null || (program as any)?.capacity_max != null) && (
+                          <div><span className="text-gray-500">Effectif</span><p className="font-medium mt-0.5">Min {(program as any).capacity_min ?? '—'} · Max {(program as any).capacity_max ?? '—'}</p></div>
+                        )}
+                        {(program as any)?.accessibility_info && <div className="sm:col-span-2"><span className="text-gray-500">Accessibilité</span><p className="mt-0.5 text-gray-700">{(program as any).accessibility_info}</p></div>}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Profil des apprenants — onglets JSONB */}
+                  <AccordionItem value="profile" className="border-none">
+                    <AccordionTrigger className="px-6 py-4 hover:bg-gray-50/50 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors"><GraduationCap className="h-4 w-4" /></div>
+                        <span className="font-medium text-gray-900 group-hover:text-brand-blue transition-colors">Profil des apprenants</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      {(() => {
+                        const tabs = (program as any)?.learner_profile_tabs
+                        if (!Array.isArray(tabs) || tabs.length === 0) return <p className="text-sm text-gray-400 italic">Aucun profil renseigné</p>
+                        return <div className="space-y-4">{tabs.map((tab: { id: string; title: string; content: string }) => (
+                          <div key={tab.id} className="rounded-xl border border-gray-100 overflow-hidden">
+                            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-sm font-medium text-brand-blue">{tab.title}</div>
+                            <pre className="px-4 py-3 text-sm text-gray-700 whitespace-pre-wrap font-sans">{tab.content || <span className="text-gray-400 italic">Vide</span>}</pre>
+                          </div>
+                        ))}</div>
+                      })()}
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Type d'action de formation */}
+                  <AccordionItem value="type" className="border-none">
+                    <AccordionTrigger className="px-6 py-4 hover:bg-gray-50/50 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors"><Award className="h-4 w-4" /></div>
+                        <span className="font-medium text-gray-900 group-hover:text-brand-blue transition-colors">Type d'action de formation</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <div className="space-y-3 text-sm">
+                        {(program as any)?.training_action_type ? (
+                          <>
+                            <div><span className="text-gray-500">Type</span>
+                              <p className="font-medium mt-0.5 capitalize">{(program as any).training_action_type.replace(/_/g, ' ')}</p>
+                            </div>
+                            {(program as any)?.rs_title_name && <div><span className="text-gray-500">Titre visé</span><p className="font-medium mt-0.5">{(program as any).rs_title_name}</p></div>}
+                            {(program as any)?.rs_code && <div><span className="text-gray-500">Code RS</span><p className="font-mono font-medium mt-0.5">{(program as any).rs_code}</p></div>}
+                          </>
+                        ) : <p className="text-gray-400 italic">Non renseigné</p>}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Suivi de l'exécution — onglets JSONB */}
+                  <AccordionItem value="followup" className="border-none">
+                    <AccordionTrigger className="px-6 py-4 hover:bg-gray-50/50 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors"><FileCheck className="h-4 w-4" /></div>
+                        <span className="font-medium text-gray-900 group-hover:text-brand-blue transition-colors">Suivi de l'exécution</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      {(() => {
+                        const tabs = (program as any)?.execution_follow_up_tabs
+                        if (!Array.isArray(tabs) || tabs.length === 0) return <p className="text-sm text-gray-400 italic">Aucun suivi renseigné</p>
+                        return <div className="space-y-4">{tabs.map((tab: { id: string; title: string; content: string }) => (
+                          <div key={tab.id} className="rounded-xl border border-gray-100 overflow-hidden">
+                            <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-sm font-medium text-brand-blue">{tab.title}</div>
+                            <pre className="px-4 py-3 text-sm text-gray-700 whitespace-pre-wrap font-sans">{tab.content || <span className="text-gray-400 italic">Vide</span>}</pre>
+                          </div>
+                        ))}</div>
+                      })()}
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Sections restantes — simples textareas */}
                   {[
-                    { id: 'description', title: 'Description du programme', icon: FileText, rows: 6 },
-                    { id: 'objectives', title: 'Objectifs pédagogiques', icon: ListChecks, rows: 4 },
-                    { id: 'content', title: 'Contenu de la formation', icon: BookOpen, rows: 8 },
-                    { id: 'modalities', title: 'Modalités', icon: Settings, rows: 4 },
-                    { id: 'profile', title: 'Profil des apprenants', icon: GraduationCap, rows: 4 },
-                    { id: 'type', title: 'Type d\'action de formation', icon: Award, rows: 3 },
-                    { id: 'followup', title: 'Suivi de l\'exécution', icon: FileCheck, rows: 4 },
                     { id: 'certification', title: 'Modalités de certification', icon: Award, rows: 4 },
                     { id: 'quality', title: 'Qualité', icon: Shield, rows: 4 },
                     { id: 'accounting', title: 'Configuration comptable', icon: Euro, rows: 2 },
@@ -550,22 +691,16 @@ export default function ProgramDetailPage() {
                     <AccordionItem key={section.id} value={section.id} className="border-none">
                       <AccordionTrigger className="px-6 py-4 hover:bg-gray-50/50 transition-colors group">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors">
-                            <section.icon className="h-4 w-4" />
-                          </div>
+                          <div className="p-2 bg-brand-blue/5 rounded-lg text-brand-blue group-hover:bg-brand-blue/10 transition-colors"><section.icon className="h-4 w-4" /></div>
                           <span className="font-medium text-gray-900 group-hover:text-brand-blue transition-colors">{section.title}</span>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="px-6 pb-6">
-                        <textarea
-                          {...register(section.id as any)}
-                          rows={section.rows}
-                          className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all duration-200 resize-y"
-                          placeholder={`Saisissez ${section.title.toLowerCase()}...`}
-                        />
+                        <textarea {...register(section.id as any)} rows={section.rows} className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all duration-200 resize-y" placeholder={`Saisissez ${section.title.toLowerCase()}...`} />
                       </AccordionContent>
                     </AccordionItem>
                   ))}
+
                 </Accordion>
               </GlassCard>
             </motion.div>
