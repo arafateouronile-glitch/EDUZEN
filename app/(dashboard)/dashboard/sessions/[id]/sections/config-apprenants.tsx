@@ -26,7 +26,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
-import { studentService } from '@/lib/services/student.service.client'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -197,36 +196,16 @@ export function ConfigApprenants({
     enabled: !!formationId && !!user?.organization_id && !!sessionId,
   })
 
-  // Récupérer tous les étudiants actifs (pour recherche et création)
-  const { data: allStudentsResult } = useQuery<{
-    data: StudentWithRelations[]
-    total: number
-    page: number
-    limit: number
-    totalPages: number
-  }>({
-    queryKey: ['all-students', user?.organization_id],
-    queryFn: async () => {
-      if (!user?.organization_id) {
-        return { data: [], total: 0, page: 1, limit: 50, totalPages: 0 }
-      }
-      return studentService.getAll(user.organization_id, { status: 'active' })
-    },
-    enabled: !!user?.organization_id,
-  })
-
-  const allStudents = useMemo(() => allStudentsResult?.data || [], [allStudentsResult?.data])
-
   // Recherche server-side dans TOUTE la base quand l'utilisateur tape (bypass la pagination de 50)
   const { data: searchStudentsResult, isFetching: isSearching } = useQuery({
     queryKey: ['students-search', user?.organization_id, searchQuery],
     queryFn: async () => {
-      if (!user?.organization_id || searchQuery.length < 2) return []
+      if (!user?.organization_id || searchQuery.length < 1) return []
       const { data, error } = await supabase
         .from('students')
         .select('*')
         .eq('organization_id', user.organization_id)
-        .eq('is_active', true)
+        .eq('status', 'active')
         .or(
           `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,student_number.ilike.%${searchQuery}%`
         )
@@ -235,7 +214,7 @@ export function ConfigApprenants({
       if (error) throw error
       return (data || []) as StudentWithRelations[]
     },
-    enabled: !!user?.organization_id && searchQuery.length >= 2,
+    enabled: !!user?.organization_id && searchQuery.length >= 1,
   })
 
   // Récupérer les entités externes (entreprises/organismes)
@@ -297,12 +276,9 @@ export function ConfigApprenants({
   }, [filteredCandidates])
 
   const filteredAllStudents = useMemo(() => {
-    // Si l'utilisateur a tapé au moins 2 caractères, utiliser les résultats server-side
-    // (couvre toute la base, pas seulement les 50 premiers)
-    if (searchQuery.length >= 2 && searchStudentsResult) return searchStudentsResult
-    if (!allStudents || !Array.isArray(allStudents)) return []
-    return allStudents
-  }, [allStudents, searchQuery, searchStudentsResult])
+    if (!searchQuery || searchQuery.length < 1) return []
+    return searchStudentsResult || []
+  }, [searchQuery, searchStudentsResult])
 
   // IDs des étudiants déjà inscrits
   const enrolledStudentIds = useMemo(
@@ -952,8 +928,18 @@ export function ConfigApprenants({
         </GlassCard>
       )}
 
+      {/* État de chargement / aucun résultat */}
+      {searchQuery.length >= 1 && (searchMode === 'all' || searchMode === 'students') && !isSearching && allOtherStudents.length === 0 && !filteredCandidates.length && (
+        <GlassCard variant="default" className="p-6">
+          <div className="text-center py-4 text-gray-500">
+            <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">Aucun apprenant trouvé pour &laquo;&nbsp;{searchQuery}&nbsp;&raquo;</p>
+          </div>
+        </GlassCard>
+      )}
+
       {/* Résultats de recherche — tous les apprenants de la base */}
-      {searchQuery.length >= 2 && allOtherStudents.length > 0 && (searchMode === 'all' || searchMode === 'students') && (
+      {searchQuery.length >= 1 && allOtherStudents.length > 0 && (searchMode === 'all' || searchMode === 'students') && (
         <GlassCard variant="default" className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
