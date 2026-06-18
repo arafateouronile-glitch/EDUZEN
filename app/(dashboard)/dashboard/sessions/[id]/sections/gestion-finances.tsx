@@ -391,6 +391,12 @@ export function GestionFinances({
       // Fallback sur le prop sessionModules (déjà chargé par le hook parent)
       const resolvedModules = freshModules ?? (sessionModules?.length ? sessionModules : undefined)
 
+      let invoiceCompany = null
+      if (student?.id) {
+        const { data: ce } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).single()
+        if (ce?.companies && !Array.isArray(ce.companies)) invoiceCompany = ce.companies
+      }
+
       const variables = extractDocumentVariables({
         student,
         organization: org ?? undefined,
@@ -398,6 +404,7 @@ export function GestionFinances({
         invoice: invoiceData,
         sessionModules: resolvedModules,
         academicYear,
+        company: invoiceCompany as any,
         language: 'fr',
         issueDate: invoice.issue_date ?? undefined,
       })
@@ -494,6 +501,12 @@ export function GestionFinances({
       }
       const resolvedModules2 = freshModules2 ?? (sessionModules?.length ? sessionModules : undefined)
 
+      let emailInvoiceCompany = null
+      if (student?.id) {
+        const { data: ce2 } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).single()
+        if (ce2?.companies && !Array.isArray(ce2.companies)) emailInvoiceCompany = ce2.companies
+      }
+
       const variables = extractDocumentVariables({
         student,
         organization: org ?? undefined,
@@ -501,6 +514,7 @@ export function GestionFinances({
         invoice: invoiceData,
         sessionModules: resolvedModules2,
         academicYear,
+        company: emailInvoiceCompany as any,
         language: 'fr',
         issueDate: invoice.issue_date ?? undefined,
       })

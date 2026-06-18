@@ -382,12 +382,20 @@ export default function InvoiceDetailPage() {
       const student = invoice.students as StudentWithRelations | undefined
       const invoiceData = invoice as InvoiceWithRelations
 
+      let paymentCompany = null
+      if (student?.id) {
+        const supabase = createClient()
+        const { data: ce } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).single()
+        if (ce?.companies && !Array.isArray(ce.companies)) paymentCompany = ce.companies
+      }
+
       const variables = extractDocumentVariables({
         student,
         organization: organization as TableRow<'organizations'>,
         session: undefined,
         invoice: invoiceData,
         academicYear,
+        company: paymentCompany as any,
         language: 'fr',
         issueDate: invoice.issue_date ?? undefined,
       })

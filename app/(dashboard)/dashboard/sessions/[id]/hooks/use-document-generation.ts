@@ -29,6 +29,27 @@ import type { TableRow } from '@/lib/types/supabase-helpers'
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
+type Company = TableRow<'companies'>
+
+/** Récupère l'entreprise principale d'un étudiant via company_employees */
+async function fetchStudentCompany(studentId: string): Promise<Company | null> {
+  try {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('company_employees')
+      .select('companies(*)')
+      .eq('student_id', studentId)
+      .eq('is_active', true)
+      .limit(1)
+      .single()
+    if (data && data.companies && !Array.isArray(data.companies)) {
+      return data.companies as Company
+    }
+    return null
+  } catch {
+    return null
+  }
+}
 
 interface DocumentGenerationProps {
   sessionData: SessionWithRelations | undefined
@@ -343,6 +364,7 @@ export function useDocumentGeneration({
       }
 
       // Préparer les variables pour le template
+      const studentCompany = await fetchStudentCompany(student.id)
       const variables = extractDocumentVariables({
         student: student as any,
         session: {
@@ -353,6 +375,7 @@ export function useDocumentGeneration({
         } as any,
         organization: organization as any,
         program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+        company: studentCompany,
         language: 'fr',
         issueDate: new Date().toISOString(),
       })
@@ -525,6 +548,7 @@ export function useDocumentGeneration({
       }
 
       // Préparer les variables pour le template
+      const convocationCompany = await fetchStudentCompany(student.id)
       const variables = extractDocumentVariables({
         student: {
           ...student,
@@ -544,6 +568,7 @@ export function useDocumentGeneration({
         } as any,
         organization: organization as any,
         program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+        company: convocationCompany,
         language: 'fr',
         issueDate: new Date().toISOString(),
       })
@@ -1275,6 +1300,7 @@ export function useDocumentGeneration({
 
         if (template) {
           // Utiliser l'API pour générer le PDF avec le template
+          const zipStudentCompany = await fetchStudentCompany(student.id)
           const variables = extractDocumentVariables({
             student: {
               ...student,
@@ -1293,6 +1319,7 @@ export function useDocumentGeneration({
             } as any,
             organization: organization as any,
             program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+            company: zipStudentCompany,
             language: 'fr',
             issueDate: new Date().toISOString(),
           })
@@ -1996,6 +2023,7 @@ export function useDocumentGeneration({
 
       if (template) {
         // Même pipeline que le téléchargement : API generate-pdf (Puppeteer) pour un PDF identique
+        const emailContractCompany = await fetchStudentCompany(student.id)
         const variables = extractDocumentVariables({
           student: student as any,
           session: {
@@ -2006,6 +2034,7 @@ export function useDocumentGeneration({
           } as any,
           organization: organization as any,
           program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+          company: emailContractCompany,
           language: 'fr',
           issueDate: new Date().toISOString(),
         })
@@ -2239,6 +2268,7 @@ export function useDocumentGeneration({
         : await templateService.getDefaultTemplate(organization.id, 'contrat')
 
       if (template) {
+        const previewContractCompany = await fetchStudentCompany(student.id)
         const variables = extractDocumentVariables({
           student: student as any,
           session: {
@@ -2249,6 +2279,7 @@ export function useDocumentGeneration({
           } as any,
           organization: organization as any,
           program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+          company: previewContractCompany,
           language: 'fr',
           issueDate: new Date().toISOString(),
         })
@@ -2648,6 +2679,7 @@ export function useDocumentGeneration({
         return
       }
 
+      const conventionStudentCompany = await fetchStudentCompany(student.id)
       const variables = extractDocumentVariables({
         student: student as any,
         session: {
@@ -2658,6 +2690,7 @@ export function useDocumentGeneration({
         } as any,
         organization: organization as any,
         program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+        company: conventionStudentCompany,
         language: 'fr',
         issueDate: new Date().toISOString(),
       })
