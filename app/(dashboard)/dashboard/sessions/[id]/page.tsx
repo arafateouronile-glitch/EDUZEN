@@ -132,6 +132,22 @@ export default function SessionDetailPage() {
   const { addToast } = useToast()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isDuplicating, setIsDuplicating] = useState(false)
+
+  const handleDuplicateSession = async () => {
+    if (!sessionId) return
+    setIsDuplicating(true)
+    try {
+      const copy = await sessionService.duplicateSession(sessionId)
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      addToast({ title: 'Session dupliquée', description: 'La copie a été créée (brouillon).', type: 'success' })
+      router.push(`/dashboard/sessions/${copy.id}`)
+    } catch (err: unknown) {
+      addToast({ title: 'Erreur', description: err instanceof Error ? err.message : 'Impossible de dupliquer la session.', type: 'error' })
+    } finally {
+      setIsDuplicating(false)
+    }
+  }
 
   const handleDeleteSession = async () => {
     if (!sessionId) return
@@ -390,8 +406,15 @@ export default function SessionDetailPage() {
                   Actions rapides
                 </h4>
                 <div className="space-y-1.5">
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-brand-blue hover:shadow-sm rounded-xl text-xs font-medium">
-                    <Copy className="w-3.5 h-3.5 mr-2" /> Dupliquer la session
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-brand-blue hover:shadow-sm rounded-xl text-xs font-medium"
+                    onClick={handleDuplicateSession}
+                    disabled={isDuplicating}
+                  >
+                    <Copy className="w-3.5 h-3.5 mr-2" />
+                    {isDuplicating ? 'Duplication…' : 'Dupliquer la session'}
                   </Button>
                   <Button variant="ghost" size="sm" className="w-full justify-start h-9 text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm rounded-xl text-xs font-medium">
                     <ExternalLink className="w-3.5 h-3.5 mr-2" /> Voir sur le portail

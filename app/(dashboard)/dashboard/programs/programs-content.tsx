@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, Search, BookOpen, Calendar, Users, BookMarked, TrendingUp, CheckCircle, XCircle, Activity, ArrowRight, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { Plus, Search, BookOpen, Calendar, Users, BookMarked, TrendingUp, CheckCircle, XCircle, Activity, ArrowRight, SlidersHorizontal, Trash2, Copy } from 'lucide-react'
 import Link from 'next/link'
 import { PulseOnMount } from '@/components/ui/micro-interactions'
 import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
@@ -87,6 +87,18 @@ export function ProgramsContent({
     },
     onError: (err: Error & { message?: string }) => {
       addToast({ title: 'Erreur', description: err?.message || 'Impossible de supprimer le programme.', type: 'error' })
+    },
+  })
+
+  const duplicateProgramMutation = useMutation({
+    mutationFn: (id: string) => programService.duplicateProgram(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['programs'] })
+      await queryClient.invalidateQueries({ queryKey: ['programs-global-stats'] })
+      addToast({ title: 'Programme dupliqué', description: 'La copie a été créée (inactive).', type: 'success' })
+    },
+    onError: (err: Error & { message?: string }) => {
+      addToast({ title: 'Erreur', description: err?.message || 'Impossible de dupliquer le programme.', type: 'error' })
     },
   })
 
@@ -421,6 +433,21 @@ export function ProgramsContent({
                             </div>
 
                             <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-gray-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-lg"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  duplicateProgramMutation.mutate(program.id)
+                                }}
+                                title="Dupliquer le programme"
+                                disabled={duplicateProgramMutation.isPending}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
                               <Button
                                 type="button"
                                 variant="ghost"

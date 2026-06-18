@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, Search, BookMarked, Calendar, Users, DollarSign, Filter, TrendingUp, CheckCircle, XCircle, BookOpen, Activity, ArrowRight, SlidersHorizontal, ArrowUpRight, Clock, Trash2 } from 'lucide-react'
+import { Plus, Search, BookMarked, Calendar, Users, DollarSign, Filter, TrendingUp, CheckCircle, XCircle, BookOpen, Activity, ArrowRight, SlidersHorizontal, ArrowUpRight, Clock, Trash2, Copy } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency, cn } from '@/lib/utils'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -168,6 +168,18 @@ function FormationsPageContent() {
     },
     onError: (err: any) => {
       addToast({ title: 'Erreur', description: err?.message || 'Impossible de supprimer la formation.', type: 'error' })
+    },
+  })
+
+  const duplicateFormationMutation = useMutation({
+    mutationFn: (id: string) => formationService.duplicateFormation(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['formations'] })
+      await queryClient.invalidateQueries({ queryKey: ['formation-stats'] })
+      addToast({ title: 'Formation dupliquée', description: 'La copie a été créée (inactive).', type: 'success' })
+    },
+    onError: (err: any) => {
+      addToast({ title: 'Erreur', description: err?.message || 'Impossible de dupliquer la formation.', type: 'error' })
     },
   })
 
@@ -678,6 +690,21 @@ function FormationsPageContent() {
                           </motion.div>
 
                           <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-lg"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                duplicateFormationMutation.mutate(formation.id)
+                              }}
+                              title="Dupliquer la formation"
+                              disabled={duplicateFormationMutation.isPending}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
                             <Button
                               type="button"
                               variant="ghost"

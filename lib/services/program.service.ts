@@ -140,6 +140,28 @@ export class ProgramService {
   }
 
   /**
+   * Duplique un programme (sans ses formations/sessions associées)
+   */
+  async duplicateProgram(id: string) {
+    try {
+      const original = await this.getProgramById(id)
+      const { id: _id, created_at: _ca, updated_at: _ua, formations: _f, ...rest } = original as any
+      const copy = {
+        ...rest,
+        name: `Copie de ${original.name}`,
+        code: original.code ? `${original.code}-COPIE` : undefined,
+        is_active: false,
+      }
+      const { data, error } = await this.supabase.from('programs').insert(copy).select().single()
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('ProgramService.duplicateProgram', error, { id })
+      throw error
+    }
+  }
+
+  /**
    * Récupère toutes les formations d'un programme
    */
   async getFormationsByProgram(programId: string) {

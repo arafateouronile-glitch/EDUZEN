@@ -417,6 +417,34 @@ export class SessionService {
   }
 
   /**
+   * Duplique une session (sans les inscriptions ni les émargements)
+   */
+  async duplicateSession(id: string) {
+    try {
+      const { data: original, error: fetchError } = await this.supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', id)
+        .single()
+      if (fetchError) throw fetchError
+      const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = original as any
+      const copy = {
+        ...rest,
+        title: `Copie de ${original.title}`,
+        status: 'draft',
+        start_date: null,
+        end_date: null,
+      }
+      const { data, error } = await this.supabase.from('sessions').insert(copy).select().single()
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('SessionService.duplicateSession', error, { id })
+      throw error
+    }
+  }
+
+  /**
    * Supprime une session
    */
   async deleteSession(id: string) {

@@ -149,6 +149,33 @@ export class FormationService {
   }
 
   /**
+   * Duplique une formation (sans ses sessions associées)
+   */
+  async duplicateFormation(id: string) {
+    try {
+      const { data: original, error: fetchError } = await this.supabase
+        .from('formations')
+        .select('*')
+        .eq('id', id)
+        .single()
+      if (fetchError) throw fetchError
+      const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = original as any
+      const copy = {
+        ...rest,
+        name: `Copie de ${original.name}`,
+        code: original.code ? `${original.code}-COPIE` : undefined,
+        is_active: false,
+      }
+      const { data, error } = await this.supabase.from('formations').insert(copy).select().single()
+      if (error) throw error
+      return data
+    } catch (error) {
+      logger.error('FormationService.duplicateFormation', error, { id })
+      throw error
+    }
+  }
+
+  /**
    * Supprime définitivement une formation de la base de données
    */
   async hardDeleteFormation(id: string) {
