@@ -231,17 +231,24 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     eleve_telephone: stud?.phone || '',
     eleve_email: stud?.email || '',
 
-    // Entreprise / Client (table companies ou fallback student)
+    // Entreprise / Client (table companies ou external_entities via fallback)
+    // Les deux tables ont des noms de champs légèrement différents — on lit les deux
     entreprise_nom: company?.name || stud?.company_name || stud?.entreprise_nom || '',
     entreprise_adresse: company?.address || '',
     entreprise_code_postal: company?.postal_code || '',
     entreprise_ville: company?.city || '',
-    entreprise_telephone: company?.phone || '',
-    entreprise_email: company?.email || company?.billing_email || '',
+    entreprise_telephone: company?.phone || (company as unknown as Record<string, string>)?.contact_phone || '',
+    entreprise_email: company?.email || company?.billing_email || (company as unknown as Record<string, string>)?.contact_email || '',
     entreprise_siret: company?.siret || '',
-    entreprise_tva: (company?.metadata as Record<string, unknown> | null)?.tva_number as string || '',
-    entreprise_contact: '',
-    entreprise_representant: '',
+    entreprise_tva: (company as unknown as Record<string, string>)?.vat_number || (company?.metadata as Record<string, unknown> | null)?.tva_number as string || '',
+    entreprise_contact: (() => {
+      const c = company as unknown as Record<string, string> | null
+      if (!c) return ''
+      const first = c.contact_first_name || ''
+      const last = c.contact_last_name || ''
+      return `${first} ${last}`.trim()
+    })(),
+    entreprise_representant: (company as unknown as Record<string, string>)?.contact_job_title || '',
 
     tuteur_nom: stud?.tutor_name || stud?.representative_name || (student ? `${student.first_name || ''} ${student.last_name || ''}`.trim() : ''),
     // Destinataire du devis : entreprise si disponible, sinon prénom + nom de l'étudiant

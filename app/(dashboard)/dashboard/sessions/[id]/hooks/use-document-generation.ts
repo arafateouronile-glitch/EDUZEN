@@ -31,19 +31,61 @@ type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
 type Company = TableRow<'companies'>
 
-/** Récupère l'entreprise principale d'un étudiant via company_employees */
+/** Récupère l'entité principale d'un étudiant (external_entities via student_entities) */
 async function fetchStudentCompany(studentId: string): Promise<Company | null> {
   try {
     const supabase = createClient()
-    const { data } = await supabase
+    // Priorité : external_entities (table principale pour les entreprises/entités)
+    const { data: seData } = await supabase
+      .from('student_entities')
+      .select('external_entities(*)')
+      .eq('student_id', studentId)
+      .eq('is_current', true)
+      .limit(1)
+      .single()
+    if (seData?.external_entities && !Array.isArray(seData.external_entities)) {
+      const ext = seData.external_entities as Record<string, unknown>
+      // Mapper external_entities → Company pour compatibilité avec extractDocumentVariables
+      return {
+        id: ext.id as string,
+        name: ext.name as string,
+        address: ext.address as string | null,
+        city: ext.city as string | null,
+        postal_code: ext.postal_code as string | null,
+        phone: ext.phone as string | null,
+        email: ext.email as string | null,
+        billing_email: ext.contact_email as string | null,
+        siret: ext.siret as string | null,
+        siren: ext.siren as string | null,
+        website: ext.website as string | null,
+        metadata: { tva_number: ext.vat_number },
+        organization_id: ext.organization_id as string,
+        is_active: ext.is_active as boolean,
+        billing_address: null,
+        country: ext.country as string | null,
+        legal_form: ext.legal_form as string | null,
+        logo_url: null,
+        notes: null,
+        opco_contact_email: null,
+        opco_id: null,
+        opco_name: null,
+        created_at: ext.created_at as string,
+        updated_at: ext.updated_at as string,
+        deleted_at: null,
+        deleted_by: null,
+        external_entity_id: null,
+      } as Company
+    }
+    // Fallback : company_employees
+    const { data: ceData } = await supabase
       .from('company_employees')
       .select('companies(*)')
       .eq('student_id', studentId)
       .eq('is_active', true)
       .limit(1)
       .single()
-    if (data && data.companies && !Array.isArray(data.companies)) {
-      return data.companies as Company
+    if (ceData?.companies && !Array.isArray(ceData.companies)) {
+      return ceData.companies as Company
     }
     return null
   } catch {
