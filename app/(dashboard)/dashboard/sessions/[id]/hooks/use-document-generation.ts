@@ -2556,11 +2556,149 @@ export function useDocumentGeneration({
     }
   }
 
+  // Convention individuelle pour un apprenant rattaché à une entreprise
+  const handleGenerateConventionForEnrollment = async (enrollment: EnrollmentWithRelations, templateId?: string) => {
+    if (!sessionData || !formation || !organization || !enrollment) return
+
+    const student = enrollment.students
+    if (!student) return
+
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      let template: DocumentTemplate | null = null
+
+      if (templateId) {
+        template = await templateService.getTemplateById(templateId)
+      } else {
+        template = await templateService.getDefaultTemplate(organization.id, 'convention')
+      }
+
+      if (!template) {
+        const html = await generateContractHTML({
+          student: {
+            first_name: student.first_name,
+            last_name: student.last_name,
+            email: student.email || undefined,
+            phone: student.phone || undefined,
+            address: student.address || undefined,
+            date_of_birth: student.date_of_birth || undefined,
+          },
+          session: {
+            name: sessionData.name,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            location: sessionData.location || undefined,
+          },
+          formation: {
+            name: formation.name,
+            code: formation.code || undefined,
+            price: (formation as FormationWithRelations & { price?: number }).price || undefined,
+            duration_hours: (formation as FormationWithRelations & { duration_hours?: number }).duration_hours || undefined,
+          },
+          program: program ? { name: program.name } : undefined,
+          organization: {
+            name: organization.name,
+            address: organization.address || undefined,
+            phone: organization.phone || undefined,
+            email: organization.email || undefined,
+            logo_url: organization.logo_url || undefined,
+          },
+          enrollment: {
+            enrollment_date: enrollment.enrollment_date || '',
+            total_amount: enrollment.total_amount || 0,
+            paid_amount: enrollment.paid_amount || 0,
+          },
+          issueDate: new Date().toISOString(),
+          language: 'fr',
+          organizationId: organization.id,
+          templateId,
+        })
+
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = html
+        tempDiv.style.position = 'absolute'
+        tempDiv.style.left = '-9999px'
+        tempDiv.style.top = '-9999px'
+        tempDiv.style.width = '210mm'
+        tempDiv.style.minHeight = '297mm'
+        document.body.appendChild(tempDiv)
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+        if (!element) element = tempDiv.querySelector('.document-container') as HTMLElement
+        if (!element) element = tempDiv.querySelector('div') as HTMLElement
+        if (!element) { document.body.removeChild(tempDiv); throw new Error('Élément de document non trouvé') }
+
+        const elementId = `temp-convention-${Date.now()}`
+        element.id = elementId
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        const pdfBlob = await generatePDFBlobFromHTML(elementId)
+        document.body.removeChild(tempDiv)
+
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `convention_${student.last_name}_${student.first_name}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        addToast({ type: 'success', title: 'Convention générée', description: 'La convention a été générée et téléchargée avec succès.' })
+        return
+      }
+
+      const variables = extractDocumentVariables({
+        student: student as any,
+        session: {
+          ...sessionData,
+          start_date: sessionData.start_date,
+          end_date: sessionData.end_date,
+          location: sessionData.location || undefined,
+        } as any,
+        organization: organization as any,
+        program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+        language: 'fr',
+        issueDate: new Date().toISOString(),
+      })
+
+      const response = await fetch('/api/documents/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template, variables, documentId: undefined, organizationId: organization.id }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+      }
+
+      const pdfBlob = await response.blob()
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `convention_${student.last_name}_${student.first_name}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      addToast({ type: 'success', title: 'Convention générée', description: 'La convention a été générée et téléchargée avec succès.' })
+    } catch (error) {
+      logger.error('Erreur lors de la génération de la convention', error as Error, {
+        enrollmentId: enrollment.id,
+        studentId: enrollment.student_id,
+      })
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la génération de la convention.' })
+    }
+  }
+
   return {
     isGeneratingZip,
     zipGenerationProgress,
     lastZipGeneration,
     handleGenerateConvention,
+    handleGenerateConventionForEnrollment,
     handleGenerateContract,
     handleGenerateConvocation,
     handleGenerateProgram,

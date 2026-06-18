@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { FileText, Download, Mail, AlertCircle, UserPlus, CheckCircle2, Clock, FileCheck, Sparkles, Send, Eye, PenTool } from 'lucide-react'
+import { FileText, Download, Mail, AlertCircle, UserPlus, CheckCircle2, Clock, FileCheck, Sparkles, Send, Eye, PenTool, Building2 } from 'lucide-react'
 import { formatDate, cn } from '@/lib/utils'
 import { useDocumentGeneration } from '../hooks/use-document-generation'
 import { useToast } from '@/components/ui/toast'
@@ -97,6 +97,7 @@ export function GestionConventions({
     zipGenerationProgress,
     lastZipGeneration,
     handleGenerateConvention,
+    handleGenerateConventionForEnrollment,
     handleGenerateContract,
     handleGenerateAllConventionsZip,
     handleGenerateProgram,
@@ -221,6 +222,35 @@ export function GestionConventions({
       return (signedDoc as { signed_file_url?: string | null } | undefined)?.signed_file_url ?? null
     }
   }, [sessionContractDocs, signedRequestIds])
+
+  // Récupérer les entités (entreprises/organismes) rattachées aux apprenants inscrits
+  const enrolledStudentIds = useMemo(() => enrollments.map(e => e.student_id).filter(Boolean) as string[], [enrollments])
+
+  const { data: studentEntitiesData } = useQuery({
+    queryKey: ['student-entities-for-session', enrolledStudentIds],
+    queryFn: async () => {
+      if (!enrolledStudentIds.length) return []
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('student_entities')
+        .select('student_id, is_current, external_entities(id, name, type)')
+        .in('student_id', enrolledStudentIds)
+        .eq('is_current', true)
+      return (data || []) as Array<{ student_id: string; is_current: boolean; external_entities: { id: string; name: string; type: string } | null }>
+    },
+    enabled: enrolledStudentIds.length > 0,
+  })
+
+  // Map student_id → a une entreprise rattachée
+  const studentHasCompany = useMemo(() => {
+    const map = new Map<string, boolean>()
+    for (const se of studentEntitiesData || []) {
+      if (se.student_id && se.external_entities) {
+        map.set(se.student_id, true)
+      }
+    }
+    return map
+  }, [studentEntitiesData])
 
   // Récupérer les templates d'email pour les contrats/conventions
   const { data: emailTemplates } = useQuery<EmailTemplate[]>({
@@ -481,12 +511,22 @@ export function GestionConventions({
                             )}
                             <div className="absolute -bottom-1 -right-1 bg-green-500 border-2 border-white w-4 h-4 rounded-full" />
                           </div>
+                          {(() => {
+                            const hasCompany = !!enrollment.student_id && studentHasCompany.get(enrollment.student_id)
+                            return (
                           <div>
                             <p className="font-bold text-gray-900">{student.first_name} {student.last_name}</p>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-gray-100 text-gray-600 border-gray-200">
-                                Contrat particulier
-                              </Badge>
+                              {hasCompany ? (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+                                  <Building2 className="h-2.5 w-2.5" />
+                                  Convention entreprise
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-gray-100 text-gray-600 border-gray-200">
+                                  Contrat particulier
+                                </Badge>
+                              )}
                               <span className="text-xs text-gray-400">•</span>
                               {getContractStatusForEnrollment(enrollment) === 'signed' ? (
                                 <span className="text-xs font-medium text-green-600 flex items-center gap-1">
@@ -503,9 +543,12 @@ export function GestionConventions({
                               )}
                             </div>
                           </div>
+                            )
+                          })()}
                         </div>
-                        
+
                         {(() => {
+                          const hasCompany = !!enrollment.student_id && studentHasCompany.get(enrollment.student_id)
                           const contractStatus = getContractStatusForEnrollment(enrollment)
                           const signedUrl = getSignedUrlForEnrollment(enrollment)
                           const isSigned = contractStatus === 'signed'
@@ -517,12 +560,14 @@ export function GestionConventions({
                                 onClick={() => {
                                   if (isSigned && signedUrl) {
                                     window.open(signedUrl, '_blank')
+                                  } else if (hasCompany) {
+                                    handleGenerateConventionForEnrollment(enrollment, selectedConventionTemplateId)
                                   } else {
                                     handleGenerateContract(enrollment, selectedConventionTemplateId)
                                   }
                                 }}
                                 className="h-9 w-9 p-0 rounded-full hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
-                                title={isSigned ? 'Télécharger le contrat signé' : 'Télécharger le contrat'}
+                                title={isSigned ? 'Télécharger le document signé' : hasCompany ? 'Télécharger la convention' : 'Télécharger le contrat'}
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
@@ -552,13 +597,13 @@ export function GestionConventions({
                                 onClick={() => {
                                   setSignatureRequestDialog({
                                     enrollment,
-                                    type: 'contract',
+                                    type: hasCompany ? 'convention' : 'contract',
                                   })
                                   setSignatureRequestForm({
                                     recipientEmail: student.email || '',
                                     recipientName: `${student.first_name} ${student.last_name}`,
-                                    subject: `Demande de signature : Contrat de formation - ${student.first_name} ${student.last_name}`,
-                                    message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre contrat de formation pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir le signer en ligne.\n\nCordialement,\n${organization?.name || ''}`,
+                                    subject: `Demande de signature : ${hasCompany ? 'Convention' : 'Contrat'} de formation - ${student.first_name} ${student.last_name}`,
+                                    message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre ${hasCompany ? 'convention' : 'contrat'} de formation pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir le signer en ligne.\n\nCordialement,\n${organization?.name || ''}`,
                                   })
                                 }}
                                 disabled={!student.email || isSigned}
