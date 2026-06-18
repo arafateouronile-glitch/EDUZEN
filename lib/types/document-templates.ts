@@ -403,7 +403,18 @@ export interface DocumentVariables {
   ecole_siret?: string
   ecole_rcs?: string
   ecole_code_postal?: string
+
+  // Entreprise / Client
   entreprise_nom?: string
+  entreprise_adresse?: string
+  entreprise_code_postal?: string
+  entreprise_ville?: string
+  entreprise_telephone?: string
+  entreprise_email?: string
+  entreprise_siret?: string
+  entreprise_tva?: string
+  entreprise_contact?: string
+  entreprise_representant?: string
   destinataire_du_devis?: string
   adresse_destinataire?: string
   code_postal_destinataire?: string

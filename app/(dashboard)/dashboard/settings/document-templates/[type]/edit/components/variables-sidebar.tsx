@@ -65,6 +65,25 @@ const VARIABLE_CATEGORIES: VariableCategory[] = [
     ],
   },
   {
+    name: 'Entreprise / Client',
+    variables: [
+      { key: 'entreprise_nom', label: 'Nom de l\'entreprise' },
+      { key: 'entreprise_adresse', label: 'Adresse de l\'entreprise' },
+      { key: 'entreprise_code_postal', label: 'Code postal de l\'entreprise' },
+      { key: 'entreprise_ville', label: 'Ville de l\'entreprise' },
+      { key: 'entreprise_telephone', label: 'Téléphone de l\'entreprise' },
+      { key: 'entreprise_email', label: 'Email de l\'entreprise' },
+      { key: 'entreprise_siret', label: 'SIRET de l\'entreprise' },
+      { key: 'entreprise_tva', label: 'N° TVA de l\'entreprise' },
+      { key: 'entreprise_contact', label: 'Nom du contact' },
+      { key: 'entreprise_representant', label: 'Représentant légal' },
+      { key: 'destinataire_du_devis', label: 'Destinataire du devis' },
+      { key: 'adresse_destinataire', label: 'Adresse du destinataire' },
+      { key: 'code_postal_destinataire', label: 'Code postal destinataire' },
+      { key: 'ville_destinataire', label: 'Ville du destinataire' },
+    ],
+  },
+  {
     name: 'Formation',
     variables: [
       { key: 'formation_nom', label: 'Nom de la formation' },

@@ -11,6 +11,7 @@ type Student = TableRow<'students'>
 type Session = TableRow<'sessions'>
 type Invoice = TableRow<'invoices'>
 type Program = TableRow<'programs'>
+type Company = TableRow<'companies'>
 
 /** Organisation avec champs optionnels (settings, city, website, iban, bic, etc.) */
 type OrgExtended = Organization & {
@@ -108,6 +109,7 @@ export interface ExtractVariablesOptions {
   academicYear?: { name: string } | null
   language?: 'fr' | 'en'
   issueDate?: string
+  company?: Company | null
 }
 
 /**
@@ -124,6 +126,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     academicYear,
     language = 'fr',
     issueDate = new Date().toISOString(),
+    company,
   } = options
 
   const org = organization as OrgExtended | undefined
@@ -228,19 +231,31 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     eleve_telephone: stud?.phone || '',
     eleve_email: stud?.email || '',
 
-    // Destinataire / client (devis, facture)
-    entreprise_nom: stud?.company_name || stud?.entreprise_nom || '',
+    // Entreprise / Client (table companies ou fallback student)
+    entreprise_nom: company?.name || stud?.company_name || stud?.entreprise_nom || '',
+    entreprise_adresse: company?.address || '',
+    entreprise_code_postal: company?.postal_code || '',
+    entreprise_ville: company?.city || '',
+    entreprise_telephone: company?.phone || '',
+    entreprise_email: company?.email || company?.billing_email || '',
+    entreprise_siret: company?.siret || '',
+    entreprise_tva: (company?.metadata as Record<string, unknown> | null)?.tva_number as string || '',
+    entreprise_contact: '',
+    entreprise_representant: '',
+
     tuteur_nom: stud?.tutor_name || stud?.representative_name || (student ? `${student.first_name || ''} ${student.last_name || ''}`.trim() : ''),
-    // Destinataire du devis : nom de l'entreprise pour les entreprises, prénom + nom pour les particuliers
+    // Destinataire du devis : entreprise si disponible, sinon prénom + nom de l'étudiant
     destinataire_du_devis:
       (() => {
+        const companyName = company?.name
+        if (companyName && String(companyName).trim()) return String(companyName).trim()
         const ent = stud?.company_name || stud?.entreprise_nom
         if (ent && String(ent).trim()) return String(ent).trim()
         return student ? `${student.first_name || ''} ${student.last_name || ''}`.trim() : ''
       })(),
-    adresse_destinataire: stud?.address || '',
-    code_postal_destinataire: stud?.postal_code || '',
-    ville_destinataire: stud?.city || '',
+    adresse_destinataire: company?.address || stud?.address || '',
+    code_postal_destinataire: company?.postal_code || stud?.postal_code || '',
+    ville_destinataire: company?.city || stud?.city || '',
 
     // Format alternatif (etudiant_*) pour compatibilité
     etudiant_nom: student?.last_name || '',
