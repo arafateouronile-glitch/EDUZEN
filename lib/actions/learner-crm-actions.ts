@@ -389,15 +389,10 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
   const { orgId } = await getAuthContext()
   const supabase  = createAdminClient()
 
+  // Query 1 : students plat, sans jointures — rapide
   const { data: students, error } = await supabase
     .from('students')
-    .select(`
-      id, first_name, last_name, email, photo_url, created_at,
-      enrollments (
-        id, status, session_id,
-        sessions ( id, name, start_date, end_date, formations ( name ) )
-      )
-    `)
+    .select('id, first_name, last_name, email, photo_url, created_at')
     .eq('organization_id', orgId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -405,11 +400,29 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
 
   if (error) throw new Error(`getLearnerPipeline : ${error.message}`)
 
-  // ── Données Qualiopi batch : présences + docs + emails ──
   const studentIds    = (students ?? []).map(s => s.id)
   const studentEmails = (students ?? []).map(s => s.email).filter(Boolean) as string[]
 
-  const [{ data: presences }, { data: learnerDocs }, { data: emailLogsBatch }, { data: evalsBatch }, { data: companyEmployees }] = await Promise.all([
+  // Toutes les queries restantes en parallèle — enrollments inclus (plus de cascade)
+  type RawEnrollment = {
+    id: string; status: string | null; session_id: string; student_id: string
+    sessions: { id: string; name: string; start_date: string; end_date: string; formations: { name: string }[] | null } | null
+  }
+
+  const [
+    { data: rawEnrollments },
+    { data: presences },
+    { data: learnerDocs },
+    { data: emailLogsBatch },
+    { data: evalsBatch },
+    { data: companyEmployees },
+  ] = await Promise.all([
+    studentIds.length > 0
+      ? supabase.from('enrollments')
+          .select('id, status, student_id, session_id, sessions(id, name, start_date, end_date, formations(name))')
+          .in('student_id', studentIds)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] as RawEnrollment[] }),
     supabase.from('attendance').select('student_id').eq('organization_id', orgId)
       .in('student_id', studentIds).in('status', ['present', 'present_late']),
     supabase.from('learner_documents').select('student_id, type').in('student_id', studentIds),
@@ -421,6 +434,14 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       ? supabase.from('company_employees').select('student_id, companies(id, name)').in('student_id', studentIds).eq('is_active', true)
       : Promise.resolve({ data: [] }),
   ])
+
+  // Grouper les enrollments par student_id (ordre created_at DESC conservé)
+  const enrollmentsByStudent = new Map<string, RawEnrollment[]>()
+  for (const e of (rawEnrollments ?? []) as RawEnrollment[]) {
+    const list = enrollmentsByStudent.get(e.student_id) ?? []
+    list.push(e)
+    enrollmentsByStudent.set(e.student_id, list)
+  }
 
   const hasPresence   = new Set((presences ?? []).map(p => p.student_id))
   const hasEval       = new Set((evalsBatch ?? []).map(e => e.student_id))
@@ -466,11 +487,7 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
   }
 
   for (const student of students ?? []) {
-    type RawEnrollment = {
-      id: string; status: string | null; session_id: string
-      sessions: { id: string; name: string; start_date: string; end_date: string; formations: { name: string }[] | null } | null
-    }
-    const enrollments = (student.enrollments ?? []) as RawEnrollment[]
+    const enrollments = enrollmentsByStudent.get(student.id) ?? []
     const active = enrollments.find(e => e.status !== 'cancelled') ?? enrollments[0] ?? null
     const sess   = active?.sessions ?? null
 
