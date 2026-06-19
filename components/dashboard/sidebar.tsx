@@ -42,6 +42,7 @@ import {
   Badge,
   ClipboardCheck,
   Plug,
+  Send,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useTrial } from '@/lib/hooks/use-trial'
@@ -142,6 +143,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
         ],
       },
       { name: t('navigation.documents'), href: '/dashboard/documents', icon: FileText },
+      { name: 'Communications', href: '/dashboard/communications', icon: Send },
     ],
   },
   {
