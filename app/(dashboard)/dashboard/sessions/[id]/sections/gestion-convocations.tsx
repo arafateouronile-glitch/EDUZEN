@@ -868,7 +868,7 @@ export function GestionConvocations({
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner un modèle de document" />
                 </SelectTrigger>
-                <SelectContent className="z-[9999]">
+                <SelectContent className="z-[9999]" side="top">
                   <SelectItem value="default">Modèle par défaut (système)</SelectItem>
                   {(documentTemplates ?? []).map((template: DocumentTemplate) => (
                     <SelectItem key={template.id} value={template.id}>
