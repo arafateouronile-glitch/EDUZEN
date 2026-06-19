@@ -863,17 +863,12 @@ export function GestionConvocations({
                 value={selectedDocumentTemplateId}
                 onValueChange={(value) => {
                   setSelectedDocumentTemplateId(value)
-                  // Charger le template par défaut si disponible
-                  const template = (documentTemplates ?? []).find((t: DocumentTemplate) => t.id === value)
-                  if (template && template.is_default) {
-                    // Le template par défaut sera utilisé automatiquement
-                  }
                 }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner un modèle de document" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999]">
                   <SelectItem value="default">Modèle par défaut (système)</SelectItem>
                   {(documentTemplates ?? []).map((template: DocumentTemplate) => (
                     <SelectItem key={template.id} value={template.id}>
@@ -897,7 +892,6 @@ export function GestionConvocations({
                 value={selectedEmailTemplateId}
                 onValueChange={(value) => {
                   setSelectedEmailTemplateId(value)
-                  // Charger le contenu du template d'email
                   const template = emailTemplates?.find(t => t.id === value)
                   if (template) {
                     setBulkEmailContent({
@@ -910,7 +904,7 @@ export function GestionConvocations({
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Sélectionner un modèle d'email" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999]">
                   <SelectItem value="default">Modèle par défaut (système)</SelectItem>
                   {emailTemplates?.map((template) => (
                     <SelectItem key={template.id} value={template.id}>
