@@ -53,13 +53,13 @@ export default async function DashboardLayout({
   const pathname = h.get('x-pathname') ?? '/dashboard'
 
   const supabase = await createClient()
-  // getSession reads from cookie (no network) — proxy.ts already validated the JWT
-  const { data: { session } } = await supabase.auth.getSession().catch(async (e: unknown) => {
+  // getUser() validates the JWT with Supabase Auth server — required here because
+  // authUser.id is used to query org data and make routing decisions
+  const { data: { user: authUser } } = await supabase.auth.getUser().catch(async (e: unknown) => {
     const err = e as { code?: string }
     if (err?.code === 'refresh_token_not_found') await supabase.auth.signOut()
-    return { data: { session: null } }
+    return { data: { user: null } }
   })
-  const authUser = session?.user ?? null
 
   if (!authUser) {
     redirect('/auth/login?redirect=' + encodeURIComponent(pathname))
