@@ -167,7 +167,7 @@ export default function SessionDetailPage() {
   // Calculate session metrics
   const sessionMetrics = useMemo(() => {
     const enrollmentsCount = enrollments?.length || 0
-    const maxCapacity = (sessionData as { max_participants?: number })?.max_participants ?? 20
+    const maxCapacity = (sessionData as { capacity_max?: number | null })?.capacity_max || 20
     const fillRate = Math.round((enrollmentsCount / maxCapacity) * 100)
 
     const startDate = sessionData?.start_date ? parseISO(sessionData.start_date) : null
