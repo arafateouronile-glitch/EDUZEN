@@ -124,6 +124,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
           { name: vocab.evaluations, href: '/dashboard/evaluations', icon: FileCheck },
           { name: t('navigation.learningPortfolios'), href: '/dashboard/evaluations/portfolios', icon: BookMarked },
           { name: 'Rapports & Analytics', href: '/dashboard/reports', icon: BarChart3, allowedRoles: ADMIN_ROLES },
+          { name: 'Communications', href: '/dashboard/suivi', icon: Send },
         ],
       },
     ],
@@ -143,7 +144,6 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
         ],
       },
       { name: t('navigation.documents'), href: '/dashboard/documents', icon: FileText },
-      { name: 'Suivi communications', href: '/dashboard/suivi', icon: Send },
     ],
   },
   {
