@@ -143,7 +143,7 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
         ],
       },
       { name: t('navigation.documents'), href: '/dashboard/documents', icon: FileText },
-      { name: 'Communications', href: '/dashboard/communications', icon: Send },
+      { name: 'Suivi communications', href: '/dashboard/suivi', icon: Send },
     ],
   },
   {
