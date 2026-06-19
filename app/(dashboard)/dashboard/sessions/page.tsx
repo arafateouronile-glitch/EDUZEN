@@ -325,8 +325,8 @@ function SessionsPageContent() {
       }
     },
     enabled: !!user?.organization_id,
-    staleTime: 1000 * 60 * 5, // 5 minutes - les stats changent moins souvent
-    refetchOnMount: true, // Toujours refetch à l'arrivée sur la page pour afficher les graphiques
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   })
 
   const getStatusColor = (status: Session['status']) => {

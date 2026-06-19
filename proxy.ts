@@ -87,7 +87,9 @@ export async function proxy(req: NextRequest) {
       },
     }
   )
-  const { data: { user: authUser } } = await supabase.auth.getUser()
+  // getSession reads from cookie (no network) — sufficient for redirect logic in middleware
+  const { data: { session } } = await supabase.auth.getSession()
+  const authUser = session?.user ?? null
   const protectedRoutes = [
     '/dashboard',
     '/students',
