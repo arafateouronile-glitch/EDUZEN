@@ -1,39 +1,47 @@
 import { redirect } from 'next/navigation'
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import DashboardClientLayout from './dashboard-client-layout'
 
-/** Requêtes directes (sans cache) pour le check onboarding/subscription — données critiques */
-async function getLayoutData(userId: string) {
-  const supabase = await createClient()
+// Cached 60s per userId — invalidated by revalidateTag('layout-data-<userId>')
+// Uses admin client so the function is pure (no dependency on request cookies)
+const getLayoutData = (userId: string) =>
+  unstable_cache(
+    async () => {
+      const supabase = createAdminClient()
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('organization_id')
-    .eq('id', userId)
-    .single()
+      const { data: userData } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', userId)
+        .single()
 
-  if (!userData?.organization_id) return null
+      if (!userData?.organization_id) return null
 
-  const orgId = userData.organization_id
-  const [orgResult, subscriptionResult] = await Promise.all([
-    supabase
-      .from('organizations')
-      .select('settings, subscription_status')
-      .eq('id', orgId)
-      .single(),
-    supabase
-      .from('subscriptions')
-      .select('trial_end_at, status')
-      .eq('organization_id', orgId)
-      .maybeSingle(),
-  ])
+      const orgId = userData.organization_id
+      const [orgResult, subscriptionResult] = await Promise.all([
+        supabase
+          .from('organizations')
+          .select('settings, subscription_status')
+          .eq('id', orgId)
+          .single(),
+        supabase
+          .from('subscriptions')
+          .select('trial_end_at, status')
+          .eq('organization_id', orgId)
+          .maybeSingle(),
+      ])
 
-  return {
-    userData,
-    org: orgResult.data,
-    subscription: subscriptionResult.data,
-  }
-}
+      return {
+        userData,
+        org: orgResult.data,
+        subscription: subscriptionResult.data,
+      }
+    },
+    [`layout-data-${userId}`],
+    { revalidate: 60, tags: [`layout-data-${userId}`] }
+  )()
 
 export default async function DashboardLayout({
   children,

@@ -1,6 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createServiceRoleClient } from '@/lib/supabase/service'
@@ -233,6 +234,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      revalidateTag(`layout-data-${user.id}`, { expire: 0 })
       return NextResponse.json({
         success: true,
         subscriptionId: null,
@@ -416,6 +418,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    revalidateTag(`layout-data-${user.id}`, { expire: 0 })
     logger.info('Onboarding complété avec succès', {
       organizationId: orgId,
       subscriptionId: subscription.id,
