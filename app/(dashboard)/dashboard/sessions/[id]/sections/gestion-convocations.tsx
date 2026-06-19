@@ -859,24 +859,19 @@ export function GestionConvocations({
                 <FileCheck className="h-4 w-4 text-cyan-600" />
                 Modèle de document (convocation)
               </Label>
-              <Select
+              <select
                 value={selectedDocumentTemplateId}
-                onValueChange={(value) => {
-                  setSelectedDocumentTemplateId(value)
-                }}
+                onChange={(e) => setSelectedDocumentTemplateId(e.target.value)}
+                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner un modèle de document" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999]" side="top">
-                  <SelectItem value="default">Modèle par défaut (système)</SelectItem>
-                  {(documentTemplates ?? []).map((template: DocumentTemplate) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name} {template.is_default && '(Par défaut)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">Sélectionner un modèle de document</option>
+                <option value="default">Modèle par défaut (système)</option>
+                {(documentTemplates ?? []).map((template: DocumentTemplate) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}{template.is_default ? ' (Par défaut)' : ''}
+                  </option>
+                ))}
+              </select>
               <p className="text-xs text-gray-500">
                 Le modèle sélectionné sera utilisé pour générer les PDF des convocations.
               </p>
@@ -888,9 +883,10 @@ export function GestionConvocations({
                 <Mail className="h-4 w-4 text-cyan-600" />
                 Modèle d'email
               </Label>
-              <Select
+              <select
                 value={selectedEmailTemplateId}
-                onValueChange={(value) => {
+                onChange={(e) => {
+                  const value = e.target.value
                   setSelectedEmailTemplateId(value)
                   const template = emailTemplates?.find(t => t.id === value)
                   if (template) {
@@ -900,19 +896,16 @@ export function GestionConvocations({
                     })
                   }
                 }}
+                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-600/20 focus:border-cyan-600"
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner un modèle d'email" />
-                </SelectTrigger>
-                <SelectContent className="z-[9999]">
-                  <SelectItem value="default">Modèle par défaut (système)</SelectItem>
-                  {emailTemplates?.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name} {template.is_default && '(Par défaut)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">Sélectionner un modèle d'email</option>
+                <option value="default">Modèle par défaut (système)</option>
+                {emailTemplates?.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}{template.is_default ? ' (Par défaut)' : ''}
+                  </option>
+                ))}
+              </select>
               <p className="text-xs text-gray-500">
                 Le modèle sélectionné sera utilisé comme base pour le contenu de l'email.
               </p>
