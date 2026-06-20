@@ -189,6 +189,13 @@ const DOCUMENT_TYPES: Array<{
     icon: Users,
     color: '#7C3AED',
   },
+  {
+    type: 'ordre_de_mission',
+    name: 'Ordre de mission',
+    description: 'Autorisation de déplacement avec remboursement de frais professionnels',
+    icon: Users,
+    color: '#059669',
+  },
 ]
 
 export default function DocumentTemplatesPage() {

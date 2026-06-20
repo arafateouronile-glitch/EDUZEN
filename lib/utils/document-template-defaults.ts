@@ -2414,6 +2414,188 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     `,
     footerContent: premiumFooter,
   },
+
+  ordre_de_mission: {
+    type: 'ordre_de_mission',
+    name: 'Ordre de mission formateur',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <div style="text-align: center; margin-bottom: 25px;">
+        <h1 style="font-size: 15pt; font-weight: bold; margin: 0 0 6px 0; color: #1A1A1A; text-transform: uppercase; letter-spacing: 0.5px;">
+          Ordre de Mission
+        </h1>
+        <h2 style="font-size: 11pt; font-weight: normal; margin: 0 0 4px 0; color: #444;">
+          Formation Professionnelle Continue
+        </h2>
+        <p style="font-size: 8.5pt; color: #666; margin: 0; font-style: italic;">
+          (Arrêté du 20 décembre 2002 relatif aux frais professionnels — Barèmes URSSAF en vigueur)
+        </p>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 8.5pt; color: #666; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+        <span>Réf. mission : <strong>{mission_reference}</strong></span>
+        <span>NDA : {ecole_numero_declaration}</span>
+        <span>Émis le : {date_aujourd_hui}</span>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="font-weight: bold; font-size: 10.5pt; margin: 0 0 14px 0; color: #1A1A1A;">L'ORGANISME MANDANT DONNE ORDRE À :</p>
+
+        <div style="display: flex; gap: 16px; margin-bottom: 14px;">
+          <div style="flex: 1; background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px;">
+            <p style="font-size: 8pt; text-transform: uppercase; color: #888; margin: 0 0 6px 0; letter-spacing: 0.5px;">Organisme mandant</p>
+            <p style="font-weight: bold; font-size: 10pt; margin: 0 0 3px 0;">{ecole_nom}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">SIRET : {ecole_siret} — NDA : {ecole_numero_declaration}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">{ecole_adresse}, {ecole_code_postal} {ecole_ville}</p>
+            <p style="font-size: 9pt; margin: 4px 0 0 0; color: #333;">Représenté par : <strong>{mission_autorisant_nom}</strong>, {mission_autorisant_qualite}</p>
+          </div>
+          <div style="flex: 1; background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px;">
+            <p style="font-size: 8pt; text-transform: uppercase; color: #888; margin: 0 0 6px 0; letter-spacing: 0.5px;">Formateur missionnaire</p>
+            <p style="font-weight: bold; font-size: 10pt; margin: 0 0 3px 0;">{formateur_prenom} {formateur_nom}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">Statut : {formateur_statut}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">{formateur_adresse}, {formateur_code_postal} {formateur_ville}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">{formateur_email} — {formateur_telephone}</p>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 20px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 1 — Objet de la mission
+      </h2>
+      <div style="background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px; margin-bottom: 10px;">
+        <p style="font-weight: bold; font-size: 10.5pt; margin: 0 0 4px 0;">{mission_objet}</p>
+        <p style="font-size: 9.5pt; color: #333; margin: 0 0 2px 0;">Formation : {mission_formation}</p>
+        <p style="font-size: 9pt; color: #666; margin: 0;">Réf. session : {mission_session_ref}</p>
+      </div>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 0;">
+        Le missionnaire est autorisé à se déplacer pour réaliser la mission de formation définie ci-dessus, dans le cadre des activités de formation professionnelle continue de l'organisme (art. L.6313-1 et suivants du Code du Travail).
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 2 — Lieu, dates et durée
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0;">
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold; width: 40%;">Lieu d'intervention</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">{mission_lieu}<br/><span style="font-size: 9pt; color: #555;">{mission_lieu_adresse}</span></td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold;">Période</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">Du {mission_date_debut} au {mission_date_fin}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold;">Horaires</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">{mission_horaires}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold;">Durée totale</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">{mission_duree_jours} jour(s) — {mission_duree_heures} heure(s) de formation</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold;">Transport autorisé</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">{mission_transport_autorise}</td>
+        </tr>
+      </table>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 3 — Remboursement des frais professionnels
+      </h2>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 0 0 8px 0;">
+        Conformément à l'arrêté du 20 décembre 2002 relatif aux frais professionnels déductibles pour le calcul des cotisations de sécurité sociale, et aux barèmes URSSAF en vigueur, les frais engagés par le missionnaire sont remboursés dans les limites suivantes :
+      </p>
+      <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0;">
+        <thead>
+          <tr style="background: #1A1A1A; color: white;">
+            <th style="padding: 7px 10px; text-align: left; font-weight: bold;">Nature des frais</th>
+            <th style="padding: 7px 10px; text-align: center; font-weight: bold;">Base de remboursement</th>
+            <th style="padding: 7px 10px; text-align: right; font-weight: bold;">Plafond</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd;">Indemnités kilométriques (véhicule personnel)</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: center;">{mission_distance_aller} km A/R × barème fiscal en vigueur</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{mission_indemnite_km} €/km</td>
+          </tr>
+          <tr>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd;">Repas du midi (déplacement hors résidence)</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: center;">Sur justificatif — art. 4 arrêté 20/12/2002</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{mission_frais_repas_midi} €</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd;">Repas du soir (grand déplacement)</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: center;">Sur justificatif — art. 4 arrêté 20/12/2002</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{mission_frais_repas_soir} €</td>
+          </tr>
+          <tr>
+            <td style="padding: 7px 10px;">Hébergement (grand déplacement, nuit complète)</td>
+            <td style="padding: 7px 10px; text-align: center;">Sur justificatif — plafond URSSAF zone concernée</td>
+            <td style="padding: 7px 10px; text-align: right; font-weight: bold;">{mission_frais_hebergement} €/nuit</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size: 8.5pt; color: #666; margin: 6px 0 0 0; font-style: italic;">
+        Est considéré comme « grand déplacement » tout déplacement à plus de 50 km du domicile habituel du missionnaire ne pouvant donner lieu à retour quotidien (circ. DSS/SDFSS/5B du 7 janvier 2003). Les justificatifs originaux doivent être remis à l'organisme dans un délai de 30 jours suivant la fin de la mission.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 4 — Avance sur frais
+      </h2>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 0 0 6px 0;">
+        Une avance sur frais de <strong>{mission_avance} €</strong> sera versée au missionnaire préalablement à la mission, à valoir sur le remboursement définitif. Tout solde débiteur au terme de la mission devra être reversé à l'organisme dans un délai de 15 jours calendaires.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 5 — Obligations du missionnaire
+      </h2>
+      <ul style="font-size: 9.5pt; line-height: 1.7; margin: 0 0 0 18px; padding: 0;">
+        <li>Respecter scrupuleusement le programme de formation et les horaires fixés ;</li>
+        <li>Émarger les feuilles de présence à chaque séance conformément aux exigences Qualiopi (indicateur 7 du Référentiel National Qualité) ;</li>
+        <li>Signaler immédiatement tout incident, annulation ou modification pouvant affecter le bon déroulement de la mission ;</li>
+        <li>Conserver et remettre l'intégralité des justificatifs de frais originaux dans les délais impartis ;</li>
+        <li>Respecter la confidentialité des données à caractère personnel des stagiaires (RGPD — Règlement UE 2016/679) ;</li>
+        <li>Fournir, sur demande, tout compte-rendu ou bilan pédagogique requis par l'organisme ;</li>
+        <li>N'effectuer que les déplacements strictement nécessaires à l'exécution de la mission, par les moyens de transport autorisés.</li>
+      </ul>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 6 — Annulation et force majeure
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0 0 6px 0;">
+        Toute annulation ou report de la mission doit être signalée dans les meilleurs délais. Seuls les frais engagés et justifiés avant l'annulation seront remboursés. En cas de force majeure au sens de l'article 1218 du Code civil (pandémie, grève des transports, catastrophe naturelle), le présent ordre de mission est suspendu sans pénalité, avec report éventuel sur accord des parties.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 7 — Notes particulières
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0; min-height: 30px;">
+        {mission_notes}
+      </p>
+
+      <div style="margin-top: 30px;">
+        <p style="text-align: center; font-size: 9.5pt; margin-bottom: 20px; color: #555;">
+          Fait en deux exemplaires originaux, à {ecole_ville}, le {date_aujourd_hui}
+        </p>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+          <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Pour l'Organisme de Formation</p>
+            <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{ecole_nom}<br/>{mission_autorisant_nom} — {mission_autorisant_qualite}</p>
+            <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+              <p style="font-size: 8.5pt; color: #666;">Signature et cachet</p>
+            </div>
+          </div>
+          <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Le Formateur missionnaire</p>
+            <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{formateur_prenom} {formateur_nom}<br/>Lu et approuvé — bon pour accord</p>
+            <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+              <p style="font-size: 8.5pt; color: #666;">Signature</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    footerContent: premiumFooter,
+  },
 }
 
 /**

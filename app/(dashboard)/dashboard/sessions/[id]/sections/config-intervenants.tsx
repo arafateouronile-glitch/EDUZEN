@@ -112,9 +112,12 @@ export function ConfigIntervenants({
     },
   })
 
-  async function generateConventionPdf(): Promise<Blob | null> {
+  async function generatePdf(): Promise<Blob | null> {
     if (!selectedTeacher) return null
-    const res = await fetch('/api/teacher-documents/generate-convention', {
+    const endpoint = docType === 'ordre_de_mission'
+      ? '/api/teacher-documents/generate-ordre-de-mission'
+      : '/api/teacher-documents/generate-convention'
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -124,6 +127,15 @@ export function ConfigIntervenants({
           email: (selectedTeacher as any).email ?? '',
           specialization: (selectedTeacher as any).specialization ?? null,
         },
+        session: {
+          name: formData.name || '',
+          period_start: formData.start_date || new Date().toISOString().split('T')[0],
+          period_end: formData.end_date || new Date().toISOString().split('T')[0],
+          daily_rate: dailyRate ? parseFloat(dailyRate) : null,
+          intervention_days: interventionDays ? parseFloat(interventionDays) : null,
+          specialization: (selectedTeacher as any).specialization ?? null,
+        },
+        // Compatibilité convention route
         convention: {
           period_start: formData.start_date || new Date().toISOString().split('T')[0],
           period_end: formData.end_date || new Date().toISOString().split('T')[0],
@@ -142,12 +154,13 @@ export function ConfigIntervenants({
     if (!selectedTeacher) return
     setIsGeneratingPdf(true)
     try {
-      const blob = await generateConventionPdf()
+      const blob = await generatePdf()
       if (!blob) return
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `convention-${(selectedTeacher.full_name ?? 'formateur').replace(/\s+/g, '-')}.pdf`
+      const prefix = docType === 'ordre_de_mission' ? 'ordre-mission' : 'convention'
+      a.download = `${prefix}-${(selectedTeacher.full_name ?? 'formateur').replace(/\s+/g, '-')}.pdf`
       a.click()
       URL.revokeObjectURL(url)
     } catch {
@@ -161,7 +174,7 @@ export function ConfigIntervenants({
     if (!selectedTeacher) return
     setIsSendingEmail(true)
     try {
-      const blob = await generateConventionPdf()
+      const blob = await generatePdf()
       if (!blob) return
 
       // Upload dans Supabase Storage
@@ -203,7 +216,7 @@ export function ConfigIntervenants({
     if (!selectedTeacher) return
     setIsSendingSignature(true)
     try {
-      const blob = await generateConventionPdf()
+      const blob = await generatePdf()
       if (!blob) return
 
       const reader = new FileReader()
@@ -384,12 +397,15 @@ export function ConfigIntervenants({
                 </button>
                 <button
                   type="button"
-                  disabled
-                  className="flex items-center gap-2 p-3 rounded-lg border text-sm text-left border-border opacity-50 cursor-not-allowed relative"
+                  onClick={() => setDocType('ordre_de_mission')}
+                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm text-left transition-colors ${
+                    docType === 'ordre_de_mission'
+                      ? 'border-primary bg-primary/5 text-primary font-medium'
+                      : 'border-border hover:border-primary/50'
+                  }`}
                 >
                   <ClipboardList className="h-4 w-4 shrink-0" />
                   <span>Ordre de mission</span>
-                  <Badge variant="outline" className="text-[10px] px-1 py-0 ml-auto">Bientôt</Badge>
                 </button>
               </div>
             </div>

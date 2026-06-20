@@ -131,6 +131,12 @@ export function getDocumentTypeConfig(type: DocumentType) {
       icon: Users,
       color: '#7C3AED',
     },
+    ordre_de_mission: {
+      name: 'Ordre de mission',
+      description: 'Autorisation de déplacement avec remboursement de frais professionnels',
+      icon: Users,
+      color: '#059669',
+    },
   }
 
   return configs[type]

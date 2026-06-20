@@ -1046,6 +1046,129 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
         </table>
       </div>
     `,
+    ordre_de_mission: `
+      <h1 style="text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 6px;">
+        ORDRE DE MISSION
+      </h1>
+      <p style="text-align: center; font-size: 13px; color: #666; margin-bottom: 4px;">Formation Professionnelle Continue</p>
+      <p style="text-align: center; font-size: 11px; color: #888; margin-bottom: 30px; font-style: italic;">
+        (Arrêté du 20 décembre 2002 — Barèmes URSSAF en vigueur)
+      </p>
+
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-bottom: 20px;">
+        <span>Réf. : {mission_reference}</span>
+        <span>NDA : {ecole_numero_declaration}</span>
+        <span>Date : {date_aujourd_hui}</span>
+      </div>
+
+      <div style="display: flex; gap: 16px; margin-bottom: 25px;">
+        <div style="flex: 1; border: 1px solid #ddd; padding: 12px;">
+          <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: #888; margin-bottom: 6px;">Mandant</p>
+          <p style="font-weight: bold;">{ecole_nom}</p>
+          <p style="font-size: 12px;">{ecole_adresse}, {ecole_code_postal} {ecole_ville}</p>
+          <p style="font-size: 12px;">SIRET : {ecole_siret}</p>
+          <p style="font-size: 12px;">Représenté par : {mission_autorisant_nom}, {mission_autorisant_qualite}</p>
+        </div>
+        <div style="flex: 1; border: 1px solid #ddd; padding: 12px;">
+          <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: #888; margin-bottom: 6px;">Missionnaire</p>
+          <p style="font-weight: bold;">{formateur_prenom} {formateur_nom}</p>
+          <p style="font-size: 12px;">{formateur_statut}</p>
+          <p style="font-size: 12px;">{formateur_adresse}, {formateur_code_postal} {formateur_ville}</p>
+          <p style="font-size: 12px;">{formateur_email} — {formateur_telephone}</p>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 14px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 10px;">Article 1 — Objet de la mission</h2>
+        <p style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">{mission_objet}</p>
+        <p style="font-size: 12px;">Formation : {mission_formation}</p>
+        <p style="font-size: 12px;">Réf. session : {mission_session_ref}</p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 14px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 10px;">Article 2 — Lieu, dates et durée</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <tr>
+            <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f5f5f5; width: 35%; font-weight: bold;">Lieu d'intervention</td>
+            <td style="padding: 6px 10px; border: 1px solid #ddd;">{mission_lieu} — {mission_lieu_adresse}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">Période</td>
+            <td style="padding: 6px 10px; border: 1px solid #ddd;">Du {mission_date_debut} au {mission_date_fin}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">Horaires</td>
+            <td style="padding: 6px 10px; border: 1px solid #ddd;">{mission_horaires}</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">Durée</td>
+            <td style="padding: 6px 10px; border: 1px solid #ddd;">{mission_duree_jours} jour(s) — {mission_duree_heures} heure(s)</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">Transport autorisé</td>
+            <td style="padding: 6px 10px; border: 1px solid #ddd;">{mission_transport_autorise}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 14px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 10px;">Article 3 — Remboursement des frais</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <tr style="background: #333; color: white;">
+            <th style="padding: 6px 10px; text-align: left;">Nature</th>
+            <th style="padding: 6px 10px; text-align: center;">Base</th>
+            <th style="padding: 6px 10px; text-align: right;">Plafond</th>
+          </tr>
+          <tr>
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd;">Indemnités km (barème fiscal)</td>
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd; text-align: center;">{mission_distance_aller} km A/R</td>
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{mission_indemnite_km} €/km</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd;">Repas midi (plafond URSSAF)</td>
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd; text-align: center;">Sur justificatif</td>
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{mission_frais_repas_midi} €</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd;">Repas soir (grand déplacement)</td>
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd; text-align: center;">Sur justificatif</td>
+            <td style="padding: 6px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{mission_frais_repas_soir} €</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 6px 10px;">Hébergement (nuit complète)</td>
+            <td style="padding: 6px 10px; text-align: center;">Sur justificatif</td>
+            <td style="padding: 6px 10px; text-align: right; font-weight: bold;">{mission_frais_hebergement} €/nuit</td>
+          </tr>
+        </table>
+        <p style="font-size: 11px; color: #666; margin-top: 6px; font-style: italic;">Grand déplacement : > 50 km du domicile, sans possibilité de retour quotidien (circ. DSS/SDFSS/5B du 7 janv. 2003). Justificatifs à remettre sous 30 jours.</p>
+        <p style="font-size: 12px; margin-top: 8px;">Avance sur frais accordée : <strong>{mission_avance} €</strong></p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h2 style="font-size: 14px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 10px;">Article 4 — Notes particulières</h2>
+        <p style="font-size: 13px;">{mission_notes}</p>
+      </div>
+
+      <div style="margin-top: 50px; text-align: center;">
+        <p style="margin-bottom: 40px;">Fait à {ecole_ville}, le {date_aujourd_hui}</p>
+        <table style="width: 100%;">
+          <tr>
+            <td style="width: 50%; text-align: center;">
+              <p><strong>Pour l'Organisme de Formation</strong></p>
+              <p style="font-size: 12px;">{ecole_nom} — {mission_autorisant_nom}</p>
+              <p style="margin-top: 60px;">________________________</p>
+              <p style="font-size: 12px;">Signature et cachet</p>
+            </td>
+            <td style="width: 50%; text-align: center;">
+              <p><strong>Le Formateur missionnaire</strong></p>
+              <p style="font-size: 12px;">{formateur_prenom} {formateur_nom}</p>
+              <p style="margin-top: 60px;">________________________</p>
+              <p style="font-size: 12px;">Lu et approuvé — Bon pour accord</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
   }
 
   return templates[type] || ''

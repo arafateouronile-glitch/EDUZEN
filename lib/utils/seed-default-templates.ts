@@ -23,6 +23,7 @@ const ALL_DOCUMENT_TYPES: DocumentType[] = [
   'attestation_assiduite',
   'attestation',
   'convention_formateur',
+  'ordre_de_mission',
 ]
 
 export async function seedDefaultTemplatesForOrg(

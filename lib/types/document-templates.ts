@@ -21,6 +21,7 @@ export type DocumentType =
   | 'livret_accueil' // OF - Livret d'accueil
   | 'emargement' // OF - Feuille d'émargement
   | 'convention_formateur' // Convention de prestation avec formateur indépendant
+  | 'ordre_de_mission' // Ordre de mission pour déplacement d'un formateur
 
 export interface DocumentTemplate {
   id: string
@@ -497,6 +498,29 @@ export interface DocumentVariables {
   convention_modalites_paiement?: string
   convention_lieu_formation?: string
   convention_notes?: string
+
+  // Ordre de mission
+  mission_reference?: string
+  mission_objet?: string
+  mission_formation?: string
+  mission_session_ref?: string
+  mission_lieu?: string
+  mission_lieu_adresse?: string
+  mission_date_debut?: string
+  mission_date_fin?: string
+  mission_horaires?: string
+  mission_duree_jours?: string
+  mission_duree_heures?: string
+  mission_transport_autorise?: string
+  mission_distance_aller?: string
+  mission_indemnite_km?: string
+  mission_frais_repas_midi?: string
+  mission_frais_repas_soir?: string
+  mission_frais_hebergement?: string
+  mission_avance?: string
+  mission_autorisant_nom?: string
+  mission_autorisant_qualite?: string
+  mission_notes?: string
 }
 
 // Type pour les données d'édition
