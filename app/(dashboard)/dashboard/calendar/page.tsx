@@ -8,6 +8,7 @@ import {
   Plus,
   Bell,
   CheckCircle2,
+  RefreshCw,
   Clock,
   AlertTriangle,
   ListTodo,
@@ -20,6 +21,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { calendarService, type CalendarEvent, type CalendarTodo, type CreateTodoInput, type UpdateTodoInput } from '@/lib/services/calendar.service.client'
 import { CalendarView } from '@/components/calendar/calendar-view'
 import { TodoModal } from '@/components/calendar/todo-modal'
+import { SyncCalendarModal } from '@/components/calendar/sync-calendar-modal'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
@@ -35,6 +37,7 @@ export default function CalendarPage() {
 
   // État local
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [selectedTodo, setSelectedTodo] = useState<CalendarTodo | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [dateRange, setDateRange] = useState(() => {
@@ -375,13 +378,23 @@ export default function CalendarPage() {
           </p>
         </div>
 
-        <Button
-          onClick={() => handleAddEvent()}
-          className="bg-brand-blue hover:bg-brand-blue-dark text-white shadow-md font-semibold px-6 py-5"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Nouvelle tâche
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsSyncModalOpen(true)}
+            className="border-gray-200 text-gray-600 hover:text-brand-blue hover:border-brand-blue font-semibold px-4 py-5"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Synchroniser
+          </Button>
+          <Button
+            onClick={() => handleAddEvent()}
+            className="bg-brand-blue hover:bg-brand-blue-dark text-white shadow-md font-semibold px-6 py-5"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Nouvelle tâche
+          </Button>
+        </div>
       </motion.div>
 
       {/* Statistiques */}
@@ -623,6 +636,12 @@ export default function CalendarPage() {
           </GlassCard>
         </div>
       </div>
+
+      {/* Modal synchronisation calendrier */}
+      <SyncCalendarModal
+        open={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+      />
 
       {/* Modal TODO */}
       <TodoModal
