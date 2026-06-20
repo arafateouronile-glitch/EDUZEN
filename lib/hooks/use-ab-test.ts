@@ -4,8 +4,8 @@
 
 import { useMemo } from 'react'
 import { useAuth } from './use-auth'
-import { abTestingService } from '@/lib/services/ab-testing.service'
-import type { Variant } from '@/lib/services/ab-testing.service'
+import { abTestingService } from '@/lib/services/ab-testing.service.client'
+import type { Variant } from '@/lib/services/ab-testing.service.client'
 
 interface UseABTestOptions {
   testId: string

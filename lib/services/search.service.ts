@@ -3,7 +3,6 @@
  * Recherche dans étudiants, sessions, documents, messages
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
@@ -26,9 +25,9 @@ export interface SearchResult {
 export class SearchService {
   private supabase: SupabaseClient<Database>
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
+  constructor(supabaseClient: SupabaseClient<Database>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -221,7 +220,6 @@ export class SearchService {
   }
 }
 
-export const searchService = new SearchService()
 
 
 

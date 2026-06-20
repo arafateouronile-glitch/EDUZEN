@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -86,13 +85,13 @@ export interface PortfolioEntry {
   updated_at: string
 }
 
-class LearningPortfolioService {
+export class LearningPortfolioService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -690,6 +689,5 @@ class LearningPortfolioService {
   }
 }
 
-export const learningPortfolioService = new LearningPortfolioService()
 
 

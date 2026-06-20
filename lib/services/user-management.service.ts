@@ -1,6 +1,5 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface Role {
@@ -99,9 +98,9 @@ export class UserManagementService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -566,4 +565,3 @@ export class UserManagementService {
   }
 }
 
-export const userManagementService = new UserManagementService()

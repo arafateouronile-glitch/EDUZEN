@@ -9,7 +9,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { qualiopiService, type QualiopiIndicator } from '@/lib/services/qualiopi.service'
+import { qualiopiService, type QualiopiIndicator } from '@/lib/services/qualiopi.service.client'
 import {
   QUALIOPI_REFERENTIAL,
   type AuditorPortalData,

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { feedbackService } from '@/lib/services/feedback.service'
+import { feedbackService } from '@/lib/services/feedback.service.client'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select-shadcn'
 import { MessageSquare, X, Upload, Image as ImageIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import type { FeedbackType } from '@/lib/services/feedback.service'
+import type { FeedbackType } from '@/lib/services/feedback.service.client'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 interface FeedbackButtonProps {

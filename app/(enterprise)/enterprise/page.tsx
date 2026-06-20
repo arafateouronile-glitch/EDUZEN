@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
-import { enterprisePortalService, type CompanyKPIs, type EmployeeProgress } from '@/lib/services/enterprise-portal.service'
+import { enterprisePortalService, type CompanyKPIs, type EmployeeProgress } from '@/lib/services/enterprise-portal.service.client'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'

@@ -6,7 +6,6 @@
  * et les types régénérés avec: supabase gen types typescript
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Types définis manuellement car la table n'existe pas encore dans database.types.ts
@@ -50,9 +49,9 @@ export interface CreateExportHistoryParams {
 export class ExportHistoryService {
   private supabase: SupabaseClient
 
-  constructor(supabaseClient?: SupabaseClient) {
+  constructor(supabaseClient: SupabaseClient) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -294,5 +293,4 @@ export class ExportHistoryService {
   }
 }
 
-export const exportHistoryService = new ExportHistoryService()
 

@@ -5,7 +5,6 @@
  * (Google, Microsoft, GitHub, SAML)
  */
 
-import { createClient } from '@/lib/supabase/client'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export interface SSOProvider {
@@ -214,4 +213,3 @@ export class SSOService {
 }
 
 // Export singleton instance
-export const ssoService = new SSOService()

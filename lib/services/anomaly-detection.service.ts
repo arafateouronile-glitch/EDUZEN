@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
@@ -15,8 +14,8 @@ export class AnomalyDetectionService {
   // Tables anomaly_* et normal_patterns non dans le schéma généré — cast centralisé ici
   private get db() { return this.supabase as unknown as SupabaseClient }
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient!
   }
 
   // ========== ANOMALY TYPES ==========
@@ -430,6 +429,5 @@ export class AnomalyDetectionService {
   }
 }
 
-export const anomalyDetectionService = new AnomalyDetectionService()
 
 

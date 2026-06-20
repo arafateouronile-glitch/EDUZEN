@@ -3,7 +3,6 @@
  * Permet de tester différentes variantes de fonctionnalités
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import { analytics } from '@/lib/utils/analytics'
@@ -33,9 +32,9 @@ export class ABTestingService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -223,4 +222,3 @@ export class ABTestingService {
   }
 }
 
-export const abTestingService = new ABTestingService()

@@ -15,7 +15,7 @@ vi.mock('@/lib/services/calendar.service', () => {
   }
 })
 
-import { calendarService } from '@/lib/services/calendar.service'
+import { calendarService } from '@/lib/services/calendar.service.client'
 
 describe('CalendarService', () => {
   beforeEach(() => {

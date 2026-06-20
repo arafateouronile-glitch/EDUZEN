@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { AskAiButton } from '@/components/dashboard/ask-ai-button'
 import { useSessionDetail } from './hooks/use-session-detail'
-import { sessionService } from '@/lib/services/session.service'
+import { sessionService } from '@/lib/services/session.service.client'
 import { useToast } from '@/components/ui/toast'
 import { SessionSidebar } from './components/session-sidebar'
 import { SkeletonLoader } from './components/skeleton-loader'

@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { workflowValidationService } from '@/lib/services/workflow-validation.service'
+import { workflowValidationService } from '@/lib/services/workflow-validation.service.client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
 import { formatDate } from '@/lib/utils'

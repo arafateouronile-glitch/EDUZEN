@@ -4,8 +4,8 @@ import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { enterprisePortalService } from '@/lib/services/enterprise-portal.service'
-import type { Company } from '@/lib/services/enterprise-portal.service'
+import { enterprisePortalService } from '@/lib/services/enterprise-portal.service.client'
+import type { Company } from '@/lib/services/enterprise-portal.service.client'
 
 type EnterpriseCompanyContextValue = {
   company: Company | null

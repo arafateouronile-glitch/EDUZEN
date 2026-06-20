@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
-import { enterprisePortalService, type TrainingRequest } from '@/lib/services/enterprise-portal.service'
+import { enterprisePortalService, type TrainingRequest } from '@/lib/services/enterprise-portal.service.client'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'

@@ -2,7 +2,6 @@
  * Service pour gérer les paramètres du catalogue public (site vitrine)
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
@@ -63,9 +62,9 @@ export class PublicCatalogSettingsService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
+  constructor(supabaseClient: SupabaseClient<Database>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -155,7 +154,6 @@ export class PublicCatalogSettingsService {
   }
 }
 
-export const publicCatalogSettingsService = new PublicCatalogSettingsService()
 
 
 

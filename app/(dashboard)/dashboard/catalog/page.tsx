@@ -6,8 +6,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { programService } from '@/lib/services/program.service'
-import { publicCatalogService } from '@/lib/services/public-catalog.service'
+import { programService } from '@/lib/services/program.service.client'
+import { publicCatalogService } from '@/lib/services/public-catalog.service.client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'

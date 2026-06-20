@@ -20,7 +20,7 @@ vi.mock('@/lib/supabase/client', () => {
   }
 })
 
-import { learnerNotificationsService } from '@/lib/services/learner-notifications.service'
+import { learnerNotificationsService } from '@/lib/services/learner-notifications.service.client'
 
 describe('LearnerNotificationsService', () => {
   describe('getPermissionStatus', () => {

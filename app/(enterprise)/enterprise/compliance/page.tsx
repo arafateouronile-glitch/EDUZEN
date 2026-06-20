@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
-import { enterprisePortalService } from '@/lib/services/enterprise-portal.service'
+import { enterprisePortalService } from '@/lib/services/enterprise-portal.service.client'
 import { ComplianceMatrix } from '@/components/enterprise/compliance-matrix'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertCircle } from 'lucide-react'

@@ -5,7 +5,7 @@
 import { exportToExcel as excelJSExport, exportToCSV as csvExport } from './excel-export'
 import { formatDate } from './format'
 import { analytics } from './analytics'
-import { exportHistoryService } from '@/lib/services/export-history.service'
+import { exportHistoryService } from '@/lib/services/export-history.service.client'
 import { logger } from '@/lib/utils/logger'
 
 export type ExportFormat = 'xlsx' | 'csv'

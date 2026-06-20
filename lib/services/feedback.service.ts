@@ -2,7 +2,6 @@
  * Service pour gérer le système de feedback utilisateur
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
 import { logger } from '@/lib/utils/logger'
@@ -33,9 +32,9 @@ export class FeedbackService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -234,7 +233,6 @@ export class FeedbackService {
   }
 }
 
-export const feedbackService = new FeedbackService()
 
 
 

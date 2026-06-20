@@ -19,7 +19,7 @@ vi.mock('@/lib/supabase/client', () => {
   }
 })
 
-import { sessionChargesService } from '@/lib/services/session-charges.service'
+import { sessionChargesService } from '@/lib/services/session-charges.service.client'
 
 describe('SessionChargesService', () => {
   describe('getCategories', () => {

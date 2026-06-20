@@ -6,7 +6,6 @@
  * - Envoi programmé de documents
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Database } from '@/types/database.types'
@@ -53,9 +52,9 @@ export class NotificationSchedulerService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
+  constructor(supabaseClient: SupabaseClient<Database>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -420,5 +419,3 @@ export class NotificationSchedulerService {
     return (data as ScheduledNotification[]) || []
   }
 }
-
-export const notificationSchedulerService = new NotificationSchedulerService()

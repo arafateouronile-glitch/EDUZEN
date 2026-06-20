@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { cpfService, type CPFEnrollment, type CPFEligibleTraining } from '@/lib/services/cpf.service'
+import { cpfService, type CPFEnrollment, type CPFEligibleTraining } from '@/lib/services/cpf.service.client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

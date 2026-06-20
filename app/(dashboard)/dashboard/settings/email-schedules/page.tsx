@@ -45,7 +45,7 @@ import type {
   EmailScheduleTargetType,
   CreateEmailScheduleInput,
   DocumentType,
-} from '@/lib/services/email-schedule.service'
+} from '@/lib/services/email-schedule.service.client'
 import {
   PRESET_AUTOMATIONS,
   PRESET_EMAIL_TYPES,

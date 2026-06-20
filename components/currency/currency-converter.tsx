@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useFormatting } from '@/lib/hooks/use-formatting'
-import { currencyService } from '@/lib/services/currency.service'
+import { currencyService } from '@/lib/services/currency.service.client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {

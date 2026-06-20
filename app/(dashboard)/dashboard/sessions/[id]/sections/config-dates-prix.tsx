@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import type { SessionFormData, SlotConfig } from '../hooks/use-session-detail'
 import type { TableRow } from '@/lib/types/supabase-helpers'
-import { sessionSlotService } from '@/lib/services/session-slot.service'
+import { sessionSlotService } from '@/lib/services/session-slot.service.client'
 import { useToast } from '@/components/ui/toast'
 
 type SessionSlot = TableRow<'session_slots'>

@@ -2,7 +2,6 @@
  * Service de gestion des devises et conversions
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 
@@ -34,9 +33,9 @@ export class CurrencyService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -121,7 +120,6 @@ export class CurrencyService {
   }
 }
 
-export const currencyService = new CurrencyService()
 
 
 

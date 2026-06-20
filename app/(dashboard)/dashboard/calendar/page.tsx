@@ -17,7 +17,7 @@ import {
   Filter,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { calendarService, type CalendarEvent, type CalendarTodo, type CreateTodoInput, type UpdateTodoInput } from '@/lib/services/calendar.service'
+import { calendarService, type CalendarEvent, type CalendarTodo, type CreateTodoInput, type UpdateTodoInput } from '@/lib/services/calendar.service.client'
 import { CalendarView } from '@/components/calendar/calendar-view'
 import { TodoModal } from '@/components/calendar/todo-modal'
 import { Button } from '@/components/ui/button'

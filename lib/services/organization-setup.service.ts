@@ -1,10 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
 import { documentTemplateService } from './document-template.service.client'
-import { qualiopiService } from './qualiopi.service'
-import { sessionService } from './session.service'
-import { programService } from './program.service'
-import { formationService } from './formation.service'
+import { qualiopiService } from './qualiopi.service.client'
+import { sessionService } from './session.service.client'
+import { programService } from './program.service.client'
+import { formationService } from './formation.service.client'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import type { DocumentType } from '@/lib/types/document-templates'
 import { BRAND_COLORS } from '@/lib/config/app-config'
@@ -24,8 +23,8 @@ export interface OrganizationSetupConfig {
 export class OrganizationSetupService {
   private supabase: SupabaseClient<any>
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient!
   }
 
   /**
@@ -453,4 +452,3 @@ export class OrganizationSetupService {
   }
 }
 
-export const organizationSetupService = new OrganizationSetupService()

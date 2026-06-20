@@ -3,7 +3,6 @@
  * Intégration avec Mon Compte Formation
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 
@@ -110,9 +109,9 @@ export class CPFService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -542,4 +541,3 @@ export class CPFService {
   }
 }
 
-export const cpfService = new CPFService()

@@ -7,7 +7,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { qualiopiService } from '@/lib/services/qualiopi.service'
+import { qualiopiService } from '@/lib/services/qualiopi.service.client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

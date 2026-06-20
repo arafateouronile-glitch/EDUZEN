@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
@@ -82,8 +81,8 @@ export class TemplateMarketplaceService {
     return this.supabase as SupabaseClientWithMarketplace
   }
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient!
   }
 
   // ========== CATEGORIES ==========
@@ -551,6 +550,5 @@ export class TemplateMarketplaceService {
   }
 }
 
-export const templateMarketplaceService = new TemplateMarketplaceService()
 
 

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
-import { enterprisePortalService } from '@/lib/services/enterprise-portal.service'
+import { enterprisePortalService } from '@/lib/services/enterprise-portal.service.client'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertCircle, BarChart3, Users, Clock, GraduationCap, Wallet } from 'lucide-react'

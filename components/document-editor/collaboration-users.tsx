@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Avatar } from '@/components/ui/avatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { realtimeCollaborationService, type ActiveUser } from '@/lib/services/realtime-collaboration.service'
+import { realtimeCollaborationService, type ActiveUser } from '@/lib/services/realtime-collaboration.service.client'
 import { Users } from 'lucide-react'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 

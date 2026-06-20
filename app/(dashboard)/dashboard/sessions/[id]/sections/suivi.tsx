@@ -42,7 +42,7 @@ import type {
 } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { logger, sanitizeError } from '@/lib/utils/logger'
-import { evaluationService } from '@/lib/services/evaluation.service'
+import { evaluationService } from '@/lib/services/evaluation.service.client'
 import {
   Dialog,
   DialogContent,

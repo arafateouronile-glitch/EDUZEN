@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { knowledgeBaseService } from '@/lib/services/knowledge-base.service'
+import { knowledgeBaseService } from '@/lib/services/knowledge-base.service.client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, HelpCircle, Eye, ThumbsUp } from 'lucide-react'

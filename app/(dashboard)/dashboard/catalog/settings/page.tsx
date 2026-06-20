@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { publicCatalogSettingsService, type PublicCatalogSettingsFormData } from '@/lib/services/public-catalog-settings.service'
+import { publicCatalogSettingsService, type PublicCatalogSettingsFormData } from '@/lib/services/public-catalog-settings.service.client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'

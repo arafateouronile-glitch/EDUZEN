@@ -3,7 +3,6 @@
  * Pour les organismes de formation en France
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 
@@ -85,9 +84,9 @@ export class QualiopiService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -449,4 +448,3 @@ export class QualiopiService {
   }
 }
 
-export const qualiopiService = new QualiopiService()

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { elearningService } from '@/lib/services/elearning.service'
+import { elearningService } from '@/lib/services/elearning.service.client'
 import {
   ArrowLeft, Save, X, Monitor, Smartphone, GripVertical,
   ChevronDown, Plus, Image as ImageIcon, Bold, Italic,

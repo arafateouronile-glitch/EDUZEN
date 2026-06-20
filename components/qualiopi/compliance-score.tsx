@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { qualiopiService } from '@/lib/services/qualiopi.service'
+import { qualiopiService } from '@/lib/services/qualiopi.service.client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Award, TrendingUp, AlertCircle, CheckCircle2, Info } from 'lucide-react'

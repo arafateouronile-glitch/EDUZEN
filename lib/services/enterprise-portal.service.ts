@@ -8,7 +8,6 @@
  * - OPCO share links
  */
 
-import { createClient } from '@/lib/supabase/client'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -222,7 +221,7 @@ export interface SkillsEvolutionData {
 // SERVICE CLASS
 // =====================================================
 
-class EnterprisePortalService {
+export class EnterprisePortalService {
   private getClient(): SupabaseClient {
     if (typeof window === 'undefined') {
       // Server-side: would need to pass cookies, simplified for client usage
@@ -950,4 +949,3 @@ class EnterprisePortalService {
 }
 
 // Export singleton instance
-export const enterprisePortalService = new EnterprisePortalService()

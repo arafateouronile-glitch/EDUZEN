@@ -366,7 +366,7 @@ export async function revokeDocumentSignature(
  * UTILISATION DANS UN COMPOSANT REACT
  *
  * import { generateAndDownloadPDF } from '@/lib/utils/document-generation/pdf-with-signatures'
- * import { signatureService } from '@/lib/services/signature.service'
+ * import { signatureService } from '@/lib/services/signature.service.client'
  *
  * function DocumentPage() {
  *   const handleGeneratePDF = async () => {

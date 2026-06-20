@@ -103,7 +103,7 @@ vi.mock('@/lib/utils/logger', () => ({
   sanitizeError: (error: any) => ({ message: error.message }),
 }))
 
-import { invoiceService } from '@/lib/services/invoice.service'
+import { invoiceService } from '@/lib/services/invoice.service.client'
 
 describe('AccountingService - Batch Invoice Sync Optimization', () => {
   let service: AccountingService

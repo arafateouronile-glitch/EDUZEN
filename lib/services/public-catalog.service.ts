@@ -2,7 +2,6 @@
  * Service du catalogue public des formations et inscriptions en ligne
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
@@ -17,9 +16,9 @@ export class PublicCatalogService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
+  constructor(supabaseClient: SupabaseClient<Database>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -301,7 +300,6 @@ export class PublicCatalogService {
   }
 }
 
-export const publicCatalogService = new PublicCatalogService()
 
 
 

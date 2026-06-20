@@ -4,7 +4,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { ComplianceService } from '@/lib/services/compliance.service'
-import { ssoService } from '@/lib/services/sso.service'
+import { ssoService } from '@/lib/services/sso.service.client'
 
 /**
  * Vérifie la conformité 2FA et crée/met à jour les contrôles correspondants

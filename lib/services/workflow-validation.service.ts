@@ -3,7 +3,6 @@
  * Service pour gérer les workflows de validation multi-niveaux
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
@@ -79,8 +78,8 @@ export class WorkflowValidationService {
     return this.supabase as SupabaseClientWithWorkflow
   }
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient!
   }
 
   // ========== WORKFLOWS ==========
@@ -517,4 +516,3 @@ export class WorkflowValidationService {
   }
 }
 
-export const workflowValidationService = new WorkflowValidationService()

@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import { logger } from '@/lib/utils/logger'
@@ -128,14 +127,14 @@ export type UpdateTodoInput = Partial<CreateTodoInput> & {
   status?: CalendarTodo['status']
 }
 
-class CalendarService {
+export class CalendarService {
   private supabase: SupabaseClient<Database>
 
   // Table calendar_todos non dans le schéma généré — cast centralisé ici
   private get db() { return this.supabase as unknown as SupabaseClient }
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<Database>) {
+    this.supabase = supabaseClient!
   }
 
   // ==========================================
@@ -981,4 +980,3 @@ class CalendarService {
   }
 }
 
-export const calendarService = new CalendarService()

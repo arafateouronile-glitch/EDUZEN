@@ -15,7 +15,7 @@ vi.mock('@/lib/supabase/client', () => {
   }
 })
 
-import { notificationSchedulerService } from '@/lib/services/notification-scheduler.service'
+import { notificationSchedulerService } from '@/lib/services/notification-scheduler.service.client'
 
 describe('NotificationSchedulerService', () => {
   describe('getScheduledNotifications', () => {

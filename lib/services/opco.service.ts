@@ -3,7 +3,6 @@
  * Déclarations automatiques et financements OPCO pour les organismes de formation en France
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 
@@ -116,9 +115,9 @@ export class OPCOService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -497,4 +496,3 @@ export class OPCOService {
   }
 }
 
-export const opcoService = new OPCOService()

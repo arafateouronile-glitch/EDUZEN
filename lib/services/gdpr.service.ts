@@ -3,7 +3,6 @@
  * Droit à l'oubli, portabilité, consentements, registre des traitements
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface GDPRConsent {
@@ -101,9 +100,9 @@ export class GDPRService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -409,4 +408,3 @@ export class GDPRService {
   }
 }
 
-export const gdprService = new GDPRService()

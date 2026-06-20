@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
 import { z } from 'zod'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -49,8 +48,8 @@ export interface ImportResult {
 export class ImportService {
   private supabase: SupabaseClient<any>
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient!
   }
 
   /**
@@ -311,4 +310,3 @@ export class ImportService {
   }
 }
 
-export const importService = new ImportService()

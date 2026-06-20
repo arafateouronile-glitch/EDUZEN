@@ -40,7 +40,7 @@ import Image from 'next/image'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import { emailTemplateService } from '@/lib/services/email-template.service.client'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
-import type { EmailTemplate } from '@/lib/services/email-template.service'
+import type { EmailTemplate } from '@/lib/services/email-template.service.client'
 
 type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>

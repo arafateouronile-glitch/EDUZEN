@@ -14,7 +14,7 @@ vi.mock('@/lib/supabase/client', () => {
   }
 })
 
-import { educationalResourcesService } from '@/lib/services/educational-resources.service'
+import { educationalResourcesService } from '@/lib/services/educational-resources.service.client'
 
 describe('EducationalResourcesService', () => {
   describe('getCategories', () => {

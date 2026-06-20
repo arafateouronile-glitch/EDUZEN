@@ -3,7 +3,7 @@
  * Couverture : getCompanyForManager (null), getCompanyKPIs (default sans employés)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { enterprisePortalService } from '@/lib/services/enterprise-portal.service'
+import { enterprisePortalService } from '@/lib/services/enterprise-portal.service.client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 function createMockChain(resolveValue: { data: unknown; error: unknown }) {

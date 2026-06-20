@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
@@ -34,13 +33,13 @@ export interface SessionChargesSummary {
   charge_count: number
 }
 
-class SessionChargesService {
+export class SessionChargesService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
+  constructor(supabaseClient: SupabaseClient<Database>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -309,7 +308,6 @@ class SessionChargesService {
   }
 }
 
-export const sessionChargesService = new SessionChargesService()
 
 
 

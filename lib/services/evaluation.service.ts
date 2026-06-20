@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 import type { TableRow, TableInsert, TableUpdate } from '@/lib/types/supabase-helpers'
@@ -29,13 +28,13 @@ export interface EvaluationStats {
   bySubject: Record<string, { count: number; average: number }>
 }
 
-class EvaluationService {
+export class EvaluationService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
+  constructor(supabaseClient: SupabaseClient<Database>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -491,7 +490,6 @@ class EvaluationService {
   }
 }
 
-export const evaluationService = new EvaluationService()
 
 
 

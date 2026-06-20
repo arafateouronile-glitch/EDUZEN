@@ -21,7 +21,7 @@ vi.mock('@/lib/supabase/client', () => {
   }
 })
 
-import { learningPortfolioService } from '@/lib/services/learning-portfolio.service'
+import { learningPortfolioService } from '@/lib/services/learning-portfolio.service.client'
 
 describe('LearningPortfolioService', () => {
   describe('getTemplates', () => {

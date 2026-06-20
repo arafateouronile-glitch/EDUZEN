@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useTransition } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { programService } from '@/lib/services/program.service'
+import { programService } from '@/lib/services/program.service.client'
 import { ProgramsContent } from './programs-content'
 import type { Program } from './types'
 import { RoleGuard, FORMATION_MANAGEMENT_ROLES } from '@/components/auth/role-guard'

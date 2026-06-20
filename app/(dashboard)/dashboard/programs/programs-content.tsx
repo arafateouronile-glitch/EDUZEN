@@ -24,7 +24,7 @@ import { PulseOnMount } from '@/components/ui/micro-interactions'
 import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
 import { PremiumBarChart } from '@/components/charts/premium-bar-chart'
 import { cn } from '@/lib/utils'
-import { programService } from '@/lib/services/program.service'
+import { programService } from '@/lib/services/program.service.client'
 import { useToast } from '@/components/ui/toast'
 import { useShouldReduceAnimations } from '@/lib/hooks/use-reduced-motion'
 

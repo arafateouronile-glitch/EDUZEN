@@ -4,7 +4,6 @@
  * Utilise Y.js pour la synchronisation et Supabase Realtime pour la communication
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
@@ -26,9 +25,9 @@ export class RealtimeCollaborationService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
   private providers: Map<string, WebsocketProvider> = new Map()
@@ -312,4 +311,3 @@ export class RealtimeCollaborationService {
   }
 }
 
-export const realtimeCollaborationService = new RealtimeCollaborationService()

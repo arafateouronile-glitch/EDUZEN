@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export interface KnowledgeBaseArticle {
@@ -26,8 +25,8 @@ export interface KnowledgeBaseCategory {
 export class KnowledgeBaseService {
   private supabase: SupabaseClient<any>
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
-    this.supabase = supabaseClient || createClient()
+  constructor(supabaseClient: SupabaseClient<any>) {
+    this.supabase = supabaseClient!
   }
 
   /**
@@ -602,4 +601,3 @@ export class KnowledgeBaseService {
   }
 }
 
-export const knowledgeBaseService = new KnowledgeBaseService()

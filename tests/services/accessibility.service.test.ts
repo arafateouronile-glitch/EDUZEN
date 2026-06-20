@@ -12,7 +12,7 @@ vi.mock('@/lib/supabase/client', () => {
   }
 })
 
-import { accessibilityService } from '@/lib/services/accessibility.service'
+import { accessibilityService } from '@/lib/services/accessibility.service.client'
 
 describe('AccessibilityService', () => {
   describe('getDisabilityTypes', () => {

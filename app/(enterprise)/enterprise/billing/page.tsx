@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useEnterpriseCompany } from '@/lib/contexts/enterprise-company-context'
-import { enterprisePortalService } from '@/lib/services/enterprise-portal.service'
+import { enterprisePortalService } from '@/lib/services/enterprise-portal.service.client'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'

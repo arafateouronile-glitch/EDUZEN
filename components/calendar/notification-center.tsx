@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { calendarService, type CalendarNotification } from '@/lib/services/calendar.service'
+import { calendarService, type CalendarNotification } from '@/lib/services/calendar.service.client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { cn, formatDate } from '@/lib/utils'

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { qualiopiService, type QualiopiIndicator } from '@/lib/services/qualiopi.service'
+import { qualiopiService, type QualiopiIndicator } from '@/lib/services/qualiopi.service.client'
 import {
   QUALIOPI_REFERENTIAL,
 } from '@/lib/services/auditor-portal.service'

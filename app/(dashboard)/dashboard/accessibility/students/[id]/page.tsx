@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { accessibilityService } from '@/lib/services/accessibility.service'
+import { accessibilityService } from '@/lib/services/accessibility.service.client'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import type { Accommodation } from '@/lib/services/accessibility.service'
+import type { Accommodation } from '@/lib/services/accessibility.service.client'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 
 type StudentWithProgramCohort = TableRow<'students'> & { programs?: { name: string } | null; cohorts?: { name: string } | null }

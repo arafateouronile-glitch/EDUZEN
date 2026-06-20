@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { importService, type ImportMapping, type ImportResult, type StudentImportRow } from '@/lib/services/import.service'
+import { importService, type ImportMapping, type ImportResult, type StudentImportRow } from '@/lib/services/import.service.client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'

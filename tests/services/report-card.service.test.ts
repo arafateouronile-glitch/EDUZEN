@@ -19,7 +19,7 @@ vi.mock('@/lib/supabase/client', () => {
   return { createClient: () => ({ from: () => ch }) }
 })
 
-import { reportCardService } from '@/lib/services/report-card.service'
+import { reportCardService } from '@/lib/services/report-card.service.client'
 
 describe('ReportCardService', () => {
   describe('getAll', () => {

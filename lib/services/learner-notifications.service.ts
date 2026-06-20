@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 
@@ -21,13 +20,13 @@ interface SessionReminder {
   isRemote?: boolean
 }
 
-class LearnerNotificationsService {
+export class LearnerNotificationsService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
   private swRegistration: ServiceWorkerRegistration | null = null
@@ -323,7 +322,6 @@ class LearnerNotificationsService {
   }
 }
 
-export const learnerNotificationsService = new LearnerNotificationsService()
 
 
 

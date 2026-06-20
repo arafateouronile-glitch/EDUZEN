@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
-import { elearningService } from '@/lib/services/elearning.service'
+import { elearningService } from '@/lib/services/elearning.service.client'
 import { Button } from '@/components/ui/button'
 import {
   ArrowLeft, Play, CheckCircle, Star, Users, Clock, BookOpen, Award,

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { programService } from '@/lib/services/program.service'
+import { programService } from '@/lib/services/program.service.client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Plus, Search, BookMarked, Calendar, Clock, DollarSign, Users, Filter } from 'lucide-react'

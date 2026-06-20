@@ -13,7 +13,6 @@
  * - Rapports de conformité
  */
 
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -227,9 +226,9 @@ export class AccessibilityService {
   private supabase: SupabaseClient<any>
 
 
-  constructor(supabaseClient?: SupabaseClient<any>) {
+  constructor(supabaseClient: SupabaseClient<any>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -1153,4 +1152,3 @@ export class AccessibilityService {
 }
 
 // Export singleton
-export const accessibilityService = new AccessibilityService()

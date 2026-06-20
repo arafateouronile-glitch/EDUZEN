@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
@@ -42,13 +41,13 @@ export interface ReportCardFilters {
   status?: 'draft' | 'published' | 'archived'
 }
 
-class ReportCardService {
+export class ReportCardService {
   private supabase: SupabaseClient<Database>
 
 
-  constructor(supabaseClient?: SupabaseClient<Database>) {
+  constructor(supabaseClient: SupabaseClient<Database>) {
 
-    this.supabase = supabaseClient || createClient()
+    this.supabase = supabaseClient!
 
   }
 
@@ -268,5 +267,4 @@ class ReportCardService {
   }
 }
 
-export const reportCardService = new ReportCardService()
 
