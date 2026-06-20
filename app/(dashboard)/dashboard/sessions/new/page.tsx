@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -18,6 +18,7 @@ import { MultiSelect } from '@/components/ui/multi-select'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
+import { LocationSelect } from '@/components/ui/location-select'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 
@@ -68,6 +69,7 @@ export default function NewSessionPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<SessionFormData>({
     resolver: zodResolver(sessionSchema),
@@ -194,12 +196,17 @@ export default function NewSessionPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="location">Lieu</Label>
-                  <Input
-                    id="location"
-                    {...register('location')}
-                    placeholder="Salle 101 ou En ligne"
+                <div className="md:col-span-2">
+                  <Label>Lieu</Label>
+                  <Controller
+                    name="location"
+                    control={control}
+                    render={({ field }) => (
+                      <LocationSelect
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                      />
+                    )}
                   />
                 </div>
                 <div>

@@ -11,6 +11,7 @@ import type { SessionFormData, SlotConfig } from '../hooks/use-session-detail'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { sessionSlotService } from '@/lib/services/session-slot.service.client'
 import { useToast } from '@/components/ui/toast'
+import { LocationSelect } from '@/components/ui/location-select'
 
 type SessionSlot = TableRow<'session_slots'>
 
@@ -276,12 +277,9 @@ export function ConfigDatesPrix({
 
           <div>
             <label className="block text-sm font-medium mb-2">Lieu/Salle</label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => onFormDataChange({ ...formData, location: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Ex: Salle A1"
+            <LocationSelect
+              value={formData.location ?? ''}
+              onChange={(val) => onFormDataChange({ ...formData, location: val })}
             />
           </div>
 

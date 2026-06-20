@@ -12,6 +12,7 @@ import { ArrowLeft, TrendingUp, Users, Star, Award, Eye, EyeOff, Globe, Image as
 import Link from 'next/link'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { CategorySelect } from '@/components/ui/category-select'
+import { LocationSelect } from '@/components/ui/location-select'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -419,12 +420,10 @@ export default function EditProgramPage() {
                         {/* Lieu */}
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Lieu</label>
-                          <input
-                            type="text"
+                          <LocationSelect
                             value={formData.lieu}
-                            onChange={(e) => setFormData({ ...formData, lieu: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                            placeholder="Ex : 12 rue de Rivoli, 75001 Paris"
+                            onChange={(val) => setFormData({ ...formData, lieu: val })}
+                            inputClassName="text-sm py-2"
                           />
                         </div>
                         {/* Délai d'accès */}
