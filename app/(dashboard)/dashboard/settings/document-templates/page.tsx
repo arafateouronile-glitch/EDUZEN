@@ -196,6 +196,13 @@ const DOCUMENT_TYPES: Array<{
     icon: Users,
     color: '#059669',
   },
+  {
+    type: 'attestation_defraiement',
+    name: 'Attestation de défraiement',
+    description: 'Défraiement des membres de jury (vacations, transport, repas, hébergement)',
+    icon: Receipt,
+    color: '#D97706',
+  },
 ]
 
 export default function DocumentTemplatesPage() {

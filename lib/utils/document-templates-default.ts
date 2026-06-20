@@ -1169,6 +1169,128 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
         </table>
       </div>
     `,
+    attestation_defraiement: `
+      <h1 style="text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 6px;">
+        ATTESTATION DE DÉFRAIEMENT
+      </h1>
+      <p style="text-align: center; font-size: 13px; color: #555; margin-bottom: 4px;">Membre de Jury — Certification Professionnelle</p>
+      <p style="text-align: center; font-size: 11px; color: #888; font-style: italic; margin-bottom: 25px;">
+        (Art. R.6113-10 à R.6113-13 C. trav. — Décret n° 2019-958 du 13/09/2019 — Arrêté du 20/12/2002)
+      </p>
+
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-bottom: 16px;">
+        <span>Réf. défraiement : {defraiement_reference}</span>
+        <span>Examen réf. : {examen_reference}</span>
+        <span>Date : {date_aujourd_hui}</span>
+      </div>
+
+      <div style="display: flex; gap: 14px; margin-bottom: 20px;">
+        <div style="flex: 1; border: 1px solid #ddd; padding: 10px;">
+          <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: #888; margin-bottom: 6px;">Organisme</p>
+          <p style="font-weight: bold;">{ecole_nom}</p>
+          <p style="font-size: 12px;">SIRET : {ecole_siret}</p>
+          <p style="font-size: 12px;">NDA : {ecole_numero_declaration}</p>
+          <p style="font-size: 12px;">{ecole_adresse}, {ecole_code_postal} {ecole_ville}</p>
+          <p style="font-size: 12px;">Représenté par : {ecole_representant}</p>
+        </div>
+        <div style="flex: 1; border: 1px solid #ddd; padding: 10px;">
+          <p style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: #888; margin-bottom: 6px;">Membre du jury</p>
+          <p style="font-weight: bold;">{jury_prenom} {jury_nom}</p>
+          <p style="font-size: 12px;">Qualité : {jury_qualite}</p>
+          <p style="font-size: 12px;">{jury_adresse}, {jury_code_postal} {jury_ville}</p>
+          <p style="font-size: 12px;">{jury_email}</p>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 18px;">
+        <h2 style="font-size: 13px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 8px;">Article 1 — Mission de jury</h2>
+        <p style="font-weight: bold; font-size: 13px; margin-bottom: 3px;">{examen_nom}</p>
+        <p style="font-size: 12px;">Type : {examen_type}</p>
+        <p style="font-size: 12px;">Session : {session_nom}</p>
+        <p style="font-size: 12px;">Date(s) : {examen_date}</p>
+        <p style="font-size: 12px;">Lieu : {examen_lieu}</p>
+      </div>
+
+      <div style="margin-bottom: 18px;">
+        <h2 style="font-size: 13px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 8px;">Article 2 — Détail du défraiement</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <tr style="background: #333; color: white;">
+            <th style="padding: 6px 8px; text-align: left;">Nature</th>
+            <th style="padding: 6px 8px; text-align: center;">Base de calcul</th>
+            <th style="padding: 6px 8px; text-align: right;">Montant</th>
+          </tr>
+          <tr>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Vacations de jury</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd; text-align: center;">{defraiement_nb_heures} h × {defraiement_taux_vacation} €/h</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{defraiement_vacations} €</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd;">Frais de transport</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd; text-align: center;">{defraiement_distance_km} km A/R × {defraiement_taux_km} €/km</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{defraiement_transport} €</td>
+          </tr>
+          <tr>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd;">Indemnités repas</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd; text-align: center;">Sur justificatif — plafond URSSAF</td>
+            <td style="padding: 6px 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{defraiement_repas} €</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 6px 8px; border-bottom: 2px solid #333;">Frais d'hébergement</td>
+            <td style="padding: 6px 8px; border-bottom: 2px solid #333; text-align: center;">Sur justificatif — plafond URSSAF</td>
+            <td style="padding: 6px 8px; border-bottom: 2px solid #333; text-align: right; font-weight: bold;">{defraiement_hebergement} €</td>
+          </tr>
+          <tr style="background: #333; color: white;">
+            <td colspan="2" style="padding: 7px 8px; font-weight: bold;">TOTAL À VERSER</td>
+            <td style="padding: 7px 8px; text-align: right; font-weight: bold; font-size: 13px;">{defraiement_total} €</td>
+          </tr>
+        </table>
+        <p style="font-size: 10px; color: #666; font-style: italic; margin-top: 5px;">
+          Grand déplacement (> 50 km, sans retour quotidien) : plafonds repas 20,90 €/repas, hébergement 70 €/nuit (82,30 € en Île-de-France) — circ. DSS/SDFSS/5B du 7 janv. 2003.
+        </p>
+      </div>
+
+      <div style="margin-bottom: 18px;">
+        <h2 style="font-size: 13px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 8px;">Article 3 — Modalités de versement</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <tr>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; background: #f5f5f5; width: 30%; font-weight: bold;">IBAN</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-family: monospace;">{jury_iban}</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; background: #f5f5f5; font-weight: bold;">BIC</td>
+            <td style="padding: 5px 8px; border: 1px solid #ddd; font-family: monospace;">{jury_bic}</td>
+          </tr>
+        </table>
+        <p style="font-size: 11px; margin-top: 5px; color: #555;">Virement sous 30 jours calendaires suivant la date de l'examen.</p>
+      </div>
+
+      <div style="margin-bottom: 18px; background: #fff8e1; border: 1px solid #f59e0b; padding: 10px; border-radius: 3px;">
+        <p style="font-size: 11px; font-weight: bold; color: #92400e; margin-bottom: 5px;">⚠ Information fiscale — Article 4</p>
+        <p style="font-size: 11px; color: #78350f; line-height: 1.6;">
+          Les vacations de jury sont des revenus imposables à déclarer en <strong>BNC (art. 92 CGI)</strong> ou en revenus salariaux selon le statut du bénéficiaire. Les remboursements de frais dans les limites URSSAF ne sont pas soumis à cotisations sociales (arrêté 20/12/2002).
+        </p>
+      </div>
+
+      <div style="margin-top: 45px; text-align: center;">
+        <p style="margin-bottom: 35px;">Fait à {ecole_ville}, le {date_aujourd_hui}</p>
+        <table style="width: 100%;">
+          <tr>
+            <td style="width: 50%; text-align: center;">
+              <p><strong>Pour l'Organisme</strong></p>
+              <p style="font-size: 12px;">{ecole_nom} — {ecole_representant}</p>
+              <p style="margin-top: 55px;">________________________</p>
+              <p style="font-size: 11px;">Signature et cachet</p>
+            </td>
+            <td style="width: 50%; text-align: center;">
+              <p><strong>Le Membre du Jury</strong></p>
+              <p style="font-size: 12px;">{jury_prenom} {jury_nom}</p>
+              <p style="margin-top: 55px;">________________________</p>
+              <p style="font-size: 11px;">Lu et approuvé — Bon pour paiement</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
   }
 
   return templates[type] || ''

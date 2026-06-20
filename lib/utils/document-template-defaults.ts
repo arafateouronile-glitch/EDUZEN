@@ -2596,6 +2596,169 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     `,
     footerContent: premiumFooter,
   },
+
+  attestation_defraiement: {
+    type: 'attestation_defraiement',
+    name: 'Attestation de défraiement — Membre de jury',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <div style="text-align: center; margin-bottom: 25px;">
+        <h1 style="font-size: 15pt; font-weight: bold; margin: 0 0 6px 0; color: #1A1A1A; text-transform: uppercase; letter-spacing: 0.5px;">
+          Attestation de Défraiement
+        </h1>
+        <h2 style="font-size: 11pt; font-weight: normal; margin: 0 0 4px 0; color: #444;">
+          Membre de Jury — Certification Professionnelle
+        </h2>
+        <p style="font-size: 8.5pt; color: #666; margin: 0; font-style: italic;">
+          (Art. R.6113-10 à R.6113-13 Code du Travail — Décret n° 2019-958 du 13 septembre 2019 — Arrêté du 20 décembre 2002)
+        </p>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 8.5pt; color: #666; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+        <span>Réf. : <strong>{defraiement_reference}</strong></span>
+        <span>Examen réf. : {examen_reference}</span>
+        <span>Émis le : {date_aujourd_hui}</span>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 16px; margin-bottom: 14px;">
+          <div style="flex: 1; background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px;">
+            <p style="font-size: 8pt; text-transform: uppercase; color: #888; margin: 0 0 6px 0; letter-spacing: 0.5px;">Organisme certificateur / de formation</p>
+            <p style="font-weight: bold; font-size: 10pt; margin: 0 0 3px 0;">{ecole_nom}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">SIRET : {ecole_siret} — NDA : {ecole_numero_declaration}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">{ecole_adresse}, {ecole_code_postal} {ecole_ville}</p>
+            <p style="font-size: 9pt; margin: 4px 0 0 0; color: #333;">Représenté par : <strong>{ecole_representant}</strong></p>
+          </div>
+          <div style="flex: 1; background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px;">
+            <p style="font-size: 8pt; text-transform: uppercase; color: #888; margin: 0 0 6px 0; letter-spacing: 0.5px;">Membre du jury</p>
+            <p style="font-weight: bold; font-size: 10pt; margin: 0 0 3px 0;">{jury_prenom} {jury_nom}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">Qualité : {jury_qualite}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">{jury_adresse}, {jury_code_postal} {jury_ville}</p>
+            <p style="font-size: 9pt; margin: 0 0 2px 0; color: #333;">{jury_email}</p>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 20px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 1 — Nature et objet de la mission de jury
+      </h2>
+      <div style="background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px; margin-bottom: 10px;">
+        <p style="font-weight: bold; font-size: 10.5pt; margin: 0 0 4px 0;">{examen_nom}</p>
+        <p style="font-size: 9.5pt; color: #333; margin: 0 0 2px 0;">Type : {examen_type}</p>
+        <p style="font-size: 9.5pt; color: #333; margin: 0 0 2px 0;">Session : {session_nom} — Réf. {session_nom}</p>
+        <p style="font-size: 9.5pt; color: #333; margin: 0 0 2px 0;">Date(s) : {examen_date}</p>
+        <p style="font-size: 9.5pt; color: #333; margin: 0;">Lieu : {examen_lieu}</p>
+      </div>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 0;">
+        La présente attestation est établie conformément aux articles R.6113-10 à R.6113-13 du Code du Travail et au Décret n° 2019-958 du 13 septembre 2019 relatif aux jurys de certification professionnelle. Elle certifie la participation du membre de jury susmentionné et justifie le remboursement des frais exposés dans l'exercice de sa mission.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 2 — Détail du défraiement
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0;">
+        <thead>
+          <tr style="background: #1A1A1A; color: white;">
+            <th style="padding: 7px 10px; text-align: left; font-weight: bold;">Nature</th>
+            <th style="padding: 7px 10px; text-align: center; font-weight: bold;">Détail / Base de calcul</th>
+            <th style="padding: 7px 10px; text-align: right; font-weight: bold;">Montant (€)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; font-weight: bold;">Vacations de jury</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: center;">{defraiement_nb_heures} h × {defraiement_taux_vacation} €/h</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{defraiement_vacations} €</td>
+          </tr>
+          <tr>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd;">Frais de transport</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: center;">{defraiement_distance_km} km A/R × {defraiement_taux_km} €/km (barème fiscal) ou sur justificatif</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{defraiement_transport} €</td>
+          </tr>
+          <tr style="background: #f9f9f9;">
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd;">Indemnités repas</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: center;">Sur justificatif — plafond URSSAF en vigueur</td>
+            <td style="padding: 7px 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{defraiement_repas} €</td>
+          </tr>
+          <tr>
+            <td style="padding: 7px 10px; border-bottom: 2px solid #1A1A1A;">Frais d'hébergement</td>
+            <td style="padding: 7px 10px; border-bottom: 2px solid #1A1A1A; text-align: center;">Sur justificatif — plafond URSSAF en vigueur</td>
+            <td style="padding: 7px 10px; border-bottom: 2px solid #1A1A1A; text-align: right; font-weight: bold;">{defraiement_hebergement} €</td>
+          </tr>
+          <tr style="background: #1A1A1A; color: white;">
+            <td colspan="2" style="padding: 8px 10px; font-weight: bold; font-size: 10pt;">TOTAL À VERSER</td>
+            <td style="padding: 8px 10px; text-align: right; font-weight: bold; font-size: 11pt;">{defraiement_total} €</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size: 8.5pt; color: #666; margin: 6px 0 0 0; font-style: italic;">
+        Frais remboursés conformément à l'arrêté du 20 décembre 2002 relatif aux frais professionnels et aux barèmes URSSAF. Grand déplacement (> 50 km, sans possibilité de retour quotidien) : plafonds repas 20,90 €/repas, hébergement 70 €/nuit (82,30 € en Île-de-France) — circ. DSS/SDFSS/5B du 7 janvier 2003.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 3 — Modalités de versement
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0;">
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f2f2f2; font-weight: bold; width: 30%;">Mode de versement</td>
+          <td style="padding: 6px 10px; border: 1px solid #ddd;">Virement bancaire</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f2f2f2; font-weight: bold;">IBAN</td>
+          <td style="padding: 6px 10px; border: 1px solid #ddd; font-family: monospace;">{jury_iban}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f2f2f2; font-weight: bold;">BIC / SWIFT</td>
+          <td style="padding: 6px 10px; border: 1px solid #ddd; font-family: monospace;">{jury_bic}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ddd; background: #f2f2f2; font-weight: bold;">Délai de versement</td>
+          <td style="padding: 6px 10px; border: 1px solid #ddd;">Dans un délai de 30 jours calendaires suivant la date de l'examen</td>
+        </tr>
+      </table>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 4 — Information fiscale et sociale
+      </h2>
+      <div style="background: #fff8e1; border: 1px solid #f59e0b; border-radius: 3px; padding: 10px 14px; margin-bottom: 8px;">
+        <p style="font-size: 9pt; font-weight: bold; margin: 0 0 4px 0; color: #92400e;">⚠ Déclaration fiscale obligatoire</p>
+        <p style="font-size: 9pt; line-height: 1.6; color: #78350f; margin: 0;">
+          Les vacations de jury constituent des revenus imposables. Elles doivent être déclarées par le bénéficiaire dans la catégorie des <strong>Bénéfices Non Commerciaux (BNC)</strong> au titre de l'impôt sur le revenu, conformément à l'article 92 du Code Général des Impôts, ou intégrées aux revenus salariaux si le bénéficiaire est salarié de l'organisme. L'organisme peut être tenu de remettre une attestation annuelle si le total des vacations versées excède 1 200 €/an.
+        </p>
+      </div>
+      <p style="font-size: 9pt; line-height: 1.6; margin: 0; color: #555;">
+        Les frais de transport, de repas et d'hébergement remboursés sur justificatifs dans les limites réglementaires ne sont pas soumis à cotisations sociales (art. 4 de l'arrêté du 20 décembre 2002). En revanche, tout remboursement dépassant les plafonds URSSAF doit être soumis à cotisations.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 5 — Notes particulières
+      </h2>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 0; min-height: 25px;">{defraiement_notes}</p>
+
+      <div style="margin-top: 30px;">
+        <p style="text-align: center; font-size: 9.5pt; margin-bottom: 20px; color: #555;">
+          Fait en deux exemplaires, à {ecole_ville}, le {date_aujourd_hui}
+        </p>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+          <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Pour l'Organisme</p>
+            <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{ecole_nom}<br/>{ecole_representant}</p>
+            <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+              <p style="font-size: 8.5pt; color: #666;">Signature et cachet</p>
+            </div>
+          </div>
+          <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Le Membre du Jury</p>
+            <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{jury_prenom} {jury_nom}<br/>Lu et approuvé — Bon pour paiement</p>
+            <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+              <p style="font-size: 8.5pt; color: #666;">Signature</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    footerContent: premiumFooter,
+  },
 }
 
 /**

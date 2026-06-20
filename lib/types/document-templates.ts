@@ -22,6 +22,7 @@ export type DocumentType =
   | 'emargement' // OF - Feuille d'émargement
   | 'convention_formateur' // Convention de prestation avec formateur indépendant
   | 'ordre_de_mission' // Ordre de mission pour déplacement d'un formateur
+  | 'attestation_defraiement' // Attestation de défraiement pour membres de jury
 
 export interface DocumentTemplate {
   id: string
@@ -498,6 +499,33 @@ export interface DocumentVariables {
   convention_modalites_paiement?: string
   convention_lieu_formation?: string
   convention_notes?: string
+
+  // Jury / Attestation de défraiement
+  jury_nom?: string
+  jury_prenom?: string
+  jury_qualite?: string
+  jury_email?: string
+  jury_adresse?: string
+  jury_code_postal?: string
+  jury_ville?: string
+  jury_iban?: string
+  jury_bic?: string
+  examen_nom?: string
+  examen_date?: string
+  examen_lieu?: string
+  examen_reference?: string
+  examen_type?: string
+  defraiement_reference?: string
+  defraiement_nb_heures?: string
+  defraiement_taux_vacation?: string
+  defraiement_vacations?: string
+  defraiement_transport?: string
+  defraiement_distance_km?: string
+  defraiement_taux_km?: string
+  defraiement_repas?: string
+  defraiement_hebergement?: string
+  defraiement_total?: string
+  defraiement_notes?: string
 
   // Ordre de mission
   mission_reference?: string

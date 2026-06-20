@@ -137,6 +137,12 @@ export function getDocumentTypeConfig(type: DocumentType) {
       icon: Users,
       color: '#059669',
     },
+    attestation_defraiement: {
+      name: 'Attestation de défraiement',
+      description: 'Défraiement des membres de jury (vacations, transport, repas, hébergement)',
+      icon: Receipt,
+      color: '#D97706',
+    },
   }
 
   return configs[type]
