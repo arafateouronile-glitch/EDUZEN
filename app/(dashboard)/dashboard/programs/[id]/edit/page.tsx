@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ArrowLeft, TrendingUp, Users, Star, Award, Eye, EyeOff, Globe, Image as ImageIcon, Plus, X } from 'lucide-react'
 import Link from 'next/link'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { CategorySelect } from '@/components/ui/category-select'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -389,12 +390,9 @@ export default function EditProgramPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Catégorie</label>
-                    <input
-                      type="text"
+                    <CategorySelect
                       value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Ex: Informatique, Management..."
+                      onChange={(val) => setFormData({ ...formData, category: val })}
                     />
                   </div>
                   <div className="md:col-span-2">

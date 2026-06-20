@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { formationService } from '@/lib/services/formation.service.client'
@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { formationSchema, type FormationFormData } from '@/lib/validations/schemas'
+import { CategorySelect } from '@/components/ui/category-select'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -74,6 +75,7 @@ export default function NewFormationPage() {
   const {
     register,
     handleSubmit: handleFormSubmit,
+    control,
     formState: { errors, isDirty },
     watch,
     setValue,
@@ -378,11 +380,16 @@ export default function NewFormationPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700">Catégorie</label>
-                    <input
-                      type="text"
-                      {...register('category')}
-                      className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
-                      placeholder="Ex: Informatique"
+                    <Controller
+                      name="category"
+                      control={control}
+                      render={({ field }) => (
+                        <CategorySelect
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          selectClassName="py-3 bg-white/50 rounded-xl"
+                        />
+                      )}
                     />
                   </div>
                   <div className="space-y-2">

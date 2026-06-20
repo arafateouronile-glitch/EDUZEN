@@ -17,7 +17,7 @@ import {
   Layout, Code, Save, Building2, Mail, Phone, MapPin,
   Calendar, DollarSign, Languages, Moon, Sun, Key,
   Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image as ImageIcon, Award, Palette, X, Clock, Receipt, FileSignature, User,
-  Lock, FileDown, ClipboardCheck, Accessibility, Plug, Zap, ArrowRight
+  Lock, FileDown, ClipboardCheck, Accessibility, Plug, Zap, ArrowRight, DoorOpen, Tag
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -715,6 +715,9 @@ export default function SettingsPage() {
         { id: 'calendar', label: 'Calendrier', icon: Calendar, href: '/dashboard/settings/calendar' },
         { id: 'sites', label: 'Sites', icon: MapPin, href: '/dashboard/settings/sites' },
         { id: 'lms', label: 'LMS', icon: GraduationCap, href: '/dashboard/settings/lms' },
+        { id: 'rooms', label: 'Salles', icon: DoorOpen, href: '/dashboard/settings/rooms' },
+        { id: 'teachers', label: 'Enseignants', icon: GraduationCap, href: '/dashboard/settings/teachers' },
+        { id: 'categories', label: 'Catégories', icon: Tag, href: '/dashboard/settings/categories' },
       ]
     },
     {

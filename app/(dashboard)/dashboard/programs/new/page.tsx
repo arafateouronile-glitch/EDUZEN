@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { programService } from '@/lib/services/program.service.client'
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Save, Plus, Settings, Upload, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import { programSchema, type ProgramFormData } from '@/lib/validations/schemas'
+import { CategorySelect } from '@/components/ui/category-select'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
@@ -26,6 +27,7 @@ export default function NewProgramPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     watch,
     setValue
@@ -248,16 +250,16 @@ export default function NewProgramPage() {
                 {/* Catégorie */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
-                  <select
-                    {...register('category')}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent bg-white"
-                  >
-                    <option value="">Sélectionner une catégorie</option>
-                    <option value="Prevention">Prévention et Sécurité</option>
-                    <option value="Informatique">Informatique</option>
-                    <option value="Management">Management</option>
-                    <option value="Langues">Langues</option>
-                  </select>
+                  <Controller
+                    name="category"
+                    control={control}
+                    render={({ field }) => (
+                      <CategorySelect
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
                 </div>
               </div>
 

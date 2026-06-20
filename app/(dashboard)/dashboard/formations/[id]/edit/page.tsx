@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { formationService } from '@/lib/services/formation.service.client'
@@ -15,6 +15,7 @@ import { MultiSelect } from '@/components/ui/multi-select'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
 import { formationSchema, type FormationFormData } from '@/lib/validations/schemas'
+import { CategorySelect } from '@/components/ui/category-select'
 import { useToast } from '@/components/ui/toast'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -72,6 +73,7 @@ export default function EditFormationPage() {
   const {
     register,
     handleSubmit: handleFormSubmit,
+    control,
     formState: { errors },
     watch,
     setValue,
@@ -370,11 +372,16 @@ export default function EditFormationPage() {
                 <label className="block text-sm font-medium mb-2">
                   Catégorie
                 </label>
-                <input
-                  type="text"
-                  {...register('category')}
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  placeholder="Ex: Informatique, Management..."
+                <Controller
+                  name="category"
+                  control={control}
+                  render={({ field }) => (
+                    <CategorySelect
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      selectClassName="py-3"
+                    />
+                  )}
                 />
               </div>
               <div>
