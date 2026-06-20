@@ -30,15 +30,21 @@ type SessionComplianceStudent = {
   hasSignedContract: boolean
   attendanceSignedSlots: number
   attendanceTotalSlots: number
+  /** Positionnement pré-formation — indicateur 2 Qualiopi */
+  hasPreFormationEval: boolean
+  /** Évaluation à chaud — indicateur 7 Qualiopi */
   hasEvaluation: boolean
+  /** Évaluation à froid — indicateur 14 Qualiopi */
+  hasColdEvaluation: boolean
   missingAttendanceDates?: string[]
 }
 
 type ComplianceAlert = {
-  type: 'contract' | 'attendance' | 'evaluation' | 'certificate'
+  type: 'contract' | 'attendance' | 'evaluation' | 'cold_evaluation' | 'certificate'
   priority: string
   message: string
   count?: number
+  details?: string
 }
 
 type SessionComplianceResult = {
@@ -196,11 +202,20 @@ export default function QualiopiCheckSessionPage() {
             <AlertTriangle className="h-5 w-5 text-amber-600" />
             Alertes à traiter
           </h2>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {compliance.alerts.map((a, i) => (
-              <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
-                {a.message}
+              <li key={i} className={`text-sm rounded-lg px-4 py-3 flex items-start gap-3 ${
+                a.priority === 'high'
+                  ? 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
+                  : a.priority === 'medium'
+                  ? 'bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300'
+                  : 'bg-blue-50 border border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300'
+              }`}>
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium">{a.message}</p>
+                  {a.details && <p className="text-xs mt-1 opacity-80">{a.details}</p>}
+                </div>
               </li>
             ))}
           </ul>
@@ -245,7 +260,9 @@ export default function QualiopiCheckSessionPage() {
               <th className="text-left py-3 px-2 font-medium text-gray-700 dark:text-gray-300">Apprenant</th>
               <th className="text-center py-3 px-2 font-medium text-gray-700 dark:text-gray-300">Convention</th>
               <th className="text-center py-3 px-2 font-medium text-gray-700 dark:text-gray-300">Assiduité</th>
-              <th className="text-center py-3 px-2 font-medium text-gray-700 dark:text-gray-300">Évaluation</th>
+              <th className="text-center py-3 px-2 font-medium text-gray-700 dark:text-gray-300" title="Positionnement pré-formation — indicateur 2 Qualiopi">Pré-formation</th>
+              <th className="text-center py-3 px-2 font-medium text-gray-700 dark:text-gray-300" title="Évaluation à chaud — indicateur 7 Qualiopi">Éval. à chaud</th>
+              <th className="text-center py-3 px-2 font-medium text-gray-700 dark:text-gray-300" title="Évaluation à froid — indicateur 14 Qualiopi (exigible à J+90)">Éval. à froid</th>
             </tr>
           </thead>
           <tbody>
@@ -272,10 +289,24 @@ export default function QualiopiCheckSessionPage() {
                   </span>
                 </td>
                 <td className="py-3 px-2 text-center">
+                  {s.hasPreFormationEval ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500 inline" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-amber-500 inline" />
+                  )}
+                </td>
+                <td className="py-3 px-2 text-center">
                   {s.hasEvaluation ? (
                     <CheckCircle2 className="h-5 w-5 text-green-500 inline" />
                   ) : (
                     <XCircle className="h-5 w-5 text-amber-500 inline" />
+                  )}
+                </td>
+                <td className="py-3 px-2 text-center">
+                  {s.hasColdEvaluation ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500 inline" />
+                  ) : (
+                    <span className="text-gray-300 text-xs" title="En attente (exigible à J+90 après la fin de session)">—</span>
                   )}
                 </td>
               </tr>

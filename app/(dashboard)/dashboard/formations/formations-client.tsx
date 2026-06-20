@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, Search, BookMarked, Calendar, Users, DollarSign, Filter, TrendingUp, CheckCircle, XCircle, BookOpen, Activity, ArrowRight, SlidersHorizontal, ArrowUpRight, Clock, Trash2, Copy } from 'lucide-react'
+import { Plus, Search, BookMarked, Calendar, Users, DollarSign, Filter, TrendingUp, CheckCircle, XCircle, BookOpen, Activity, ArrowRight, SlidersHorizontal, ArrowUpRight, Clock, Trash2, Copy, Star } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency, cn } from '@/lib/utils'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -777,6 +777,18 @@ function FormationsPageContent() {
                           <p className="text-sm text-gray-600 line-clamp-2 font-medium tracking-tight leading-relaxed">
                             {formation.description}
                           </p>
+                        )}
+
+                        {(formation as any).satisfaction_score_override !== null &&
+                          (formation as any).satisfaction_score_override !== undefined && (
+                          <div className="flex items-center gap-1.5 mt-3">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star key={s} className={`h-3.5 w-3.5 ${s <= Math.round((formation as any).satisfaction_score_override) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                            ))}
+                            <span className="text-xs font-semibold text-gray-600 ml-1">
+                              {(formation as any).satisfaction_score_override}/5
+                            </span>
+                          </div>
                         )}
                       </div>
 

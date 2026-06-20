@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/button'
 import { CardTitle } from '@/components/ui/card'
 import { GlassCard } from '@/components/ui/glass-card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Calendar, Clock, DollarSign, Users, BookOpen, GraduationCap, TrendingUp, CheckCircle, Plus, MapPin, Sparkles, FileText, Target, Award, List, Trash2 } from 'lucide-react'
+import { ArrowLeft, Edit, Calendar, Clock, DollarSign, Users, BookOpen, GraduationCap, TrendingUp, CheckCircle, Plus, MapPin, Sparkles, FileText, Target, Award, List, Trash2, Star, Pencil, X, Check } from 'lucide-react'
+import { useToast } from '@/components/ui/toast'
+import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { formatDate, formatCurrency, cn } from '@/lib/utils'
 // Lazy load recharts pour réduire le bundle initial
@@ -38,6 +40,9 @@ export default function FormationDetailPage() {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [editingScore, setEditingScore] = useState(false)
+  const [scoreInput, setScoreInput] = useState('')
+  const { addToast } = useToast()
 
   const deleteMutation = useMutation({
     mutationFn: () => formationService.hardDeleteFormation(formationId),
@@ -165,6 +170,63 @@ export default function FormationDetailPage() {
       }
     },
     enabled: !!formationId && !!user?.organization_id && !!formation,
+  })
+
+  // Score de satisfaction calculé automatiquement depuis les évaluations à chaud/froid de toutes les sessions
+  const { data: autoSatisfactionScore } = useQuery<number | null>({
+    queryKey: ['formation-satisfaction-score', formationId],
+    queryFn: async () => {
+      // Récupérer les sessions de la formation
+      const { data: fSessions } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('formation_id', formationId)
+      const sIds = (fSessions ?? []).map((s: any) => s.id).filter(Boolean)
+      if (!sIds.length) return null
+
+      // Grades satisfaction (hot + cold) liés à ces sessions
+      const { data: gList } = await supabase
+        .from('grades')
+        .select('id')
+        .in('session_id', sIds)
+        .in('assessment_type', ['hot', 'cold'])
+      const gIds = (gList ?? []).map((g: any) => g.id)
+      if (!gIds.length) return null
+
+      // Instances de ces grades
+      const { data: instances } = await supabase
+        .from('evaluation_template_instances')
+        .select('id')
+        .in('grade_id', gIds)
+      const iIds = (instances ?? []).map((i: any) => i.id)
+      if (!iIds.length) return null
+
+      // Réponses avec note étoile
+      const { data: responses } = await supabase
+        .from('evaluation_responses')
+        .select('answer_rating')
+        .in('instance_id', iIds)
+        .not('answer_rating', 'is', null)
+
+      const ratings = (responses ?? []).map((r: any) => Number(r.answer_rating)).filter((n) => !isNaN(n))
+      if (!ratings.length) return null
+      return Math.round((ratings.reduce((a, c) => a + c, 0) / ratings.length) * 10) / 10
+    },
+    enabled: !!formationId,
+  })
+
+  const updateScoreMutation = useMutation({
+    mutationFn: async (value: number | null) => {
+      return formationService.updateFormation(formationId, { satisfaction_score_override: value })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['formation', formationId] })
+      addToast({ type: 'success', title: 'Score mis à jour' })
+      setEditingScore(false)
+    },
+    onError: () => {
+      addToast({ type: 'error', title: 'Erreur', description: 'Impossible de mettre à jour le score.' })
+    },
   })
 
   if (isLoading) {
@@ -324,6 +386,107 @@ export default function FormationDetailPage() {
           ))}
         </motion.div>
       )}
+
+      {/* Score de satisfaction */}
+      {(() => {
+        const overrideScore = (formationData as any).satisfaction_score_override as number | null
+        const displayScore = overrideScore ?? autoSatisfactionScore
+        const isOverridden = overrideScore !== null && overrideScore !== undefined
+
+        const handleSave = () => {
+          const val = parseFloat(scoreInput.replace(',', '.'))
+          if (isNaN(val) || val < 0 || val > 5) {
+            addToast({ type: 'error', title: 'Valeur invalide', description: 'Entrez un nombre entre 0 et 5.' })
+            return
+          }
+          updateScoreMutation.mutate(Math.round(val * 10) / 10)
+        }
+
+        return (
+          <motion.div variants={itemVariants}>
+            <GlassCard variant="premium" className="p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 bg-amber-50 rounded-xl">
+                    <Star className="h-5 w-5 text-amber-500 fill-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-0.5">
+                      Satisfaction apprenants
+                    </p>
+                    {editingScore ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="5"
+                          step="0.1"
+                          value={scoreInput}
+                          onChange={(e) => setScoreInput(e.target.value)}
+                          className="w-24 h-8 text-sm"
+                          placeholder="Ex: 4.2"
+                          autoFocus
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingScore(false) }}
+                        />
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={handleSave} disabled={updateScoreMutation.isPending}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:bg-gray-100" onClick={() => setEditingScore(false)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                        {isOverridden && (
+                          <Button size="sm" variant="ghost" className="h-8 text-xs text-gray-400 hover:text-red-500" onClick={() => updateScoreMutation.mutate(null)}>
+                            Réinitialiser (auto)
+                          </Button>
+                        )}
+                      </div>
+                    ) : displayScore !== null ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl font-bold text-gray-900">{displayScore}/5</span>
+                        <span className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star key={s} className={`h-4 w-4 ${s <= Math.round(displayScore ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                          ))}
+                        </span>
+                        {isOverridden && (
+                          <span className="text-xs bg-violet-100 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 font-medium">
+                            Corrigé manuellement
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 mt-0.5">
+                        {autoSatisfactionScore === null ? 'Aucune évaluation à chaud/froid pour cette formation' : '…'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!editingScore && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 text-xs"
+                      onClick={() => {
+                        setScoreInput(String(overrideScore ?? autoSatisfactionScore ?? ''))
+                        setEditingScore(true)
+                      }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {isOverridden ? 'Modifier' : 'Corriger manuellement'}
+                    </Button>
+                  )}
+                  {autoSatisfactionScore !== null && (
+                    <span className="text-xs text-gray-400">
+                      Score calculé : {autoSatisfactionScore}/5
+                    </span>
+                  )}
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        )
+      })()}
 
       {/* Graphiques */}
       {formationStats && (formationStats.sessionStatusData.length > 0 || formationStats.enrollmentStatusData.length > 0) && (

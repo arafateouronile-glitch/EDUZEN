@@ -2,16 +2,22 @@
 
 /**
  * Page Actions correctives Qualiopi
- * Liste et gestion des actions correctives liées aux indicateurs.
+ * Liste et création des actions correctives liées aux indicateurs.
+ * La boucle "résultat d'évaluation → action documentée" est exigée par l'indicateur 10 Qualiopi.
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { qualiopiService } from '@/lib/services/qualiopi.service.client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Sparkles, AlertTriangle, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/toast'
+import { ArrowLeft, Sparkles, AlertTriangle, Clock, CheckCircle2, XCircle, Plus, X } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -30,8 +36,40 @@ const PRIORITY_CONFIG = {
   critical: { label: 'Critique', color: 'bg-red-100 text-red-700' },
 }
 
+const INDICATOR_OPTIONS = [
+  { value: '', label: 'Indicateur non spécifié' },
+  { value: '7', label: 'Indicateur 7 — Satisfaction des apprenants' },
+  { value: '10', label: 'Indicateur 10 — Amélioration continue' },
+  { value: '14', label: 'Indicateur 14 — Effets de la formation' },
+  { value: '29', label: 'Indicateur 29 — Recueil des appréciations' },
+  { value: '30', label: 'Indicateur 30 — Traitement des réclamations' },
+  { value: '31', label: 'Indicateur 31 — Mesures d\'amélioration' },
+  { value: '32', label: 'Indicateur 32 — Amélioration continue documentée' },
+  { value: 'autre', label: 'Autre' },
+]
+
+interface FormState {
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high' | 'critical'
+  indicator: string
+  due_date: string
+}
+
+const FORM_EMPTY: FormState = {
+  title: '',
+  description: '',
+  priority: 'medium',
+  indicator: '',
+  due_date: '',
+}
+
 export default function QualiopiActionsPage() {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const { addToast } = useToast()
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState<FormState>(FORM_EMPTY)
 
   const { data: actions = [], isLoading } = useQuery({
     queryKey: ['qualiopi-corrective-actions', user?.organization_id],
@@ -44,6 +82,34 @@ export default function QualiopiActionsPage() {
       }
     },
     enabled: !!user?.organization_id,
+  })
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.organization_id || !user?.id) throw new Error('Session expirée')
+      if (!form.title.trim()) throw new Error('Le titre est obligatoire')
+      if (!form.description.trim()) throw new Error('La description est obligatoire')
+      return qualiopiService.createCorrectiveAction({
+        organization_id: user.organization_id,
+        created_by: user.id,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        priority: form.priority,
+        status: 'pending',
+        due_date: form.due_date || undefined,
+        // Stocke le numéro d'indicateur dans le champ indicator_id en attendant une FK dédiée
+        indicator_id: form.indicator || undefined,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['qualiopi-corrective-actions'] })
+      addToast({ type: 'success', title: 'Action créée', description: 'L\'action corrective a été enregistrée.' })
+      setForm(FORM_EMPTY)
+      setShowForm(false)
+    },
+    onError: (e: Error) => {
+      addToast({ type: 'error', title: 'Erreur', description: e.message })
+    },
   })
 
   const byStatus = {
@@ -68,10 +134,105 @@ export default function QualiopiActionsPage() {
             Actions correctives
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Suivez et pilotez les actions correctives liées aux indicateurs Qualiopi.
+            Boucle d&apos;amélioration continue — chaque action documente la réponse de l&apos;OF aux résultats d&apos;évaluation (Qualiopi indicateur 10).
           </p>
         </div>
+        <Button
+          onClick={() => setShowForm(true)}
+          className="bg-[#274472] hover:bg-[#1a2f4a] gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Nouvelle action corrective
+        </Button>
       </div>
+
+      {/* Formulaire de création */}
+      {showForm && (
+        <Card className="border-[#274472]/20 shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Nouvelle action corrective</CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => { setShowForm(false); setForm(FORM_EMPTY) }}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <CardDescription>
+              Documentez une action mise en œuvre suite aux résultats d&apos;évaluation ou à une réclamation.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="action-title">Titre de l&apos;action *</Label>
+              <Input
+                id="action-title"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="Ex : Révision des supports pédagogiques du module 3"
+              />
+            </div>
+            <div>
+              <Label htmlFor="action-desc">Description et plan de mise en œuvre *</Label>
+              <Textarea
+                id="action-desc"
+                rows={4}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Décrivez ce qui a motivé cette action (retours apprenants, score faible, réclamation…) et les mesures concrètes mises en place."
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="action-indicator">Indicateur Qualiopi concerné</Label>
+                <select
+                  id="action-indicator"
+                  value={form.indicator}
+                  onChange={(e) => setForm({ ...form, indicator: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                >
+                  {INDICATOR_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="action-priority">Priorité</Label>
+                <select
+                  id="action-priority"
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value as FormState['priority'] })}
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                >
+                  <option value="low">Basse</option>
+                  <option value="medium">Moyenne</option>
+                  <option value="high">Haute</option>
+                  <option value="critical">Critique</option>
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="action-due">Échéance</Label>
+                <Input
+                  id="action-due"
+                  type="date"
+                  value={form.due_date}
+                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => { setShowForm(false); setForm(FORM_EMPTY) }}>
+                Annuler
+              </Button>
+              <Button
+                onClick={() => createMutation.mutate()}
+                disabled={createMutation.isPending || !form.title.trim() || !form.description.trim()}
+                className="bg-[#274472] hover:bg-[#1a2f4a]"
+              >
+                {createMutation.isPending ? 'Enregistrement…' : 'Enregistrer l\'action'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats rapides */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -106,7 +267,7 @@ export default function QualiopiActionsPage() {
         <CardHeader>
           <CardTitle>Liste des actions</CardTitle>
           <CardDescription>
-            Les actions correctives sont créées à partir du dashboard Qualiopi ou des alertes.
+            Chaque action corrective constitue une preuve de la boucle d&apos;amélioration continue (Qualiopi indicateur 10).
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -116,12 +277,12 @@ export default function QualiopiActionsPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <AlertTriangle className="h-12 w-12 text-slate-300 mb-3" />
               <p className="text-slate-600 font-medium">Aucune action corrective</p>
-              <p className="text-sm text-slate-500 mt-1">
-                Les actions correctives apparaîtront ici lorsqu’elles seront créées depuis le
-                dashboard ou les alertes.
+              <p className="text-sm text-slate-500 mt-1 max-w-sm">
+                Créez une action corrective pour documenter les améliorations mises en place suite aux résultats d&apos;évaluation.
               </p>
-              <Button variant="outline" className="mt-4" asChild>
-                <Link href="/dashboard/qualiopi">Retour au dashboard Qualiopi</Link>
+              <Button className="mt-4 bg-[#274472] hover:bg-[#1a2f4a] gap-2" onClick={() => setShowForm(true)}>
+                <Plus className="h-4 w-4" />
+                Créer ma première action
               </Button>
             </div>
           ) : (
@@ -148,6 +309,11 @@ export default function QualiopiActionsPage() {
                         <Badge variant="outline" className={priorityConf.color}>
                           {priorityConf.label}
                         </Badge>
+                        {action.indicator_id && (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            Ind. {action.indicator_id}
+                          </Badge>
+                        )}
                         {action.due_date && (
                           <span className="text-xs text-slate-500">
                             Échéance : {format(new Date(action.due_date), 'dd MMM yyyy', { locale: fr })}

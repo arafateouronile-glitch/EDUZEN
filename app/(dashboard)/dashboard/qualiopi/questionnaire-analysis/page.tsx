@@ -94,6 +94,7 @@ export default function QuestionnaireAnalysisPage() {
   const stats = data?.stats ?? []
   const hotSessions = stats.filter((s) => s.assessment_type === 'hot' || s.assessment_type === 'a_chaud')
   const coldSessions = stats.filter((s) => s.assessment_type === 'cold' || s.assessment_type === 'a_froid')
+  const preFormationSessions = stats.filter((s) => s.assessment_type === 'pre_formation')
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
@@ -182,6 +183,7 @@ export default function QuestionnaireAnalysisPage() {
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-3">
           {[
+            { num: 2, name: 'Positionnement préalable des apprenants', covered: preFormationSessions.length > 0 },
             { num: 29, name: 'Modalités de recueil des appréciations', covered: stats.length > 0 },
             { num: 30, name: 'Traitement des réclamations', covered: false, note: 'Manuel — ajoutez une preuve manuelle' },
             { num: 31, name: 'Mesures d\'amélioration mises en œuvre', covered: (data?.totalComments ?? 0) > 0 },
@@ -204,6 +206,22 @@ export default function QuestionnaireAnalysisPage() {
           ))}
         </CardContent>
       </Card>
+
+      {/* Sessions pré-formation */}
+      {preFormationSessions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Pré-formation</Badge>
+              Positionnements pré-formation ({preFormationSessions.length} session{preFormationSessions.length > 1 ? 's' : ''})
+            </CardTitle>
+            <CardDescription>Complétés avant la formation pour adapter le parcours (Qualiopi indicateur 2).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SessionTable sessions={preFormationSessions} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sessions à chaud */}
       {hotSessions.length > 0 && (

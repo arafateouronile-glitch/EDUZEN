@@ -9425,6 +9425,7 @@ export type Database = {
           program_version: string | null
           published_online: boolean | null
           quality: string | null
+          satisfaction_score_override: number | null
           subtitle: string | null
           training_action_type: string | null
           training_content: string | null
@@ -9466,6 +9467,7 @@ export type Database = {
           program_version?: string | null
           published_online?: boolean | null
           quality?: string | null
+          satisfaction_score_override?: number | null
           subtitle?: string | null
           training_action_type?: string | null
           training_content?: string | null
@@ -9507,6 +9509,7 @@ export type Database = {
           program_version?: string | null
           published_online?: boolean | null
           quality?: string | null
+          satisfaction_score_override?: number | null
           subtitle?: string | null
           training_action_type?: string | null
           training_content?: string | null

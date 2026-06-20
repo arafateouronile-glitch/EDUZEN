@@ -781,7 +781,9 @@ export default function SessionDetailPage() {
                   <GestionEvaluations
                   grades={grades}
                   gradesStats={gradesStats}
-                  students={students}
+                  students={(enrollments ?? [])
+                    .filter((e: any) => e.status !== 'cancelled' && e.students)
+                    .map((e: any) => e.students) as typeof students}
                   showEvaluationForm={showEvaluationForm}
                   evaluationForm={evaluationForm}
                   onEvaluationFormChange={setEvaluationForm}

@@ -104,6 +104,10 @@ async function buildSessionBuckets(orgId: string, supabase: Awaited<ReturnType<t
 function typeLabel(t: string) {
   if (t === 'hot' || t === 'a_chaud') return 'à chaud'
   if (t === 'cold' || t === 'a_froid') return 'à froid'
+  if (t === 'pre_formation') return 'pré-formation'
+  if (t === 'manager') return 'manager'
+  if (t === 'instructor') return 'formateur'
+  if (t === 'funder') return 'financeur'
   return t
 }
 

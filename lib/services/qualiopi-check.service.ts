@@ -21,7 +21,12 @@ export interface SessionComplianceStudent {
   hasSignedContract: boolean
   attendanceSignedSlots: number
   attendanceTotalSlots: number
+  /** Évaluation à chaud (assessment_type = 'hot') — indicateur 7 Qualiopi */
   hasEvaluation: boolean
+  /** Évaluation à froid (assessment_type = 'cold') — indicateur 14 Qualiopi */
+  hasColdEvaluation: boolean
+  /** Évaluation de positionnement pré-formation (assessment_type = 'pre_formation') — indicateur 2 Qualiopi */
+  hasPreFormationEval: boolean
   hasCertificate?: boolean
   contractDocumentId?: string | null
   pendingSignatureRequestId?: string | null
@@ -41,7 +46,7 @@ export interface SessionComplianceResult {
 }
 
 export interface ComplianceAlert {
-  type: 'contract' | 'attendance' | 'evaluation' | 'certificate'
+  type: 'contract' | 'attendance' | 'evaluation' | 'cold_evaluation' | 'certificate'
   priority: 'high' | 'medium' | 'low'
   message: string
   count?: number
@@ -84,7 +89,7 @@ export class QualiopiCheckService {
           .eq('organization_id', organizationId),
         this.supabase
           .from('grades')
-          .select('student_id, session_id')
+          .select('student_id, session_id, assessment_type')
           .eq('session_id', sessionId)
           .eq('organization_id', organizationId),
       ])
@@ -155,7 +160,13 @@ export class QualiopiCheckService {
         const signedSlots = slotDates.filter((d) => attendedDates.has(d)).length
         const missingDates = slotDates.filter((d) => !attendedDates.has(d))
 
-        const hasEval = gradesList.some((g: any) => g.student_id === sid)
+        const studentGrades = gradesList.filter((g: any) => g.student_id === sid)
+        // Indicateur 7 Qualiopi : évaluation à chaud obligatoire à l'issue de la formation
+        const hasHotEval = studentGrades.some((g: any) => g.assessment_type === 'hot')
+        // Indicateur 14 Qualiopi : évaluation à froid (à distance de la formation)
+        const hasColdEval = studentGrades.some((g: any) => g.assessment_type === 'cold')
+        // Indicateur 2 Qualiopi : positionnement préalable de l'apprenant avant la formation
+        const hasPreFormationEval = studentGrades.some((g: any) => g.assessment_type === 'pre_formation')
 
         return {
           student_id: sid,
@@ -164,7 +175,9 @@ export class QualiopiCheckService {
           hasSignedContract: signedContract,
           attendanceSignedSlots: signedSlots,
           attendanceTotalSlots: totalSlots || 1,
-          hasEvaluation: hasEval,
+          hasEvaluation: hasHotEval,
+          hasColdEvaluation: hasColdEval,
+          hasPreFormationEval,
           contractDocumentId: contractDocId,
           pendingSignatureRequestId: pendingReqId ?? null,
           missingAttendanceDates: missingDates.length > 0 ? missingDates : undefined,
@@ -172,7 +185,7 @@ export class QualiopiCheckService {
       })
 
       const score = this.computeScore(students, totalSlots)
-      const alerts = this.buildAlerts(students, sessionRow.name, totalSlots)
+      const alerts = this.buildAlerts(students, sessionRow.name, totalSlots, sessionRow.end_date)
 
       return {
         sessionId,
@@ -249,9 +262,11 @@ export class QualiopiCheckService {
   private buildAlerts(
     students: SessionComplianceStudent[],
     sessionName: string,
-    totalSlots: number
+    totalSlots: number,
+    sessionEndDate?: string
   ): ComplianceAlert[] {
     const alerts: ComplianceAlert[] = []
+
     const missingContract = students.filter((s) => !s.hasSignedContract)
     if (missingContract.length > 0) {
       alerts.push({
@@ -262,6 +277,7 @@ export class QualiopiCheckService {
         studentIds: missingContract.map((s) => s.student_id),
       })
     }
+
     const missingAttendance = students.filter(
       (s) => s.attendanceTotalSlots > 0 && s.attendanceSignedSlots < s.attendanceTotalSlots
     )
@@ -278,16 +294,53 @@ export class QualiopiCheckService {
         studentIds: missingAttendance.map((s) => s.student_id),
       })
     }
-    const missingEval = students.filter((s) => !s.hasEvaluation)
-    if (missingEval.length > 0) {
+
+    // Indicateur 2 : positionnement préalable obligatoire avant la formation
+    const missingPreFormation = students.filter((s) => !s.hasPreFormationEval)
+    if (missingPreFormation.length > 0) {
       alerts.push({
         type: 'evaluation',
         priority: 'medium',
-        message: `${missingEval.length} questionnaire(s) de satisfaction non rempli(s) pour « ${sessionName} ».`,
-        count: missingEval.length,
-        studentIds: missingEval.map((s) => s.student_id),
+        message: `${missingPreFormation.length} évaluation(s) de positionnement pré-formation manquante(s) pour « ${sessionName} » (Qualiopi indicateur 2).`,
+        count: missingPreFormation.length,
+        studentIds: missingPreFormation.map((s) => s.student_id),
+        details: 'Le positionnement préalable permet d\'adapter la formation au niveau et aux besoins de chaque apprenant.',
       })
     }
+
+    // Indicateur 7 : évaluation à chaud obligatoire pour chaque apprenant à l'issue de la formation
+    const missingHotEval = students.filter((s) => !s.hasEvaluation)
+    if (missingHotEval.length > 0) {
+      alerts.push({
+        type: 'evaluation',
+        priority: 'medium',
+        message: `${missingHotEval.length} évaluation(s) à chaud manquante(s) pour « ${sessionName} » (Qualiopi indicateur 7).`,
+        count: missingHotEval.length,
+        studentIds: missingHotEval.map((s) => s.student_id),
+        details: 'Le questionnaire de satisfaction à chaud doit être complété par chaque apprenant à l\'issue de la formation.',
+      })
+    }
+
+    // Indicateur 14 : évaluation à froid exigible à partir de 90 jours après la fin de session
+    if (sessionEndDate) {
+      const daysSinceEnd = Math.floor(
+        (Date.now() - new Date(sessionEndDate).getTime()) / (1000 * 60 * 60 * 24)
+      )
+      if (daysSinceEnd >= 90) {
+        const missingColdEval = students.filter((s) => !s.hasColdEvaluation)
+        if (missingColdEval.length > 0) {
+          alerts.push({
+            type: 'cold_evaluation',
+            priority: 'low',
+            message: `${missingColdEval.length} évaluation(s) à froid manquante(s) pour « ${sessionName} » (Qualiopi indicateur 14, session terminée il y a ${daysSinceEnd} jours).`,
+            count: missingColdEval.length,
+            studentIds: missingColdEval.map((s) => s.student_id),
+            details: 'L\'évaluation à froid mesure le transfert des acquis et l\'impact professionnel à distance de la formation.',
+          })
+        }
+      }
+    }
+
     return alerts
   }
 }
