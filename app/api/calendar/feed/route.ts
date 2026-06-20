@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
     .neq('status', 'cancelled')
     .order('start_date')
 
-  const now = new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z'
+  const now = new Date().toISOString().replace(/-/g, '').replace(/:/g, '').replace(/\./g, '').slice(0, 15) + 'Z'
 
   const lines: string[] = [
     'BEGIN:VCALENDAR',
