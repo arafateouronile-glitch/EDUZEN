@@ -9,7 +9,7 @@ import { paymentService } from '@/lib/services/payment.service.client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Users, FileText, DollarSign, Link as LinkIcon, Copy, Check, UserCheck, UserX, Loader2 } from 'lucide-react'
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Users, FileText, DollarSign, Link as LinkIcon, Check, UserCheck, UserX, Loader2, BookOpen, Download, Eye, ExternalLink, GraduationCap } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { useState } from 'react'
@@ -162,6 +162,55 @@ export default function StudentDetailPage() {
       })
     },
     enabled: !!student?.organization_id && !!studentId,
+  })
+
+  // Récupérer les inscriptions (sessions suivies)
+  const { data: enrollments } = useQuery({
+    queryKey: ['student-enrollments', studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('id, status, created_at, sessions(id, name, start_date, end_date, formation_id, formations(id, name))')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!studentId,
+  })
+
+  // Récupérer les documents de l'apprenant
+  const { data: studentDocuments } = useQuery({
+    queryKey: ['student-documents', studentId],
+    queryFn: async () => {
+      type DocItem = { id: string; name: string; type: string; file_url: string | null; date: string | null; source: string }
+      const allDocs: DocItem[] = []
+
+      const { data: learnerDocs } = await supabase
+        .from('learner_documents')
+        .select('id, title, type, file_url, sent_at, created_at')
+        .eq('student_id', studentId)
+        .order('sent_at', { ascending: false })
+
+      if (learnerDocs) {
+        type LRow = { id: string; title?: string; type?: string; file_url?: string | null; sent_at?: string | null; created_at?: string | null }
+        ;(learnerDocs as LRow[]).forEach(d => allDocs.push({ id: d.id, name: d.title || `Document ${d.type}`, type: d.type || 'other', file_url: d.file_url ?? null, date: d.sent_at || d.created_at || null, source: 'learner_documents' }))
+      }
+
+      const { data: generatedDocs } = await supabase
+        .from('generated_documents')
+        .select('id, file_name, type, file_url, created_at')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+
+      if (generatedDocs) {
+        type GRow = { id: string; file_name?: string; type?: string; file_url?: string | null; created_at?: string | null }
+        ;(generatedDocs as GRow[]).forEach(d => allDocs.push({ id: d.id, name: d.file_name || `Document ${d.type}`, type: d.type || 'other', file_url: d.file_url ?? null, date: d.created_at || null, source: 'generated_documents' }))
+      }
+
+      return allDocs.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+    },
+    enabled: !!studentId,
   })
 
   if (isLoading) {
@@ -412,6 +461,144 @@ export default function StudentDetailPage() {
                 </div>
               ) : (
                 <p className="text-muted-foreground">Aucune session assignée</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Sessions suivies */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <GraduationCap className="mr-2 h-5 w-5" />
+                Sessions suivies
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {enrollments && enrollments.length > 0 ? (
+                <div className="space-y-3">
+                  {(enrollments as Array<{
+                    id: string
+                    status?: string
+                    created_at?: string
+                    sessions?: { id?: string; name?: string; start_date?: string; end_date?: string; formations?: { name?: string } | null } | null
+                  }>).map((enrollment) => (
+                    <div key={enrollment.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <h4 className="font-semibold">{enrollment.sessions?.name || 'Session sans nom'}</h4>
+                          <span className={`px-2 py-0.5 rounded text-xs ${
+                            enrollment.status === 'active' ? 'bg-brand-blue-ghost text-brand-blue' :
+                            enrollment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            enrollment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {enrollment.status === 'active' ? 'En cours' :
+                             enrollment.status === 'completed' ? 'Terminée' :
+                             enrollment.status === 'cancelled' ? 'Annulée' :
+                             enrollment.status || 'Inscrit'}
+                          </span>
+                        </div>
+                        {enrollment.sessions?.formations?.name && (
+                          <p className="text-sm text-muted-foreground mt-1 ml-6">{enrollment.sessions.formations.name}</p>
+                        )}
+                        {(enrollment.sessions?.start_date || enrollment.sessions?.end_date) && (
+                          <p className="text-xs text-muted-foreground mt-1 ml-6 flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {enrollment.sessions?.start_date ? formatDate(enrollment.sessions.start_date) : '—'}
+                            {' → '}
+                            {enrollment.sessions?.end_date ? formatDate(enrollment.sessions.end_date) : '—'}
+                          </p>
+                        )}
+                      </div>
+                      {enrollment.sessions?.id && (
+                        <Link href={`/dashboard/sessions/${enrollment.sessions.id}`}>
+                          <Button variant="ghost" size="sm">Voir</Button>
+                        </Link>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Aucune session inscrite</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Documents */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="mr-2 h-5 w-5" />
+                Documents
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {studentDocuments && studentDocuments.length > 0 ? (
+                <div className="space-y-3">
+                  {(studentDocuments as Array<{ id: string; name: string; type: string; file_url: string | null; date: string | null; source: string }>).slice(0, 10).map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors group">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="min-w-0">
+                          <h4 className="font-medium truncate">{doc.name}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {doc.date ? formatDate(doc.date) : '—'}
+                            {' · '}
+                            <span className={`px-1.5 py-0.5 rounded text-xs ${
+                              doc.type === 'convocation' ? 'bg-blue-100 text-blue-800' :
+                              doc.type === 'attestation' ? 'bg-brand-cyan-ghost text-brand-cyan' :
+                              doc.type === 'certificate' ? 'bg-green-100 text-green-800' :
+                              doc.type === 'invoice' ? 'bg-gray-100 text-gray-800' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {doc.type === 'convocation' ? 'Convocation' :
+                               doc.type === 'attestation' ? 'Attestation' :
+                               doc.type === 'certificate' ? 'Certificat' :
+                               doc.type === 'invoice' ? 'Facture' :
+                               doc.type === 'convention' ? 'Convention' :
+                               doc.type}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      {doc.file_url && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" onClick={() => window.open(doc.file_url!, '_blank')}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={async () => {
+                              try {
+                                const res = await fetch(doc.file_url!)
+                                const blob = await res.blob()
+                                const url = URL.createObjectURL(blob)
+                                const a = document.createElement('a')
+                                a.href = url
+                                a.download = doc.name
+                                a.click()
+                                URL.revokeObjectURL(url)
+                              } catch {
+                                window.open(doc.file_url!, '_blank')
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {studentDocuments.length > 10 && (
+                    <p className="text-sm text-muted-foreground text-center pt-2">
+                      + {studentDocuments.length - 10} autres documents
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Aucun document</p>
               )}
             </CardContent>
           </Card>

@@ -43,7 +43,11 @@ export interface LearnerCard {
   crm_status: CrmStatus
   session_name: string | null
   session_id: string | null
+  session_start_date: string | null
+  session_end_date: string | null
   formation_name: string | null
+  formation_id: string | null
+  program_name: string | null
   company_name: string | null
   missing_qualiopi: string[]
   enrollment_id: string | null
@@ -108,14 +112,22 @@ function computeCrmStatus(
   sessionStartDate: string | null,
   sessionEndDate: string | null
 ): CrmStatus {
-  if (!enrollmentStatus) return 'prospect'
+  // Pas de statut d'inscription = au moins inscrit (jamais prospect si une inscription existe)
+  if (!enrollmentStatus) return 'inscrit'
   if (enrollmentStatus === 'cancelled' || enrollmentStatus === 'dropped') return 'abandon'
   if (enrollmentStatus === 'completed') return 'termine'
+
   const now   = new Date()
   const start = sessionStartDate ? new Date(sessionStartDate) : null
   const end   = sessionEndDate   ? new Date(sessionEndDate)   : null
-  if (end && end < now)                          return 'termine'
-  if (start && start <= now && end && end >= now) return 'en_cours'
+
+  // Session terminée (end_date dans le passé)
+  if (end && end < now) return 'termine'
+
+  // Session en cours : a démarré (end peut être null si pas encore renseigné)
+  if (start && start <= now) return 'en_cours'
+
+  // Inscrit : session pas encore démarrée ou dates absentes
   return 'inscrit'
 }
 
@@ -389,51 +401,98 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
   const { orgId } = await getAuthContext()
   const supabase  = createAdminClient()
 
-  // Query 1 : students plat, sans jointures — rapide
-  const { data: students, error } = await supabase
-    .from('students')
-    .select('id, first_name, last_name, email, photo_url, created_at')
-    .eq('organization_id', orgId)
-    .eq('status', 'active')
-    .order('created_at', { ascending: false })
-    .limit(200)
-
-  if (error) throw new Error(`getLearnerPipeline : ${error.message}`)
+  // Query 1 : students — paginé par tranches de 1000 (limite PostgREST)
+  const PAGE = 1000
+  let students: { id: string; first_name: string; last_name: string; email: string | null; photo_url: string | null; created_at: string | null }[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('students')
+      .select('id, first_name, last_name, email, photo_url, created_at')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .range(from, from + PAGE - 1)
+    if (error) throw new Error(`getLearnerPipeline : ${error.message}`)
+    students = students.concat(data ?? [])
+    if (!data || data.length < PAGE) break
+    from += PAGE
+  }
 
   const studentIds    = (students ?? []).map(s => s.id)
   const studentEmails = (students ?? []).map(s => s.email).filter(Boolean) as string[]
 
-  // Toutes les queries restantes en parallèle — enrollments inclus (plus de cascade)
-  type RawEnrollment = {
-    id: string; status: string | null; session_id: string; student_id: string
-    sessions: { id: string; name: string; start_date: string; end_date: string; formations: { name: string }[] | null } | null
+  // Supabase utilise des requêtes GET : une clause .in() avec trop d'UUIDs dépasse la limite d'URL (~100 IDs max)
+  // On batch toutes les queries par student_id
+  const BATCH = 100
+  function chunks<T>(arr: T[]): T[][] {
+    const result: T[][] = []
+    for (let i = 0; i < arr.length; i += BATCH) result.push(arr.slice(i, i + BATCH))
+    return result
   }
 
+  type RawEnrollment = {
+    id: string; status: string | null; session_id: string; student_id: string
+    sessions: { id: string; name: string; start_date: string; end_date: string; formation_id: string | null } | null
+  }
+
+  const idChunks    = studentIds.length > 0 ? chunks(studentIds) : []
+  const emailChunks = studentEmails.length > 0 ? chunks(studentEmails) : []
+
   const [
-    { data: rawEnrollments },
-    { data: presences },
-    { data: learnerDocs },
-    { data: emailLogsBatch },
-    { data: evalsBatch },
-    { data: companyEmployees },
+    enrollmentBatches,
+    presenceBatches,
+    docBatches,
+    emailBatches,
+    evalBatches,
+    companyBatches,
+    { data: rawFormations, error: formationsError },
   ] = await Promise.all([
-    studentIds.length > 0
-      ? supabase.from('enrollments')
-          .select('id, status, student_id, session_id, sessions(id, name, start_date, end_date, formations(name))')
-          .in('student_id', studentIds)
-          .order('created_at', { ascending: false })
-      : Promise.resolve({ data: [] as RawEnrollment[] }),
-    supabase.from('attendance').select('student_id').eq('organization_id', orgId)
-      .in('student_id', studentIds).in('status', ['present', 'present_late']),
-    supabase.from('learner_documents').select('student_id, type').in('student_id', studentIds),
-    studentEmails.length > 0
-      ? untyped(supabase).from('email_logs').select('recipient, template_type').eq('organization_id', orgId).in('recipient', studentEmails)
-      : Promise.resolve({ data: [] }),
-    supabase.from('evaluation_responses').select('student_id').in('student_id', studentIds),
-    studentIds.length > 0
-      ? supabase.from('company_employees').select('student_id, companies(id, name)').in('student_id', studentIds).eq('is_active', true)
-      : Promise.resolve({ data: [] }),
+    Promise.all(idChunks.map(ids =>
+      supabase.from('enrollments')
+        .select('id, status, student_id, session_id, sessions(id, name, start_date, end_date, formation_id)')
+        .in('student_id', ids)
+        .order('created_at', { ascending: false })
+    )),
+    Promise.all(idChunks.map(ids =>
+      supabase.from('attendance').select('student_id')
+        .eq('organization_id', orgId).in('student_id', ids).in('status', ['present', 'present_late'])
+    )),
+    Promise.all(idChunks.map(ids =>
+      supabase.from('learner_documents').select('student_id, type').in('student_id', ids)
+    )),
+    Promise.all(emailChunks.map(emails =>
+      (untyped(supabase) as ReturnType<typeof createAdminClient>).from('email_logs')
+        .select('recipient, template_type').eq('organization_id', orgId).in('recipient', emails)
+    )),
+    Promise.all(idChunks.map(ids =>
+      supabase.from('evaluation_responses').select('student_id').in('student_id', ids)
+    )),
+    Promise.all(idChunks.map(ids =>
+      supabase.from('company_employees').select('student_id, companies(id, name)')
+        .in('student_id', ids).eq('is_active', true)
+    )),
+    supabase.from('formations').select('id, name, programs(name)').eq('organization_id', orgId),
   ])
+
+  const rawEnrollments  = enrollmentBatches.flatMap(r => (r.data ?? []) as RawEnrollment[])
+  const presences       = presenceBatches.flatMap(r => r.data ?? [])
+  const learnerDocs     = docBatches.flatMap(r => r.data ?? [])
+  const emailLogsBatch  = emailBatches.flatMap(r => r.data ?? [])
+  const evalsBatch      = evalBatches.flatMap(r => r.data ?? [])
+  const companyEmployees = companyBatches.flatMap(r => r.data ?? [])
+
+  if (formationsError) console.error('[CRM] formations query error:', formationsError.message)
+
+  // Map formation_id → {name, program_name}
+  // programs est un objet (join many-to-one formations→programs), pas un tableau
+  const formationMap = new Map<string, { name: string; program_name: string | null }>()
+  for (const f of rawFormations ?? []) {
+    const prog = f.programs as { name: string } | { name: string }[] | null
+    const program_name = Array.isArray(prog)
+      ? (prog[0]?.name ?? null)
+      : ((prog as { name: string } | null)?.name ?? null)
+    formationMap.set(f.id, { name: f.name, program_name })
+  }
 
   // Grouper les enrollments par student_id (ordre created_at DESC conservé)
   const enrollmentsByStudent = new Map<string, RawEnrollment[]>()
@@ -488,7 +547,9 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
 
   for (const student of students ?? []) {
     const enrollments = enrollmentsByStudent.get(student.id) ?? []
-    const active = enrollments.find(e => e.status !== 'cancelled') ?? enrollments[0] ?? null
+
+    // Priorité : inscription non-annulée la plus récente ; sinon considéré prospect
+    const active = enrollments.find(e => e.status !== 'cancelled' && e.status !== 'dropped') ?? null
     const sess   = active?.sessions ?? null
 
     const crm_status = active
@@ -502,10 +563,14 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       email:          student.email,
       photo_url:      student.photo_url,
       crm_status,
-      session_name:   sess?.name ?? null,
-      session_id:     sess?.id ?? null,
-      formation_name: sess?.formations?.[0]?.name ?? null,
-      company_name:   companyByStudent.get(student.id) ?? null,
+      session_name:       sess?.name ?? null,
+      session_id:         sess?.id ?? null,
+      session_start_date: sess?.start_date ?? null,
+      session_end_date:   sess?.end_date ?? null,
+      formation_name:     sess?.formation_id ? (formationMap.get(sess.formation_id)?.name ?? null) : null,
+      formation_id:       sess?.formation_id ?? null,
+      program_name:       sess?.formation_id ? (formationMap.get(sess.formation_id)?.program_name ?? null) : null,
+      company_name:       companyByStudent.get(student.id) ?? null,
       missing_qualiopi: getMissingQualiopi(student.id, student.email),
       enrollment_id:  active?.id ?? null,
       created_at:     student.created_at ?? new Date().toISOString(),

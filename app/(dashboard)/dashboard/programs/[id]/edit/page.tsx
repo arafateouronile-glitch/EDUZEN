@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { programService } from '@/lib/services/program.service.client'
+import { formationService } from '@/lib/services/formation.service.client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ArrowLeft, TrendingUp, Users, Star, Award, Eye, EyeOff, Globe, Image as ImageIcon, Plus, X } from 'lucide-react'
@@ -177,6 +178,7 @@ export default function EditProgramPage() {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
       logger.debug('Mise à jour du programme', { programId, formData })
+      const firstFormation = program?.formations?.[0] as any
       const result = await programService.updateProgram(programId, {
         code: formData.code,
         name: formData.name,
@@ -219,6 +221,16 @@ export default function EditProgramPage() {
         total_learners: formData.total_learners ? parseInt(formData.total_learners) : null,
         completion_rate: formData.completion_rate ? parseInt(formData.completion_rate) : null,
       } as any)
+
+      // Mettre à jour la formation liée avec duration_hours et price
+      if (firstFormation?.id) {
+        await formationService.updateFormation(firstFormation.id, {
+          duration_hours: formData.duration_hours ? parseFloat(formData.duration_hours) : null,
+          price: formData.price ? parseFloat(formData.price) : 0,
+          currency: formData.currency || 'EUR',
+        } as any)
+      }
+
       logger.debug('Programme mis à jour avec succès', { result })
       return result
     },

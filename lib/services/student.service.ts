@@ -44,6 +44,7 @@ export class StudentService {
    */
   async getAll(organizationId: string, filters?: {
     classId?: string
+    sessionId?: string
     status?: Student['status']
     search?: string
     page?: number
@@ -54,14 +55,27 @@ export class StudentService {
       const limit = filters?.limit || 50
       const offset = (page - 1) * limit
 
-      // Récupérer d'abord les étudiants sans relations pour éviter les erreurs
-      // Enrichir ensuite avec les données des classes si nécessaire
+      // Filtre session : résoudre les IDs d'apprenants inscrits via enrollments
+      let sessionStudentIds: string[] | null = null
+      const targetSessionId = filters?.sessionId || filters?.classId
+      if (targetSessionId) {
+        const { data: enrollments } = await this.supabase
+          .from('enrollments')
+          .select('student_id')
+          .eq('session_id', targetSessionId)
+          .neq('status', 'cancelled')
+        sessionStudentIds = (enrollments ?? []).map((e) => e.student_id).filter((id): id is string => id != null)
+        if (sessionStudentIds.length === 0) {
+          return { data: [], total: 0, page, limit, totalPages: 0 }
+        }
+      }
+
       let query = this.supabase
         .from('students')
         .select('*', { count: 'exact' })
         .eq('organization_id', organizationId)
 
-      if (filters?.classId) query = query.eq('class_id', filters.classId)
+      if (sessionStudentIds) query = query.in('id', sessionStudentIds)
       if (filters?.status) query = query.eq('status', filters.status)
       
       // Ajouter la recherche si nécessaire

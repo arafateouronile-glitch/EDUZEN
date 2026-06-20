@@ -72,7 +72,7 @@ function StudentsPageContent() {
       const result = await studentService.getAll(user.organization_id, {
         search,
         status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
-        classId: sessionFilter !== 'all' ? sessionFilter : undefined,
+        sessionId: sessionFilter !== 'all' ? sessionFilter : undefined,
         page: currentPage,
         limit: itemsPerPage,
       })

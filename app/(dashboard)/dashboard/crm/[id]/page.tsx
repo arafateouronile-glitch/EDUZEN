@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getLearnerProfile, addLearnerNote } from '@/lib/actions/learner-crm-actions'
+import { addLearnerNote } from '@/lib/actions/learner-crm-actions'
+import type { LearnerProfile } from '@/lib/actions/learner-crm-actions'
 import { LearnerTimeline } from '@/components/dashboard/crm/learner-timeline'
 import { QualiopiChecklist } from '@/components/dashboard/crm/qualiopi-checklist'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -46,9 +47,13 @@ export default function LearnerProfilePage() {
 
   const [noteText, setNoteText] = useState('')
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading } = useQuery<LearnerProfile>({
     queryKey: ['learner-profile', studentId],
-    queryFn:  () => getLearnerProfile(studentId),
+    queryFn:  async () => {
+      const res = await fetch(`/api/crm/learner/${studentId}`)
+      if (!res.ok) throw new Error(await res.text())
+      return res.json()
+    },
     staleTime: 60 * 1000,
   })
 

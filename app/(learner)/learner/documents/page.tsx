@@ -16,13 +16,18 @@ import {
   Eye,
   Search,
   Calendar,
-  Filter,
   Award,
   ClipboardList,
   FileCheck,
   Mail,
   Receipt,
   Folder,
+  Library,
+  Video,
+  Music,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  ExternalLink,
 } from 'lucide-react'
 import { useState } from 'react'
 import { formatDate } from '@/lib/utils'
@@ -36,6 +41,38 @@ const documentTypes = [
   { id: 'certificate', label: 'Certificats', icon: Award },
   { id: 'invoice', label: 'Factures', icon: Receipt },
 ]
+
+interface EducationalResource {
+  id: string
+  title: string
+  description: string | null
+  resource_type: string
+  file_url: string | null
+  external_url: string | null
+  thumbnail_url: string | null
+  tags: string[] | null
+  created_at: string
+}
+
+const RESOURCE_TYPE_ICON: Record<string, React.ElementType> = {
+  video: Video,
+  audio: Music,
+  image: ImageIcon,
+  link: LinkIcon,
+  document: FileText,
+  interactive: FileText,
+  other: FileText,
+}
+
+const RESOURCE_TYPE_LABEL: Record<string, string> = {
+  video: 'Vidéo',
+  audio: 'Audio',
+  image: 'Image',
+  link: 'Lien',
+  document: 'Document',
+  interactive: 'Interactif',
+  other: 'Autre',
+}
 
 export default function LearnerDocumentsPage() {
   const { student: studentData, studentId } = useLearnerContext()
@@ -394,6 +431,19 @@ export default function LearnerDocumentsPage() {
     refetchOnMount: true,
   })
 
+  const { data: educationalResources } = useQuery<EducationalResource[]>({
+    queryKey: ['learner-educational-resources', studentId],
+    queryFn: async () => {
+      const res = await fetch('/api/learner/resources', {
+        headers: studentId ? { 'x-learner-student-id': studentId } : {},
+      })
+      if (!res.ok) return []
+      return res.json()
+    },
+    enabled: !!studentId,
+    refetchOnWindowFocus: false,
+  })
+
   // Combiner et filtrer les documents
   const allDocuments = [
     ...(documents || []).map((doc: DocItem) => ({
@@ -651,6 +701,117 @@ export default function LearnerDocumentsPage() {
           </GlassCard>
         )}
       </motion.div>
+
+      {/* Ressources pédagogiques */}
+      {educationalResources && educationalResources.length > 0 && (
+        <motion.div variants={itemVariants}>
+          <div className="flex items-center gap-2 mb-3">
+            <Library className="h-5 w-5 text-brand-blue" />
+            <h2 className="text-lg font-semibold text-gray-900">Ressources pédagogiques</h2>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-blue/10 text-brand-blue">
+              {educationalResources.length}
+            </span>
+          </div>
+          <div className="grid gap-3">
+            {educationalResources
+              .filter(r => {
+                if (!searchQuery) return true
+                return r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  r.description?.toLowerCase().includes(searchQuery.toLowerCase())
+              })
+              .map((resource, index) => {
+                const Icon = RESOURCE_TYPE_ICON[resource.resource_type] ?? FileText
+                const label = RESOURCE_TYPE_LABEL[resource.resource_type] ?? 'Ressource'
+                const href = resource.external_url || resource.file_url
+                const isExternal = !!resource.external_url
+
+                return (
+                  <motion.div
+                    key={resource.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                  >
+                    <GlassCard className="p-4 hover:shadow-lg transition-all duration-300 group">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-brand-blue-ghost shrink-0">
+                          <Icon className="h-5 w-5 text-brand-blue" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-gray-900 truncate">{resource.title}</h3>
+                            <Badge className="bg-brand-blue-pale text-brand-blue hover:bg-brand-blue-pale shrink-0">
+                              {label}
+                            </Badge>
+                          </div>
+                          {resource.description && (
+                            <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">{resource.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {resource.created_at && formatDate(resource.created_at)}
+                            </span>
+                            {resource.tags && resource.tags.length > 0 && (
+                              <span>{resource.tags.slice(0, 3).join(', ')}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {href && (
+                            isExternal ? (
+                              <a href={href} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm" className="group-hover:border-brand-blue group-hover:text-brand-blue">
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Ouvrir
+                                </Button>
+                              </a>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => window.open(href, '_blank')}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="group-hover:border-brand-blue group-hover:text-brand-blue"
+                                  onClick={async () => {
+                                    try {
+                                      const response = await fetch(href)
+                                      const blob = await response.blob()
+                                      const url = window.URL.createObjectURL(blob)
+                                      const a = document.createElement('a')
+                                      a.href = url
+                                      a.download = resource.title
+                                      a.click()
+                                      window.URL.revokeObjectURL(url)
+                                    } catch {
+                                      window.open(href, '_blank')
+                                    }
+                                  }}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Télécharger
+                                </Button>
+                              </>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </GlassCard>
+                  </motion.div>
+                )
+              })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Stats */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-4 gap-4">

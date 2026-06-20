@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -13,11 +13,18 @@ import { formationService } from '@/lib/services/formation.service.client'
 import { sessionService } from '@/lib/services/session.service.client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { ArrowLeft, Library, Save, Upload, X, FileText, Video, Image, Link as LinkIcon, Music } from 'lucide-react'
+import { ArrowLeft, Library, Save, Upload, X, FileText, Video, Image, Link as LinkIcon, Music, Users, Check, UserCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+
+interface SessionStudent {
+  id: string
+  first_name: string
+  last_name: string
+  email: string | null
+}
 
 const visibilityScopeEnum = z.enum(['all', 'program', 'formation', 'session'])
 
@@ -67,6 +74,7 @@ export default function NewResourcePage() {
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+  const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([])
 
   // Récupérer les catégories
   const { data: categories } = useQuery({
@@ -94,6 +102,7 @@ export default function NewResourcePage() {
 
   const resourceType = watch('resource_type')
   const visibilityScope = watch('visibility_scope')
+  const selectedSessionId = watch('visibility_session_id')
 
   const { data: programs } = useQuery({
     queryKey: ['programs', user?.organization_id],
@@ -121,6 +130,29 @@ export default function NewResourcePage() {
     },
     enabled: !!user?.organization_id && (visibilityScope === 'session'),
   })
+
+  const { data: sessionStudents, isLoading: isLoadingStudents } = useQuery<SessionStudent[]>({
+    queryKey: ['session-students', selectedSessionId],
+    queryFn: async () => {
+      const res = await fetch(`/api/sessions/${selectedSessionId}/students`)
+      if (!res.ok) throw new Error(await res.text())
+      return res.json()
+    },
+    enabled: visibilityScope === 'session' && !!selectedSessionId,
+  })
+
+  const toggleLearner = useCallback((id: string) => {
+    setSelectedLearnerIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }, [])
+
+  const toggleAllLearners = useCallback(() => {
+    if (!sessionStudents) return
+    setSelectedLearnerIds(prev =>
+      prev.length === sessionStudents.length ? [] : sessionStudents.map(s => s.id)
+    )
+  }, [sessionStudents])
 
   // Générer le slug automatiquement à partir du titre
   const title = watch('title')
@@ -206,6 +238,10 @@ export default function NewResourcePage() {
         : []
 
       const visibilityScope = data.visibility_scope || 'all'
+      const learnerIds = visibilityScope === 'session' && selectedLearnerIds.length > 0
+        ? selectedLearnerIds
+        : null
+
       return educationalResourcesService.createResource({
         organization_id: user.organization_id,
         title: data.title,
@@ -228,7 +264,8 @@ export default function NewResourcePage() {
         visibility_program_id: visibilityScope === 'program' ? data.visibility_program_id || null : null,
         visibility_formation_id: visibilityScope === 'formation' ? data.visibility_formation_id || null : null,
         visibility_session_id: visibilityScope === 'session' ? data.visibility_session_id || null : null,
-      } as Parameters<typeof educationalResourcesService.createResource>[0])
+        visibility_learner_ids: learnerIds,
+      } as any)
     },
     onSuccess: (resource) => {
       addToast({
@@ -431,17 +468,110 @@ export default function NewResourcePage() {
                 </div>
               )}
               {visibilityScope === 'session' && (
-                <div className="mt-3">
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Session</label>
-                  <select
-                    {...register('visibility_session_id')}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue"
-                  >
-                    <option value="">Sélectionner une session</option>
-                    {sessions?.map((s: { id: string; name: string }) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Session</label>
+                    <select
+                      {...register('visibility_session_id')}
+                      onChange={(e) => {
+                        setValue('visibility_session_id', e.target.value)
+                        setSelectedLearnerIds([])
+                      }}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue"
+                    >
+                      <option value="">Sélectionner une session</option>
+                      {sessions?.map((s: { id: string; name: string }) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedSessionId && (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm font-medium text-gray-700">
+                            Apprenants ciblés
+                          </span>
+                          {selectedLearnerIds.length > 0 && (
+                            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-brand-blue text-white">
+                              {selectedLearnerIds.length}
+                            </span>
+                          )}
+                        </div>
+                        {sessionStudents && sessionStudents.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={toggleAllLearners}
+                            className="text-xs text-brand-blue hover:underline"
+                          >
+                            {selectedLearnerIds.length === sessionStudents.length
+                              ? 'Tout désélectionner'
+                              : 'Tout sélectionner'}
+                          </button>
+                        )}
+                      </div>
+
+                      {isLoadingStudents ? (
+                        <p className="text-xs text-gray-500 py-2">Chargement des apprenants…</p>
+                      ) : !sessionStudents || sessionStudents.length === 0 ? (
+                        <p className="text-xs text-gray-500 py-2">Aucun apprenant inscrit à cette session.</p>
+                      ) : (
+                        <>
+                          <p className="text-xs text-gray-500 mb-2">
+                            {selectedLearnerIds.length === 0
+                              ? 'Tous les apprenants de la session verront cette ressource.'
+                              : `Seuls les apprenants cochés auront accès à cette ressource.`}
+                          </p>
+                          <div className="space-y-1 max-h-48 overflow-y-auto">
+                            {sessionStudents.map((student) => {
+                              const checked = selectedLearnerIds.includes(student.id)
+                              return (
+                                <label
+                                  key={student.id}
+                                  className={cn(
+                                    'flex items-center gap-2.5 px-2.5 py-1.5 rounded-md cursor-pointer transition-colors',
+                                    checked
+                                      ? 'bg-brand-blue/8 border border-brand-blue/20'
+                                      : 'hover:bg-white border border-transparent'
+                                  )}
+                                >
+                                  <div
+                                    className={cn(
+                                      'flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors',
+                                      checked
+                                        ? 'bg-brand-blue border-brand-blue'
+                                        : 'border-gray-300 bg-white'
+                                    )}
+                                  >
+                                    {checked && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+                                  </div>
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={checked}
+                                    onChange={() => toggleLearner(student.id)}
+                                  />
+                                  <div className="min-w-0">
+                                    <span className="text-sm font-medium text-gray-800">
+                                      {student.first_name} {student.last_name}
+                                    </span>
+                                    {student.email && (
+                                      <span className="ml-1.5 text-xs text-gray-400">{student.email}</span>
+                                    )}
+                                  </div>
+                                  {checked && (
+                                    <UserCheck className="ml-auto h-3.5 w-3.5 shrink-0 text-brand-blue" />
+                                  )}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

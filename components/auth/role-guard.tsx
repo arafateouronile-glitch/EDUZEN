@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { AlertCircle, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -22,39 +22,33 @@ export const FINANCE_ROLES = ['super_admin', 'admin', 'secretary', 'accountant']
 // Rôles avec accès à la gestion des formations
 export const FORMATION_MANAGEMENT_ROLES = ['super_admin', 'admin', 'secretary']
 
-export function RoleGuard({ 
-  children, 
-  allowedRoles, 
+export function RoleGuard({
+  children,
+  allowedRoles,
   fallback,
   redirectTo = '/dashboard'
 }: RoleGuardProps) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null)
 
   useEffect(() => {
-    if (isLoading) return
-    if (!user) {
-      setHasAccess(false)
-      return
-    }
-    const userRole = user.role || ''
-    const access = allowedRoles.includes(userRole)
-    setHasAccess(access)
-
+    if (isLoading || !user) return
+    const access = allowedRoles.includes(user.role || '')
     if (!access && redirectTo && !fallback) {
       router.push(redirectTo)
     }
   }, [user, isLoading, allowedRoles, redirectTo, router, fallback])
 
-  // Pendant le chargement
-  if (isLoading || hasAccess === null) {
+  // Pendant le chargement initial (pas de données en cache)
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
       </div>
     )
   }
+
+  const hasAccess = user ? allowedRoles.includes(user.role || '') : false
 
   // Si l'utilisateur n'a pas accès
   if (!hasAccess) {

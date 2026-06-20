@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type {
   DragEndEvent,
   DragStartEvent} from '@dnd-kit/core';
@@ -150,6 +150,9 @@ interface LearnerPipelineProps {
 export function LearnerPipeline({ initialData }: LearnerPipelineProps) {
   const [data, setData]           = useState<LearnerPipelineData>(initialData)
   const [activeLearner, setActiveLearner] = useState<LearnerCard | null>(null)
+
+  // Sync quand les filtres du parent changent
+  useEffect(() => { setData(initialData) }, [initialData])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })

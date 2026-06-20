@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { programService } from '@/lib/services/program.service.client'
+import { formationService } from '@/lib/services/formation.service.client'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Save, Plus, Settings, Upload, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
@@ -54,11 +55,15 @@ export default function NewProgramPage() {
     mutationFn: async (data: ProgramFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
-      // Conversion des champs numériques
       const duration_days = data.duration_days ? parseFloat(data.duration_days) : null
-      const price = data.price ? parseFloat(data.price) : null
+      const duration_hours = data.duration_hours ? parseFloat(data.duration_hours) : null
+      const price = data.price_enterprise
+        ? parseFloat(data.price_enterprise)
+        : data.price
+          ? parseFloat(data.price)
+          : 0
 
-      return programService.createProgram({
+      const program = await programService.createProgram({
         organization_id: user.organization_id,
         code: data.code,
         name: data.name,
@@ -67,7 +72,6 @@ export default function NewProgramPage() {
         category: data.category,
         program_version: data.program_version,
         version_date: data.version_date,
-        // Note: duration_hours, price, currency n'existent pas dans la table programs, c'est dans formations
         duration_days: duration_days,
         published_online: data.published_online,
         eligible_cpf: data.eligible_cpf,
@@ -85,6 +89,19 @@ export default function NewProgramPage() {
         photo_url: data.photo_url,
         is_active: true,
       })
+
+      // Créer une formation par défaut pour stocker duration_hours, price et currency
+      await formationService.createFormation({
+        program_id: program.id,
+        organization_id: user.organization_id,
+        code: data.code,
+        name: data.name,
+        duration_hours: duration_hours,
+        price: price,
+        currency: data.currency || 'EUR',
+      })
+
+      return program
     },
     onSuccess: (program) => {
       addToast({

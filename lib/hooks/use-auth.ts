@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { logger } from '@/lib/utils/logger'
 
@@ -13,7 +13,10 @@ type UserRow = Database['public']['Tables']['users']['Row'] | null
 type Organization = TableRow<'organizations'>
 
 export function useAuth() {
-  const supabase = createClient()
+  // Memoïsé pour éviter de recréer le client Supabase à chaque re-render.
+  // Sans useMemo, chaque re-render (ex. changement de pathname) crée un nouveau client,
+  // ce qui refait l'abonnement onAuthStateChange → INITIAL_SESSION re-fire → état auth vidé.
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
   const queryClient = useQueryClient()
 

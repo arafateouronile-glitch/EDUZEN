@@ -1,5 +1,4 @@
 import createMiddleware from 'next-intl/middleware'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { routing } from './i18n/routing'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
@@ -64,42 +63,24 @@ export async function proxy(req: NextRequest) {
     return res
   }
 
-  // Auth Supabase : routes protégées et redirections login/dashboard
-  let authResponse = NextResponse.next({ request: { headers: req.headers } })
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          req.cookies.set({ name, value, ...options })
-          authResponse = NextResponse.next({ request: { headers: req.headers } })
-          authResponse.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          req.cookies.set({ name, value: '', ...options })
-          authResponse = NextResponse.next({ request: { headers: req.headers } })
-          authResponse.cookies.set({ name, value: '', ...options })
-        },
-      },
-    }
-  )
-  // getSession reads from cookie (no network) — sufficient for redirect logic in middleware
-  const { data: { session } } = await supabase.auth.getSession()
-  const authUser = session?.user ?? null
+  // Fast auth check: read Supabase session cookie directly — zero network calls.
+  // The cookie exists when a valid session was established. Actual data-access security
+  // is enforced at the server component / API route level (getUser() / RLS).
+  const supabaseProjectId = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ?.replace('https://', '').split('.')[0] ?? ''
+  const authCookieName = `sb-${supabaseProjectId}-auth-token`
+  const authUser = req.cookies.get(authCookieName)?.value ? true : null
   const protectedRoutes = [
     '/dashboard',
     '/students',
     '/programs',
     '/payments',
     '/attendance',
-    '/learner',
     '/enterprise',
     '/super-admin',
   ]
+  // /learner is NOT in protectedRoutes — the learner portal uses token-based auth,
+  // not Supabase sessions. Adding it here caused redirect floods for learners.
   const isProtectedRoute = protectedRoutes.some((r) => pathname.startsWith(r))
   const authRoutes = ['/auth/login', '/auth/register']
   const isAuthRoute = authRoutes.some((r) => pathname.startsWith(r))
@@ -120,9 +101,7 @@ export async function proxy(req: NextRequest) {
     return applySecurityTo(NextResponse.redirect(redirectUrl))
   }
   if (isAuthRoute && authUser) {
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard'
-    return applySecurityTo(NextResponse.redirect(redirectUrl))
+    return applySecurityTo(NextResponse.redirect(new URL('/dashboard', req.url)))
   }
 
   // Gérer les routes avec préfixe de locale (/en/* ou /fr/*)
