@@ -4,4 +4,5 @@ import { ComplianceService } from './compliance.service'
 import { createClient } from '@/lib/supabase/client'
 
 // Instance par défaut pour usage côté client
+export * from './compliance.service'
 export const complianceService = new ComplianceService(createClient())

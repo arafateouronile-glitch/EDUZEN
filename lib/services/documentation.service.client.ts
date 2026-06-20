@@ -4,4 +4,5 @@ import { DocumentationService } from './documentation.service'
 import { createClient } from '@/lib/supabase/client'
 
 // Instance par défaut pour usage côté client
+export * from './documentation.service'
 export const documentationService = new DocumentationService(createClient())

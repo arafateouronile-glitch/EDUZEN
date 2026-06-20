@@ -9,6 +9,7 @@
  */
 
 import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 

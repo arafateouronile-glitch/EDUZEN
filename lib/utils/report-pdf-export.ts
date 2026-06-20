@@ -225,7 +225,7 @@ export async function downloadReportPDF(
   // Enregistrer dans l'historique si organizationId et userId sont fournis
   if (options?.organizationId && options?.userId) {
     try {
-      const { exportHistoryService } = await import('@/lib/services/export-history.service')
+      const { exportHistoryService } = await import('@/lib/services/export-history.service.client')
       await exportHistoryService.create({
         organizationId: options.organizationId,
         userId: options.userId,
