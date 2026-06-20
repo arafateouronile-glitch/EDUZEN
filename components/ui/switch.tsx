@@ -4,6 +4,7 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 export interface SwitchProps {
+  id?: string
   checked?: boolean
   onCheckedChange?: (checked: boolean) => void
   disabled?: boolean

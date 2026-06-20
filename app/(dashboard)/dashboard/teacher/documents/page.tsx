@@ -19,6 +19,7 @@ import {
   Briefcase,
   FileCheck,
   AlertCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { formatDate, cn } from '@/lib/utils'
@@ -53,6 +54,7 @@ type TeacherDocument = {
   file_name: string
   file_size: number | null
   mime_type: string | null
+  expiry_date: string | null
   uploaded_at: string
   verified: boolean
   verified_at: string | null
@@ -91,6 +93,7 @@ export default function TeacherDocumentsPage() {
     title: '',
     description: '',
     document_type: 'other' as TeacherDocument['document_type'],
+    expiry_date: '',
     file: null as File | null,
   })
 
@@ -138,6 +141,7 @@ export default function TeacherDocumentsPage() {
         title: '',
         description: '',
         document_type: 'other',
+        expiry_date: '',
         file: null,
       })
       if (fileInputRef.current) {
@@ -226,6 +230,7 @@ export default function TeacherDocumentsPage() {
     formData.append('title', uploadForm.title)
     formData.append('description', uploadForm.description)
     formData.append('document_type', uploadForm.document_type)
+    if (uploadForm.expiry_date) formData.append('expiry_date', uploadForm.expiry_date)
 
     try {
       await uploadMutation.mutateAsync(formData)
@@ -365,6 +370,27 @@ export default function TeacherDocumentsPage() {
                       <p className="text-sm text-gray-500 mb-4 line-clamp-2">{doc.description}</p>
                     )}
                     
+                    {doc.expiry_date && (() => {
+                      const days = Math.floor((new Date(doc.expiry_date).getTime() - Date.now()) / 86_400_000)
+                      const expired = days < 0
+                      const soon = days < 30
+                      const warning = days < 90
+                      const label = expired
+                        ? `Expiré le ${new Date(doc.expiry_date).toLocaleDateString('fr-FR')}`
+                        : `Expire le ${new Date(doc.expiry_date).toLocaleDateString('fr-FR')}`
+                      const color = expired || soon
+                        ? 'bg-red-50 text-red-700 border-red-200'
+                        : warning
+                          ? 'bg-orange-50 text-orange-700 border-orange-200'
+                          : 'bg-gray-50 text-gray-500 border-gray-200'
+                      return (
+                        <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border mb-3 ${color}`}>
+                          <AlertTriangle className="w-3 h-3" />
+                          {label}
+                        </div>
+                      )
+                    })()}
+
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
                       <span>{formatFileSize(doc.file_size)}</span>
                       <span>•</span>
@@ -452,7 +478,18 @@ export default function TeacherDocumentsPage() {
                 rows={3}
               />
             </div>
-            
+
+            <div>
+              <Label htmlFor="expiry_date">Date d'expiration (optionnel)</Label>
+              <Input
+                id="expiry_date"
+                type="date"
+                value={uploadForm.expiry_date}
+                onChange={(e) => setUploadForm(prev => ({ ...prev, expiry_date: e.target.value }))}
+              />
+              <p className="text-xs text-gray-400 mt-1">Pour les diplômes ou certifications à renouveler</p>
+            </div>
+
             <div>
               <Label htmlFor="file">Fichier *</Label>
               <Input
