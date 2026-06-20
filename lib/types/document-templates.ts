@@ -20,6 +20,7 @@ export type DocumentType =
   | 'attestation_assiduite'
   | 'livret_accueil' // OF - Livret d'accueil
   | 'emargement' // OF - Feuille d'émargement
+  | 'convention_formateur' // Convention de prestation avec formateur indépendant
 
 export interface DocumentTemplate {
   id: string
@@ -476,6 +477,26 @@ export interface DocumentVariables {
   heures_suivies?: string
   heures_totales?: string
   taux_assiduite?: string
+
+  // Formateur indépendant (convention_formateur)
+  formateur_nom?: string
+  formateur_prenom?: string
+  formateur_email?: string
+  formateur_adresse?: string
+  formateur_code_postal?: string
+  formateur_ville?: string
+  formateur_telephone?: string
+  formateur_siret?: string
+  formateur_specialite?: string
+  formateur_statut?: string // Ex: Micro-entrepreneur, SASU, Profession libérale...
+  convention_date_debut?: string
+  convention_date_fin?: string
+  convention_tarif_horaire?: string
+  convention_heures_total?: string
+  convention_montant_total?: string
+  convention_modalites_paiement?: string
+  convention_lieu_formation?: string
+  convention_notes?: string
 }
 
 // Type pour les données d'édition

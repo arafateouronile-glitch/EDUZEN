@@ -22937,6 +22937,7 @@ export type Database = {
         | "emargement"
         | "certificat_realisation"
         | "attestation"
+        | "convention_formateur"
     }
     CompositeTypes: {
       [_ in never]: never

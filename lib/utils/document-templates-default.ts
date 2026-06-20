@@ -930,14 +930,14 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
           ATTESTATION D'ASSIDUITÉ
         </h1>
       </div>
-      
+
       <div style="margin-bottom: 40px;">
         <p style="text-align: justify; font-size: 16px; line-height: 1.8;">
-          Le Directeur de l'établissement <strong>{ecole_nom}</strong>, situé au 
+          Le Directeur de l'établissement <strong>{ecole_nom}</strong>, situé au
           <strong>{ecole_adresse} - {ecole_ville}</strong>,
         </p>
         <p style="text-align: justify; font-size: 16px; line-height: 1.8; margin-top: 20px;">
-          Atteste que <strong>{eleve_prenom} {eleve_nom}</strong>, né(e) le 
+          Atteste que <strong>{eleve_prenom} {eleve_nom}</strong>, né(e) le
           <strong>{eleve_date_naissance}</strong>, numéro d'inscription <strong>{eleve_numero}</strong>,
         </p>
         <p style="text-align: center; font-size: 18px; font-weight: bold; margin: 30px 0;">
@@ -950,7 +950,7 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
           avec une assiduité conforme aux exigences réglementaires.
         </p>
       </div>
-      
+
       <div style="margin: 40px 0; padding: 20px; background-color: #f9fafb; border-left: 4px solid #335ACF;">
         <p style="margin-bottom: 10px;"><strong>Session :</strong> {session_nom}</p>
         <p style="margin-bottom: 10px;"><strong>Période :</strong> Du {session_debut} au {session_fin}</p>
@@ -958,13 +958,13 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
         <p style="margin-bottom: 10px;"><strong>Heures effectuées :</strong> {heures_effectuees} heures</p>
         <p><strong>Taux de présence :</strong> {taux_presence}%</p>
       </div>
-      
+
       <div style="margin-top: 50px;">
         <p style="text-align: justify; font-size: 14px;">
           Le présent document est délivré pour servir et valoir ce que de droit.
         </p>
       </div>
-      
+
       <div style="margin-top: 60px; text-align: center;">
         <p style="margin-bottom: 50px;">
           {ecole_ville}, le {date_jour}
@@ -972,6 +972,78 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
         <p><strong>Le Directeur</strong></p>
         <p style="margin-top: 60px;">________________________</p>
         <p>{ecole_directeur}</p>
+      </div>
+    `,
+    convention_formateur: `
+      <h1 style="text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 10px;">
+        CONVENTION DE PRESTATION DE SERVICES
+      </h1>
+      <h2 style="text-align: center; font-size: 16px; font-weight: normal; margin-bottom: 30px;">
+        Animation de Formation Professionnelle
+      </h2>
+      <p style="text-align: center; font-size: 12px; color: #666; margin-bottom: 30px;">
+        (Articles L.6353-1 et suivants du Code du Travail)
+      </p>
+
+      <div style="margin-bottom: 30px;">
+        <p><strong>ENTRE :</strong></p>
+        <p style="margin-left: 20px; margin-top: 10px;">
+          <strong>L'Organisme de Formation :</strong> {ecole_nom}<br/>
+          SIRET : {ecole_siret}<br/>
+          Déclaration d'activité N° {ecole_numero_declaration}<br/>
+          {ecole_adresse}, {ecole_code_postal} {ecole_ville}<br/>
+          Représenté(e) par : {ecole_representant}
+        </p>
+        <p style="margin-left: 20px; margin-top: 20px;">
+          <strong>Et le Formateur :</strong><br/>
+          {formateur_prenom} {formateur_nom}<br/>
+          SIRET : {formateur_siret}<br/>
+          Statut : {formateur_statut}<br/>
+          {formateur_adresse}, {formateur_code_postal} {formateur_ville}<br/>
+          Email : {formateur_email} — Tél : {formateur_telephone}
+        </p>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Article 1 — Objet</h2>
+        <p>Prestation d'animation de formation : <strong>{formateur_specialite}</strong></p>
+        <p>Du {convention_date_debut} au {convention_date_fin} — {convention_heures_total} heures — {convention_lieu_formation}</p>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Article 2 — Honoraires</h2>
+        <p>Tarif : {convention_tarif_horaire} €/h × {convention_heures_total} h = <strong>{convention_montant_total} € HT</strong></p>
+        <p>Modalités : {convention_modalites_paiement}</p>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Article 3 — Obligations</h2>
+        <p>Le Formateur s'engage à réaliser les prestations avec professionnalisme, à fournir les supports pédagogiques, émarger les feuilles de présence et respecter la confidentialité. Il atteste de son indépendance et fournira une attestation de vigilance URSSAF sur demande.</p>
+      </div>
+
+      <div style="margin-bottom: 25px;">
+        <h2 style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">Article 4 — Clauses particulières</h2>
+        <p>{convention_notes}</p>
+      </div>
+
+      <div style="margin-top: 50px; text-align: center;">
+        <p style="margin-bottom: 50px;">Fait à {ecole_ville}, le {date_jour}</p>
+        <table style="width: 100%;">
+          <tr>
+            <td style="width: 50%; text-align: center;">
+              <p><strong>Pour l'Organisme de Formation</strong></p>
+              <p>{ecole_nom} — {ecole_representant}</p>
+              <p style="margin-top: 60px;">________________________</p>
+              <p>Signature et cachet</p>
+            </td>
+            <td style="width: 50%; text-align: center;">
+              <p><strong>Le Formateur</strong></p>
+              <p>{formateur_prenom} {formateur_nom}</p>
+              <p style="margin-top: 60px;">________________________</p>
+              <p>Lu et approuvé</p>
+            </td>
+          </tr>
+        </table>
       </div>
     `,
   }

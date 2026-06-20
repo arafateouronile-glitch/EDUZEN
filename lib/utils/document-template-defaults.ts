@@ -2204,6 +2204,216 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     `,
     footerContent: premiumFooter,
   },
+
+  // ==========================================
+  // CONVENTION DE PRESTATION FORMATEUR
+  // ==========================================
+  convention_formateur: {
+    type: 'convention_formateur',
+    name: 'Convention de prestation avec formateur indépendant',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <div style="text-align: center; margin-bottom: 25px;">
+        <h1 style="font-size: 15pt; font-weight: bold; margin: 0 0 6px 0; color: #1A1A1A; text-transform: uppercase; letter-spacing: 0.5px;">
+          Convention de Prestation de Services
+        </h1>
+        <h2 style="font-size: 11pt; font-weight: normal; margin: 0 0 4px 0; color: #444;">
+          Animation de Formation Professionnelle
+        </h2>
+        <p style="font-size: 8.5pt; color: #666; margin: 0; font-style: italic;">
+          (Articles L.6353-1 et suivants du Code du Travail — Formation professionnelle continue)
+        </p>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <p style="font-weight: bold; font-size: 10.5pt; margin: 0 0 14px 0; color: #1A1A1A;">ENTRE LES SOUSSIGNÉS :</p>
+
+        <div style="background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px; margin-bottom: 14px;">
+          <p style="font-weight: bold; font-size: 10pt; margin: 0 0 4px 0;">{ecole_nom}</p>
+          <p style="font-size: 9.5pt; margin: 0 0 2px 0; color: #333;">{ecole_adresse}, {ecole_code_postal} {ecole_ville}</p>
+          <p style="font-size: 9.5pt; margin: 0 0 2px 0; color: #333;">SIRET : {ecole_siret}</p>
+          <p style="font-size: 9.5pt; margin: 0 0 2px 0; color: #333;">Déclaration d'activité N° {ecole_numero_declaration} (Préfet de région : {ecole_region})</p>
+          <p style="font-size: 9.5pt; margin: 8px 0 2px 0; color: #333;">Représenté(e) par : <strong>{ecole_representant}</strong></p>
+          <p style="font-size: 8.5pt; color: #666; margin: 4px 0 0 0; font-style: italic;">Ci-après dénommé « l'Organisme de Formation »</p>
+        </div>
+
+        <p style="font-size: 10pt; font-weight: bold; text-align: center; margin: 12px 0; color: #555;">ET</p>
+
+        <div style="background: #f9f9f9; border-left: 3px solid #1A1A1A; padding: 10px 14px; margin-bottom: 14px;">
+          <p style="font-weight: bold; font-size: 10pt; margin: 0 0 4px 0;">{formateur_prenom} {formateur_nom}</p>
+          <p style="font-size: 9.5pt; margin: 0 0 2px 0; color: #333;">{formateur_adresse}, {formateur_code_postal} {formateur_ville}</p>
+          <p style="font-size: 9.5pt; margin: 0 0 2px 0; color: #333;">Email : {formateur_email} — Tél : {formateur_telephone}</p>
+          <p style="font-size: 9.5pt; margin: 0 0 2px 0; color: #333;">SIRET : {formateur_siret}</p>
+          <p style="font-size: 9.5pt; margin: 0 0 2px 0; color: #333;">Statut : {formateur_statut}</p>
+          <p style="font-size: 9.5pt; margin: 0 0 2px 0; color: #333;">Spécialité : {formateur_specialite}</p>
+          <p style="font-size: 8.5pt; color: #666; margin: 4px 0 0 0; font-style: italic;">Ci-après dénommé « le Formateur »</p>
+        </div>
+
+        <p style="font-size: 9.5pt; color: #444; font-style: italic; margin: 10px 0 0 0;">
+          Il a été convenu ce qui suit :
+        </p>
+      </div>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 20px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 1 — Objet de la convention
+      </h2>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9.5pt; margin: 0 0 8px 0;">
+        La présente convention a pour objet de définir les conditions dans lesquelles le Formateur intervient en qualité de prestataire indépendant au profit de l'Organisme de Formation pour assurer des actions de formation professionnelle continue au sens des articles L.6313-1 et suivants du Code du Travail.
+      </p>
+      <p style="text-align: justify; line-height: 1.6; font-size: 9.5pt; margin: 0;">
+        Le Formateur agit en qualité de prestataire indépendant et n'est lié à l'Organisme de Formation par aucun lien de subordination. La présente convention ne saurait être requalifiée en contrat de travail.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 2 — Nature et durée de la prestation
+      </h2>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 0 0 6px 0;">
+        Le Formateur s'engage à réaliser la prestation suivante : <strong>{formateur_specialite}</strong>
+      </p>
+      <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 10px 0;">
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold; width: 40%;">Période de la prestation</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">Du {convention_date_debut} au {convention_date_fin}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold;">Volume horaire total</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">{convention_heures_total} heures</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold;">Lieu de la formation</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">{convention_lieu_formation}</td>
+        </tr>
+      </table>
+      <p style="font-size: 9pt; color: #555; font-style: italic; margin: 6px 0 0 0;">
+        Le calendrier précis des interventions sera communiqué au Formateur au moins 15 jours avant chaque session. Toute modification de planning fera l'objet d'une concertation préalable entre les parties.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 3 — Honoraires et modalités de paiement
+      </h2>
+      <table style="width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 10px 0;">
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold; width: 40%;">Tarif horaire HT</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">{convention_tarif_horaire} €/heure</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold;">Volume horaire</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc;">{convention_heures_total} heures</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; background: #f2f2f2; font-weight: bold;">Montant total HT</td>
+          <td style="padding: 6px 10px; border: 1px solid #ccc; font-weight: bold; font-size: 10.5pt;">{convention_montant_total} €</td>
+        </tr>
+      </table>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 8px 0 0 0;">
+        <strong>Modalités de paiement :</strong> {convention_modalites_paiement}
+      </p>
+      <p style="font-size: 9pt; color: #555; margin: 6px 0 0 0; font-style: italic;">
+        Le paiement sera effectué sur présentation de facture émise par le Formateur, conformément à son statut juridique. En cas de TVA applicable, celle-ci sera indiquée sur la facture et facturée en sus du montant HT indiqué ci-dessus.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 4 — Obligations du Formateur
+      </h2>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 0 0 6px 0;">Le Formateur s'engage à :</p>
+      <ul style="font-size: 9.5pt; line-height: 1.7; margin: 0 0 0 18px; padding: 0;">
+        <li>Réaliser les prestations avec professionnalisme et dans le respect des règles pédagogiques en vigueur ;</li>
+        <li>Se conformer au programme de formation défini conjointement avec l'Organisme de Formation ;</li>
+        <li>Assurer la remise des documents pédagogiques nécessaires aux stagiaires (supports de cours, exercices, etc.) ;</li>
+        <li>Émarger les feuilles de présence à chaque séance et transmettre tout document requis par l'Organisme ;</li>
+        <li>Signaler sans délai toute difficulté susceptible de compromettre le bon déroulement de la formation ;</li>
+        <li>Respecter les règles de confidentialité relatives aux stagiaires et à l'activité de l'Organisme de Formation ;</li>
+        <li>Souscrire et maintenir une assurance responsabilité civile professionnelle couvrant son activité.</li>
+      </ul>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 5 — Obligations de l'Organisme de Formation
+      </h2>
+      <p style="font-size: 9.5pt; line-height: 1.6; margin: 0 0 6px 0;">L'Organisme de Formation s'engage à :</p>
+      <ul style="font-size: 9.5pt; line-height: 1.7; margin: 0 0 0 18px; padding: 0;">
+        <li>Mettre à disposition du Formateur les locaux, équipements et ressources pédagogiques nécessaires au bon déroulement des formations ;</li>
+        <li>Communiquer au Formateur les informations relatives aux stagiaires (niveaux, prérequis, objectifs attendus) ;</li>
+        <li>Régler les honoraires dans les délais convenus, sur présentation de facture conforme ;</li>
+        <li>Informer le Formateur de toute modification de planning dans les meilleurs délais.</li>
+      </ul>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 6 — Propriété intellectuelle
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0;">
+        Les supports et contenus pédagogiques spécifiquement créés par le Formateur dans le cadre de la présente convention et destinés exclusivement à l'Organisme de Formation sont cédés à ce dernier à titre non exclusif pour la durée légale de protection. Le Formateur conserve la propriété intellectuelle de ses outils et méthodes préexistants. Toute reproduction ou diffusion des supports originaux du Formateur est soumise à son accord préalable écrit.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 7 — Confidentialité
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0;">
+        Les parties s'engagent mutuellement à garder confidentielles toutes les informations sensibles échangées dans le cadre de la présente convention (données personnelles des stagiaires, informations commerciales, contenu pédagogique propriétaire), et ce pendant toute la durée de la convention et pour une période de 3 ans après son expiration, conformément à la réglementation RGPD en vigueur.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 8 — Indépendance des parties et régime social
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0;">
+        Le Formateur exerce son activité en toute indépendance et sous sa propre responsabilité. Il est seul responsable de ses obligations fiscales et sociales découlant de son statut de travailleur indépendant. L'Organisme de Formation ne peut être tenu responsable de tout manquement du Formateur à ses obligations déclaratives. Le Formateur s'engage à fournir, à première demande, une attestation de vigilance délivrée par l'URSSAF conformément à l'article L.8222-1 du Code du Travail.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 9 — Résiliation
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0 0 6px 0;">
+        Chaque partie peut mettre fin à la présente convention par lettre recommandée avec accusé de réception, moyennant un préavis de 15 jours calendaires, sauf accord mutuel pour un délai plus court.
+      </p>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0;">
+        En cas de manquement grave d'une partie à ses obligations, l'autre partie peut résilier la présente convention de plein droit, sans préavis ni indemnité, par lettre recommandée avec accusé de réception, après mise en demeure restée sans effet pendant 8 jours ouvrés. Les prestations effectuées avant la résiliation sont dues et seront réglées dans les conditions prévues à l'article 3.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 10 — Force majeure
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0;">
+        Aucune des parties ne saurait être tenue responsable d'un manquement à ses obligations en cas de survenance d'un événement de force majeure au sens de l'article 1218 du Code civil. La partie concernée doit informer l'autre dans les plus brefs délais. Si la situation de force majeure persiste au-delà de 30 jours, chacune des parties peut résilier la convention sans indemnité.
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 11 — Clauses particulières
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0; min-height: 40px;">
+        {convention_notes}
+      </p>
+
+      <h2 style="font-size: 11pt; font-weight: bold; margin: 18px 0 8px 0; color: #1A1A1A; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+        Article 12 — Loi applicable et règlement des litiges
+      </h2>
+      <p style="text-align: justify; font-size: 9.5pt; line-height: 1.6; margin: 0;">
+        La présente convention est soumise au droit français. En cas de litige, les parties s'engagent à rechercher une solution amiable avant toute action judiciaire. À défaut d'accord amiable dans un délai de 30 jours, le litige sera soumis aux tribunaux compétents du ressort du siège social de l'Organisme de Formation.
+      </p>
+
+      <div style="margin-top: 30px;">
+        <p style="text-align: center; font-size: 9.5pt; margin-bottom: 20px; color: #555;">
+          Fait en deux exemplaires originaux, à {ecole_ville}, le {date_jour}
+        </p>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+          <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Pour l'Organisme de Formation</p>
+            <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{ecole_nom}<br/>{ecole_representant}</p>
+            <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+              <p style="font-size: 8.5pt; color: #666;">Signature et cachet</p>
+            </div>
+          </div>
+          <div style="width: 45%; text-align: center;">
+            <p style="font-weight: bold; font-size: 9.5pt; margin-bottom: 4px;">Le Formateur</p>
+            <p style="font-size: 9pt; color: #444; margin-bottom: 50px;">{formateur_prenom} {formateur_nom}<br/>Lu et approuvé</p>
+            <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+              <p style="font-size: 8.5pt; color: #666;">Signature</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    footerContent: premiumFooter,
+  },
 }
 
 /**

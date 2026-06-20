@@ -114,7 +114,7 @@ export default function TeacherDocumentsPage() {
         throw error
       }
       
-      return (data || []) as TeacherDocument[]
+      return (data || []) as unknown as TeacherDocument[]
     },
     enabled: !!user?.id,
   })

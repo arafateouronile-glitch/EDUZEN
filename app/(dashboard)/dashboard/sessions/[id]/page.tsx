@@ -689,6 +689,7 @@ export default function SessionDetailPage() {
                     formData={formData}
                     onFormDataChange={setFormData}
                     users={users}
+                    sessionId={sessionId}
                   />
                 </Suspense>
               )}

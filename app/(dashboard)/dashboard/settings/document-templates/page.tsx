@@ -25,6 +25,7 @@ import {
   Scale,
   Book,
   CheckCircle,
+  Users,
   Search,
   Filter,
   MoreVertical,
@@ -180,6 +181,13 @@ const DOCUMENT_TYPES: Array<{
     description: 'Justificatif de présence aux cours',
     icon: CheckCircle,
     color: '#335ACF',
+  },
+  {
+    type: 'convention_formateur',
+    name: 'Convention formateur',
+    description: 'Convention de prestation avec un formateur indépendant',
+    icon: Users,
+    color: '#7C3AED',
   },
 ]
 

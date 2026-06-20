@@ -20,6 +20,8 @@ interface ConventionBody {
     period_end: string
     hourly_rate?: number | null
     total_hours?: number | null
+    daily_rate?: number | null
+    intervention_days?: number | null
     specialization?: string | null
     custom_notes?: string | null
   }
@@ -107,12 +109,25 @@ function buildConventionHtml(body: ConventionBody, org: Record<string, any>): st
         <div class="field-label">Fin de la convention</div>
         <div class="field-value">${formatDate(convention.period_end)}</div>
       </div>
-      ${convention.hourly_rate != null ? `
+      ${convention.daily_rate != null ? `
+      <div class="field">
+        <div class="field-label">Tarif journalier HT</div>
+        <div class="field-value">${Number(convention.daily_rate).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}/jour</div>
+      </div>` : convention.hourly_rate != null ? `
       <div class="field">
         <div class="field-label">Tarif horaire HT</div>
-        <div class="field-value">${Number(convention.hourly_rate).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</div>
+        <div class="field-value">${Number(convention.hourly_rate).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}/heure</div>
       </div>` : ''}
-      ${convention.total_hours != null ? `
+      ${convention.intervention_days != null ? `
+      <div class="field">
+        <div class="field-label">Jours d'intervention</div>
+        <div class="field-value">${convention.intervention_days} jour${Number(convention.intervention_days) > 1 ? 's' : ''}</div>
+      </div>
+      ${convention.daily_rate != null ? `
+      <div class="field">
+        <div class="field-label">Montant total estimé HT</div>
+        <div class="field-value">${(Number(convention.daily_rate) * Number(convention.intervention_days)).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</div>
+      </div>` : ''}` : convention.total_hours != null ? `
       <div class="field">
         <div class="field-label">Volume horaire prévu</div>
         <div class="field-value">${convention.total_hours} heures</div>

@@ -12,6 +12,7 @@ import {
   Scale,
   Book,
   CheckCircle,
+  Users,
 } from 'lucide-react'
 import type { DocumentType } from '@/lib/types/document-templates'
 
@@ -123,6 +124,12 @@ export function getDocumentTypeConfig(type: DocumentType) {
       description: 'Feuille d\'émargement OF pour les sessions',
       icon: ClipboardList,
       color: '#335ACF',
+    },
+    convention_formateur: {
+      name: 'Convention formateur',
+      description: 'Convention de prestation avec un formateur indépendant',
+      icon: Users,
+      color: '#7C3AED',
     },
   }
 
