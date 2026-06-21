@@ -96,26 +96,44 @@ export async function GET() {
     }
 
     const effectiveIndicators = indicators.map((ind) => {
-      const refNum = indicatorCodeToReferentialNumber(ind.indicator_code)
+      const refNum    = indicatorCodeToReferentialNumber(ind.indicator_code)
       const hasEvidence = refNum != null && evidenceIndicatorNumbers.has(refNum)
-      const status =
-        ind.status === 'not_started' && hasEvidence ? 'in_progress' : ind.status
+      // Si sync-evidence a mis à jour le statut → on le respecte
+      // Sinon on élève not_started → in_progress quand des preuves existent
+      const status = ind.status === 'not_started' && hasEvidence ? 'in_progress' : ind.status
       return { ...ind, refNum, status }
     })
 
-    let covered = 0
+    let compliantCount    = 0
+    let inProgressCount   = 0
+    let notStartedCount   = 0
+
     for (let num = 1; num <= TOTAL_REFERENTIAL_INDICATORS; num++) {
       const ind = effectiveIndicators.find((i) => i.refNum === num)
-      if (ind && (ind.status === 'compliant' || ind.status === 'in_progress')) {
-        covered++
-      } else if (!ind && evidenceIndicatorNumbers.has(num)) {
-        covered++
+      if (ind?.status === 'compliant') {
+        compliantCount++
+      } else if (ind?.status === 'in_progress' || (!ind && evidenceIndicatorNumbers.has(num))) {
+        inProgressCount++
+      } else {
+        notStartedCount++
       }
     }
 
-    const score = Math.round((covered / TOTAL_REFERENTIAL_INDICATORS) * 100)
-    const res = NextResponse.json({ score })
-    // Cache navigateur 60s pour limiter les appels (~500ms chacun)
+    // Score strict (indicateurs pleinement conformes) + score pondéré (conforme + 0.5 * en cours)
+    const strictScore   = Math.round((compliantCount / TOTAL_REFERENTIAL_INDICATORS) * 100)
+    const weightedScore = Math.round(
+      ((compliantCount + inProgressCount * 0.5) / TOTAL_REFERENTIAL_INDICATORS) * 100
+    )
+
+    const res = NextResponse.json({
+      score:          strictScore,     // score strict : conforme uniquement
+      weighted_score: weightedScore,   // score pondéré : conforme + en cours × 0.5
+      compliant:      compliantCount,
+      in_progress:    inProgressCount,
+      not_started:    notStartedCount,
+      total:          TOTAL_REFERENTIAL_INDICATORS,
+    })
+    // Cache 60s
     res.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=30')
     return res
   } catch (err) {

@@ -23,6 +23,7 @@ import {
   Loader2,
   ClipboardList,
   CheckCircle2,
+  Euro,
 } from 'lucide-react'
 
 type User = TableRow<'users'>
@@ -250,6 +251,28 @@ export function ConfigIntervenants({
 
   const teachers = users.filter((u) => u.role === 'teacher')
 
+  // Tous les intervenants de la session (multi-formateurs)
+  const { data: allSessionTeachers } = useQuery({
+    queryKey: ['all-session-teachers', sessionId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('session_teachers')
+        .select('teacher_id, daily_rate, hourly_rate, intervention_days, total_hours, role, is_primary')
+        .eq('session_id', sessionId)
+        .order('is_primary', { ascending: false })
+      return (data ?? []) as Array<{
+        teacher_id: string | null
+        daily_rate: number | null
+        hourly_rate: number | null
+        intervention_days: number | null
+        total_hours: number | null
+        role: string | null
+        is_primary: boolean | null
+      }>
+    },
+    enabled: !!sessionId,
+  })
+
   return (
     <div className="space-y-4">
       {/* Sélection de l'intervenant */}
@@ -464,6 +487,76 @@ export function ConfigIntervenants({
                 L'email du formateur n'est pas renseigné — l'envoi par email et la signature électronique ne sont pas disponibles.
               </p>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Conventions multi-formateurs depuis session_teachers */}
+      {allSessionTeachers && allSessionTeachers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Euro className="h-4 w-4" />
+              Conventions de prestation ({allSessionTeachers.length} intervenant{allSessionTeachers.length > 1 ? 's' : ''})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {allSessionTeachers.map((st) => {
+              const teacher = users.find((u) => u.id === st.teacher_id)
+              const name = teacher?.full_name ?? st.teacher_id ?? '—'
+              const total =
+                st.daily_rate != null && st.intervention_days != null
+                  ? st.daily_rate * st.intervention_days
+                  : st.hourly_rate != null && st.total_hours != null
+                  ? st.hourly_rate * st.total_hours
+                  : null
+
+              return (
+                <div
+                  key={st.teacher_id}
+                  className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/30 text-sm"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{name}</span>
+                      {st.is_primary && (
+                        <Badge variant="secondary" className="text-xs shrink-0">Principal</Badge>
+                      )}
+                      {st.role && (
+                        <Badge variant="outline" className="text-xs shrink-0">{st.role}</Badge>
+                      )}
+                    </div>
+                    <div className="text-muted-foreground mt-0.5">
+                      {st.daily_rate != null && (
+                        <span>{st.daily_rate.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}/j</span>
+                      )}
+                      {st.intervention_days != null && (
+                        <span className="ml-2">· {st.intervention_days} j</span>
+                      )}
+                      {total != null && (
+                        <span className="ml-2 font-medium text-foreground">
+                          = {total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {st.teacher_id && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 gap-1.5"
+                      onClick={() => window.open(
+                        `/api/sessions/${sessionId}/teacher-convention?user_id=${st.teacher_id}`,
+                        '_blank'
+                      )}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Convention PDF
+                    </Button>
+                  )}
+                </div>
+              )
+            })}
           </CardContent>
         </Card>
       )}

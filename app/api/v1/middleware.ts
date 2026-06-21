@@ -81,7 +81,11 @@ export async function apiMiddleware(request: NextRequest): Promise<NextResponse 
 
   // Vérifier les IPs autorisées
   if (key.allowed_ips && key.allowed_ips.length > 0) {
-    const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    // x-forwarded-for peut contenir "client, proxy1, proxy2" — on prend uniquement le premier
+    const rawForwarded = request.headers.get('x-forwarded-for')
+    const clientIP = (rawForwarded ? rawForwarded.split(',')[0] : null)?.trim()
+      || request.headers.get('x-real-ip')?.trim()
+      || 'unknown'
     if (!key.allowed_ips.includes(clientIP)) {
       return NextResponse.json(
         { error: 'IP not allowed', message: 'Your IP address is not authorized to use this API key' },

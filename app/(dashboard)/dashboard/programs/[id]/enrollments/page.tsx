@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
@@ -87,9 +87,17 @@ export default function ProgramEnrollmentsPage() {
     enabled: formationsList.length > 0,
   })
 
+  // Memoize session IDs so the query key stays stable (no new array ref each render)
+  const allSessionIds = useMemo(
+    () => (sessions || []).map((s: { id: string }) => s.id).filter((id): id is string => !!id),
+    [sessions]
+  )
+  const sessionIdsKey = allSessionIds.join(',')
+
   // Récupérer les inscriptions
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
-    queryKey: ['program-enrollments', programId, selectedSessionId],
+    // Include sessionIdsKey so the query re-runs when sessions finish loading (selectedSessionId=null mode)
+    queryKey: ['program-enrollments', programId, selectedSessionId ?? sessionIdsKey],
     queryFn: async () => {
       let query = supabase
         .from('enrollments')
@@ -98,24 +106,17 @@ export default function ProgramEnrollmentsPage() {
 
       if (selectedSessionId) {
         query = query.eq('session_id', selectedSessionId)
+      } else if (allSessionIds.length > 0) {
+        query = query.in('session_id', allSessionIds)
       } else {
-        if (sessions && sessions.length > 0) {
-          const sessionIds = (sessions || []).map((s: { id: string }) => s.id).filter((id): id is string => !!id)
-          if (sessionIds.length > 0) {
-            query = query.in('session_id', sessionIds)
-          } else {
-            return []
-          }
-        } else {
-          return []
-        }
+        return []
       }
 
       const { data, error } = await query
       if (error) throw error
       return data || []
     },
-    enabled: !!programId && (selectedSessionId !== null || (sessions && sessions.length > 0)),
+    enabled: !!programId && (selectedSessionId !== null || allSessionIds.length > 0),
   })
 
   // Récupérer tous les élèves pour le formulaire de nouvelle inscription

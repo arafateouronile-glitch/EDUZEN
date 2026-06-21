@@ -780,6 +780,7 @@ export default function SessionDetailPage() {
               {activeStep === 'gestion' && activeGestionTab === 'evaluations' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <GestionEvaluations
+                  sessionId={sessionId}
                   grades={grades}
                   gradesStats={gradesStats}
                   students={(enrollments ?? [])

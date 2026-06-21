@@ -8,7 +8,7 @@ import { sessionService } from '@/lib/services/session.service.client'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Save, CheckCircle, XCircle, Clock, AlertCircle, Calendar } from 'lucide-react'
+import { ArrowLeft, Save, CheckCircle, XCircle, Clock, AlertCircle, Calendar, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 import { useState, useEffect } from 'react'
@@ -233,7 +233,8 @@ export default function SessionAttendancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
         <Link href={`/dashboard/sessions/${sessionId}`}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
@@ -262,6 +263,15 @@ export default function SessionAttendancePage() {
             {sessionData?.location && ` - ${sessionData.location}`}
           </p>
         </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.open(`/api/sessions/${sessionId}/attendance-sheet`, '_blank')}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Feuille d'émargement PDF
+        </Button>
       </div>
 
       <Tabs defaultValue="manual" className="w-full">

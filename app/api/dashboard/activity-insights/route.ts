@@ -50,78 +50,49 @@ export async function GET() {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
-    const { data: programs } = await supabase
-      .from('programs')
-      .select('id, name, code')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
+    // Calcul top programmes : join depuis enrollments → sessions → formations → programs
+    // Évite de charger toutes les données org en mémoire
+    const [{ data: enrollmentsByProgram }, { data: recentEnrollments }] = await Promise.all([
+      supabase
+        .from('enrollments')
+        .select('sessions!inner(formations!inner(program_id, organization_id))')
+        .eq('sessions.formations.organization_id', organizationId)
+        .limit(5000),
+      supabase
+        .from('enrollments')
+        .select('id, status, created_at, students(first_name, last_name, photo_url), sessions!inner(name, formations!inner(name, organization_id, programs(name)))')
+        .eq('sessions.formations.organization_id', organizationId)
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ])
 
-    const { data: formations } = await supabase
-      .from('formations')
-      .select('id, program_id')
-      .eq('organization_id', organizationId)
-
-    const formationIds = (formations || []).map((f: { id: string }) => f.id).filter(Boolean)
-
-    const { data: sessions } = formationIds.length
-      ? await supabase
-          .from('sessions')
-          .select('id, formation_id')
-          .in('formation_id', formationIds)
-      : { data: [] as Array<{ id: string; formation_id: string }>, error: null } as { data: Array<{ id: string; formation_id: string }> | null; error: unknown }
-
-    const sessionIds = (sessions || []).map((s: { id: string }) => s.id).filter(Boolean)
-
-    const { data: enrollments } = sessionIds.length
-      ? await supabase
-          .from('enrollments')
-          .select('session_id')
-          .in('session_id', sessionIds)
-      : { data: [] as Array<{ session_id: string }>, error: null } as { data: Array<{ session_id: string }> | null; error: unknown }
-
-    const formationToProgram = new Map<string, string>()
-    for (const formation of formations || []) {
-      if (formation.id && formation.program_id) {
-        formationToProgram.set(formation.id, formation.program_id)
-      }
-    }
-
-    const sessionToProgram = new Map<string, string>()
-    for (const session of sessions || []) {
-      if (!session.id || !session.formation_id) continue
-      const programId = formationToProgram.get(session.formation_id)
-      if (programId) {
-        sessionToProgram.set(session.id, programId)
-      }
-    }
-
+    // Compter les inscriptions par program_id côté JS sur la liste déjà filtrée par org
+    type EnrollmentProgramRow = { sessions: { formations: { program_id: string | null; organization_id: string } | null } | null }
     const programCounts = new Map<string, number>()
-    for (const enrollment of enrollments || []) {
-      const programId = enrollment.session_id ? sessionToProgram.get(enrollment.session_id) : undefined
-      if (!programId) continue
-      programCounts.set(programId, (programCounts.get(programId) || 0) + 1)
+    for (const row of (enrollmentsByProgram ?? []) as unknown as EnrollmentProgramRow[]) {
+      const pid = row.sessions?.formations?.program_id
+      if (pid) programCounts.set(pid, (programCounts.get(pid) ?? 0) + 1)
     }
 
-    const topPrograms: TopProgram[] = (programs || [])
-      .map((program: { id: string; name: string; code: string }) => ({
-        id: program.id,
-        name: program.name,
-        code: program.code,
-        enrollments: programCounts.get(program.id) || 0,
-      }))
-      .filter((program) => program.enrollments > 0)
-      .sort((a, b) => b.enrollments - a.enrollments)
+    // Récupérer uniquement les programmes qui ont des inscriptions (max 5 résultats)
+    const topProgramIds = [...programCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
+      .map(([id]) => id)
 
-    // eslint-disable-next-line
-    const recentEnrollmentsQuery: any = supabase
-      .from('enrollments')
-      .select('id, status, created_at, students(first_name, last_name, photo_url), sessions!inner(name, formations!inner(name, organization_id, programs(name)))')
-      .eq('sessions.formations.organization_id', organizationId)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    const { data: recentEnrollments } = await recentEnrollmentsQuery
+    let topPrograms: TopProgram[] = []
+    if (topProgramIds.length > 0) {
+      const { data: programs } = await supabase
+        .from('programs')
+        .select('id, name, code')
+        .in('id', topProgramIds)
+      topPrograms = (programs ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        enrollments: programCounts.get(p.id) ?? 0,
+      })).sort((a, b) => b.enrollments - a.enrollments)
+    }
 
     const payload: ActivityInsightsPayload = {
       topPrograms,
@@ -129,7 +100,7 @@ export async function GET() {
     }
 
     const res = NextResponse.json(payload)
-    res.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=30')
+    res.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=60')
     return res
   } catch (error) {
     logger.error('activity insights error', error instanceof Error ? error : new Error(String(error)), {

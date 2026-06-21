@@ -20,6 +20,13 @@ import { CriteriaNavigation } from './criterion-card'
 import { EvidenceVault, type Evidence } from './evidence-vault'
 import { CriticalAlerts, type RiskIndicator } from './critical-alerts'
 import { ActivityHeatmap } from './activity-heatmap'
+import { Criterion1Detail } from './criterion1-detail'
+import { Criterion2Detail } from './criterion2-detail'
+import { Criterion3Detail } from './criterion3-detail'
+import { Criterion4Detail } from './criterion4-detail'
+import { Criterion5Detail } from './criterion5-detail'
+import { Criterion6Detail } from './criterion6-detail'
+import { Criterion7Detail } from './criterion7-detail'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -131,10 +138,18 @@ function IndicatorProgressTracker({
 // Header Premium avec Score et Actions
 function PremiumHeader({
   score,
+  weightedScore,
+  compliant,
+  inProgress,
+  notStarted,
   onSimulateAudit,
   onEnterAuditMode,
 }: {
   score: number
+  weightedScore: number
+  compliant: number
+  inProgress: number
+  notStarted: number
   onSimulateAudit: () => void
   onEnterAuditMode: () => void
 }) {
@@ -185,8 +200,27 @@ function PremiumHeader({
           </motion.div>
         </div>
 
-        {/* Score Ring */}
-        <AuditScoreRing score={score} size={160} />
+        {/* Score Ring + détail */}
+        <div className="flex flex-col items-center gap-3">
+          <AuditScoreRing score={score} size={160} />
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+              <span className="text-slate-600"><span className="font-bold text-green-600">{compliant}</span> conformes</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-[#34B9EE]" />
+              <span className="text-slate-600"><span className="font-bold text-[#34B9EE]">{inProgress}</span> en cours</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-slate-300" />
+              <span className="text-slate-500"><span className="font-semibold text-slate-500">{notStarted}</span> restants</span>
+            </div>
+          </div>
+          {weightedScore > score && (
+            <span className="text-[11px] text-slate-400">Score pondéré : {weightedScore}%</span>
+          )}
+        </div>
 
         {/* Actions */}
         <div className="flex flex-col gap-3">
@@ -346,6 +380,26 @@ export function QualiopiDashboardPremium() {
   const [selectedCriterion, setSelectedCriterion] = useState<number | null>(null)
   const [isAuditMode, setIsAuditMode] = useState(false)
   const [hasTriedInit, setHasTriedInit] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExportReport = useCallback(async () => {
+    setIsExporting(true)
+    try {
+      const res = await fetch('/api/qualiopi/export-report')
+      if (!res.ok) throw new Error('Erreur export')
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `rapport-qualiopi-${new Date().toISOString().split('T')[0]}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      addToast({ title: 'Erreur', description: 'Impossible de générer le rapport PDF.', type: 'error' })
+    } finally {
+      setIsExporting(false)
+    }
+  }, [addToast])
 
   // Récupérer les indicateurs
   const { data: indicators = [], isLoading: loadingIndicators, refetch: refetchIndicators } = useQuery({
@@ -390,21 +444,32 @@ export function QualiopiDashboardPremium() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- init une seule fois quand indicateurs vides
   }, [loadingIndicators, indicators.length, user?.organization_id])
 
-  // Score unique (API) : même source que le dashboard pour cohérence 13% / 19%
-  const { data: apiComplianceScore } = useQuery({
+  // Score depuis l'API (recalculé depuis les preuves après chaque sync)
+  const { data: apiCompliance } = useQuery({
     queryKey: ['qualiopi-compliance-rate', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
       const res = await fetch('/api/qualiopi/compliance-rate')
-      if (!res.ok) return 0
-      const json = await res.json()
-      return typeof json.score === 'number' ? json.score : 0
+      if (!res.ok) return null
+      const json = await res.json() as {
+        score: number
+        weighted_score: number
+        compliant: number
+        in_progress: number
+        not_started: number
+        total: number
+      }
+      return json
     },
     enabled: !!user?.organization_id,
     refetchOnMount: true,
     staleTime: 1000,
   })
-  const headerScore = apiComplianceScore ?? 0
+  const headerScore      = apiCompliance?.score         ?? 0
+  const weightedScore    = apiCompliance?.weighted_score ?? 0
+  const compliantCount   = apiCompliance?.compliant      ?? 0
+  const inProgressCount  = apiCompliance?.in_progress    ?? 0
+  const notStartedCount  = apiCompliance?.not_started    ?? 0
 
   // Sync des preuves auto (catalogue, accessibilité, conventions, convocations) au chargement
   const { refetch: refetchEvidence } = useQuery({
@@ -708,6 +773,10 @@ export function QualiopiDashboardPremium() {
         {/* Header avec Score (API partagée avec le dashboard pour affichage identique) */}
         <PremiumHeader
           score={headerScore}
+          weightedScore={weightedScore}
+          compliant={compliantCount}
+          inProgress={inProgressCount}
+          notStarted={notStartedCount}
           onSimulateAudit={handleSimulateAudit}
           onEnterAuditMode={handleEnterAuditMode}
         />
@@ -728,10 +797,26 @@ export function QualiopiDashboardPremium() {
 
           {/* Colonne centrale - Panneau des indicateurs (statut effectif selon preuves) */}
           <div className="lg:col-span-5">
-            <IndicatorPanel
-              criterionNumber={selectedCriterion}
-              indicators={effectiveIndicators}
-            />
+            {selectedCriterion === 1 ? (
+              <Criterion1Detail />
+            ) : selectedCriterion === 2 ? (
+              <Criterion2Detail />
+            ) : selectedCriterion === 3 ? (
+              <Criterion3Detail />
+            ) : selectedCriterion === 4 ? (
+              <Criterion4Detail />
+            ) : selectedCriterion === 5 ? (
+              <Criterion5Detail />
+            ) : selectedCriterion === 6 ? (
+              <Criterion6Detail />
+            ) : selectedCriterion === 7 ? (
+              <Criterion7Detail />
+            ) : (
+              <IndicatorPanel
+                criterionNumber={selectedCriterion}
+                indicators={effectiveIndicators}
+              />
+            )}
           </div>
 
           {/* Colonne droite - Alertes et Preuves */}
@@ -772,11 +857,17 @@ export function QualiopiDashboardPremium() {
               Analyse questionnaires
             </Link>
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/qualiopi/evidence">
-              <Download className="h-4 w-4 mr-2" />
-              Exporter un rapport
-            </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportReport}
+            disabled={isExporting}
+          >
+            {isExporting
+              ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              : <Download className="h-4 w-4 mr-2" />
+            }
+            {isExporting ? 'Génération…' : 'Exporter un rapport'}
           </Button>
         </motion.div>
       </div>

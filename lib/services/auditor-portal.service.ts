@@ -231,6 +231,17 @@ export const QUALIOPI_REFERENTIAL: QualiopiCriterion[] = [
   },
 ]
 
+// Convertit "2.3" → 6 (numéro séquentiel 1-32)
+function indicatorCodeToSeqNumber(code: string): number | null {
+  const parts = (code ?? '').split('.')
+  const c = parseInt(parts[0], 10)
+  const i = parseInt(parts[1], 10)
+  if (isNaN(c) || isNaN(i)) return null
+  const criterion = QUALIOPI_REFERENTIAL.find((cr) => cr.number === c)
+  if (!criterion) return null
+  return criterion.indicators[i - 1]?.number ?? null
+}
+
 // ============================================================================
 // Service
 // ============================================================================
@@ -405,14 +416,14 @@ export class AuditorPortalService {
       .from('compliance_evidence_automated')
       .select('*')
       .eq('organization_id', organizationId)
-      .eq('status', 'valid')
       .order('event_date', { ascending: false })
       .limit(500)
 
     // Construire les données enrichies des indicateurs
     const enrichedIndicators = (indicators || []).map((ind: any) => {
+      const seqNum = indicatorCodeToSeqNumber(ind.indicator_code)
       const counts = (evidenceCounts || []).find(
-        (ec: EvidenceCountByIndicator) => ec.indicator_number === parseInt(ind.indicator_code, 10)
+        (ec: EvidenceCountByIndicator) => ec.indicator_number === seqNum
       )
       return {
         id: ind.id,

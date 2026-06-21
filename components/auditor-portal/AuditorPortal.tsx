@@ -62,6 +62,18 @@ import type {
   ComplianceEvidenceAutomated,
   QualiopiCriterion,
 } from '@/lib/services/auditor-portal.service'
+import { QUALIOPI_REFERENTIAL } from '@/lib/services/auditor-portal.service'
+
+// Convertit "2.3" → 6 (numéro séquentiel 1-32 du référentiel)
+function indicatorCodeToNumber(code: string): number | null {
+  const parts = (code ?? '').split('.')
+  const c = parseInt(parts[0], 10)
+  const i = parseInt(parts[1], 10)
+  if (isNaN(c) || isNaN(i)) return null
+  const criterion = QUALIOPI_REFERENTIAL.find((cr) => cr.number === c)
+  if (!criterion) return null
+  return criterion.indicators[i - 1]?.number ?? null
+}
 
 // ============================================================================
 // Types
@@ -288,13 +300,28 @@ function EvidenceRow({
     minute: '2-digit',
   })
 
+  const statusConfig = {
+    valid:   { label: 'Valide',   className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    pending: { label: 'En attente', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+    invalid: { label: 'Invalide', className: 'bg-red-50 text-red-700 border-red-200' },
+  } as const
+  const statusCfg = statusConfig[evidence.status as keyof typeof statusConfig] ?? { label: evidence.status, className: 'bg-slate-50 text-slate-600 border-slate-200' }
+
   return (
     <TableRow className="hover:bg-slate-50/50">
       <TableCell className="font-medium">
         <div className="flex flex-col gap-1">
-          <span className="text-sm">{evidence.title}</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm">{evidence.title}</span>
+            <Badge variant="outline" className={`text-xs px-1.5 py-0 ${statusCfg.className}`}>
+              {statusCfg.label}
+            </Badge>
+          </div>
+          {evidence.description && (
+            <span className="text-xs text-slate-500 line-clamp-2">{evidence.description}</span>
+          )}
           {evidence.entity_name && (
-            <span className="text-xs text-slate-500">{evidence.entity_name}</span>
+            <span className="text-xs text-slate-400">{evidence.entity_name}</span>
           )}
         </div>
       </TableCell>
@@ -367,8 +394,8 @@ export function AuditorPortal({
   const indicatorsByNumber = useMemo(() => {
     const map = new Map<number, AuditorPortalData['indicators'][0]>()
     data.indicators.forEach((ind) => {
-      const num = parseInt(ind.indicator_code, 10)
-      if (!isNaN(num)) {
+      const num = indicatorCodeToNumber(ind.indicator_code)
+      if (num !== null) {
         map.set(num, ind)
       }
     })
@@ -382,7 +409,8 @@ export function AuditorPortal({
 
   const evidenceForIndicator = useMemo(() => {
     if (!selectedIndicatorData) return []
-    const indicatorNum = parseInt(selectedIndicatorData.indicator_code, 10)
+    const indicatorNum = indicatorCodeToNumber(selectedIndicatorData.indicator_code)
+    if (indicatorNum === null) return []
     return data.evidence.filter((e) => e.indicator_number === indicatorNum)
   }, [data.evidence, selectedIndicatorData])
 

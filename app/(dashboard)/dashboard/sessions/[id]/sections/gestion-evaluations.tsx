@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { Plus, X, ClipboardList, Award, TrendingUp, Users, CheckCircle2, Calendar, FileText, AlertCircle, Sparkles, FileText as FileTextIcon, Mail, User, Link2 } from 'lucide-react'
+import { Plus, X, ClipboardList, Award, TrendingUp, Users, CheckCircle2, Calendar, FileText, AlertCircle, Sparkles, FileText as FileTextIcon, Mail, User, Link2, Send, CheckCheck, Eye, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
 import { formatDate, cn } from '@/lib/utils'
 import type { 
   GradeWithRelations,
@@ -20,7 +23,12 @@ import {
 } from '@/components/ui/select'
 import { Star } from 'lucide-react'
 
+interface QuestionnaireStats {
+  byType: Record<string, { sent: number; viewed: number; submitted: number }>
+}
+
 interface GestionEvaluationsProps {
+  sessionId?: string
   grades?: GradeWithRelations[]
   gradesStats?: {
     total: number
@@ -116,6 +124,7 @@ const evaluationTypes = [
 ]
 
 export function GestionEvaluations({
+  sessionId,
   grades = [],
   gradesStats,
   students = [],
@@ -132,6 +141,51 @@ export function GestionEvaluations({
   onAttachTemplate,
   attachTemplateMutation,
 }: GestionEvaluationsProps) {
+  const queryClient = useQueryClient()
+
+  // ── Questionnaires ──────────────────────────────────────────────────────────
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [selectedAssessmentType, setSelectedAssessmentType] = useState<'hot' | 'cold'>('hot')
+  const [sendResult, setSendResult] = useState<{ sent: number; skipped: number } | null>(null)
+
+  const { data: qStats, isLoading: qStatsLoading } = useQuery<QuestionnaireStats>({
+    queryKey: ['questionnaire-stats', sessionId],
+    queryFn: async () => {
+      const res = await fetch(`/api/sessions/${sessionId}/questionnaires`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return res.json() as Promise<QuestionnaireStats>
+    },
+    enabled: !!sessionId,
+  })
+
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedTemplateId) throw new Error('Choisissez un template')
+      const res = await fetch(`/api/sessions/${sessionId}/questionnaires`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template_id: selectedTemplateId, assessment_type: selectedAssessmentType }),
+      })
+      if (!res.ok) {
+        const j = await res.json() as { error?: string }
+        throw new Error(j.error ?? 'Erreur envoi')
+      }
+      return res.json() as Promise<{ created: number; skipped: number }>
+    },
+    onSuccess: (data) => {
+      setSendResult({ sent: data.created, skipped: data.skipped })
+      queryClient.invalidateQueries({ queryKey: ['questionnaire-stats', sessionId] })
+    },
+  })
+
+  // Templates de type satisfaction disponibles
+  const satisfactionTemplates = evaluationTemplates.filter(t =>
+    !t.assessment_type || ['hot', 'cold', 'pre_formation', 'a_chaud', 'a_froid'].includes(t.assessment_type ?? '')
+  )
+
+  const hotStats = qStats?.byType?.['hot']
+  const coldStats = qStats?.byType?.['cold']
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -150,12 +204,131 @@ export function GestionEvaluations({
   }
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-8"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
+      {/* ── Questionnaires de satisfaction ───────────────────────────────── */}
+      {sessionId && (
+        <GlassCard variant="default" className="p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="h-9 w-9 bg-orange-50 rounded-lg flex items-center justify-center">
+              <Send className="h-4.5 w-4.5 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Questionnaires de satisfaction</h3>
+              <p className="text-xs text-muted-foreground">Envoi de liens personnalisés aux apprenants inscrits</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['questionnaire-stats', sessionId] })}
+              className="ml-auto text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <RefreshCw className={cn('h-4 w-4', qStatsLoading && 'animate-spin')} />
+            </button>
+          </div>
+
+          {/* Stats existantes */}
+          {(hotStats || coldStats) && (
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {[{ key: 'hot', label: 'À chaud', stats: hotStats }, { key: 'cold', label: 'À froid', stats: coldStats }].map(({ key, label, stats }) =>
+                stats ? (
+                  <div key={key} className="bg-slate-50 rounded-xl p-3">
+                    <p className="text-xs font-medium text-slate-600 mb-2">{label}</p>
+                    <div className="flex gap-4 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <Send className="h-3.5 w-3.5 text-blue-500" />
+                        <span>{stats.sent} envoyés</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Eye className="h-3.5 w-3.5 text-amber-500" />
+                        <span>{stats.viewed} consultés</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCheck className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>{stats.submitted} réponses</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null
+              )}
+            </div>
+          )}
+
+          {/* Formulaire d'envoi */}
+          <div className="space-y-3">
+            {satisfactionTemplates.length === 0 ? (
+              <div className="text-sm text-slate-500 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <AlertCircle className="h-4 w-4 text-amber-500 inline mr-1.5 -mt-0.5" />
+                Aucun template de satisfaction disponible.{' '}
+                <Link href="/dashboard/evaluations/templates/new" className="text-blue-600 underline">
+                  Créer un template
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3 items-end">
+                <div className="flex gap-2">
+                  {(['hot', 'cold'] as const).map(type => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedAssessmentType(type)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
+                        selectedAssessmentType === type
+                          ? 'border-orange-400 bg-orange-50 text-orange-700'
+                          : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                      )}
+                    >
+                      {type === 'hot' ? '🔥 À chaud' : '❄️ À froid'}
+                    </button>
+                  ))}
+                </div>
+                <select
+                  value={selectedTemplateId}
+                  onChange={e => setSelectedTemplateId(e.target.value)}
+                  className="flex-1 min-w-[180px] h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                >
+                  <option value="">Choisir un template…</option>
+                  {satisfactionTemplates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  disabled={!selectedTemplateId || sendMutation.isPending}
+                  onClick={() => { setSendResult(null); sendMutation.mutate() }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                >
+                  {sendMutation.isPending ? (
+                    <RefreshCw className="h-4 w-4 animate-spin mr-1.5" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-1.5" />
+                  )}
+                  Envoyer
+                </Button>
+              </div>
+            )}
+
+            {sendMutation.isError && (
+              <p className="text-sm text-red-600 flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4" />
+                {sendMutation.error instanceof Error ? sendMutation.error.message : 'Erreur'}
+              </p>
+            )}
+            {sendResult && (
+              <p className="text-sm text-emerald-600 flex items-center gap-1.5">
+                <CheckCheck className="h-4 w-4" />
+                {sendResult.sent} lien(s) créé(s) et envoyé(s)
+                {sendResult.skipped > 0 && `, ${sendResult.skipped} ignoré(s) (déjà soumis)`}
+              </p>
+            )}
+          </div>
+        </GlassCard>
+      )}
+
       {/* Formulaire de création d'évaluation */}
       <AnimatePresence>
         {showEvaluationForm && (

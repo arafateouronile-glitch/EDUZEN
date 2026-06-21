@@ -226,13 +226,21 @@ function TeachersPageContent() {
           <h1 className="text-3xl font-bold">Enseignants</h1>
           <p className="text-gray-600 mt-1">Gérez les formateurs et enseignants de votre organisation</p>
         </div>
-        <Button
-          onClick={() => window.location.href = '/dashboard/settings/users/new'}
-          className="bg-brand-blue hover:bg-brand-blue-dark"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Inviter un enseignant
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <a href="/dashboard/settings/teachers/remuneration">
+              <Euro className="w-4 h-4 mr-1.5" />
+              Rémunération
+            </a>
+          </Button>
+          <Button
+            onClick={() => window.location.href = '/dashboard/settings/users/new'}
+            className="bg-brand-blue hover:bg-brand-blue-dark"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Inviter un enseignant
+          </Button>
+        </div>
       </div>
 
       {/* Compteurs */}

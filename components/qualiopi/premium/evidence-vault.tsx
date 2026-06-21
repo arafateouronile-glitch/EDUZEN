@@ -1,5 +1,6 @@
 'use client'
 
+import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import {
@@ -14,6 +15,7 @@ import {
   Eye,
   Plus,
   RefreshCw,
+  Trash2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { GlassCardPremium } from './glass-card-premium'
@@ -21,6 +23,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { AddEvidenceModal } from './add-evidence-modal'
+import { useToast } from '@/components/ui/toast'
 
 // Types d'evidence
 type EvidenceSource = 'system' | 'manual_upload' | 'integration' | 'automated_detection'
@@ -121,14 +125,17 @@ function SourceBadge({ source }: { source: EvidenceSource }) {
 function EvidenceRow({
   evidence,
   onView,
+  onDelete,
   delay = 0,
 }: {
   evidence: Evidence
   onView?: () => void
+  onDelete?: (id: string) => void
   delay?: number
 }) {
   const Icon = EVIDENCE_TYPE_ICONS[evidence.evidence_type] || FileText
-  const isAuto = evidence.source === 'system' || evidence.source === 'automated_detection'
+  const isAuto   = evidence.source === 'system' || evidence.source === 'automated_detection'
+  const isManual = evidence.source === 'manual_upload'
 
   return (
     <motion.div
@@ -196,7 +203,7 @@ function EvidenceRow({
       </div>
 
       {/* Timestamp et actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
         <span className="text-xs text-slate-400">
           {formatDistanceToNow(new Date(evidence.event_date), {
             addSuffix: true,
@@ -211,9 +218,25 @@ function EvidenceRow({
             'bg-[#274472]/5 hover:bg-[#274472]/10',
             'transition-all duration-200'
           )}
+          onClick={onView}
         >
           <Eye className="h-3.5 w-3.5 text-[#274472]" />
         </div>
+
+        {isManual && onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(evidence.id) }}
+            className={cn(
+              'opacity-0 group-hover:opacity-100',
+              'flex items-center justify-center h-7 w-7 rounded-lg',
+              'text-red-400 hover:bg-red-50 hover:text-red-600',
+              'transition-all duration-200'
+            )}
+            title="Supprimer cette preuve manuelle"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Confiance indicator */}
@@ -225,12 +248,26 @@ function EvidenceRow({
 }
 
 export function EvidenceVault({ evidence, onViewEvidence, onRefreshEvidence, className }: EvidenceVaultProps) {
+  const queryClient = useQueryClient()
+  const { addToast } = useToast()
+
   // Stats rapides
   const autoCount = evidence.filter(
     (e) => e.source === 'system' || e.source === 'automated_detection'
   ).length
   const manualCount = evidence.length - autoCount
   const autoPercentage = evidence.length > 0 ? Math.round((autoCount / evidence.length) * 100) : 0
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/qualiopi/manual-evidence?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      queryClient.invalidateQueries({ queryKey: ['compliance-evidence-premium'] })
+      addToast({ title: 'Preuve supprimée', type: 'success' })
+    } catch {
+      addToast({ title: 'Erreur', description: 'Impossible de supprimer la preuve.', type: 'error' })
+    }
+  }
 
   return (
     <GlassCardPremium variant="default" className={cn('p-5', className)} delay={0.2}>
@@ -269,12 +306,14 @@ export function EvidenceVault({ evidence, onViewEvidence, onRefreshEvidence, cla
               <ChevronRight className="h-4 w-4 ml-1" />
             </Link>
           </Button>
-          <Button size="sm" className="bg-[#274472] hover:bg-[#1a2f4a] text-white" asChild>
-            <Link href="/dashboard/qualiopi/evidence/add">
-              <Plus className="h-4 w-4 mr-1" />
-              Ajouter une preuve
-            </Link>
-          </Button>
+          <AddEvidenceModal
+            trigger={
+              <Button size="sm" className="bg-[#274472] hover:bg-[#1a2f4a] text-white">
+                <Plus className="h-4 w-4 mr-1" />
+                Ajouter une preuve
+              </Button>
+            }
+          />
         </div>
       </div>
 
@@ -328,6 +367,7 @@ export function EvidenceVault({ evidence, onViewEvidence, onRefreshEvidence, cla
                 key={item.id}
                 evidence={item}
                 onView={() => onViewEvidence?.(item)}
+                onDelete={handleDelete}
                 delay={index * 0.05}
               />
             ))

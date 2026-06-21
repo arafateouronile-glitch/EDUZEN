@@ -5,6 +5,42 @@ import { Resend } from 'resend'
 import { logger, maskEmail, sanitizeError } from '@/lib/utils/logger'
 import { sendEmailBodySchema } from '@/lib/validations/schemas'
 
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024 // 10 MB
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function validateAttachmentUrl(raw: string): void {
+  let url: URL
+  try { url = new URL(raw) } catch { throw new Error('URL pièce jointe invalide') }
+
+  if (!['https:', 'http:'].includes(url.protocol)) {
+    throw new Error('Protocole URL non autorisé')
+  }
+
+  const blocked = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]', '::1', 'metadata.google.internal']
+  if (blocked.includes(url.hostname)) throw new Error('URL interne non autorisée')
+
+  // Bloque les plages IPv4 privées (RFC 1918)
+  const ipv4 = url.hostname.match(/^(\d+)\.(\d+)\./)
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])]
+    if (
+      a === 10 ||
+      a === 127 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 169 && b === 254)
+    ) throw new Error('IP privée non autorisée')
+  }
+}
+
 /**
  * API Route pour envoyer des emails avec pièces jointes via Resend
  *
@@ -70,15 +106,25 @@ export async function POST(request: NextRequest) {
 
     if (attachmentUrl) {
       try {
-        logger.debug('Downloading attachment', { attachmentUrl })
+        validateAttachmentUrl(attachmentUrl)
 
-        const fileResponse = await fetch(attachmentUrl)
+        const fileResponse = await fetch(attachmentUrl, {
+          signal: AbortSignal.timeout(10_000),
+        })
 
         if (!fileResponse.ok) {
           throw new Error(`Failed to fetch attachment: ${fileResponse.statusText}`)
         }
 
+        const contentLength = fileResponse.headers.get('content-length')
+        if (contentLength && parseInt(contentLength) > MAX_ATTACHMENT_BYTES) {
+          throw new Error('Pièce jointe trop volumineuse (max 10 MB)')
+        }
+
         const fileBuffer = await fileResponse.arrayBuffer()
+        if (fileBuffer.byteLength > MAX_ATTACHMENT_BYTES) {
+          throw new Error('Pièce jointe trop volumineuse (max 10 MB)')
+        }
 
         attachments.push({
           filename: attachmentName || 'document.pdf',
@@ -90,11 +136,7 @@ export async function POST(request: NextRequest) {
           size: fileBuffer.byteLength,
         })
       } catch (error) {
-        logger.error('Failed to download attachment', error, {
-          attachmentUrl,
-          error: sanitizeError(error),
-        })
-        // Continue without attachment rather than failing completely
+        logger.error('Failed to download attachment', error, { error: sanitizeError(error) })
         logger.warn('Sending email without attachment due to download failure')
       }
     }
@@ -110,12 +152,12 @@ export async function POST(request: NextRequest) {
           </div>
           <div style="background: white; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
             <div style="white-space: pre-wrap; line-height: 1.6;">
-              ${messageStr.split('\n').map((line: string) => `<p style="margin: 10px 0;">${line}</p>`).join('')}
+              ${escapeHtml(messageStr).split('\n').map((line: string) => `<p style="margin: 10px 0;">${line}</p>`).join('')}
             </div>
             ${attachments.length > 0 ? `
               <div style="margin-top: 30px; padding: 15px; background: #f5f5f5; border-left: 4px solid #667eea; border-radius: 4px;">
                 <p style="margin: 0; color: #666; font-size: 14px;">
-                  📎 Document joint à cet email: <strong>${attachmentName || 'document.pdf'}</strong>
+                  📎 Document joint à cet email: <strong>${escapeHtml(attachmentName || 'document.pdf')}</strong>
                 </p>
               </div>
             ` : ''}
