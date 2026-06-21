@@ -10,6 +10,7 @@ import { isGotenbergConfigured, htmlToPdf } from '@/lib/services/gotenberg.servi
 import { createPage } from '@/lib/utils/puppeteer-pool'
 import { buildTeacherConventionHtml } from '@/lib/utils/teacher-convention/build-html'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { acquireOrgLock, releaseOrgLock } from '@/lib/utils/sync-lock'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -19,6 +20,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   let puppeteerPage: Awaited<ReturnType<typeof createPage>> | null = null
+  let lockAcquired = false
+  let convLockId: string | undefined
 
   try {
     const { id: sessionId } = await params
@@ -40,50 +43,61 @@ export async function GET(
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
-    // ── Session ───────────────────────────────────────────────────────────────
-    const { data: session, error: sessErr } = await supabase
-      .from('sessions')
-      .select('id, name, start_date, end_date, organization_id')
-      .eq('id', sessionId)
-      .eq('organization_id', orgId)
-      .single()
+    // ── Lock anti-doublons par session+formateur ──────────────────────────────
+    convLockId = `${sessionId}:${userId}`
+    lockAcquired = await acquireOrgLock('pdf-convention', convLockId, 60)
+    if (!lockAcquired) {
+      return NextResponse.json(
+        { error: 'Génération en cours, réessayez dans quelques secondes' },
+        { status: 429 }
+      )
+    }
+
+    // ── Toutes les queries en parallèle ──────────────────────────────────────
+    const [sessionResult, orgResult, teacherUserResult, teacherRecordResult, stRowResult] =
+      await Promise.all([
+        supabase
+          .from('sessions')
+          .select('id, name, start_date, end_date, organization_id')
+          .eq('id', sessionId)
+          .eq('organization_id', orgId)
+          .single(),
+        supabase
+          .from('organizations')
+          .select('name, address, city, email, phone, siret, nda_number')
+          .eq('id', orgId)
+          .single(),
+        supabase
+          .from('users')
+          .select('id, full_name, email')
+          .eq('id', userId)
+          .single(),
+        supabase
+          .from('teachers')
+          .select('specialization')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase
+          .from('session_teachers')
+          .select('daily_rate, hourly_rate, intervention_days, total_hours, notes')
+          .eq('session_id', sessionId)
+          .eq('teacher_id', userId)
+          .maybeSingle(),
+      ])
+
+    const { data: session, error: sessErr } = sessionResult
+    const { data: org } = orgResult
+    const { data: teacherUser } = teacherUserResult
+    const { data: teacherRecord } = teacherRecordResult
+    const { data: stRow } = stRowResult
 
     if (sessErr || !session) {
       return NextResponse.json({ error: 'Session introuvable' }, { status: 404 })
     }
 
-    // ── Organisation ─────────────────────────────────────────────────────────
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('name, address, city, email, phone, siret, nda_number')
-      .eq('id', orgId)
-      .single()
-
-    // ── Formateur (user) ─────────────────────────────────────────────────────
-    const { data: teacherUser } = await supabase
-      .from('users')
-      .select('id, full_name, email')
-      .eq('id', userId)
-      .single()
-
     if (!teacherUser) {
       return NextResponse.json({ error: 'Formateur introuvable' }, { status: 404 })
     }
-
-    // ── Spécialisation depuis teachers ────────────────────────────────────────
-    const { data: teacherRecord } = await supabase
-      .from('teachers')
-      .select('specialization')
-      .eq('user_id', userId)
-      .maybeSingle()
-
-    // ── Conditions d'intervention (session_teachers) ──────────────────────────
-    const { data: stRow } = await supabase
-      .from('session_teachers')
-      .select('daily_rate, hourly_rate, intervention_days, total_hours, notes')
-      .eq('session_id', sessionId)
-      .eq('teacher_id', userId)
-      .maybeSingle()
 
     // ── Génération HTML ───────────────────────────────────────────────────────
     const html = buildTeacherConventionHtml({
@@ -159,6 +173,7 @@ export async function GET(
     })
     return NextResponse.json({ error: 'Erreur lors de la génération' }, { status: 500 })
   } finally {
+    if (lockAcquired && convLockId) await releaseOrgLock('pdf-convention', convLockId)
     if (puppeteerPage) {
       try { await puppeteerPage.close() } catch { /* ignore */ }
     }

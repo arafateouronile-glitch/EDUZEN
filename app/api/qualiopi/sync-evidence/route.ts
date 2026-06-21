@@ -11,9 +11,12 @@
  * - Ind. 29 : recueil des appréciations (satisfaction renseignée)
  */
 
+import { after } from 'next/server'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserOrgId } from '@/lib/utils/with-auth'
+import { acquireOrgLock, releaseOrgLock } from '@/lib/utils/sync-lock'
 
 const IND1_REQUIRED_FIELDS = [
   { key: 'description',             label: 'Description' },
@@ -61,18 +64,13 @@ async function bulkInsert(
   }
 }
 
-export async function POST() {
-  try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-    }
-
-    const orgId = await getUserOrgId(supabase, user.id)
-    if (!orgId) {
-      return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
-    }
+/**
+ * Cœur de la synchronisation — découplé du handler HTTP pour pouvoir
+ * s'exécuter dans un after() sans dépendance au contexte de requête.
+ * Utilise le client admin (service_role) car cookies non disponibles hors requête.
+ */
+async function doSync(orgId: string): Promise<{ count: number }> {
+  const supabase = createAdminClient()
 
     const now      = new Date().toISOString()
     const inserted: string[]        = []
@@ -1161,10 +1159,46 @@ export async function POST() {
       })
     )
 
+  return { count: inserted.length }
+}
+
+/**
+ * POST /api/qualiopi/sync-evidence
+ * Démarre la synchronisation en arrière-plan via after() et répond immédiatement.
+ * Un lock Redis par organisation empêche les syncs simultanés pour la même org.
+ */
+export async function POST() {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
+    const orgId = await getUserOrgId(supabase, user.id)
+    if (!orgId) {
+      return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+    }
+
+    const locked = await acquireOrgLock('sync-evidence', orgId)
+    if (!locked) {
+      return NextResponse.json({
+        success: true,
+        status:  'already_running',
+        message: 'Synchronisation déjà en cours pour cette organisation',
+      })
+    }
+
+    after(
+      doSync(orgId)
+        .catch((e) => console.error('[sync-evidence:background]', e))
+        .finally(() => releaseOrgLock('sync-evidence', orgId))
+    )
+
     return NextResponse.json({
       success: true,
-      count:   inserted.length,
-      message: `${inserted.length} preuve(s) remontée(s) · indicateurs mis à jour.`,
+      status:  'queued',
+      message: 'Synchronisation démarrée en arrière-plan',
     })
   } catch (e) {
     console.error('[sync-evidence]', e)

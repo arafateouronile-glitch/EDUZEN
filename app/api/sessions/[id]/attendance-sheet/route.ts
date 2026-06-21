@@ -14,6 +14,7 @@ import {
   type AttendanceSheetData,
 } from '@/lib/utils/attendance-sheet/generate-html'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { acquireOrgLock, releaseOrgLock } from '@/lib/utils/sync-lock'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
@@ -25,9 +26,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   let puppeteerPage: Awaited<ReturnType<typeof createPage>> | null = null
+  let lockAcquired = false
+  let sessionId: string | undefined
 
   try {
-    const { id: sessionId } = await params
+    const { id } = await params
+    sessionId = id
 
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -40,60 +44,64 @@ export async function GET(
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
-    // ── Récupérer la session ──────────────────────────────────────────────────
-    const { data: session, error: sessErr } = await supabase
-      .from('sessions')
-      .select('id, name, start_date, end_date, location, teacher_id, formation_id, organization_id')
-      .eq('id', sessionId)
-      .eq('organization_id', orgId)
-      .single()
+    // ── Lock anti-doublons par session ───────────────────────────────────────
+    lockAcquired = await acquireOrgLock('pdf-attendance', sessionId, 60)
+    if (!lockAcquired) {
+      return NextResponse.json(
+        { error: 'Génération en cours, réessayez dans quelques secondes' },
+        { status: 429 }
+      )
+    }
+
+    type SessionJoined = {
+      id: string; name: string; start_date: string | null; end_date: string | null
+      location: string | null; organization_id: string
+      formations: { name: string } | null
+      teachers: { users: { full_name: string | null } | null } | null
+    }
+
+    // ── Vague 1 : session (avec joins) + org en parallèle ────────────────────
+    const [sessionResult, orgResult] = await Promise.all([
+      supabase
+        .from('sessions')
+        .select('id, name, start_date, end_date, location, organization_id, formations(name), teachers(users(full_name))')
+        .eq('id', sessionId)
+        .eq('organization_id', orgId)
+        .single(),
+      supabase
+        .from('organizations')
+        .select('name, nda_number, address, city, logo_url')
+        .eq('id', orgId)
+        .single(),
+    ])
+
+    const { data: session, error: sessErr } = sessionResult as { data: SessionJoined | null; error: unknown }
+    const { data: org } = orgResult
 
     if (sessErr || !session) {
       return NextResponse.json({ error: 'Session introuvable' }, { status: 404 })
     }
 
-    // ── Récupérer l'organisation ──────────────────────────────────────────────
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('name, nda_number, address, city, logo_url')
-      .eq('id', orgId)
-      .single()
+    const formation: { name: string | null } | null = session.formations ?? null
+    const teacher: { full_name: string | null } | null = session.teachers?.users ?? null
 
-    // ── Formation ─────────────────────────────────────────────────────────────
-    let formation: { name: string | null } | null = null
-    if (session.formation_id) {
-      const { data: f } = await supabase
-        .from('formations')
-        .select('name')
-        .eq('id', session.formation_id)
-        .single()
-      formation = f
-    }
+    // ── Vague 2 : inscrits + slots en parallèle ───────────────────────────────
+    const [enrollmentsResult, slotsResult] = await Promise.all([
+      supabase
+        .from('enrollments')
+        .select('students(first_name, last_name, company)')
+        .eq('session_id', sessionId)
+        .in('status', ['confirmed', 'completed']),
+      supabase
+        .from('session_slots')
+        .select('date, time_slot')
+        .eq('session_id', sessionId)
+        .order('date', { ascending: true })
+        .order('time_slot', { ascending: true }),
+    ])
 
-    // ── Formateur ─────────────────────────────────────────────────────────────
-    let teacher: { full_name: string | null } | null = null
-    if (session.teacher_id) {
-      const { data: teacherRow } = await supabase
-        .from('teachers')
-        .select('user_id')
-        .eq('id', session.teacher_id)
-        .single()
-      if (teacherRow?.user_id) {
-        const { data: userRow } = await supabase
-          .from('users')
-          .select('full_name')
-          .eq('id', teacherRow.user_id)
-          .single()
-        teacher = userRow
-      }
-    }
-
-    // ── Inscrits ──────────────────────────────────────────────────────────────
-    const { data: enrollments } = await supabase
-      .from('enrollments')
-      .select('students(first_name, last_name, company)')
-      .eq('session_id', sessionId)
-      .in('status', ['confirmed', 'completed'])
+    const { data: enrollments } = enrollmentsResult
+    const { data: rawSlots } = slotsResult
 
     type EnrRow = { students: { first_name: string | null; last_name: string | null; company?: string | null } | null }
     const students: AttendanceSheetData['students'] = ((enrollments ?? []) as unknown as EnrRow[])
@@ -104,14 +112,6 @@ export async function GET(
       }))
       .filter((s) => s.last_name || s.first_name)
       .sort((a, b) => a.last_name.localeCompare(b.last_name, 'fr'))
-
-    // ── Slots ─────────────────────────────────────────────────────────────────
-    const { data: rawSlots } = await supabase
-      .from('session_slots')
-      .select('date, time_slot')
-      .eq('session_id', sessionId)
-      .order('date', { ascending: true })
-      .order('time_slot', { ascending: true })
 
     let slots: AttendanceSheetData['slots']
     if (rawSlots && rawSlots.length > 0) {
@@ -202,6 +202,7 @@ export async function GET(
     })
     return NextResponse.json({ error: 'Erreur lors de la génération' }, { status: 500 })
   } finally {
+    if (lockAcquired && sessionId) await releaseOrgLock('pdf-attendance', sessionId)
     if (puppeteerPage) {
       try { await puppeteerPage.close() } catch { /* ignore */ }
     }
