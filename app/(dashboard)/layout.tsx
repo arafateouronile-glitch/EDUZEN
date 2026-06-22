@@ -62,6 +62,9 @@ export default async function DashboardLayout({
   })
 
   if (!authUser) {
+    // Clear any stale session cookie so the middleware fast-path no longer
+    // sees an auth cookie on the next request (prevents the redirect loop).
+    await supabase.auth.signOut().catch(() => {})
     redirect('/auth/login?redirect=' + encodeURIComponent(pathname))
   }
 

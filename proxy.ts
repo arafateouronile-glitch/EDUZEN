@@ -100,7 +100,11 @@ export async function proxy(req: NextRequest) {
     redirectUrl.searchParams.set('redirect', pathname)
     return applySecurityTo(NextResponse.redirect(redirectUrl))
   }
-  if (isAuthRoute && authUser) {
+  // Only redirect authenticated users away from the login page when they navigated
+  // there directly (no redirect param). If a redirect param is present, it means a
+  // protected route already rejected the session (e.g. expired JWT) and sent the user
+  // here — bouncing them back would create an infinite redirect loop.
+  if (isAuthRoute && authUser && !req.nextUrl.searchParams.get('redirect')) {
     return applySecurityTo(NextResponse.redirect(new URL('/dashboard', req.url)))
   }
 
