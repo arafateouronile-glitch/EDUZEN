@@ -116,37 +116,40 @@ async function deleteJuryMember(id: string): Promise<void> {
 // ─── Session Jury ─────────────────────────────────────────────────────────────
 
 async function getSessionJury(sessionId: string): Promise<SessionJury[]> {
-  const supabase = createClient()
-  const { data, error } = await db(supabase)
-    .from('session_jury')
-    .select('*, jury_members(*)')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: true })
-  if (error) throw error
-  return data || []
+  const res = await fetch(`/api/jury/session-assignments?sessionId=${encodeURIComponent(sessionId)}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Erreur ${res.status}`)
+  }
+  return res.json()
 }
 
 async function addJuryToSession(
   sessionId: string,
   juryMemberId: string
 ): Promise<SessionJury> {
-  const supabase = createClient()
-  const { data, error } = await db(supabase)
-    .from('session_jury')
-    .insert({ session_id: sessionId, jury_member_id: juryMemberId })
-    .select('*, jury_members(*)')
-    .single()
-  if (error) throw error
-  return data
+  const res = await fetch('/api/jury/session-assignments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, juryMemberId }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Erreur ${res.status}`)
+  }
+  return res.json()
 }
 
 async function removeJuryFromSession(sessionJuryId: string): Promise<void> {
-  const supabase = createClient()
-  const { error } = await db(supabase)
-    .from('session_jury')
-    .delete()
-    .eq('id', sessionJuryId)
-  if (error) throw error
+  const res = await fetch('/api/jury/session-assignments', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionJuryId }),
+  })
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Erreur ${res.status}`)
+  }
 }
 
 export const juryService = {
