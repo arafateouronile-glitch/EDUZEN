@@ -54,7 +54,7 @@ export async function GET(
     }
 
     type SessionJoined = {
-      id: string; name: string; start_date: string | null; end_date: string | null
+      id: string; name: string; start_date: string; end_date: string
       location: string | null; organization_id: string
       formations: { name: string } | null
       teachers: { users: { full_name: string | null } | null } | null

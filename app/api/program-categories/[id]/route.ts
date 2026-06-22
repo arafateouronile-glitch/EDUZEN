@@ -12,7 +12,7 @@ export async function DELETE(
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
 
     // Soft delete — garder la valeur dans les programs/formations existants
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('program_categories')
       .update({ is_active: false })
       .eq('id', id)

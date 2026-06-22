@@ -241,7 +241,7 @@ export default function RemunerationPage() {
       const sessionIds = sessions.map((s) => s.id)
 
       // Étape 2 : session_teachers pour ces sessions avec tarif renseigné
-      const { data: stRows, error: stErr } = await supabase
+      const { data: stRows, error: stErr } = await (supabase as any)
         .from('session_teachers')
         .select('id, daily_rate, intervention_days, total_hours, role, teacher_id, session_id')
         .in('session_id', sessionIds)
@@ -250,7 +250,7 @@ export default function RemunerationPage() {
       if (stErr) throw stErr
 
       // Étape 3 : formateurs + user_id
-      const teacherIds = [...new Set((stRows ?? []).map((r) => r.teacher_id).filter(Boolean))] as string[]
+      const teacherIds = [...new Set((stRows ?? []).map((r: { teacher_id: string | null }) => r.teacher_id).filter(Boolean))] as string[]
       if (teacherIds.length === 0) return []
 
       const { data: teacherRows, error: tErr } = await supabase

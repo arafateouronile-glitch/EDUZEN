@@ -642,7 +642,7 @@ export default function GenerateDocumentPage() {
               }
               
               // Sauvegarder le document (type et metadata conformes à la table generated_documents)
-              const { error: saveError } = await supabase
+              const { error: saveError } = await (supabase as any)
                 .from('generated_documents')
                 .insert({
                   ...documentData,

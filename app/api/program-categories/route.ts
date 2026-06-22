@@ -18,7 +18,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('program_categories')
       .select('id, name, color')
       .eq('organization_id', userData.organization_id)
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const name = (body.name ?? '').trim()
     if (!name) return NextResponse.json({ error: 'Nom requis' }, { status: 400 })
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('program_categories')
       .insert({ organization_id: userData.organization_id, name, color: body.color ?? null })
       .select('id, name, color')

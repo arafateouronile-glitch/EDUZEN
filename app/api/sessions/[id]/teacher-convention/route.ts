@@ -77,12 +77,12 @@ export async function GET(
           .select('specialization')
           .eq('user_id', userId)
           .maybeSingle(),
-        supabase
+        (supabase as any)
           .from('session_teachers')
           .select('daily_rate, hourly_rate, intervention_days, total_hours, notes')
           .eq('session_id', sessionId)
           .eq('teacher_id', userId)
-          .maybeSingle(),
+          .maybeSingle() as Promise<{ data: { daily_rate: number | null; hourly_rate: number | null; intervention_days: number | null; total_hours: number | null; notes: string | null } | null; error: unknown }>,
       ])
 
     const { data: session, error: sessErr } = sessionResult

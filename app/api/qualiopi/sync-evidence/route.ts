@@ -57,7 +57,7 @@ async function bulkInsert(
 ) {
   const CHUNK = 500
   for (let i = 0; i < evidences.length; i += CHUNK) {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('compliance_evidence_automated')
       .insert(evidences.slice(i, i + CHUNK))
     if (error) throw error

@@ -260,7 +260,7 @@ export function ConfigIntervenants({
         .select('teacher_id, daily_rate, hourly_rate, intervention_days, total_hours, role, is_primary')
         .eq('session_id', sessionId)
         .order('is_primary', { ascending: false })
-      return (data ?? []) as Array<{
+      return (data ?? []) as unknown as Array<{
         teacher_id: string | null
         daily_rate: number | null
         hourly_rate: number | null

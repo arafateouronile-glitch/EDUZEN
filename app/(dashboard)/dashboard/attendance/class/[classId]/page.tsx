@@ -70,7 +70,7 @@ function SignatureCanvas({
 }: {
   onClear: () => void
   existingUrl: string | null | undefined
-  canvasRef: React.RefObject<HTMLCanvasElement | null>
+  canvasRef: React.RefObject<HTMLCanvasElement>
 }) {
   const isDrawingRef = useRef(false)
 
@@ -86,7 +86,7 @@ function SignatureCanvas({
     ctx.lineJoin = 'round'
   }, [canvasRef])
 
-  const getPos = (e: MouseEvent | Touch, canvas: HTMLCanvasElement) => {
+  const getPos = (e: { clientX: number; clientY: number }, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
     const scaleY = canvas.height / rect.height
@@ -196,7 +196,7 @@ export default function ClassAttendancePage() {
   const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
   const { user } = useAuth()
   const supabase = createClient()
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   // ── Données ──────────────────────────────────────────────────────────────────
