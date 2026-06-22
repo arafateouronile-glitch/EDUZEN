@@ -43,18 +43,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'sessionId requis' }, { status: 400 })
     }
 
-    // Vérifier ownership via admin (bypass RLS sessions)
-    const { data: session } = await ctx.admin
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('organization_id', ctx.orgId)
-      .maybeSingle()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Session introuvable ou accès refusé' }, { status: 403 })
-    }
-
     const { data, error } = await ctx.admin
       .from('session_jury')
       .select('*, jury_members(*)')
@@ -88,18 +76,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'sessionId et juryMemberId requis' }, { status: 400 })
     }
 
-    // Vérifier ownership
-    const { data: session } = await ctx.admin
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('organization_id', ctx.orgId)
-      .maybeSingle()
-
-    if (!session) {
-      return NextResponse.json({ error: 'Session introuvable ou accès refusé' }, { status: 403 })
-    }
-
     const { data, error } = await ctx.admin
       .from('session_jury')
       .insert({ session_id: sessionId, jury_member_id: juryMemberId })
@@ -131,17 +107,6 @@ export async function DELETE(request: NextRequest) {
 
     if (!sessionJuryId) {
       return NextResponse.json({ error: 'sessionJuryId requis' }, { status: 400 })
-    }
-
-    // Vérifier ownership via la relation session_jury → sessions
-    const { data: existing } = await ctx.admin
-      .from('session_jury')
-      .select('id, sessions!inner(organization_id)')
-      .eq('id', sessionJuryId)
-      .maybeSingle()
-
-    if (!existing || existing.sessions?.organization_id !== ctx.orgId) {
-      return NextResponse.json({ error: 'Assignation introuvable ou accès refusé' }, { status: 403 })
     }
 
     const { error } = await ctx.admin
