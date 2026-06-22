@@ -108,7 +108,14 @@ export function ConfigApprenants({
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showEnrollmentForm, setShowEnrollmentForm] = useState(false)
-  const [_showNewStudentForm, setShowNewStudentForm] = useState(false)
+  const [showNewStudentForm, setShowNewStudentForm] = useState(false)
+  const [newStudentForm, setNewStudentForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+  })
   const [searchMode, setSearchMode] = useState<'all' | 'students' | 'entities'>('all')
   const [editingEnrollment, setEditingEnrollment] = useState<EnrollmentWithRelations | null>(null)
   const [editForm, setEditForm] = useState<{
@@ -361,6 +368,53 @@ export function ConfigApprenants({
       funding_type_id: enrollmentForm.funding_type_id || '',
     })
     setShowEnrollmentForm(true)
+  }
+
+  // Mutation pour créer un nouvel apprenant puis l'inscrire
+  const createStudentMutation = useMutation({
+    mutationFn: async (data: { first_name: string; last_name: string; email?: string; phone?: string; date_of_birth?: string }) => {
+      if (!user?.organization_id) throw new Error('Organisation manquante')
+      const { data: student, error } = await supabase
+        .from('students')
+        .insert({
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email || null,
+          phone: data.phone || null,
+          date_of_birth: data.date_of_birth || null,
+          organization_id: user.organization_id,
+          status: 'active',
+          student_number: '',
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      return student
+    },
+    onSuccess: (student) => {
+      queryClient.invalidateQueries({ queryKey: ['students', user?.organization_id] })
+      setShowNewStudentForm(false)
+      setNewStudentForm({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '' })
+      addToast({ type: 'success', title: 'Apprenant créé', description: 'L\'apprenant a été créé. Complétez l\'inscription ci-dessous.' })
+      handleEnrollCandidate(student.id)
+    },
+    onError: (error) => {
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Une erreur est survenue.' })
+    },
+  })
+
+  const handleCreateStudent = () => {
+    if (!newStudentForm.first_name.trim() || !newStudentForm.last_name.trim()) {
+      addToast({ type: 'error', title: 'Champs requis', description: 'Le prénom et le nom sont obligatoires.' })
+      return
+    }
+    createStudentMutation.mutate({
+      first_name: newStudentForm.first_name.trim(),
+      last_name: newStudentForm.last_name.trim(),
+      email: newStudentForm.email.trim() || undefined,
+      phone: newStudentForm.phone.trim() || undefined,
+      date_of_birth: newStudentForm.date_of_birth || undefined,
+    })
   }
 
   const handleSubmitEnrollment = async () => {
@@ -1547,6 +1601,91 @@ export function ConfigApprenants({
           </div>
         </GlassCard>
       )}
+
+      {/* Dialog de création d'un nouvel apprenant */}
+      <Dialog open={showNewStudentForm} onOpenChange={(open) => { if (!open) { setShowNewStudentForm(false); setNewStudentForm({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '' }) } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-brand-blue" />
+              Créer un nouvel apprenant
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="new_first_name">Prénom *</Label>
+                <Input
+                  id="new_first_name"
+                  value={newStudentForm.first_name}
+                  onChange={(e) => setNewStudentForm({ ...newStudentForm, first_name: e.target.value })}
+                  placeholder="Prénom"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <Label htmlFor="new_last_name">Nom *</Label>
+                <Input
+                  id="new_last_name"
+                  value={newStudentForm.last_name}
+                  onChange={(e) => setNewStudentForm({ ...newStudentForm, last_name: e.target.value })}
+                  placeholder="Nom de famille"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="new_email">Email</Label>
+              <Input
+                id="new_email"
+                type="email"
+                value={newStudentForm.email}
+                onChange={(e) => setNewStudentForm({ ...newStudentForm, email: e.target.value })}
+                placeholder="email@exemple.com"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="new_phone">Téléphone</Label>
+                <Input
+                  id="new_phone"
+                  type="tel"
+                  value={newStudentForm.phone}
+                  onChange={(e) => setNewStudentForm({ ...newStudentForm, phone: e.target.value })}
+                  placeholder="06 00 00 00 00"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new_dob">Date de naissance</Label>
+                <Input
+                  id="new_dob"
+                  type="date"
+                  value={newStudentForm.date_of_birth}
+                  onChange={(e) => setNewStudentForm({ ...newStudentForm, date_of_birth: e.target.value })}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              Après création, vous pourrez compléter le profil depuis la fiche apprenant.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowNewStudentForm(false); setNewStudentForm({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '' }) }}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleCreateStudent}
+              disabled={createStudentMutation.isPending || !newStudentForm.first_name.trim() || !newStudentForm.last_name.trim()}
+              className="shadow-lg shadow-brand-blue/20"
+            >
+              {createStudentMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Création...</>
+              ) : (
+                <><UserPlus className="h-4 w-4 mr-2" />Créer et inscrire</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de modification d'inscription */}
       <Dialog open={!!editingEnrollment} onOpenChange={(open) => { if (!open) { setEditingEnrollment(null); setEditForm(null) } }}>
