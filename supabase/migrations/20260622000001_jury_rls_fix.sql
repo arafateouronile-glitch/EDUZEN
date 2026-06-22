@@ -45,14 +45,8 @@ CREATE POLICY "session_jury_org_access" ON session_jury
     )
   );
 
--- Accès public par token (confirmation magic-link sans auth)
+-- La route /api/jury/confirm utilise createAdminClient() (service_role) qui bypass RLS.
+-- Aucune politique publique n'est nécessaire — USING (TRUE) ouvrirait toutes les lignes
+-- aux utilisateurs anonymes via l'API Supabase directe.
 DROP POLICY IF EXISTS "session_jury_public_token_update" ON session_jury;
-CREATE POLICY "session_jury_public_token_update" ON session_jury
-  FOR UPDATE
-  USING (TRUE)
-  WITH CHECK (TRUE);
-
 DROP POLICY IF EXISTS "session_jury_public_token_read" ON session_jury;
-CREATE POLICY "session_jury_public_token_read" ON session_jury
-  FOR SELECT
-  USING (TRUE);
