@@ -89,15 +89,20 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Génération PDF via Gotenberg (ou Puppeteer en fallback)
+    const filename = `convention-${body.teacher.full_name.replace(/\s+/g, '-')}.pdf`
+    const pdfHeaders = {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    }
+
+    // Gotenberg en priorité — fallback Puppeteer si indisponible
     if (isGotenbergConfigured()) {
-      const pdfBuffer = await htmlToPdf(html, { format: 'A4', marginTop: '0.98in', marginBottom: '0.98in', marginLeft: '0.79in', marginRight: '0.79in' })
-      return new NextResponse(new Uint8Array(pdfBuffer), {
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="convention-${body.teacher.full_name.replace(/\s+/g, '-')}.pdf"`,
-        },
-      })
+      try {
+        const pdfBuffer = await htmlToPdf(html, { format: 'A4', marginTop: '0.98in', marginBottom: '0.98in', marginLeft: '0.79in', marginRight: '0.79in' })
+        return new NextResponse(new Uint8Array(pdfBuffer), { headers: pdfHeaders })
+      } catch (e) {
+        logger.error('Gotenberg indisponible, fallback Puppeteer', e)
+      }
     }
 
     if (process.env.VERCEL === '1') {
@@ -114,12 +119,7 @@ export async function POST(request: NextRequest) {
     await page.close()
     page = null
 
-    return new NextResponse(new Uint8Array(pdf), {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="convention-${body.teacher.full_name.replace(/\s+/g, '-')}.pdf"`,
-      },
-    })
+    return new NextResponse(new Uint8Array(pdf), { headers: pdfHeaders })
   } catch (error: unknown) {
     if (page) { try { await page.close() } catch {} }
     logger.error('Erreur génération convention formateur', error)

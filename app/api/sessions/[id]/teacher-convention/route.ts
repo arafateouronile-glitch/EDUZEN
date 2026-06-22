@@ -128,17 +128,23 @@ export async function GET(
     })
 
     // ── PDF via Gotenberg (ou Puppeteer en fallback) ──────────────────────────
-    let pdfBuffer: Buffer | Uint8Array
+    let pdfBuffer: Buffer | Uint8Array | null = null
 
     if (isGotenbergConfigured()) {
-      pdfBuffer = await htmlToPdf(html, {
-        format: 'A4',
-        marginTop: '0.98in',
-        marginBottom: '0.98in',
-        marginLeft: '0.79in',
-        marginRight: '0.79in',
-      })
-    } else {
+      try {
+        pdfBuffer = await htmlToPdf(html, {
+          format: 'A4',
+          marginTop: '0.98in',
+          marginBottom: '0.98in',
+          marginLeft: '0.79in',
+          marginRight: '0.79in',
+        })
+      } catch (e) {
+        logger.error('Gotenberg indisponible, fallback Puppeteer', e)
+      }
+    }
+
+    if (!pdfBuffer) {
       if (process.env.VERCEL === '1') {
         return NextResponse.json(
           { error: 'Génération PDF indisponible sur Vercel sans Gotenberg' },
