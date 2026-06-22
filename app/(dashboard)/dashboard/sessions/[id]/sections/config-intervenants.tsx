@@ -226,18 +226,21 @@ export function ConfigIntervenants({
         reader.readAsDataURL(blob)
       })
 
+      const docLabel = docType === 'ordre_de_mission' ? 'Ordre de mission' : 'Convention formateur'
       const res = await fetch('/api/signature-requests/send-from-contract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pdfBase64,
-          documentTitle: `Convention formateur — ${selectedTeacher.full_name}`,
+          documentTitle: `${docLabel} — ${selectedTeacher.full_name}`,
+          type: 'convention',
+          sessionId,
           recipientEmail: (selectedTeacher as any).email ?? '',
           recipientName: selectedTeacher.full_name ?? '',
           recipientId: selectedTeacher.id,
           recipientType: 'teacher',
-          subject: `Signature convention — ${formData.name || 'Session de formation'}`,
-          message: `Bonjour ${selectedTeacher.full_name},\n\nVeuillez signer la convention de prestation pour la session de formation.`,
+          subject: `Signature ${docLabel} — ${formData.name || 'Session de formation'}`,
+          message: `Bonjour ${selectedTeacher.full_name},\n\nVeuillez signer votre ${docLabel.toLowerCase()} pour la session de formation.`,
         }),
       })
       if (!res.ok) throw new Error()

@@ -47,20 +47,21 @@ export async function POST(request: NextRequest) {
     const {
       pdfBase64, // PDF en base64 généré côté client
       documentTitle,
-      type, // 'contract' | 'convention'
-      enrollmentId,
-      sessionId,
+      type, // 'contract' | 'convention' | 'convention_formateur'
+      enrollmentId,   // optionnel (absent pour les documents formateurs)
+      sessionId,      // optionnel
       recipientEmail,
       recipientName,
       recipientId,
+      recipientType,  // 'student' | 'teacher' (défaut : 'student')
       subject,
       message,
       expiresAt,
     } = body
 
-    if (!pdfBase64 || !documentTitle || !type || !enrollmentId || !sessionId || !recipientEmail || !recipientName) {
+    if (!pdfBase64 || !documentTitle || !recipientEmail || !recipientName) {
       return NextResponse.json(
-        { error: 'Données manquantes' },
+        { error: 'Données manquantes (pdfBase64, documentTitle, recipientEmail, recipientName requis)' },
         { status: 400 }
       )
     }
@@ -95,9 +96,13 @@ export async function POST(request: NextRequest) {
       .from('documents')
       .getPublicUrl(filePath)
 
-    // Récupérer l'étudiant si recipientId est fourni
+    // Résoudre le type de destinataire
+    const resolvedRecipientType: 'student' | 'teacher' =
+      recipientType === 'teacher' ? 'teacher' : 'student'
+
+    // Récupérer l'étudiant si c'est un document étudiant
     let studentId: string | null = null
-    if (recipientId) {
+    if (resolvedRecipientType === 'student' && recipientId) {
       const { data: studentData } = await supabase
         .from('students')
         .select('id')
@@ -106,16 +111,20 @@ export async function POST(request: NextRequest) {
       studentId = studentData?.id || null
     }
 
+    // Mapper le type de document
+    const docType = type === 'contract' ? 'contract' : 'convention'
+
     // Créer le document dans la base de données
     const document = await documentService.create({
       title: documentTitle,
-      type: type === 'contract' ? 'contract' : 'convention',
+      type: docType,
       file_url: urlData.publicUrl,
       organization_id: userData.organization_id,
       student_id: studentId,
       metadata: {
-        session_id: sessionId,
-        enrollment_id: enrollmentId,
+        session_id: sessionId || null,
+        enrollment_id: enrollmentId || null,
+        recipient_type: resolvedRecipientType,
         generated_at: new Date().toISOString(),
       },
     })
@@ -126,8 +135,8 @@ export async function POST(request: NextRequest) {
       organizationId: userData.organization_id,
       recipientEmail,
       recipientName,
-      recipientType: 'student',
-      recipientId: recipientId || studentId,
+      recipientType: resolvedRecipientType,
+      recipientId: recipientId || studentId || undefined,
       subject: subject || `Demande de signature : ${documentTitle}`,
       message: message || null,
       expiresAt: expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
