@@ -72,8 +72,11 @@ export async function POST(request: NextRequest) {
     // Uploader le PDF vers Supabase Storage
     const documentService = new DocumentService(supabase)
     const timestamp = Date.now()
-    const fileName = `${documentTitle.replace(/\s+/g, '_')}.pdf`
-    const filePath = `signatures/${userData.organization_id}/${timestamp}_${fileName}`
+    const safeTitle = documentTitle
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_').replace(/^_|_$/g, '') || 'document'
+    const filePath = `signatures/${userData.organization_id}/${timestamp}_${safeTitle}.pdf`
     
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('documents')
