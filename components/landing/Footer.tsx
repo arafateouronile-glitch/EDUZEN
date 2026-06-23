@@ -38,7 +38,7 @@ export function Footer() {
           </div>
 
           {/* Links */}
-          <div className="md:col-span-7 lg:col-span-8 grid grid-cols-2 md:grid-cols-3 gap-8">
+          <div className="md:col-span-7 lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
               {
                 title: "Produit",
@@ -56,6 +56,17 @@ export function Footer() {
                   { label: "À propos", href: "/a-propos" },
                   { label: "Programme d'affiliation", href: "/affiliation" },
                   { label: "Centre d'aide", href: "/contact" },
+                ]
+              },
+              {
+                title: "Comparatifs",
+                links: [
+                  { label: "EduZen vs Digiforma", href: "/comparatif/eduzen-vs-digiforma" },
+                  { label: "EduZen vs Dendreo", href: "/comparatif/eduzen-vs-dendreo" },
+                  { label: "EduZen vs SmartOF", href: "/comparatif/eduzen-vs-smartof" },
+                  { label: "EduZen vs Qualiobee", href: "/comparatif/eduzen-vs-qualiobee" },
+                  { label: "EduZen vs Ymag", href: "/comparatif/eduzen-vs-ymag" },
+                  { label: "EduZen vs Teachizy", href: "/comparatif/eduzen-vs-teachizy" },
                 ]
               },
               {
