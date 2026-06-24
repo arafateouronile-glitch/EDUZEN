@@ -409,8 +409,18 @@ function replaceVariablesInHTML(html: string, variables: VariablesMap): string {
   // EXCLURE COMPLÈTEMENT les variables de logo car elles sont déjà traitées dans processLogos
   const logoKeys = ['ecole_logo', 'organization_logo', 'organisation_logo']
   // Variables autorisées à injecter du HTML brut (généré côté serveur/app)
-  // Exemple: lignes de modules (tableaux) pour devis/factures, lignes étudiants pour rapports.
-  const rawHtmlKeys = ['modules_lignes', 'modules_lignes_facture', 'students_table_rows']
+  // Exemple: lignes de modules (tableaux) pour devis/factures, champs rich-text TipTap des programmes.
+  const rawHtmlKeys = [
+    'modules_lignes', 'modules_lignes_facture', 'students_table_rows',
+    // Champs rich-text des programmes (stockés en HTML par TipTap)
+    'programme_objectifs', 'programme_profil_apprenants', 'programme_public_concerne',
+    'programme_contenu', 'programme_suivi_execution', 'programme_modalites_certification',
+    'programme_certification', 'programme_qualite', 'programme_description',
+    'programme_methodes_pedagogiques', 'programme_prerequis', 'programme_accessibilite',
+    'programme_domaines_competences',
+    // Champs rich-text des formations
+    'formation_objectifs', 'formation_contenu', 'formation_qualite_et_resultats',
+  ]
   const sortedKeys = Object.keys(variables)
     .filter(key => !logoKeys.includes(key)) // Exclure les variables de logo
     .sort((a, b) => b.length - a.length)
