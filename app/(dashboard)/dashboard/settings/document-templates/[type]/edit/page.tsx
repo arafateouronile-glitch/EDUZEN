@@ -618,9 +618,19 @@ export default function DocumentTemplateEditPage() {
                 </Button>
                 <Button
                   variant="outline"
+                  onClick={handleResetToDefault}
+                  title="Réinitialiser ce modèle avec le contenu par défaut"
+                  className="hidden sm:flex text-amber-700 border-amber-300 hover:bg-amber-50 hover:border-amber-400"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Réinitialiser par défaut
+                </Button>
+                <Button
+                  variant="outline"
                   size="icon"
                   onClick={handleResetToDefault}
-                  title="Réinitialiser avec le contenu par défaut"
+                  title="Réinitialiser ce modèle avec le contenu par défaut"
+                  className="sm:hidden text-amber-700 border-amber-300 hover:bg-amber-50"
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
