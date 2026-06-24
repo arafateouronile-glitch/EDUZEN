@@ -84,6 +84,8 @@ export default function EditProgramPage() {
     training_content: '',
     execution_follow_up: '',
     certification_modalities: '',
+    // Qualiopi
+    pedagogical_methods: '',
     // Statistiques
     success_rate: '',
     satisfaction_rate: '',
@@ -117,7 +119,7 @@ export default function EditProgramPage() {
         price: (firstFormation as any)?.price?.toString() || '',
         currency: (firstFormation as any)?.currency || 'EUR',
         payment_plan: (firstFormation as any)?.payment_plan || 'full',
-        prerequisites: (firstFormation as any)?.prerequisites || '',
+        prerequisites: program.prerequisites || '',
         capacity_max: (program as any).capacity_max?.toString() || '',
         capacity_min: (program as any).capacity_min?.toString() || '',
         age_min: (firstFormation as any)?.age_min?.toString() || '',
@@ -129,19 +131,21 @@ export default function EditProgramPage() {
         cpf_code: (program as any).cpf_code || '',
         // Modalité détaillée
         lieu: (program as any).lieu || '',
-        access_delay_days: (program as any).access_delay_days?.toString() || '15',
-        accessibility_info: (program as any).accessibility_info || 'Formation accessible aux personnes en situation de handicap. Pour toutes demandes d\'adaptation, veuillez contacter notre référent handicap.',
+        access_delay_days: program.access_delay_days?.toString() || '15',
+        accessibility_info: program.accessibility_info || 'Formation accessible aux personnes en situation de handicap. Pour toutes demandes d\'adaptation, veuillez contacter notre référent handicap.',
         edof_hours: (program as any).edof_hours?.toString() || '',
         // Type d'action de formation
         training_action_type: (program as any).training_action_type || '',
         rs_title_name: (program as any).rs_title_name || '',
         rs_code: (program as any).rs_code || '',
         // Objectifs et contenu
-        pedagogical_objectives: (program as any).pedagogical_objectives || '',
-        learner_profile: (program as any).learner_profile || '',
-        training_content: (program as any).training_content || '',
-        execution_follow_up: (program as any).execution_follow_up || '',
-        certification_modalities: (program as any).certification_modalities || '',
+        pedagogical_objectives: program.pedagogical_objectives || '',
+        learner_profile: program.learner_profile || '',
+        training_content: program.training_content || '',
+        execution_follow_up: program.execution_follow_up || '',
+        certification_modalities: program.certification_modalities || '',
+        // Qualiopi
+        pedagogical_methods: program.pedagogical_methods || '',
         // Statistiques
         success_rate: (program as any).success_rate?.toString() || '',
         satisfaction_rate: (program as any).satisfaction_rate?.toString() || '',
@@ -200,6 +204,8 @@ export default function EditProgramPage() {
         lieu: formData.lieu || null,
         access_delay_days: formData.access_delay_days ? parseInt(formData.access_delay_days) : null,
         accessibility_info: formData.accessibility_info || null,
+        prerequisites: formData.prerequisites || null,
+        pedagogical_methods: formData.pedagogical_methods || null,
         edof_hours: formData.edof_hours ? parseInt(formData.edof_hours) : null,
         capacity_min: formData.capacity_min ? parseInt(formData.capacity_min) : null,
         capacity_max: formData.capacity_max ? parseInt(formData.capacity_max) : null,
@@ -443,13 +449,41 @@ export default function EditProgramPage() {
                         </div>
                         {/* Accessibilité */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Accessibilité</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Accessibilité handicap <span className="text-amber-600 font-normal">(Qualiopi ind. 7)</span>
+                          </label>
                           <textarea
                             value={formData.accessibility_info}
                             onChange={(e) => setFormData({ ...formData, accessibility_info: e.target.value })}
                             rows={3}
                             className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                             placeholder="Formation accessible aux personnes en situation de handicap..."
+                          />
+                        </div>
+                        {/* Prérequis */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Prérequis et niveau d'entrée <span className="text-amber-600 font-normal">(Qualiopi ind. 3)</span>
+                          </label>
+                          <textarea
+                            value={formData.prerequisites}
+                            onChange={(e) => setFormData({ ...formData, prerequisites: e.target.value })}
+                            rows={3}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            placeholder="Ex : Aucun prérequis. / Niveau Bac requis. Maîtrise des bases de..."
+                          />
+                        </div>
+                        {/* Méthodes pédagogiques */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Méthodes pédagogiques <span className="text-amber-600 font-normal">(Qualiopi ind. 5)</span>
+                          </label>
+                          <textarea
+                            value={formData.pedagogical_methods}
+                            onChange={(e) => setFormData({ ...formData, pedagogical_methods: e.target.value })}
+                            rows={3}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            placeholder="Ex : Cours magistraux, travaux pratiques, études de cas, e-learning..."
                           />
                         </div>
                         {/* EDOF */}

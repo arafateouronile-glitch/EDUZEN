@@ -56,6 +56,7 @@ type FormationExtended = {
 /** Programme avec champs étendus */
 type ProgramExtended = Program & {
   duration_hours?: number | null
+  // Anciens alias conservés pour rétrocompatibilité (peuvent être undefined)
   content?: string | null
   objectives?: string | null
   target_audience?: string | null
@@ -67,6 +68,12 @@ type ProgramExtended = Program & {
   certification?: string | null
   code?: string | null
   description?: string | null
+  // Champs réels de la table programs (accès direct via Program)
+  lieu?: string | null
+  access_delay_days?: number | null
+  accessibility_info?: string | null
+  rs_title_name?: string | null
+  rs_code?: string | null
   modalities?: string | null
 }
 /** Étudiant avec champs optionnels (photo, adresse, entreprise, tuteur) */
@@ -323,15 +330,39 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     programme_nom: program?.name || (session as SessionWithRelations)?.formations?.programs?.name || '',
     programme_code: prog?.code || '',
     programme_description: prog?.description || '',
-    programme_objectifs: prog?.objectives || '',
-    programme_duree_totale: program?.formations
-      ? `${program.formations.reduce((total, f) => total + (f.duration_hours || 0), 0)} heures`
-      : '',
-    programme_nombre_formations: program?.formations ? `${program.formations.length}` : '',
-    programme_nombre_sessions: '', // À calculer si nécessaire
-    programme_public_concerne: prog?.target_audience || '',
+    programme_sous_titre: prog?.subtitle || '',
+    programme_categorie: prog?.category || '',
+    programme_version: prog?.program_version || '',
+    programme_date_version: prog?.version_date ? new Date(prog.version_date).toLocaleDateString('fr-FR') : '',
+    programme_duree_heures: prog?.duration_hours != null ? `${prog.duration_hours} h` : '',
+    programme_duree_jours: prog?.duration_days != null ? `${prog.duration_days} j` : '',
+    programme_duree_totale: prog?.duration_hours
+      ? `${prog.duration_hours} heures`
+      : program?.formations
+        ? `${program.formations.reduce((total, f) => total + (f.duration_hours || 0), 0)} heures`
+        : '',
+    programme_objectifs: prog?.pedagogical_objectives || prog?.objectives || '',
+    programme_profil_apprenants: prog?.learner_profile || prog?.target_audience || '',
+    programme_public_concerne: prog?.learner_profile || prog?.target_audience || '',
+    programme_contenu: prog?.training_content || prog?.content || '',
+    programme_suivi_execution: prog?.execution_follow_up || '',
     programme_modalites: prog?.modalities || '',
-    programme_certification: prog?.certification || '',
+    programme_modalites_certification: prog?.certification_modalities || prog?.certification || '',
+    programme_certification: prog?.certification_modalities || prog?.certification || '',
+    programme_type_action: prog?.training_action_type || '',
+    programme_qualite: prog?.quality || '',
+    programme_eligible_cpf: prog?.eligible_cpf ? 'Oui' : (prog?.eligible_cpf === false ? 'Non' : ''),
+    programme_code_cpf: prog?.cpf_code || '',
+    programme_prix_entreprise: prog?.price_enterprise != null ? `${Number(prog.price_enterprise).toFixed(2)} €` : '',
+    programme_prix_particulier: prog?.price_individual != null ? `${Number(prog.price_individual).toFixed(2)} €` : '',
+    programme_prix_independant: prog?.price_freelance != null ? `${Number(prog.price_freelance).toFixed(2)} €` : '',
+    programme_domaines_competences: prog?.competence_domains || '',
+    programme_prerequis: prog?.prerequisites || '',
+    programme_methodes_pedagogiques: prog?.pedagogical_methods || '',
+    programme_delai_acces: prog?.access_delay_days != null ? `${prog.access_delay_days} jours ouvrés` : '',
+    programme_accessibilite: prog?.accessibility_info || '',
+    programme_nombre_formations: program?.formations ? `${program.formations.length}` : '',
+    programme_nombre_sessions: '',
 
     // Facture
     numero_facture: invoice?.invoice_number || '',

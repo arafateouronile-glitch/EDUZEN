@@ -14005,6 +14005,8 @@ export type Database = {
       }
       programs: {
         Row: {
+          access_delay_days: number | null
+          accessibility_info: string | null
           accounting_product_config: string | null
           category: string | null
           certification_modalities: string | null
@@ -14028,8 +14030,10 @@ export type Database = {
           modalities: string | null
           name: string
           organization_id: string
+          pedagogical_methods: string | null
           pedagogical_objectives: string | null
           photo_url: string | null
+          prerequisites: string | null
           price: number | null
           price_enterprise: number | null
           price_freelance: number | null
@@ -14049,6 +14053,8 @@ export type Database = {
           version_date: string | null
         }
         Insert: {
+          access_delay_days?: number | null
+          accessibility_info?: string | null
           accounting_product_config?: string | null
           category?: string | null
           certification_modalities?: string | null
@@ -14072,8 +14078,10 @@ export type Database = {
           modalities?: string | null
           name: string
           organization_id: string
+          pedagogical_methods?: string | null
           pedagogical_objectives?: string | null
           photo_url?: string | null
+          prerequisites?: string | null
           price?: number | null
           price_enterprise?: number | null
           price_freelance?: number | null
@@ -14093,6 +14101,8 @@ export type Database = {
           version_date?: string | null
         }
         Update: {
+          access_delay_days?: number | null
+          accessibility_info?: string | null
           accounting_product_config?: string | null
           category?: string | null
           certification_modalities?: string | null
@@ -14116,8 +14126,10 @@ export type Database = {
           modalities?: string | null
           name?: string
           organization_id?: string
+          pedagogical_methods?: string | null
           pedagogical_objectives?: string | null
           photo_url?: string | null
+          prerequisites?: string | null
           price?: number | null
           price_enterprise?: number | null
           price_freelance?: number | null

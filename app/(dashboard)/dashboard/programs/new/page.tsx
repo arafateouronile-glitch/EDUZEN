@@ -88,9 +88,13 @@ export default function NewProgramPage() {
         quality: data.quality,
         accounting_product_config: data.accounting_product_config,
         competence_domains: data.competence_domains,
+        prerequisites: data.prerequisites,
+        pedagogical_methods: data.pedagogical_methods,
+        access_delay_days: data.access_delay_days ? parseInt(data.access_delay_days) : null,
+        accessibility_info: data.accessibility_info,
         photo_url: data.photo_url,
         is_active: true,
-      })
+      } as any)
 
       // Créer une formation par défaut pour stocker duration_hours, price et currency
       await formationService.createFormation({
@@ -552,6 +556,68 @@ export default function NewProgramPage() {
                   rows={2}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
                 />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="prerequisites">
+              <AccordionTrigger className="px-6 hover:bg-gray-50">
+                <span>Prérequis et niveau d'entrée <span className="ml-2 text-xs font-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Qualiopi ind. 3</span></span>
+              </AccordionTrigger>
+              <AccordionContent className="px-6">
+                <p className="text-xs text-gray-500 mb-2">Niveau de connaissances requis pour accéder à la formation.</p>
+                <textarea
+                  {...register('prerequisites')}
+                  rows={4}
+                  placeholder="Ex : Aucun prérequis. / Niveau Bac requis. Maîtrise des bases de..."
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="pedagogical_methods">
+              <AccordionTrigger className="px-6 hover:bg-gray-50">
+                <span>Méthodes pédagogiques <span className="ml-2 text-xs font-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Qualiopi ind. 5</span></span>
+              </AccordionTrigger>
+              <AccordionContent className="px-6">
+                <p className="text-xs text-gray-500 mb-2">Moyens pédagogiques, techniques et d'encadrement mis en œuvre.</p>
+                <textarea
+                  {...register('pedagogical_methods')}
+                  rows={4}
+                  placeholder="Ex : Cours magistraux, travaux pratiques, études de cas, e-learning..."
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="accessibility">
+              <AccordionTrigger className="px-6 hover:bg-gray-50">
+                <span>Accessibilité handicap <span className="ml-2 text-xs font-normal text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Qualiopi ind. 7</span></span>
+              </AccordionTrigger>
+              <AccordionContent className="px-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Délai d'accès moyen (jours ouvrés)</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        {...register('access_delay_days')}
+                        className="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                        placeholder="15"
+                      />
+                      <span className="text-sm text-gray-500">jours</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Modalités d'accueil et coordonnées référent handicap</label>
+                    <textarea
+                      {...register('accessibility_info')}
+                      rows={3}
+                      placeholder="Formation accessible aux personnes en situation de handicap. Pour toute demande d'adaptation, contacter notre référent handicap : …"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent"
+                    />
+                  </div>
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>

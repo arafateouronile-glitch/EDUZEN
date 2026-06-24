@@ -309,13 +309,35 @@ export interface DocumentVariables {
   programme_nom?: string
   programme_code?: string
   programme_description?: string
-  programme_objectifs?: string
+  programme_sous_titre?: string
+  programme_categorie?: string
+  programme_version?: string
+  programme_date_version?: string
+  programme_duree_heures?: string
+  programme_duree_jours?: string
   programme_duree_totale?: string
+  programme_objectifs?: string
+  programme_profil_apprenants?: string
+  programme_public_concerne?: string
+  programme_contenu?: string
+  programme_suivi_execution?: string
+  programme_modalites?: string
+  programme_modalites_certification?: string
+  programme_certification?: string
+  programme_type_action?: string
+  programme_qualite?: string
+  programme_eligible_cpf?: string
+  programme_code_cpf?: string
+  programme_prix_entreprise?: string
+  programme_prix_particulier?: string
+  programme_prix_independant?: string
+  programme_domaines_competences?: string
+  programme_prerequis?: string
+  programme_methodes_pedagogiques?: string
+  programme_delai_acces?: string
+  programme_accessibilite?: string
   programme_nombre_formations?: string
   programme_nombre_sessions?: string
-  programme_public_concerne?: string
-  programme_modalites?: string
-  programme_certification?: string
   
   // Formation
   formation_nom?: string

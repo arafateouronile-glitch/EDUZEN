@@ -1672,105 +1672,127 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     name: 'Programme de formation',
     headerContent: premiumHeader,
     bodyContent: `
-      <div style="text-align: center; margin-bottom: 25px;">
-        <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 8px 0; color: #1A1A1A;">
-          PROGRAMME DE FORMATION
+      <div style="text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #1A1A1A;">
+        <h1 style="font-size: 16pt; font-weight: bold; margin: 0 0 8px 0; color: #1A1A1A; text-transform: uppercase; letter-spacing: 1px;">
+          Programme de formation
         </h1>
-        <p style="font-size: 14pt; font-weight: bold; margin: 10px 0 0 0; color: #333;">
+        <p style="font-size: 14pt; font-weight: bold; margin: 10px 0 4px 0; color: #1A1A1A;">
           {programme_nom}
         </p>
-        <p style="font-size: 10pt; color: #666; margin: 5px 0 0 0;">
-          Code : {programme_code} | Durée totale : {programme_duree_totale}
+        <p style="font-size: 11pt; color: #555; margin: 0 0 8px 0; font-style: italic;">
+          {programme_sous_titre}
+        </p>
+        <p style="font-size: 9pt; color: #666; margin: 0;">
+          Code : {programme_code}
+          &nbsp;|&nbsp;
+          Durée : {programme_duree_heures}
+          &nbsp;|&nbsp;
+          Catégorie : {programme_categorie}
+          &nbsp;|&nbsp;
+          Type d'action : {programme_type_action}
+        </p>
+        <p style="font-size: 9pt; color: #888; margin: 4px 0 0 0;">
+          Version {programme_version} — {programme_date_version}
         </p>
       </div>
 
-      <div style="padding: 15px; background-color: #F9FAFB; border-left: 3px solid #1A1A1A; margin-bottom: 20px;">
-        <p style="margin: 0 0 8px 0; font-size: 11pt; font-weight: bold;">📋 Description du programme :</p>
-        <p style="margin: 0; text-align: justify; line-height: 1.6; font-size: 10pt;">
+      <div style="padding: 14px; background-color: #F9FAFB; border-left: 3px solid #334155; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #1E293B;">Description</p>
+        <p style="margin: 0; text-align: justify; line-height: 1.65; font-size: 10pt; color: #374151;">
           {programme_description}
         </p>
       </div>
 
-      <div style="padding: 15px; background-color: #F0F9FF; border-left: 3px solid #0EA5E9; margin-bottom: 20px;">
-        <p style="margin: 0 0 8px 0; font-size: 11pt; font-weight: bold;">🎯 Objectifs du programme :</p>
-        <p style="margin: 0; text-align: justify; line-height: 1.6; font-size: 10pt;">
+      <div style="padding: 14px; background-color: #EFF6FF; border-left: 3px solid #3B82F6; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #1E3A8A;">Objectifs pédagogiques</p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #1E40AF;">
           {programme_objectifs}
+        </div>
+      </div>
+
+      <div style="padding: 14px; background-color: #FEF9C3; border-left: 3px solid #EAB308; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #713F12;">Public et profil des apprenants</p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #854D0E;">
+          {programme_profil_apprenants}
+        </div>
+      </div>
+
+      <div style="padding: 14px; background-color: #FFF1F2; border-left: 3px solid #F43F5E; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #881337;">Prérequis et niveau d'entrée</p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #9F1239;">
+          {programme_prerequis}
+        </div>
+      </div>
+
+      <div style="padding: 14px; background-color: #ECFDF5; border-left: 3px solid #10B981; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #064E3B;">Méthodes pédagogiques</p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #065F46;">
+          {programme_methodes_pedagogiques}
+        </div>
+      </div>
+
+      <div style="padding: 14px; background-color: #F0FDF4; border-left: 3px solid #22C55E; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #14532D;">Contenu de la formation</p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #166534;">
+          {programme_contenu}
+        </div>
+      </div>
+
+      <div style="padding: 14px; background-color: #FAF5FF; border-left: 3px solid #A855F7; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #581C87;">Suivi de l'exécution et évaluation des résultats</p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #6B21A8;">
+          {programme_suivi_execution}
+        </div>
+      </div>
+
+      <div style="padding: 14px; background-color: #FFF7ED; border-left: 3px solid #F97316; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #7C2D12;">Modalités de certification</p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #9A3412;">
+          {programme_modalites_certification}
+        </div>
+      </div>
+
+      <div style="padding: 14px; background-color: #F8FAFC; border-left: 3px solid #64748B; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10.5pt; font-weight: bold; color: #1E293B;">Indicateurs de qualité et résultats</p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #334155;">
+          {programme_qualite}
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 16px; margin-bottom: 18px;">
+        <div style="flex: 1; padding: 14px; background-color: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px;">
+          <p style="margin: 0 0 8px 0; font-size: 10pt; font-weight: bold; color: #374151;">Tarifs</p>
+          <p style="margin: 0 0 4px 0; font-size: 10pt; color: #6B7280;">Entreprise : <strong style="color: #111827;">{programme_prix_entreprise}</strong></p>
+          <p style="margin: 0 0 4px 0; font-size: 10pt; color: #6B7280;">Particulier : <strong style="color: #111827;">{programme_prix_particulier}</strong></p>
+          <p style="margin: 0; font-size: 10pt; color: #6B7280;">Indépendant : <strong style="color: #111827;">{programme_prix_independant}</strong></p>
+        </div>
+        <div style="flex: 1; padding: 14px; background-color: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px;">
+          <p style="margin: 0 0 8px 0; font-size: 10pt; font-weight: bold; color: #374151;">CPF</p>
+          <p style="margin: 0 0 4px 0; font-size: 10pt; color: #6B7280;">Éligible CPF : <strong style="color: #111827;">{programme_eligible_cpf}</strong></p>
+          <p style="margin: 0; font-size: 10pt; color: #6B7280;">Code CPF : <strong style="color: #111827;">{programme_code_cpf}</strong></p>
+        </div>
+      </div>
+
+      <div style="padding: 14px; background-color: #F1F5F9; border-left: 3px solid #94A3B8; margin-bottom: 18px;">
+        <p style="margin: 0 0 6px 0; font-size: 10pt; font-weight: bold; color: #334155;">Domaines de compétences</p>
+        <p style="margin: 0; font-size: 10pt; color: #475569;">{programme_domaines_competences}</p>
+      </div>
+
+      <div style="padding: 14px; background-color: #F5F3FF; border-left: 3px solid #8B5CF6; margin-bottom: 18px;">
+        <p style="margin: 0 0 8px 0; font-size: 10.5pt; font-weight: bold; color: #4C1D95;">Accessibilité et délais d'accès</p>
+        <p style="margin: 0 0 6px 0; font-size: 10pt; color: #5B21B6;">
+          <strong>Délai d'accès moyen :</strong> {programme_delai_acces}
         </p>
+        <div style="margin: 0; line-height: 1.65; font-size: 10pt; color: #6D28D9;">
+          {programme_accessibilite}
+        </div>
       </div>
 
-      <div style="padding: 15px; background-color: #FEF3C7; border-left: 3px solid #F59E0B; margin-bottom: 20px;">
-        <p style="margin: 0 0 8px 0; font-size: 11pt; font-weight: bold;">👥 Public concerné :</p>
-        <p style="margin: 0; line-height: 1.6; font-size: 10pt;">
-          {programme_public_concerne}
-        </p>
-      </div>
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">Prérequis</h2>
-      <ul style="margin: 10px 0 20px 20px; font-size: 10pt; line-height: 1.6;">
-        <li>{prerequis_1}</li>
-        <li>{prerequis_2}</li>
-        <li>{prerequis_3}</li>
-      </ul>
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">CONTENU PÉDAGOGIQUE</h2>
-
-      <div style="margin-bottom: 20px; padding: 15px; background-color: #FAFAFA; border-radius: 4px;">
-        <h3 style="font-size: 11pt; font-weight: bold; margin: 0 0 10px 0;">Module 1 : {module_1_titre}</h3>
-        <p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Durée :</strong> {module_1_duree}</p>
-        <ul style="margin: 0 0 0 20px; font-size: 10pt; line-height: 1.6;">
-          <li>{module_1_contenu_1}</li>
-          <li>{module_1_contenu_2}</li>
-          <li>{module_1_contenu_3}</li>
-        </ul>
-      </div>
-
-      <div style="margin-bottom: 20px; padding: 15px; background-color: #FAFAFA; border-radius: 4px;">
-        <h3 style="font-size: 11pt; font-weight: bold; margin: 0 0 10px 0;">Module 2 : {module_2_titre}</h3>
-        <p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Durée :</strong> {module_2_duree}</p>
-        <ul style="margin: 0 0 0 20px; font-size: 10pt; line-height: 1.6;">
-          <li>{module_2_contenu_1}</li>
-          <li>{module_2_contenu_2}</li>
-          <li>{module_2_contenu_3}</li>
-        </ul>
-      </div>
-
-      <div style="margin-bottom: 20px; padding: 15px; background-color: #FAFAFA; border-radius: 4px;">
-        <h3 style="font-size: 11pt; font-weight: bold; margin: 0 0 10px 0;">Module 3 : {module_3_titre}</h3>
-        <p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Durée :</strong> {module_3_duree}</p>
-        <ul style="margin: 0 0 0 20px; font-size: 10pt; line-height: 1.6;">
-          <li>{module_3_contenu_1}</li>
-          <li>{module_3_contenu_2}</li>
-          <li>{module_3_contenu_3}</li>
-        </ul>
-      </div>
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">MÉTHODES PÉDAGOGIQUES</h2>
-      <ul style="margin: 10px 0 20px 20px; font-size: 10pt; line-height: 1.6;">
-        <li>Cours théoriques et pratiques</li>
-        <li>Travaux dirigés et études de cas</li>
-        <li>Projets et mises en situation</li>
-        <li>Évaluations continues</li>
-      </ul>
-
-      <h2 style="font-size: 12pt; font-weight: bold; margin: 25px 0 12px 0; color: #1A1A1A;">MODALITÉS D'ÉVALUATION</h2>
-      <p style="text-align: justify; line-height: 1.6; font-size: 10pt; margin: 0;">
-        L'évaluation se fait par contrôle continu, travaux pratiques et examen final. 
-        Une attestation de réussite est délivrée aux participants ayant obtenu une moyenne 
-        minimale de 10/20.
-      </p>
-
-      <div style="padding: 15px; background-color: #F0F9FF; border-left: 3px solid #0EA5E9; margin: 25px 0;">
-        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Dates de formation :</strong></p>
-        <p style="margin: 0 0 8px 0; font-size: 10pt;">Du {session_debut} au {session_fin}</p>
-        <p style="margin: 0 0 8px 0; font-size: 10pt;"><strong>Lieu :</strong> {session_lieu}</p>
-        <p style="margin: 0; font-size: 10pt;"><strong>Horaires :</strong> {session_horaires}</p>
-      </div>
-
-      <div style="margin-top: 30px; text-align: right;">
-        <p style="margin: 0; font-size: 10pt;">Fait à {ecole_ville}, le {date_jour}</p>
-        <div style="margin-top: 20px;">
+      <div style="margin-top: 30px; text-align: right; padding-top: 20px; border-top: 1px solid #E5E7EB;">
+        <p style="margin: 0; font-size: 10pt; color: #6B7280;">Fait à {ecole_ville}, le {date_jour}</p>
+        <div style="margin-top: 15px;">
           <p style="margin: 0; font-weight: bold; font-size: 10pt;">{ecole_representant}</p>
-          <p style="margin: 3px 0 0 0; font-size: 10pt;">Directeur</p>
+          <p style="margin: 3px 0 0 0; font-size: 9pt; color: #6B7280;">Responsable pédagogique</p>
         </div>
       </div>
     `,
