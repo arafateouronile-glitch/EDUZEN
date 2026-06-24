@@ -78,6 +78,10 @@ const nextConfig = {
         source: '/assets/:path*',
         destination: '/_next/static/media/:path*',
       },
+      {
+        source: '/comparatif/:slug',
+        destination: '/comparatif/:slug.html',
+      },
     ]
   },
   // Headers de sécurité Elite (complémentaires au middleware)
