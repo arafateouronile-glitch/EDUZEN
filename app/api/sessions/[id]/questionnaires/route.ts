@@ -77,12 +77,12 @@ export async function POST(
     .single()
   if (!session) return NextResponse.json({ error: 'Session introuvable' }, { status: 404 })
 
-  // Vérifier le template appartient à l'org
+  // Vérifier le template appartient à l'org ou est un template global (organization_id null)
   const { data: template } = await supabase
     .from('evaluation_templates')
     .select('id, name, assessment_type')
     .eq('id', template_id)
-    .eq('organization_id', orgId)
+    .or(`organization_id.eq.${orgId},organization_id.is.null`)
     .single()
   if (!template) return NextResponse.json({ error: 'Template introuvable' }, { status: 404 })
 

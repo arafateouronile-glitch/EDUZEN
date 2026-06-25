@@ -18,29 +18,16 @@ export function InstallPrompt() {
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    // Ne pas afficher si déjà installée ou si déjà rejetée
-    if (isInstalled || dismissed) {
-      return
-    }
+    if (isInstalled || dismissed) return
 
-    // Vérifier si l'utilisateur a déjà rejeté
     const dismissedAt = localStorage.getItem('pwa-install-dismissed')
     if (dismissedAt) {
-      const dismissedDate = new Date(dismissedAt)
-      const daysSinceDismissed = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24)
-      
-      // Réafficher après 7 jours
-      if (daysSinceDismissed < 7) {
-        return
-      }
+      const hoursSinceDismissed = (Date.now() - new Date(dismissedAt).getTime()) / (1000 * 60 * 60)
+      if (hoursSinceDismissed < 24) return
     }
 
-    // Afficher le prompt après un délai
     if (isInstallable) {
-      const timer = setTimeout(() => {
-        setShowPrompt(true)
-      }, 3000) // Afficher après 3 secondes
-
+      const timer = setTimeout(() => setShowPrompt(true), 3000)
       return () => clearTimeout(timer)
     }
   }, [isInstallable, isInstalled, dismissed])
@@ -63,7 +50,7 @@ export function InstallPrompt() {
   }
 
   return (
-    <Dialog open={showPrompt} onOpenChange={setShowPrompt}>
+    <Dialog open={showPrompt} onOpenChange={(open) => { if (!open) handleDismiss() }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

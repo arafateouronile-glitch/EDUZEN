@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/types/database.types";
 import { logger, maskId, sanitizeError } from "@/lib/utils/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   withBodyValidation,
   type ValidationSchema,
@@ -208,7 +209,22 @@ export async function POST(request: NextRequest) {
           organizationId: maskId(userData.organization_id),
         });
 
-        // En mode test, on simule un envoi réussi
+        // Insérer dans email_logs même en mode test pour traçabilité sur /dashboard/suivi
+        // Utilise l'admin client pour bypasser la RLS (pas de policy INSERT pour authenticated)
+        try {
+          await createAdminClient().from("email_logs").insert({
+            recipient: recipients[0],
+            subject: String(subject),
+            template_type: template_type ? String(template_type) : null,
+            organization_id: userData.organization_id,
+            resend_id: null,
+            status: "sent",
+            metadata: { recipients, test_mode: true },
+          });
+        } catch (logError) {
+          logger.warn("Email Send - Failed to insert test email_log", logError as Error);
+        }
+
         return NextResponse.json({
           success: true,
           message:
@@ -273,8 +289,9 @@ export async function POST(request: NextRequest) {
         });
 
         // Insérer dans email_logs pour traçabilité (checklist Qualiopi, timeline CRM, etc.)
+        // Utilise l'admin client pour bypasser la RLS (pas de policy INSERT pour authenticated)
         try {
-          await supabase.from("email_logs").insert({
+          await createAdminClient().from("email_logs").insert({
             recipient: recipients[0],
             subject: String(subject),
             template_type: template_type ? String(template_type) : null,
