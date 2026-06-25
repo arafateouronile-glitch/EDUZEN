@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
             metadata: { recipients, test_mode: true },
           });
         } catch (logError) {
-          logger.warn("Email Send - Failed to insert test email_log", logError as Error);
+          logger.warn("Email Send - Failed to insert test email_log", { error: logError instanceof Error ? logError.message : String(logError) });
         }
 
         return NextResponse.json({
