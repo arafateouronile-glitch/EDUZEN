@@ -44,6 +44,8 @@ type ProgramSettings = {
   [key: string]: unknown
 }
 
+type TabItem = { id: string; title: string; content: string }
+
 type Program = TableRow<'programs'> & {
   // Champs optionnels présents en DB mais hors types générés
   success_rate?: number | null
@@ -56,12 +58,31 @@ type Program = TableRow<'programs'> & {
   price_enterprise?: number | null
   price_individual?: number | null
   currency?: string | null
+  // Tabs JSONB (contenu saisi via l'UI onglets)
+  pedagogical_objectives_tabs?: TabItem[] | null
+  learner_profile_tabs?: TabItem[] | null
+  training_content_tabs?: TabItem[] | null
+  execution_follow_up_tabs?: TabItem[] | null
+  // Champs Qualiopi
+  prerequisites?: string | null
+  pedagogical_methods?: string | null
+  access_delay_days?: number | null
+  accessibility_info?: string | null
   formations?: Array<TableRow<'formations'> & {
     sessions?: TableRow<'sessions'>[]
   }>
   organizations?: TableRow<'organizations'> & {
     settings?: ProgramSettings | null
   }
+}
+
+// Convertit les tabs JSONB en texte plat (fallback si champ texte vide)
+function tabsToText(tabs: TabItem[] | null | undefined): string {
+  if (!Array.isArray(tabs) || tabs.length === 0) return ''
+  return tabs
+    .filter(t => t.content?.trim())
+    .map(t => tabs.length > 1 ? `${t.title}\n${t.content}` : t.content)
+    .join('\n\n')
 }
 
 interface PublicProgramDetailProps {
@@ -89,6 +110,12 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
   }
 
   const organization = program.organizations
+
+  // Champs avec fallback sur les tabs JSONB si le champ texte est vide
+  const objectives = program.pedagogical_objectives || tabsToText(program.pedagogical_objectives_tabs)
+  const learnerProfile = program.learner_profile || tabsToText(program.learner_profile_tabs)
+  const trainingContent = program.training_content || tabsToText(program.training_content_tabs)
+  const executionFollowUp = program.execution_follow_up || tabsToText(program.execution_follow_up_tabs)
 
   // Calculer les statistiques
   const totalSessions = program.formations?.reduce((acc, f) => acc + (f.sessions?.length || 0), 0) || 0
@@ -368,8 +395,8 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
               </CardContent>
             </Card>
 
-            {/* Objectifs pédagogiques */}
-            {program.pedagogical_objectives && (
+            {/* Objectifs pédagogiques — Qualiopi ind. 1 */}
+            {objectives && (
               <Card className="shadow-lg border-0 overflow-hidden">
                 <div className="h-1" style={{ backgroundColor: primaryColor }} />
                 <CardHeader>
@@ -380,7 +407,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {program.pedagogical_objectives.split('\n').filter(Boolean).map((objective, index) => (
+                    {objectives.split('\n').filter(Boolean).map((objective, index) => (
                       <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                         <div
                           className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -396,39 +423,85 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
               </Card>
             )}
 
-            {/* Contenu de la formation */}
-            {program.training_content && (
+            {/* Public visé — Qualiopi ind. 1 */}
+            {learnerProfile && (
+              <Card className="shadow-lg border-0 overflow-hidden">
+                <div className="h-1" style={{ backgroundColor: primaryColor }} />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="w-5 h-5" style={{ color: primaryColor }} />
+                    Public concerné
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">{learnerProfile}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Prérequis — Qualiopi ind. 3 */}
+            {program.prerequisites && (
+              <Card className="shadow-lg border-0 overflow-hidden">
+                <div className="h-1" style={{ backgroundColor: primaryColor }} />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardCheck className="w-5 h-5" style={{ color: primaryColor }} />
+                    Prérequis et niveau d'entrée
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {program.prerequisites.split('\n').filter(Boolean).map((req, index) => (
+                      <div key={index} className="flex items-start gap-2 text-gray-700">
+                        <span className="text-gray-400 mt-1">•</span>
+                        <span>{req.replace(/^[-•]\s*/, '')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Méthodes pédagogiques — Qualiopi ind. 5 */}
+            {program.pedagogical_methods && (
+              <Card className="shadow-lg border-0 overflow-hidden">
+                <div className="h-1" style={{ backgroundColor: primaryColor }} />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5" style={{ color: primaryColor }} />
+                    Méthodes pédagogiques et modalités d'évaluation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">{program.pedagogical_methods}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Contenu de la formation — Qualiopi ind. 1 */}
+            {trainingContent && (
               <Card className="shadow-lg border-0 overflow-hidden">
                 <div className="h-1" style={{ backgroundColor: primaryColor }} />
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Layers className="w-5 h-5" style={{ color: primaryColor }} />
-                    Programme détaillé
+                    Contenu pédagogique
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {program.training_content.split('\n').filter(Boolean).map((content, index) => {
-                      const isModule = content.match(/^(module|chapitre|partie|jour)/i)
+                  <div className="space-y-3">
+                    {trainingContent.split('\n').filter(Boolean).map((line, index) => {
+                      const isModule = line.match(/^(module|chapitre|partie|jour|bloc)/i)
                       return (
                         <div
                           key={index}
                           className={cn(
-                            "p-4 rounded-lg",
-                            isModule ? "bg-gray-900 text-white" : "bg-gray-50 ml-4 border-l-2"
+                            "p-3 rounded-lg",
+                            isModule ? "font-semibold bg-gray-100 text-gray-900" : "bg-gray-50 ml-4 border-l-2 text-gray-700"
                           )}
                           style={!isModule ? { borderColor: primaryColor } : {}}
                         >
-                          {isModule ? (
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                                <span className="font-bold text-sm">{index + 1}</span>
-                              </div>
-                              <span className="font-semibold">{content}</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-700">{content.replace(/^[-•]\s*/, '')}</span>
-                          )}
+                          {line.replace(/^[-•]\s*/, '')}
                         </div>
                       )
                     })}
@@ -437,38 +510,21 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
               </Card>
             )}
 
-            {/* Public visé et prérequis */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {program.learner_profile && (
-                <Card className="shadow-lg border-0 overflow-hidden">
-                  <div className="h-1" style={{ backgroundColor: primaryColor }} />
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <UserCheck className="w-5 h-5" style={{ color: primaryColor }} />
-                      Public visé
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 text-sm whitespace-pre-line">{program.learner_profile}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {program.execution_follow_up && (
-                <Card className="shadow-lg border-0 overflow-hidden">
-                  <div className="h-1" style={{ backgroundColor: primaryColor }} />
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <ClipboardCheck className="w-5 h-5" style={{ color: primaryColor }} />
-                      Prérequis
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 text-sm whitespace-pre-line">{program.execution_follow_up}</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            {/* Suivi de l'exécution */}
+            {executionFollowUp && (
+              <Card className="shadow-lg border-0 overflow-hidden">
+                <div className="h-1" style={{ backgroundColor: primaryColor }} />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" style={{ color: primaryColor }} />
+                    Suivi de l'exécution et évaluation des résultats
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">{executionFollowUp}</p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Modalités d'évaluation et certification */}
             {program.certification_modalities && (
@@ -611,26 +667,28 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
               </Card>
             )}
 
-            {/* Accessibilité */}
-            <Card className="shadow-lg border-0 overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50">
+            {/* Accessibilité et délais d'accès — Qualiopi ind. 7 */}
+            <Card className="shadow-lg border-0 overflow-hidden">
+              <div className="h-1" style={{ backgroundColor: primaryColor }} />
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Accessibility className="w-5 h-5 text-blue-600" />
-                  Accessibilité
+                  <Accessibility className="w-5 h-5" style={{ color: primaryColor }} />
+                  Accessibilité et délais d'accès
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="bg-white/80 backdrop-blur rounded-xl p-5 border border-blue-100">
-                  <p className="text-gray-700">
-                    Cette formation est accessible aux personnes en situation de handicap.
-                    Notre référent handicap est à votre disposition pour étudier les adaptations
-                    nécessaires à votre parcours de formation.
-                  </p>
-                  <div className="mt-4 flex items-center gap-2 text-blue-600">
-                    <Phone className="w-4 h-4" />
-                    <span className="text-sm font-medium">Contactez notre référent handicap</span>
+              <CardContent className="space-y-4">
+                {program.access_delay_days != null && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Clock className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Délai d'accès moyen :</span>
+                      <span className="text-sm text-gray-600 ml-1">{program.access_delay_days} jours ouvrés</span>
+                    </div>
                   </div>
-                </div>
+                )}
+                <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                  {program.accessibility_info || 'Cette formation est accessible aux personnes en situation de handicap. Notre référent handicap est à votre disposition pour étudier les adaptations nécessaires à votre parcours de formation.'}
+                </p>
               </CardContent>
             </Card>
           </div>
