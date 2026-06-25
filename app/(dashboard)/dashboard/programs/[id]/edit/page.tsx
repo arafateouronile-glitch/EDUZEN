@@ -213,15 +213,15 @@ export default function EditProgramPage() {
         training_action_type: formData.training_action_type || null,
         rs_title_name: formData.rs_title_name || null,
         rs_code: formData.rs_code || null,
-        // Objectifs et contenu
+        // Objectifs et contenu — les champs texte sont sérialisés depuis les tabs
         pedagogical_objectives_tabs: objectiveTabs as any,
-        pedagogical_objectives: formData.pedagogical_objectives || null,
+        pedagogical_objectives: objectiveTabs.map((t) => t.content).filter(Boolean).join('\n\n') || formData.pedagogical_objectives || null,
         learner_profile_tabs: learnerProfileTabs as any,
         training_content_tabs: trainingContentTabs as any,
         execution_follow_up_tabs: executionFollowUpTabs as any,
-        learner_profile: formData.learner_profile || null,
-        training_content: formData.training_content || null,
-        execution_follow_up: formData.execution_follow_up || null,
+        learner_profile: learnerProfileTabs.map((t) => t.content).filter(Boolean).join('\n\n') || formData.learner_profile || null,
+        training_content: trainingContentTabs.map((t) => t.content).filter(Boolean).join('\n\n') || formData.training_content || null,
+        execution_follow_up: executionFollowUpTabs.map((t) => t.content).filter(Boolean).join('\n\n') || formData.execution_follow_up || null,
         certification_modalities: formData.certification_modalities || null,
         // Statistiques
         success_rate: formData.success_rate ? parseInt(formData.success_rate) : null,

@@ -143,6 +143,17 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
   const stud = student as StudentExtended | undefined
   const inv = invoice as InvoiceExtended | undefined
 
+  // Convertit un tableau de tabs {id, title, content} en HTML (plain text → <br>)
+  const tabsToHtml = (tabs: unknown): string => {
+    if (!Array.isArray(tabs) || tabs.length === 0) return ''
+    return tabs.map((t: { title?: string; content?: string }) => {
+      const body = (t.content || '').replace(/\n/g, '<br>')
+      return tabs.length > 1
+        ? `<p><strong>${escapeHtml(t.title || '')}</strong></p><p>${body}</p>`
+        : `<p>${body}</p>`
+    }).join('')
+  }
+
   const formation = (session as SessionWithRelations)?.formations
   const formationName = formation?.name || prog?.name || session?.name || ''
   const fallbackDesignation = formationName || 'Formation'
@@ -341,11 +352,11 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
       : program?.formations
         ? `${program.formations.reduce((total, f) => total + (f.duration_hours || 0), 0)} heures`
         : '',
-    programme_objectifs: prog?.pedagogical_objectives || prog?.objectives || '',
-    programme_profil_apprenants: prog?.learner_profile || prog?.target_audience || '',
-    programme_public_concerne: prog?.learner_profile || prog?.target_audience || '',
-    programme_contenu: prog?.training_content || prog?.content || '',
-    programme_suivi_execution: prog?.execution_follow_up || '',
+    programme_objectifs: prog?.pedagogical_objectives || tabsToHtml((prog as any)?.pedagogical_objectives_tabs) || prog?.objectives || '',
+    programme_profil_apprenants: prog?.learner_profile || tabsToHtml((prog as any)?.learner_profile_tabs) || prog?.target_audience || '',
+    programme_public_concerne: prog?.learner_profile || tabsToHtml((prog as any)?.learner_profile_tabs) || prog?.target_audience || '',
+    programme_contenu: prog?.training_content || tabsToHtml((prog as any)?.training_content_tabs) || prog?.content || '',
+    programme_suivi_execution: prog?.execution_follow_up || tabsToHtml((prog as any)?.execution_follow_up_tabs) || '',
     programme_modalites: prog?.modalities || '',
     programme_modalites_certification: prog?.certification_modalities || prog?.certification || '',
     programme_certification: prog?.certification_modalities || prog?.certification || '',

@@ -21,8 +21,9 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
-import { generatePDFFromHTML } from '@/lib/utils/pdf-generator'
-import { generateProgramDOCX, generateProgramHTML, type ProgramExportInput } from '@/lib/utils/program-export'
+import { generateProgramDOCX, type ProgramExportInput } from '@/lib/utils/program-export'
+import { DocumentTemplateService } from '@/lib/services/document-template.service'
+import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
 import { GlassCard } from '@/components/ui/glass-card'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +46,16 @@ export default function ProgramDetailPage() {
     queryKey: ['program', programId],
     queryFn: () => programService.getProgramById(programId),
     enabled: !!programId,
+  })
+
+  // Organisation pour les variables du template
+  const { data: organization } = useQuery({
+    queryKey: ['organization', user?.organization_id],
+    queryFn: async () => {
+      const { data } = await supabase.from('organizations').select('*').eq('id', user!.organization_id!).single()
+      return data
+    },
+    enabled: !!user?.organization_id,
   })
 
   // React Hook Form avec validation Zod
@@ -167,25 +178,45 @@ export default function ProgramDetailPage() {
   })
 
   const handleExportPDF = async () => {
-    if (!program) return
+    if (!program || !user?.organization_id) return
     setIsExporting(true)
     try {
-      const html = generateProgramHTML(program as unknown as ProgramExportInput)
-      const container = document.createElement('div')
-      container.id = 'temp-pdf-container'
-      container.innerHTML = html
-      container.style.position = 'absolute'
-      container.style.left = '-9999px'
-      container.style.top = '0'
-      document.body.appendChild(container)
+      const templateService = new DocumentTemplateService(supabase)
+      const template = await templateService.getDefaultTemplate(user.organization_id, 'programme')
+      if (!template) throw new Error('Aucun modèle de programme configuré dans les paramètres')
 
-      await generatePDFFromHTML('program-pdf-content', `Programme_${program.code}.pdf`)
-      
-      document.body.removeChild(container)
+      const variables = extractDocumentVariables({
+        program: { ...program, formations: [] } as any,
+        organization: organization as any,
+        language: 'fr',
+        issueDate: new Date().toISOString(),
+      })
+
+      const response = await fetch('/api/documents/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template, variables, organizationId: user.organization_id }),
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+        throw new Error(err.details || err.error || 'Erreur lors de la génération du PDF')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `programme_${program.name.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
       addToast({ type: 'success', title: 'Export PDF réussi', description: 'Le fichier a été téléchargé.' })
     } catch (error) {
       logger.error('Erreur lors de l\'export PDF', sanitizeError(error))
-      addToast({ type: 'error', title: 'Erreur export', description: 'Impossible de générer le PDF.' })
+      addToast({ type: 'error', title: 'Erreur export', description: error instanceof Error ? error.message : 'Impossible de générer le PDF.' })
     } finally {
       setIsExporting(false)
     }

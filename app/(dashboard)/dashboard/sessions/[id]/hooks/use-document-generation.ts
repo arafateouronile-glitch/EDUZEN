@@ -792,6 +792,15 @@ export function useDocumentGeneration({
         issueDate: new Date().toISOString(),
       })
 
+      // DEBUG: vérifier les variables extraites pour le programme
+      console.warn('[PROGRAMME DEBUG] variables clés:', {
+        programme_objectifs: (variables as any).programme_objectifs?.substring?.(0, 100) ?? '❌ vide',
+        programme_profil_apprenants: (variables as any).programme_profil_apprenants?.substring?.(0, 100) ?? '❌ vide',
+        programme_contenu: (variables as any).programme_contenu?.substring?.(0, 100) ?? '❌ vide',
+        programme_prerequis: (variables as any).programme_prerequis?.substring?.(0, 100) ?? '❌ vide',
+        program_id: program?.id,
+      })
+
       // Utiliser l'API pour générer le PDF (même système que la page de génération)
       const response = await fetch('/api/documents/generate-pdf', {
         method: 'POST',

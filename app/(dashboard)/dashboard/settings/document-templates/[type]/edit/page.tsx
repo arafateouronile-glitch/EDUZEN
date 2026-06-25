@@ -372,6 +372,7 @@ export default function DocumentTemplateEditPage() {
         name: defaultContent.name,
         content: {
           ...template.content,
+          html: defaultContent.bodyContent,
           elements: [
             {
               id: 'main-content',
