@@ -221,17 +221,19 @@ export async function POST(request: NextRequest) {
         const storageUrl = await uploadGeneratedDocument(pdfBuffer, fileName, orgId, 'PDF').catch(() => null)
         const fileUrl = storageUrl ?? `data:application/pdf;base64,${pdfBuffer.toString('base64')}`
 
-        await admin.from('generated_documents').insert({
-          organization_id:     orgId,
-          template_id:         template.id,
-          type:                template.type,
-          file_name:           fileName,
-          file_url:            fileUrl,
-          format:              'PDF',
-          page_count:          null,
-          generated_by:        user.id,
-          metadata:            { template_name: template.name, engine } as Record<string, unknown>,
-        })
+        // Types générés obsolètes pour generated_documents (organisation_id absent du snapshot)
+        await (admin as unknown as { from: (t: string) => { insert: (v: unknown) => Promise<unknown> } })
+          .from('generated_documents').insert({
+            organization_id:     orgId,
+            template_id:         template.id,
+            type:                template.type,
+            file_name:           fileName,
+            file_url:            fileUrl,
+            format:              'PDF',
+            page_count:          null,
+            generated_by:        user.id,
+            metadata:            { template_name: template.name, engine },
+          })
       }
     } catch (saveError) {
       logger.warn('[PDF API] Erreur sauvegarde generated_documents (non-bloquant)', {
