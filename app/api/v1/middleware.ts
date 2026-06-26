@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { canUseAPI } from '@/lib/services/plan-limits'
 
+// Scopes disponibles sans plan Enterprise (connexion site web en lecture seule)
+const PUBLIC_WEB_SCOPES = new Set(['read:programs', 'read:sessions', 'read:formations'])
+
 // Interface pour les clés API
 interface APIKeyData {
   id: string
@@ -27,6 +30,19 @@ export type APIMiddlewareResult = {
  * Middleware pour l'authentification et le rate limiting de l'API
  */
 export async function apiMiddleware(request: NextRequest): Promise<NextResponse | APIMiddlewareResult> {
+  // Répondre aux preflight CORS sans exiger de clé API
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin':  '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Eduzen-API-Key, X-API-Key, Authorization',
+        'Access-Control-Max-Age':       '86400',
+      },
+    })
+  }
+
   // Récupérer la clé API depuis les headers (supporte x-eduzen-api-key, x-api-key et Bearer)
   const apiKey =
     request.headers.get('x-eduzen-api-key') ||
@@ -55,20 +71,23 @@ export async function apiMiddleware(request: NextRequest): Promise<NextResponse 
 
   const key = keyData as unknown as APIKeyData
 
-  // Créer le client serveur pour les autres opérations
-  const supabase = await createClient()
+  // Les clés limitées aux scopes "site web" sont accessibles sans plan Enterprise
+  const keyScopes: string[] = key.scopes ?? []
+  const isPublicWebKey = keyScopes.length > 0 && keyScopes.every(s => PUBLIC_WEB_SCOPES.has(s))
 
-  // Vérifier que l'organisation a le plan Enterprise
-  const hasApiAccess = await canUseAPI(supabase, key.organization_id)
-  if (!hasApiAccess) {
-    return NextResponse.json(
-      {
-        error: 'Plan upgrade required',
-        message: 'API access requires the Enterprise plan. Please upgrade your subscription to use the EDUZEN API.',
-        upgrade_url: '/dashboard/settings?tab=billing',
-      },
-      { status: 403 }
-    )
+  if (!isPublicWebKey) {
+    const supabase = await createClient()
+    const hasApiAccess = await canUseAPI(supabase, key.organization_id)
+    if (!hasApiAccess) {
+      return NextResponse.json(
+        {
+          error: 'Plan upgrade required',
+          message: 'API access requires the Enterprise plan. Please upgrade your subscription to use the EDUZEN API.',
+          upgrade_url: '/dashboard/settings?tab=billing',
+        },
+        { status: 403 }
+      )
+    }
   }
 
   // Vérifier l'expiration

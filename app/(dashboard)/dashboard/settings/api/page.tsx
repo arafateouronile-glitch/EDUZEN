@@ -30,6 +30,8 @@ import {
   CheckCircle,
   Clock,
   Webhook,
+  Download,
+  Globe,
 } from 'lucide-react'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
@@ -113,21 +115,30 @@ export default function APISettingsPage() {
     })
   }
 
-  const scopes = [
-    { value: 'read:students', label: 'Lire les étudiants' },
-    { value: 'write:students', label: 'Créer/modifier les étudiants' },
-    { value: 'read:documents', label: 'Lire les documents' },
-    { value: 'write:documents', label: 'Créer/modifier les documents' },
-    { value: 'read:payments', label: 'Lire les paiements' },
-    { value: 'write:payments', label: 'Créer/modifier les paiements' },
-    { value: '*', label: 'Tous les accès' },
+  const webScopes = [
+    { value: 'read:programs',   label: 'Lire les programmes + stats' },
+    { value: 'read:formations', label: 'Lire les formations' },
+    { value: 'read:sessions',   label: 'Lire les sessions de formation' },
   ]
 
+  const enterpriseScopes = [
+    { value: 'read:enrollments',  label: 'Lire les inscriptions' },
+    { value: 'write:enrollments', label: 'Créer des inscriptions' },
+    { value: 'read:students',     label: 'Lire les apprenants' },
+    { value: 'write:students',    label: 'Créer/modifier les apprenants' },
+    { value: 'read:invoices',     label: 'Lire les factures et devis' },
+    { value: 'write:invoices',    label: 'Créer des factures et devis' },
+    { value: 'read:documents',    label: 'Lire les templates de documents' },
+    { value: 'write:documents',   label: 'Générer des documents' },
+    { value: 'send:email',        label: 'Envoyer des emails' },
+    { value: 'read:signatures',   label: 'Lire les demandes de signature' },
+    { value: 'write:signatures',  label: 'Créer des demandes de signature' },
+    { value: '*',                 label: 'Tous les accès' },
+  ]
+
+  const scopes = [...webScopes, ...enterpriseScopes]
+
   return (
-    <TrialGate
-      featureName="Accès API & Webhooks"
-      featureDescription="L'accès à l'API EduZen permet d'intégrer vos outils métier et d'automatiser vos workflows. Disponible avec les formules Premium et Enterprise."
-    >
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
@@ -145,7 +156,13 @@ export default function APISettingsPage() {
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="quota">Quotas</TabsTrigger>
           <TabsTrigger value="docs">Documentation</TabsTrigger>
+          <TabsTrigger value="wordpress">Plugin WordPress</TabsTrigger>
         </TabsList>
+
+        <TrialGate
+          featureName="Accès API & Webhooks"
+          featureDescription="L'accès à l'API EduZen permet d'intégrer vos outils métier et d'automatiser vos workflows. Disponible avec les formules Premium et Enterprise."
+        >
 
         {/* Onglet Clés API */}
         <TabsContent value="keys">
@@ -193,23 +210,55 @@ export default function APISettingsPage() {
                     </div>
                     <div>
                       <Label>Permissions (Scopes)</Label>
-                      <div className="space-y-2 mt-2">
-                        {scopes.map((scope) => (
-                          <label key={scope.value} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={newKeyScopes.includes(scope.value)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setNewKeyScopes([...newKeyScopes, scope.value])
-                                } else {
-                                  setNewKeyScopes(newKeyScopes.filter((s) => s !== scope.value))
-                                }
-                              }}
-                            />
-                            <span className="text-sm">{scope.label}</span>
-                          </label>
-                        ))}
+
+                      {/* Scopes site web — disponibles sur tous les plans */}
+                      <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                        <p className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">
+                          🌐 Connexion site web — tous les plans
+                        </p>
+                        <div className="space-y-2">
+                          {webScopes.map((scope) => (
+                            <label key={scope.value} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={newKeyScopes.includes(scope.value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewKeyScopes([...newKeyScopes, scope.value])
+                                  } else {
+                                    setNewKeyScopes(newKeyScopes.filter((s) => s !== scope.value))
+                                  }
+                                }}
+                              />
+                              <span className="text-sm">{scope.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Scopes avancés — plan Enterprise */}
+                      <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+                          ⚡ Fonctions avancées — plan Enterprise
+                        </p>
+                        <div className="space-y-2">
+                          {enterpriseScopes.map((scope) => (
+                            <label key={scope.value} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={newKeyScopes.includes(scope.value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewKeyScopes([...newKeyScopes, scope.value])
+                                  } else {
+                                    setNewKeyScopes(newKeyScopes.filter((s) => s !== scope.value))
+                                  }
+                                }}
+                              />
+                              <span className="text-sm">{scope.label}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     <Button
@@ -604,9 +653,88 @@ export default function APISettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        </TrialGate>
+
+        {/* Onglet Plugin WordPress — visible sur tous les plans */}
+        <TabsContent value="wordpress">
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold">Plugin WordPress</h2>
+              <p className="text-muted-foreground">
+                Connectez votre site WordPress à EDUZEN en quelques minutes
+              </p>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <Globe className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle>EDUZEN Connexion Site</CardTitle>
+                    <CardDescription>Plugin officiel WordPress — Version 1.0.0</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Installez ce plugin sur votre site WordPress pour afficher automatiquement
+                  vos programmes, sessions et formations EDUZEN grâce à des shortcodes simples.
+                  Les données se mettent à jour en temps réel depuis votre espace EDUZEN.
+                </p>
+
+                <a href="/downloads/eduzen-wordpress-plugin.zip" download>
+                  <Button className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Télécharger le plugin (.zip)
+                  </Button>
+                </a>
+
+                <div className="border rounded-lg divide-y">
+                  <div className="p-4">
+                    <h3 className="font-semibold text-sm mb-3">Installation en 3 étapes</h3>
+                    <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                      <li>Téléchargez le fichier .zip ci-dessus</li>
+                      <li>Dans WordPress : <strong>Extensions → Ajouter → Téléverser une extension</strong></li>
+                      <li>Allez dans <strong>Réglages → EDUZEN</strong> et collez votre clé API "site web"</li>
+                    </ol>
+                  </div>
+
+                  <div className="p-4">
+                    <h3 className="font-semibold text-sm mb-3">Shortcodes disponibles</h3>
+                    <div className="space-y-3">
+                      {[
+                        { code: '[eduzen_programs]', desc: 'Liste des programmes avec taux de réussite et satisfaction' },
+                        { code: '[eduzen_sessions]', desc: 'Sessions avec dates, places disponibles et statut' },
+                        { code: '[eduzen_formations]', desc: 'Catalogue des formations avec durée et tarif' },
+                      ].map(({ code, desc }) => (
+                        <div key={code} className="flex items-start gap-3">
+                          <code className="text-xs px-2 py-1 bg-gray-100 rounded font-mono whitespace-nowrap">{code}</code>
+                          <span className="text-xs text-muted-foreground pt-1">{desc}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Exemples : <code className="bg-gray-100 px-1 rounded">[eduzen_programs limit="6" columns="2"]</code> · <code className="bg-gray-100 px-1 rounded">[eduzen_sessions status="ongoing"]</code>
+                    </p>
+                  </div>
+
+                  <div className="p-4">
+                    <h3 className="font-semibold text-sm mb-2">Clé API à utiliser</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Créez une clé API dans l'onglet <strong>Clés API</strong> en cochant uniquement les permissions
+                      de la section <span className="text-blue-700">🌐 Connexion site web</span> (disponibles sur tous les plans).
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
       </Tabs>
     </div>
-    </TrialGate>
   )
 }
 

@@ -3,328 +3,446 @@ import { APP_URLS } from '@/lib/config/app-config'
 
 /**
  * GET /api/v1/docs
- * Documentation OpenAPI/Swagger de l'API
+ * Documentation OpenAPI 3.0 de l'API publique EDUZEN
  */
 export async function GET() {
-  const openAPISpec = {
+  const base = APP_URLS.getBaseUrl()
+
+  const spec = {
     openapi: '3.0.0',
     info: {
       title: 'EDUZEN API',
       version: '1.0.0',
-      description: `API publique pour accéder aux données EDUZEN.
+      description: `API REST pour accéder et piloter vos données EDUZEN depuis vos propres applications.
 
 ## Authentification
 
-Incluez votre clé API dans le header \`x-eduzen-api-key\` de chaque requête.
-Les headers \`X-API-Key\` et \`Authorization: Bearer <key>\` sont également acceptés.
+Fournissez votre clé API dans le header \`x-eduzen-api-key\` de chaque requête.
+Les alternatives \`X-API-Key\` et \`Authorization: Bearer <clé>\` sont également acceptées.
 
+\`\`\`bash
+curl -H "x-eduzen-api-key: ezn_live_xxxx" ${base}/api/v1/programs
 \`\`\`
-curl -H "x-eduzen-api-key: eduz_votre_cle" ${APP_URLS.getBaseUrl()}/api/v1/students
-\`\`\`
+
+Générez vos clés depuis **Dashboard → Paramètres → API & Intégrations**.
 
 ## Plan requis
 
-L'accès à l'API est réservé au **plan Enterprise**. Les requêtes depuis une organisation sans ce plan recevront une erreur 403.
+L'accès à l'API est réservé au **plan Enterprise**. Une organisation sans ce plan recevra une erreur \`403 Plan upgrade required\`.
+
+## Scopes
+
+Chaque clé API est créée avec un ensemble de permissions (scopes). Exemple pour un site web public :
+
+| Scope | Accès |
+|---|---|
+| \`read:sessions\` | Lire les sessions de formation |
+| \`read:formations\` | Lire les formations |
+| \`read:programs\` | Lire les programmes + stats |
+| \`read:enrollments\` | Lire les inscriptions |
+| \`write:enrollments\` | Créer des inscriptions |
+| \`read:students\` | Lire les apprenants |
+| \`write:students\` | Créer/modifier les apprenants |
+| \`read:invoices\` | Lire les factures et devis |
+| \`write:invoices\` | Créer des factures et devis |
+| \`read:documents\` | Lire les templates de documents |
+| \`write:documents\` | Générer des documents |
+| \`send:email\` | Envoyer des emails |
+| \`read:signatures\` | Lire les demandes de signature |
+| \`write:signatures\` | Créer des demandes de signature |
+| \`*\` | Tous les accès |
 
 ## Rate Limiting
 
-| Fenêtre | Limite par défaut |
-|---------|-------------------|
-| Par minute | 60 requêtes |
+| Fenêtre | Limite |
+|---|---|
 | Par heure | 1 000 requêtes |
-| Par jour | 10 000 requêtes |
-| Par mois | 100 000 requêtes |
 
-Les headers \`X-RateLimit-Remaining\` et \`X-RateLimit-Reset\` sont inclus dans chaque réponse.
+Chaque réponse inclut les headers \`X-RateLimit-Remaining\` et \`X-RateLimit-Reset\`.
+
+## Format des réponses
+
+Toutes les réponses utilisent le format JSON avec enveloppe \`data\` :
+
+\`\`\`json
+{
+  "data": [...],
+  "meta": { "page": 1, "limit": 50, "total": 120 }
+}
+\`\`\`
+
+Les erreurs retournent :
+\`\`\`json
+{ "error": "Invalid API key", "message": "Description détaillée" }
+\`\`\`
 
 ## Webhooks
 
-Configurez des webhooks depuis le dashboard (Intégrations & API) pour recevoir des notifications en temps réel.
-Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`.
-
-Événements disponibles : \`learner.created\`, \`document.signed\`, \`diploma.expired\`, \`payment.received\`, \`session.completed\`, etc.
-`,
+Configurez des webhooks depuis le dashboard pour recevoir des notifications en temps réel lors d'événements (session terminée, paiement reçu, document signé…).
+Chaque payload est signé HMAC-SHA256 via le header \`X-Webhook-Signature\`.`,
       contact: {
         name: 'Support EDUZEN',
         email: 'support@eduzen.io',
       },
     },
     servers: [
-      {
-        url: APP_URLS.getBaseUrl(),
-        description: 'Production server',
-      },
+      { url: base, description: 'Production' },
     ],
-    security: [
-      {
-        EduzenApiKey: [],
-      },
-    ],
+    security: [{ ApiKey: [] }],
     components: {
       securitySchemes: {
-        EduzenApiKey: {
+        ApiKey: {
           type: 'apiKey',
           in: 'header',
           name: 'x-eduzen-api-key',
-          description: 'Clé API EDUZEN (préfixe eduz_). Générez-la depuis Dashboard > Intégrations & API.',
-        },
-        ApiKeyAuth: {
-          type: 'apiKey',
-          in: 'header',
-          name: 'X-API-Key',
-          description: 'Header alternatif accepté pour la clé API.',
-        },
-        BearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-          description: 'Token Bearer pour authentification CRON (utilise CRON_SECRET)',
+          description: 'Clé API générée depuis Dashboard → Paramètres → API & Intégrations.',
         },
       },
       schemas: {
-        Student: {
+        // ─── Pagination ───────────────────────────────────────────────────
+        Meta: {
           type: 'object',
           properties: {
-            id: { type: 'string', format: 'uuid' },
-            full_name: { type: 'string' },
-            email: { type: 'string', format: 'email' },
-            phone: { type: 'string' },
-            date_of_birth: { type: 'string', format: 'date' },
-            student_number: { type: 'string' },
-            status: { type: 'string', enum: ['active', 'inactive', 'graduated'] },
+            page:  { type: 'integer', example: 1 },
+            limit: { type: 'integer', example: 50 },
+            total: { type: 'integer', example: 120 },
           },
         },
-        DocumentTemplate: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            name: { type: 'string' },
-            type: { type: 'string', enum: ['attestation', 'facture', 'devis', 'contrat'] },
-            body: { type: 'object' },
-            variables: { type: 'object' },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' },
-          },
-        },
-        Session: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            name: { type: 'string' },
-            status: { type: 'string', enum: ['active', 'completed', 'cancelled', 'draft'] },
-            start_date: { type: 'string', format: 'date' },
-            end_date: { type: 'string', format: 'date' },
-            start_time: { type: 'string' },
-            end_time: { type: 'string' },
-            location: { type: 'string' },
-            capacity_max: { type: 'integer' },
-            formation_id: { type: 'string', format: 'uuid' },
-            teacher_id: { type: 'string', format: 'uuid' },
-            organization_id: { type: 'string', format: 'uuid' },
-            created_at: { type: 'string', format: 'date-time' },
-            updated_at: { type: 'string', format: 'date-time' },
-          },
-        },
-        SignatureRequest: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', format: 'uuid' },
-            document_id: { type: 'string', format: 'uuid' },
-            status: { type: 'string', enum: ['pending', 'signed', 'expired', 'declined', 'cancelled'] },
-            recipient_email: { type: 'string', format: 'email' },
-            recipient_name: { type: 'string' },
-            recipient_type: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] },
-            message: { type: 'string' },
-            expires_at: { type: 'string', format: 'date-time' },
-            signed_at: { type: 'string', format: 'date-time' },
-            created_at: { type: 'string', format: 'date-time' },
-          },
-        },
+        // ─── Erreur ───────────────────────────────────────────────────────
         Error: {
           type: 'object',
           properties: {
-            error: { type: 'string' },
-            message: { type: 'string' },
+            error:   { type: 'string', example: 'Invalid API key' },
+            message: { type: 'string', example: 'The provided API key is invalid or has been revoked' },
+          },
+        },
+        // ─── Student ──────────────────────────────────────────────────────
+        Student: {
+          type: 'object',
+          properties: {
+            id:              { type: 'string', format: 'uuid' },
+            student_number:  { type: 'string', example: 'ETU-2025-0042' },
+            first_name:      { type: 'string', example: 'Marie' },
+            last_name:       { type: 'string', example: 'Dupont' },
+            email:           { type: 'string', format: 'email', nullable: true },
+            phone:           { type: 'string', nullable: true },
+            date_of_birth:   { type: 'string', format: 'date', nullable: true },
+            gender:          { type: 'string', nullable: true },
+            address:         { type: 'string', nullable: true },
+            city:            { type: 'string', nullable: true },
+            postal_code:     { type: 'string', nullable: true },
+            country:         { type: 'string', nullable: true },
+            status:          { type: 'string', enum: ['active', 'inactive', 'graduated'], example: 'active' },
+            enrollment_date: { type: 'string', format: 'date', nullable: true },
+            photo_url:       { type: 'string', format: 'uri', nullable: true },
+            organization_id: { type: 'string', format: 'uuid' },
+            created_at:      { type: 'string', format: 'date-time' },
+            updated_at:      { type: 'string', format: 'date-time' },
+          },
+        },
+        // ─── Session ──────────────────────────────────────────────────────
+        Session: {
+          type: 'object',
+          properties: {
+            id:              { type: 'string', format: 'uuid' },
+            name:            { type: 'string', example: 'Session Management — Printemps 2026' },
+            status:          { type: 'string', enum: ['draft', 'active', 'completed', 'cancelled'], example: 'active' },
+            start_date:      { type: 'string', format: 'date', example: '2026-03-10' },
+            end_date:        { type: 'string', format: 'date', example: '2026-03-14' },
+            start_time:      { type: 'string', example: '09:00', nullable: true },
+            end_time:        { type: 'string', example: '17:00', nullable: true },
+            location:        { type: 'string', example: 'Paris 8e', nullable: true },
+            capacity_max:    { type: 'integer', example: 12, nullable: true },
+            formation_id:    { type: 'string', format: 'uuid', nullable: true },
+            teacher_id:      { type: 'string', format: 'uuid', nullable: true },
+            organization_id: { type: 'string', format: 'uuid' },
+            exam_date:       { type: 'string', format: 'date', nullable: true },
+            created_at:      { type: 'string', format: 'date-time' },
+            updated_at:      { type: 'string', format: 'date-time' },
+          },
+        },
+        // ─── Formation ────────────────────────────────────────────────────
+        Formation: {
+          type: 'object',
+          properties: {
+            id:                          { type: 'string', format: 'uuid' },
+            code:                        { type: 'string', example: 'FORM-MGT-01' },
+            name:                        { type: 'string', example: 'Management d\'équipe' },
+            description:                 { type: 'string', nullable: true },
+            program_id:                  { type: 'string', format: 'uuid', nullable: true },
+            price:                       { type: 'number', example: 1500 },
+            currency:                    { type: 'string', example: 'EUR' },
+            payment_plan:                { type: 'string', enum: ['full', 'installment', 'custom'], example: 'full' },
+            duration_hours:              { type: 'integer', example: 35, nullable: true },
+            duration_days:               { type: 'integer', example: 5, nullable: true },
+            duration_unit:               { type: 'string', enum: ['hours', 'days'], example: 'hours' },
+            capacity_max:                { type: 'integer', nullable: true },
+            is_active:                   { type: 'boolean', example: true },
+            published_online:            { type: 'boolean', example: false },
+            eligible_cpf:                { type: 'boolean', example: false },
+            cpf_code:                    { type: 'string', nullable: true },
+            pedagogical_objectives:      { type: 'string', nullable: true },
+            training_content:            { type: 'string', nullable: true },
+            certification_issued:        { type: 'boolean', example: false },
+            satisfaction_score_override: {
+              type: 'number', nullable: true, minimum: 0, maximum: 5,
+              description: 'Score de satisfaction manuel (remplace le calcul automatique)',
+            },
+            photo_url: { type: 'string', format: 'uri', nullable: true },
+            programs: {
+              nullable: true,
+              type: 'object',
+              description: 'Programme parent (si rattaché)',
+              properties: {
+                id:   { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+              },
+            },
+            organization_id: { type: 'string', format: 'uuid' },
+            created_at:      { type: 'string', format: 'date-time' },
+            updated_at:      { type: 'string', format: 'date-time' },
+          },
+        },
+        // ─── Program ──────────────────────────────────────────────────────
+        Program: {
+          type: 'object',
+          properties: {
+            id:                  { type: 'string', format: 'uuid' },
+            code:                { type: 'string', example: 'PROG-MGT' },
+            name:                { type: 'string', example: 'Management' },
+            description:         { type: 'string', nullable: true },
+            category:            { type: 'string', nullable: true, example: 'Soft skills' },
+            success_rate:        { type: 'integer', nullable: true, minimum: 0, maximum: 100, example: 87, description: 'Taux de réussite en % (0-100)' },
+            satisfaction_rate:   { type: 'number', nullable: true, minimum: 0, maximum: 5, example: 4.6, description: 'Note de satisfaction moyenne sur 5' },
+            completion_rate:     { type: 'integer', nullable: true, minimum: 0, maximum: 100, example: 92, description: 'Taux de complétion en % (0-100)' },
+            total_learners:      { type: 'integer', nullable: true, example: 134, description: 'Nombre total d\'apprenants ayant suivi ce programme' },
+            is_public:           { type: 'boolean', nullable: true, example: true, description: 'Affiché sur le site public de l\'organisme' },
+            public_description:  { type: 'string', nullable: true, description: 'Description publique pour le site web' },
+            public_image_url:    { type: 'string', format: 'uri', nullable: true },
+            price:               { type: 'number', nullable: true },
+            price_individual:    { type: 'number', nullable: true },
+            price_freelance:     { type: 'number', nullable: true },
+            price_enterprise:    { type: 'number', nullable: true },
+            is_active:           { type: 'boolean', example: true },
+            organization_id:     { type: 'string', format: 'uuid' },
+            created_at:          { type: 'string', format: 'date-time' },
+            updated_at:          { type: 'string', format: 'date-time' },
+          },
+        },
+        // ─── Enrollment ───────────────────────────────────────────────────
+        Enrollment: {
+          type: 'object',
+          properties: {
+            id:              { type: 'string', format: 'uuid' },
+            student_id:      { type: 'string', format: 'uuid' },
+            session_id:      { type: 'string', format: 'uuid' },
+            status:          { type: 'string', enum: ['active', 'cancelled', 'completed', 'pending'], example: 'active' },
+            total_amount:    { type: 'number', example: 1500 },
+            paid_amount:     { type: 'number', nullable: true, example: 0 },
+            payment_status:  { type: 'string', nullable: true, example: 'pending' },
+            funding_type_id: { type: 'string', format: 'uuid', nullable: true },
+            enrollment_date: { type: 'string', format: 'date', nullable: true },
+            students: {
+              type: 'object',
+              nullable: true,
+              description: 'Données de l\'apprenant (incluses automatiquement)',
+              properties: {
+                id:         { type: 'string', format: 'uuid' },
+                first_name: { type: 'string' },
+                last_name:  { type: 'string' },
+                email:      { type: 'string', format: 'email', nullable: true },
+              },
+            },
+            sessions: {
+              type: 'object',
+              nullable: true,
+              description: 'Données de la session (incluses automatiquement)',
+              properties: {
+                id:         { type: 'string', format: 'uuid' },
+                name:       { type: 'string' },
+                start_date: { type: 'string', format: 'date' },
+                end_date:   { type: 'string', format: 'date' },
+                status:     { type: 'string' },
+              },
+            },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ─── Invoice ──────────────────────────────────────────────────────
+        Invoice: {
+          type: 'object',
+          properties: {
+            id:              { type: 'string', format: 'uuid' },
+            invoice_number:  { type: 'string', example: 'FAC-2026-0023', description: 'Numéro généré automatiquement (FAC-YYYY-NNN ou DEV-YYYY-NNN)' },
+            document_type:   { type: 'string', enum: ['invoice', 'quote'], example: 'invoice' },
+            status:          { type: 'string', enum: ['draft', 'sent', 'paid', 'overdue', 'cancelled'], example: 'draft' },
+            amount:          { type: 'number', example: 1500, description: 'Montant HT' },
+            total_amount:    { type: 'number', example: 1800, description: 'Montant TTC' },
+            tax_amount:      { type: 'number', example: 300, description: 'Montant TVA' },
+            currency:        { type: 'string', example: 'EUR' },
+            issue_date:      { type: 'string', format: 'date' },
+            due_date:        { type: 'string', format: 'date' },
+            notes:           { type: 'string', nullable: true },
+            items:           { type: 'array', nullable: true, items: { type: 'object' }, description: 'Lignes de détail' },
+            pdf_url:         { type: 'string', format: 'uri', nullable: true },
+            enrollment_id:   { type: 'string', format: 'uuid', nullable: true },
+            student_id:      { type: 'string', format: 'uuid', nullable: true },
+            organization_id: { type: 'string', format: 'uuid' },
+            created_at:      { type: 'string', format: 'date-time' },
+            updated_at:      { type: 'string', format: 'date-time' },
+          },
+        },
+        // ─── DocumentTemplate ─────────────────────────────────────────────
+        DocumentTemplate: {
+          type: 'object',
+          properties: {
+            id:         { type: 'string', format: 'uuid' },
+            name:       { type: 'string', example: 'Attestation de formation' },
+            type:       { type: 'string', enum: ['attestation', 'facture', 'devis', 'contrat', 'programme', 'convention'], example: 'attestation' },
+            is_active:  { type: 'boolean', example: true },
+            created_at: { type: 'string', format: 'date-time' },
+            updated_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ─── SignatureRequest ──────────────────────────────────────────────
+        SignatureRequest: {
+          type: 'object',
+          properties: {
+            id:               { type: 'string', format: 'uuid' },
+            document_id:      { type: 'string', format: 'uuid' },
+            status:           { type: 'string', enum: ['pending', 'signed', 'expired', 'declined', 'cancelled'], example: 'pending' },
+            recipient_email:  { type: 'string', format: 'email' },
+            recipient_name:   { type: 'string' },
+            recipient_type:   { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] },
+            recipient_id:     { type: 'string', format: 'uuid', nullable: true },
+            subject:          { type: 'string', nullable: true },
+            message:          { type: 'string', nullable: true },
+            expires_at:       { type: 'string', format: 'date-time' },
+            signed_at:        { type: 'string', format: 'date-time', nullable: true },
+            organization_id:  { type: 'string', format: 'uuid' },
+            created_at:       { type: 'string', format: 'date-time' },
           },
         },
       },
+      // ─── Réponses réutilisables ─────────────────────────────────────────
       responses: {
-        BadRequest: {
-          description: 'Requête invalide',
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/Error' },
-            },
-          },
-        },
         Unauthorized: {
-          description: 'Non authentifié',
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/Error' },
-            },
-          },
+          description: 'Clé API manquante ou invalide',
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
         },
         Forbidden: {
-          description: 'Permissions insuffisantes',
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/Error' },
-            },
-          },
+          description: 'Scope insuffisant ou plan Enterprise requis',
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
         },
         NotFound: {
-          description: 'Ressource non trouvée',
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/Error' },
-            },
-          },
+          description: 'Ressource introuvable',
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+        },
+        BadRequest: {
+          description: 'Paramètres invalides ou manquants',
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
         },
         RateLimit: {
-          description: 'Rate limit dépassé',
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/Error' },
-            },
-          },
+          description: 'Limite de requêtes dépassée',
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
         },
       },
     },
+    // ═══════════════════════════════════════════════════════════════════════
+    // PATHS
+    // ═══════════════════════════════════════════════════════════════════════
     paths: {
-      '/api/v1/students': {
+      // ─── Programmes ──────────────────────────────────────────────────────
+      '/api/v1/programs': {
         get: {
-          summary: 'Liste des apprenants',
-          description: 'Récupère la liste paginée des apprenants de l\'organisation',
-          tags: ['Apprenants'],
-          security: [{ EduzenApiKey: [] }],
+          operationId: 'listPrograms',
+          summary: 'Liste des programmes',
+          description: `Retourne les programmes de formation avec leurs statistiques Qualiopi.
+
+**Cas d'usage — site web public :**
+\`\`\`
+GET /api/v1/programs?is_public=true
+\`\`\`
+Scope requis : \`read:programs\``,
+          tags: ['Programmes'],
           parameters: [
-            {
-              name: 'page',
-              in: 'query',
-              schema: { type: 'integer', default: 1, minimum: 1 },
-              description: 'Numéro de page',
-            },
-            {
-              name: 'limit',
-              in: 'query',
-              schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 },
-              description: 'Nombre d\'éléments par page',
-            },
-            {
-              name: 'search',
-              in: 'query',
-              schema: { type: 'string' },
-              description: 'Recherche par nom ou email',
-            },
+            { name: 'page',      in: 'query', schema: { type: 'integer', default: 1, minimum: 1 }, description: 'Numéro de page' },
+            { name: 'limit',     in: 'query', schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 }, description: 'Éléments par page (max 100)' },
+            { name: 'search',    in: 'query', schema: { type: 'string' }, description: 'Recherche dans nom, code, description' },
+            { name: 'is_public', in: 'query', schema: { type: 'boolean' }, description: '`true` = uniquement les programmes visibles sur le site public' },
+            { name: 'is_active', in: 'query', schema: { type: 'boolean' }, description: 'Filtrer par statut actif (par défaut tous retournés)' },
           ],
           responses: {
             '200': {
-              description: 'Liste des étudiants',
+              description: 'Liste paginée des programmes',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
-                      data: {
-                        type: 'array',
-                        items: { $ref: '#/components/schemas/Student' },
-                      },
-                      meta: {
-                        type: 'object',
-                        properties: {
-                          page: { type: 'integer' },
-                          limit: { type: 'integer' },
-                          total: { type: 'integer' },
-                        },
-                      },
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Program' } },
+                      meta: { $ref: '#/components/schemas/Meta' },
                     },
+                  },
+                  example: {
+                    data: [{
+                      id: 'a1b2c3d4-0000-0000-0000-ef1234567890',
+                      code: 'PROG-MGT',
+                      name: 'Management',
+                      description: null,
+                      category: 'Soft skills',
+                      success_rate: 87,
+                      satisfaction_rate: 4.6,
+                      completion_rate: 92,
+                      total_learners: 134,
+                      is_public: true,
+                      public_description: 'Développez vos compétences managériales.',
+                      public_image_url: 'https://cdn.eduzen.fr/programmes/management.jpg',
+                      price: null,
+                      price_individual: 1500,
+                      price_enterprise: 1200,
+                      is_active: true,
+                      created_at: '2025-01-15T09:00:00Z',
+                      updated_at: '2026-06-01T14:30:00Z',
+                    }],
+                    meta: { page: 1, limit: 50, total: 1 },
                   },
                 },
               },
             },
-            '401': {
-              description: 'Non authentifié',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-            '403': {
-              description: 'Permissions insuffisantes',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-            '429': {
-              description: 'Rate limit dépassé',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '429': { $ref: '#/components/responses/RateLimit' },
           },
         },
       },
-      '/api/v1/sessions': {
+
+      // ─── Formations ──────────────────────────────────────────────────────
+      '/api/v1/formations': {
         get: {
-          summary: 'Liste des sessions de formation',
-          description: 'Récupère la liste paginée des sessions de formation de l\'organisation',
-          tags: ['Sessions'],
-          security: [{ EduzenApiKey: [] }],
+          operationId: 'listFormations',
+          summary: 'Liste des formations',
+          description: `Retourne les formations avec le programme parent rattaché.
+
+Scope requis : \`read:formations\``,
+          tags: ['Formations'],
           parameters: [
-            {
-              name: 'page',
-              in: 'query',
-              schema: { type: 'integer', default: 1, minimum: 1 },
-              description: 'Numéro de page',
-            },
-            {
-              name: 'limit',
-              in: 'query',
-              schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 },
-              description: 'Nombre d\'éléments par page',
-            },
-            {
-              name: 'status',
-              in: 'query',
-              schema: { type: 'string', enum: ['active', 'completed', 'cancelled', 'draft'] },
-              description: 'Filtrer par statut',
-            },
-            {
-              name: 'formation_id',
-              in: 'query',
-              schema: { type: 'string', format: 'uuid' },
-              description: 'Filtrer par formation',
-            },
-            {
-              name: 'search',
-              in: 'query',
-              schema: { type: 'string' },
-              description: 'Recherche par nom de session',
-            },
+            { name: 'page',       in: 'query', schema: { type: 'integer', default: 1, minimum: 1 } },
+            { name: 'limit',      in: 'query', schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 } },
+            { name: 'search',     in: 'query', schema: { type: 'string' }, description: 'Recherche dans nom, code, description' },
+            { name: 'program_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par programme parent' },
           ],
           responses: {
             '200': {
-              description: 'Liste des sessions',
+              description: 'Liste paginée des formations',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
-                      data: { type: 'array', items: { $ref: '#/components/schemas/Session' } },
-                      meta: {
-                        type: 'object',
-                        properties: {
-                          page: { type: 'integer' },
-                          limit: { type: 'integer' },
-                          total: { type: 'integer' },
-                        },
-                      },
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Formation' } },
+                      meta: { $ref: '#/components/schemas/Meta' },
                     },
                   },
                 },
@@ -336,31 +454,333 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
           },
         },
       },
+
+      // ─── Sessions ────────────────────────────────────────────────────────
+      '/api/v1/sessions': {
+        get: {
+          operationId: 'listSessions',
+          summary: 'Liste des sessions',
+          description: `Retourne les sessions de formation, triées par date de début.
+
+Scope requis : \`read:sessions\``,
+          tags: ['Sessions'],
+          parameters: [
+            { name: 'page',         in: 'query', schema: { type: 'integer', default: 1, minimum: 1 } },
+            { name: 'limit',        in: 'query', schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 } },
+            { name: 'search',       in: 'query', schema: { type: 'string' }, description: 'Recherche par nom de session' },
+            { name: 'status',       in: 'query', schema: { type: 'string', enum: ['draft', 'active', 'completed', 'cancelled'] }, description: 'Filtrer par statut' },
+            { name: 'formation_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par formation' },
+          ],
+          responses: {
+            '200': {
+              description: 'Liste paginée des sessions',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Session' } },
+                      meta: { $ref: '#/components/schemas/Meta' },
+                    },
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '429': { $ref: '#/components/responses/RateLimit' },
+          },
+        },
+      },
+
+      // ─── Apprenants ──────────────────────────────────────────────────────
+      '/api/v1/students': {
+        get: {
+          operationId: 'listStudents',
+          summary: 'Liste des apprenants',
+          description: 'Scope requis : `read:students`',
+          tags: ['Apprenants'],
+          parameters: [
+            { name: 'page',   in: 'query', schema: { type: 'integer', default: 1, minimum: 1 } },
+            { name: 'limit',  in: 'query', schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 } },
+            { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Recherche par nom ou email' },
+          ],
+          responses: {
+            '200': {
+              description: 'Liste paginée des apprenants',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Student' } },
+                      meta: { $ref: '#/components/schemas/Meta' },
+                    },
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '429': { $ref: '#/components/responses/RateLimit' },
+          },
+        },
+        post: {
+          operationId: 'createStudent',
+          summary: 'Créer un apprenant',
+          description: 'Scope requis : `write:students`',
+          tags: ['Apprenants'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['first_name', 'last_name'],
+                  properties: {
+                    first_name:    { type: 'string', example: 'Marie' },
+                    last_name:     { type: 'string', example: 'Dupont' },
+                    email:         { type: 'string', format: 'email', nullable: true },
+                    phone:         { type: 'string', nullable: true },
+                    date_of_birth: { type: 'string', format: 'date', nullable: true },
+                    status:        { type: 'string', enum: ['active', 'inactive'], default: 'active' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Apprenant créé',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/Student' } } },
+                },
+              },
+            },
+            '400': { $ref: '#/components/responses/BadRequest' },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+          },
+        },
+      },
+
+      // ─── Inscriptions ────────────────────────────────────────────────────
+      '/api/v1/enrollments': {
+        get: {
+          operationId: 'listEnrollments',
+          summary: 'Liste des inscriptions',
+          description: `Retourne les inscriptions avec les données de l'apprenant et de la session incluses.
+
+Scope requis : \`read:enrollments\``,
+          tags: ['Inscriptions'],
+          parameters: [
+            { name: 'page',       in: 'query', schema: { type: 'integer', default: 1, minimum: 1 } },
+            { name: 'limit',      in: 'query', schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 } },
+            { name: 'session_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par session' },
+            { name: 'student_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par apprenant' },
+            { name: 'status',     in: 'query', schema: { type: 'string', enum: ['active', 'cancelled', 'completed', 'pending'] } },
+          ],
+          responses: {
+            '200': {
+              description: 'Liste paginée des inscriptions (avec joins students + sessions)',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Enrollment' } },
+                      meta: { $ref: '#/components/schemas/Meta' },
+                    },
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '429': { $ref: '#/components/responses/RateLimit' },
+          },
+        },
+        post: {
+          operationId: 'createEnrollment',
+          summary: 'Inscrire un apprenant à une session',
+          description: `Crée une inscription. L'apprenant et la session doivent appartenir à la même organisation.
+
+Scope requis : \`write:enrollments\``,
+          tags: ['Inscriptions'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['student_id', 'session_id'],
+                  properties: {
+                    student_id:      { type: 'string', format: 'uuid' },
+                    session_id:      { type: 'string', format: 'uuid' },
+                    status:          { type: 'string', enum: ['active', 'pending'], default: 'active' },
+                    total_amount:    { type: 'number', default: 0, description: 'Montant de l\'inscription' },
+                    funding_type_id: { type: 'string', format: 'uuid', nullable: true, description: 'Type de financement (OPCO, CPF, etc.)' },
+                    enrollment_date: { type: 'string', format: 'date', description: 'Date d\'inscription (défaut: aujourd\'hui)' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Inscription créée',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/Enrollment' } } },
+                },
+              },
+            },
+            '400': { $ref: '#/components/responses/BadRequest' },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { description: 'Apprenant ou session introuvable', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          },
+        },
+      },
+
+      '/api/v1/enrollments/{id}': {
+        get: {
+          operationId: 'getEnrollment',
+          summary: 'Récupérer une inscription',
+          description: `Retourne une inscription par son ID avec les données apprenant + session.
+
+Scope requis : \`read:enrollments\``,
+          tags: ['Inscriptions'],
+          parameters: [
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID de l\'inscription' },
+          ],
+          responses: {
+            '200': {
+              description: 'Inscription trouvée',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/Enrollment' } } },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
+          },
+        },
+      },
+
+      // ─── Factures ────────────────────────────────────────────────────────
+      '/api/v1/invoices': {
+        get: {
+          operationId: 'listInvoices',
+          summary: 'Liste des factures et devis',
+          description: `Retourne les factures et devis de l'organisation.
+
+Scope requis : \`read:invoices\``,
+          tags: ['Factures'],
+          parameters: [
+            { name: 'page',          in: 'query', schema: { type: 'integer', default: 1, minimum: 1 } },
+            { name: 'limit',         in: 'query', schema: { type: 'integer', default: 50, minimum: 1, maximum: 100 } },
+            { name: 'enrollment_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par inscription' },
+            { name: 'student_id',    in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par apprenant' },
+            { name: 'document_type', in: 'query', schema: { type: 'string', enum: ['invoice', 'quote'] }, description: 'Filtrer par type' },
+            { name: 'status',        in: 'query', schema: { type: 'string', enum: ['draft', 'sent', 'paid', 'overdue', 'cancelled'] } },
+          ],
+          responses: {
+            '200': {
+              description: 'Liste paginée des factures',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      data: { type: 'array', items: { $ref: '#/components/schemas/Invoice' } },
+                      meta: { $ref: '#/components/schemas/Meta' },
+                    },
+                  },
+                },
+              },
+            },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '429': { $ref: '#/components/responses/RateLimit' },
+          },
+        },
+        post: {
+          operationId: 'createInvoice',
+          summary: 'Créer une facture ou un devis',
+          description: `Le numéro est généré automatiquement (FAC-YYYY-NNN pour une facture, DEV-YYYY-NNN pour un devis).
+
+Scope requis : \`write:invoices\``,
+          tags: ['Factures'],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['enrollment_id', 'amount'],
+                  properties: {
+                    enrollment_id: { type: 'string', format: 'uuid', description: 'Inscription associée (obligatoire)' },
+                    document_type: { type: 'string', enum: ['invoice', 'quote'], default: 'invoice' },
+                    amount:        { type: 'number', description: 'Montant HT' },
+                    total_amount:  { type: 'number', description: 'Montant TTC (défaut: égal à amount)' },
+                    tax_amount:    { type: 'number', default: 0, description: 'Montant TVA' },
+                    currency:      { type: 'string', default: 'EUR' },
+                    status:        { type: 'string', enum: ['draft', 'sent'], default: 'draft' },
+                    due_date:      { type: 'string', format: 'date', description: 'Date d\'échéance (défaut: +30 jours)' },
+                    issue_date:    { type: 'string', format: 'date', description: 'Date d\'émission (défaut: aujourd\'hui)' },
+                    notes:         { type: 'string', nullable: true },
+                    items: {
+                      type: 'array', nullable: true,
+                      description: 'Lignes de détail (optionnel)',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          description: { type: 'string' },
+                          quantity:    { type: 'number' },
+                          unit_price:  { type: 'number' },
+                          total:       { type: 'number' },
+                        },
+                      },
+                    },
+                    pdf_url:     { type: 'string', format: 'uri', nullable: true, description: 'URL du PDF (depuis /api/v1/documents/generate)' },
+                    document_id: { type: 'string', format: 'uuid', nullable: true, description: 'ID du document généré (pour traçabilité)' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Facture ou devis créé',
+              content: {
+                'application/json': {
+                  schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/Invoice' } } },
+                },
+              },
+            },
+            '400': { $ref: '#/components/responses/BadRequest' },
+            '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { description: 'Inscription introuvable', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          },
+        },
+      },
+
+      // ─── Documents ───────────────────────────────────────────────────────
       '/api/v1/document-templates': {
         get: {
+          operationId: 'listDocumentTemplates',
           summary: 'Liste des templates de documents',
-          description: 'Récupère la liste des templates de documents disponibles',
-          tags: ['Document Templates'],
-          security: [{ EduzenApiKey: [] }],
+          description: 'Scope requis : `read:documents`',
+          tags: ['Documents'],
           parameters: [
-            {
-              name: 'type',
-              in: 'query',
-              schema: { type: 'string', enum: ['attestation', 'facture', 'devis', 'contrat'] },
-              description: 'Filtrer par type de document',
-            },
-            {
-              name: 'page',
-              in: 'query',
-              schema: { type: 'integer', default: 1, minimum: 1 },
-              description: 'Numéro de page',
-            },
-            {
-              name: 'limit',
-              in: 'query',
-              schema: { type: 'integer', default: 20, minimum: 1, maximum: 100 },
-              description: 'Nombre d\'éléments par page',
-            },
+            { name: 'page',  in: 'query', schema: { type: 'integer', default: 1 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 20, maximum: 100 } },
+            { name: 'type',  in: 'query', schema: { type: 'string', enum: ['attestation', 'facture', 'devis', 'contrat', 'programme', 'convention'] } },
           ],
           responses: {
             '200': {
@@ -370,14 +790,8 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
                   schema: {
                     type: 'object',
                     properties: {
-                      data: {
-                        type: 'array',
-                        items: { $ref: '#/components/schemas/DocumentTemplate' },
-                      },
-                      meta: {
-                        type: 'object',
-                        properties: { total: { type: 'integer' } },
-                      },
+                      data: { type: 'array', items: { $ref: '#/components/schemas/DocumentTemplate' } },
+                      meta: { type: 'object', properties: { total: { type: 'integer' } } },
                     },
                   },
                 },
@@ -385,45 +799,39 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             },
             '401': { $ref: '#/components/responses/Unauthorized' },
             '403': { $ref: '#/components/responses/Forbidden' },
-            '429': { $ref: '#/components/responses/RateLimit' },
           },
         },
       },
+
       '/api/v1/document-templates/{id}': {
         get: {
+          operationId: 'getDocumentTemplate',
           summary: 'Récupérer un template',
-          description: 'Récupère un template de document par son ID',
-          tags: ['Document Templates'],
-          security: [{ EduzenApiKey: [] }],
+          description: 'Scope requis : `read:documents`',
+          tags: ['Documents'],
           parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID du template',
-            },
+            { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
           ],
           responses: {
             '200': {
               description: 'Template trouvé',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/DocumentTemplate' },
-                },
-              },
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/DocumentTemplate' } } },
             },
-            '404': { $ref: '#/components/responses/NotFound' },
             '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
           },
         },
       },
+
       '/api/v1/documents/generate': {
         post: {
+          operationId: 'generateDocument',
           summary: 'Générer un document',
-          description: 'Génère un document à partir d\'un template et de variables',
+          description: `Génère un document à partir d'un template et de variables. Retourne le fichier binaire (download=true) ou les métadonnées (download=false).
+
+Scope requis : \`write:documents\``,
           tags: ['Documents'],
-          security: [{ EduzenApiKey: [] }],
           requestBody: {
             required: true,
             content: {
@@ -432,558 +840,12 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
                   type: 'object',
                   required: ['template_id', 'format', 'variables'],
                   properties: {
-                    template_id: { type: 'string', format: 'uuid', description: 'ID du template' },
-                    format: { type: 'string', enum: ['PDF', 'DOCX', 'HTML'], description: 'Format de sortie' },
-                    variables: { type: 'object', description: 'Variables à remplacer dans le template' },
-                    related_entity_type: { type: 'string', description: 'Type d\'entité liée (ex: student)' },
-                    related_entity_id: { type: 'string', format: 'uuid', description: 'ID de l\'entité liée' },
-                    download: { type: 'boolean', default: true, description: 'true = retourne le fichier binaire, false = retourne les métadonnées' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Document généré — fichier binaire (download=true) ou métadonnées (download=false)',
-              content: {
-                'application/pdf': { schema: { type: 'string', format: 'binary' } },
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { schema: { type: 'string', format: 'binary' } },
-                'text/html': { schema: { type: 'string', format: 'binary' } },
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      data: {
-                        type: 'object',
-                        properties: {
-                          file_name: { type: 'string' },
-                          page_count: { type: 'integer' },
-                          format: { type: 'string' },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-      },
-      '/api/v1/formations': {
-        get: {
-          summary: 'Liste des formations',
-          description: 'Récupère la liste paginée des formations de l\'organisation',
-          tags: ['Formations'],
-          security: [{ EduzenApiKey: [] }],
-          parameters: [
-            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
-            { name: 'limit', in: 'query', schema: { type: 'integer', default: 50, maximum: 100 } },
-            { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Recherche par nom, code ou description' },
-            { name: 'program_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par programme' },
-          ],
-          responses: {
-            '200': {
-              description: 'Liste des formations',
-              content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } }, meta: { type: 'object', properties: { page: { type: 'integer' }, limit: { type: 'integer' }, total: { type: 'integer' } } } } } } },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/v1/enrollments': {
-        get: {
-          summary: 'Liste des inscriptions',
-          description: 'Récupère les inscriptions de l\'organisation, filtrables par session ou apprenant',
-          tags: ['Inscriptions'],
-          security: [{ EduzenApiKey: [] }],
-          parameters: [
-            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
-            { name: 'limit', in: 'query', schema: { type: 'integer', default: 50, maximum: 100 } },
-            { name: 'session_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par session' },
-            { name: 'student_id', in: 'query', schema: { type: 'string', format: 'uuid' }, description: 'Filtrer par apprenant' },
-            { name: 'status', in: 'query', schema: { type: 'string', enum: ['active', 'cancelled', 'completed', 'pending'] } },
-          ],
-          responses: {
-            '200': {
-              description: 'Liste des inscriptions',
-              content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } }, meta: { type: 'object', properties: { page: { type: 'integer' }, limit: { type: 'integer' }, total: { type: 'integer' } } } } } } },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/v1/email/send': {
-        post: {
-          summary: 'Envoyer un email',
-          description: 'Envoie un email via Resend au nom de l\'organisation (scope: send:email)',
-          tags: ['Email'],
-          security: [{ EduzenApiKey: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['to', 'subject'],
-                  properties: {
-                    to: { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
-                    subject: { type: 'string' },
-                    html: { type: 'string', description: 'Corps HTML (html ou text requis)' },
-                    text: { type: 'string', description: 'Corps texte brut' },
-                    cc: { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
-                    bcc: { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
-                    reply_to: { type: 'string', format: 'email' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': { description: 'Email envoyé', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string' }, to: { type: 'array', items: { type: 'string' } } } } } } } } },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-          },
-        },
-      },
-      '/api/v1/signature-requests': {
-        get: {
-          summary: 'Liste des demandes de signature',
-          description: 'Récupère les demandes de signature de l\'organisation (scope: read:signatures)',
-          tags: ['Signatures'],
-          security: [{ EduzenApiKey: [] }],
-          parameters: [
-            { name: 'status', in: 'query', schema: { type: 'string', enum: ['pending', 'signed', 'expired', 'declined', 'cancelled'] } },
-            { name: 'recipient_type', in: 'query', schema: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] } },
-          ],
-          responses: {
-            '200': { description: 'Liste des demandes', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/SignatureRequest' } }, meta: { type: 'object', properties: { total: { type: 'integer' } } } } } } } },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-          },
-        },
-        post: {
-          summary: 'Créer une demande de signature',
-          description: 'Crée une demande de signature et envoie l\'email au destinataire. Supporte l\'envoi unique ou multiple (scope: write:signatures)',
-          tags: ['Signatures'],
-          security: [{ EduzenApiKey: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['document_id'],
-                  properties: {
-                    document_id: { type: 'string', format: 'uuid' },
-                    recipient_email: { type: 'string', format: 'email', description: 'Requis pour envoi unique' },
-                    recipient_name: { type: 'string', description: 'Requis pour envoi unique' },
-                    recipient_type: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'], description: 'Requis pour envoi unique' },
-                    recipient_id: { type: 'string', format: 'uuid', description: 'ID de l\'apprenant/enseignant si connu' },
-                    subject: { type: 'string', description: 'Objet de l\'email (optionnel)' },
-                    message: { type: 'string', description: 'Message personnalisé (optionnel)' },
-                    expires_at: { type: 'string', format: 'date-time', description: 'Date d\'expiration (défaut: +30 jours)' },
-                    recipients: {
-                      type: 'array',
-                      maxItems: 20,
-                      description: 'Pour envoi multiple (remplace recipient_email/name/type)',
-                      items: {
-                        type: 'object',
-                        required: ['email', 'name', 'type'],
-                        properties: {
-                          email: { type: 'string', format: 'email' },
-                          name: { type: 'string' },
-                          type: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] },
-                          id: { type: 'string', format: 'uuid' },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '201': { description: 'Demande(s) créée(s) et email(s) envoyé(s)', content: { 'application/json': { schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/SignatureRequest' } } } } } },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-      },
-      '/api/v1/webhooks/incoming': {
-        post: {
-          summary: 'Recevoir un événement externe',
-          description: 'Reçoit et stocke un événement depuis une application externe (scope: write:webhooks)',
-          tags: ['Webhooks'],
-          security: [{ EduzenApiKey: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['event', 'data'],
-                  properties: {
-                    event: { type: 'string', description: 'Type d\'événement (ex: student.updated, payment.received)' },
-                    data: { type: 'object', description: 'Payload de l\'événement' },
-                    source: { type: 'string', description: 'Nom de l\'application source (ex: formflow, typeform)' },
-                    idempotency_key: { type: 'string', description: 'Clé d\'idempotence pour éviter les doublons' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '201': { description: 'Événement reçu', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'object', properties: { id: { type: 'string' }, event: { type: 'string' }, status: { type: 'string' } } } } } } } },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-          },
-        },
-      },
-      '/api/auth/check': {
-        get: {
-          summary: 'Vérifier l\'authentification',
-          description: 'Vérifie l\'état de l\'authentification de l\'utilisateur',
-          tags: ['Auth'],
-          responses: {
-            '200': {
-              description: 'État de l\'authentification',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      authenticated: { type: 'boolean' },
-                      user: { type: 'object' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/signature-requests': {
-        get: {
-          summary: 'Liste des demandes de signature',
-          description: 'Récupère les demandes de signature pour une organisation',
-          tags: ['Signature Requests'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'status',
-              in: 'query',
-              schema: { type: 'string', enum: ['pending', 'signed', 'expired', 'declined', 'cancelled'] },
-              description: 'Filtrer par statut',
-            },
-            {
-              name: 'recipientType',
-              in: 'query',
-              schema: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] },
-              description: 'Filtrer par type de destinataire',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Liste des demandes de signature',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'array',
-                    items: { $ref: '#/components/schemas/SignatureRequest' },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-          },
-        },
-        post: {
-          summary: 'Créer une demande de signature',
-          description: 'Crée une ou plusieurs demandes de signature',
-          tags: ['Signature Requests'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['document_id', 'recipients'],
-                  properties: {
-                    document_id: { type: 'string', format: 'uuid' },
-                    recipients: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        required: ['email', 'name'],
-                        properties: {
-                          email: { type: 'string', format: 'email' },
-                          name: { type: 'string' },
-                          role: { type: 'string', enum: ['signer', 'viewer'] },
-                        },
-                      },
-                    },
-                    message: { type: 'string' },
-                    expires_at: { type: 'string', format: 'date-time' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '201': {
-              description: 'Demande(s) de signature créée(s)',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      requests: {
-                        type: 'array',
-                        items: { $ref: '#/components/schemas/SignatureRequest' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-          },
-        },
-      },
-      '/api/payments/stripe/create-intent': {
-        post: {
-          summary: 'Créer une intention de paiement Stripe',
-          description: 'Crée une intention de paiement Stripe pour un montant donné',
-          tags: ['Payments'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['amount', 'customer_email'],
-                  properties: {
-                    amount: { type: 'number', minimum: 0.01, maximum: 999999999 },
-                    currency: { type: 'string', enum: ['EUR', 'USD', 'GBP', 'CHF', 'CAD'], default: 'EUR' },
-                    description: { type: 'string', maxLength: 500 },
-                    customer_email: { type: 'string', format: 'email' },
-                    customer_name: { type: 'string', maxLength: 100 },
-                    metadata: { type: 'object' },
-                    return_url: { type: 'string', format: 'uri' },
-                    cancel_url: { type: 'string', format: 'uri' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Intention de paiement créée',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      client_secret: { type: 'string' },
-                      payment_intent_id: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/api/email/send': {
-        post: {
-          summary: 'Envoyer un email',
-          description: 'Envoie un email à un ou plusieurs destinataires',
-          tags: ['Email'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['to', 'subject'],
-                  properties: {
-                    to: {
-                      oneOf: [
-                        { type: 'string', format: 'email' },
-                        { type: 'array', items: { type: 'string', format: 'email' } },
-                      ],
-                    },
-                    subject: { type: 'string', minLength: 1, maxLength: 200 },
-                    html: { type: 'string', maxLength: 100000 },
-                    text: { type: 'string', maxLength: 100000 },
-                    cc: {
-                      oneOf: [
-                        { type: 'string', format: 'email' },
-                        { type: 'array', items: { type: 'string', format: 'email' } },
-                      ],
-                    },
-                    bcc: {
-                      oneOf: [
-                        { type: 'string', format: 'email' },
-                        { type: 'array', items: { type: 'string', format: 'email' } },
-                      ],
-                    },
-                    replyTo: { type: 'string', format: 'email' },
-                    attachments: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          filename: { type: 'string' },
-                          content: { type: 'string' },
-                          contentType: { type: 'string' },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Email envoyé avec succès',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      message_id: { type: 'string' },
-                      success: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/document-templates': {
-        get: {
-          summary: 'Liste des templates de documents (v2)',
-          description: 'Récupère tous les templates de documents d\'une organisation',
-          tags: ['Document Templates'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'type',
-              in: 'query',
-              schema: { type: 'string', enum: ['attestation', 'facture', 'devis', 'contrat'] },
-              description: 'Filtrer par type de document',
-            },
-            {
-              name: 'isActive',
-              in: 'query',
-              schema: { type: 'boolean' },
-              description: 'Filtrer par statut actif',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Liste des templates',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'array',
-                    items: { $ref: '#/components/schemas/DocumentTemplate' },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-        post: {
-          summary: 'Créer un template de document (v2)',
-          description: 'Crée un nouveau template de document',
-          tags: ['Document Templates'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['name', 'type', 'organization_id'],
-                  properties: {
-                    name: { type: 'string' },
-                    type: { type: 'string', enum: ['attestation', 'facture', 'devis', 'contrat'] },
-                    organization_id: { type: 'string', format: 'uuid' },
-                    body: { type: 'object' },
-                    variables: { type: 'object' },
-                    is_active: { type: 'boolean', default: true },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '201': {
-              description: 'Template créé',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/DocumentTemplate' },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-          },
-        },
-      },
-      '/api/documents/generate': {
-        post: {
-          summary: 'Générer un document (v2)',
-          description: 'Génère un document à partir d\'un template et de variables',
-          tags: ['Documents'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['template_id', 'variables'],
-                  properties: {
-                    template_id: { type: 'string', format: 'uuid' },
-                    variables: { type: 'object' },
-                    format: { type: 'string', enum: ['PDF', 'DOCX', 'HTML'], default: 'PDF' },
-                    send_email: { type: 'boolean', default: false },
-                    email_recipients: {
-                      type: 'array',
-                      items: { type: 'string', format: 'email' },
-                    },
+                    template_id:          { type: 'string', format: 'uuid' },
+                    format:               { type: 'string', enum: ['PDF', 'DOCX', 'HTML'], example: 'PDF' },
+                    variables:            { type: 'object', description: 'Variables à injecter dans le template (ex: { student_name: "Marie Dupont" })' },
+                    related_entity_type:  { type: 'string', nullable: true, description: 'Type de l\'entité liée (ex: "student", "session")' },
+                    related_entity_id:    { type: 'string', format: 'uuid', nullable: true },
+                    download:             { type: 'boolean', default: true, description: 'true = fichier binaire, false = métadonnées JSON' },
                   },
                 },
               },
@@ -993,109 +855,18 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             '200': {
               description: 'Document généré',
               content: {
+                'application/pdf': { schema: { type: 'string', format: 'binary' } },
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { schema: { type: 'string', format: 'binary' } },
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
-                      document_url: { type: 'string', format: 'uri' },
-                      document_id: { type: 'string', format: 'uuid' },
-                      success: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/learner/data': {
-        get: {
-          summary: 'Récupérer les données de l\'espace apprenant',
-          description: 'Récupère les données de l\'apprenant (étudiant, inscriptions, cours, etc.)',
-          tags: ['Learner'],
-          parameters: [
-            {
-              name: 'type',
-              in: 'query',
-              schema: { type: 'string', enum: ['student', 'enrollments', 'courses', 'attendance', 'grades'] },
-              description: 'Type de données à récupérer',
-            },
-            {
-              name: 'access_token',
-              in: 'query',
-              schema: { type: 'string' },
-              description: 'Token d\'accès direct (optionnel)',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Données récupérées avec succès',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    description: 'Structure varie selon le type demandé',
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/push-notifications/register': {
-        post: {
-          summary: 'Enregistrer un device pour notifications push',
-          description: 'Enregistre un appareil pour recevoir des notifications push',
-          tags: ['Push Notifications'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['deviceToken', 'deviceType', 'platform'],
-                  properties: {
-                    deviceToken: { type: 'string', description: 'Token unique du device' },
-                    deviceType: { type: 'string', enum: ['mobile', 'tablet', 'desktop'] },
-                    platform: { type: 'string', enum: ['ios', 'android', 'web'] },
-                    deviceName: { type: 'string' },
-                    deviceModel: { type: 'string' },
-                    osVersion: { type: 'string' },
-                    appVersion: { type: 'string' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Device enregistré',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      device: {
+                      data: {
                         type: 'object',
                         properties: {
-                          id: { type: 'string', format: 'uuid' },
-                          device_token: { type: 'string' },
-                          device_type: { type: 'string' },
-                          platform: { type: 'string' },
+                          file_name:  { type: 'string' },
+                          page_count: { type: 'integer' },
+                          format:     { type: 'string' },
                         },
                       },
                     },
@@ -1105,24 +876,36 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             },
             '400': { $ref: '#/components/responses/BadRequest' },
             '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
+            '404': { $ref: '#/components/responses/NotFound' },
           },
         },
       },
-      '/api/push-notifications/unregister': {
+
+      // ─── Email ───────────────────────────────────────────────────────────
+      '/api/v1/email/send': {
         post: {
-          summary: 'Désenregistrer un device',
-          description: 'Désenregistre un appareil pour ne plus recevoir de notifications push',
-          tags: ['Push Notifications'],
-          security: [{ ApiKeyAuth: [] }],
+          operationId: 'sendEmail',
+          summary: 'Envoyer un email',
+          description: `Envoie un email via Resend au nom de l'organisation.
+
+Scope requis : \`send:email\``,
+          tags: ['Email'],
           requestBody: {
             required: true,
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['deviceToken'],
+                  required: ['to', 'subject'],
                   properties: {
-                    deviceToken: { type: 'string', description: 'Token du device à désenregistrer' },
+                    to:       { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
+                    subject:  { type: 'string' },
+                    html:     { type: 'string', description: 'Corps HTML (html ou text requis)' },
+                    text:     { type: 'string', description: 'Corps texte brut' },
+                    cc:       { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
+                    bcc:      { oneOf: [{ type: 'string', format: 'email' }, { type: 'array', items: { type: 'string', format: 'email' } }] },
+                    reply_to: { type: 'string', format: 'email' },
                   },
                 },
               },
@@ -1130,13 +913,13 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
           },
           responses: {
             '200': {
-              description: 'Device désenregistré',
+              description: 'Email envoyé',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
-                      success: { type: 'boolean' },
+                      data: { type: 'object', properties: { id: { type: 'string' }, to: { type: 'array', items: { type: 'string' } } } },
                     },
                   },
                 },
@@ -1144,106 +927,32 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             },
             '400': { $ref: '#/components/responses/BadRequest' },
             '401': { $ref: '#/components/responses/Unauthorized' },
+            '403': { $ref: '#/components/responses/Forbidden' },
           },
         },
       },
-      '/api/document-templates/{id}': {
+
+      // ─── Signatures ──────────────────────────────────────────────────────
+      '/api/v1/signature-requests': {
         get: {
-          summary: 'Récupérer un template par ID (v2)',
-          description: 'Récupère un template de document par son ID',
-          tags: ['Document Templates'],
-          security: [{ ApiKeyAuth: [] }],
+          operationId: 'listSignatureRequests',
+          summary: 'Liste des demandes de signature',
+          description: 'Scope requis : `read:signatures`',
+          tags: ['Signatures'],
           parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID du template',
-            },
+            { name: 'status',         in: 'query', schema: { type: 'string', enum: ['pending', 'signed', 'expired', 'declined', 'cancelled'] } },
+            { name: 'recipient_type', in: 'query', schema: { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] } },
           ],
           responses: {
             '200': {
-              description: 'Template trouvé',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/DocumentTemplate' },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-        put: {
-          summary: 'Mettre à jour un template (v2)',
-          description: 'Met à jour un template de document existant',
-          tags: ['Document Templates'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID du template',
-            },
-          ],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string' },
-                    body: { type: 'object' },
-                    variables: { type: 'object' },
-                    is_active: { type: 'boolean' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Template mis à jour',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/DocumentTemplate' },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-        delete: {
-          summary: 'Supprimer un template (v2)',
-          description: 'Supprime un template de document',
-          tags: ['Document Templates'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID du template',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Template supprimé',
+              description: 'Liste des demandes de signature',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
-                      success: { type: 'boolean' },
+                      data: { type: 'array', items: { $ref: '#/components/schemas/SignatureRequest' } },
+                      meta: { type: 'object', properties: { total: { type: 'integer' } } },
                     },
                   },
                 },
@@ -1251,1157 +960,79 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             },
             '401': { $ref: '#/components/responses/Unauthorized' },
             '403': { $ref: '#/components/responses/Forbidden' },
-            '404': { $ref: '#/components/responses/NotFound' },
           },
         },
-      },
-      '/api/documents/generate-batch': {
         post: {
-          summary: 'Générer plusieurs documents en masse',
-          description: 'Génère plusieurs documents à partir d\'un template et d\'une liste de variables',
-          tags: ['Documents'],
-          security: [{ ApiKeyAuth: [] }],
+          operationId: 'createSignatureRequest',
+          summary: 'Créer une demande de signature',
+          description: `Crée une ou plusieurs demandes de signature et envoie les emails automatiquement. Maximum 20 destinataires par appel.
+
+Scope requis : \`write:signatures\``,
+          tags: ['Signatures'],
           requestBody: {
             required: true,
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['template_id', 'format', 'items'],
+                  required: ['document_id'],
                   properties: {
-                    template_id: { type: 'string', format: 'uuid' },
-                    format: { type: 'string', enum: ['PDF', 'DOCX'] },
-                    items: {
+                    document_id:      { type: 'string', format: 'uuid' },
+                    recipient_email:  { type: 'string', format: 'email', description: 'Requis pour envoi unique' },
+                    recipient_name:   { type: 'string', description: 'Requis pour envoi unique' },
+                    recipient_type:   { type: 'string', enum: ['student', 'funder', 'teacher', 'other'], description: 'Requis pour envoi unique' },
+                    recipient_id:     { type: 'string', format: 'uuid', nullable: true },
+                    subject:          { type: 'string', nullable: true, description: 'Objet de l\'email (défaut: "Demande de signature : <titre>")' },
+                    message:          { type: 'string', nullable: true },
+                    expires_at:       { type: 'string', format: 'date-time', description: 'Expiration (défaut: +30 jours)' },
+                    recipients: {
                       type: 'array',
+                      description: 'Pour envoi multiple (remplace recipient_email / name / type)',
+                      maxItems: 20,
                       items: {
                         type: 'object',
+                        required: ['email', 'name', 'type'],
                         properties: {
-                          variables: { type: 'object' },
-                        },
-                      },
-                    },
-                    zip_filename: { type: 'string', maxLength: 200 },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Documents générés (fichier ZIP)',
-              content: {
-                'application/zip': {
-                  schema: {
-                    type: 'string',
-                    format: 'binary',
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/signature-requests/{id}': {
-        patch: {
-          summary: 'Mettre à jour une demande de signature',
-          description: 'Met à jour une demande de signature (annuler, envoyer rappel, etc.)',
-          tags: ['Signature Requests'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID de la demande de signature',
-            },
-          ],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['action'],
-                  properties: {
-                    action: { type: 'string', enum: ['cancel', 'remind'] },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Demande mise à jour',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-      },
-      '/api/payments/stripe/status/{paymentIntentId}': {
-        get: {
-          summary: 'Vérifier le statut d\'un paiement Stripe',
-          description: 'Récupère le statut d\'une intention de paiement Stripe',
-          tags: ['Payments'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'paymentIntentId',
-              in: 'path',
-              required: true,
-              schema: { type: 'string' },
-              description: 'ID de l\'intention de paiement Stripe',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Statut du paiement',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      status: { type: 'string', enum: ['requires_payment_method', 'processing', 'succeeded', 'canceled'] },
-                      amount: { type: 'number' },
-                      currency: { type: 'string' },
-                      paid: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-      },
-      '/api/resources/upload': {
-        post: {
-          summary: 'Uploader une ressource',
-          description: 'Upload une ressource (fichier) vers Supabase Storage',
-          tags: ['Resources'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'multipart/form-data': {
-                schema: {
-                  type: 'object',
-                  required: ['file', 'organization_id', 'title', 'resource_type'],
-                  properties: {
-                    file: { type: 'string', format: 'binary' },
-                    organization_id: { type: 'string', format: 'uuid' },
-                    category_id: { type: 'string', format: 'uuid' },
-                    title: { type: 'string' },
-                    description: { type: 'string' },
-                    resource_type: { type: 'string' },
-                    tags: { type: 'string' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Ressource uploadée',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      resource: {
-                        type: 'object',
-                        properties: {
-                          id: { type: 'string', format: 'uuid' },
-                          title: { type: 'string' },
-                          file_url: { type: 'string', format: 'uri' },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/resources/{id}/download': {
-        get: {
-          summary: 'Télécharger une ressource',
-          description: 'Télécharge ou redirige vers une ressource',
-          tags: ['Resources'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID de la ressource',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Redirection vers la ressource',
-              headers: {
-                Location: {
-                  schema: { type: 'string', format: 'uri' },
-                  description: 'URL de la ressource',
-                },
-              },
-            },
-            '301': {
-              description: 'Redirection permanente vers la ressource',
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-      },
-      '/api/documents/scheduled': {
-        get: {
-          summary: 'Liste des générations programmées',
-          description: 'Récupère toutes les générations de documents programmées pour une organisation',
-          tags: ['Documents'],
-          security: [{ ApiKeyAuth: [] }],
-          responses: {
-            '200': {
-              description: 'Liste des générations programmées',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string', format: 'uuid' },
-                        template_id: { type: 'string', format: 'uuid' },
-                        scheduled_at: { type: 'string', format: 'date-time' },
-                        status: { type: 'string', enum: ['pending', 'completed', 'failed'] },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-        post: {
-          summary: 'Créer une génération programmée',
-          description: 'Programme la génération d\'un document à une date/heure précise',
-          tags: ['Documents'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['template_id', 'scheduled_at', 'variables'],
-                  properties: {
-                    template_id: { type: 'string', format: 'uuid' },
-                    scheduled_at: { type: 'string', format: 'date-time' },
-                    variables: { type: 'object' },
-                    format: { type: 'string', enum: ['PDF', 'DOCX', 'HTML'], default: 'PDF' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '201': {
-              description: 'Génération programmée créée',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', format: 'uuid' },
-                      scheduled_at: { type: 'string', format: 'date-time' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/api/documents/schedule-send': {
-        post: {
-          summary: 'Programmer l\'envoi d\'un document',
-          description: 'Programme l\'envoi d\'un document par email à une date/heure précise',
-          tags: ['Documents'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['document_id', 'scheduled_at'],
-                  properties: {
-                    document_id: { type: 'string', format: 'uuid' },
-                    recipient_type: { type: 'string', enum: ['student', 'funder', 'teacher'] },
-                    recipient_ids: { type: 'array', items: { type: 'string', format: 'uuid' } },
-                    session_id: { type: 'string', format: 'uuid' },
-                    scheduled_at: { type: 'string', format: 'date-time' },
-                    subject: { type: 'string' },
-                    message: { type: 'string' },
-                    send_via: { type: 'string', enum: ['email', 'sms'] },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '201': {
-              description: 'Envoi programmé créé',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', format: 'uuid' },
-                      scheduled_at: { type: 'string', format: 'date-time' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '403': { $ref: '#/components/responses/Forbidden' },
-          },
-        },
-      },
-      '/api/signature-requests/sign': {
-        post: {
-          summary: 'Signer une demande de signature',
-          description: 'Signe une demande de signature (endpoint public, accessible via token)',
-          tags: ['Signature Requests'],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['token', 'signatureData'],
-                  properties: {
-                    token: { type: 'string', description: 'Token d\'accès à la demande de signature' },
-                    signatureData: {
-                      type: 'object',
-                      description: 'Données de la signature (image, coordonnées, etc.)',
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Signature effectuée',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      signature: {
-                        type: 'object',
-                        properties: {
-                          id: { type: 'string', format: 'uuid' },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-      },
-      '/api/learner/access-token': {
-        post: {
-          summary: 'Générer un token d\'accès pour apprenant',
-          description: 'Génère un token d\'accès temporaire pour un apprenant (espace apprenant)',
-          tags: ['Learner'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['studentId'],
-                  properties: {
-                    studentId: { type: 'string', format: 'uuid' },
-                    sessionId: { type: 'string', format: 'uuid' },
-                    expiresInDays: { type: 'integer', default: 30, minimum: 1, maximum: 365 },
-                    maxUses: { type: 'integer', nullable: true, minimum: 1 },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Token généré',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      token: { type: 'string' },
-                      expiresAt: { type: 'string', format: 'date-time' },
-                      accessUrl: { type: 'string', format: 'uri' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/api/users/create': {
-        post: {
-          summary: 'Créer un utilisateur',
-          description: 'Crée un nouvel utilisateur dans le système',
-          tags: ['Users'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['email', 'full_name', 'organization_id'],
-                  properties: {
-                    email: { type: 'string', format: 'email' },
-                    full_name: { type: 'string', minLength: 2, maxLength: 100 },
-                    phone: { type: 'string', pattern: '^\\+?[1-9]\\d{1,14}$' },
-                    organization_id: { type: 'string', format: 'uuid' },
-                    password: {
-                      type: 'string',
-                      minLength: 8,
-                      maxLength: 72,
-                      description: 'Doit contenir majuscule, minuscule et chiffre',
-                    },
-                    role: { type: 'string', enum: ['super_admin', 'admin', 'teacher', 'student'] },
-                    is_active: { type: 'boolean', default: true },
-                    send_invitation: { type: 'boolean', default: false },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '201': {
-              description: 'Utilisateur créé',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      user: {
-                        type: 'object',
-                        properties: {
-                          id: { type: 'string', format: 'uuid' },
                           email: { type: 'string', format: 'email' },
-                          full_name: { type: 'string' },
+                          name:  { type: 'string' },
+                          type:  { type: 'string', enum: ['student', 'funder', 'teacher', 'other'] },
+                          id:    { type: 'string', format: 'uuid', nullable: true },
                         },
                       },
                     },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '201': {
+              description: 'Demande(s) créée(s) et email(s) envoyé(s)',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { data: { $ref: '#/components/schemas/SignatureRequest' } },
                   },
                 },
               },
             },
             '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '409': {
-              description: 'Utilisateur déjà existant',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/electronic-attendance/sessions': {
-        get: {
-          summary: 'Liste des sessions d\'émargement électronique',
-          description: 'Récupère les sessions d\'émargement électronique pour une organisation',
-          tags: ['Electronic Attendance'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'status',
-              in: 'query',
-              schema: { type: 'string', enum: ['draft', 'active', 'closed', 'cancelled'] },
-              description: 'Filtrer par statut',
-            },
-            {
-              name: 'date',
-              in: 'query',
-              schema: { type: 'string', format: 'date' },
-              description: 'Filtrer par date',
-            },
-            {
-              name: 'sessionId',
-              in: 'query',
-              schema: { type: 'string', format: 'uuid' },
-              description: 'Filtrer par session',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Liste des sessions',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string', format: 'uuid' },
-                        session_id: { type: 'string', format: 'uuid' },
-                        date: { type: 'string', format: 'date' },
-                        status: { type: 'string' },
-                        requests: {
-                          type: 'array',
-                          items: {
-                            type: 'object',
-                            properties: {
-                              id: { type: 'string', format: 'uuid' },
-                              student_name: { type: 'string' },
-                              status: { type: 'string' },
-                              signed_at: { type: 'string', format: 'date-time' },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
             '401': { $ref: '#/components/responses/Unauthorized' },
             '403': { $ref: '#/components/responses/Forbidden' },
             '404': { $ref: '#/components/responses/NotFound' },
           },
         },
       },
-      '/api/documents/generate-pdf': {
+
+      // ─── Webhooks ────────────────────────────────────────────────────────
+      '/api/v1/webhooks/incoming': {
         post: {
-          summary: 'Générer un document PDF',
-          description: 'Génère un document PDF à partir d\'un template et de variables',
-          tags: ['Documents'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['template', 'variables'],
-                  properties: {
-                    template: { $ref: '#/components/schemas/DocumentTemplate' },
-                    variables: { type: 'object' },
-                    documentId: { type: 'string', format: 'uuid' },
-                    organizationId: { type: 'string', format: 'uuid' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'PDF généré',
-              content: {
-                'application/pdf': {
-                  schema: {
-                    type: 'string',
-                    format: 'binary',
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/api/documents/generate-docx': {
-        post: {
-          summary: 'Générer un document Word (DOCX)',
-          description: 'Génère un document Word (DOCX) à partir d\'un template et de variables',
-          tags: ['Documents'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['templateId', 'variables'],
-                  properties: {
-                    templateId: { type: 'string', format: 'uuid' },
-                    variables: { type: 'object' },
-                    filename: { type: 'string', default: 'document.docx' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'DOCX généré',
-              content: {
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
-                  schema: {
-                    type: 'string',
-                    format: 'binary',
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-          },
-        },
-      },
-      '/api/sessions/active': {
-        get: {
-          summary: 'Liste des sessions actives',
-          description: 'Récupère la liste des sessions actives',
-          tags: ['Sessions'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'limit',
-              in: 'query',
-              schema: { type: 'integer', default: 10, minimum: 1, maximum: 100 },
-              description: 'Nombre de sessions à retourner',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Liste des sessions actives',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      sessions: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            id: { type: 'string', format: 'uuid' },
-                            status: { type: 'string' },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/api/sessions/revoke': {
-        post: {
-          summary: 'Révoquer une session',
-          description: 'Révoque une session spécifique ou toutes les sessions',
-          tags: ['Sessions'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    session_id: { type: 'string', format: 'uuid' },
-                    revoke_all: { type: 'boolean', default: false },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Session(s) révoquée(s)',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      message: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/api/geolocation/reverse-geocode': {
-        get: {
-          summary: 'Géocodage inverse',
-          description: 'Convertit des coordonnées GPS (latitude, longitude) en adresse',
-          tags: ['Geolocation'],
-          parameters: [
-            {
-              name: 'latitude',
-              in: 'query',
-              required: true,
-              schema: { type: 'number' },
-              description: 'Latitude',
-            },
-            {
-              name: 'longitude',
-              in: 'query',
-              required: true,
-              schema: { type: 'number' },
-              description: 'Longitude',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Adresse trouvée',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      address: { type: 'string' },
-                      details: { type: 'object' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/sirene/search': {
-        get: {
-          summary: 'Recherche d\'entreprise via SIRENE',
-          description: 'Recherche des informations d\'entreprise via l\'API SIRENE (INSEE)',
-          tags: ['Sirene'],
-          parameters: [
-            {
-              name: 'siret',
-              in: 'query',
-              schema: { type: 'string', pattern: '^[0-9]{14}$' },
-              description: 'Numéro SIRET (14 chiffres)',
-            },
-            {
-              name: 'siren',
-              in: 'query',
-              schema: { type: 'string', pattern: '^[0-9]{9}$' },
-              description: 'Numéro SIREN (9 chiffres)',
-            },
-            {
-              name: 'name',
-              in: 'query',
-              schema: { type: 'string' },
-              description: 'Nom de l\'entreprise',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Informations de l\'entreprise',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      data: { type: 'object' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '404': { $ref: '#/components/responses/NotFound' },
-            '500': {
-              description: 'Erreur serveur ou configuration manquante',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/2fa/generate-secret': {
-        post: {
-          summary: 'Générer un secret 2FA',
-          description: 'Génère un secret TOTP et un QR code pour activer l\'authentification à deux facteurs',
-          tags: ['2FA'],
-          security: [{ ApiKeyAuth: [] }],
-          responses: {
-            '200': {
-              description: 'Secret et QR code générés',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      secret: { type: 'string' },
-                      qrCodeUrl: { type: 'string', format: 'uri' },
-                      backupCodes: {
-                        type: 'array',
-                        items: { type: 'string' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/2fa/verify': {
-        post: {
-          summary: 'Vérifier un code 2FA',
-          description: 'Vérifie un code TOTP lors de la connexion avec 2FA',
-          tags: ['2FA'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['code'],
-                  properties: {
-                    code: { type: 'string', description: 'Code TOTP à 6 chiffres' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Code vérifié',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      isBackupCode: { type: 'boolean' },
-                      sessionToken: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/2fa/verify-activation': {
-        post: {
-          summary: 'Vérifier l\'activation 2FA',
-          description: 'Vérifie un code TOTP lors de l\'activation de l\'authentification à deux facteurs',
-          tags: ['2FA'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['code'],
-                  properties: {
-                    code: { type: 'string', description: 'Code TOTP à 6 chiffres' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: '2FA activée avec succès',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      message: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/2fa/verify-login': {
-        post: {
-          summary: 'Vérifier code 2FA lors de la connexion',
-          description: 'Vérifie un code TOTP lors de la connexion (sans authentification préalable) et définit le token de session 2FA',
-          tags: ['2FA'],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['userId', 'code'],
-                  properties: {
-                    userId: { type: 'string', format: 'uuid', description: 'ID de l\'utilisateur' },
-                    code: { type: 'string', description: 'Code TOTP à 6 chiffres ou code de récupération à 8 caractères hex' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Code vérifié, session 2FA créée',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      isBackupCode: { type: 'boolean' },
-                      sessionToken: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/2fa/disable': {
-        post: {
-          summary: 'Désactiver la 2FA',
-          description: 'Désactive l\'authentification à deux facteurs pour un utilisateur',
-          tags: ['2FA'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: false,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    password: { type: 'string', description: 'Mot de passe pour confirmer la désactivation' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: '2FA désactivée avec succès',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      message: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/2fa/regenerate-backup-codes': {
-        post: {
-          summary: 'Régénérer les codes de récupération 2FA',
-          description: 'Régénère les codes de récupération pour l\'authentification à deux facteurs',
-          tags: ['2FA'],
-          security: [{ ApiKeyAuth: [] }],
-          responses: {
-            '200': {
-              description: 'Codes de récupération régénérés',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      backupCodes: {
-                        type: 'array',
-                        items: { type: 'string' },
-                      },
-                      message: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '429': { $ref: '#/components/responses/RateLimit' },
-          },
-        },
-      },
-      '/api/cron/notification-reminders': {
-        get: {
-          summary: 'CRON - Rappels de notifications',
-          description: 'Tâche CRON pour envoyer les rappels de notifications (à exécuter quotidiennement)',
-          tags: ['Cron'],
-          security: [
-            {
-              BearerAuth: [],
-            },
-          ],
-          parameters: [
-            {
-              name: 'Authorization',
-              in: 'header',
-              required: true,
-              schema: { type: 'string' },
-              description: 'Bearer token avec CRON_SECRET',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Rappels envoyés',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      message: { type: 'string' },
-                      results: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            organizationId: { type: 'string', format: 'uuid' },
-                            scheduled: { type: 'integer' },
-                            errors: { type: 'array', items: { type: 'string' } },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/api/cron/send-scheduled-documents': {
-        get: {
-          summary: 'CRON - Envoi des documents planifiés',
-          description: 'Tâche CRON pour envoyer les documents planifiés (à exécuter toutes les 5-15 minutes)',
-          tags: ['Cron'],
-          security: [
-            {
-              BearerAuth: [],
-            },
-          ],
-          parameters: [
-            {
-              name: 'Authorization',
-              in: 'header',
-              required: true,
-              schema: { type: 'string' },
-              description: 'Bearer token avec CRON_SECRET',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Documents envoyés',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      message: { type: 'string' },
-                      sent: { type: 'integer' },
-                      failed: { type: 'integer' },
-                      errors: { type: 'array', items: { type: 'string' } },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-          },
-        },
-      },
-      '/api/webhooks/stripe': {
-        post: {
-          summary: 'Webhook Stripe',
-          description: 'Webhook pour gérer automatiquement les événements Stripe (souscriptions, paiements)',
+          operationId: 'receiveWebhookEvent',
+          summary: 'Recevoir un événement externe',
+          description: `Reçoit et stocke un événement depuis une application externe (Typeform, Make, Zapier…).
+
+Scope requis : \`write:webhooks\``,
           tags: ['Webhooks'],
           requestBody: {
             required: true,
@@ -2409,481 +1040,26 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
               'application/json': {
                 schema: {
                   type: 'object',
-                  description: 'Événement Stripe (customer.subscription.created, customer.subscription.updated, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed)',
-                },
-              },
-            },
-          },
-          parameters: [
-            {
-              name: 'stripe-signature',
-              in: 'header',
-              required: true,
-              schema: { type: 'string' },
-              description: 'Signature Stripe pour vérifier l\'authenticité du webhook',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Webhook traité',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      received: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-          },
-        },
-      },
-      '/api/electronic-attendance/sign': {
-        post: {
-          summary: 'Signer une demande d\'émargement électronique',
-          description: 'Signe une demande d\'émargement électronique (endpoint public)',
-          tags: ['Electronic Attendance'],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['token', 'signatureData'],
+                  required: ['event', 'data'],
                   properties: {
-                    token: { type: 'string', description: 'Token de la demande d\'émargement' },
-                    signatureData: { type: 'object', description: 'Données de signature' },
-                    location: {
-                      type: 'object',
-                      properties: {
-                        latitude: { type: 'number' },
-                        longitude: { type: 'number' },
-                        address: { type: 'string' },
-                      },
-                    },
+                    event:            { type: 'string', example: 'student.updated', description: 'Type d\'événement' },
+                    data:             { type: 'object', description: 'Payload de l\'événement' },
+                    source:           { type: 'string', example: 'typeform', description: 'Nom de l\'application source' },
+                    idempotency_key:  { type: 'string', description: 'Clé d\'idempotence pour éviter les doublons' },
                   },
                 },
               },
             },
           },
           responses: {
-            '200': {
-              description: 'Signature réussie',
+            '201': {
+              description: 'Événement reçu',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
-                      success: { type: 'boolean' },
-                      message: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/electronic-attendance/public/{token}': {
-        get: {
-          summary: 'Récupérer une demande d\'émargement par token',
-          description: 'Récupère une demande d\'émargement par son token (endpoint public)',
-          tags: ['Electronic Attendance'],
-          parameters: [
-            {
-              name: 'token',
-              in: 'path',
-              required: true,
-              schema: { type: 'string' },
-              description: 'Token de la demande d\'émargement',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Demande d\'émargement',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', format: 'uuid' },
-                      token: { type: 'string' },
-                      status: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/electronic-attendance/sessions/{id}': {
-        get: {
-          summary: 'Récupérer une session d\'émargement',
-          description: 'Récupère une session d\'émargement par son ID',
-          tags: ['Electronic Attendance'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID de la session d\'émargement',
-            },
-          ],
-          responses: {
-            '200': {
-              description: 'Session d\'émargement',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      id: { type: 'string', format: 'uuid' },
-                      status: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-        patch: {
-          summary: 'Mettre à jour une session d\'émargement',
-          description: 'Met à jour une session d\'émargement (lancer, fermer, etc.)',
-          tags: ['Electronic Attendance'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID de la session d\'émargement',
-            },
-          ],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['action'],
-                  properties: {
-                    action: { type: 'string', enum: ['start', 'close', 'cancel'] },
-                    sendEmails: { type: 'boolean', default: true },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Session mise à jour',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      message: { type: 'string' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/electronic-attendance/requests/{id}': {
-        patch: {
-          summary: 'Mettre à jour une demande d\'émargement',
-          description: 'Met à jour une demande d\'émargement (rappel, etc.)',
-          tags: ['Electronic Attendance'],
-          security: [{ ApiKeyAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', format: 'uuid' },
-              description: 'ID de la demande d\'émargement',
-            },
-          ],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['action'],
-                  properties: {
-                    action: { type: 'string', enum: ['remind'] },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Demande mise à jour',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-            '400': { $ref: '#/components/responses/BadRequest' },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/compliance/reports/generate': {
-        post: {
-          summary: 'Générer un rapport de conformité',
-          description: 'Génère un rapport de conformité pour une organisation',
-          tags: ['Compliance'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: false,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    report_type: { type: 'string', enum: ['annual', 'monthly', 'quarterly'], default: 'annual' },
-                    format: { type: 'string', enum: ['pdf', 'json'], default: 'pdf' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Rapport généré',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      report: { type: 'object' },
-                      download_url: { type: 'string', format: 'uri' },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/compliance/alerts/check': {
-        post: {
-          summary: 'Vérifier les alertes de conformité',
-          description: 'Exécute toutes les vérifications d\'alertes de conformité',
-          tags: ['Compliance'],
-          security: [{ ApiKeyAuth: [] }],
-          responses: {
-            '200': {
-              description: 'Vérifications terminées',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      timestamp: { type: 'string', format: 'date-time' },
-                      results: { type: 'object' },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/compliance/alerts/critical-risks': {
-        get: {
-          summary: 'Vérifier les risques critiques',
-          description: 'Vérifie les risques critiques et envoie des alertes',
-          tags: ['Compliance'],
-          security: [{ ApiKeyAuth: [] }],
-          responses: {
-            '200': {
-              description: 'Risques critiques vérifiés',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      risks: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            id: { type: 'string', format: 'uuid' },
-                            severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] },
-                            description: { type: 'string' },
-                          },
-                        },
-                      },
-                      alerts_sent: { type: 'integer' },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/compliance/sync-controls': {
-        post: {
-          summary: 'Synchroniser les contrôles de conformité',
-          description: 'Synchronise les contrôles de conformité avec les systèmes existants (2FA, SSO, etc.)',
-          tags: ['Compliance'],
-          security: [{ ApiKeyAuth: [] }],
-          responses: {
-            '200': {
-              description: 'Contrôles synchronisés',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      timestamp: { type: 'string', format: 'date-time' },
-                      results: { type: 'object' },
-                    },
-                  },
-                },
-              },
-            },
-            '401': { $ref: '#/components/responses/Unauthorized' },
-            '404': { $ref: '#/components/responses/NotFound' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/api/cpf/catalog-sync': {
-        post: {
-          summary: 'Synchroniser le catalogue CPF',
-          description: 'Synchronise le catalogue CPF depuis un fichier XML',
-          tags: ['CPF'],
-          security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  required: ['xml_data'],
-                  properties: {
-                    xml_data: { type: 'string', description: 'Contenu XML du catalogue CPF' },
-                  },
-                },
-              },
-            },
-          },
-          responses: {
-            '200': {
-              description: 'Catalogue synchronisé',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean' },
-                      synced: { type: 'integer' },
-                      errors: { type: 'array', items: { type: 'string' } },
+                      data: { type: 'object', properties: { id: { type: 'string' }, event: { type: 'string' }, status: { type: 'string' } } },
                     },
                   },
                 },
@@ -2892,26 +1068,19 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
             '400': { $ref: '#/components/responses/BadRequest' },
             '401': { $ref: '#/components/responses/Unauthorized' },
             '403': { $ref: '#/components/responses/Forbidden' },
-            '500': {
-              description: 'Erreur serveur',
-              content: {
-                'application/json': {
-                  schema: { $ref: '#/components/schemas/Error' },
-                },
-              },
-            },
           },
         },
       },
+
       '/api/v1/webhooks/events': {
         get: {
-          summary: 'Liste des types d\'événements webhook',
-          description: 'Retourne la liste complète des types d\'événements disponibles pour les webhooks',
+          operationId: 'listWebhookEvents',
+          summary: 'Types d\'événements disponibles',
+          description: 'Retourne la liste des types d\'événements pouvant déclencher un webhook sortant.',
           tags: ['Webhooks'],
-          security: [{ EduzenApiKey: [] }],
           responses: {
             '200': {
-              description: 'Liste des événements',
+              description: 'Liste des types d\'événements',
               content: {
                 'application/json': {
                   schema: {
@@ -2922,9 +1091,9 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
                         items: {
                           type: 'object',
                           properties: {
-                            name: { type: 'string', example: 'learner.created' },
-                            description: { type: 'string', example: 'Déclenché quand un apprenant est créé' },
-                            category: { type: 'string', example: 'Apprenants' },
+                            name:        { type: 'string', example: 'session.completed' },
+                            description: { type: 'string', example: 'Déclenché quand une session est marquée terminée' },
+                            category:    { type: 'string', example: 'Sessions' },
                           },
                         },
                       },
@@ -2937,26 +1106,58 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
         },
       },
     },
+    // ═══════════════════════════════════════════════════════════════════════
+    // WEBHOOKS SORTANTS (x-webhooks)
+    // ═══════════════════════════════════════════════════════════════════════
     'x-webhooks': {
       'learner.created': {
         post: {
           summary: 'Apprenant créé',
-          description: 'Déclenché quand un nouvel apprenant est créé dans l\'organisation',
-          tags: ['Webhook Events'],
+          description: 'Déclenché quand un nouvel apprenant est créé dans l\'organisation.',
+          tags: ['Événements Webhook'],
           requestBody: {
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    event: { type: 'string', example: 'learner.created' },
+                    event:     { type: 'string', example: 'learner.created' },
                     timestamp: { type: 'string', format: 'date-time' },
                     data: {
                       type: 'object',
                       properties: {
-                        id: { type: 'string', format: 'uuid' },
+                        id:        { type: 'string', format: 'uuid' },
                         full_name: { type: 'string' },
-                        email: { type: 'string', format: 'email' },
+                        email:     { type: 'string', format: 'email' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'Webhook reçu' } },
+        },
+      },
+      'session.completed': {
+        post: {
+          summary: 'Session terminée',
+          description: 'Déclenché quand une session passe au statut "completed".',
+          tags: ['Événements Webhook'],
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    event:     { type: 'string', example: 'session.completed' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        session_id:   { type: 'string', format: 'uuid' },
+                        session_name: { type: 'string' },
+                        end_date:     { type: 'string', format: 'date' },
                       },
                     },
                   },
@@ -2970,53 +1171,23 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
       'document.signed': {
         post: {
           summary: 'Document signé',
-          description: 'Déclenché quand un document (contrat, convention) est signé',
-          tags: ['Webhook Events'],
+          description: 'Déclenché quand un document (contrat, convention) est signé électroniquement.',
+          tags: ['Événements Webhook'],
           requestBody: {
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    event: { type: 'string', example: 'document.signed' },
+                    event:     { type: 'string', example: 'document.signed' },
                     timestamp: { type: 'string', format: 'date-time' },
                     data: {
                       type: 'object',
                       properties: {
-                        document_id: { type: 'string', format: 'uuid' },
-                        signer_name: { type: 'string' },
-                        signer_email: { type: 'string', format: 'email' },
-                        document_type: { type: 'string' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          responses: { '200': { description: 'Webhook reçu' } },
-        },
-      },
-      'diploma.expired': {
-        post: {
-          summary: 'Diplôme expiré',
-          description: 'Déclenché quand un diplôme ou certificat arrive à expiration',
-          tags: ['Webhook Events'],
-          requestBody: {
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    event: { type: 'string', example: 'diploma.expired' },
-                    timestamp: { type: 'string', format: 'date-time' },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        student_id: { type: 'string', format: 'uuid' },
-                        student_name: { type: 'string' },
-                        diploma_name: { type: 'string' },
-                        expired_at: { type: 'string', format: 'date' },
+                        document_id:    { type: 'string', format: 'uuid' },
+                        signer_name:    { type: 'string' },
+                        signer_email:   { type: 'string', format: 'email' },
+                        document_type:  { type: 'string' },
                       },
                     },
                   },
@@ -3030,23 +1201,53 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
       'payment.received': {
         post: {
           summary: 'Paiement reçu',
-          description: 'Déclenché quand un paiement est reçu avec succès',
-          tags: ['Webhook Events'],
+          description: 'Déclenché quand un paiement est enregistré avec succès.',
+          tags: ['Événements Webhook'],
           requestBody: {
             content: {
               'application/json': {
                 schema: {
                   type: 'object',
                   properties: {
-                    event: { type: 'string', example: 'payment.received' },
+                    event:     { type: 'string', example: 'payment.received' },
                     timestamp: { type: 'string', format: 'date-time' },
                     data: {
                       type: 'object',
                       properties: {
-                        payment_id: { type: 'string', format: 'uuid' },
-                        amount: { type: 'number' },
-                        currency: { type: 'string' },
+                        payment_id:   { type: 'string', format: 'uuid' },
+                        amount:       { type: 'number' },
+                        currency:     { type: 'string' },
                         student_name: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: { '200': { description: 'Webhook reçu' } },
+        },
+      },
+      'diploma.expired': {
+        post: {
+          summary: 'Diplôme expiré',
+          description: 'Déclenché quand un diplôme ou certificat arrive à expiration.',
+          tags: ['Événements Webhook'],
+          requestBody: {
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    event:     { type: 'string', example: 'diploma.expired' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        student_id:   { type: 'string', format: 'uuid' },
+                        student_name: { type: 'string' },
+                        diploma_name: { type: 'string' },
+                        expired_at:   { type: 'string', format: 'date' },
                       },
                     },
                   },
@@ -3060,5 +1261,5 @@ Chaque payload est signé avec HMAC-SHA256 via le header \`X-Webhook-Signature\`
     },
   }
 
-  return NextResponse.json(openAPISpec)
+  return NextResponse.json(spec)
 }

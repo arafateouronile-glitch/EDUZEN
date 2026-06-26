@@ -48,16 +48,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const hasAccess = await canUseAPI(supabase, user.organization_id)
-    if (!hasAccess) {
-      return NextResponse.json(
-        { error: 'API access requires the Enterprise plan' },
-        { status: 403 }
-      )
-    }
-
     const body = await request.json()
     const { name, description, scopes } = body
+
+    // Les scopes "site web" (lecture publique) sont disponibles sur tous les plans payants
+    const PUBLIC_WEB_SCOPES = new Set(['read:programs', 'read:sessions', 'read:formations'])
+    const requestedScopes: string[] = body.scopes || []
+    const isPublicWebKey = requestedScopes.length > 0 && requestedScopes.every((s: string) => PUBLIC_WEB_SCOPES.has(s))
+
+    if (!isPublicWebKey) {
+      const hasAccess = await canUseAPI(supabase, user.organization_id)
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'API access requires the Enterprise plan' },
+          { status: 403 }
+        )
+      }
+    }
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -67,6 +74,12 @@ export async function POST(request: NextRequest) {
     const result = await apiService.createAPIKey(user.organization_id, user.id, name, {
       description,
       scopes: scopes || [],
+      // Limites réduites pour les clés "site web" (lecture publique, plans non-Enterprise)
+      ...(isPublicWebKey && {
+        rateLimitPerMinute: 20,
+        rateLimitPerHour:   100,
+        rateLimitPerDay:    1000,
+      }),
     })
 
     return NextResponse.json({ data: result })

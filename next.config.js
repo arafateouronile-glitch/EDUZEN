@@ -79,6 +79,10 @@ const nextConfig = {
         destination: '/_next/static/media/:path*',
       },
       {
+        source: '/comparatif',
+        destination: '/comparatif/index.html',
+      },
+      {
         source: '/comparatif/:slug',
         destination: '/comparatif/:slug.html',
       },
@@ -153,6 +157,18 @@ const nextConfig = {
           // via getSecurityHeadersWithNonce() : CSP stricte avec nonce par requête.
           // Ce fichier statique ne définit pas de CSP car le middleware couvre toutes les routes HTML.
           // Les assets statiques (_next/static, _next/image) n'ont pas besoin de CSP.
+        ],
+      },
+      {
+        // API v1 publique : autoriser les appels cross-origin (sites WordPress, apps externes)
+        source: '/api/v1/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin',  value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, X-Eduzen-API-Key, X-API-Key, Authorization' },
+          { key: 'Access-Control-Max-Age',       value: '86400' },
+          // Écraser CORP same-origin (défini dans le bloc global) pour autoriser cross-origin
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
       {
