@@ -171,8 +171,34 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     return [] as Partial<BlogPost>[]
   })
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
+  const blogPostingSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.meta_description || post.excerpt || '',
+    image: post.featured_image_url || `${baseUrl}/og-image.png`,
+    datePublished: post.published_at || post.created_at,
+    dateModified: post.updated_at,
+    url: `${baseUrl}/blog/${post.slug}`,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `${baseUrl}/blog/${post.slug}` },
+    author: { '@type': 'Organization', name: 'EduZen', url: baseUrl },
+    publisher: {
+      '@type': 'Organization',
+      name: 'EduZen',
+      logo: { '@type': 'ImageObject', url: `${baseUrl}/logo.png` },
+    },
+    ...(post.reading_time_minutes && { timeRequired: `PT${post.reading_time_minutes}M` }),
+    ...(post.blog_categories && { articleSection: (post.blog_categories as { name?: string }).name }),
+    ...(post.tags && post.tags.length > 0 && { keywords: post.tags.map((t: { name: string }) => t.name).join(', ') }),
+  }
+
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
+      />
       <ReadingProgress />
       <Navbar />
 

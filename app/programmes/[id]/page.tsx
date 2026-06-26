@@ -11,6 +11,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { PublicProgramDetail } from '@/components/public/program-detail'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { CatalogNavbar } from '@/components/public/catalog-navbar'
 import { CatalogFooter } from '@/components/public/catalog-footer'
 import { CatalogStyles } from '@/components/public/catalog-styles'
@@ -94,6 +95,15 @@ export default async function ProgramDetailPage({ params }: PageProps) {
     .maybeSingle()
 
   // Filtrer les formations et sessions actives
+  const activeSessions = (program.formations || [])
+    .filter((f) => (f as { is_active?: boolean }).is_active)
+    .flatMap((f) => {
+      const formation = f as { sessions?: Array<{ id: string; status?: string }>; [key: string]: unknown }
+      return (formation.sessions || []).filter(
+        (s) => s.status === 'scheduled' || s.status === 'ongoing'
+      )
+    })
+
   const programWithActiveContent = {
     ...program,
     formations: (program.formations || [])
@@ -109,6 +119,40 @@ export default async function ProgramDetailPage({ params }: PageProps) {
       }),
   }
 
+  // Utiliser createAdminClient pour bypasser RLS sur la table enrollment_form_links
+  // (table nouvelle, pas de grant anon configuré)
+  const adminDb = createAdminClient() as any
+
+  // Liens par session + lien général (fallback) en parallèle
+  const sessionIds = activeSessions.map((s) => s.id)
+
+  const [sessionLinksResult, generalLinkResult] = await Promise.all([
+    sessionIds.length > 0
+      ? adminDb
+          .from('enrollment_form_links')
+          .select('session_id, token')
+          .in('session_id', sessionIds)
+          .eq('is_active', true)
+      : Promise.resolve({ data: [] }),
+    adminDb
+      .from('enrollment_form_links')
+      .select('token')
+      .eq('org_id', organization.id)
+      .is('session_id', null)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const enrollmentLinks: Record<string, string> = Object.fromEntries(
+    ((sessionLinksResult.data ?? []) as Array<{ session_id: string; token: string }>)
+      .filter((l) => l.session_id && l.token)
+      .map((l) => [l.session_id, l.token])
+  )
+  const generalEnrollmentToken: string | undefined = generalLinkResult.data?.token ?? undefined
+
+
   // Utiliser les valeurs des settings ou celles par défaut
   const logoUrl = catalogSettings?.logo_url || organization.logo_url
   const primaryColor = catalogSettings?.primary_color || '#274472'
@@ -116,16 +160,19 @@ export default async function ProgramDetailPage({ params }: PageProps) {
   return (
     <>
       <CatalogStyles primaryColor={primaryColor} />
-      <CatalogNavbar 
+      <CatalogNavbar
         organizationName={organization.name ?? ''}
         logoUrl={logoUrl}
         primaryColor={primaryColor}
       />
       <div className="min-h-screen bg-white">
-        <PublicProgramDetail 
-          program={programWithActiveContent as Parameters<typeof PublicProgramDetail>[0]['program']} 
+        <PublicProgramDetail
+          program={programWithActiveContent as Parameters<typeof PublicProgramDetail>[0]['program']}
           primaryColor={primaryColor}
           organizationCode={organization.code ?? undefined}
+          enrollmentLinks={enrollmentLinks}
+          generalEnrollmentToken={generalEnrollmentToken}
+          contactEmail={catalogSettings?.contact_email ?? organization.email ?? undefined}
         />
       </div>
       <CatalogFooter

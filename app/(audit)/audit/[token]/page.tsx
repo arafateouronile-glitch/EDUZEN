@@ -94,6 +94,67 @@ export default function AuditorPage() {
     window.open(url, '_blank', 'noopener,noreferrer')
   }, [])
 
+  // Télécharger le document source d'une entité (programme, session, formateur…)
+  const handleDownloadEntityDoc = useCallback(async (entityType: string, entityId: string, entityName?: string) => {
+    try {
+      const url = `/api/auditor/entity-pdf?token=${encodeURIComponent(token)}&type=${encodeURIComponent(entityType)}&id=${encodeURIComponent(entityId)}`
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('PDF generation failed')
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = `${entityType}-${(entityName || entityId).replace(/[^a-zA-Z0-9]/g, '-').slice(0, 40)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      alert('Erreur lors de la génération du document. Veuillez réessayer.')
+    }
+  }, [token])
+
+  // Télécharger la fiche de preuve PDF (générée par la route /api/auditor/evidence-pdf)
+  const handleDownloadFiche = useCallback(async (evidenceId: string) => {
+    try {
+      const url = `/api/auditor/evidence-pdf?token=${encodeURIComponent(token)}&id=${encodeURIComponent(evidenceId)}`
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('PDF generation failed')
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = `preuve-qualiopi-${evidenceId.slice(0, 8)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      alert('Erreur lors de la génération de la fiche PDF. Veuillez réessayer.')
+    }
+  }, [token])
+
+  // Télécharger un document (fetch → blob pour forcer le téléchargement)
+  const handleDownloadDocument = useCallback(async (url: string, filename?: string) => {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('fetch failed')
+      const blob = await response.blob()
+      const ext = blob.type.includes('pdf') ? '.pdf' : blob.type.includes('image') ? '' : ''
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename ? `${filename}${ext}` : 'preuve'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      // CORS ou erreur réseau : fallback ouverture onglet
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }, [])
+
   // Affichage selon l'état
   if (pageState === 'loading') {
     return (
@@ -203,6 +264,9 @@ export default function AuditorPage() {
         onSearch={data.link.permissions.sampling_mode ? handleSearch : undefined}
         onExportPdf={data.link.permissions.export_pdf ? handleExportPdf : undefined}
         onViewDocument={handleViewDocument}
+        onDownloadDocument={handleDownloadDocument}
+        onDownloadFiche={handleDownloadFiche}
+        onDownloadEntityDoc={handleDownloadEntityDoc}
       />
     )
   }

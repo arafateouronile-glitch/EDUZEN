@@ -23,6 +23,7 @@ import {
   Trash2,
   MoreVertical,
   UserCog,
+  Clock,
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -146,61 +147,23 @@ export function ConfigApprenants({
     enabled: !!user?.organization_id,
   })
 
-  // Récupérer les candidats de la formation (étudiants inscrits à d'autres sessions de la même formation)
+  // Récupérer les candidats ayant postulé à cette session depuis le catalogue public
   const { data: formationCandidates } = useQuery({
-    queryKey: ['formation-candidates', formationId, user?.organization_id],
+    queryKey: ['session-public-candidates', sessionId],
     queryFn: async () => {
-      if (!formationId || !user?.organization_id) return []
+      if (!sessionId) return []
 
-      // Récupérer toutes les sessions de cette formation
-      const { data: formationSessions } = await supabase
-        .from('sessions')
-        .select('id')
-        .eq('formation_id', formationId)
-        .eq('organization_id', user.organization_id)
-        .neq('id', sessionId) // Exclure la session actuelle
+      const { data, error } = await supabase
+        .from('public_enrollments')
+        .select('id, first_name, last_name, email, phone, status, created_at, candidate_notes')
+        .eq('session_id', sessionId)
+        .in('status', ['pending', 'confirmed'])
+        .order('created_at', { ascending: true })
 
-      if (!formationSessions || formationSessions.length === 0) return []
-
-      const sessionIds = formationSessions.map((s) => s.id)
-
-      // Récupérer les inscriptions à ces sessions
-      const { data: otherEnrollments } = await supabase
-        .from('enrollments')
-        .select('student_id')
-        .in('session_id', sessionIds)
-        .in('status', ['confirmed', 'pending'])
-
-      if (!otherEnrollments || otherEnrollments.length === 0) return []
-
-      const candidateStudentIds = [...new Set(otherEnrollments.map((e) => e.student_id).filter((id): id is string => id !== null))]
-
-      // Récupérer les étudiants candidats avec toutes les informations
-      const { data: candidates } = await supabase
-        .from('students')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          student_number,
-          email,
-          phone,
-          photo_url,
-          date_of_birth,
-          gender,
-          address,
-          city,
-          status,
-          organization_id
-        `)
-        .in('id', candidateStudentIds.filter((id): id is string => id !== null))
-        .eq('organization_id', user.organization_id)
-        .eq('status', 'active')
-        .order('last_name', { ascending: true })
-
-      return (candidates || []) as StudentWithRelations[]
+      if (error) throw error
+      return data || []
     },
-    enabled: !!formationId && !!user?.organization_id && !!sessionId,
+    enabled: !!sessionId,
   })
 
   // Recherche server-side dans TOUTE la base quand l'utilisateur tape (bypass la pagination de 50)
@@ -260,27 +223,35 @@ export function ConfigApprenants({
     enabled: !!user?.organization_id && !!externalEntities && externalEntities.length > 0,
   })
 
-  // Filtrer les candidats et étudiants (inclure tous les candidats, même ceux déjà inscrits)
+  // Emails des étudiants déjà inscrits (pour détecter si un candidat catalogue est déjà inscrit)
+  const enrolledStudentEmails = useMemo(
+    () => new Set(
+      enrollments
+        ?.map((e) => (e as EnrollmentWithRelations).students?.email)
+        .filter((email): email is string => !!email)
+        .map((email) => email.toLowerCase())
+    ),
+    [enrollments]
+  )
+
+  // Filtrer les candidats catalogue
   const filteredCandidates = useMemo(() => {
     if (!formationCandidates) return []
     if (!searchQuery) return formationCandidates
 
     const query = searchQuery.toLowerCase()
     return formationCandidates.filter(
-      (student) =>
-        student.first_name?.toLowerCase().includes(query) ||
-        student.last_name?.toLowerCase().includes(query) ||
-        student.student_number?.toLowerCase().includes(query) ||
-        student.email?.toLowerCase().includes(query) ||
-        student.phone?.toLowerCase().includes(query) ||
-        `${student.first_name || ''} ${student.last_name || ''}`.toLowerCase().includes(query)
+      (c) =>
+        c.first_name?.toLowerCase().includes(query) ||
+        c.last_name?.toLowerCase().includes(query) ||
+        c.email?.toLowerCase().includes(query) ||
+        c.phone?.toLowerCase().includes(query) ||
+        `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase().includes(query)
     )
   }, [formationCandidates, searchQuery])
-  
+
   // Tous les candidats (y compris ceux déjà inscrits pour l'affichage)
-  const allCandidates = useMemo(() => {
-    return filteredCandidates
-  }, [filteredCandidates])
+  const allCandidates = useMemo(() => filteredCandidates, [filteredCandidates])
 
   const filteredAllStudents = useMemo(() => {
     if (!searchQuery || searchQuery.length < 1) return []
@@ -328,16 +299,16 @@ export function ConfigApprenants({
   // eslint-disable-next-line react-hooks/exhaustive-deps -- getStudentsForEntity reads from state, deps sufficient
   }, [externalEntities, searchQuery, studentEntities, enrolledStudentIds])
 
-  // Candidats non encore inscrits (pour les boutons d'inscription)
+  // Candidats catalogue non encore inscrits (par email)
   const availableCandidates = useMemo(
-    () => filteredCandidates.filter((c) => !enrolledStudentIds.has(c.id)),
-    [filteredCandidates, enrolledStudentIds]
+    () => filteredCandidates.filter((c) => !enrolledStudentEmails.has((c.email || '').toLowerCase())),
+    [filteredCandidates, enrolledStudentEmails]
   )
-  
-  // Candidats déjà inscrits (pour l'affichage)
+
+  // Candidats catalogue déjà inscrits (par email)
   const enrolledCandidates = useMemo(
-    () => filteredCandidates.filter((c) => enrolledStudentIds.has(c.id)),
-    [filteredCandidates, enrolledStudentIds]
+    () => filteredCandidates.filter((c) => enrolledStudentEmails.has((c.email || '').toLowerCase())),
+    [filteredCandidates, enrolledStudentEmails]
   )
 
   // Tous les étudiants (non candidats) - inclure même ceux déjà inscrits
@@ -358,7 +329,7 @@ export function ConfigApprenants({
     return allOtherStudents.filter((s) => enrolledStudentIds.has(s.id))
   }, [allOtherStudents, enrolledStudentIds])
 
-  // Gérer l'inscription
+  // Gérer l'inscription depuis un student_id connu
   const handleEnrollCandidate = (studentId: string) => {
     onEnrollmentFormChange({
       ...enrollmentForm,
@@ -369,6 +340,48 @@ export function ConfigApprenants({
     })
     setShowEnrollmentForm(true)
   }
+
+  // Inscrire un candidat catalogue : trouver ou créer le student par email puis ouvrir le formulaire
+  const enrollPublicCandidateMutation = useMutation({
+    mutationFn: async (candidate: { first_name: string; last_name: string; email: string | null; phone: string | null }) => {
+      if (!user?.organization_id) throw new Error('Organisation manquante')
+
+      // Chercher un étudiant existant par email dans l'organisation
+      if (candidate.email) {
+        const { data: existing } = await supabase
+          .from('students')
+          .select('id')
+          .eq('organization_id', user.organization_id)
+          .eq('email', candidate.email)
+          .maybeSingle()
+        if (existing) return existing.id
+      }
+
+      // Créer un nouvel étudiant depuis les données du candidat
+      const { data: created, error } = await supabase
+        .from('students')
+        .insert({
+          first_name: candidate.first_name,
+          last_name: candidate.last_name,
+          email: candidate.email || null,
+          phone: candidate.phone || null,
+          organization_id: user.organization_id,
+          status: 'active',
+          student_number: '',
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      return created.id
+    },
+    onSuccess: (studentId) => {
+      queryClient.invalidateQueries({ queryKey: ['students', user?.organization_id] })
+      handleEnrollCandidate(studentId)
+    },
+    onError: (error) => {
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Une erreur est survenue.' })
+    },
+  })
 
   // Mutation pour créer un nouvel apprenant puis l'inscrire
   const createStudentMutation = useMutation({
@@ -537,6 +550,8 @@ export function ConfigApprenants({
     return { enrolled, candidates, available, enrolledFromCandidates }
   }, [enrollments, formationCandidates, availableCandidates, enrolledCandidates])
 
+  type PublicCandidate = NonNullable<typeof formationCandidates>[number]
+
   return (
     <div className="space-y-6">
       {/* Statistiques */}
@@ -637,17 +652,17 @@ export function ConfigApprenants({
         </div>
       </GlassCard>
 
-      {/* Candidats de la formation */}
-      {formationId && (searchMode === 'all' || searchMode === 'students') && (
+      {/* Candidats du catalogue public */}
+      {(searchMode === 'all' || searchMode === 'students') && (
         <GlassCard variant="premium" className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <UserPlus className="h-5 w-5 text-purple-600" />
-                Candidats de la formation
+                Candidats du catalogue public
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Étudiants inscrits à d'autres sessions de cette formation
+                Apprenants ayant postulé à cette session depuis le catalogue en ligne
               </p>
             </div>
             <Badge variant="outline" className="text-purple-600 border-purple-200">
@@ -661,22 +676,21 @@ export function ConfigApprenants({
               <p className="text-sm">
                 {searchQuery
                   ? 'Aucun candidat trouvé avec ce critère'
-                  : 'Aucun candidat disponible pour cette formation'}
+                  : 'Aucune candidature reçue pour cette session'}
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Candidats disponibles (non inscrits) */}
+              {/* Candidats disponibles (non encore inscrits) */}
               {availableCandidates.length > 0 && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-3">
-                    Disponibles ({availableCandidates.length})
+                    En attente d'inscription ({availableCandidates.length})
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {availableCandidates.map((candidate) => {
+                    {availableCandidates.map((candidate: PublicCandidate) => {
                       const firstName = candidate.first_name || ''
                       const lastName = candidate.last_name || ''
-                      const studentNumber = candidate.student_number || ''
                       const email = candidate.email || ''
                       const phone = candidate.phone || ''
 
@@ -690,24 +704,15 @@ export function ConfigApprenants({
                           <div className="flex items-start gap-3">
                             <Avatar
                               fallback={`${firstName[0] || ''}${lastName[0] || ''}`}
-                              userId={candidate.id}
                               size="md"
-                              src={candidate.photo_url || undefined}
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-900 truncate">
-                                    {firstName} {lastName}
-                                  </p>
-                                  {studentNumber && (
-                                    <p className="text-xs text-gray-500 mt-0.5 font-mono">
-                                      #{studentNumber}
-                                    </p>
-                                  )}
-                                </div>
+                                <p className="font-medium text-gray-900 truncate">
+                                  {firstName} {lastName}
+                                </p>
                                 <Badge variant="outline" className="text-xs border-purple-200 text-purple-600 flex-shrink-0">
-                                  Candidat
+                                  Catalogue
                                 </Badge>
                               </div>
                               <div className="mt-2 space-y-1">
@@ -727,10 +732,14 @@ export function ConfigApprenants({
                               <Button
                                 size="sm"
                                 className="w-full mt-3"
-                                onClick={() => handleEnrollCandidate(candidate.id)}
-                                disabled={createEnrollmentMutation.isPending}
+                                onClick={() => enrollPublicCandidateMutation.mutate({ first_name: firstName, last_name: lastName, email: candidate.email, phone: candidate.phone })}
+                                disabled={enrollPublicCandidateMutation.isPending || createEnrollmentMutation.isPending}
                               >
-                                <UserPlus className="h-3 w-3 mr-1" />
+                                {enrollPublicCandidateMutation.isPending ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <UserPlus className="h-3 w-3 mr-1" />
+                                )}
                                 Inscrire
                               </Button>
                             </div>
@@ -741,7 +750,7 @@ export function ConfigApprenants({
                   </div>
                 </div>
               )}
-              
+
               {/* Candidats déjà inscrits */}
               {enrolledCandidates.length > 0 && (
                 <div>
@@ -749,13 +758,14 @@ export function ConfigApprenants({
                     Déjà inscrits ({enrolledCandidates.length})
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {enrolledCandidates.map((candidate) => {
+                    {enrolledCandidates.map((candidate: PublicCandidate) => {
                       const firstName = candidate.first_name || ''
                       const lastName = candidate.last_name || ''
-                      const studentNumber = candidate.student_number || ''
                       const email = candidate.email || ''
                       const phone = candidate.phone || ''
-                      const enrollment = enrollments.find((e) => e.student_id === candidate.id)
+                      const enrollment = enrollments.find(
+                        (e) => (e as EnrollmentWithRelations).students?.email?.toLowerCase() === email.toLowerCase()
+                      )
 
                       return (
                         <motion.div
@@ -767,22 +777,13 @@ export function ConfigApprenants({
                           <div className="flex items-start gap-3">
                             <Avatar
                               fallback={`${firstName[0] || ''}${lastName[0] || ''}`}
-                              userId={candidate.id}
                               size="md"
-                              src={candidate.photo_url || undefined}
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-900 truncate">
-                                    {firstName} {lastName}
-                                  </p>
-                                  {studentNumber && (
-                                    <p className="text-xs text-gray-500 mt-0.5 font-mono">
-                                      #{studentNumber}
-                                    </p>
-                                  )}
-                                </div>
+                                <p className="font-medium text-gray-900 truncate">
+                                  {firstName} {lastName}
+                                </p>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <Badge variant="outline" className="text-xs border-green-200 text-green-600">
                                     Inscrit
@@ -795,10 +796,6 @@ export function ConfigApprenants({
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end" className="w-52">
-                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/students/${candidate.id}`)}>
-                                          <UserCog className="h-4 w-4 mr-2 text-gray-500" />
-                                          Modifier la fiche apprenant
-                                        </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => handleOpenEdit(enrollment)}>
                                           <Pencil className="h-4 w-4 mr-2 text-gray-500" />
                                           Modifier l'inscription
@@ -1108,6 +1105,12 @@ export function ConfigApprenants({
                                     #{studentNumber}
                                   </p>
                                 )}
+                                {enrollment?.status === 'pending' && (
+                                  <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                    <Clock className="w-3 h-3" />
+                                    Candidature en attente
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 <Badge variant="outline" className="text-xs border-green-200 text-green-600">
@@ -1266,30 +1269,22 @@ export function ConfigApprenants({
                       src={student.photo_url || undefined}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
-                        {firstName} {lastName}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-gray-900 truncate">
+                          {firstName} {lastName}
+                        </p>
+                        {enrollment.status === 'pending' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 whitespace-nowrap">
+                            <Clock className="w-3 h-3" />
+                            Candidature en attente
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
                         {studentNumber && (
                           <span className="font-mono">#{studentNumber}</span>
                         )}
                         <span>Inscrit le {formatDate(enrollment.enrollment_date || '')}</span>
-                        <Badge
-                          variant={
-                            enrollment.status === 'confirmed'
-                              ? 'default'
-                              : enrollment.status === 'pending'
-                              ? 'outline'
-                              : 'secondary'
-                          }
-                          className="text-xs"
-                        >
-                          {enrollment.status === 'confirmed'
-                            ? 'Confirmé'
-                            : enrollment.status === 'pending'
-                            ? 'En attente'
-                            : enrollment.status}
-                        </Badge>
                       </div>
                       {(email || phone) && (
                         <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500">
@@ -1587,20 +1582,6 @@ export function ConfigApprenants({
         )}
       </AnimatePresence>
 
-      {/* Message si pas de formation */}
-      {!formationId && (
-        <GlassCard variant="default" className="p-6">
-          <div className="text-center py-8">
-            <AlertCircle className="h-12 w-12 mx-auto mb-3 text-amber-500" />
-            <p className="text-gray-600 font-medium mb-2">
-              Aucune formation sélectionnée
-            </p>
-            <p className="text-sm text-gray-500">
-              Veuillez d'abord sélectionner une formation dans l'onglet "Programme" pour voir les candidats.
-            </p>
-          </div>
-        </GlassCard>
-      )}
 
       {/* Dialog de création d'un nouvel apprenant */}
       <Dialog open={showNewStudentForm} onOpenChange={(open) => { if (!open) { setShowNewStudentForm(false); setNewStudentForm({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '' }) } }}>

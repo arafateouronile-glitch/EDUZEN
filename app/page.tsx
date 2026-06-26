@@ -144,10 +144,10 @@ function DeferredSection({
 
 export default function HomePage() {
   return (
-    <ParallaxProvider>
-      {/* SEO: Données structurées JSON-LD pour Google */}
+    <>
+      {/* JSON-LD hors du ParallaxProvider (ssr:false) pour être dans le HTML initial */}
       <JsonLd />
-
+      <ParallaxProvider>
       <main className="min-h-screen bg-white selection:bg-brand-blue-pale selection:text-brand-blue-darker antialiased">
         {/* Navbar - critique, pas de lazy load */}
         <Navbar />
@@ -423,5 +423,6 @@ export default function HomePage() {
         </DeferredSection>
       </main>
     </ParallaxProvider>
+    </>
   )
 }

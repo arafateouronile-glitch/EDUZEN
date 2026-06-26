@@ -34,30 +34,56 @@ export default function SuperAdminDashboardPage() {
   const { data: kpis, isLoading: kpisLoading, refetch } = useQuery({
     queryKey: ['super-admin-kpis'],
     queryFn: async (): Promise<DashboardKPIs> => {
-      const { data } = await supabase
-        .from('platform_metrics_daily')
-        .select('mrr, arr, active_organizations, new_organizations, churn_rate, retention_rate, conversion_rate')
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      const now = new Date()
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-      if (!data) return {
-        mrr: 0, arr: 0, activeOrganizations: 0, newSubscribersThisMonth: 0,
-        churnRate: 0, retentionRate: 0,
-      }
+      const [{ data: activeSubs }, { count: churnedThisMonth }] = await Promise.all([
+        supabase
+          .from('organization_subscriptions')
+          .select('organization_id, status, billing_cycle, created_at, subscription_plans(price_monthly, price_yearly)')
+          .in('status', ['active', 'trial']),
+        supabase
+          .from('organization_subscriptions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'canceled')
+          .gte('canceled_at', startOfMonth),
+      ])
+
+      const subs = activeSubs ?? []
+      const activeOrgs = new Set(subs.map(s => s.organization_id)).size
+      const newThisMonth = new Set(
+        subs.filter(s => s.created_at >= startOfMonth).map(s => s.organization_id)
+      ).size
+
+      const mrr = subs
+        .filter(s => s.status === 'active')
+        .reduce((sum, s) => {
+          const plan = (s as any).subscription_plans
+          if (!plan) return sum
+          const monthly = s.billing_cycle === 'yearly'
+            ? (Number(plan.price_yearly) || 0) / 12
+            : (Number(plan.price_monthly) || 0)
+          return sum + monthly
+        }, 0)
+
+      const churned = churnedThisMonth ?? 0
+      const total = subs.length + churned
+      const churnRate = total > 0 ? (churned / total) * 100 : 0
+      const activeCount = subs.filter(s => s.status === 'active').length
+      const trialCount = subs.filter(s => s.status === 'trial').length
+      const conversionRate = (activeCount + trialCount) > 0
+        ? (activeCount / (activeCount + trialCount)) * 100
+        : 0
 
       return {
-        mrr: Number(data.mrr),
-        arr: Number(data.arr),
-        activeOrganizations: data.active_organizations,
-        newSubscribersThisMonth: data.new_organizations,
-        churnRate: Number(data.churn_rate ?? 0) * 100,
-        retentionRate: Number(data.retention_rate ?? 0) * 100,
-        conversionRate: Number(data.conversion_rate ?? 0) * 100,
-        averageRevenuePerUser:
-          data.active_organizations > 0
-            ? Math.round(Number(data.mrr) / data.active_organizations)
-            : 0,
+        mrr: Math.round(mrr),
+        arr: Math.round(mrr * 12),
+        activeOrganizations: activeOrgs,
+        newSubscribersThisMonth: newThisMonth,
+        churnRate,
+        retentionRate: 100 - churnRate,
+        conversionRate,
+        averageRevenuePerUser: activeOrgs > 0 ? Math.round(mrr / activeOrgs) : 0,
       }
     },
     staleTime: 1000 * 60 * 5,
@@ -67,45 +93,67 @@ export default function SuperAdminDashboardPage() {
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
     queryKey: ['super-admin-revenue-chart'],
     queryFn: async (): Promise<RevenueDataPoint[]> => {
-      const { data } = await supabase
-        .from('platform_revenue_monthly')
-        .select('year, month, gross_revenue, new_business_revenue, net_revenue')
-        .order('year', { ascending: true })
-        .order('month', { ascending: true })
-        .limit(12)
+      // Primary : invoices payées groupées par mois
+      const { data: invoices } = await supabase
+        .from('subscription_invoices')
+        .select('paid_at, total_amount')
+        .eq('status', 'paid')
+        .not('paid_at', 'is', null)
+        .order('paid_at', { ascending: true })
 
-      if (!data || data.length === 0) {
-        // Fallback : agréger depuis platform_metrics_daily (30 derniers jours → par mois)
-        const { data: daily } = await supabase
-          .from('platform_metrics_daily')
-          .select('date, mrr, new_revenue, churned_revenue')
-          .order('date', { ascending: true })
-          .limit(365)
-
-        if (!daily || daily.length === 0) return []
-
-        const byMonth: Record<string, { mrr: number; newRevenue: number; churnedRevenue: number }> = {}
-        for (const row of daily) {
-          const d = new Date(row.date)
-          const key = `${d.getFullYear()}-${d.getMonth()}`
-          if (!byMonth[key]) byMonth[key] = { mrr: 0, newRevenue: 0, churnedRevenue: 0 }
-          byMonth[key].mrr = Math.max(byMonth[key].mrr, Number(row.mrr))
-          byMonth[key].newRevenue += Number(row.new_revenue ?? 0)
-          byMonth[key].churnedRevenue += Number(row.churned_revenue ?? 0)
+      if (invoices && invoices.length > 0) {
+        const byMonth: Record<string, number> = {}
+        for (const inv of invoices) {
+          const d = new Date(inv.paid_at!)
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          byMonth[key] = (byMonth[key] ?? 0) + Number(inv.total_amount)
         }
-
-        return Object.entries(byMonth).slice(-12).map(([key, val]) => {
-          const [year, month] = key.split('-').map(Number)
-          return { name: `${MONTH_LABELS[month]} ${year}`, ...val }
+        return Object.entries(byMonth).slice(-12).map(([key, gross]) => {
+          const [year, month] = key.split('-')
+          return {
+            name: `${MONTH_LABELS[parseInt(month) - 1]} ${year}`,
+            mrr: Math.round(gross),
+            newRevenue: Math.round(gross),
+            churnedRevenue: 0,
+          }
         })
       }
 
-      return data.map((row) => ({
-        name: MONTH_LABELS[row.month - 1],
-        mrr: Number(row.gross_revenue),
-        newRevenue: Number(row.new_business_revenue),
-        churnedRevenue: Number(row.gross_revenue) - Number(row.net_revenue),
-      }))
+      // Fallback : reconstituer le MRR mensuel à partir des abonnements actifs/résiliés
+      const { data: subs } = await supabase
+        .from('organization_subscriptions')
+        .select('status, billing_cycle, created_at, canceled_at, subscription_plans(price_monthly, price_yearly)')
+        .in('status', ['active', 'trial', 'canceled', 'expired'])
+        .order('created_at', { ascending: true })
+
+      if (!subs || subs.length === 0) return []
+
+      const now = new Date()
+      return Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1)
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() - (11 - i) + 1, 0, 23, 59, 59)
+
+        const monthMrr = subs
+          .filter(s => {
+            const created = new Date(s.created_at)
+            const canceled = s.canceled_at ? new Date(s.canceled_at) : null
+            return created <= monthEnd && (!canceled || canceled >= d) && s.status !== 'trial'
+          })
+          .reduce((sum, s) => {
+            const plan = (s as any).subscription_plans
+            if (!plan) return sum
+            return sum + (s.billing_cycle === 'yearly'
+              ? (Number(plan.price_yearly) || 0) / 12
+              : (Number(plan.price_monthly) || 0))
+          }, 0)
+
+        return {
+          name: `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`,
+          mrr: Math.round(monthMrr),
+          newRevenue: 0,
+          churnedRevenue: 0,
+        }
+      })
     },
     staleTime: 1000 * 60 * 10,
   })
@@ -148,18 +196,20 @@ export default function SuperAdminDashboardPage() {
       // Derniers abonnements (actifs ou trial)
       const { data: recentSubs } = await supabase
         .from('organization_subscriptions')
-        .select('id, status, created_at, canceled_at, organization_id, subscription_plans(name, code)')
+        .select('id, status, created_at, canceled_at, organization_id, subscription_plans(name, code), organizations(name)')
         .order('created_at', { ascending: false })
         .limit(5)
 
       for (const sub of recentSubs ?? []) {
         const plan = (sub as any).subscription_plans
+        const org = (sub as any).organizations
+        const orgName = org?.name ?? `Org ${sub.organization_id.slice(0, 8)}…`
         const isCanceled = sub.status === 'canceled'
         items.push({
           id: sub.id,
           type: isCanceled ? 'churn' : 'subscription',
           title: isCanceled ? 'Annulation d\'abonnement' : `Nouvel abonnement ${plan?.name ?? ''}`,
-          description: `Organisation ${sub.organization_id.slice(0, 8)}… — plan ${plan?.name ?? 'inconnu'}`,
+          description: `${orgName} — plan ${plan?.name ?? 'inconnu'}`,
           timestamp: formatRelative(isCanceled ? sub.canceled_at : sub.created_at),
           metadata: {
             plan: plan?.name,

@@ -1,10 +1,5 @@
-'use client'
-
-import Script from 'next/script'
-
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
 
-// Données structurées pour l'organisation
 const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
@@ -37,7 +32,6 @@ const organizationSchema = {
   ],
 }
 
-// Données structurées pour le produit SaaS
 const softwareSchema = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -87,13 +81,6 @@ const softwareSchema = {
       },
     ],
   },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: '4.9',
-    ratingCount: '12',
-    bestRating: '5',
-    worstRating: '1',
-  },
   featureList: [
     'Conformité Qualiopi 100% automatique',
     'Émargement numérique par QR Code',
@@ -113,7 +100,6 @@ const softwareSchema = {
   },
 }
 
-// Données structurées pour la page web
 const webPageSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
@@ -140,7 +126,6 @@ const webPageSchema = {
   specialty: 'Formation professionnelle continue en France',
 }
 
-// FAQ Schema pour les rich snippets FAQ
 const faqSchema = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
@@ -188,7 +173,6 @@ const faqSchema = {
   ],
 }
 
-// Breadcrumb schema
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
@@ -205,35 +189,25 @@ const breadcrumbSchema = {
 export function JsonLd() {
   return (
     <>
-      <Script
-        id="organization-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-        strategy="afterInteractive"
       />
-      <Script
-        id="software-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
-        strategy="afterInteractive"
       />
-      <Script
-        id="webpage-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }}
-        strategy="afterInteractive"
       />
-      <Script
-        id="faq-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        strategy="afterInteractive"
       />
-      <Script
-        id="breadcrumb-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-        strategy="afterInteractive"
       />
     </>
   )

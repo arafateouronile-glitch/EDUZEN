@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils'
 import { usePlatformAdmin } from '@/lib/hooks/use-platform-admin'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useTheme } from '@/lib/hooks/use-theme'
+import { useNotifications } from '@/lib/hooks/use-notifications'
+import { formatDistanceToNow } from 'date-fns'
+import { fr } from 'date-fns/locale'
 import {
   Bell,
   Search,
@@ -76,6 +79,7 @@ export function SuperAdminHeader({ sidebarCollapsed = false }: SuperAdminHeaderP
   const { roleLabel } = usePlatformAdmin()
   const { theme, setTheme, resolvedTheme } = useTheme()
   const [searchQuery, setSearchQuery] = useState('')
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingAllAsRead } = useNotifications({ limit: 5 })
 
   // Generate breadcrumbs from pathname
   const getBreadcrumbs = () => {
@@ -206,50 +210,65 @@ export function SuperAdminHeader({ sidebarCollapsed = false }: SuperAdminHeaderP
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                3
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
             <DropdownMenuLabel className="flex items-center justify-between">
               Notifications
-              <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-brand-blue">
-                Tout marquer lu
-              </Button>
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 text-xs text-brand-blue"
+                  onClick={() => markAllAsRead()}
+                  disabled={isMarkingAllAsRead}
+                >
+                  Tout marquer lu
+                </Button>
+              )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="max-h-80 overflow-y-auto">
-              <DropdownMenuItem className="flex-col items-start gap-1 p-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-2 w-2 rounded-full bg-brand-blue" />
-                  <span className="font-medium text-sm">Nouvel abonnement Pro</span>
+              {notifications.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Aucune notification
                 </div>
-                <p className="text-xs text-muted-foreground pl-4">
-                  Formation Excellence a souscrit au plan Pro
-                </p>
-                <span className="text-[10px] text-muted-foreground pl-4">il y a 5 min</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex-col items-start gap-1 p-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-2 w-2 rounded-full bg-amber-500" />
-                  <span className="font-medium text-sm">Alerte paiement</span>
-                </div>
-                <p className="text-xs text-muted-foreground pl-4">
-                  3 paiements en attente depuis plus de 7 jours
-                </p>
-                <span className="text-[10px] text-muted-foreground pl-4">il y a 1h</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex-col items-start gap-1 p-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="font-medium text-sm">Article publié</span>
-                </div>
-                <p className="text-xs text-muted-foreground pl-4">
-                  "Guide Qualiopi 2024" est maintenant en ligne
-                </p>
-                <span className="text-[10px] text-muted-foreground pl-4">il y a 2h</span>
-              </DropdownMenuItem>
+              ) : (
+                notifications.map((notif) => {
+                  const dotColor =
+                    notif.type === 'error' ? 'bg-red-500'
+                    : notif.type === 'warning' ? 'bg-amber-500'
+                    : notif.type === 'success' ? 'bg-emerald-500'
+                    : notif.type === 'payment' ? 'bg-purple-500'
+                    : 'bg-brand-blue'
+
+                  return (
+                    <DropdownMenuItem
+                      key={notif.id}
+                      className="flex-col items-start gap-1 p-3"
+                      onClick={() => { if (!notif.read_at) markAsRead(notif.id) }}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        {!notif.read_at && <span className={`flex h-2 w-2 rounded-full shrink-0 ${dotColor}`} />}
+                        <span className={`font-medium text-sm ${notif.read_at ? 'text-muted-foreground' : ''}`}>
+                          {notif.title}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground pl-4 line-clamp-2">
+                        {notif.message}
+                      </p>
+                      <span className="text-[10px] text-muted-foreground pl-4">
+                        {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: fr })}
+                      </span>
+                    </DropdownMenuItem>
+                  )
+                })
+              )}
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild className="justify-center">

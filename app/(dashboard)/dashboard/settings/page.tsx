@@ -17,7 +17,7 @@ import {
   Layout, Code, Save, Building2, Mail, Phone, MapPin,
   Calendar, DollarSign, Languages, Moon, Sun, Key,
   Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image as ImageIcon, Award, Palette, X, Clock, Receipt, FileSignature, User,
-  Lock, FileDown, ClipboardCheck, Accessibility, Plug, Zap, ArrowRight, DoorOpen, Tag
+  Lock, FileDown, ClipboardCheck, ClipboardList, Accessibility, Plug, Zap, ArrowRight, DoorOpen, Tag
 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
@@ -693,7 +693,8 @@ export default function SettingsPage() {
       tabs: [
         { id: 'email-templates', label: 'Modèles d\'emails', icon: Mail, href: '/dashboard/settings/email-templates' },
         { id: 'email-schedules', label: 'Planification', icon: Clock, href: '/dashboard/settings/email-schedules' },
-{ id: 'document-templates', label: 'Documents', icon: FileText, href: '/dashboard/settings/document-templates' },
+        { id: 'document-templates', label: 'Documents', icon: FileText, href: '/dashboard/settings/document-templates' },
+        { id: 'enrollment-forms', label: 'Formulaires d\'inscription', icon: ClipboardList, href: '/dashboard/settings/enrollment-forms' },
       ]
     },
     {

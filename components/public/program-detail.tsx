@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -89,10 +89,29 @@ interface PublicProgramDetailProps {
   program: Program
   primaryColor?: string
   organizationCode?: string
+  enrollmentLinks?: Record<string, string>
+  generalEnrollmentToken?: string
+  contactEmail?: string
 }
 
-export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.primary, organizationCode }: PublicProgramDetailProps) {
+export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.primary, organizationCode, enrollmentLinks = {}, generalEnrollmentToken, contactEmail }: PublicProgramDetailProps) {
   const [selectedFormation, setSelectedFormation] = useState<string | null>(null)
+  const sessionsRef = useRef<HTMLDivElement>(null)
+
+  function scrollToSessions() {
+    sessionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function handleSessionEnroll(sessionId?: string) {
+    const token = (sessionId && enrollmentLinks[sessionId]) || generalEnrollmentToken
+    if (token) {
+      window.location.href = `/s/${token}`
+    } else if (contactEmail) {
+      window.location.href = `mailto:${contactEmail}?subject=Demande d'inscription — ${program.name}`
+    } else {
+      scrollToSessions()
+    }
+  }
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('fr-FR', {
@@ -251,6 +270,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                   size="lg"
                   className="bg-white hover:bg-white/90 shadow-lg"
                   style={{ color: primaryColor }}
+                  onClick={scrollToSessions}
                 >
                   <Play className="w-4 h-4 mr-2" />
                   S'inscrire maintenant
@@ -546,7 +566,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Sessions disponibles */}
             {program.formations && program.formations.length > 0 && (
-              <Card className="shadow-lg border-0 overflow-hidden">
+              <Card ref={sessionsRef} className="shadow-lg border-0 overflow-hidden scroll-mt-24">
                 <div className="h-1 bg-gradient-to-r" style={{ background: `linear-gradient(to right, ${primaryColor}, ${primaryColor}80)` }} />
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -643,6 +663,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                                   <Button
                                     className="text-white shadow-md hover:shadow-lg transition-all"
                                     style={{ backgroundColor: primaryColor }}
+                                    onClick={() => handleSessionEnroll(session.id)}
                                   >
                                     S'inscrire
                                     <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
@@ -809,6 +830,11 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                   <Button
                     className="w-full text-white shadow-lg hover:shadow-xl transition-all h-12 text-base"
                     style={{ backgroundColor: primaryColor }}
+                    onClick={() =>
+                      upcomingSessions.length > 0
+                        ? handleSessionEnroll(upcomingSessions[0].id)
+                        : handleSessionEnroll()
+                    }
                   >
                     <Play className="w-4 h-4 mr-2" />
                     S'inscrire maintenant
