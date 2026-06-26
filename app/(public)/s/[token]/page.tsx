@@ -108,7 +108,7 @@ function FormInput({
 
     const options = dynOpts
       ? dynOpts
-      : (field.options ?? []).map(o => ({ id: o.value ?? o.label, label: o.label }))
+      : (field.options ?? []).map(o => ({ id: o, label: o }))
 
     return (
       <div className="relative">
