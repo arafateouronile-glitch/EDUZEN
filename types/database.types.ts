@@ -7287,6 +7287,7 @@ export type Database = {
           signature_data: string | null
           signature_token: string
           signed_at: string | null
+          signed_via: string | null
           status: string
           student_email: string
           student_id: string
@@ -7312,6 +7313,7 @@ export type Database = {
           signature_data?: string | null
           signature_token: string
           signed_at?: string | null
+          signed_via?: string | null
           status?: string
           student_email: string
           student_id: string
@@ -7337,6 +7339,7 @@ export type Database = {
           signature_data?: string | null
           signature_token?: string
           signed_at?: string | null
+          signed_via?: string | null
           status?: string
           student_email?: string
           student_id?: string
@@ -7405,6 +7408,10 @@ export type Database = {
           mode: string
           opens_at: string | null
           organization_id: string
+          public_emargement_active: boolean | null
+          public_emargement_expires_at: string | null
+          public_emargement_pin: string | null
+          public_emargement_token: string | null
           qr_code_data: string | null
           qr_code_enabled: boolean | null
           require_geolocation: boolean | null
@@ -7431,6 +7438,10 @@ export type Database = {
           mode?: string
           opens_at?: string | null
           organization_id: string
+          public_emargement_active?: boolean | null
+          public_emargement_expires_at?: string | null
+          public_emargement_pin?: string | null
+          public_emargement_token?: string | null
           qr_code_data?: string | null
           qr_code_enabled?: boolean | null
           require_geolocation?: boolean | null
@@ -7457,6 +7468,10 @@ export type Database = {
           mode?: string
           opens_at?: string | null
           organization_id?: string
+          public_emargement_active?: boolean | null
+          public_emargement_expires_at?: string | null
+          public_emargement_pin?: string | null
+          public_emargement_token?: string | null
           qr_code_data?: string | null
           qr_code_enabled?: boolean | null
           require_geolocation?: boolean | null
@@ -14002,6 +14017,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      public_emargement_logs: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          learner_id: string | null
+          session_id: string | null
+          token: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          learner_id?: string | null
+          session_id?: string | null
+          token?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          learner_id?: string | null
+          session_id?: string | null
+          token?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
       }
       programs: {
         Row: {

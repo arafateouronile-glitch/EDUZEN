@@ -910,6 +910,17 @@ export function Suivi({
       </TabsContent>
 
       <TabsContent value="attendance" className="space-y-6">
+        {/* Émargement électronique — en premier pour visibilité */}
+        {sessionData?.id && user?.organization_id && (
+          <GlassCard variant="premium" className="p-6">
+            <ElectronicAttendanceManager
+              sessionId={sessionData.id}
+              organizationId={user.organization_id}
+              sessionName={sessionData.name ?? undefined}
+            />
+          </GlassCard>
+        )}
+
         {/* Feuilles d'émargement physiques */}
         {sessionData?.id && organization && (
           <GlassCard variant="premium" className="p-6">
@@ -929,16 +940,6 @@ export function Suivi({
               organizationName={organization.name || 'Organisation'}
               organizationAddress={organization.address || undefined}
               formationName={formation?.name}
-            />
-          </GlassCard>
-        )}
-
-        {/* Émargement électronique */}
-        {sessionData?.id && user?.organization_id && (
-          <GlassCard variant="premium" className="p-6">
-            <ElectronicAttendanceManager
-              sessionId={sessionData.id}
-              organizationId={user.organization_id}
             />
           </GlassCard>
         )}

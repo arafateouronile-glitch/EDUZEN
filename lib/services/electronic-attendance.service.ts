@@ -142,6 +142,22 @@ export class ElectronicAttendanceService {
 
       if (error) throw error
 
+      // Créer les demandes d'émargement pour chaque apprenant inscrit
+      if (students.length > 0) {
+        const requests = students.map((s) => ({
+          attendance_session_id: data.id,
+          student_id: s.id,
+          student_name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim(),
+          student_email: s.email!,
+          status: 'pending' as const,
+          organization_id: params.organizationId,
+          signature_token: crypto.randomUUID().replace(/-/g, ''),
+        }))
+        await this.supabase
+          .from('electronic_attendance_requests')
+          .insert(requests as ElectronicAttendanceRequestInsert[])
+      }
+
       logger.info('Session d\'émargement créée', {
         attendanceSessionId: data.id,
         sessionId: params.sessionId,
@@ -524,6 +540,270 @@ export class ElectronicAttendanceService {
   }
 
   /**
+   * Envoie les emails d'émargement uniquement aux apprenants sélectionnés.
+   * Crée ou réutilise les electronic_attendance_requests existants.
+   */
+  async sendSelectedEmails(
+    attendanceSessionId: string,
+    learnerIds: string[],
+    customMessage?: string
+  ) {
+    try {
+      const { data: attendanceSession, error: sessionError } = await this.supabase
+        .from('electronic_attendance_sessions')
+        .select('*, session:sessions(id, name)')
+        .eq('id', attendanceSessionId)
+        .single()
+
+      if (sessionError || !attendanceSession) {
+        throw errorHandler.createNotFoundError('Session d\'émargement introuvable', { attendanceSessionId })
+      }
+
+      const sessionTitle =
+        (attendanceSession.session as { name?: string } | null)?.name ?? attendanceSession.title
+
+      // Récupérer les requests existantes pour ces apprenants
+      const { data: existingRequests } = await this.supabase
+        .from('electronic_attendance_requests')
+        .select('*')
+        .eq('attendance_session_id', attendanceSessionId)
+        .in('student_id', learnerIds)
+
+      const existingByStudentId = new Map(
+        (existingRequests ?? []).map((r) => [r.student_id, r])
+      )
+
+      // Récupérer les données des étudiants non encore dans les requests
+      const missingIds = learnerIds.filter((id) => !existingByStudentId.has(id))
+      let newRequests: ElectronicAttendanceRequest[] = []
+
+      if (missingIds.length > 0) {
+        const { data: enrollments } = await this.supabase
+          .from('enrollments')
+          .select('student_id, students(id, first_name, last_name, email)')
+          .eq('session_id', attendanceSession.session_id)
+          .in('student_id', missingIds)
+          .in('status', ['confirmed', 'active'])
+
+        const students = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
+          .map((e) => e.students)
+          .filter((s): s is StudentRef => !!s && !!s.email)
+
+        const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
+        const toInsert = students.map((student) => ({
+          organization_id: attendanceSession.organization_id,
+          attendance_session_id: attendanceSessionId,
+          student_id: student.id,
+          student_email: student.email,
+          student_name: `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
+          status: 'pending' as const,
+          signature_token: this.generateSignatureToken(),
+          access_token: crypto.randomUUID(),
+          token_expires_at: tokenExpiresAt,
+        }))
+
+        if (toInsert.length > 0) {
+          const { data: created } = await this.supabase
+            .from('electronic_attendance_requests')
+            .insert(toInsert as ElectronicAttendanceRequestInsert[])
+            .select()
+          newRequests = created ?? []
+        }
+      }
+
+      // Fusionner : demandes existantes + nouvelles
+      const allRequests: ElectronicAttendanceRequest[] = [
+        ...learnerIds
+          .map((id) => existingByStudentId.get(id))
+          .filter((r): r is ElectronicAttendanceRequest => !!r),
+        ...newRequests,
+      ]
+
+      // Envoyer les emails (uniquement ceux avec email valide)
+      const toSend = allRequests.filter((r) => !!r.student_email)
+      const results = await Promise.allSettled(
+        toSend.map(async (request) => {
+          const token = (request as RequestWithAccessToken).access_token ?? request.signature_token
+          const url = this.generateAttendanceUrl(token)
+          return this.sendAttendanceRequestEmail(
+            request.student_email,
+            request.student_name,
+            sessionTitle,
+            attendanceSession.date,
+            attendanceSession.start_time || null,
+            url,
+            customMessage
+          )
+        })
+      )
+
+      const successful = results.filter((r) => r.status === 'fulfilled').length
+      const failed = results.filter((r) => r.status === 'rejected').length
+
+      logger.info('Emails sélectifs envoyés', { attendanceSessionId, successful, failed })
+
+      return { successful, failed, total: toSend.length }
+    } catch (error) {
+      if (error instanceof AppError) throw error
+      throw errorHandler.handleError(error, { operation: 'sendSelectedEmails', attendanceSessionId })
+    }
+  }
+
+  /**
+   * Active/désactive le lien public et met à jour ses options.
+   */
+  async updatePublicLink(
+    attendanceSessionId: string,
+    options: { active: boolean; expiresAt?: string | null; pin?: string | null }
+  ) {
+    try {
+      const update: Record<string, unknown> = {
+        public_emargement_active: options.active,
+      }
+      if ('expiresAt' in options) update.public_emargement_expires_at = options.expiresAt ?? null
+      if ('pin' in options) update.public_emargement_pin = options.pin ?? null
+
+      const { data, error } = await this.supabase
+        .from('electronic_attendance_sessions')
+        .update(update as ElectronicAttendanceSessionUpdate)
+        .eq('id', attendanceSessionId)
+        .select('id, public_emargement_token, public_emargement_active, public_emargement_expires_at')
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      if (error instanceof AppError) throw error
+      throw errorHandler.handleError(error, { operation: 'updatePublicLink', attendanceSessionId })
+    }
+  }
+
+  /**
+   * Régénère le token public d'une session.
+   */
+  async regeneratePublicToken(attendanceSessionId: string) {
+    try {
+      const newToken = crypto.randomUUID().replace(/-/g, '')
+      const { data, error } = await this.supabase
+        .from('electronic_attendance_sessions')
+        .update({ public_emargement_token: newToken } as ElectronicAttendanceSessionUpdate)
+        .eq('id', attendanceSessionId)
+        .select('id, public_emargement_token')
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      if (error instanceof AppError) throw error
+      throw errorHandler.handleError(error, { operation: 'regeneratePublicToken', attendanceSessionId })
+    }
+  }
+
+  /**
+   * Soumet une signature via le lien public de séance.
+   * Vérifie le token, détecte la double signature, upload et enregistre.
+   */
+  async submitPublicEmargement(
+    token: string,
+    learnerId: string,
+    signatureData: string,
+    ipAddress: string | null
+  ) {
+    try {
+      // Récupérer la session via son token public
+      const { data: session, error: sessionError } = await this.supabase
+        .from('electronic_attendance_sessions')
+        .select('id, organization_id, session_id, date, start_time, end_time, public_emargement_active, public_emargement_expires_at')
+        .eq('public_emargement_token', token)
+        .single()
+
+      if (sessionError || !session) {
+        throw errorHandler.createNotFoundError('Lien introuvable', { token })
+      }
+
+      if (!session.public_emargement_active) {
+        throw errorHandler.createValidationError('Ce lien est désactivé', 'active')
+      }
+
+      if (session.public_emargement_expires_at && new Date(session.public_emargement_expires_at) < new Date()) {
+        throw errorHandler.createValidationError('Ce lien a expiré', 'expires_at')
+      }
+
+      // Vérifier que cet apprenant a bien une request pour cette session
+      const { data: existingRequest, error: reqError } = await this.supabase
+        .from('electronic_attendance_requests')
+        .select('id, status, signed_at, student_name')
+        .eq('attendance_session_id', session.id)
+        .eq('student_id', learnerId)
+        .single()
+
+      if (reqError || !existingRequest) {
+        throw errorHandler.createNotFoundError('Cet apprenant n\'est pas inscrit à cette session', { learnerId })
+      }
+
+      // Double signature bloquée (Option A)
+      if (existingRequest.status === 'signed') {
+        const time = existingRequest.signed_at
+          ? new Date(existingRequest.signed_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+          : ''
+        return {
+          alreadySigned: true,
+          signedAt: existingRequest.signed_at,
+          message: `Vous avez déjà signé${time ? ` à ${time}` : ''}. Si vous pensez qu'il s'agit d'une erreur, contactez votre formateur.`,
+        }
+      }
+
+      // Logger la signature
+      await this.supabase.from('public_emargement_logs').insert({
+        token,
+        session_id: session.id,
+        action: 'sign',
+        learner_id: learnerId,
+        ip_address: ipAddress,
+      })
+
+      // Créer l'enregistrement d'émargement dans la table attendance
+      let attendanceId: string | null = null
+      try {
+        const att = await this.attendanceService.upsert({
+          organization_id: session.organization_id,
+          student_id: learnerId,
+          session_id: session.session_id,
+          date: session.date,
+          status: 'present',
+        } as Parameters<AttendanceService['upsert']>[0])
+        attendanceId = att?.id ?? null
+      } catch {
+        // Non-bloquant : la signature reste dans electronic_attendance_requests
+      }
+
+      // Mettre à jour la request avec la signature
+      await this.supabase
+        .from('electronic_attendance_requests')
+        .update({
+          status: 'signed',
+          signature_data: signatureData,
+          signed_at: new Date().toISOString(),
+          attendance_id: attendanceId,
+          signed_via: 'public_link',
+          ip_address: ipAddress,
+        } as ElectronicAttendanceRequestUpdate)
+        .eq('id', existingRequest.id)
+
+      logger.info('Signature publique enregistrée', { sessionId: session.id, learnerId })
+
+      return {
+        success: true,
+        learner_name: existingRequest.student_name,
+        signed_at: new Date().toISOString(),
+      }
+    } catch (error) {
+      if (error instanceof AppError) throw error
+      throw errorHandler.handleError(error, { operation: 'submitPublicEmargement' })
+    }
+  }
+
+  /**
    * Ferme une session d'émargement
    */
   async closeAttendanceSession(attendanceSessionId: string) {
@@ -731,7 +1011,8 @@ export class ElectronicAttendanceService {
     sessionTitle: string,
     date: string,
     startTime: string | null,
-    attendanceUrl: string
+    attendanceUrl: string,
+    customMessage?: string
   ) {
     const formattedDate = new Date(date).toLocaleDateString('fr-FR', {
       weekday: 'long',
@@ -764,6 +1045,8 @@ export class ElectronicAttendanceService {
             </p>
 
             <p style="margin:0 0 20px;font-size:14px;color:#555;">Ou copiez ce lien dans votre navigateur : <a href="${attendanceUrl}" style="color:#555;word-break:break-all;">${attendanceUrl}</a></p>
+
+            ${customMessage ? `<p style="margin:0 0 20px;padding:12px 16px;background:#f5f5f5;border-left:3px solid #1a1a1a;font-size:14px;">${customMessage}</p>` : ''}
 
             <p style="margin:0 0 40px;font-size:14px;color:#555;">Votre signature électronique sera enregistrée de manière sécurisée et conforme aux normes en vigueur.</p>
 

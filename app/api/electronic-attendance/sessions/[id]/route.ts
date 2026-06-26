@@ -74,6 +74,21 @@ export async function PATCH(
       return NextResponse.json(result)
     }
 
+    if (action === 'toggle-public-link') {
+      const { active, expiresAt, pin } = body as {
+        active: boolean
+        expiresAt?: string | null
+        pin?: string | null
+      }
+      const result = await electronicAttendanceService.updatePublicLink(id, { active, expiresAt, pin })
+      return NextResponse.json(result)
+    }
+
+    if (action === 'regenerate-public-token') {
+      const result = await electronicAttendanceService.regeneratePublicToken(id)
+      return NextResponse.json(result)
+    }
+
     return NextResponse.json(
       { error: 'Action non reconnue' },
       { status: 400 }

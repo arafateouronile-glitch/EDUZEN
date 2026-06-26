@@ -19,7 +19,12 @@ import {
   Download,
   PenLine,
   Send,
+  Link2,
+  Copy,
+  QrCode,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { QRCodeModal } from '@/components/ui/QRCodeModal'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { DigitalAttendanceSheet, type AttendancePerson } from './digital-attendance-sheet'
@@ -68,6 +73,8 @@ interface ElectronicSession {
   start_time: string | null
   time_slot?: string | null
   status?: string | null
+  public_emargement_token: string | null
+  public_emargement_active: boolean | null
   requests: ElectronicRequest[]
 }
 
@@ -87,13 +94,85 @@ export function PhysicalAttendanceSheetDownloader({
   const [electronicSessions, setElectronicSessions] = useState<ElectronicSession[]>([])
   const [sendingSlotId, setSendingSlotId] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [creatingLinkSlotId, setCreatingLinkSlotId] = useState<string | null>(null)
+  const [togglingLinkSessionId, setTogglingLinkSessionId] = useState<string | null>(null)
+  const [qrModal, setQrModal] = useState<{ url: string; title: string } | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
 
-  useEffect(() => {
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const publicUrl = (token: string) => {
+    const base = process.env.NEXT_PUBLIC_APP_URL
+      || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')
+    return `${base}/p/${token}`
+  }
+
+  const refreshElectronicSessions = useCallback(() => {
     fetch(`/api/electronic-attendance/sessions?sessionId=${sessionId}`)
       .then((r) => r.ok ? r.json() : [])
       .then((data: ElectronicSession[]) => setElectronicSessions(Array.isArray(data) ? data : []))
       .catch(() => {})
   }, [sessionId])
+
+  const handleCreatePublicLink = async (slot: SessionSlot) => {
+    setCreatingLinkSlotId(slot.id)
+    try {
+      const timeLabel = getTimeSlotLabel(slot)
+      const dateStr = format(new Date(slot.date), 'd MMMM yyyy', { locale: fr })
+      const res = await fetch('/api/electronic-attendance/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          title: `Émargement ${timeLabel} — ${dateStr}`,
+          date: slot.date,
+          startTime: slot.start_time || undefined,
+          endTime: slot.end_time || undefined,
+          mode: 'electronic',
+          requireGeolocation: false,
+          allowedRadiusMeters: 100,
+        }),
+      })
+      if (!res.ok) throw new Error('Erreur création session')
+      // Activer le lien public immédiatement
+      const created = await res.json()
+      await fetch(`/api/electronic-attendance/sessions/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-public-link', active: true }),
+      })
+      refreshElectronicSessions()
+    } catch {
+      setSendError('Erreur lors de la création du lien public')
+    } finally {
+      setCreatingLinkSlotId(null)
+    }
+  }
+
+  const handleTogglePublicLink = async (eSessionId: string, active: boolean) => {
+    setTogglingLinkSessionId(eSessionId)
+    try {
+      await fetch(`/api/electronic-attendance/sessions/${eSessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-public-link', active }),
+      })
+      refreshElectronicSessions()
+    } finally {
+      setTogglingLinkSessionId(null)
+    }
+  }
+
+  const handleCopyLink = (token: string) => {
+    navigator.clipboard.writeText(publicUrl(token)).then(() => showToast('Lien copié !')).catch(() => {})
+  }
+
+  useEffect(() => {
+    refreshElectronicSessions()
+  }, [refreshElectronicSessions])
 
   const sortedSlots = [...sessionSlots].sort((a, b) => {
     const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -509,6 +588,24 @@ export function PhysicalAttendanceSheetDownloader({
 
   return (
     <div className="space-y-6">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2">
+          <CheckCircle className="h-4 w-4" />
+          {toast}
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {qrModal && (
+        <QRCodeModal
+          open={!!qrModal}
+          onClose={() => setQrModal(null)}
+          url={qrModal.url}
+          title={qrModal.title}
+        />
+      )}
+
       {/* Description */}
       <Card>
         <CardContent className="pt-6">
@@ -739,6 +836,56 @@ export function PhysicalAttendanceSheetDownloader({
                   </div>
                 </div>
               </CardContent>
+
+              {/* Lien public QR / email */}
+              <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/30">
+                {eSession?.public_emargement_token ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Link2 className="h-4 w-4 text-brand-blue" />
+                        <span className="text-sm font-medium text-gray-700">Lien public de présence</span>
+                        <Switch
+                          checked={!!eSession.public_emargement_active}
+                          onCheckedChange={(v) => handleTogglePublicLink(eSession.id, v)}
+                          disabled={togglingLinkSessionId === eSession.id}
+                        />
+                        <span className="text-xs text-gray-500">
+                          {eSession.public_emargement_active ? 'Actif' : 'Inactif'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1" onClick={() => handleCopyLink(eSession.public_emargement_token!)}>
+                          <Copy className="h-3.5 w-3.5" />Copier
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1"
+                          onClick={() => setQrModal({ url: publicUrl(eSession.public_emargement_token!), title: `Émargement — ${sessionName}` })}>
+                          <QrCode className="h-3.5 w-3.5" />QR Code
+                        </Button>
+                      </div>
+                    </div>
+                    {eSession.public_emargement_active && (
+                      <code className="block text-xs text-gray-500 bg-white border rounded px-2 py-1 truncate">
+                        {publicUrl(eSession.public_emargement_token)}
+                      </code>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 text-xs h-7"
+                    disabled={creatingLinkSlotId === slot.id}
+                    onClick={() => handleCreatePublicLink(slot)}
+                  >
+                    {creatingLinkSlotId === slot.id
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <QrCode className="h-3.5 w-3.5" />
+                    }
+                    Créer le lien public / QR Code
+                  </Button>
+                )}
+              </div>
 
               {/* Émargement numérique — toujours visible */}
               <div className="border-t border-gray-100 bg-gray-50/50">

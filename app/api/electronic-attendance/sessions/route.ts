@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
           student_id,
           status,
           signed_at,
+          signed_via,
           location_verified,
           signature_data
         )
