@@ -59,6 +59,16 @@ export function Footer() {
                 ]
               },
               {
+                title: "Solutions",
+                links: [
+                  { label: "Formation sécurité", href: "/pour/organisme-securite" },
+                  { label: "Auto-écoles", href: "/pour/auto-ecole" },
+                  { label: "CFA", href: "/pour/cfa" },
+                  { label: "Formation en entreprise", href: "/pour/formation-entreprise" },
+                  { label: "Établissements scolaires", href: "/pour/etablissement-scolaire" },
+                ]
+              },
+              {
                 title: "Comparatifs",
                 links: [
                   { label: "EduZen vs Digiforma", href: "/comparatif/eduzen-vs-digiforma" },

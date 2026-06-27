@@ -86,6 +86,14 @@ const nextConfig = {
         source: '/comparatif/:slug',
         destination: '/comparatif/:slug.html',
       },
+      {
+        source: '/pour',
+        destination: '/pour/index.html',
+      },
+      {
+        source: '/pour/:slug',
+        destination: '/pour/:slug.html',
+      },
     ]
   },
   // Headers de sécurité Elite (complémentaires au middleware)

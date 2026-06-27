@@ -28,6 +28,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/comparatif/eduzen-vs-qualiobee`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/comparatif/eduzen-vs-ymag`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${baseUrl}/comparatif/eduzen-vs-teachizy`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.8 },
+    // Pages solutions par secteur — priorité haute, recherches par type d'organisme
+    { url: `${baseUrl}/pour`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${baseUrl}/pour/organisme-securite`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${baseUrl}/pour/auto-ecole`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${baseUrl}/pour/cfa`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${baseUrl}/pour/formation-entreprise`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${baseUrl}/pour/etablissement-scolaire`, lastModified: comparatifDate, changeFrequency: 'monthly', priority: 0.85 },
   ]
 
   try {
