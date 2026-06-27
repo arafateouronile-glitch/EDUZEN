@@ -51,7 +51,16 @@ export async function GET(
 
   const link = sub.enrollment_form_links as any
   const template = link?.enrollment_form_templates as { name: string; description: string | null; fields: FormField[] } | null
-  const org = link?.organizations as { name: string; logo_url: string | null; email: string | null } | null
+  const orgBase = link?.organizations as { name: string; logo_url: string | null; email: string | null } | null
+
+  // Fetch full org details for premium header/footer
+  const { data: orgFull } = await admin
+    .from('organizations')
+    .select('name, logo_url, address, city, phone, email, siret, nda_number')
+    .eq('id', orgId)
+    .single()
+
+  const org = orgFull ?? orgBase
   const fields: FormField[] = template?.fields ?? []
 
   // Generate signed URLs for uploaded documents (1 hour)
@@ -117,17 +126,25 @@ export async function GET(
     : 'formulaire'
   const filename = `inscription_${studentName}_${new Date(sub.submitted_at).toISOString().split('T')[0]}.pdf`
 
-  let pdfBuffer: Buffer
+  let pdfBuffer: Buffer | undefined
 
+  let gotenbergFailed = false
   if (isGotenbergConfigured()) {
-    pdfBuffer = await htmlToPdf(html, {
-      format: 'A4',
-      marginTop: '0',
-      marginBottom: '0',
-      marginLeft: '0',
-      marginRight: '0',
-    })
-  } else {
+    try {
+      pdfBuffer = await htmlToPdf(html, {
+        format: 'A4',
+        marginTop: '0',
+        marginBottom: '0',
+        marginLeft: '0',
+        marginRight: '0',
+      })
+    } catch {
+      // Gotenberg unreachable (dev) — fall through to Puppeteer
+      gotenbergFailed = true
+    }
+  }
+
+  if (!isGotenbergConfigured() || gotenbergFailed) {
     // Fallback local : Puppeteer (dev sans Gotenberg)
     let page: Awaited<ReturnType<typeof createPage>> | null = null
     try {
@@ -143,7 +160,11 @@ export async function GET(
     }
   }
 
-  return new NextResponse(pdfBuffer, {
+  if (!pdfBuffer) {
+    return NextResponse.json({ error: 'Échec génération PDF' }, { status: 500 })
+  }
+
+  return new NextResponse(pdfBuffer as unknown as BodyInit, {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
@@ -162,7 +183,7 @@ function buildFormHtml({
   logoDataUrl,
   labelMaps,
 }: {
-  org: { name: string; logo_url: string | null; email: string | null } | null
+  org: { name: string; logo_url?: string | null; email?: string | null; phone?: string | null; address?: string | null; city?: string | null; siret?: string | null; nda_number?: string | null } | null
   template: { name: string; description: string | null } | null
   submission: {
     submitted_at: string
@@ -175,363 +196,147 @@ function buildFormHtml({
   logoDataUrl: string | null
   labelMaps: Record<string, Record<string, string>>
 }) {
-  const submittedAt = new Date(submission.submitted_at).toLocaleString('fr-FR', {
-    day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  const f = (s: string | null | undefined) => s ?? ''
+  const submittedAt = new Date(submission.submitted_at).toLocaleDateString('fr-FR', {
+    day: '2-digit', month: 'long', year: 'numeric',
   })
-
-  const sessionHtml = submission.sessions ? `
-    <div class="meta-card">
-      <span class="meta-label">Session</span>
-      <span class="meta-value">${submission.sessions.name}</span>
-      ${submission.sessions.start_date ? `<span class="meta-value small">${new Date(submission.sessions.start_date).toLocaleDateString('fr-FR')}${submission.sessions.end_date ? ` &rarr; ${new Date(submission.sessions.end_date).toLocaleDateString('fr-FR')}` : ''}</span>` : ''}
-      ${submission.sessions.location ? `<span class="meta-value small">Lieu : ${submission.sessions.location}</span>` : ''}
-    </div>
-  ` : ''
 
   const fieldRows = formDataEntries
     .filter(([k]) => {
-      const fieldDef = fields.find(f => f.id === k)
+      const fieldDef = fields.find(fd => fd.id === k)
       return fieldDef?.type !== 'file' && fieldDef?.type !== 'separator'
     })
     .map(([key, val]) => {
-      const fieldDef = fields.find(f => f.id === key)
+      const fieldDef = fields.find(fd => fd.id === key)
       const label = fieldDef?.label ?? key
       let raw = Array.isArray(val) ? (val as string[]).join(', ') : String(val ?? '')
-      // Resolve UUID → label for dynamic fields
       if (fieldDef?.dynamic_source && raw) {
         const map = labelMaps[fieldDef.dynamic_source] ?? {}
-        const resolved = raw.split(', ').map(v => map[v] ?? v).join(', ')
-        raw = resolved
+        raw = raw.split(', ').map(v => map[v] ?? v).join(', ')
       }
-      return `
-        <tr>
-          <td class="field-label">${label}</td>
-          <td class="field-value">${raw || '<em class="empty">Non renseign&eacute;</em>'}</td>
-        </tr>
-      `
+      return `<tr>
+        <td style="width:38%;padding:7px 12px 7px 0;font-size:9pt;font-weight:600;color:#555;border-bottom:1px solid #f0f0f0;vertical-align:top;font-family:'Times New Roman',Times,serif;">${label}</td>
+        <td style="padding:7px 0 7px 12px;font-size:9.5pt;color:#1A1A1A;border-bottom:1px solid #f0f0f0;vertical-align:top;font-family:'Times New Roman',Times,serif;">${raw || '<em style="color:#bbb;font-style:italic;">Non renseign&eacute;</em>'}</td>
+      </tr>`
     }).join('')
 
-  const docsHtml = docsWithUrls.length > 0 ? `
-    <div class="section-block">
-      <h3 class="section-title">Documents fournis</h3>
-      <table class="fields-table">
-        <tbody>
-          ${docsWithUrls.map(doc => `
-            <tr>
-              <td class="field-label">${doc.fieldLabel}</td>
-              <td class="field-value">
-                ${doc.url
-                  ? `<a href="${doc.url}" class="doc-link">${doc.filename}</a>`
-                  : doc.filename
-                }
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-  ` : ''
+  const docsRows = docsWithUrls.map(doc => `<tr>
+    <td style="width:38%;padding:7px 12px 7px 0;font-size:9pt;font-weight:600;color:#555;border-bottom:1px solid #f0f0f0;font-family:'Times New Roman',Times,serif;">${doc.fieldLabel}</td>
+    <td style="padding:7px 0 7px 12px;font-size:9.5pt;border-bottom:1px solid #f0f0f0;font-family:'Times New Roman',Times,serif;">${doc.url ? `<a href="${doc.url}" style="color:#1A1A1A;text-decoration:underline;">${doc.filename}</a>` : doc.filename}</td>
+  </tr>`).join('')
+
+  const logoHtml = logoDataUrl
+    ? `<img src="${logoDataUrl}" style="max-height:60px;max-width:130px;object-fit:contain;" alt="Logo" />`
+    : ''
+
+  const sessionLine = submission.sessions
+    ? [
+        submission.sessions.name,
+        submission.sessions.start_date ? new Date(submission.sessions.start_date).toLocaleDateString('fr-FR') : null,
+        submission.sessions.end_date ? `au ${new Date(submission.sessions.end_date).toLocaleDateString('fr-FR')}` : null,
+      ].filter(Boolean).join(' — ')
+    : null
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 10.5pt;
-    color: #1a1a2e;
-    background: white;
-    line-height: 1.5;
-  }
-
-  .top-band {
-    background: #15263f;
-    padding: 28px 40px 24px;
-    color: white;
-  }
-
-  .org-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 18px;
-  }
-
-  .org-logo {
-    width: 56px;
-    height: 56px;
-    object-fit: contain;
-    background: white;
-    border-radius: 8px;
-    padding: 4px;
-    flex-shrink: 0;
-  }
-
-  .org-logo-placeholder {
-    width: 56px;
-    height: 56px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18pt;
-    font-weight: 700;
-    color: rgba(255,255,255,0.7);
-    flex-shrink: 0;
-    line-height: 1;
-  }
-
-  .org-name {
-    font-size: 16pt;
-    font-weight: 700;
-  }
-
-  .org-email {
-    font-size: 9pt;
-    color: rgba(255,255,255,0.6);
-    margin-top: 2px;
-  }
-
-  .form-title {
-    font-size: 20pt;
-    font-weight: 800;
-    margin-bottom: 4px;
-  }
-
-  .form-desc {
-    font-size: 10pt;
-    color: rgba(255,255,255,0.7);
-  }
-
-  .accent-band {
-    height: 4px;
-    background: #335ACF;
-  }
-
-  .meta-row {
-    display: flex;
-    gap: 12px;
-    padding: 14px 40px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e5e7eb;
-    flex-wrap: wrap;
-  }
-
-  .meta-card {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  .meta-label {
-    font-size: 7.5pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #9ca3af;
-  }
-
-  .meta-value {
-    font-size: 9.5pt;
-    font-weight: 600;
-    color: #374151;
-  }
-
-  .meta-value.small {
-    font-size: 8.5pt;
-    font-weight: 400;
-    color: #6b7280;
-  }
-
-  .meta-sep {
-    width: 1px;
-    background: #e5e7eb;
-    margin: 4px 12px;
-    align-self: stretch;
-  }
-
-  .body {
-    padding: 28px 40px 40px;
-  }
-
-  .section-block {
-    margin-bottom: 28px;
-  }
-
-  .section-title {
-    font-size: 9pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #335ACF;
-    border-bottom: 1.5px solid #335ACF;
-    padding-bottom: 6px;
-    margin-bottom: 14px;
-  }
-
-  .fields-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .fields-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  .field-label {
-    width: 38%;
-    padding: 9px 12px 9px 0;
-    font-size: 9.5pt;
-    font-weight: 600;
-    color: #6b7280;
-    border-bottom: 1px solid #f3f4f6;
-    vertical-align: top;
-  }
-
-  .field-value {
-    padding: 9px 0 9px 12px;
-    font-size: 10pt;
-    color: #111827;
-    border-bottom: 1px solid #f3f4f6;
-    vertical-align: top;
-  }
-
-  .empty {
-    color: #d1d5db;
-    font-style: italic;
-  }
-
-  .doc-link {
-    color: #335ACF;
-    text-decoration: none;
-    font-weight: 500;
-  }
-
-  .signature-row {
-    display: flex;
-    gap: 24px;
-  }
-
-  .signature-box {
-    flex: 1;
-    border: 1.5px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 16px;
-    min-height: 90px;
-  }
-
-  .signature-box-label {
-    font-size: 8.5pt;
-    font-weight: 700;
-    color: #9ca3af;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-  }
-
-  .signature-box-hint {
-    font-size: 8pt;
-    color: #d1d5db;
-    font-style: italic;
-  }
-
-  .footer {
-    margin-top: 32px;
-    padding-top: 14px;
-    border-top: 1px solid #f3f4f6;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .footer-text {
-    font-size: 8pt;
-    color: #d1d5db;
-  }
-
-  .badge {
-    display: inline-block;
-    background: #f0f4ff;
-    color: #335ACF;
-    font-size: 8pt;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 99px;
-    border: 1px solid #c7d7fd;
-  }
+  @page { size: A4; margin: 15mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Times New Roman', Times, serif; font-size: 10pt; color: #1A1A1A; background: white; line-height: 1.5; }
+  table { border-collapse: collapse; }
 </style>
 </head>
 <body>
 
-  <div class="top-band">
-    <div class="org-header">
-      ${logoDataUrl
-        ? `<img src="${logoDataUrl}" class="org-logo" alt="Logo" />`
-        : `<div class="org-logo-placeholder">${(org?.name ?? 'OF').substring(0, 2).toUpperCase()}</div>`
-      }
-      <div>
-        <div class="org-name">${org?.name ?? 'Organisme de formation'}</div>
-        ${org?.email ? `<div class="org-email">${org.email}</div>` : ''}
-      </div>
-    </div>
-    <div class="form-title">${template?.name ?? 'Formulaire d\'inscription'}</div>
-    ${template?.description ? `<div class="form-desc">${template.description}</div>` : ''}
+  <!-- HEADER : logo droite, infos org gauche -->
+  <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:4px;">
+    <tr>
+      <td style="vertical-align:top;padding-right:15px;">
+        <p style="font-weight:bold;font-size:10pt;margin:0 0 2px 0;line-height:1.1;">${f(org?.name)}</p>
+        ${org?.address ? `<p style="font-size:8pt;color:#666;margin:0;line-height:1.3;">${f(org.address)}</p>` : ''}
+        ${org?.city ? `<p style="font-size:8pt;color:#666;margin:0;line-height:1.3;">${f(org.city)}</p>` : ''}
+        ${org?.email ? `<p style="font-size:8pt;color:#666;margin:0;line-height:1.3;">Email : ${f(org.email)}</p>` : ''}
+        ${org?.phone ? `<p style="font-size:8pt;color:#666;margin:0;line-height:1.3;">T&eacute;l : ${f(org.phone)}</p>` : ''}
+      </td>
+      <td style="vertical-align:top;text-align:right;white-space:nowrap;">${logoHtml}</td>
+    </tr>
+  </table>
+
+  <div style="border-top:1px solid #1A1A1A;margin-bottom:18px;"></div>
+
+  <!-- TITRE -->
+  <div style="text-align:center;margin-bottom:18px;">
+    <p style="font-size:14pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px 0;">${template?.name ?? 'Formulaire d\'inscription'}</p>
+    ${template?.description ? `<p style="font-size:9pt;color:#666;font-style:italic;margin:0;">${template.description}</p>` : ''}
+    <p style="font-size:8.5pt;color:#888;margin:4px 0 0 0;">D&eacute;pos&eacute; le ${submittedAt}</p>
   </div>
 
-  <div class="accent-band"></div>
+  <!-- CANDIDAT + SESSION -->
+  <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:18px;border:1px solid #e5e7eb;">
+    <tr>
+      <td style="padding:10px 14px;vertical-align:top;width:50%;border-right:1px solid #e5e7eb;">
+        <p style="font-size:7pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.6px;color:#888;margin:0 0 4px 0;">Candidat</p>
+        ${submission.students ? `
+          <p style="font-size:10.5pt;font-weight:bold;margin:0;">${submission.students.first_name} ${submission.students.last_name}</p>
+          ${submission.students.email ? `<p style="font-size:8.5pt;color:#555;margin:1px 0 0 0;">${submission.students.email}</p>` : ''}
+          ${submission.students.phone ? `<p style="font-size:8.5pt;color:#555;margin:1px 0 0 0;">${submission.students.phone}</p>` : ''}
+        ` : '<p style="font-size:9pt;color:#bbb;font-style:italic;margin:0;">Non renseign&eacute;</p>'}
+      </td>
+      <td style="padding:10px 14px;vertical-align:top;">
+        <p style="font-size:7pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.6px;color:#888;margin:0 0 4px 0;">Session</p>
+        ${sessionLine ? `<p style="font-size:10pt;font-weight:bold;margin:0;">${sessionLine}</p>` : '<p style="font-size:9pt;color:#bbb;font-style:italic;margin:0;">Non renseign&eacute;</p>'}
+        ${submission.sessions?.location ? `<p style="font-size:8.5pt;color:#555;margin:1px 0 0 0;">Lieu : ${submission.sessions.location}</p>` : ''}
+      </td>
+    </tr>
+  </table>
 
-  <div class="meta-row">
-    <div class="meta-card">
-      <span class="meta-label">Date de soumission</span>
-      <span class="meta-value">${submittedAt}</span>
-    </div>
-    ${submission.students ? `
-    <div class="meta-sep"></div>
-    <div class="meta-card">
-      <span class="meta-label">Candidat</span>
-      <span class="meta-value">${submission.students.first_name} ${submission.students.last_name}</span>
-      ${submission.students.email ? `<span class="meta-value small">${submission.students.email}</span>` : ''}
-    </div>
-    ` : ''}
-    ${sessionHtml ? `<div class="meta-sep"></div>${sessionHtml}` : ''}
-  </div>
+  <!-- CHAMPS DU FORMULAIRE -->
+  <p style="font-size:7.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.7px;color:#888;border-bottom:1px solid #1A1A1A;padding-bottom:3px;margin-bottom:10px;">Renseignements du candidat</p>
+  <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:22px;">
+    <tbody>
+      ${fieldRows || '<tr><td colspan="2" style="font-size:9pt;color:#bbb;font-style:italic;padding:6px 0;">Aucune donn&eacute;e</td></tr>'}
+    </tbody>
+  </table>
 
-  <div class="body">
+  ${docsWithUrls.length > 0 ? `
+  <!-- DOCUMENTS -->
+  <p style="font-size:7.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.7px;color:#888;border-bottom:1px solid #1A1A1A;padding-bottom:3px;margin-bottom:10px;">Documents fournis</p>
+  <table cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:22px;">
+    <tbody>${docsRows}</tbody>
+  </table>
+  ` : ''}
 
-    <div class="section-block">
-      <h3 class="section-title">Renseignements du candidat</h3>
-      <table class="fields-table">
-        <tbody>
-          ${fieldRows || '<tr><td colspan="2" style="color:#d1d5db;font-style:italic;padding:8px 0;">Aucune donn&eacute;e</td></tr>'}
-        </tbody>
-      </table>
-    </div>
-
-    ${docsHtml}
-
-    <div class="section-block">
-      <h3 class="section-title">Signatures</h3>
-      <div class="signature-row">
-        <div class="signature-box">
-          <div class="signature-box-label">Signature du candidat</div>
-          <div class="signature-box-hint">Lu et approuv&eacute;</div>
+  <!-- SIGNATURES -->
+  <p style="font-size:7.5pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.7px;color:#888;border-bottom:1px solid #1A1A1A;padding-bottom:3px;margin-bottom:16px;">Signatures</p>
+  <p style="text-align:center;font-size:9pt;color:#555;margin-bottom:22px;">Fait &agrave; ${f(org?.city) || '___________'}, le _______________</p>
+  <table cellpadding="0" cellspacing="0" style="width:100%;">
+    <tr>
+      <td style="width:48%;text-align:center;vertical-align:top;padding:0 10px;">
+        <p style="font-size:9pt;font-weight:bold;margin:0 0 4px 0;">Signature du candidat</p>
+        <p style="font-size:8pt;color:#888;font-style:italic;margin:0 0 55px 0;">Lu et approuv&eacute;</p>
+        <div style="border-top:1px solid #1A1A1A;padding-top:5px;">
+          ${submission.students ? `<p style="font-size:8.5pt;color:#555;">${submission.students.first_name} ${submission.students.last_name}</p>` : ''}
         </div>
-        <div class="signature-box">
-          <div class="signature-box-label">Cachet et signature de l'organisme</div>
-          <div class="signature-box-hint">${org?.name ?? ''}</div>
+      </td>
+      <td style="width:4%;"></td>
+      <td style="width:48%;text-align:center;vertical-align:top;padding:0 10px;">
+        <p style="font-size:9pt;font-weight:bold;margin:0 0 4px 0;">Cachet et signature de l'organisme</p>
+        <p style="font-size:8pt;color:#888;font-style:italic;margin:0 0 55px 0;">${f(org?.name)}</p>
+        <div style="border-top:1px solid #1A1A1A;padding-top:5px;">
+          <p style="font-size:8.5pt;color:#555;">&nbsp;</p>
         </div>
-      </div>
-    </div>
+      </td>
+    </tr>
+  </table>
 
-    <div class="footer">
-      <div class="footer-text">Document g&eacute;n&eacute;r&eacute; le ${new Date().toLocaleDateString('fr-FR')} &mdash; ${org?.name ?? ''}</div>
-      <div class="footer-text"><span class="badge">EduZen</span></div>
-    </div>
-
+  <!-- FOOTER -->
+  <div style="margin-top:30px;padding-top:6px;background:#fafafa;">
+    <p style="font-size:6.5pt;color:#1A1A1A;text-align:center;margin:0;font-weight:500;line-height:1.3;">
+      ${f(org?.name)}${org?.address ? ` | ${f(org.address)} ${f(org.city)}` : ''}${org?.siret ? ` | SIRET : ${f(org.siret)}` : ''}
+    </p>
+    ${org?.nda_number ? `<p style="font-size:6.5pt;color:#666;text-align:center;margin:1px 0 0 0;line-height:1.2;">D&eacute;claration d'activit&eacute; : ${f(org.nda_number)}</p>` : ''}
   </div>
 
 </body>

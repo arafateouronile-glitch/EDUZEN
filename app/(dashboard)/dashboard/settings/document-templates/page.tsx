@@ -203,6 +203,13 @@ const DOCUMENT_TYPES: Array<{
     icon: Receipt,
     color: '#D97706',
   },
+  {
+    type: 'formulaire_inscription',
+    name: 'Formulaire d\'inscription',
+    description: 'Formulaire d\'inscription apprenant — en-tête et pied de page personnalisables',
+    icon: ClipboardList,
+    color: '#0EA5E9',
+  },
 ]
 
 export default function DocumentTemplatesPage() {

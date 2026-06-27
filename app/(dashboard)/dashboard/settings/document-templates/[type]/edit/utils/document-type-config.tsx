@@ -143,6 +143,12 @@ export function getDocumentTypeConfig(type: DocumentType) {
       icon: Receipt,
       color: '#D97706',
     },
+    formulaire_inscription: {
+      name: 'Formulaire d\'inscription',
+      description: 'Formulaire d\'inscription apprenant — en-tête et pied de page personnalisables',
+      icon: FileText,
+      color: '#0EA5E9',
+    },
   }
 
   return configs[type]

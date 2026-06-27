@@ -1291,6 +1291,69 @@ export const getDefaultDocumentContent = (type: DocumentType): string => {
         </table>
       </div>
     `,
+
+    formulaire_inscription: `
+      <h1 style="text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase;">
+        Formulaire d'inscription
+      </h1>
+      <p style="text-align: center; font-size: 12px; color: #555; margin-bottom: 20px; font-style: italic;">{formulaire_titre}</p>
+      <div style="border-top: 2px solid #1A1A1A; margin-bottom: 20px;"></div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
+        <thead>
+          <tr>
+            <th style="text-align: left; padding: 6px 8px; background: #f3f4f6; font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; border-bottom: 1px solid #ddd; width: 40%;">Champ</th>
+            <th style="text-align: left; padding: 6px 8px; background: #f3f4f6; font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; border-bottom: 1px solid #ddd;">Valeur</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0; font-weight: 600;">Prénom</td>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0;">{eleve_prenom}</td>
+          </tr>
+          <tr>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0; font-weight: 600;">Nom</td>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0;">{eleve_nom}</td>
+          </tr>
+          <tr>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0; font-weight: 600;">Email</td>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0;">{eleve_email}</td>
+          </tr>
+          <tr>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0; font-weight: 600;">Formation souhaitée</td>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0;">{formation_nom}</td>
+          </tr>
+          <tr>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0; font-weight: 600;">Session</td>
+            <td style="padding: 7px 8px; border-bottom: 1px solid #f0f0f0;">{session_debut} → {session_fin}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top: 30px;">
+        <p style="font-weight: bold; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 4px;">Signatures</p>
+        <p style="text-align: center; font-size: 11px; color: #555; margin-bottom: 20px;">Fait à {ecole_ville}, le {date_soumission}</p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <tr>
+            <td style="width: 48%; text-align: center; vertical-align: top; padding: 0 10px;">
+              <p style="font-weight: bold; margin-bottom: 4px;">Signature du candidat</p>
+              <p style="color: #888; font-style: italic; font-size: 10px; margin-bottom: 50px;">Lu et approuvé</p>
+              <div style="border-top: 1px solid #1A1A1A; padding-top: 6px;">
+                <p style="font-size: 10px; color: #888;">{eleve_prenom} {eleve_nom}</p>
+              </div>
+            </td>
+            <td style="width: 4%;"></td>
+            <td style="width: 48%; text-align: center; vertical-align: top; padding: 0 10px;">
+              <p style="font-weight: bold; margin-bottom: 4px;">Cachet et signature de l'organisme</p>
+              <p style="color: #888; font-style: italic; font-size: 10px; margin-bottom: 50px;">{ecole_nom}</p>
+              <div style="border-top: 1px solid #1A1A1A; padding-top: 6px;">
+                <p style="font-size: 10px; color: #888;">{ecole_representant}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
   }
 
   return templates[type] || ''

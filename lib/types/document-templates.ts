@@ -23,6 +23,7 @@ export type DocumentType =
   | 'convention_formateur' // Convention de prestation avec formateur indépendant
   | 'ordre_de_mission' // Ordre de mission pour déplacement d'un formateur
   | 'attestation_defraiement' // Attestation de défraiement pour membres de jury
+  | 'formulaire_inscription' // Formulaire d'inscription apprenant (PDF soumission)
 
 export interface DocumentTemplate {
   id: string

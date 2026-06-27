@@ -2725,6 +2725,90 @@ export const documentTemplateDefaults: Record<DocumentType, DocumentTemplateDefa
     `,
     footerContent: premiumFooter,
   },
+
+  // ==========================================
+  // FORMULAIRE D'INSCRIPTION APPRENANT
+  // ==========================================
+  formulaire_inscription: {
+    type: 'formulaire_inscription',
+    name: 'Formulaire d\'inscription',
+    headerContent: premiumHeader,
+    bodyContent: `
+      <!-- Titre -->
+      <div style="text-align: center; margin-bottom: 20px; font-family: 'Times New Roman', Times, serif;">
+        <h1 style="font-size: 14pt; font-weight: bold; margin: 0 0 4px 0; color: #1A1A1A; letter-spacing: 0.5px; text-transform: uppercase;">
+          Formulaire d'inscription
+        </h1>
+        <p style="font-size: 8pt; color: #888; margin: 0; font-style: italic;">{formulaire_titre}</p>
+        <div style="width: 60px; height: 2px; background: #1A1A1A; margin: 10px auto 0;"></div>
+      </div>
+
+      <!-- Métadonnées : candidat + session -->
+      <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 16px; border: 0; font-family: 'Times New Roman', Times, serif; font-size: 8.5pt;">
+        <tr>
+          <td style="width: 50%; vertical-align: top; border: 0; padding-right: 12px;">
+            <p style="margin: 0 0 2px 0; font-weight: bold; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.5px; color: #888;">Candidat</p>
+            <p style="margin: 0; font-size: 9pt; font-weight: bold; color: #1A1A1A;">{eleve_prenom} {eleve_nom}</p>
+            <p style="margin: 1px 0 0 0; font-size: 8pt; color: #555;">{eleve_email}</p>
+          </td>
+          <td style="width: 50%; vertical-align: top; border: 0;">
+            <p style="margin: 0 0 2px 0; font-weight: bold; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.5px; color: #888;">Session</p>
+            <p style="margin: 0; font-size: 9pt; font-weight: bold; color: #1A1A1A;">{formation_nom}</p>
+            <p style="margin: 1px 0 0 0; font-size: 8pt; color: #555;">Du {session_debut} au {session_fin}</p>
+          </td>
+        </tr>
+      </table>
+
+      <div style="border-top: 1px solid #E5E7EB; margin-bottom: 16px;"></div>
+
+      <!-- Renseignements du candidat -->
+      <div style="margin-bottom: 20px; font-family: 'Times New Roman', Times, serif;">
+        <p style="margin: 0 0 10px 0; font-size: 7.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; color: #888; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px;">
+          Renseignements du candidat
+        </p>
+        <!-- Les champs du formulaire sont générés dynamiquement -->
+        {formulaire_champs}
+      </div>
+
+      <!-- Documents fournis -->
+      <div style="margin-bottom: 20px; font-family: 'Times New Roman', Times, serif;">
+        <p style="margin: 0 0 10px 0; font-size: 7.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; color: #888; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px;">
+          Documents fournis
+        </p>
+        {formulaire_documents}
+      </div>
+
+      <!-- Zone de signatures -->
+      <div style="margin-top: 28px; font-family: 'Times New Roman', Times, serif;">
+        <p style="margin: 0 0 10px 0; font-size: 7.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; color: #888; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px;">
+          Signatures
+        </p>
+        <p style="text-align: center; font-size: 8.5pt; margin: 0 0 20px 0; color: #555;">
+          Fait à {ecole_ville}, le {date_soumission}
+        </p>
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border: 0; font-family: 'Times New Roman', Times, serif; font-size: 8.5pt;">
+          <tr>
+            <td style="width: 48%; vertical-align: top; border: 0; text-align: center;">
+              <p style="font-weight: bold; margin: 0 0 4px 0;">Signature du candidat</p>
+              <p style="color: #888; font-size: 8pt; font-style: italic; margin-bottom: 48px;">Lu et approuvé</p>
+              <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+                <p style="font-size: 8pt; color: #888;">{eleve_prenom} {eleve_nom}</p>
+              </div>
+            </td>
+            <td style="width: 4%; border: 0;"></td>
+            <td style="width: 48%; vertical-align: top; border: 0; text-align: center;">
+              <p style="font-weight: bold; margin: 0 0 4px 0;">Cachet et signature de l'organisme</p>
+              <p style="color: #888; font-size: 8pt; font-style: italic; margin-bottom: 48px;">{ecole_nom}</p>
+              <div style="border-top: 1px solid #1A1A1A; margin: 0 auto; width: 80%; padding-top: 6px;">
+                <p style="font-size: 8pt; color: #888;">{ecole_representant}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+    footerContent: premiumFooter,
+  },
 }
 
 /**
