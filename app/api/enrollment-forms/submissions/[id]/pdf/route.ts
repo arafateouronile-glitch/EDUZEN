@@ -87,10 +87,30 @@ export async function GET(
     }
   }
 
+  // Resolve dynamic field UUIDs → human-readable labels
+  const dynamicSources = [...new Set(fields.filter(f => f.dynamic_source).map(f => f.dynamic_source!))]
+  const labelMaps: Record<string, Record<string, string>> = {}
+
+  await Promise.all(dynamicSources.map(async (source) => {
+    if (source === 'programs') {
+      const { data } = await admin.from('programs').select('id, name').eq('organization_id', orgId)
+      labelMaps.programs = Object.fromEntries((data ?? []).map((r: { id: string; name: string }) => [r.id, r.name]))
+    } else if (source === 'sessions') {
+      const { data } = await admin.from('sessions').select('id, name, start_date').eq('organization_id', orgId)
+      labelMaps.sessions = Object.fromEntries((data ?? []).map((r: { id: string; name: string; start_date: string | null }) => [
+        r.id,
+        r.start_date ? `${r.name} — ${new Date(r.start_date).toLocaleDateString('fr-FR')}` : r.name,
+      ]))
+    } else if (source === 'funding_types') {
+      const { data } = await admin.from('funding_types').select('id, name').eq('organization_id', orgId)
+      labelMaps.funding_types = Object.fromEntries((data ?? []).map((r: { id: string; name: string }) => [r.id, r.name]))
+    }
+  }))
+
   const formDataEntries = Object.entries(sub.form_data as Record<string, unknown>)
     .filter(([k]) => !k.startsWith('__'))
 
-  const html = buildFormHtml({ org, template, submission: sub, fields, formDataEntries, docsWithUrls, logoDataUrl })
+  const html = buildFormHtml({ org, template, submission: sub, fields, formDataEntries, docsWithUrls, logoDataUrl, labelMaps })
 
   const studentName = sub.students
     ? `${sub.students.first_name}_${sub.students.last_name}`
@@ -140,6 +160,7 @@ function buildFormHtml({
   formDataEntries,
   docsWithUrls,
   logoDataUrl,
+  labelMaps,
 }: {
   org: { name: string; logo_url: string | null; email: string | null } | null
   template: { name: string; description: string | null } | null
@@ -152,6 +173,7 @@ function buildFormHtml({
   formDataEntries: [string, unknown][]
   docsWithUrls: Array<{ field_id: string; filename: string; url: string | null; fieldLabel: string }>
   logoDataUrl: string | null
+  labelMaps: Record<string, Record<string, string>>
 }) {
   const submittedAt = new Date(submission.submitted_at).toLocaleString('fr-FR', {
     day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -174,13 +196,17 @@ function buildFormHtml({
     .map(([key, val]) => {
       const fieldDef = fields.find(f => f.id === key)
       const label = fieldDef?.label ?? key
-      const display = Array.isArray(val)
-        ? (val as string[]).join(', ')
-        : String(val ?? '')
+      let raw = Array.isArray(val) ? (val as string[]).join(', ') : String(val ?? '')
+      // Resolve UUID → label for dynamic fields
+      if (fieldDef?.dynamic_source && raw) {
+        const map = labelMaps[fieldDef.dynamic_source] ?? {}
+        const resolved = raw.split(', ').map(v => map[v] ?? v).join(', ')
+        raw = resolved
+      }
       return `
         <tr>
           <td class="field-label">${label}</td>
-          <td class="field-value">${display || '<em class="empty">Non renseign&eacute;</em>'}</td>
+          <td class="field-value">${raw || '<em class="empty">Non renseign&eacute;</em>'}</td>
         </tr>
       `
     }).join('')
