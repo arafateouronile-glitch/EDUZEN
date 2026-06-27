@@ -131,17 +131,17 @@ function FormInput({
     return (
       <div className="space-y-2">
         {(field.options ?? []).map(opt => (
-          <label key={opt.value ?? opt.label} className="flex items-center gap-3 cursor-pointer group">
+          <label key={opt} className="flex items-center gap-3 cursor-pointer group">
             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-              value === (opt.value ?? opt.label)
+              value === opt
                 ? 'border-[#335ACF] bg-[#335ACF]'
                 : 'border-gray-300 group-hover:border-[#335ACF]/50'
             }`}>
-              {value === (opt.value ?? opt.label) && (
+              {value === opt && (
                 <div className="w-2 h-2 rounded-full bg-white" />
               )}
             </div>
-            <span className="text-gray-700 text-sm">{opt.label}</span>
+            <span className="text-gray-700 text-sm">{opt}</span>
           </label>
         ))}
       </div>
@@ -153,21 +153,20 @@ function FormInput({
       <div className="space-y-2">
         {(field.options ?? []).map(opt => {
           const arr = Array.isArray(value) ? value : []
-          const checked = arr.includes(opt.value ?? opt.label)
+          const checked = arr.includes(opt)
           return (
-            <label key={opt.value ?? opt.label} className="flex items-center gap-3 cursor-pointer group">
+            <label key={opt} className="flex items-center gap-3 cursor-pointer group">
               <div
                 className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
                   checked ? 'bg-[#335ACF] border-[#335ACF]' : 'border-gray-300 group-hover:border-[#335ACF]/50'
                 }`}
                 onClick={() => {
-                  const v = opt.value ?? opt.label
-                  onChange(checked ? arr.filter(x => x !== v) : [...arr, v])
+                  onChange(checked ? arr.filter(x => x !== opt) : [...arr, opt])
                 }}
               >
                 {checked && <span className="text-white text-xs font-bold leading-none">✓</span>}
               </div>
-              <span className="text-gray-700 text-sm">{opt.label}</span>
+              <span className="text-gray-700 text-sm">{opt}</span>
             </label>
           )
         })}
