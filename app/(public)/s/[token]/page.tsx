@@ -185,7 +185,7 @@ function FormInput({
     )
   }
 
-  if (field.type === 'phone') {
+  if (field.type === 'tel') {
     return (
       <input
         type="tel"
