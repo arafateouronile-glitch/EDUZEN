@@ -73,7 +73,10 @@ export async function GET(
   let logoDataUrl: string | null = null
   if (org?.logo_url) {
     try {
-      const res = await fetch(org.logo_url)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 4000)
+      const res = await fetch(org.logo_url, { signal: controller.signal })
+      clearTimeout(timeout)
       if (res.ok) {
         const buf = await res.arrayBuffer()
         const mime = res.headers.get('content-type') ?? 'image/png'
@@ -101,7 +104,7 @@ export async function GET(
   let page: Awaited<ReturnType<typeof createPage>> | null = null
   try {
     page = await createPage()
-    await page.setContent(html, { waitUntil: 'networkidle0' })
+    await page.setContent(html, { waitUntil: 'domcontentloaded' })
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -155,7 +158,7 @@ function buildFormHtml({
       <span class="meta-label">Session</span>
       <span class="meta-value">${submission.sessions.name}</span>
       ${submission.sessions.start_date ? `<span class="meta-value small">${new Date(submission.sessions.start_date).toLocaleDateString('fr-FR')}${submission.sessions.end_date ? ` → ${new Date(submission.sessions.end_date).toLocaleDateString('fr-FR')}` : ''}</span>` : ''}
-      ${submission.sessions.location ? `<span class="meta-value small">📍 ${submission.sessions.location}</span>` : ''}
+      ${submission.sessions.location ? `<span class="meta-value small">Lieu : ${submission.sessions.location}</span>` : ''}
     </div>
   ` : ''
 
@@ -188,8 +191,8 @@ function buildFormHtml({
               <td class="field-label">${doc.fieldLabel}</td>
               <td class="field-value">
                 ${doc.url
-                  ? `<a href="${doc.url}" class="doc-link">📎 ${doc.filename}</a>`
-                  : `📎 ${doc.filename}`
+                  ? `<a href="${doc.url}" class="doc-link">[Lien] ${doc.filename}</a>`
+                  : `[Fichier] ${doc.filename}`
                 }
               </td>
             </tr>
@@ -449,7 +452,7 @@ function buildFormHtml({
     <div class="org-header">
       ${logoDataUrl
         ? `<img src="${logoDataUrl}" class="org-logo" alt="Logo" />`
-        : `<div class="org-logo-placeholder">🏢</div>`
+        : `<div class="org-logo-placeholder">OF</div>`
       }
       <div>
         <div class="org-name">${org?.name ?? 'Organisme de formation'}</div>
