@@ -199,7 +199,7 @@ function FormInput({
 
   return (
     <input
-      type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'}
+      type={field.type === 'email' ? 'email' : 'text'}
       className={base}
       placeholder={field.placeholder || ''}
       value={value as string}
