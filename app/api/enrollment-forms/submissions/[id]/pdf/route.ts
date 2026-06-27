@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isGotenbergConfigured, htmlToPdf } from '@/lib/services/gotenberg.service'
 import { createPage } from '@/lib/utils/puppeteer-pool'
 import type { FormField } from '@/lib/types/enrollment-forms'
 
@@ -29,7 +30,6 @@ export async function GET(
   const { id } = await params
   const admin = createAdminClient() as any
 
-  // Fetch submission + template + org + student + session
   const { data: sub, error } = await admin
     .from('enrollment_submissions')
     .select(`
@@ -69,7 +69,7 @@ export async function GET(
     })
   }
 
-  // Build logo data URL if available
+  // Embed logo as data URL (Gotenberg has no access to external URLs)
   let logoDataUrl: string | null = null
   if (org?.logo_url) {
     try {
@@ -83,49 +83,53 @@ export async function GET(
         logoDataUrl = `data:${mime};base64,${Buffer.from(buf).toString('base64')}`
       }
     } catch {
-      // Logo non disponible, on continue sans
+      // Logo unavailable — continue without
     }
   }
 
   const formDataEntries = Object.entries(sub.form_data as Record<string, unknown>)
     .filter(([k]) => !k.startsWith('__'))
 
-  const html = buildFormHtml({
-    org,
-    template,
-    submission: sub,
-    fields,
-    formDataEntries,
-    docsWithUrls,
-    logoDataUrl,
-  })
+  const html = buildFormHtml({ org, template, submission: sub, fields, formDataEntries, docsWithUrls, logoDataUrl })
 
-  // Generate PDF
-  let page: Awaited<ReturnType<typeof createPage>> | null = null
-  try {
-    page = await createPage()
-    await page.setContent(html, { waitUntil: 'domcontentloaded' })
-    const pdfBuffer = await page.pdf({
+  const studentName = sub.students
+    ? `${sub.students.first_name}_${sub.students.last_name}`
+    : 'formulaire'
+  const filename = `inscription_${studentName}_${new Date(sub.submitted_at).toISOString().split('T')[0]}.pdf`
+
+  let pdfBuffer: Buffer
+
+  if (isGotenbergConfigured()) {
+    pdfBuffer = await htmlToPdf(html, {
       format: 'A4',
-      printBackground: true,
-      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+      marginTop: '0',
+      marginBottom: '0',
+      marginLeft: '0',
+      marginRight: '0',
     })
-
-    const studentName = sub.students
-      ? `${sub.students.first_name}_${sub.students.last_name}`
-      : 'formulaire'
-    const filename = `inscription_${studentName}_${new Date(sub.submitted_at).toISOString().split('T')[0]}.pdf`
-
-    return new NextResponse(pdfBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
-    })
-  } finally {
-    if (page) await page.close().catch(() => {})
+  } else {
+    // Fallback local : Puppeteer (dev sans Gotenberg)
+    let page: Awaited<ReturnType<typeof createPage>> | null = null
+    try {
+      page = await createPage()
+      await page.setContent(html, { waitUntil: 'domcontentloaded' })
+      pdfBuffer = Buffer.from(await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+      }))
+    } finally {
+      if (page) await page.close().catch(() => {})
+    }
   }
+
+  return new NextResponse(pdfBuffer, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+  })
 }
 
 function buildFormHtml({
@@ -157,7 +161,7 @@ function buildFormHtml({
     <div class="meta-card">
       <span class="meta-label">Session</span>
       <span class="meta-value">${submission.sessions.name}</span>
-      ${submission.sessions.start_date ? `<span class="meta-value small">${new Date(submission.sessions.start_date).toLocaleDateString('fr-FR')}${submission.sessions.end_date ? ` → ${new Date(submission.sessions.end_date).toLocaleDateString('fr-FR')}` : ''}</span>` : ''}
+      ${submission.sessions.start_date ? `<span class="meta-value small">${new Date(submission.sessions.start_date).toLocaleDateString('fr-FR')}${submission.sessions.end_date ? ` &rarr; ${new Date(submission.sessions.end_date).toLocaleDateString('fr-FR')}` : ''}</span>` : ''}
       ${submission.sessions.location ? `<span class="meta-value small">Lieu : ${submission.sessions.location}</span>` : ''}
     </div>
   ` : ''
@@ -176,7 +180,7 @@ function buildFormHtml({
       return `
         <tr>
           <td class="field-label">${label}</td>
-          <td class="field-value">${display || '<em class="empty">Non renseigné</em>'}</td>
+          <td class="field-value">${display || '<em class="empty">Non renseign&eacute;</em>'}</td>
         </tr>
       `
     }).join('')
@@ -191,8 +195,8 @@ function buildFormHtml({
               <td class="field-label">${doc.fieldLabel}</td>
               <td class="field-value">
                 ${doc.url
-                  ? `<a href="${doc.url}" class="doc-link">[Lien] ${doc.filename}</a>`
-                  : `[Fichier] ${doc.filename}`
+                  ? `<a href="${doc.url}" class="doc-link">${doc.filename}</a>`
+                  : doc.filename
                 }
               </td>
             </tr>
@@ -210,16 +214,15 @@ function buildFormHtml({
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 10.5pt;
     color: #1a1a2e;
     background: white;
     line-height: 1.5;
   }
 
-  /* Bande couleur top */
   .top-band {
-    background: linear-gradient(135deg, #15263f 0%, #1e3a5f 100%);
+    background: #15263f;
     padding: 28px 40px 24px;
     color: white;
   }
@@ -249,14 +252,16 @@ function buildFormHtml({
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 18pt;
+    font-weight: 700;
+    color: rgba(255,255,255,0.7);
     flex-shrink: 0;
+    line-height: 1;
   }
 
   .org-name {
     font-size: 16pt;
     font-weight: 700;
-    letter-spacing: -0.3px;
   }
 
   .org-email {
@@ -268,7 +273,6 @@ function buildFormHtml({
   .form-title {
     font-size: 20pt;
     font-weight: 800;
-    letter-spacing: -0.5px;
     margin-bottom: 4px;
   }
 
@@ -277,13 +281,11 @@ function buildFormHtml({
     color: rgba(255,255,255,0.7);
   }
 
-  /* Bande accent cyan */
   .accent-band {
     height: 4px;
-    background: linear-gradient(90deg, #335ACF, #34B9EE);
+    background: #335ACF;
   }
 
-  /* Meta cards */
   .meta-row {
     display: flex;
     gap: 12px;
@@ -301,7 +303,7 @@ function buildFormHtml({
 
   .meta-label {
     font-size: 7.5pt;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #9ca3af;
@@ -322,11 +324,10 @@ function buildFormHtml({
   .meta-sep {
     width: 1px;
     background: #e5e7eb;
-    margin: 4px 0;
+    margin: 4px 12px;
     align-self: stretch;
   }
 
-  /* Body */
   .body {
     padding: 28px 40px 40px;
   }
@@ -384,11 +385,9 @@ function buildFormHtml({
     font-weight: 500;
   }
 
-  /* Signature zone */
   .signature-row {
     display: flex;
     gap: 24px;
-    margin-top: 8px;
   }
 
   .signature-box {
@@ -401,7 +400,7 @@ function buildFormHtml({
 
   .signature-box-label {
     font-size: 8.5pt;
-    font-weight: 600;
+    font-weight: 700;
     color: #9ca3af;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -414,7 +413,6 @@ function buildFormHtml({
     font-style: italic;
   }
 
-  /* Footer */
   .footer {
     margin-top: 32px;
     padding-top: 14px;
@@ -424,12 +422,7 @@ function buildFormHtml({
     align-items: center;
   }
 
-  .footer-left {
-    font-size: 8pt;
-    color: #d1d5db;
-  }
-
-  .footer-right {
+  .footer-text {
     font-size: 8pt;
     color: #d1d5db;
   }
@@ -439,7 +432,7 @@ function buildFormHtml({
     background: #f0f4ff;
     color: #335ACF;
     font-size: 8pt;
-    font-weight: 600;
+    font-weight: 700;
     padding: 2px 8px;
     border-radius: 99px;
     border: 1px solid #c7d7fd;
@@ -452,7 +445,7 @@ function buildFormHtml({
     <div class="org-header">
       ${logoDataUrl
         ? `<img src="${logoDataUrl}" class="org-logo" alt="Logo" />`
-        : `<div class="org-logo-placeholder">OF</div>`
+        : `<div class="org-logo-placeholder">${(org?.name ?? 'OF').substring(0, 2).toUpperCase()}</div>`
       }
       <div>
         <div class="org-name">${org?.name ?? 'Organisme de formation'}</div>
@@ -470,8 +463,8 @@ function buildFormHtml({
       <span class="meta-label">Date de soumission</span>
       <span class="meta-value">${submittedAt}</span>
     </div>
-    <div class="meta-sep"></div>
     ${submission.students ? `
+    <div class="meta-sep"></div>
     <div class="meta-card">
       <span class="meta-label">Candidat</span>
       <span class="meta-value">${submission.students.first_name} ${submission.students.last_name}</span>
@@ -487,7 +480,7 @@ function buildFormHtml({
       <h3 class="section-title">Renseignements du candidat</h3>
       <table class="fields-table">
         <tbody>
-          ${fieldRows || '<tr><td colspan="2" style="color:#d1d5db;font-style:italic;padding:8px 0;">Aucune donnée</td></tr>'}
+          ${fieldRows || '<tr><td colspan="2" style="color:#d1d5db;font-style:italic;padding:8px 0;">Aucune donn&eacute;e</td></tr>'}
         </tbody>
       </table>
     </div>
@@ -499,7 +492,7 @@ function buildFormHtml({
       <div class="signature-row">
         <div class="signature-box">
           <div class="signature-box-label">Signature du candidat</div>
-          <div class="signature-box-hint">Lu et approuvé</div>
+          <div class="signature-box-hint">Lu et approuv&eacute;</div>
         </div>
         <div class="signature-box">
           <div class="signature-box-label">Cachet et signature de l'organisme</div>
@@ -509,8 +502,8 @@ function buildFormHtml({
     </div>
 
     <div class="footer">
-      <div class="footer-left">Document généré le ${new Date().toLocaleDateString('fr-FR')} · ${org?.name ?? ''}</div>
-      <div class="footer-right"><span class="badge">EduZen</span></div>
+      <div class="footer-text">Document g&eacute;n&eacute;r&eacute; le ${new Date().toLocaleDateString('fr-FR')} &mdash; ${org?.name ?? ''}</div>
+      <div class="footer-text"><span class="badge">EduZen</span></div>
     </div>
 
   </div>
