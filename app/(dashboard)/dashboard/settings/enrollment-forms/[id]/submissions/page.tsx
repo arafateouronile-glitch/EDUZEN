@@ -17,6 +17,7 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
+  FileDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -64,6 +65,26 @@ export default function SubmissionsPage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterSession, setFilterSession] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  const downloadPdf = async (submissionId: string, studentName: string) => {
+    setDownloadingId(submissionId)
+    try {
+      const res = await fetch(`/api/enrollment-forms/submissions/${submissionId}/pdf`)
+      if (!res.ok) throw new Error('Erreur génération PDF')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `inscription_${studentName.replace(/\s+/g, '_')}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Impossible de générer le PDF.')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
 
   const { data: template } = useQuery({
     queryKey: ['enrollment-form-template', id],
@@ -238,6 +259,24 @@ export default function SubmissionsPage() {
                       {cfg.label}
                     </Badge>
                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-7 h-7 text-gray-400 hover:text-blue-600"
+                        title="Télécharger PDF"
+                        disabled={downloadingId === sub.id}
+                        onClick={() => {
+                          const name = sub.students
+                            ? `${sub.students.first_name} ${sub.students.last_name}`
+                            : 'apprenant'
+                          downloadPdf(sub.id, name)
+                        }}
+                      >
+                        {downloadingId === sub.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <FileDown className="w-3.5 h-3.5" />
+                        }
+                      </Button>
                       {sub.students && (
                         <Link href={`/dashboard/students/${sub.students.id}`}>
                           <Button variant="ghost" size="icon" className="w-7 h-7 text-gray-400 hover:text-gray-700" title="Profil apprenant">
