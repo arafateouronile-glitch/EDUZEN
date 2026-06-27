@@ -775,20 +775,9 @@ export function useSessionDetail(sessionId: string) {
         throw new Error('Session non trouvée')
       }
 
-      // Vérifier que la session n'est pas terminée
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const endDate = sessionData.end_date ? new Date(sessionData.end_date) : null
-      if (endDate) {
-        endDate.setHours(23, 59, 59, 999)
-      }
-
-      if (
-        sessionData.status === 'completed' ||
-        sessionData.status === 'cancelled' ||
-        (endDate && endDate < today)
-      ) {
-        throw new Error('Impossible d\'inscrire un apprenant à une session terminée ou annulée')
+      // Seules les sessions annulées bloquent l'inscription
+      if (sessionData.status === 'cancelled') {
+        throw new Error('Impossible d\'inscrire un apprenant à une session annulée')
       }
 
       // Vérifier si l'inscription existe déjà

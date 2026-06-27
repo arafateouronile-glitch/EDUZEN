@@ -189,6 +189,7 @@ interface SelectContextValue {
   labels?: Record<string, string>
   registerLabel?: (value: string, label: string) => void
   unregisterLabel?: (value: string) => void
+  persistLabel?: (value: string, label: string) => void
 }
 
 const SelectContext = React.createContext<SelectContextValue>({})
@@ -206,6 +207,8 @@ export const SelectRoot = React.forwardRef<HTMLDivElement, SelectRootProps>(
     const [open, setOpen] = React.useState(false)
     const [internalValue, setInternalValue] = React.useState<string | undefined>(value || defaultValue)
     const [labels, setLabels] = React.useState<Record<string, string>>({})
+    // Labels persistants : survivent au démontage des SelectItem (fermeture du dropdown)
+    const [persistedLabels, setPersistedLabels] = React.useState<Record<string, string>>({})
     const triggerRef = React.useRef<HTMLButtonElement | null>(null)
 
     const handleValueChange = (newValue: string) => {
@@ -221,8 +224,14 @@ export const SelectRoot = React.forwardRef<HTMLDivElement, SelectRootProps>(
       setLabels(prev => { const next = { ...prev }; delete next[val]; return next })
     }, [])
 
+    const persistLabel = React.useCallback((val: string, label: string) => {
+      setPersistedLabels(prev => prev[val] === label ? prev : { ...prev, [val]: label })
+    }, [])
+
+    const mergedLabels = { ...persistedLabels, ...labels }
+
     return (
-      <SelectContext.Provider value={{ value: value || internalValue, onValueChange: handleValueChange, open, setOpen, triggerRef, labels, registerLabel, unregisterLabel }}>
+      <SelectContext.Provider value={{ value: value || internalValue, onValueChange: handleValueChange, open, setOpen, triggerRef, labels: mergedLabels, registerLabel, unregisterLabel, persistLabel }}>
         <div className="relative" ref={ref}>{children}</div>
       </SelectContext.Provider>
     )
@@ -341,7 +350,7 @@ interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
   ({ value, children, className, ...props }, ref) => {
-    const { value: selectedValue, onValueChange, setOpen, registerLabel, unregisterLabel } = React.useContext(SelectContext)
+    const { value: selectedValue, onValueChange, setOpen, registerLabel, unregisterLabel, persistLabel } = React.useContext(SelectContext)
     const isSelected = selectedValue === value
 
     React.useEffect(() => {
@@ -351,6 +360,9 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
     }, [value, children, registerLabel, unregisterLabel])
 
     const handleClick = () => {
+      // Persiste le label avant fermeture pour que SelectValue l'affiche après démontage des items
+      const label = typeof children === 'string' ? children : ''
+      if (label) persistLabel?.(value, label)
       onValueChange?.(value)
       setOpen?.(false)
     }

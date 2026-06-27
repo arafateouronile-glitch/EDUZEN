@@ -839,7 +839,7 @@ export function SessionElearningSection({
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner une séquence" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent portal={false}>
                   {coursesNotAssigned.map((course) => (
                     <SelectItem key={course.id} value={course.id}>
                       {course.title}
