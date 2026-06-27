@@ -13,8 +13,8 @@ import { BlogSidebar } from '@/components/blog/blog-sidebar'
 import { logger } from '@/lib/utils/logger'
 
 export const metadata = {
-  title: 'Blog | EDUZEN',
-  description: "Découvrez nos articles sur la formation professionnelle, la gestion d'organisme de formation et bien plus encore.",
+  title: 'Blog formation professionnelle — Qualiopi, LMS, gestion OF | EduZen',
+  description: "Conseils et guides sur la gestion d'organisme de formation, Qualiopi, e-learning et LMS. Actualités de la formation professionnelle.",
 }
 
 async function getBlogPosts(
@@ -72,37 +72,43 @@ async function getBlogPosts(
     return { posts: [], total: 0 }
   }
 
-  const postsWithRelations = await Promise.all(
-    (posts || []).map(async (post) => {
-      let category: BlogCategory | null = null
-      if (post.category_id) {
-        const { data: catData } = await supabase
-          .from('blog_categories')
-          .select('*')
-          .eq('id', post.category_id)
-          .maybeSingle()
-        category = catData as BlogCategory | null
-      }
+  const rawPosts = posts || []
 
-      const { data: postTags } = await supabase
-        .from('blog_post_tags')
-        .select('*')
-        .eq('post_id', post.id)
+  // Batch fetch categories (1 query)
+  const categoryIds = [...new Set(rawPosts.map((p) => p.category_id).filter(Boolean) as string[])]
+  const categoriesMap = new Map<string, BlogCategory>()
+  if (categoryIds.length > 0) {
+    const { data: cats } = await supabase.from('blog_categories').select('*').in('id', categoryIds)
+    cats?.forEach((c) => categoriesMap.set(c.id, c as BlogCategory))
+  }
 
-      let tags: BlogTag[] = []
-      if (postTags && postTags.length > 0) {
-        const tagIds = postTags
-          .map((pt: { tag_id?: string }) => pt.tag_id)
-          .filter((id): id is string => typeof id === 'string')
-        if (tagIds.length > 0) {
-          const { data: tagsData } = await supabase.from('blog_tags').select('*').in('id', tagIds)
-          tags = (tagsData || []) as BlogTag[]
-        }
-      }
-
-      return { ...post, tags, blog_categories: category }
+  // Batch fetch tags (2 queries: post_tags join + tags)
+  const postIds = rawPosts.map((p) => p.id)
+  const tagsMap = new Map<string, BlogTag[]>()
+  if (postIds.length > 0) {
+    const { data: postTagRows } = await supabase
+      .from('blog_post_tags')
+      .select('post_id, tag_id')
+      .in('post_id', postIds)
+    const allTagIds = [...new Set((postTagRows || []).map((pt: { tag_id?: string }) => pt.tag_id).filter((id): id is string => typeof id === 'string'))]
+    const tagById = new Map<string, BlogTag>()
+    if (allTagIds.length > 0) {
+      const { data: tagsData } = await supabase.from('blog_tags').select('*').in('id', allTagIds)
+      tagsData?.forEach((t) => tagById.set(t.id, t as BlogTag))
+    }
+    ;(postTagRows || []).forEach((pt: { post_id: string; tag_id?: string }) => {
+      if (!pt.tag_id) return
+      if (!tagsMap.has(pt.post_id)) tagsMap.set(pt.post_id, [])
+      const tag = tagById.get(pt.tag_id)
+      if (tag) tagsMap.get(pt.post_id)!.push(tag)
     })
-  )
+  }
+
+  const postsWithRelations = rawPosts.map((post) => ({
+    ...post,
+    blog_categories: categoriesMap.get(post.category_id) ?? null,
+    tags: tagsMap.get(post.id) ?? [],
+  }))
 
   return {
     posts: postsWithRelations as (BlogPost & { tags: BlogTag[]; blog_categories?: BlogCategory | null })[],
@@ -128,22 +134,18 @@ async function getFeaturedPosts() {
     return []
   }
 
-  const postsWithCategories = await Promise.all(
-    (posts || []).map(async (post) => {
-      let category: BlogCategory | null = null
-      if (post.category_id) {
-        const { data: catData } = await supabase
-          .from('blog_categories')
-          .select('*')
-          .eq('id', post.category_id)
-          .maybeSingle()
-        category = catData as BlogCategory | null
-      }
-      return { ...post, blog_categories: category }
-    })
-  )
+  const rawPosts = posts || []
+  const catIds = [...new Set(rawPosts.map((p) => p.category_id).filter(Boolean) as string[])]
+  const catsMap = new Map<string, BlogCategory>()
+  if (catIds.length > 0) {
+    const { data: cats } = await supabase.from('blog_categories').select('*').in('id', catIds)
+    cats?.forEach((c) => catsMap.set(c.id, c as BlogCategory))
+  }
 
-  return postsWithCategories as (BlogPost & { blog_categories?: BlogCategory | null })[]
+  return rawPosts.map((post) => ({
+    ...post,
+    blog_categories: catsMap.get(post.category_id) ?? null,
+  })) as (BlogPost & { blog_categories?: BlogCategory | null })[]
 }
 
 async function getCategories() {
@@ -161,21 +163,21 @@ async function getCategories() {
     return []
   }
 
-  const categoriesWithCount = await Promise.all(
-    (categories || []).map(async (category) => {
-      const { count } = await supabase
-        .from('blog_posts')
-        .select('*', { count: 'exact', head: true })
-        .eq('category_id', category.id)
-        .eq('status', 'published')
-        .or(`published_at.is.null,published_at.lte.${now}`)
-      return { ...category, postsCount: count || 0 }
-    })
-  )
+  // 1 query au lieu de N count queries parallèles
+  const { data: postCatRows } = await supabase
+    .from('blog_posts')
+    .select('category_id')
+    .eq('status', 'published')
+    .or(`published_at.is.null,published_at.lte.${now}`)
+    .not('category_id', 'is', null)
 
-  return categoriesWithCount
-    .filter((cat) => cat.postsCount > 0)
-    .map(({ postsCount, ...cat }) => cat) as BlogCategory[]
+  const countByCat = new Map<string, number>()
+  postCatRows?.forEach((p: { category_id: string }) => {
+    countByCat.set(p.category_id, (countByCat.get(p.category_id) ?? 0) + 1)
+  })
+
+  return (categories || [])
+    .filter((cat) => (countByCat.get(cat.id) ?? 0) > 0) as BlogCategory[]
 }
 
 async function getTagBySlug(slug: string) {

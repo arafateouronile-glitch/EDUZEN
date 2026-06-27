@@ -44,14 +44,26 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .eq('status', 'published')
     .maybeSingle()
 
-  if (!post) return { title: 'Article non trouvé | EDUZEN' }
+  if (!post) return { title: 'Article non trouvé | EduZen' }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.eduzen.io'
+  const postTitle = post.meta_title || post.title
+  const postDesc = post.meta_description || post.excerpt || ''
 
   return {
-    title: `${post.meta_title || post.title} | EDUZEN Blog`,
-    description: post.meta_description || post.excerpt || '',
+    title: `${postTitle} | EduZen Blog`,
+    description: postDesc,
+    alternates: { canonical: `${baseUrl}/blog/${slug}` },
     openGraph: {
-      title: post.meta_title || post.title,
-      description: post.meta_description || post.excerpt || '',
+      title: postTitle,
+      description: postDesc,
+      type: 'article',
+      images: post.featured_image_url ? [{ url: post.featured_image_url, width: 1200, height: 630 }] : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: postTitle,
+      description: postDesc,
       images: post.featured_image_url ? [post.featured_image_url] : [],
     },
   }
@@ -154,7 +166,7 @@ async function getRelatedPosts(postId: string, categoryId: string | null, limit:
   return (data || []) as Partial<BlogPost>[]
 }
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -171,7 +183,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     return [] as Partial<BlogPost>[]
   })
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://eduzen.io'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.eduzen.io'
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `${baseUrl}/blog/${post.slug}` },
+    ],
+  }
   const blogPostingSchema = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -195,10 +216,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <div className="min-h-screen bg-white">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }} />
       <ReadingProgress />
       <Navbar />
 
