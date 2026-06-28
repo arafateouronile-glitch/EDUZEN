@@ -370,18 +370,18 @@ export default function HomePage() {
                 <Link
                   key={href}
                   href={href}
-                  className="group relative flex flex-col items-center gap-4 p-6 rounded-2xl bg-white border border-gray-100 hover:border-brand-blue/20 hover:shadow-xl hover:shadow-brand-blue/8 hover:-translate-y-1 transition-all duration-500 text-center overflow-hidden"
+                  className="group relative flex flex-col items-center gap-5 p-6 rounded-2xl bg-white border border-gray-200 hover:border-brand-blue/30 hover:shadow-xl hover:shadow-brand-blue/10 hover:-translate-y-1 transition-all duration-500 text-center overflow-hidden"
                 >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-brand-blue/[0.02] to-brand-cyan/[0.04]" />
-                  <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} shadow-lg shadow-black/10`}>
-                    <Icon className="w-7 h-7 text-white" strokeWidth={1.5} />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-brand-blue/[0.03] to-brand-cyan/[0.06]" />
+                  <div className={`relative w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} shadow-lg shadow-black/15`}>
+                    <Icon className="w-8 h-8 text-white" strokeWidth={2} />
                   </div>
                   <div className="relative">
-                    <p className="text-[14px] font-bold text-gray-900 font-display group-hover:text-brand-blue transition-colors duration-300 leading-tight">{label}</p>
-                    <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">{sub}</p>
+                    <p className="text-[15px] font-bold text-gray-900 font-display group-hover:text-brand-blue transition-colors duration-300 leading-tight">{label}</p>
+                    <p className="text-[12px] text-gray-600 mt-1.5 leading-relaxed">{sub}</p>
                   </div>
-                  <div className="relative mt-auto flex items-center gap-1 text-[11px] font-semibold text-brand-blue opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
-                    Découvrir <ArrowRight className="w-3 h-3" />
+                  <div className="relative mt-auto flex items-center gap-1 text-[12px] font-semibold text-brand-blue/60 group-hover:text-brand-blue group-hover:translate-y-0 transition-all duration-300">
+                    Découvrir <ArrowRight className="w-3.5 h-3.5" />
                   </div>
                 </Link>
               ))}
