@@ -206,13 +206,22 @@ export default function AuditPreviewPage() {
         .in('entity_id', studentIds)
       addAll(studentEvidence)
 
-      // Sessions de l'apprenant via la table attendance
-      // (pas de filtre organization_id : la colonne est nullable)
+      // Sessions de l'apprenant via la table enrollments (inscription)
+      const { data: enrollments } = await supabase
+        .from('enrollments')
+        .select('session_id')
+        .in('student_id', studentIds)
+      // Compléter avec attendance si présences enregistrées sans inscription formelle
       const { data: attendances } = await supabase
         .from('attendance')
         .select('session_id')
         .in('student_id', studentIds)
-      const sessionIds = [...new Set((attendances ?? []).map((a) => a.session_id).filter(Boolean))] as string[]
+      const sessionIds = [
+        ...new Set([
+          ...(enrollments ?? []).map((e) => e.session_id),
+          ...(attendances ?? []).map((a) => a.session_id),
+        ].filter(Boolean)),
+      ] as string[]
       if (sessionIds.length > 0) {
         const { data: sessionEvidence } = await supabase
           .from('compliance_evidence_automated')
