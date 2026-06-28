@@ -197,7 +197,7 @@ export default function AuditPreviewPage() {
     if (students?.length) {
       const studentIds = students.map((s) => s.id)
 
-      // Preuves directes sur l'apprenant (tous entity_types confondus)
+      // Preuves directes par entity_id = student_uuid
       const { data: studentEvidence } = await supabase
         .from('compliance_evidence_automated')
         .select('*')
@@ -206,23 +206,20 @@ export default function AuditPreviewPage() {
         .in('entity_id', studentIds)
       addAll(studentEvidence)
 
-      // Sessions de l'apprenant via la table enrollments (inscription)
-      const { data: enrollments } = await supabase
-        .from('enrollments')
-        .select('session_id')
-        .in('student_id', studentIds)
-      // Compléter avec attendance si présences enregistrées sans inscription formelle
-      const { data: attendances } = await supabase
-        .from('attendance')
-        .select('session_id')
-        .in('student_id', studentIds)
+      // Inscriptions → session_ids (enrollments + attendance)
+      const [{ data: enrollments }, { data: attendances }] = await Promise.all([
+        supabase.from('enrollments').select('session_id').in('student_id', studentIds),
+        supabase.from('attendance').select('session_id').in('student_id', studentIds),
+      ])
       const sessionIds = [
         ...new Set([
           ...(enrollments ?? []).map((e) => e.session_id),
           ...(attendances ?? []).map((a) => a.session_id),
         ].filter(Boolean)),
       ] as string[]
+
       if (sessionIds.length > 0) {
+        // Preuves au niveau session (ex: questionnaire_analysis)
         const { data: sessionEvidence } = await supabase
           .from('compliance_evidence_automated')
           .select('*')
@@ -230,6 +227,34 @@ export default function AuditPreviewPage() {
           .eq('status', 'valid')
           .in('entity_id', sessionIds)
         addAll(sessionEvidence)
+
+        // Sessions → formation_ids → program_ids
+        // Les preuves principales sont générées au niveau programme
+        const { data: sessionRows } = await supabase
+          .from('sessions')
+          .select('id, formation_id')
+          .in('id', sessionIds)
+        const formationIds = [...new Set((sessionRows ?? []).map((s) => s.formation_id).filter(Boolean))] as string[]
+
+        if (formationIds.length > 0) {
+          const { data: formationRows } = await supabase
+            .from('formations')
+            .select('id, program_id')
+            .in('id', formationIds)
+          const programIds = [...new Set((formationRows ?? []).map((f) => f.program_id).filter(Boolean))] as string[]
+
+          // Preuves au niveau formation et programme
+          const allEntityIds = [...new Set([...formationIds, ...programIds])]
+          if (allEntityIds.length > 0) {
+            const { data: programEvidence } = await supabase
+              .from('compliance_evidence_automated')
+              .select('*')
+              .eq('organization_id', orgId)
+              .eq('status', 'valid')
+              .in('entity_id', allEntityIds)
+            addAll(programEvidence)
+          }
+        }
       }
     }
 
