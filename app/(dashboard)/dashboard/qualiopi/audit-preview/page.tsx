@@ -197,21 +197,20 @@ export default function AuditPreviewPage() {
     if (students?.length) {
       const studentIds = students.map((s) => s.id)
 
-      // Preuves directes sur l'apprenant
+      // Preuves directes sur l'apprenant (tous entity_types confondus)
       const { data: studentEvidence } = await supabase
         .from('compliance_evidence_automated')
         .select('*')
         .eq('organization_id', orgId)
         .eq('status', 'valid')
-        .eq('entity_type', 'student')
         .in('entity_id', studentIds)
       addAll(studentEvidence)
 
       // Sessions de l'apprenant via la table attendance
+      // (pas de filtre organization_id : la colonne est nullable)
       const { data: attendances } = await supabase
         .from('attendance')
         .select('session_id')
-        .eq('organization_id', orgId)
         .in('student_id', studentIds)
       const sessionIds = [...new Set((attendances ?? []).map((a) => a.session_id).filter(Boolean))] as string[]
       if (sessionIds.length > 0) {
