@@ -6,7 +6,7 @@
  * Design: Chirurgical & Zen - Lecture seule, transparence totale
  */
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Shield,
   CheckCircle2,
@@ -804,21 +804,34 @@ export function AuditorPortal({
     return data.evidence.filter((e) => e.indicator_number === indicatorNum)
   }, [data.evidence, selectedIndicatorData])
 
-  // Gestionnaires
-  const handleSearch = useCallback(async () => {
-    if (!searchTerm.trim() || searchTerm.length < 2) return
-    if (!onSearch) return
+  // Debounce : déclenche la recherche 400ms après la dernière frappe
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const runSearch = useCallback(async (term: string) => {
+    if (!term.trim() || term.length < 2 || !onSearch) return
     setIsSearching(true)
     try {
-      const results = await onSearch(searchTerm)
+      const results = await onSearch(term)
       setSearchResults(results)
     } finally {
       setIsSearching(false)
     }
-  }, [searchTerm, onSearch])
+  }, [onSearch])
+
+  useEffect(() => {
+    if (!searchTerm.trim() || searchTerm.length < 2) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => runSearch(searchTerm), 400)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchTerm, runSearch])
+
+  const handleSearch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    runSearch(searchTerm)
+  }, [searchTerm, runSearch])
 
   const handleClearSearch = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     setSearchTerm('')
     setSearchResults(null)
   }, [])
@@ -1192,7 +1205,11 @@ export function AuditorPortal({
                   ) : (
                     <div className="text-center py-12 text-slate-500">
                       <Search className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                      <p>Aucune preuve trouvée pour cette recherche</p>
+                      <p className="font-medium text-slate-700 mb-1">Aucune preuve trouvée pour "{searchTerm}"</p>
+                      <p className="text-sm text-slate-400 max-w-sm mx-auto">
+                        Vérifiez l'orthographe du nom, ou lancez une synchronisation depuis le tableau de bord
+                        Qualiopi pour générer les preuves de cet apprenant.
+                      </p>
                     </div>
                   )}
                 </CardContent>
