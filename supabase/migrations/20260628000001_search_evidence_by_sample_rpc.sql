@@ -4,6 +4,8 @@
 --
 -- Remplace les 5-6 requêtes séquentielles client-side du mode Échantillonnage.
 
+DROP FUNCTION IF EXISTS search_evidence_by_sample(uuid, text);
+
 CREATE OR REPLACE FUNCTION search_evidence_by_sample(
   org_id     uuid,
   search_term text
