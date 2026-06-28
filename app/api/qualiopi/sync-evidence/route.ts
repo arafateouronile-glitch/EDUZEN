@@ -82,7 +82,7 @@ async function doSync(orgId: string): Promise<{ count: number }> {
       .delete()
       .eq('organization_id', orgId)
       .eq('source', 'system')
-      .in('entity_type', ['program', 'accessibility', 'document'])
+      .in('entity_type', ['program', 'accessibility', 'document', 'student'])
 
     // ── Pré-chargement bulk ──────────────────────────────────────────────────
     const { data: allFormations } = await supabase
@@ -1104,6 +1104,128 @@ async function doSync(orgId: string): Promise<{ count: number }> {
       },
     })
     inserted.push('org:32:amelioration-continue')
+
+    // ── Preuves par apprenant (rend chaque apprenant recherchable) ───────────
+    if (allSessionIds.length > 0) {
+      const { data: enrollments } = await supabase
+        .from('enrollments')
+        .select('student_id, session_id')
+        .in('session_id', allSessionIds)
+        .not('student_id', 'is', null)
+        .limit(10000)
+
+      if (enrollments?.length) {
+        const uniqueStudentIds = [...new Set(enrollments.map((e) => e.student_id!).filter(Boolean))]
+
+        const [{ data: students }, { data: studentAtt }] = await Promise.all([
+          supabase
+            .from('students')
+            .select('id, first_name, last_name')
+            .eq('organization_id', orgId)
+            .in('id', uniqueStudentIds)
+            .limit(5000),
+          supabase
+            .from('attendance')
+            .select('student_id, status')
+            .in('session_id', allSessionIds)
+            .not('student_id', 'is', null)
+            .limit(50000),
+        ])
+
+        // Présences agrégées par apprenant
+        const attByStudent = new Map<string, { present: number; total: number }>()
+        for (const a of studentAtt ?? []) {
+          if (!a.student_id) continue
+          const s = attByStudent.get(a.student_id) ?? { present: 0, total: 0 }
+          s.total++
+          if (a.status === 'present' || a.status === 'late') s.present++
+          attByStudent.set(a.student_id, s)
+        }
+
+        // Sessions par apprenant
+        const sessionsByStudent = new Map<string, string[]>()
+        for (const e of enrollments) {
+          if (!e.student_id || !e.session_id) continue
+          const arr = sessionsByStudent.get(e.student_id) ?? []
+          arr.push(e.session_id)
+          sessionsByStudent.set(e.student_id, arr)
+        }
+
+        const sessionsArr   = allSessions   ?? []
+        const formationsArr = allFormations ?? []
+        const programsArr   = programs      ?? []
+
+        for (const student of students ?? []) {
+          const name       = [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Apprenant'
+          const studSessIds = sessionsByStudent.get(student.id) ?? []
+          if (!studSessIds.length) continue
+
+          // Remonter : sessions → formations → programmes
+          const formIds = [...new Set(
+            studSessIds
+              .map((sid) => sessionsArr.find((s) => s.id === sid)?.formation_id)
+              .filter((v): v is string => !!v)
+          )]
+          const progIds = [...new Set(
+            formIds
+              .map((fid) => formationsArr.find((f) => f.id === fid)?.program_id)
+              .filter((v): v is string => !!v)
+          )]
+          const progNames = programsArr
+            .filter((p) => progIds.includes(p.id))
+            .map((p) => p.name ?? '')
+            .filter(Boolean)
+
+          const att            = attByStudent.get(student.id)
+          const attendanceRate = att && att.total > 0 ? Math.round((att.present / att.total) * 100) : null
+
+          // Ind. 4 — Dossier apprenant (index de recherche)
+          evidences.push({
+            organization_id:  orgId,
+            indicator_number: 4,
+            evidence_type:    'data_point',
+            source:           'system',
+            entity_type:      'student',
+            entity_id:        student.id,
+            entity_name:      name,
+            title:            `Dossier apprenant — ${name}`,
+            description:      `Inscrit à ${studSessIds.length} session(s) — ${progNames.join(', ') || 'Programme non défini'}`,
+            status:           'valid',
+            confidence_score: 100,
+            event_date:       now,
+            metadata: {
+              sessions_count: studSessIds.length,
+              session_ids:    studSessIds,
+              program_names:  progNames,
+              program_ids:    progIds,
+            },
+          })
+
+          // Ind. 12 — Taux de présence de l'apprenant
+          if (att && att.total > 0) {
+            evidences.push({
+              organization_id:  orgId,
+              indicator_number: 12,
+              evidence_type:    'attendance',
+              source:           'system',
+              entity_type:      'student',
+              entity_id:        student.id,
+              entity_name:      name,
+              title:            `Présence — ${name} (${attendanceRate}%)`,
+              description:      `${att.present} présence(s) sur ${att.total} pointage(s)`,
+              status:           attendanceRate !== null && attendanceRate >= 70 ? 'valid' : 'pending',
+              confidence_score: attendanceRate ?? 0,
+              event_date:       now,
+              metadata: {
+                present_count:   att.present,
+                total_pointages: att.total,
+                attendance_rate: attendanceRate,
+              },
+            })
+          }
+        }
+      }
+    }
 
     // ── Insertion bulk de toutes les preuves collectées ──────────────────────
     await bulkInsert(supabase, evidences)
