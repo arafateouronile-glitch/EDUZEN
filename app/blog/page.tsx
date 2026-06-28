@@ -106,7 +106,7 @@ async function getBlogPosts(
 
   const postsWithRelations = rawPosts.map((post) => ({
     ...post,
-    blog_categories: categoriesMap.get(post.category_id) ?? null,
+    blog_categories: post.category_id ? (categoriesMap.get(post.category_id) ?? null) : null,
     tags: tagsMap.get(post.id) ?? [],
   }))
 
@@ -144,7 +144,7 @@ async function getFeaturedPosts() {
 
   return rawPosts.map((post) => ({
     ...post,
-    blog_categories: catsMap.get(post.category_id) ?? null,
+    blog_categories: post.category_id ? (catsMap.get(post.category_id) ?? null) : null,
   })) as (BlogPost & { blog_categories?: BlogCategory | null })[]
 }
 
@@ -172,7 +172,8 @@ async function getCategories() {
     .not('category_id', 'is', null)
 
   const countByCat = new Map<string, number>()
-  postCatRows?.forEach((p: { category_id: string }) => {
+  postCatRows?.forEach((p: { category_id: string | null }) => {
+    if (!p.category_id) return
     countByCat.set(p.category_id, (countByCat.get(p.category_id) ?? 0) + 1)
   })
 

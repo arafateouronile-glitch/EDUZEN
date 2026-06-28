@@ -1,13 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
-import { Menu, X, ArrowRight, Sparkles } from 'lucide-react'
+import { Menu, X, ArrowRight, Sparkles, ChevronDown } from 'lucide-react'
+
+const SOLUTIONS = [
+  { label: 'Formation sécurité', href: '/pour/organisme-securite', icon: '🦺' },
+  { label: 'Auto-écoles', href: '/pour/auto-ecole', icon: '🚗' },
+  { label: 'CFA', href: '/pour/cfa', icon: '🎓' },
+  { label: 'Formation entreprise', href: '/pour/formation-entreprise', icon: '🏢' },
+  { label: 'Établissements scolaires', href: '/pour/etablissement-scolaire', icon: '🏫' },
+]
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isSolutionsOpen, setIsSolutionsOpen] = useState(false)
+  const solutionsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,6 +34,16 @@ export function Navbar() {
     { label: 'FAQ', href: '#faq' },
     { label: 'Contact', href: '/contact' },
   ]
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (solutionsRef.current && !solutionsRef.current.contains(e.target as Node)) {
+        setIsSolutionsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   return (
     <motion.nav
@@ -71,6 +91,49 @@ export function Navbar() {
                   ? 'bg-gradient-to-r from-brand-cyan/10 via-brand-cyan/15 to-brand-cyan/10 border border-brand-cyan/20 shadow-sm shadow-brand-cyan/10'
                   : 'bg-gradient-to-r from-brand-cyan/8 via-brand-cyan/12 to-brand-cyan/8 backdrop-blur-sm border border-brand-cyan/15'
               }`}>
+                {/* Solutions dropdown */}
+                <div ref={solutionsRef} className="relative">
+                  <button
+                    onClick={() => setIsSolutionsOpen(!isSolutionsOpen)}
+                    className="relative flex items-center gap-1 px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-300 text-brand-blue-dark/80 hover:text-brand-blue hover:bg-white/60"
+                  >
+                    Solutions
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isSolutionsOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {isSolutionsOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.97 }}
+                        transition={{ duration: 0.18 }}
+                        className="absolute top-full left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl shadow-brand-blue/10 border border-gray-100 overflow-hidden z-50"
+                      >
+                        {SOLUTIONS.map((s) => (
+                          <Link
+                            key={s.href}
+                            href={s.href}
+                            onClick={() => setIsSolutionsOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 text-[13px] font-medium text-gray-700 hover:text-brand-blue hover:bg-brand-blue/[0.04] transition-colors"
+                          >
+                            <span>{s.icon}</span>
+                            {s.label}
+                          </Link>
+                        ))}
+                        <div className="border-t border-gray-100">
+                          <Link
+                            href="/pour"
+                            onClick={() => setIsSolutionsOpen(false)}
+                            className="flex items-center gap-2 px-4 py-3 text-[12px] font-semibold text-brand-blue hover:bg-brand-blue/[0.04] transition-colors"
+                          >
+                            Voir tous les secteurs <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {navItems.map((item, index) => (
                   <motion.div
                     key={item.label}
@@ -179,7 +242,24 @@ export function Navbar() {
                   </motion.div>
                 ))}
 
-                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-3" />
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-1" />
+                <div className="px-4 py-2">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Solutions par secteur</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {SOLUTIONS.map((s) => (
+                      <Link
+                        key={s.href}
+                        href={s.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium text-gray-700 hover:text-brand-blue hover:bg-brand-blue/[0.04] transition-colors"
+                      >
+                        <span>{s.icon}</span>
+                        {s.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-1" />
 
                 <motion.div
                   initial={{ opacity: 0, x: -16 }}

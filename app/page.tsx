@@ -344,6 +344,33 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Secteurs — maillage interne vers /pour */}
+        <section className="py-16 bg-gray-50/60">
+          <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl">
+            <div className="text-center mb-10">
+              <p className="text-sm font-semibold text-brand-blue uppercase tracking-wider mb-2">Solutions par secteur</p>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">EduZen s&apos;adapte à votre activité</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {[
+                { icon: '🦺', label: 'Formation sécurité', href: '/pour/organisme-securite', sub: 'SST · CACES · Habilitations' },
+                { icon: '🚗', label: 'Auto-écoles', href: '/pour/auto-ecole', sub: 'Permis B · AAC · LMS' },
+                { icon: '🎓', label: 'CFA', href: '/pour/cfa', sub: 'Qualiopi · BPF · OPCO' },
+                { icon: '🏢', label: 'Formation entreprise', href: '/pour/formation-entreprise', sub: 'PDC · OPCO · LMS' },
+                { icon: '🏫', label: 'Établissements', href: '/pour/etablissement-scolaire', sub: 'Élèves · Planning · E-learning' },
+              ].map(({ icon, label, href, sub }) => (
+                <a key={href} href={href} className="group flex flex-col items-center gap-3 p-5 rounded-2xl bg-white border border-gray-100 hover:border-brand-blue/30 hover:shadow-md hover:shadow-brand-blue/5 transition-all duration-300 text-center">
+                  <span className="text-3xl">{icon}</span>
+                  <div>
+                    <p className="text-[14px] font-semibold text-gray-900 group-hover:text-brand-blue transition-colors">{label}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Sections below-the-fold rendues à l'approche viewport (qualité visuelle inchangée). */}
         <DeferredSection>
           <Suspense fallback={<SectionSkeleton />}>
