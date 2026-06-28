@@ -160,13 +160,31 @@ export default function AuditPreviewPage() {
   }, [organization, indicators, evidence, user?.organization_id])
 
   const handleSearch = useCallback(async (term: string): Promise<ComplianceEvidenceAutomated[]> => {
-    const lower = term.toLowerCase().trim()
-    if (!lower) return []
-    return (evidence as unknown as ComplianceEvidenceAutomated[]).filter((e) => {
-      const fields = [e.title, e.description, e.entity_name, e.entity_type, e.evidence_type]
-      return fields.some((f) => f?.toLowerCase().includes(lower))
-    })
-  }, [evidence])
+    if (!term.trim() || !user?.organization_id) return []
+
+    // Essayer la RPC (même logique que le vrai portail auditeur)
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('search_evidence_by_sample', {
+        org_id: user.organization_id,
+        search_term: term.trim(),
+      })
+
+    if (!rpcError && rpcData) {
+      return rpcData as ComplianceEvidenceAutomated[]
+    }
+
+    // Fallback : ilike sur les champs texte
+    const { data } = await supabase
+      .from('compliance_evidence_automated')
+      .select('*')
+      .eq('organization_id', user.organization_id)
+      .eq('status', 'valid')
+      .or(`entity_name.ilike.%${term.trim()}%,title.ilike.%${term.trim()}%,description.ilike.%${term.trim()}%`)
+      .order('event_date', { ascending: false })
+      .limit(100)
+
+    return (data || []) as ComplianceEvidenceAutomated[]
+  }, [supabase, user?.organization_id])
 
   const handleExportPdf = useCallback(() => {
     window.print()
