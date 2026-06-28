@@ -290,11 +290,13 @@ function EvidenceRow({
   onView,
   onDownload,
   onDownloadFiche,
+  onDownloadEntityDoc,
 }: {
   evidence: ComplianceEvidenceAutomated
   onView?: (url: string) => void
   onDownload?: (url: string, filename?: string) => void
   onDownloadFiche?: (evidenceId: string) => void
+  onDownloadEntityDoc?: (entityType: string, entityId: string, entityName?: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -394,6 +396,18 @@ function EvidenceRow({
               >
                 <Download className="h-4 w-4 mr-1" />
                 Doc
+              </Button>
+            )}
+            {!evidence.file_url && evidence.entity_id && ENTITY_TYPES_WITH_DOC.has(evidence.entity_type ?? '') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                onClick={() => onDownloadEntityDoc?.(evidence.entity_type!, evidence.entity_id!, evidence.entity_name)}
+                title={`Télécharger le document ${evidence.entity_type === 'program' ? 'programme' : evidence.entity_type}`}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                {evidence.entity_type === 'program' ? 'Programme' : evidence.entity_type === 'session' ? 'Session' : 'Doc'}
               </Button>
             )}
             <Button
@@ -648,7 +662,7 @@ function MaterialEvidenceGroup({
                     <Download className="h-3.5 w-3.5" />
                   </Button>
                 )}
-                {!item.file_url && ENTITY_TYPES_WITH_DOC.has(entityType) && item.entity_id && (
+                {ENTITY_TYPES_WITH_DOC.has(entityType) && item.entity_id && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1266,6 +1280,7 @@ export function AuditorPortal({
                               onView={onViewDocument}
                               onDownload={onDownloadDocument}
                               onDownloadFiche={onDownloadFiche}
+                              onDownloadEntityDoc={onDownloadEntityDoc}
                             />
                           ))}
                         </TableBody>

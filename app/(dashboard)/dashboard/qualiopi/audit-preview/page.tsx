@@ -171,6 +171,24 @@ export default function AuditPreviewPage() {
     window.open(url, '_blank', 'noopener,noreferrer')
   }, [])
 
+  const handleDownloadDocument = useCallback((url: string, filename?: string) => {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename || 'document'
+    a.target = '_blank'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }, [])
+
+  const handleDownloadFiche = useCallback((evidenceId: string) => {
+    window.open(`/api/auditor/evidence-pdf?id=${encodeURIComponent(evidenceId)}`, '_blank', 'noopener,noreferrer')
+  }, [])
+
+  const handleDownloadEntityDoc = useCallback((entityType: string, entityId: string) => {
+    window.open(`/api/auditor/entity-pdf?type=${encodeURIComponent(entityType)}&id=${encodeURIComponent(entityId)}`, '_blank', 'noopener,noreferrer')
+  }, [])
+
   if (loadingIndicators) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB]">
@@ -259,6 +277,9 @@ export default function AuditPreviewPage() {
           onSearch={handleSearch}
           onExportPdf={handleExportPdf}
           onViewDocument={handleViewDocument}
+          onDownloadDocument={handleDownloadDocument}
+          onDownloadFiche={handleDownloadFiche}
+          onDownloadEntityDoc={handleDownloadEntityDoc}
         />
       </div>
 
