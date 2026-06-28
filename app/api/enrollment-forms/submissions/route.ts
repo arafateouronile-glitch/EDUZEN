@@ -54,5 +54,42 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ submissions: data })
+
+  // Resolve dynamic-source UUIDs (programs, sessions, funding_types) into human-readable names.
+  // Collect unique IDs from form_data across all submissions.
+  const programIds = new Set<string>()
+  const fundingIds = new Set<string>()
+  const sessionIds = new Set<string>()
+
+  for (const sub of data ?? []) {
+    const fd = sub.form_data as Record<string, unknown>
+    for (const val of Object.values(fd)) {
+      if (typeof val !== 'string' || !/^[0-9a-f-]{36}$/.test(val)) continue
+      // We don't know the source per value here — collect all UUID-like values;
+      // we'll resolve them against each table and merge results.
+      programIds.add(val)
+      fundingIds.add(val)
+      sessionIds.add(val)
+    }
+  }
+
+  const labelMap: Record<string, string> = {}
+
+  const [programs, funding, sessions] = await Promise.all([
+    programIds.size
+      ? admin.from('programs').select('id, name').in('id', [...programIds]).then(({ data: r }: { data: Array<{ id: string; name: string }> | null }) => r ?? [])
+      : Promise.resolve([]),
+    fundingIds.size
+      ? admin.from('funding_types').select('id, name').in('id', [...fundingIds]).then(({ data: r }: { data: Array<{ id: string; name: string }> | null }) => r ?? [])
+      : Promise.resolve([]),
+    sessionIds.size
+      ? admin.from('sessions').select('id, name').in('id', [...sessionIds]).then(({ data: r }: { data: Array<{ id: string; name: string }> | null }) => r ?? [])
+      : Promise.resolve([]),
+  ])
+
+  for (const p of programs as Array<{ id: string; name: string }>) labelMap[p.id] = p.name
+  for (const f of funding as Array<{ id: string; name: string }>) labelMap[f.id] = f.name
+  for (const s of sessions as Array<{ id: string; name: string }>) labelMap[s.id] = s.name
+
+  return NextResponse.json({ submissions: data, labelMap })
 }

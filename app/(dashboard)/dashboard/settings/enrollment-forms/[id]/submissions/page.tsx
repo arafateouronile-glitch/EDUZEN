@@ -47,7 +47,7 @@ async function fetchSubmissions(templateId: string, filters: { session?: string;
   const res = await fetch(`/api/enrollment-forms/submissions?${params}`)
   if (!res.ok) throw new Error('Erreur chargement')
   const data = await res.json()
-  return data.submissions as Submission[]
+  return { submissions: data.submissions as Submission[], labelMap: (data.labelMap ?? {}) as Record<string, string> }
 }
 
 async function fetchTemplate(id: string) {
@@ -92,11 +92,13 @@ export default function SubmissionsPage() {
     enabled: !!id,
   })
 
-  const { data: submissions, isLoading } = useQuery({
+  const { data: submissionsData, isLoading } = useQuery({
     queryKey: ['enrollment-form-submissions', id, filterStatus, filterSession],
     queryFn: () => fetchSubmissions(id, { status: filterStatus, session: filterSession }),
     enabled: !!id,
   })
+  const submissions = submissionsData?.submissions
+  const labelMap = submissionsData?.labelMap ?? {}
 
   const exportCsv = () => {
     if (!submissions?.length) return
@@ -306,9 +308,13 @@ export default function SubmissionsPage() {
                           .map(([key, val]) => {
                             const fieldDef = template?.fields?.find((f: { id: string }) => f.id === key)
                             const label = fieldDef?.label ?? key
+                            const resolve = (v: unknown): string => {
+                              if (typeof v === 'string' && labelMap[v]) return labelMap[v]
+                              return String(v ?? '—')
+                            }
                             const display = Array.isArray(val)
-                              ? val.join(', ')
-                              : String(val ?? '—')
+                              ? val.map(resolve).join(', ')
+                              : resolve(val)
                             return (
                               <div key={key} className="bg-gray-50 rounded-lg p-2">
                                 <p className="text-gray-400 text-xs">{label}</p>
