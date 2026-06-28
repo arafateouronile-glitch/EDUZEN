@@ -117,8 +117,8 @@ function CellIcon({ value, highlight }: { value: CellValue; highlight: boolean }
       <span
         className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${
           highlight
-            ? 'bg-brand-cyan/20 text-brand-cyan'
-            : 'bg-emerald-50 text-emerald-500'
+            ? 'bg-brand-cyan/25 text-brand-cyan'
+            : 'bg-emerald-100 text-emerald-600'
         }`}
       >
         <Check className="w-4 h-4" strokeWidth={2.5} />
@@ -128,10 +128,10 @@ function CellIcon({ value, highlight }: { value: CellValue; highlight: boolean }
   if (value === 'yes-paid') {
     return (
       <div className="flex flex-col items-center gap-0.5">
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 text-amber-500">
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-600">
           <Check className="w-4 h-4" strokeWidth={2} />
         </span>
-        <span className="text-[9px] text-amber-400 font-semibold tracking-wide leading-none">
+        <span className="text-[9px] text-amber-600 font-semibold tracking-wide leading-none">
           payant
         </span>
       </div>
@@ -139,14 +139,14 @@ function CellIcon({ value, highlight }: { value: CellValue; highlight: boolean }
   }
   if (value === 'partial') {
     return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-400">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200 text-gray-500">
         <Minus className="w-4 h-4" strokeWidth={2} />
       </span>
     )
   }
   if (value === 'no') {
     return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-50 text-red-300">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500">
         <X className="w-4 h-4" strokeWidth={2} />
       </span>
     )
@@ -229,12 +229,12 @@ export function ComparisonTable() {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0"
         >
-          <div className="min-w-[780px] rounded-3xl overflow-hidden border border-gray-100/80 shadow-2xl shadow-gray-900/[0.06]">
+          <div className="min-w-[780px] rounded-3xl overflow-hidden border border-gray-200 shadow-2xl shadow-gray-900/[0.08]">
 
             {/* En-têtes colonnes */}
             <div className="grid grid-cols-[2.4fr_repeat(5,1fr)]">
-              <div className="bg-gray-50 px-5 py-5 border-b border-gray-100 flex items-end">
-                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+              <div className="bg-gray-50 px-5 py-5 border-b border-gray-200 flex items-end">
+                <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                   Fonctionnalité
                 </span>
               </div>
@@ -244,7 +244,7 @@ export function ComparisonTable() {
                   className={`relative px-2 py-5 text-center border-b ${
                     c.highlight
                       ? 'bg-gradient-to-b from-brand-blue to-brand-blue-dark border-transparent'
-                      : 'bg-gray-50 border-gray-100'
+                      : 'bg-gray-50 border-gray-200'
                   }`}
                 >
                   {c.highlight && (
@@ -253,10 +253,10 @@ export function ComparisonTable() {
                       {c.tag}
                     </span>
                   )}
-                  <p className={`font-bold text-sm ${c.highlight ? 'text-white' : 'text-gray-700'}`}>
+                  <p className={`font-bold text-sm ${c.highlight ? 'text-white' : 'text-gray-800'}`}>
                     {c.name}
                   </p>
-                  <p className={`text-[11px] mt-1 font-medium ${c.highlight ? 'text-brand-cyan' : 'text-gray-400'}`}>
+                  <p className={`text-[11px] mt-1 font-medium ${c.highlight ? 'text-brand-cyan' : 'text-gray-500'}`}>
                     {c.priceNote}
                   </p>
                 </div>
@@ -269,18 +269,18 @@ export function ComparisonTable() {
                 key={row.label}
                 className={`grid grid-cols-[2.4fr_repeat(5,1fr)] group transition-colors ${
                   row.badge
-                    ? 'bg-brand-blue/[0.025] hover:bg-brand-blue/[0.05]'
+                    ? 'bg-brand-blue/[0.04] hover:bg-brand-blue/[0.07]'
                     : rowIdx % 2 === 0
-                    ? 'bg-white hover:bg-gray-50/60'
-                    : 'bg-gray-50/50 hover:bg-gray-50'
+                    ? 'bg-white hover:bg-gray-50'
+                    : 'bg-gray-50 hover:bg-gray-100/60'
                 }`}
               >
                 {/* Critère */}
-                <div className="flex flex-col justify-center py-4 pl-5 pr-4 border-r border-gray-100">
+                <div className="flex flex-col justify-center py-4 pl-5 pr-4 border-r border-gray-200">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
                       className={`text-sm font-semibold leading-snug ${
-                        row.badge ? 'text-brand-blue' : 'text-gray-800'
+                        row.badge ? 'text-brand-blue' : 'text-gray-900'
                       }`}
                     >
                       {row.label}
@@ -291,16 +291,16 @@ export function ComparisonTable() {
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-gray-400 mt-0.5">{row.sub}</span>
+                  <span className="text-xs text-gray-500 mt-0.5">{row.sub}</span>
                 </div>
 
                 {/* Cellules */}
                 {row.values.map((val, colIdx) => (
                   <div
                     key={colIdx}
-                    className={`border-r border-gray-100/80 last:border-r-0 ${
+                    className={`border-r border-gray-200 last:border-r-0 ${
                       competitors[colIdx].highlight
-                        ? 'bg-brand-blue/[0.05] group-hover:bg-brand-blue/[0.09]'
+                        ? 'bg-brand-blue/[0.06] group-hover:bg-brand-blue/[0.10]'
                         : ''
                     }`}
                   >
@@ -311,18 +311,18 @@ export function ComparisonTable() {
             ))}
 
             {/* Ligne score */}
-            <div className="grid grid-cols-[2.4fr_repeat(5,1fr)] bg-gray-50 border-t border-gray-100">
-              <div className="flex flex-col justify-center py-4 pl-5 pr-4 border-r border-gray-100">
-                <span className="text-sm font-bold text-gray-800">Fonctionnalités incluses</span>
-                <span className="text-xs text-gray-400 mt-0.5">Sans supplément ni option</span>
+            <div className="grid grid-cols-[2.4fr_repeat(5,1fr)] bg-gray-100 border-t border-gray-200">
+              <div className="flex flex-col justify-center py-4 pl-5 pr-4 border-r border-gray-200">
+                <span className="text-sm font-bold text-gray-900">Fonctionnalités incluses</span>
+                <span className="text-xs text-gray-500 mt-0.5">Sans supplément ni option</span>
               </div>
               {competitors.map((c, colIdx) => {
                 const count = countIncluded(colIdx)
                 return (
                   <div
                     key={c.name}
-                    className={`flex items-center justify-center py-4 border-r border-gray-100 last:border-r-0 ${
-                      c.highlight ? 'bg-brand-blue/[0.05]' : ''
+                    className={`flex items-center justify-center py-4 border-r border-gray-200 last:border-r-0 ${
+                      c.highlight ? 'bg-brand-blue/[0.06]' : ''
                     }`}
                   >
                     <span
@@ -330,14 +330,14 @@ export function ComparisonTable() {
                         c.highlight
                           ? 'text-brand-blue'
                           : count >= 8
-                          ? 'text-emerald-500'
+                          ? 'text-emerald-600'
                           : count >= 5
-                          ? 'text-gray-600'
-                          : 'text-gray-400'
+                          ? 'text-gray-700'
+                          : 'text-gray-500'
                       }`}
                     >
                       {count}
-                      <span className="text-xs font-normal opacity-40"> /{total}</span>
+                      <span className="text-xs font-normal opacity-50"> /{total}</span>
                     </span>
                   </div>
                 )
@@ -345,8 +345,8 @@ export function ComparisonTable() {
             </div>
 
             {/* CTA footer */}
-            <div className="grid grid-cols-[2.4fr_repeat(5,1fr)] border-t border-gray-100">
-              <div className="bg-gray-50 px-5 py-5" />
+            <div className="grid grid-cols-[2.4fr_repeat(5,1fr)] border-t border-gray-200">
+              <div className="bg-gray-100 px-5 py-5" />
               {competitors.map((c) => (
                 <div
                   key={c.name}
@@ -365,7 +365,7 @@ export function ComparisonTable() {
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   ) : (
-                    <span className="text-xs text-gray-300 font-medium">—</span>
+                    <span className="text-xs text-gray-400 font-medium">—</span>
                   )}
                 </div>
               ))}
@@ -384,10 +384,10 @@ export function ComparisonTable() {
           {LEGEND.map((item) => (
             <div key={item.label} className="flex items-center gap-2">
               <CellIcon value={item.type} highlight={false} />
-              <span className="text-xs text-gray-400">{item.label}</span>
+              <span className="text-xs text-gray-600">{item.label}</span>
             </div>
           ))}
-          <span className="text-xs text-gray-300 ml-1">· Sources publiques, juin 2025</span>
+          <span className="text-xs text-gray-400 ml-1">· Sources publiques, juin 2025</span>
         </motion.div>
 
       </div>

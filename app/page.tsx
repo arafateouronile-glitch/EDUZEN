@@ -362,10 +362,10 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {([
                 { Icon: GraduationCap, label: 'CFA', href: '/pour/cfa', sub: 'Apprentissage · BPF · OPCO', gradient: 'from-brand-blue to-brand-blue-dark' },
-                { Icon: Car, label: 'Auto-écoles', href: '/pour/auto-ecole', sub: 'Permis B · AAC · Livret', gradient: 'from-sky-500 to-brand-cyan' },
-                { Icon: Building2, label: 'Formation en entreprise', href: '/pour/formation-entreprise', sub: 'PDC · Inter/Intra · OPCO', gradient: 'from-indigo-600 to-brand-blue' },
-                { Icon: ShieldCheck, label: 'Formations réglementées', href: '/pour/organisme-securite', sub: 'SST · CACES · Habilitations', gradient: 'from-amber-500 to-orange-500' },
-                { Icon: School, label: 'Établissements scolaires', href: '/pour/etablissement-scolaire', sub: 'Élèves · Planning · E-learning', gradient: 'from-emerald-500 to-brand-cyan' },
+                { Icon: Car, label: 'Auto-écoles', href: '/pour/auto-ecole', sub: 'Permis B · AAC · Livret', gradient: 'from-brand-blue to-brand-cyan' },
+                { Icon: Building2, label: 'Formation en entreprise', href: '/pour/formation-entreprise', sub: 'PDC · Inter/Intra · OPCO', gradient: 'from-brand-blue-dark to-brand-blue' },
+                { Icon: ShieldCheck, label: 'Formations réglementées', href: '/pour/organisme-securite', sub: 'SST · CACES · Habilitations', gradient: 'from-brand-cyan to-brand-blue' },
+                { Icon: School, label: 'Établissements scolaires', href: '/pour/etablissement-scolaire', sub: 'Élèves · Planning · E-learning', gradient: 'from-brand-blue to-brand-cyan' },
               ] as const).map(({ Icon, label, href, sub, gradient }) => (
                 <Link
                   key={href}
