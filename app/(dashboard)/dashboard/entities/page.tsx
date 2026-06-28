@@ -104,55 +104,45 @@ function EntitiesPageContent() {
     contact_job_title: '',
   })
 
-  // Récupérer les entités
-  const { data: entities, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['external-entities', user?.organization_id, search, typeFilter],
     queryFn: async () => {
-      if (!user?.organization_id) return []
-      
-      let query = supabase
+      if (!user?.organization_id) return { entities: [] as ExternalEntity[], studentCounts: {} as Record<string, number> }
+
+      let entityQuery = supabase
         .from('external_entities')
         .select('*')
         .eq('organization_id', user.organization_id)
         .order('name', { ascending: true })
 
       if (search) {
-        query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%,siret.ilike.%${search}%`)
+        entityQuery = entityQuery.or(`name.ilike.%${search}%,code.ilike.%${search}%,siret.ilike.%${search}%`)
       }
-
       if (typeFilter !== 'all') {
-        query = query.eq('type', typeFilter)
+        entityQuery = entityQuery.eq('type', typeFilter)
       }
 
-      const { data, error } = await query
-      if (error) throw error
-      return (data || []) as ExternalEntity[]
+      const [entitiesRes, countsRes] = await Promise.all([
+        entityQuery,
+        supabase.from('student_entities').select('entity_id').eq('is_current', true),
+      ])
+
+      if (entitiesRes.error) throw entitiesRes.error
+      if (countsRes.error) throw countsRes.error
+
+      const studentCounts: Record<string, number> = {}
+      countsRes.data?.forEach((se: { entity_id: string }) => {
+        studentCounts[se.entity_id] = (studentCounts[se.entity_id] || 0) + 1
+      })
+
+      return { entities: (entitiesRes.data || []) as ExternalEntity[], studentCounts }
     },
+    staleTime: 5 * 60 * 1000,
     enabled: !!user?.organization_id,
   })
 
-  // Compter les apprenants par entité
-  const { data: studentCounts } = useQuery({
-    queryKey: ['student-entity-counts', user?.organization_id],
-    queryFn: async () => {
-      if (!user?.organization_id) return {}
-      
-      const { data, error } = await supabase
-        .from('student_entities')
-        .select('entity_id, is_current')
-        .eq('is_current', true)
-      
-      if (error) throw error
-      
-      const counts: Record<string, number> = {}
-      data?.forEach((se: { entity_id: string }) => {
-        counts[se.entity_id] = (counts[se.entity_id] || 0) + 1
-      })
-      
-      return counts
-    },
-    enabled: !!user?.organization_id,
-  })
+  const entities = data?.entities ?? []
+  const studentCounts = data?.studentCounts ?? {}
 
   // Créer ou modifier une entité
   const saveMutation = useMutation({
@@ -401,16 +391,16 @@ function EntitiesPageContent() {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.1 }
+      transition: { staggerChildren: 0.04 }
     }
   }
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: { opacity: 0, y: 12 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
+      transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }
     }
   }
 
@@ -506,15 +496,34 @@ function EntitiesPageContent() {
         </motion.div>
 
         {/* Liste des entités */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {isLoading ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex justify-center py-20"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm animate-pulse">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-gray-100 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-100 rounded w-3/4" />
+                      <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    </div>
+                  </div>
+                  <div className="space-y-2 mb-6">
+                    <div className="h-3 bg-gray-100 rounded w-2/3" />
+                    <div className="h-3 bg-gray-100 rounded w-1/2" />
+                    <div className="h-3 bg-gray-100 rounded w-3/5" />
+                  </div>
+                  <div className="border-t border-gray-100 pt-4 flex justify-between">
+                    <div className="h-4 bg-gray-100 rounded w-1/4" />
+                    <div className="h-4 bg-gray-100 rounded w-1/4" />
+                  </div>
+                </div>
+              ))}
             </motion.div>
           ) : entities && entities.length > 0 ? (
             <motion.div 

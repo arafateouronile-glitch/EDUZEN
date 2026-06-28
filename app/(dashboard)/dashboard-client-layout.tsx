@@ -48,15 +48,19 @@ export default function DashboardClientLayout({
     }
   }, [authLoadingTimedOut, session])
 
-  // Règle stricte anti "semi-connecté":
-  // si session auth existe mais profil applicatif absent, on quitte immédiatement le dashboard.
+  // Règle anti "semi-connecté" avec fenêtre de grâce:
+  // si session auth existe mais profil absent, attendre 6 s avant de déconnecter.
+  // Évite les faux positifs causés par une erreur réseau transitoire (ENOTFOUND, ERR_NETWORK_CHANGED).
+  // React Query retry:2 a le temps de réessayer; si user arrive entre-temps on annule.
   useEffect(() => {
     if (authLoading) return
-    if (session?.user && !user) {
+    if (!session?.user || user) return
+    const t = setTimeout(() => {
       if (typeof window !== 'undefined') {
         window.location.replace('/auth/logout?reason=profile_missing')
       }
-    }
+    }, 6000)
+    return () => clearTimeout(t)
   }, [authLoading, session, user])
 
   // Gestion d'erreur globale pour les scripts externes (extensions de navigateur, iframe Cursor/Vercel)
