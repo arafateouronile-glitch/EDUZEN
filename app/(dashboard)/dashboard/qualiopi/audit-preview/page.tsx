@@ -161,29 +161,92 @@ export default function AuditPreviewPage() {
 
   const handleSearch = useCallback(async (term: string): Promise<ComplianceEvidenceAutomated[]> => {
     if (!term.trim() || !user?.organization_id) return []
+    const orgId = user.organization_id
+    const q = term.trim()
+    const results = new Map<string, ComplianceEvidenceAutomated>()
 
-    // Essayer la RPC (même logique que le vrai portail auditeur)
-    const { data: rpcData, error: rpcError } = await supabase
-      .rpc('search_evidence_by_sample', {
-        org_id: user.organization_id,
-        search_term: term.trim(),
-      })
-
-    if (!rpcError && rpcData) {
-      return rpcData as ComplianceEvidenceAutomated[]
+    const addAll = (rows: unknown[] | null) => {
+      for (const e of rows ?? [])
+        results.set((e as ComplianceEvidenceAutomated).id, e as ComplianceEvidenceAutomated)
     }
 
-    // Fallback : ilike sur les champs texte
-    const { data } = await supabase
+    // 1. RPC cross-table côté serveur (si disponible)
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('search_evidence_by_sample', { org_id: orgId, search_term: q })
+    if (!rpcError && rpcData?.length > 0) return rpcData as ComplianceEvidenceAutomated[]
+
+    // 2. Match texte direct sur les preuves
+    const { data: directData } = await supabase
       .from('compliance_evidence_automated')
       .select('*')
-      .eq('organization_id', user.organization_id)
+      .eq('organization_id', orgId)
       .eq('status', 'valid')
-      .or(`entity_name.ilike.%${term.trim()}%,title.ilike.%${term.trim()}%,description.ilike.%${term.trim()}%`)
+      .or(`entity_name.ilike.%${q}%,title.ilike.%${q}%,description.ilike.%${q}%`)
       .order('event_date', { ascending: false })
       .limit(100)
+    addAll(directData)
 
-    return (data || []) as ComplianceEvidenceAutomated[]
+    // 3. Apprenants correspondants → preuves directes + sessions fréquentées
+    const { data: students } = await supabase
+      .from('students')
+      .select('id')
+      .eq('organization_id', orgId)
+      .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
+      .limit(20)
+
+    if (students?.length) {
+      const studentIds = students.map((s) => s.id)
+
+      // Preuves directes sur l'apprenant
+      const { data: studentEvidence } = await supabase
+        .from('compliance_evidence_automated')
+        .select('*')
+        .eq('organization_id', orgId)
+        .eq('status', 'valid')
+        .eq('entity_type', 'student')
+        .in('entity_id', studentIds)
+      addAll(studentEvidence)
+
+      // Sessions de l'apprenant via la table attendance
+      const { data: attendances } = await supabase
+        .from('attendance')
+        .select('session_id')
+        .eq('organization_id', orgId)
+        .in('student_id', studentIds)
+      const sessionIds = [...new Set((attendances ?? []).map((a) => a.session_id).filter(Boolean))] as string[]
+      if (sessionIds.length > 0) {
+        const { data: sessionEvidence } = await supabase
+          .from('compliance_evidence_automated')
+          .select('*')
+          .eq('organization_id', orgId)
+          .eq('status', 'valid')
+          .in('entity_id', sessionIds)
+        addAll(sessionEvidence)
+      }
+    }
+
+    // 4. Sessions correspondantes par nom
+    const { data: sessions } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('organization_id', orgId)
+      .ilike('name', `%${q}%`)
+      .limit(20)
+
+    if (sessions?.length) {
+      const sessionIds = sessions.map((s) => s.id)
+      const { data: sessionEvidence } = await supabase
+        .from('compliance_evidence_automated')
+        .select('*')
+        .eq('organization_id', orgId)
+        .eq('status', 'valid')
+        .in('entity_id', sessionIds)
+      addAll(sessionEvidence)
+    }
+
+    return Array.from(results.values()).sort(
+      (a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime()
+    )
   }, [supabase, user?.organization_id])
 
   const handleExportPdf = useCallback(() => {
