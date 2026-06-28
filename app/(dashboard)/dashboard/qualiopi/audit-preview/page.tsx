@@ -13,6 +13,7 @@ import { qualiopiService, type QualiopiIndicator } from '@/lib/services/qualiopi
 import {
   QUALIOPI_REFERENTIAL,
   type AuditorPortalData,
+  type ComplianceEvidenceAutomated,
 } from '@/lib/services/auditor-portal.service'
 import { createClient } from '@/lib/supabase/client'
 
@@ -158,10 +159,14 @@ export default function AuditPreviewPage() {
     } as unknown as AuditorPortalData
   }, [organization, indicators, evidence, user?.organization_id])
 
-  // Handlers pour la simulation (pas de vraie fonctionnalité en mode preview)
-  const handleSearch = useCallback(async () => {
-    return []
-  }, [])
+  const handleSearch = useCallback(async (term: string): Promise<ComplianceEvidenceAutomated[]> => {
+    const lower = term.toLowerCase().trim()
+    if (!lower) return []
+    return (evidence as unknown as ComplianceEvidenceAutomated[]).filter((e) => {
+      const fields = [e.title, e.description, e.entity_name, e.entity_type, e.evidence_type]
+      return fields.some((f) => f?.toLowerCase().includes(lower))
+    })
+  }, [evidence])
 
   const handleExportPdf = useCallback(() => {
     window.print()
