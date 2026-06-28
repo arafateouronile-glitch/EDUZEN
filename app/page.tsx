@@ -2,6 +2,8 @@
 
 import dynamic from 'next/dynamic'
 import { Suspense, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { GraduationCap, Car, Building2, ShieldCheck, School, ArrowRight } from 'lucide-react'
 import { Navbar } from '@/components/landing/Navbar'
 import { JsonLd } from '@/components/seo/JsonLd'
 
@@ -345,27 +347,43 @@ export default function HomePage() {
         </section>
 
         {/* Secteurs — maillage interne vers /pour */}
-        <section className="py-16 bg-gray-50/60">
-          <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl">
-            <div className="text-center mb-10">
-              <p className="text-sm font-semibold text-brand-blue uppercase tracking-wider mb-2">Solutions par secteur</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">EduZen s&apos;adapte à votre activité</h2>
+        <section className="py-20 bg-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(39,68,114,0.04),transparent)]" />
+          <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl relative">
+            <div className="text-center mb-14">
+              <p className="text-[11px] font-bold text-brand-blue uppercase tracking-[0.2em] mb-4">Solutions métier</p>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tighter font-display text-gray-900">
+                EduZen s&apos;adapte à votre secteur
+              </h2>
+              <p className="text-gray-500 mt-4 text-[15px] max-w-lg mx-auto leading-relaxed">
+                Une plateforme configurée pour chaque métier de la formation professionnelle.
+              </p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              {[
-                { icon: '🦺', label: 'Formation sécurité', href: '/pour/organisme-securite', sub: 'SST · CACES · Habilitations' },
-                { icon: '🚗', label: 'Auto-écoles', href: '/pour/auto-ecole', sub: 'Permis B · AAC · LMS' },
-                { icon: '🎓', label: 'CFA', href: '/pour/cfa', sub: 'Qualiopi · BPF · OPCO' },
-                { icon: '🏢', label: 'Formation entreprise', href: '/pour/formation-entreprise', sub: 'PDC · OPCO · LMS' },
-                { icon: '🏫', label: 'Établissements', href: '/pour/etablissement-scolaire', sub: 'Élèves · Planning · E-learning' },
-              ].map(({ icon, label, href, sub }) => (
-                <a key={href} href={href} className="group flex flex-col items-center gap-3 p-5 rounded-2xl bg-white border border-gray-100 hover:border-brand-blue/30 hover:shadow-md hover:shadow-brand-blue/5 transition-all duration-300 text-center">
-                  <span className="text-3xl">{icon}</span>
-                  <div>
-                    <p className="text-[14px] font-semibold text-gray-900 group-hover:text-brand-blue transition-colors">{label}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {([
+                { Icon: GraduationCap, label: 'CFA', href: '/pour/cfa', sub: 'Apprentissage · BPF · OPCO', gradient: 'from-brand-blue to-brand-blue-dark' },
+                { Icon: Car, label: 'Auto-écoles', href: '/pour/auto-ecole', sub: 'Permis B · AAC · Livret', gradient: 'from-sky-500 to-brand-cyan' },
+                { Icon: Building2, label: 'Formation en entreprise', href: '/pour/formation-entreprise', sub: 'PDC · Inter/Intra · OPCO', gradient: 'from-indigo-600 to-brand-blue' },
+                { Icon: ShieldCheck, label: 'Formations réglementées', href: '/pour/organisme-securite', sub: 'SST · CACES · Habilitations', gradient: 'from-amber-500 to-orange-500' },
+                { Icon: School, label: 'Établissements scolaires', href: '/pour/etablissement-scolaire', sub: 'Élèves · Planning · E-learning', gradient: 'from-emerald-500 to-brand-cyan' },
+              ] as const).map(({ Icon, label, href, sub, gradient }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="group relative flex flex-col items-center gap-4 p-6 rounded-2xl bg-white border border-gray-100 hover:border-brand-blue/20 hover:shadow-xl hover:shadow-brand-blue/8 hover:-translate-y-1 transition-all duration-500 text-center overflow-hidden"
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-brand-blue/[0.02] to-brand-cyan/[0.04]" />
+                  <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br ${gradient} shadow-lg shadow-black/10`}>
+                    <Icon className="w-7 h-7 text-white" strokeWidth={1.5} />
                   </div>
-                </a>
+                  <div className="relative">
+                    <p className="text-[14px] font-bold text-gray-900 font-display group-hover:text-brand-blue transition-colors duration-300 leading-tight">{label}</p>
+                    <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">{sub}</p>
+                  </div>
+                  <div className="relative mt-auto flex items-center gap-1 text-[11px] font-semibold text-brand-blue opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
+                    Découvrir <ArrowRight className="w-3 h-3" />
+                  </div>
+                </Link>
               ))}
             </div>
           </div>

@@ -6,10 +6,10 @@ import { motion, AnimatePresence } from '@/components/ui/motion'
 import { Menu, X, ArrowRight, Sparkles, ChevronDown } from 'lucide-react'
 
 const SOLUTIONS = [
-  { label: 'Formation sécurité', href: '/pour/organisme-securite', icon: '🦺' },
-  { label: 'Auto-écoles', href: '/pour/auto-ecole', icon: '🚗' },
   { label: 'CFA', href: '/pour/cfa', icon: '🎓' },
-  { label: 'Formation entreprise', href: '/pour/formation-entreprise', icon: '🏢' },
+  { label: 'Auto-écoles', href: '/pour/auto-ecole', icon: '🚗' },
+  { label: 'Formation en entreprise', href: '/pour/formation-entreprise', icon: '🏢' },
+  { label: 'Formations réglementées', href: '/pour/organisme-securite', icon: '⚠️' },
   { label: 'Établissements scolaires', href: '/pour/etablissement-scolaire', icon: '🏫' },
 ]
 

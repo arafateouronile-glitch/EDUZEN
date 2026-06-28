@@ -61,10 +61,10 @@ export function Footer() {
               {
                 title: "Solutions",
                 links: [
-                  { label: "Formation sécurité", href: "/pour/organisme-securite" },
-                  { label: "Auto-écoles", href: "/pour/auto-ecole" },
                   { label: "CFA", href: "/pour/cfa" },
+                  { label: "Auto-écoles", href: "/pour/auto-ecole" },
                   { label: "Formation en entreprise", href: "/pour/formation-entreprise" },
+                  { label: "Formations réglementées", href: "/pour/organisme-securite" },
                   { label: "Établissements scolaires", href: "/pour/etablissement-scolaire" },
                 ]
               },
