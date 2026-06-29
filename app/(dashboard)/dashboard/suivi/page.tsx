@@ -177,9 +177,11 @@ export default function CommunicationsPage() {
     const emails = emailLogs || []
     const docs = generatedDocs || []
     const delivered = emails.filter(e => e.status === 'delivered' || e.status === 'opened' || e.status === 'clicked').length
+    const opened = emails.filter(e => e.status === 'opened' || e.status === 'clicked').length
     const bounced = emails.filter(e => e.status === 'bounced' || e.status === 'failed').length
     const deliveryRate = emails.length > 0 ? Math.round((delivered / emails.length) * 100) : 0
-    return { totalEmails: emails.length, totalDocs: docs.length, delivered, bounced, deliveryRate }
+    const openRate = delivered > 0 ? Math.round((opened / delivered) * 100) : 0
+    return { totalEmails: emails.length, totalDocs: docs.length, delivered, opened, bounced, deliveryRate, openRate }
   }, [emailLogs, generatedDocs])
 
   const formatDate = (d: string | null) => {
@@ -221,7 +223,7 @@ export default function CommunicationsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <GlassCard variant="premium" className="p-4">
           <p className="text-xs text-gray-500 mb-1">Emails envoyés</p>
           <p className="text-2xl font-bold text-gray-900">{stats.totalEmails}</p>
@@ -230,6 +232,11 @@ export default function CommunicationsPage() {
           <p className="text-xs text-gray-500 mb-1">Livrés</p>
           <p className="text-2xl font-bold text-green-600">{stats.delivered}</p>
           <p className="text-xs text-gray-400">{stats.deliveryRate}% taux</p>
+        </GlassCard>
+        <GlassCard variant="premium" className="p-4">
+          <p className="text-xs text-gray-500 mb-1">Ouverts</p>
+          <p className="text-2xl font-bold text-purple-600">{stats.opened}</p>
+          <p className="text-xs text-gray-400">{stats.openRate}% taux</p>
         </GlassCard>
         <GlassCard variant="premium" className="p-4">
           <p className="text-xs text-gray-500 mb-1">Rejetés / Échoués</p>
