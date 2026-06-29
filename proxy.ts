@@ -9,6 +9,21 @@ import { checkApiRateLimitForMiddleware } from '@/lib/utils/rate-limiter-distrib
 // Créer le middleware next-intl avec la configuration de routing
 const intlMiddleware = createMiddleware(routing)
 
+const CALENDLY_DEMO_URL = 'https://calendly.com/airtonenile/30min'
+
+// Pages marketing redirigées vers Calendly (stratégie demo-driven)
+const MARKETING_PREFIXES = [
+  '/demo',
+  '/pricing',
+  '/formations',
+  '/programmes',
+  '/blog',
+  '/a-propos',
+  '/contact',
+  '/affiliation',
+  '/pour',
+]
+
 /** CORS strict : uniquement origines autorisées ou localhost/127.0.0.1 en dev */
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false

@@ -161,22 +161,22 @@ export const Hero = memo(function Hero() {
             transition={{ delay: 0.5, duration: 0.8 }}
             className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-8 md:mb-10 items-center justify-center"
           >
-            <Link href="/auth/register" className="w-full sm:w-auto">
+            <Link href="https://calendly.com/airtonenile/30min" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
               <MagneticButton className="group relative w-full sm:w-auto overflow-hidden rounded-full bg-[#111] px-8 py-4 text-white transition-all hover:bg-gray-900 active:scale-95 shadow-xl hover:shadow-2xl hover:shadow-brand-blue/20">
                 <div className="relative z-10 flex items-center justify-center gap-2 font-semibold">
                   <Zap className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span>Commencer Gratuitement</span>
+                  <span>Réserver une démo</span>
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </div>
                 <div className="absolute inset-0 -z-10 bg-gradient-to-r from-brand-blue to-brand-cyan opacity-0 transition-opacity duration-500 group-hover:opacity-20" />
               </MagneticButton>
             </Link>
 
-            <Link href="/demo" className="w-full sm:w-auto">
+            <Link href="/auth/register" className="w-full sm:w-auto">
               <MagneticButton className="group relative w-full sm:w-auto overflow-hidden rounded-full border border-gray-200 bg-white px-8 py-4 text-gray-900 transition-all hover:bg-gray-50 active:scale-95 shadow-sm hover:shadow-md">
                 <div className="relative z-10 flex items-center justify-center gap-2 font-semibold">
                   <PlayCircle className="w-4 h-4 text-gray-500 group-hover:text-brand-blue transition-colors" />
-                  <span>Voir la Démo</span>
+                  <span>Démarrer un essai gratuit</span>
                 </div>
               </MagneticButton>
             </Link>

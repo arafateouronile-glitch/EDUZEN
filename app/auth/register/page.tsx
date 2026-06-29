@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { Button } from '@/components/ui/button'
@@ -12,7 +13,7 @@ import {
   Building2, User, Mail, Lock, ArrowRight, CheckCircle2,
   Phone, Shield, Star, BadgeCheck, Clock, Zap, HeartHandshake,
   ChevronDown, ChevronUp, MapPin, Receipt, Users, BookOpen,
-  PenLine, FileOutput, Globe, CreditCard, FileCheck,
+  PenLine, FileOutput, Globe, CreditCard, FileCheck, CalendarCheck2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -137,7 +138,41 @@ const TRUST_ROW = [
   { icon: BadgeCheck,     label: 'Export libre' },
 ]
 
-export default function RegisterPage() {
+function DemoBookedBanner() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -12, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="w-full max-w-md mb-4"
+    >
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 p-px shadow-xl shadow-green-500/20">
+        <div className="rounded-[15px] bg-white px-5 py-4 flex items-start gap-4">
+          <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+            <CalendarCheck2 className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <p className="font-bold text-gray-900 text-sm leading-snug mb-0.5">
+              Votre démo est réservée !
+            </p>
+            <p className="text-gray-500 text-xs leading-relaxed">
+              En attendant la visio, créez votre espace gratuit — tout sera déjà configuré quand on se retrouvera.
+            </p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function RegisterPageInner() {
+  const searchParams = useSearchParams()
+  const fromDemo = searchParams.get('from') === 'demo'
+
+  return <RegisterForm fromDemo={fromDemo} />
+}
+
+function RegisterForm({ fromDemo }: { fromDemo: boolean }) {
   const { register, isRegistering, registerError } = useAuth()
   const [formData, setFormData] = useState({
     organizationName: '',
@@ -223,17 +258,25 @@ export default function RegisterPage() {
             ))}
           </div>
 
-          {/* Founder call */}
-          <GlassCard variant="default" className="p-4 border-brand-blue/15">
+          {/* Founder call / Démo confirmée */}
+          <GlassCard variant="default" className={`p-4 ${fromDemo ? 'border-green-200 bg-green-50/50' : 'border-brand-blue/15'}`}>
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-brand-blue/10 border border-brand-blue/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Phone className="h-4 w-4 text-brand-blue" />
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${fromDemo ? 'bg-green-100 border border-green-200' : 'bg-brand-blue/10 border border-brand-blue/20'}`}>
+                {fromDemo
+                  ? <CalendarCheck2 className="h-4 w-4 text-green-600" />
+                  : <Phone className="h-4 w-4 text-brand-blue" />}
               </div>
               <div>
                 <p className="text-gray-800 text-sm font-semibold mb-0.5">
-                  Le fondateur vous appelle dans les <span className="text-brand-blue">48h</span>
+                  {fromDemo
+                    ? <>Votre démo est <span className="text-green-600">confirmée</span> dans votre agenda</>
+                    : <>Le fondateur vous appelle dans les <span className="text-brand-blue">48h</span></>}
                 </p>
-                <p className="text-gray-500 text-xs">Configuration personnalisée incluse · Créneaux limités</p>
+                <p className="text-gray-500 text-xs">
+                  {fromDemo
+                    ? 'Créez votre compte maintenant — il sera configuré pour la visio'
+                    : 'Configuration personnalisée incluse · Créneaux limités'}
+                </p>
               </div>
             </div>
           </GlassCard>
@@ -374,6 +417,9 @@ export default function RegisterPage() {
           </div>
         </div>
 
+        {/* Banner démo réservée */}
+        {fromDemo && <DemoBookedBanner />}
+
         {/* Social proof counter */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -411,9 +457,13 @@ export default function RegisterPage() {
                 <Building2 className="h-5 w-5 text-white" />
               </motion.div>
               <h2 className="font-display font-bold text-xl sm:text-2xl text-gray-900 tracking-tight mb-1">
-                Créez votre espace gratuit
+                {fromDemo ? 'Créez votre espace en attendant' : 'Créez votre espace gratuit'}
               </h2>
-              <p className="text-gray-500 text-sm font-medium">14 jours gratuits · Sans carte bancaire · Annulation libre</p>
+              <p className="text-gray-500 text-sm font-medium">
+                {fromDemo
+                  ? 'Tout sera prêt pour votre démo · Sans carte bancaire'
+                  : '14 jours gratuits · Sans carte bancaire · Annulation libre'}
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -554,5 +604,13 @@ export default function RegisterPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterPageInner />
+    </Suspense>
   )
 }

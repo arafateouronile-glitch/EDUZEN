@@ -177,7 +177,7 @@ export function Navbar() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
-                <Link href="/auth/register">
+                <Link href="https://calendly.com/airtonenile/30min" target="_blank" rel="noopener noreferrer">
                   <motion.div
                     whileHover={{ scale: 1.02, y: -1 }}
                     whileTap={{ scale: 0.98 }}
@@ -188,7 +188,7 @@ export function Navbar() {
                     <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-brand-blue via-brand-cyan to-brand-blue opacity-0 group-hover:opacity-30 blur-lg transition-opacity duration-500" />
                     <div className="relative flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white text-[13px] font-semibold shadow-lg shadow-brand-blue/25 group-hover:shadow-xl group-hover:shadow-brand-blue/30 transition-all duration-500">
                       <Sparkles className="w-3.5 h-3.5 opacity-80" />
-                      Commencer
+                      Réserver une démo
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform duration-300" />
                     </div>
                   </motion.div>
@@ -281,12 +281,12 @@ export function Navbar() {
                   transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   className="mt-2"
                 >
-                  <Link href="/auth/register" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="https://calendly.com/airtonenile/30min" target="_blank" rel="noopener noreferrer" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="relative group">
                       <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-brand-blue to-brand-cyan opacity-20 blur-sm" />
                       <div className="relative flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white text-[15px] font-semibold shadow-lg shadow-brand-blue/20">
                         <Sparkles className="w-4 h-4 opacity-80" />
-                        Commencer gratuitement
+                        Réserver une démo
                         <ArrowRight className="w-4 h-4" />
                       </div>
                     </div>
