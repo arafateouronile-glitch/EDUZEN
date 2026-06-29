@@ -205,6 +205,11 @@ function RegisterForm({ fromDemo }: { fromDemo: boolean }) {
       if (typeof window !== 'undefined' && (window as Window & { fbq?: (...args: unknown[]) => void }).fbq) {
         (window as Window & { fbq?: (...args: unknown[]) => void }).fbq!('track', 'StartTrial', { value: '0.00', currency: 'EUR', predicted_ltv: '0.00' })
       }
+      // Google Ads — conversion inscription
+      const w = window as unknown as { gtag?: (...args: unknown[]) => void }
+      if (typeof w.gtag === 'function') {
+        w.gtag('event', 'conversion_event_signup', {})
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
     }
