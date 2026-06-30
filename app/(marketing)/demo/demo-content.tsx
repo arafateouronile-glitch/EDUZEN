@@ -1,195 +1,260 @@
 'use client'
 
-import { useState } from 'react'
-import { submitDemoLead } from '@/lib/actions/demo-actions'
-import { Button } from '@/components/ui/button'
-import { ArrowRight, Loader2 } from 'lucide-react'
+import { motion } from '@/components/ui/motion'
+import { GlassCard } from '@/components/ui/glass-card'
+import { cn } from '@/lib/utils'
+import Link from 'next/link'
+import {
+  Building2, Star, Shield, BadgeCheck, HeartHandshake,
+  MapPin, CalendarCheck2, CheckCircle2, ArrowRight, Clock,
+  Video, User, Zap,
+} from 'lucide-react'
 
-const YOUTUBE_ID = 'VP-5kmHzERU'
+function FloatingBlob({ className, delay = 0, duration = 25 }: { className?: string; delay?: number; duration?: number }) {
+  return (
+    <motion.div
+      className={cn('absolute pointer-events-none blur-3xl opacity-20', className)}
+      animate={{ scale: [1, 1.15, 0.9, 1], x: [0, 30, -20, 0], y: [0, -40, 25, 0] }}
+      transition={{ duration, repeat: Infinity, ease: 'linear', delay }}
+    />
+  )
+}
+
+const DEMO_AGENDA = [
+  "Tour complet de l'interface en 5 min",
+  'Génération d\'une convention en direct (45s)',
+  'Émargement numérique par QR code',
+  '33 indicateurs Qualiopi automatisés',
+  'Synchronisation CPF / EDOF sans double saisie',
+  'Questions & réponses personnalisées',
+]
+
+const STATS = [
+  { value: '17',  label: 'Documents automatisés' },
+  { value: '33',  label: 'Indicateurs Qualiopi' },
+  { value: '6h+', label: 'Récupérées / semaine' },
+]
+
+const TESTIMONIALS = [
+  {
+    quote: "En 30 minutes de démo, j'avais compris que ça allait changer ma façon de travailler. Le lendemain, je générais mes premières conventions.",
+    author: 'Marie D.',
+    role: 'Directrice OF, Île-de-France',
+    result: "7h → 1h30 d'admin/semaine",
+  },
+  {
+    quote: "Mon auditeur Qualiopi est arrivé à l'improviste. Tous mes indicateurs étaient déjà traçés. Il a dit que c'était le dossier le mieux préparé qu'il ait vu depuis 2 ans.",
+    author: 'Thomas R.',
+    role: 'Responsable qualité, OF Lyon',
+    result: 'Audit Qualiopi réussi du 1er coup',
+  },
+]
+
+const TRUST_ROW = [
+  { icon: MapPin,         label: 'Hébergé en France' },
+  { icon: Shield,         label: 'Conforme RGPD' },
+  { icon: HeartHandshake, label: 'Support 7j/7' },
+  { icon: BadgeCheck,     label: 'Export libre' },
+]
 
 export function DemoContent() {
-  const [submitted, setSubmitted] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    const form = e.currentTarget
-    const data = {
-      first_name: (form.elements.namedItem('first_name') as HTMLInputElement).value,
-      last_name: (form.elements.namedItem('last_name') as HTMLInputElement).value,
-      company: (form.elements.namedItem('company') as HTMLInputElement).value,
-      email: (form.elements.namedItem('email') as HTMLInputElement).value,
-      phone: (form.elements.namedItem('phone') as HTMLInputElement).value || undefined,
-      message: (form.elements.namedItem('message') as HTMLTextAreaElement).value || undefined,
-    }
-
-    const result = await submitDemoLead(data)
-
-    if (!result.success) {
-      setError(result.error ?? 'Erreur inconnue')
-      setLoading(false)
-      return
-    }
-
-    setSubmitted(true)
-    setLoading(false)
-  }
-
   return (
-    <main className="min-h-screen bg-[#FDFDFD] flex flex-col items-center justify-center px-4 py-24">
-      <div className="w-full max-w-2xl mx-auto">
-        {!submitted ? (
-          <div className="bg-white border border-gray-100 rounded-3xl shadow-xl p-8 md:p-12">
-            <div className="mb-8 text-center">
-              <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 font-display">
-                Voir la démo EDUZEN
-              </h1>
-              <p className="text-gray-500">
-                Remplis le formulaire pour accéder à la démonstration complète.
-              </p>
+    <div className="min-h-screen flex overflow-hidden bg-gradient-to-br from-blue-50 via-white to-cyan-50 relative pt-16">
+      <FloatingBlob className="top-[-10%] left-[-5%] w-96 h-96 rounded-full bg-gradient-to-br from-brand-blue to-brand-blue-light" duration={30} />
+      <FloatingBlob className="bottom-[-10%] right-[-5%] w-80 h-80 rounded-full bg-gradient-to-tr from-brand-cyan to-brand-cyan-light" delay={4} duration={35} />
+      <FloatingBlob className="top-[40%] left-[35%] w-64 h-64 rounded-full bg-blue-200" delay={8} duration={28} />
+
+      {/* ── LEFT COLUMN (desktop) ── */}
+      <div className="hidden lg:flex lg:w-[44%] relative z-10 flex-col justify-between p-12 overflow-y-auto">
+
+        {/* Logo */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-lg flex items-center justify-center shadow-md shadow-brand-blue/20">
+              <Building2 className="h-4 w-4 text-white" />
             </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="first_name" className="text-sm font-medium text-gray-700">
-                    Prénom
-                  </label>
-                  <input
-                    id="first_name"
-                    name="first_name"
-                    type="text"
-                    required
-                    placeholder="Marie"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="last_name" className="text-sm font-medium text-gray-700">
-                    Nom
-                  </label>
-                  <input
-                    id="last_name"
-                    name="last_name"
-                    type="text"
-                    required
-                    placeholder="Dupont"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="company" className="text-sm font-medium text-gray-700">
-                  Entreprise / Organisme
-                </label>
-                <input
-                  id="company"
-                  name="company"
-                  type="text"
-                  required
-                  placeholder="Mon Organisme de Formation"
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                    Email professionnel
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="marie@monorganisme.fr"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                    Téléphone <span className="text-gray-400 font-normal">(facultatif)</span>
-                  </label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    placeholder="06 12 34 56 78"
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="message" className="text-sm font-medium text-gray-700">
-                  Votre situation actuelle <span className="text-gray-400 font-normal">(facultatif)</span>
-                </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  rows={3}
-                  placeholder="Ex : Je gère 50 apprenants/an, j'utilise actuellement Excel et Word..."
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/10 transition-all resize-none"
-                />
-              </div>
-
-              {error && (
-                <p className="text-sm text-red-500 text-center">{error}</p>
-              )}
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="mt-2 w-full rounded-xl bg-[#111] hover:bg-gray-900 text-white py-3 font-semibold flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    Accéder à la démo
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
-
-              <p className="text-xs text-gray-400 text-center mt-1">
-                Aucun spam. Tes données restent confidentielles.
-              </p>
-            </form>
+            <span className="font-display font-bold text-xl text-gray-900 tracking-tight">
+              Edu<span className="text-brand-blue">Zen</span>
+            </span>
           </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Voici la démo complète</h2>
-              <p className="text-gray-500">Découvre toutes les fonctionnalités d'EDUZEN.</p>
+          <p className="text-gray-400 text-xs font-medium ml-9">Logiciel de gestion pour OF français</p>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-5 my-8">
+
+          {/* Hero */}
+          <div>
+            <h1 className="font-display font-bold text-[1.85rem] leading-[1.2] text-gray-900 mb-3">
+              Voyez EduZen<br />en action —<br />
+              <span className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">30 minutes chrono.</span>
+            </h1>
+            <p className="text-gray-500 text-sm leading-relaxed">
+              Une démo en visio, en direct, adaptée à votre situation. Zéro powerpoint, 100% concret.
+            </p>
+          </div>
+
+          {/* Stats */}
+          <div className="flex gap-2.5">
+            {STATS.map((stat) => (
+              <GlassCard key={stat.label} variant="default" className="flex-1 py-3.5 px-2 text-center">
+                <div className="font-display font-bold text-xl bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">{stat.value}</div>
+                <div className="text-gray-400 text-[10px] mt-0.5 font-medium leading-tight">{stat.label}</div>
+              </GlassCard>
+            ))}
+          </div>
+
+          {/* Agenda */}
+          <GlassCard variant="default" className="p-4 border-brand-blue/15">
+            <div className="flex items-center gap-2 mb-3">
+              <CalendarCheck2 className="h-4 w-4 text-brand-blue" />
+              <p className="text-gray-700 text-sm font-semibold">Au programme de votre démo</p>
             </div>
-            <a
-              href={`https://www.youtube.com/watch?v=${YOUTUBE_ID}`}
+            <div className="space-y-2">
+              {DEMO_AGENDA.map((item) => (
+                <div key={item} className="flex items-start gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-brand-cyan mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-600 text-xs">{item}</span>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+
+          {/* Témoignages */}
+          <div className="space-y-3">
+            {TESTIMONIALS.map((t, i) => (
+              <motion.div key={t.author} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.08 }}>
+                <GlassCard variant="subtle" className="border-l-4 border-l-brand-cyan rounded-l-none p-4">
+                  <div className="flex gap-0.5 mb-2">
+                    {[...Array(5)].map((_, j) => <Star key={j} className="h-2.5 w-2.5 fill-brand-cyan text-brand-cyan" />)}
+                  </div>
+                  <p className="text-gray-700 text-sm italic leading-relaxed mb-2.5">&ldquo;{t.quote}&rdquo;</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-xs font-semibold">{t.author}</p>
+                      <p className="text-gray-400 text-xs">{t.role}</p>
+                    </div>
+                    <div className="bg-green-50 border border-green-100 rounded-lg px-2.5 py-1">
+                      <p className="text-green-700 text-[10px] font-bold leading-tight">{t.result}</p>
+                    </div>
+                  </div>
+                </GlassCard>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Trust row */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="flex flex-wrap gap-3">
+          {TRUST_ROW.map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-1.5 text-gray-400 text-xs font-medium">
+              <Icon className="h-3.5 w-3.5 text-brand-blue/60" />
+              {label}
+            </div>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* ── RIGHT COLUMN — CTA Calendly ── */}
+      <div className="w-full lg:w-[56%] flex flex-col items-center justify-start lg:justify-center px-4 sm:px-6 py-8 lg:py-10 relative z-10 overflow-y-auto">
+
+        {/* Mobile header */}
+        <div className="lg:hidden w-full max-w-md mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-lg flex items-center justify-center shadow-md shadow-brand-blue/20">
+              <Building2 className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-display font-bold text-lg text-gray-900 tracking-tight">
+              Edu<span className="text-brand-blue">Zen</span>
+            </span>
+          </div>
+          <h1 className="font-display font-bold text-2xl text-gray-900 leading-tight mb-2">
+            Voyez EduZen en action —<br />
+            <span className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">30 minutes chrono.</span>
+          </h1>
+          <p className="text-gray-500 text-sm mb-4">Une démo en visio, en direct, adaptée à votre situation.</p>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-md space-y-4"
+        >
+          {/* Card principale */}
+          <GlassCard variant="premium" className="p-7 border-2 border-white/60 shadow-2xl backdrop-blur-2xl bg-white/70">
+
+            {/* Badge disponibilité */}
+            <div className="flex items-center gap-2 mb-5">
+              <div className="flex items-center gap-1.5 bg-green-50 border border-green-100 rounded-full px-3 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-green-700 text-xs font-semibold">Créneaux disponibles cette semaine</span>
+              </div>
+            </div>
+
+            {/* Titre */}
+            <div className="mb-6">
+              <h2 className="font-display font-bold text-2xl text-gray-900 mb-1.5">
+                Réservez votre démo
+              </h2>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                30 minutes avec le fondateur, en visio, pour voir EduZen sur votre cas concret.
+              </p>
+            </div>
+
+            {/* Détails pratiques */}
+            <div className="space-y-3 mb-7">
+              {[
+                { icon: Clock,  text: '30 minutes chrono — pas de débordement' },
+                { icon: Video,  text: 'En visio (Google Meet ou Teams)' },
+                { icon: User,   text: 'Avec le fondateur, pas un commercial' },
+                { icon: Zap,    text: 'Démo sur votre situation réelle' },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <div className="w-7 h-7 bg-brand-blue/8 border border-brand-blue/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Icon className="h-3.5 w-3.5 text-brand-blue" />
+                  </div>
+                  <span className="text-gray-700 text-sm">{text}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA principal */}
+            <Link
+              href="https://calendly.com/airtonenile/30min"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative block w-full aspect-video rounded-2xl overflow-hidden shadow-2xl"
+              className="group w-full h-14 bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan text-white font-bold text-base rounded-xl shadow-lg shadow-brand-blue/25 hover:shadow-xl hover:shadow-brand-blue/35 transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
-              <img
-                src={`https://img.youtube.com/vi/${YOUTUBE_ID}/maxresdefault.jpg`}
-                alt="Démo EDUZEN"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                <div className="w-20 h-20 rounded-full bg-white/90 group-hover:bg-white transition-colors flex items-center justify-center shadow-2xl">
-                  <svg className="w-8 h-8 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-              </div>
-            </a>
-          </div>
-        )}
+              <CalendarCheck2 className="h-5 w-5" />
+              Choisir mon créneau
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+
+            {/* Sous-bouton */}
+            <p className="text-center text-gray-400 text-xs mt-3">
+              Vous serez redirigé vers Calendly pour choisir votre horaire
+            </p>
+          </GlassCard>
+
+          {/* Card garantie */}
+          <GlassCard variant="subtle" className="p-4 flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+            <p className="text-gray-600 text-sm leading-snug">
+              <span className="font-semibold text-gray-800">Aucun engagement.</span>{' '}
+              La démo est gratuite, sans pression commerciale. Si EduZen ne vous convient pas, on vous dit pourquoi — et on vous recommande une alternative.
+            </p>
+          </GlassCard>
+
+          {/* Badges */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex flex-wrap gap-2 justify-center pb-4">
+            {['🔒 Sécurisé SSL', '🇫🇷 Hébergé France', 'Conforme RGPD', 'Sans engagement'].map((label) => (
+              <span key={label} className="bg-white/70 border border-gray-200 text-gray-500 text-xs font-medium px-3 py-1.5 rounded-full backdrop-blur-sm">
+                {label}
+              </span>
+            ))}
+          </motion.div>
+        </motion.div>
       </div>
-    </main>
+    </div>
   )
 }

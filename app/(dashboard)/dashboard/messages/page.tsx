@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Search, MessageSquare, Users, Plus, MoreVertical, Loader2, AlertCircle, Trash2, Archive } from 'lucide-react'
+import { Search, MessageSquare, Users, Plus, MoreVertical, Loader2, AlertCircle, Trash2, Archive, Mail, Send, BarChart2, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { formatRelativeTime } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
@@ -29,12 +29,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+type ActiveTab = 'messages' | 'campaigns'
+
 export default function MessagesPage() {
   const router = useRouter()
   const { user } = useAuth()
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { addToast } = useToast()
+  const [activeTab, setActiveTab] = useState<ActiveTab>('messages')
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewConversationDialog, setShowNewConversationDialog] = useState(false)
   const [userSearchQuery, setUserSearchQuery] = useState('')
@@ -396,6 +399,7 @@ export default function MessagesPage() {
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="mb-8">
+        {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-3 mb-2">
@@ -407,17 +411,114 @@ export default function MessagesPage() {
               </h1>
             </div>
             <p className="text-gray-600 text-sm lg:text-base ml-1">
-              Communiquez avec vos collègues et candidats
+              Messagerie interne et campagnes e-mail
             </p>
           </div>
-          <Button
-            onClick={() => setShowNewConversationDialog(true)}
-            className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle conversation
-          </Button>
+          {activeTab === 'messages' && (
+            <Button
+              onClick={() => setShowNewConversationDialog(true)}
+              className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle conversation
+            </Button>
+          )}
+          {activeTab === 'campaigns' && (
+            <Button
+              className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              disabled
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Nouvelle campagne
+            </Button>
+          )}
         </div>
+
+        {/* Onglets */}
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-6">
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+              activeTab === 'messages'
+                ? 'bg-white text-brand-blue shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Messages internes
+          </button>
+          <button
+            onClick={() => setActiveTab('campaigns')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+              activeTab === 'campaigns'
+                ? 'bg-white text-brand-blue shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Mail className="h-4 w-4" />
+            Campagnes mailing
+          </button>
+        </div>
+      </div>
+
+      {/* ── CAMPAGNES MAILING ── */}
+      {activeTab === 'campaigns' && (
+        <div className="space-y-6">
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { label: 'Campagnes envoyées', value: '—', icon: Send, color: 'from-brand-blue to-brand-blue-dark' },
+              { label: 'Taux d\'ouverture moyen', value: '—', icon: BarChart2, color: 'from-brand-cyan to-brand-blue' },
+              { label: 'Destinataires atteints', value: '—', icon: Users, color: 'from-brand-blue to-brand-cyan' },
+            ].map((stat) => (
+              <Card key={stat.label} className="border-brand-blue/10 bg-gradient-to-br from-white to-brand-blue-ghost/20">
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className={`p-2.5 bg-gradient-to-br ${stat.color} rounded-xl flex-shrink-0`}>
+                    <stat.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Empty state */}
+          <Card className="border-brand-blue/20 bg-gradient-to-br from-brand-blue-ghost/30 to-brand-cyan-ghost/30">
+            <CardContent className="py-20">
+              <div className="text-center space-y-5 max-w-sm mx-auto">
+                <div className="p-5 bg-gradient-to-br from-brand-blue-ghost to-brand-cyan-ghost rounded-2xl inline-block">
+                  <Mail className="h-14 w-14 text-brand-blue" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-gray-900">Campagnes mailing</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">
+                    Envoyez des e-mails ciblés à vos apprenants, prospects ou contacts — en masse ou par segment.
+                  </p>
+                </div>
+                <div className="space-y-2 text-left">
+                  {[
+                    'Relances automatiques après inscription',
+                    'Convocations et rappels de session',
+                    'Newsletters et actualités OF',
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-2 text-sm text-gray-600">
+                      <ChevronRight className="h-3.5 w-3.5 text-brand-cyan flex-shrink-0" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 pt-2">Fonctionnalité disponible prochainement</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ── MESSAGES INTERNES ── */}
+      {activeTab === 'messages' && (<>
 
         {/* Barre de recherche */}
         <Card className="border-brand-blue/20 bg-gradient-to-br from-brand-blue-ghost/30 to-brand-cyan-ghost/30 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
@@ -434,10 +535,9 @@ export default function MessagesPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Liste des conversations */}
-      <div className="space-y-3">
+        {/* Liste des conversations */}
+        <div className="space-y-3 mt-6">
         {filteredConversations && filteredConversations.length > 0 ? (
           filteredConversations.map((conversation: any) => {
             const name = getConversationName(conversation)
@@ -586,8 +686,10 @@ export default function MessagesPage() {
         )}
       </div>
 
+      </>)}
+
       {/* Dialog pour créer une nouvelle conversation */}
-      <Dialog 
+      <Dialog
         open={showNewConversationDialog} 
         onOpenChange={(open) => {
           setShowNewConversationDialog(open)

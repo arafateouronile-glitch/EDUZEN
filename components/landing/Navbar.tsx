@@ -177,7 +177,7 @@ export function Navbar() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.6, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
-                <Link href="https://calendly.com/airtonenile/30min" target="_blank" rel="noopener noreferrer">
+                <Link href="/demo">
                   <motion.div
                     whileHover={{ scale: 1.02, y: -1 }}
                     whileTap={{ scale: 0.98 }}
@@ -281,7 +281,7 @@ export function Navbar() {
                   transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
                   className="mt-2"
                 >
-                  <Link href="https://calendly.com/airtonenile/30min" target="_blank" rel="noopener noreferrer" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/demo" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="relative group">
                       <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-brand-blue to-brand-cyan opacity-20 blur-sm" />
                       <div className="relative flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-blue to-brand-blue-dark text-white text-[15px] font-semibold shadow-lg shadow-brand-blue/20">

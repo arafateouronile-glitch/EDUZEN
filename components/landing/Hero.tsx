@@ -161,7 +161,7 @@ export const Hero = memo(function Hero() {
             transition={{ delay: 0.5, duration: 0.8 }}
             className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-8 md:mb-10 items-center justify-center"
           >
-            <Link href="https://calendly.com/airtonenile/30min" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+            <Link href="/demo" className="w-full sm:w-auto">
               <MagneticButton className="group relative w-full sm:w-auto overflow-hidden rounded-full bg-[#111] px-8 py-4 text-white transition-all hover:bg-gray-900 active:scale-95 shadow-xl hover:shadow-2xl hover:shadow-brand-blue/20">
                 <div className="relative z-10 flex items-center justify-center gap-2 font-semibold">
                   <Zap className="w-4 h-4 fill-yellow-400 text-yellow-400" />

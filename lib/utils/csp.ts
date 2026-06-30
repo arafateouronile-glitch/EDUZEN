@@ -122,6 +122,7 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://scripts.clarity.ms',
     'https://*.clarity.ms',
     'https://connect.facebook.net',
+    'https://assets.calendly.com',
     ...additionalScriptSrc
   )
 
@@ -173,6 +174,8 @@ export function generateCSP(config: CSPConfig = {}): string {
     'https://www.facebook.com',
     'https://*.facebook.com',
     'https://connect.facebook.net',
+    'https://*.calendly.com',
+    'https://calendly.com',
     ...additionalConnectSrc,
   ]
 
@@ -183,8 +186,8 @@ export function generateCSP(config: CSPConfig = {}): string {
 
   directives.push(`connect-src ${connectSrc.join(' ')}`)
 
-  // frame-src: Iframes autorisées (Stripe pour 3D Secure, CardElement et Checkout + YouTube pour la démo + Meta Pixel via GTM)
-  directives.push("frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://*.stripe.network https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://www.facebook.com https://*.facebook.com")
+  // frame-src: Iframes autorisées (Stripe pour 3D Secure, CardElement et Checkout + YouTube pour la démo + Meta Pixel via GTM + Calendly)
+  directives.push("frame-src 'self' https://*.supabase.co https://js.stripe.com https://*.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://*.stripe.network https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://www.facebook.com https://*.facebook.com https://calendly.com https://*.calendly.com")
 
   // media-src: Médias autorisés
   directives.push("media-src 'self' https://*.supabase.co blob:")
