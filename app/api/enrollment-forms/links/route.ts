@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await admin
     .from('enrollment_form_links')
     .insert({ ...body, org_id: orgId })
-    .select()
+    .select('*, organizations(slug)')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

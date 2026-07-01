@@ -48,7 +48,7 @@ function ShareModal({ templateId, onClose }: { templateId: string; onClose: () =
   const [expiresAt, setExpiresAt] = useState('')
   const [maxUses, setMaxUses] = useState('')
   const [label, setLabel] = useState('')
-  const [generatedLink, setGeneratedLink] = useState<{ token: string; id: string } | null>(null)
+  const [generatedLink, setGeneratedLink] = useState<{ token: string; id: string; orgSlug?: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [emailRecipient, setEmailRecipient] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
@@ -81,7 +81,8 @@ function ShareModal({ templateId, onClose }: { templateId: string; onClose: () =
       })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      setGeneratedLink({ token: data.link.token, id: data.link.id })
+      const orgSlug = (data.link.organizations as { slug?: string } | null)?.slug
+      setGeneratedLink({ token: data.link.token, id: data.link.id, orgSlug })
     } catch {
       addToast({ type: 'error', title: 'Erreur lors de la génération du lien' })
     } finally {
@@ -89,7 +90,11 @@ function ShareModal({ templateId, onClose }: { templateId: string; onClose: () =
     }
   }
 
-  const formUrl = generatedLink ? `${baseUrl}/s/${generatedLink.token}` : ''
+  const formUrl = generatedLink
+    ? generatedLink.orgSlug
+      ? `${baseUrl}/s/${generatedLink.orgSlug}/${generatedLink.token}`
+      : `${baseUrl}/s/${generatedLink.token}`
+    : ''
 
   const copyLink = () => {
     navigator.clipboard.writeText(formUrl)

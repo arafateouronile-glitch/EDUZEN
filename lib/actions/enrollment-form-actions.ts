@@ -14,7 +14,7 @@ export async function sendEnrollmentFormEmail(
     .from('enrollment_form_links')
     .select(`
       token, expires_at,
-      organizations ( name ),
+      organizations ( name, slug ),
       sessions ( name, start_date, end_date, location )
     `)
     .eq('id', linkId)
@@ -22,7 +22,7 @@ export async function sendEnrollmentFormEmail(
 
   if (!link) return { success: false, error: 'Lien introuvable' }
 
-  const org = link.organizations as { name: string } | null
+  const org = link.organizations as { name: string; slug?: string | null } | null
   const session = link.sessions as {
     name: string
     start_date: string
@@ -31,7 +31,9 @@ export async function sendEnrollmentFormEmail(
   } | null
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.eduzen.io'
-  const formUrl = `${baseUrl}/s/${link.token}`
+  const formUrl = org?.slug
+    ? `${baseUrl}/s/${org.slug}/${link.token}`
+    : `${baseUrl}/s/${link.token}`
 
   const expiryLine = link.expires_at
     ? `<p style="color:#666;font-size:13px;">Ce lien expire le ${new Date(link.expires_at).toLocaleDateString('fr-FR')}.</p>`
