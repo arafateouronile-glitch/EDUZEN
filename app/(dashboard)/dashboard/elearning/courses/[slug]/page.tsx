@@ -40,7 +40,7 @@ export default function CourseDetailPage() {
     queryFn: async () => {
       if (!course?.id || !user?.id) return null
       const enrollments = await elearningService.getStudentEnrollments(user.id)
-      return enrollments.find((e: any) => e.course_id === (course as any).id)
+      return enrollments.find((e: any) => e.course_id === (course as any).id) ?? null
     },
     enabled: !!course?.id && !!user?.id,
   })

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { elearningService } from '@/lib/services/elearning.service.client'
 import { Button } from '@/components/ui/button'
@@ -36,6 +37,7 @@ export default function ELearningPage() {
   const { user } = useAuth()
   const { addToast } = useToast()
   const queryClient = useQueryClient()
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const canManageElearning = ['super_admin', 'admin', 'secretary'].includes(user?.role || '')
@@ -122,6 +124,42 @@ export default function ELearningPage() {
     enrollment_status?: string | null
     last_accessed_at?: string | null
   }
+  const quickCreateMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.organization_id) throw new Error('Organization manquante')
+      const ts = Date.now()
+      return elearningService.createCourse({
+        organization_id: user.organization_id,
+        title: 'Nouvelle séquence',
+        slug: `nouvelle-sequence-${ts}`,
+        short_description: null,
+        description: null,
+        difficulty_level: 'beginner',
+        estimated_duration_hours: null,
+        price: null,
+        currency: 'EUR',
+        is_published: false,
+        is_featured: false,
+        instructor_id: user.id,
+        formation_id: null,
+        thumbnail_url: null,
+        total_lessons: 0,
+        total_students: 0,
+      })
+    },
+    onSuccess: (course) => {
+      queryClient.invalidateQueries({ queryKey: ['elearning-courses'] })
+      router.push(`/dashboard/elearning/courses/${(course as any).slug}/edit`)
+    },
+    onError: (error: unknown) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Impossible de créer la séquence.',
+      })
+    },
+  })
+
   const togglePublishMutation = useMutation({
     mutationFn: async (course: CourseItem) => {
       const nextPublished = !course.is_published
@@ -225,12 +263,14 @@ export default function ELearningPage() {
               Gérez vos séquences : modification, suppression, publication et scores.
             </p>
           </div>
-          <Link href="/dashboard/elearning/new">
-            <Button className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle séquence
-            </Button>
-          </Link>
+          <Button
+            onClick={() => quickCreateMutation.mutate()}
+            disabled={quickCreateMutation.isPending}
+            className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {quickCreateMutation.isPending ? 'Création…' : 'Nouvelle séquence'}
+          </Button>
         </motion.div>
 
         <motion.div variants={itemVariants}>
@@ -422,12 +462,14 @@ export default function ELearningPage() {
                 </p>
               </div>
               {!searchQuery && (
-                <Link href="/dashboard/elearning/new">
-                  <Button className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-md hover:shadow-lg transition-all">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Créer une séquence
-                  </Button>
-                </Link>
+                <Button
+                  onClick={() => quickCreateMutation.mutate()}
+                  disabled={quickCreateMutation.isPending}
+                  className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan shadow-md hover:shadow-lg transition-all"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {quickCreateMutation.isPending ? 'Création…' : 'Créer une séquence'}
+                </Button>
               )}
             </GlassCard>
           )}

@@ -1,7 +1,11 @@
 -- Quiz attempts + Certificates pour EDUZEN LMS
 
+-- Suppression préventive pour idempotence (DROP recrée proprement si table partielle)
+DROP TABLE IF EXISTS public.certificates CASCADE;
+DROP TABLE IF EXISTS public.quiz_attempts CASCADE;
+
 -- 1. quiz_attempts — une tentative = un passage complet du quiz
-CREATE TABLE IF NOT EXISTS public.quiz_attempts (
+CREATE TABLE public.quiz_attempts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lesson_id UUID NOT NULL REFERENCES public.lessons(id) ON DELETE CASCADE,
   student_id UUID NOT NULL,               -- auth.uid()
@@ -40,7 +44,7 @@ CREATE POLICY "Instructors view quiz attempts of their courses"
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.quiz_attempts TO authenticated;
 
 -- 2. certificates — certificat émis à la complétion d'un cours
-CREATE TABLE IF NOT EXISTS public.certificates (
+CREATE TABLE public.certificates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
   student_id UUID NOT NULL,               -- auth.uid()

@@ -35,7 +35,7 @@ export default function CourseLearnPage() {
     queryFn: async () => {
       if (!course?.id || !user?.id) return null
       const enrollments = await elearningService.getStudentEnrollments(user.id)
-      return enrollments.find((e: any) => e.course_id === course.id)
+      return enrollments.find((e: any) => e.course_id === course.id) ?? null
     },
     enabled: !!course?.id && !!user?.id,
   })
@@ -288,7 +288,7 @@ function CourseLearnPage_DUPLICATE_1() {
     queryFn: async () => {
       if (!course?.id || !user?.id) return null
       const enrollments = await elearningService.getStudentEnrollments(user.id)
-      return enrollments.find((e: any) => e.course_id === course.id)
+      return enrollments.find((e: any) => e.course_id === course.id) ?? null
     },
     enabled: !!course?.id && !!user?.id,
   })
@@ -541,7 +541,7 @@ function CourseLearnPage_DUPLICATE_2() {
     queryFn: async () => {
       if (!course?.id || !user?.id) return null
       const enrollments = await elearningService.getStudentEnrollments(user.id)
-      return enrollments.find((e: any) => e.course_id === course.id)
+      return enrollments.find((e: any) => e.course_id === course.id) ?? null
     },
     enabled: !!course?.id && !!user?.id,
   })
