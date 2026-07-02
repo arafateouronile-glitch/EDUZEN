@@ -64,6 +64,7 @@ export default function LearnerCourseDetailPage() {
   
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const lessonBottomRef = useRef<HTMLDivElement>(null)
   const lessonCardRef = useRef<HTMLDivElement>(null)
@@ -441,10 +442,17 @@ export default function LearnerCourseDetailPage() {
     }
   }, [currentLessonIndex, totalLessons])
 
-  // Reprendre à la dernière leçon visitée (une seule fois après chargement)
+  // Reprendre à la première leçon non terminée dès que la progression est chargée
   useEffect(() => {
-    if (!allLessons.length || !lastLessonStorageKey || restoredLastLesson.current) return
+    if (!allLessons.length || !lastLessonStorageKey || restoredLastLesson.current || !lessonProgress) return
     restoredLastLesson.current = true
+    // Priorité 1 : première leçon non terminée
+    const firstIncomplete = allLessons.findIndex((l: any) => !lessonProgress?.[l.id]?.is_completed)
+    if (firstIncomplete > 0) {
+      setCurrentLessonIndex(firstIncomplete)
+      return
+    }
+    // Priorité 2 (tout terminé = révision) : dernière leçon visitée
     try {
       const savedId = localStorage.getItem(lastLessonStorageKey)
       if (savedId) {
@@ -453,7 +461,7 @@ export default function LearnerCourseDetailPage() {
       }
     } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allLessons.length, lastLessonStorageKey])
+  }, [allLessons.length, lastLessonStorageKey, !!lessonProgress])
 
   // Sauvegarder la leçon courante comme "dernière visitée"
   useEffect(() => {
@@ -617,6 +625,26 @@ export default function LearnerCourseDetailPage() {
       setCurrentLessonIndex(currentLessonIndex - 1)
     }
   }
+
+  // Raccourcis clavier : ← → pour naviguer entre leçons, Espace pour play/pause vidéo
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if ((e.target as HTMLElement)?.isContentEditable) return
+      if (e.key === 'ArrowRight') {
+        setCurrentLessonIndex(i => Math.min(i + 1, totalLessons - 1))
+      } else if (e.key === 'ArrowLeft') {
+        setCurrentLessonIndex(i => Math.max(i - 1, 0))
+      } else if (e.key === ' ' && videoRef.current) {
+        e.preventDefault()
+        if (videoRef.current.paused) videoRef.current.play().catch(() => {})
+        else videoRef.current.pause()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [totalLessons])
 
   const handleCompleteLesson = () => {
     if (currentLesson) {
@@ -1497,6 +1525,107 @@ export default function LearnerCourseDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Bouton flottant mobile pour ouvrir la liste des leçons */}
+      <div className="fixed bottom-20 right-4 z-40 lg:hidden">
+        <button
+          onClick={() => setMobileDrawerOpen(true)}
+          className="flex items-center gap-2 bg-brand-blue text-white rounded-full pl-3 pr-4 py-2.5 shadow-lg text-sm font-semibold active:scale-95 transition-transform"
+        >
+          <BookOpen className="h-4 w-4" />
+          <span>{completedLessons}/{totalLessons}</span>
+        </button>
+      </div>
+
+      {/* Drawer mobile — liste des leçons */}
+      <AnimatePresence>
+        {mobileDrawerOpen && (
+          <>
+            <motion.div
+              key="drawer-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50 lg:hidden"
+              onClick={() => setMobileDrawerOpen(false)}
+            />
+            <motion.div
+              key="drawer-panel"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white rounded-t-2xl max-h-[78vh] flex flex-col shadow-2xl"
+            >
+              {/* Handle + header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">Contenu du cours</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">{completedLessons}/{totalLessons} leçons · {progressPercentage}%</p>
+                </div>
+                <button
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+              </div>
+              {/* Progress bar */}
+              <div className="h-1 bg-gray-100 shrink-0">
+                <div
+                  className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan transition-all duration-500"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              {/* Lesson list */}
+              <div className="overflow-y-auto flex-1 px-3 py-3">
+                {allLessons.map((lesson: any, idx: number) => {
+                  const isActive = idx === currentLessonIndex
+                  const isComplete = isLessonCompleted(lesson.id)
+                  const prevSectionTitle = idx > 0 ? allLessons[idx - 1].sectionTitle : null
+                  const showSectionHeader =
+                    lesson.sectionTitle !== prevSectionTitle &&
+                    (lesson.sectionTitle !== 'Sans section' || course.course_sections?.length > 0)
+                  return (
+                    <div key={lesson.id}>
+                      {showSectionHeader && (
+                        <div className={`px-2 pb-1 ${idx > 0 ? 'mt-4' : 'mt-1'}`}>
+                          <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            {lesson.sectionTitle}
+                          </h4>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => { setCurrentLessonIndex(idx); setMobileDrawerOpen(false) }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all mb-0.5 ${
+                          isActive ? 'bg-brand-blue shadow-md' : isComplete ? 'hover:bg-green-50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+                          isActive ? 'bg-white/20 text-white' : isComplete ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                        }`}>
+                          {isComplete && !isActive ? <CheckCircle2 className="h-4 w-4" /> : <span>{idx + 1}</span>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : isComplete ? 'text-gray-700' : 'text-gray-600'}`}>
+                            {lesson.title}
+                          </p>
+                          {lesson.video_duration_minutes && (
+                            <p className={`text-xs mt-0.5 ${isActive ? 'text-white/60' : 'text-gray-400'}`}>
+                              {lesson.video_duration_minutes} min
+                            </p>
+                          )}
+                        </div>
+                        {isActive && <PlayCircle className="h-4 w-4 text-white/70 shrink-0" />}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
