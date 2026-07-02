@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -12,7 +12,13 @@ import {
   AlignLeft, List, Palette, Type, Video, Zap, HelpCircle,
   BarChart2, BookOpen, Camera, Check, FileText, Eye, Loader2,
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { cn } from '@/lib/utils'
+
+const ScormUploader = dynamic(
+  () => import('@/components/elearning/ScormUploader').then(m => m.ScormUploader),
+  { ssr: false }
+)
 import {
   DndContext,
   DragOverlay,
@@ -72,6 +78,12 @@ interface LessonItem {
   video_duration_minutes: number | null
   content?: string | null
   resources?: LessonSettings | null
+  scorm_packages?: {
+    id: string
+    title: string | null
+    scorm_version: string
+    entry_point: string
+  }[] | null
 }
 
 function parseBlocks(raw: string | null | undefined): ContentBlock[] {
@@ -1291,6 +1303,21 @@ export default function EditPage() {
     enabled: !!user?.organization_id,
   })
 
+  // ── Scorm packages — requête séparée pour éviter la dépendance au join lessons
+  const [selectedLessonIdForScorm, setSelectedLessonIdForScorm] = useState<string | null>(null)
+  const { data: scormPackageForLesson, refetch: refetchScormPackage } = useQuery({
+    queryKey: ['scorm-package', selectedLessonIdForScorm],
+    queryFn: async () => {
+      if (!selectedLessonIdForScorm) return null
+      const res = await fetch(`/api/elearning/scorm/package?lesson_id=${selectedLessonIdForScorm}`)
+      if (!res.ok) return null
+      const json = await res.json()
+      return json.package ?? null
+    },
+    enabled: !!selectedLessonIdForScorm,
+    staleTime: 0,
+  })
+
   // ── Course form state (left panel) ────────────────────────────────
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -1327,6 +1354,12 @@ export default function EditPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseLoaded])
 
+  // Stable org_id ref — ne se perd pas quand course est null pendant un refetch
+  const orgIdRef = useRef<string>('')
+  useEffect(() => {
+    if (course?.organization_id) orgIdRef.current = course.organization_id
+  }, [course?.organization_id])
+
   // ── Lesson editor state (center panel) ───────────────────────────
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)
   const [loadedLessonId, setLoadedLessonId] = useState<string | null>(null)
@@ -1359,6 +1392,13 @@ export default function EditPage() {
       setSelectedLessonId(lessons[0].id)
     }
   }, [lessons, selectedLessonId])
+
+  // Sync selected lesson ID for scorm query when lesson type is scorm
+  useEffect(() => {
+    if (!selectedLessonId) { setSelectedLessonIdForScorm(null); return }
+    const lesson = lessons.find(l => l.id === selectedLessonId)
+    setSelectedLessonIdForScorm(lesson?.lesson_type === 'scorm' ? selectedLessonId : null)
+  }, [selectedLessonId, lessons])
 
   // ── Block operations ────────────────────────────────────────────
   const handleChangeBlock = useCallback((id: string, data: unknown) => {
@@ -1519,6 +1559,7 @@ export default function EditPage() {
         label === 'E-learning' ? 'elearning'
         : label === 'Scorm' ? 'scorm'
         : 'mixed'
+      const firstSectionId = (course as any).sections?.[0]?.id as string | undefined
       return elearningService.createLesson({
         course_id: course.id,
         title: newTitle,
@@ -1526,6 +1567,7 @@ export default function EditPage() {
         lesson_type: lessonType,
         order_index: lessons.length,
         content: JSON.stringify([]),
+        ...(firstSectionId ? { section_id: firstSectionId } : {}),
       })
     },
     onSuccess: (newLesson) => {
@@ -1587,24 +1629,52 @@ export default function EditPage() {
           />
         </aside>
 
-        {/* Center — Block editor (flex-1) */}
+        {/* Center — Block editor or SCORM uploader (flex-1) */}
         <main className="flex-1 overflow-hidden">
-          <BlockEditor
-            lessonTitle={lessonTitle}
-            setLessonTitle={setLessonTitle}
-            blocks={blocks}
-            onChangeBlock={handleChangeBlock}
-            onAddBlock={handleAddBlock}
-            onReorderBlocks={setBlocks}
-            onSave={() => updateLessonMutation.mutate()}
-            onCancel={() => {
-              setBlocks(savedBlocks)
-              setLessonTitle(savedLessonTitle)
-            }}
-            isSaving={updateLessonMutation.isPending}
-            isDirty={isDirty}
-            hasLesson={!!selectedLessonId}
-          />
+          {(() => {
+            const selectedLesson = lessons.find(l => l.id === selectedLessonId)
+            const isScorm = selectedLesson?.lesson_type === 'scorm'
+            const organizationId = orgIdRef.current || course?.organization_id
+            if (isScorm && selectedLessonId && organizationId) {
+              const existingPkg = scormPackageForLesson ?? selectedLesson?.scorm_packages?.[0] ?? null
+              return (
+                <ScormUploader
+                  key={selectedLessonId}
+                  lessonId={selectedLessonId}
+                  organizationId={organizationId}
+                  existingPackage={existingPkg ? {
+                    id: existingPkg.id,
+                    title: existingPkg.title ?? null,
+                    scorm_version: existingPkg.scorm_version,
+                    entry_point: existingPkg.entry_point,
+                    file_count: 0,
+                  } : null}
+                  onSuccess={() => {
+                    refetchScormPackage()
+                    queryClient.invalidateQueries({ queryKey: ['course-edit', slug] })
+                  }}
+                />
+              )
+            }
+            return (
+              <BlockEditor
+                lessonTitle={lessonTitle}
+                setLessonTitle={setLessonTitle}
+                blocks={blocks}
+                onChangeBlock={handleChangeBlock}
+                onAddBlock={handleAddBlock}
+                onReorderBlocks={setBlocks}
+                onSave={() => updateLessonMutation.mutate()}
+                onCancel={() => {
+                  setBlocks(savedBlocks)
+                  setLessonTitle(savedLessonTitle)
+                }}
+                isSaving={updateLessonMutation.isPending}
+                isDirty={isDirty}
+                hasLesson={!!selectedLessonId}
+              />
+            )
+          })()}
         </main>
 
         {/* Right — Activity list (w-72) */}

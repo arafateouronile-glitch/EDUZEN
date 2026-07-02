@@ -265,7 +265,8 @@ export default function CourseDetailPage() {
 
               <div className="divide-y divide-gray-100">
                 {course.sections && course.sections.length > 0 ? (
-                  course.sections.map((section: any, sectionIndex: number) => {
+                  <>
+                  {course.sections.map((section: any, sectionIndex: number) => {
                     const sectionLessons = lessonsBySection[section.id] || []
                     const isExpanded = expandedSections.includes(section.id)
                     const completedInSection = enrollment?.completed_lessons?.filter(
@@ -361,7 +362,56 @@ export default function CourseDetailPage() {
                         </AnimatePresence>
                       </div>
                     )
-                  })
+                  })}
+                  {(lessonsBySection['no-section'] || []).length > 0 && (
+                    <div className="group/section">
+                      <div className="px-6 pb-4 pt-3 space-y-2">
+                        {(lessonsBySection['no-section'] || []).map((lesson: any) => {
+                          const isCompleted = enrollment?.completed_lessons?.includes(lesson.id)
+                          return (
+                            <div
+                              key={lesson.id}
+                              className={cn(
+                                "flex items-center justify-between p-3 rounded-lg border transition-all",
+                                isCompleted
+                                  ? "bg-emerald-50/50 border-emerald-100"
+                                  : "bg-white border-gray-200 hover:border-brand-blue/30 hover:shadow-sm"
+                              )}
+                            >
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className={cn(
+                                  "flex-shrink-0 p-1.5 rounded-md",
+                                  isCompleted ? "text-emerald-600 bg-emerald-100" : "text-gray-400 bg-gray-100"
+                                )}>
+                                  {isCompleted ? <CheckCircle className="h-4 w-4" /> :
+                                   lesson.lesson_type === 'video' ? <Video className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                </div>
+                                <p className={cn("text-sm font-medium truncate", isCompleted ? "text-emerald-900" : "text-gray-700")}>
+                                  {lesson.title}
+                                </p>
+                              </div>
+                              {enrollment ? (
+                                <Link href={`/dashboard/elearning/courses/${slug}/lessons/${lesson.slug}`}>
+                                  <Button size="sm" variant="ghost" className="h-8 text-xs">
+                                    {isCompleted ? 'Revoir' : 'Lancer'}
+                                  </Button>
+                                </Link>
+                              ) : lesson.is_preview ? (
+                                <Link href={`/dashboard/elearning/courses/${slug}/lessons/${lesson.slug}`}>
+                                  <Button size="sm" variant="outline" className="h-8 text-xs border-brand-blue/30 text-brand-blue">
+                                    Aperçu
+                                  </Button>
+                                </Link>
+                              ) : (
+                                <LockIcon className="h-4 w-4 text-gray-300" />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  </>
                 ) : (
                   <div className="p-12 text-center text-gray-500">
                     <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300" />

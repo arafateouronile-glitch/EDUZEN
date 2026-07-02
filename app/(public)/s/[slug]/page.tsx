@@ -284,7 +284,7 @@ function FileDropzone({
 // ── Main page ────────────────────────────────────────────────
 export default function PublicEnrollmentForm() {
   const params = useParams()
-  const token = params?.token as string
+  const token = (params?.slug ?? params?.token) as string
 
   const [pageState, setPageState] = useState<PageState>('loading')
   const [linkData, setLinkData] = useState<LinkData | null>(null)

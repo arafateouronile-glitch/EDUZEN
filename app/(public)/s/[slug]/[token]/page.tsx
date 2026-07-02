@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { submitEnrollmentForm } from '../../[token]/actions'
+import { submitEnrollmentForm } from '../actions'
 import type { FormField, DynamicSource } from '@/lib/types/enrollment-forms'
 import {
   Loader2,

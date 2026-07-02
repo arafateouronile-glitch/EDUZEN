@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLearnerContext } from '@/lib/contexts/learner-context'
 import { createLearnerClient } from '@/lib/supabase/learner-client'
@@ -42,6 +43,11 @@ import { useParams, useRouter } from 'next/navigation'
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+
+const ScormPlayer = dynamic(
+  () => import('@/components/elearning/ScormPlayer').then(m => m.ScormPlayer),
+  { ssr: false }
+)
 
 export default function LearnerCourseDetailPage() {
   const params = useParams()
@@ -152,7 +158,8 @@ export default function LearnerCourseDetailPage() {
                 order_index,
                 video_url,
                 is_preview,
-                quizzes(id)
+                quizzes(id),
+                scorm_packages(id, entry_point, scorm_version, storage_path)
               )
             )
           `)
@@ -233,15 +240,13 @@ export default function LearnerCourseDetailPage() {
     enabled: !!course?.id && !!studentId && !!supabase,
   })
 
-  // Fallback: si les sections ne sont pas visibles (RLS course_sections pas appliquée),
-  // on charge les leçons directement via `lessons` pour permettre au candidat de démarrer.
+  // Fallback: leçons sans section (section_id IS NULL) ou si RLS course_sections non appliquée.
   const { data: lessonsFallback } = useQuery({
     queryKey: ['learner-course-lessons-fallback', course?.id],
     queryFn: async () => {
       if (!supabase || !course?.id) return []
-      if (course?.course_sections?.length) return [] // inutile si on a déjà sections+lessons
 
-      const { data, error } = await supabase
+      const query = supabase
         .from('lessons')
         .select(
           `
@@ -257,11 +262,19 @@ export default function LearnerCourseDetailPage() {
           course_id,
           section_id,
           section:course_sections(title),
-          quizzes(id)
+          quizzes(id),
+          scorm_packages(id, entry_point, scorm_version, storage_path)
         `
         )
         .eq('course_id', course.id)
         .order('order_index', { ascending: true })
+
+      // Si le cours a des sections, ne ramener que les leçons sans section
+      if (course?.course_sections?.length) {
+        query.is('section_id', null)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         logger.warn('Error fetching lessons fallback', {
@@ -276,20 +289,33 @@ export default function LearnerCourseDetailPage() {
     enabled: !!supabase && !!course?.id,
   })
 
-  // Organiser les leçons
-  const allLessons =
-    course?.course_sections?.length
-      ? course.course_sections
-          ?.sort((a: any, b: any) => a.order_index - b.order_index)
-          .flatMap((section: any) =>
-            (section.lessons || [])
-              .sort((a: any, b: any) => a.order_index - b.order_index)
-              .map((lesson: any) => ({ ...lesson, sectionTitle: section.title }))
-          ) || []
-      : (lessonsFallback || []).map((lesson: any) => ({
+  // Organiser les leçons — triées par order_index global pour correspondre à l'ordre éditeur
+  const allLessons = (() => {
+    if (!course?.course_sections?.length) {
+      return (lessonsFallback || []).map((lesson: any) => ({
+        ...lesson,
+        sectionTitle: lesson?.section?.title || 'Sans section',
+      }))
+    }
+
+    const sectioned = course.course_sections
+      .flatMap((section: any) =>
+        (section.lessons || []).map((lesson: any) => ({
           ...lesson,
-          sectionTitle: lesson?.section?.title || 'Sans section',
+          sectionTitle: section.title,
         }))
+      )
+
+    const unsectioned = (lessonsFallback || []).map((lesson: any) => ({
+      ...lesson,
+      sectionTitle: 'Sans section',
+    }))
+
+    // Tri global par order_index pour correspondre à l'ordre de l'éditeur
+    return [...sectioned, ...unsectioned].sort(
+      (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0)
+    )
+  })()
 
   const currentLesson = allLessons[currentLessonIndex]
   const totalLessons = allLessons.length
@@ -972,6 +998,16 @@ export default function LearnerCourseDetailPage() {
           {currentLesson && (
             <GlassCard className="overflow-hidden">
               {/* Video/Content Area */}
+              {currentLesson.lesson_type === 'scorm' && currentLesson.scorm_packages?.[0] ? (
+                <ScormPlayer
+                  lessonId={currentLesson.id}
+                  entryPoint={currentLesson.scorm_packages[0].entry_point}
+                  scormVersion={currentLesson.scorm_packages[0].scorm_version as '1.2' | '2004'}
+                  studentId={studentId || ''}
+                  organizationId={(course as any)?.organization_id || ''}
+                  onComplete={handleCompleteLesson}
+                />
+              ) : (
               <div className="relative aspect-video bg-gray-900">
                 {currentLesson.video_url ? (
                   <video
@@ -1004,6 +1040,7 @@ export default function LearnerCourseDetailPage() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Lesson Info */}
               <div className="p-6">
@@ -1176,124 +1213,65 @@ export default function LearnerCourseDetailPage() {
           <GlassCard className="p-4">
             <h3 className="font-bold text-gray-900 mb-4">Contenu du cours</h3>
             <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
-              {course.course_sections?.length ? course.course_sections
-                ?.sort((a: any, b: any) => a.order_index - b.order_index)
-                .map((section: any) => (
-                  <div key={section.id} className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">
-                      {section.title}
-                    </h4>
-                    <div className="space-y-1">
-                      {section.lessons
-                        .sort((a: any, b: any) => a.order_index - b.order_index)
-                        .map((lesson: any, idx: number) => {
-                          const globalIndex = allLessons.findIndex((l: any) => l.id === lesson.id)
-                          const isActive = globalIndex === currentLessonIndex
-                          const isComplete = isLessonCompleted(lesson.id)
-                          
-                          return (
-                            <button
-                              key={lesson.id}
-                              onClick={() => setCurrentLessonIndex(globalIndex)}
-                              className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                                isActive
-                                  ? 'bg-brand-blue text-white shadow-lg'
-                                  : isComplete
-                                  ? 'bg-green-50 text-gray-700 hover:bg-green-100'
-                                  : 'hover:bg-gray-50 text-gray-600'
-                              }`}
-                            >
-                              <div className={`p-1.5 rounded-lg ${
-                                isActive ? 'bg-white/20' : isComplete ? 'bg-green-100' : 'bg-gray-100'
-                              }`}>
-                                {isComplete ? (
-                                  <CheckCircle2 className={`h-4 w-4 ${isActive ? 'text-white' : 'text-green-600'}`} />
-                                ) : (
-                                  getLessonIcon(lesson.lesson_type)
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium truncate ${
-                                  isActive ? 'text-white' : ''
-                                }`}>
-                                  {lesson.title}
-                                </p>
-                                <div className={`flex items-center gap-2 text-xs ${isActive ? 'text-white/70' : 'text-gray-400'}`}>
-                                  {lesson.video_duration_minutes && <span>{lesson.video_duration_minutes} min</span>}
-                                  {timeSpent[lesson.id] > 0 && (
-                                    <span className="flex items-center gap-0.5">
-                                      <Timer className="h-2.5 w-2.5" />
-                                      {formatTimeSpent(timeSpent[lesson.id])}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {isActive && (
-                                <PlayCircle className="h-5 w-5 text-white" />
-                              )}
-                            </button>
-                          )
-                        })}
-                    </div>
-                  </div>
-                )) : allLessons.length ? (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2 px-2">Leçons</h4>
-                    <div className="space-y-1">
-                      {allLessons.map((lesson: any) => {
-                        const globalIndex = allLessons.findIndex((l: any) => l.id === lesson.id)
-                        const isActive = globalIndex === currentLessonIndex
-                        const isComplete = isLessonCompleted(lesson.id)
+              {allLessons.length ? (
+                allLessons.map((lesson: any, idx: number) => {
+                  const isActive = idx === currentLessonIndex
+                  const isComplete = isLessonCompleted(lesson.id)
+                  const prevSectionTitle = idx > 0 ? allLessons[idx - 1].sectionTitle : null
+                  const showSectionHeader =
+                    lesson.sectionTitle !== prevSectionTitle &&
+                    (lesson.sectionTitle !== 'Sans section' || course.course_sections?.length > 0)
 
-                        return (
-                          <button
-                            key={lesson.id}
-                            onClick={() => setCurrentLessonIndex(globalIndex)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                              isActive
-                                ? 'bg-brand-blue text-white shadow-lg'
-                                : isComplete
-                                ? 'bg-green-50 text-gray-700 hover:bg-green-100'
-                                : 'hover:bg-gray-50 text-gray-600'
-                            }`}
-                          >
-                            <div
-                              className={`p-1.5 rounded-lg ${
-                                isActive ? 'bg-white/20' : isComplete ? 'bg-green-100' : 'bg-gray-100'
-                              }`}
-                            >
-                              {isComplete ? (
-                                <CheckCircle2 className={`h-4 w-4 ${isActive ? 'text-white' : 'text-green-600'}`} />
-                              ) : (
-                                getLessonIcon(lesson.lesson_type)
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : ''}`}>
-                                {lesson.title}
-                              </p>
-                              <div className={`flex items-center gap-2 text-xs ${isActive ? 'text-white/70' : 'text-gray-400'}`}>
-                                {lesson.video_duration_minutes && <span>{lesson.video_duration_minutes} min</span>}
-                                {timeSpent[lesson.id] > 0 && (
-                                  <span className="flex items-center gap-0.5">
-                                    <Timer className="h-2.5 w-2.5" />
-                                    {formatTimeSpent(timeSpent[lesson.id])}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {isActive && <PlayCircle className="h-5 w-5 text-white" />}
-                          </button>
-                        )
-                      })}
+                  return (
+                    <div key={lesson.id}>
+                      {showSectionHeader && (
+                        <h4 className={`text-sm font-semibold text-gray-700 mb-2 px-2 ${idx > 0 ? 'mt-4' : ''}`}>
+                          {lesson.sectionTitle}
+                        </h4>
+                      )}
+                      <button
+                        onClick={() => setCurrentLessonIndex(idx)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
+                          isActive
+                            ? 'bg-brand-blue text-white shadow-lg'
+                            : isComplete
+                            ? 'bg-green-50 text-gray-700 hover:bg-green-100'
+                            : 'hover:bg-gray-50 text-gray-600'
+                        }`}
+                      >
+                        <div className={`p-1.5 rounded-lg ${
+                          isActive ? 'bg-white/20' : isComplete ? 'bg-green-100' : 'bg-gray-100'
+                        }`}>
+                          {isComplete ? (
+                            <CheckCircle2 className={`h-4 w-4 ${isActive ? 'text-white' : 'text-green-600'}`} />
+                          ) : (
+                            getLessonIcon(lesson.lesson_type)
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium truncate ${isActive ? 'text-white' : ''}`}>
+                            {lesson.title}
+                          </p>
+                          <div className={`flex items-center gap-2 text-xs ${isActive ? 'text-white/70' : 'text-gray-400'}`}>
+                            {lesson.video_duration_minutes && <span>{lesson.video_duration_minutes} min</span>}
+                            {timeSpent[lesson.id] > 0 && (
+                              <span className="flex items-center gap-0.5">
+                                <Timer className="h-2.5 w-2.5" />
+                                {formatTimeSpent(timeSpent[lesson.id])}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {isActive && <PlayCircle className="h-5 w-5 text-white" />}
+                      </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg border">
-                    Aucune section/leçon visible pour le moment. Si le cours est bien assigné, applique la migration RLS
-                    pour `course_sections` puis réessaye.
-                  </div>
-                )}
+                  )
+                })
+              ) : (
+                <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg border">
+                  Aucune leçon disponible pour le moment.
+                </div>
+              )}
             </div>
           </GlassCard>
 

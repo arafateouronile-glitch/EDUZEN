@@ -28,6 +28,12 @@ import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import dynamic from 'next/dynamic'
+
+const ScormPlayer = dynamic(
+  () => import('@/components/elearning/ScormPlayer').then(m => m.ScormPlayer),
+  { ssr: false }
+)
 
 // Types de blocs de contenu
 type ContentBlockType = 'text' | 'media' | 'quiz' | 'poll'
@@ -86,6 +92,19 @@ export default function LessonPage() {
       return result as any
     },
     enabled: !!course?.id && !!lessonSlug,
+  })
+
+  // Requête séparée pour scorm_packages via API (admin bypass RLS/schema cache)
+  const { data: scormPackage, isLoading: scormLoading } = useQuery({
+    queryKey: ['scorm-package-lesson', lesson?.id],
+    queryFn: async () => {
+      if (!lesson?.id) return null
+      const res = await fetch(`/api/elearning/scorm/package?lesson_id=${lesson.id}`)
+      if (!res.ok) return null
+      const json = await res.json()
+      return json.package ?? null
+    },
+    enabled: !!lesson?.id && lesson?.lesson_type === 'scorm',
   })
 
   // Parser le contenu JSON pour charger les blocs
@@ -607,6 +626,23 @@ export default function LessonPage() {
               )}
             </div>
 
+            {/* Contenu SCORM */}
+            {lesson.lesson_type === 'scorm' && scormPackage ? (
+              <div className="mb-8">
+                <ScormPlayer
+                  lessonId={lesson.id}
+                  entryPoint={scormPackage.entry_point}
+                  scormVersion={scormPackage.scorm_version as '1.2' | '2004'}
+                  studentId={user?.id || ''}
+                  organizationId={(lesson as any).course?.organization_id || course?.organization_id || ''}
+                />
+              </div>
+            ) : lesson.lesson_type === 'scorm' && !scormLoading ? (
+              <div className="mb-8 flex items-center justify-center h-48 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <p className="text-sm text-gray-400">Package SCORM non importé</p>
+              </div>
+            ) : null}
+
             {/* Vidéo principale (si présente) */}
             {lesson.video_url && (
               <div className="mb-8">
@@ -631,15 +667,17 @@ export default function LessonPage() {
             )}
 
             {/* Blocs de contenu */}
-            <div className="space-y-6">
-              {contentBlocks.length > 0 ? (
-                contentBlocks.map((block, index) => renderContentBlock(block, index))
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <p>Aucun contenu disponible pour cette leçon</p>
-                </div>
-              )}
-            </div>
+            {lesson.lesson_type !== 'scorm' && (
+              <div className="space-y-6">
+                {contentBlocks.length > 0 ? (
+                  contentBlocks.map((block, index) => renderContentBlock(block, index))
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <p>Aucun contenu disponible pour cette leçon</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Pièces jointes */}
             {lesson.attachments && Array.isArray(lesson.attachments) && lesson.attachments.length > 0 && (

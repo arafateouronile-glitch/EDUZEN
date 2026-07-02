@@ -101,9 +101,58 @@ export class ELearningService {
   }
 
   async getCourseBySlug(slug: string, organizationId: string) {
+    const isFatalSchemaError = (err: { code?: string; status?: number; message?: string }) =>
+      err?.code === 'PGRST116' ||
+      err?.code === '42P01' ||
+      err?.code === 'PGRST301' ||
+      err?.status === 400 ||
+      err?.status === 409 ||
+      err?.code === '400' ||
+      err?.code === '409' ||
+      err?.message?.includes('does not exist') ||
+      err?.message?.includes('schema cache')
+
+    const isRelationError = (err: { message?: string }) =>
+      err?.message?.includes('relationship') ||
+      err?.message?.includes('relation')
+
+    // 1. Essai avec scorm_packages join
     try {
-      // Essayer d'abord avec toutes les relations
-      const query = this.supabase
+      const { data, error } = await this.supabase
+        .from('courses')
+        .select(`
+          *,
+          instructor:users(id, full_name, email),
+          formation:formations(*),
+          sections:course_sections(*),
+          lessons:lessons(*, scorm_packages(id, title, scorm_version, entry_point))
+        `)
+        .eq('slug', slug)
+        .eq('organization_id', organizationId)
+        .maybeSingle()
+
+      if (!error) return data
+
+      // Erreur de relation scorm_packages (schema cache pas encore rechargé) → retry sans
+      if (isRelationError(error)) {
+        logger.warn('ELearningService - scorm_packages relation not in schema cache, retrying without', { errorMessage: error.message })
+      } else if (isFatalSchemaError(error)) {
+        logger.warn('ELearningService - Table courses or relations do not exist yet', { errorMessage: error.message })
+        return null
+      } else {
+        throw error
+      }
+    } catch (error: unknown) {
+      const err = error as { code?: string; status?: number; message?: string }
+      if (!isRelationError(err)) {
+        if (isFatalSchemaError(err)) return null
+        throw error
+      }
+    }
+
+    // 2. Fallback sans scorm_packages (schema cache obsolète)
+    try {
+      const { data, error } = await this.supabase
         .from('courses')
         .select(`
           *,
@@ -114,49 +163,19 @@ export class ELearningService {
         `)
         .eq('slug', slug)
         .eq('organization_id', organizationId)
-      
-      const { data, error } = await query.maybeSingle()
+        .maybeSingle()
 
       if (error) {
-        // Si la table n'existe pas, erreur 400/409 (conflit, cache schéma), retourner null
-        if (
-          error.code === 'PGRST116' ||
-          error.code === '42P01' ||
-          error.code === 'PGRST301' ||
-          (error as { status?: number }).status === 400 ||
-          (error as { status?: number }).status === 409 ||
-          error.code === '400' ||
-          error.code === '409' ||
-          error.message?.includes('relation') ||
-          error.message?.includes('relationship') ||
-          error.message?.includes('does not exist') ||
-          error.message?.includes('schema cache')
-        ) {
-          logger.warn('ELearningService - Table courses or relations do not exist yet or invalid query', { errorMessage: error.message })
+        if (isFatalSchemaError(error) || isRelationError(error)) {
+          logger.warn('ELearningService - Fallback query also failed', { errorMessage: error.message })
           return null
         }
         throw error
       }
       return data
     } catch (error: unknown) {
-      // Gérer les erreurs de table inexistante ou erreurs 400
       const errorObj = error as { code?: string; status?: number; message?: string }
-      if (
-        errorObj?.code === 'PGRST116' ||
-        errorObj?.code === '42P01' ||
-        errorObj?.code === 'PGRST301' ||
-        errorObj?.status === 400 ||
-        errorObj?.status === 409 ||
-        errorObj?.code === '400' ||
-        errorObj?.code === '409' ||
-        errorObj?.message?.includes('relation') ||
-        errorObj?.message?.includes('relationship') ||
-        errorObj?.message?.includes('does not exist') ||
-        errorObj?.message?.includes('schema cache')
-      ) {
-        logger.warn('ELearningService - Table courses or relations do not exist yet or invalid query', { errorMessage: errorObj?.message })
-        return null
-      }
+      if (isFatalSchemaError(errorObj) || isRelationError(errorObj)) return null
       throw error
     }
   }
@@ -314,7 +333,7 @@ export class ELearningService {
   async getLessonBySlug(slug: string, courseId: string) {
     const { data, error } = await this.supabase
       .from('lessons')
-      .select('*, course:courses(*), section:course_sections(*)')
+      .select('*, course:courses(*), section:course_sections(*), scorm_packages(id, entry_point, scorm_version, storage_path)')
       .eq('slug', slug)
       .eq('course_id', courseId)
       .single()
