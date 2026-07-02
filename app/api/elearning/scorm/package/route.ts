@@ -24,7 +24,11 @@ export async function GET(request: NextRequest) {
       .eq('lesson_id', lessonId)
       .maybeSingle()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      console.error('[scorm/package] DB error for lesson_id', lessonId, error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    console.log('[scorm/package] lesson_id', lessonId, '→', data ? `found (${data.id})` : 'null')
     return NextResponse.json({ package: data })
   } catch (error) {
     return NextResponse.json(

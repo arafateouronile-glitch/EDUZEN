@@ -31,6 +31,8 @@ export function ConsoleErrorFilter() {
       /NotFoundError.*removeChild|removeChild.*NotFoundError/i, // Uncaught NotFoundError (frame_start / iframe)
       /node to be removed is not a child/i, // Message alternatif removeChild
       /container has a non-static position.*scroll offset/i, // Framer Motion useScroll (html/body ont déjà position: relative)
+      /throwSCORMError.*cmi\.core\.exit/i, // Elucidat lit un champ write-only — comportement non-conforme, non bloquant
+      /SCORM Error 404.*cmi\.core\.exit/i, // idem
     ]
 
     // Fonction pour vérifier si une erreur doit être filtrée

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('scorm_sessions')
       .select('*')
       .eq('lesson_id', lesson_id)

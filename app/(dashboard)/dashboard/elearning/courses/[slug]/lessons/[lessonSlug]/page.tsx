@@ -35,6 +35,11 @@ const ScormPlayer = dynamic(
   { ssr: false }
 )
 
+function toYouTubeEmbedUrl(url: string): string {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)
+  return m ? `https://www.youtube.com/embed/${m[1]}?rel=0` : url
+}
+
 // Types de blocs de contenu
 type ContentBlockType = 'text' | 'media' | 'quiz' | 'poll'
 
@@ -381,7 +386,7 @@ export default function LessonPage() {
                   <div className="aspect-video bg-black rounded-lg overflow-hidden">
                     {block.data.mediaUrl.includes('youtube.com') || block.data.mediaUrl.includes('youtu.be') ? (
                       <iframe
-                        src={block.data.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                        src={toYouTubeEmbedUrl(block.data.mediaUrl)}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
@@ -638,8 +643,14 @@ export default function LessonPage() {
                 />
               </div>
             ) : lesson.lesson_type === 'scorm' && !scormLoading ? (
-              <div className="mb-8 flex items-center justify-center h-48 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                <p className="text-sm text-gray-400">Package SCORM non importé</p>
+              <div className="mb-8 flex flex-col items-center justify-center h-48 bg-gray-50 rounded-xl border border-dashed border-gray-200 gap-3">
+                <p className="text-sm text-gray-400">Aucun package SCORM importé pour cette leçon</p>
+                <Link
+                  href={`/dashboard/elearning/courses/${courseSlug}/edit`}
+                  className="text-xs text-brand-blue hover:underline"
+                >
+                  Importer depuis la page d&apos;édition →
+                </Link>
               </div>
             ) : null}
 
@@ -649,7 +660,7 @@ export default function LessonPage() {
                 <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
                   {lesson.video_url.includes('youtube.com') || lesson.video_url.includes('youtu.be') ? (
                     <iframe
-                      src={lesson.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                      src={toYouTubeEmbedUrl(lesson.video_url)}
                       className="w-full h-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen

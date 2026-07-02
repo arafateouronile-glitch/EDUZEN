@@ -1637,23 +1637,50 @@ export default function EditPage() {
             const organizationId = orgIdRef.current || course?.organization_id
             if (isScorm && selectedLessonId && organizationId) {
               const existingPkg = scormPackageForLesson ?? selectedLesson?.scorm_packages?.[0] ?? null
+              const titleDirty = lessonTitle !== savedLessonTitle
               return (
-                <ScormUploader
-                  key={selectedLessonId}
-                  lessonId={selectedLessonId}
-                  organizationId={organizationId}
-                  existingPackage={existingPkg ? {
-                    id: existingPkg.id,
-                    title: existingPkg.title ?? null,
-                    scorm_version: existingPkg.scorm_version,
-                    entry_point: existingPkg.entry_point,
-                    file_count: 0,
-                  } : null}
-                  onSuccess={() => {
-                    refetchScormPackage()
-                    queryClient.invalidateQueries({ queryKey: ['course-edit', slug] })
-                  }}
-                />
+                <div className="h-full flex flex-col">
+                  {/* Titre de la leçon SCORM */}
+                  <div className="px-6 py-3 border-b border-gray-200 bg-white flex items-center gap-3">
+                    <input
+                      type="text"
+                      value={lessonTitle}
+                      onChange={e => setLessonTitle(e.target.value)}
+                      onBlur={() => { if (titleDirty) updateLessonMutation.mutate() }}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur() } }}
+                      className="flex-1 text-base font-semibold text-gray-900 border-0 focus:outline-none focus:ring-0 bg-transparent placeholder:text-gray-400"
+                      placeholder="Titre de la leçon"
+                    />
+                    {titleDirty && (
+                      <button
+                        type="button"
+                        onClick={() => updateLessonMutation.mutate()}
+                        disabled={updateLessonMutation.isPending}
+                        className="text-xs text-brand-blue hover:underline disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {updateLessonMutation.isPending ? 'Sauvegarde…' : 'Sauvegarder'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex-1 overflow-auto">
+                    <ScormUploader
+                      key={selectedLessonId}
+                      lessonId={selectedLessonId}
+                      organizationId={organizationId}
+                      existingPackage={existingPkg ? {
+                        id: existingPkg.id,
+                        title: existingPkg.title ?? null,
+                        scorm_version: existingPkg.scorm_version,
+                        entry_point: existingPkg.entry_point,
+                        file_count: 0,
+                      } : null}
+                      onSuccess={() => {
+                        refetchScormPackage()
+                        queryClient.invalidateQueries({ queryKey: ['course-edit', slug] })
+                      }}
+                    />
+                  </div>
+                </div>
               )
             }
             return (
