@@ -69,6 +69,10 @@ export default function LearnerCourseDetailPage() {
   const lessonBottomRef = useRef<HTMLDivElement>(null)
   const lessonCardRef = useRef<HTMLDivElement>(null)
   const [scrollProgress, setScrollProgress] = useState(0)
+  const [videoPercent, setVideoPercent] = useState(0)
+  const [videoDurationSecs, setVideoDurationSecs] = useState(0)
+  const [videoCurrentSecs, setVideoCurrentSecs] = useState(0)
+  const prevProgressRef = useRef<number | null>(null)
   const [openAccordionItems, setOpenAccordionItems] = useState<Record<string, boolean>>({})
   const [lessonNotes, setLessonNotes] = useState<Record<string, string>>({})
   const [timeSpent, setTimeSpent] = useState<Record<string, number>>({})
@@ -116,6 +120,12 @@ export default function LearnerCourseDetailPage() {
     if (seconds < 60) return `${seconds}s`
     if (seconds < 3600) return `${Math.floor(seconds / 60)}min`
     return `${Math.floor(seconds / 3600)}h${Math.floor((seconds % 3600) / 60)}min`
+  }
+
+  const formatVideoTime = (secs: number): string => {
+    const m = Math.floor(secs / 60)
+    const s = Math.floor(secs % 60)
+    return `${m}:${String(s).padStart(2, '0')}`
   }
 
   const loadInlineAnswersFromStorage = (lessonId: string) => {
@@ -399,10 +409,13 @@ export default function LearnerCourseDetailPage() {
     })
   }, [inlineQuizAnswers, currentLesson?.id])
 
-  // Reset gating + progression scroll quand on change de leçon
+  // Reset gating + progression scroll + vidéo quand on change de leçon
   useEffect(() => {
     setBlockCompletions({})
     setScrollProgress(0)
+    setVideoPercent(0)
+    setVideoDurationSecs(0)
+    setVideoCurrentSecs(0)
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [currentLesson?.id])
 
@@ -625,6 +638,18 @@ export default function LearnerCourseDetailPage() {
       setCurrentLessonIndex(currentLessonIndex - 1)
     }
   }
+
+  // Célébration quand le cours passe à 100 %
+  useEffect(() => {
+    if (prevProgressRef.current !== null && prevProgressRef.current < 100 && progressPercentage >= 100) {
+      addToast({
+        type: 'success',
+        title: '🎉 Félicitations !',
+        description: 'Vous avez terminé ce cours. Votre certificat est disponible.',
+      })
+    }
+    prevProgressRef.current = progressPercentage
+  }, [progressPercentage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Raccourcis clavier : ← → pour naviguer entre leçons, Espace pour play/pause vidéo
   useEffect(() => {
@@ -1097,11 +1122,46 @@ export default function LearnerCourseDetailPage() {
 
   if (loadingCourse) {
     return (
-      <div className="space-y-6 pb-24 lg:pb-8">
-        <div className="h-12 w-48 bg-gray-100 rounded-lg animate-pulse" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-96 bg-gray-100 rounded-2xl animate-pulse" />
-          <div className="h-96 bg-gray-100 rounded-2xl animate-pulse" />
+      <div className="pb-24 lg:pb-8 -mx-4 sm:-mx-6 lg:-mx-8 -mt-6">
+        {/* Sticky bar skeleton */}
+        <div className="sticky top-16 z-30 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3.5 w-52 bg-gray-100 rounded animate-pulse" />
+            <div className="h-1.5 w-36 bg-gray-100 rounded-full animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px]">
+          {/* Content skeleton */}
+          <div className="px-6 md:px-10 py-8 space-y-5 border-r border-gray-100">
+            <div className="h-3.5 w-28 bg-gray-100 rounded animate-pulse" />
+            <div className="h-8 w-3/4 bg-gray-100 rounded-lg animate-pulse" />
+            <div className="space-y-2 pt-1">
+              <div className="h-3 bg-gray-100 rounded animate-pulse" />
+              <div className="h-3 bg-gray-100 rounded animate-pulse w-5/6" />
+              <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
+            </div>
+            <div className="h-56 bg-gray-100 rounded-xl animate-pulse" />
+            <div className="space-y-2">
+              <div className="h-3 bg-gray-100 rounded animate-pulse" />
+              <div className="h-3 bg-gray-100 rounded animate-pulse w-4/5" />
+            </div>
+            <div className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+          </div>
+          {/* Sidebar skeleton */}
+          <div className="hidden lg:block px-4 py-5 space-y-3 border-l border-gray-100">
+            <div className="flex justify-between items-center mb-3">
+              <div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
+              <div className="h-3 w-8 bg-gray-100 rounded animate-pulse" />
+            </div>
+            <div className="h-1.5 bg-gray-100 rounded-full animate-pulse" />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2.5 py-1.5">
+                <div className="w-6 h-6 bg-gray-100 rounded-full animate-pulse shrink-0" />
+                <div className="flex-1 h-3 bg-gray-100 rounded animate-pulse" style={{ width: `${70 + (i % 3) * 10}%` }} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -1191,14 +1251,43 @@ export default function LearnerCourseDetailPage() {
                   onComplete={handleCompleteLesson}
                 />
               ) : currentLesson.lesson_type === 'quiz' ? null : currentLesson.video_url ? (
-              <div className="aspect-video bg-gray-900">
-                <video
-                  ref={videoRef}
-                  src={currentLesson.video_url}
-                  className="w-full h-full object-contain"
-                  controls
-                  onEnded={handleCompleteLesson}
-                />
+              <div className="bg-gray-900">
+                <div className="aspect-video">
+                  <video
+                    ref={videoRef}
+                    src={currentLesson.video_url}
+                    className="w-full h-full object-contain"
+                    controls
+                    onEnded={handleCompleteLesson}
+                    onLoadedMetadata={(e) => setVideoDurationSecs(Math.round(e.currentTarget.duration))}
+                    onTimeUpdate={(e) => {
+                      const v = e.currentTarget
+                      if (v.duration > 0) {
+                        setVideoPercent(Math.round((v.currentTime / v.duration) * 100))
+                        setVideoCurrentSecs(Math.round(v.currentTime))
+                      }
+                    }}
+                  />
+                </div>
+                {/* Barre de progression vidéo */}
+                {videoDurationSecs > 0 && (
+                  <div className="px-4 py-2.5 flex items-center gap-3 border-t border-gray-700/50">
+                    <span className="text-xs text-gray-400 font-mono w-10 shrink-0 text-right">{formatVideoTime(videoCurrentSecs)}</span>
+                    <div className="flex-1 h-1 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{
+                          width: `${videoPercent}%`,
+                          background: videoPercent >= 100 ? '#22c55e' : 'linear-gradient(90deg, #3b82f6, #818cf8)',
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500 font-mono w-10 shrink-0">{formatVideoTime(videoDurationSecs)}</span>
+                    <span className={`text-[11px] font-semibold w-9 shrink-0 text-right ${videoPercent >= 100 ? 'text-green-400' : 'text-gray-500'}`}>
+                      {videoPercent}%
+                    </span>
+                  </div>
+                )}
               </div>
               ) : null}
 
