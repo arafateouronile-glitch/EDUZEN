@@ -19,6 +19,10 @@ const ScormUploader = dynamic(
   () => import('@/components/elearning/ScormUploader').then(m => m.ScormUploader),
   { ssr: false }
 )
+const QuizBuilder = dynamic(
+  () => import('@/components/elearning/QuizBuilder').then(m => m.QuizBuilder),
+  { ssr: false }
+)
 import {
   DndContext,
   DragOverlay,
@@ -1367,10 +1371,13 @@ export default function EditPage() {
   const [blocks, setBlocks] = useState<ContentBlock[]>([])
   const [savedBlocks, setSavedBlocks] = useState<ContentBlock[]>([])
   const [savedLessonTitle, setSavedLessonTitle] = useState('')
+  const [quizContent, setQuizContent] = useState<import('@/lib/types/quiz.types').QuizContent | null>(null)
+  const [savedQuizContent, setSavedQuizContent] = useState<import('@/lib/types/quiz.types').QuizContent | null>(null)
 
   const isDirty =
     lessonTitle !== savedLessonTitle ||
-    JSON.stringify(blocks) !== JSON.stringify(savedBlocks)
+    JSON.stringify(blocks) !== JSON.stringify(savedBlocks) ||
+    JSON.stringify(quizContent) !== JSON.stringify(savedQuizContent)
 
   // Load lesson into editor when selection or lessons data changes
   useEffect(() => {
@@ -1380,9 +1387,20 @@ export default function EditPage() {
     if (lesson.id === loadedLessonId) return
     setLessonTitle(lesson.title)
     setSavedLessonTitle(lesson.title)
-    const parsed = parseBlocks(lesson.content)
-    setBlocks(parsed)
-    setSavedBlocks(parsed)
+    if (lesson.lesson_type === 'quiz') {
+      let qc = null
+      try { qc = lesson.content ? JSON.parse(lesson.content) : null } catch { qc = null }
+      setQuizContent(qc)
+      setSavedQuizContent(qc)
+      setBlocks([])
+      setSavedBlocks([])
+    } else {
+      const parsed = parseBlocks(lesson.content)
+      setBlocks(parsed)
+      setSavedBlocks(parsed)
+      setQuizContent(null)
+      setSavedQuizContent(null)
+    }
     setLoadedLessonId(lesson.id)
   }, [selectedLessonId, lessons, loadedLessonId])
 
@@ -1464,14 +1482,17 @@ export default function EditPage() {
   const updateLessonMutation = useMutation({
     mutationFn: () => {
       if (!selectedLessonId) throw new Error('Aucune leçon sélectionnée')
+      const selectedLesson = lessons.find(l => l.id === selectedLessonId)
+      const isQuiz = selectedLesson?.lesson_type === 'quiz'
       return elearningService.updateLesson(selectedLessonId, {
         title: lessonTitle,
-        content: JSON.stringify(blocks),
+        content: isQuiz ? JSON.stringify(quizContent) : JSON.stringify(blocks),
       })
     },
     onSuccess: () => {
       setSavedBlocks(blocks)
       setSavedLessonTitle(lessonTitle)
+      setSavedQuizContent(quizContent)
       queryClient.invalidateQueries({ queryKey: ['course-edit', slug] })
     },
   })
@@ -1634,7 +1655,37 @@ export default function EditPage() {
           {(() => {
             const selectedLesson = lessons.find(l => l.id === selectedLessonId)
             const isScorm = selectedLesson?.lesson_type === 'scorm'
+            const isQuiz = selectedLesson?.lesson_type === 'quiz'
             const organizationId = orgIdRef.current || course?.organization_id
+
+            if (isQuiz && selectedLessonId) {
+              return (
+                <div className="h-full flex flex-col">
+                  <div className="px-6 py-3 border-b border-gray-200 bg-white flex items-center gap-3">
+                    <input
+                      type="text"
+                      value={lessonTitle}
+                      onChange={e => setLessonTitle(e.target.value)}
+                      onBlur={() => { if (lessonTitle !== savedLessonTitle) updateLessonMutation.mutate() }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                      className="flex-1 text-base font-semibold text-gray-900 border-0 focus:outline-none focus:ring-0 bg-transparent placeholder:text-gray-400"
+                      placeholder="Titre du quiz"
+                    />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <QuizBuilder
+                      key={selectedLessonId}
+                      content={quizContent}
+                      onChange={setQuizContent}
+                      onSave={() => updateLessonMutation.mutate()}
+                      isSaving={updateLessonMutation.isPending}
+                      isDirty={isDirty}
+                    />
+                  </div>
+                </div>
+              )
+            }
+
             if (isScorm && selectedLessonId && organizationId) {
               const existingPkg = scormPackageForLesson ?? selectedLesson?.scorm_packages?.[0] ?? null
               const titleDirty = lessonTitle !== savedLessonTitle

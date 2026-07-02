@@ -48,6 +48,10 @@ const ScormPlayer = dynamic(
   () => import('@/components/elearning/ScormPlayer').then(m => m.ScormPlayer),
   { ssr: false }
 )
+const QuizPlayer = dynamic(
+  () => import('@/components/elearning/QuizPlayer').then(m => m.QuizPlayer),
+  { ssr: false }
+)
 
 export default function LearnerCourseDetailPage() {
   const params = useParams()
@@ -319,6 +323,21 @@ export default function LearnerCourseDetailPage() {
 
   const currentLesson = allLessons[currentLessonIndex]
   const totalLessons = allLessons.length
+
+  // Quiz attempts pour la leçon quiz courante
+  const { data: quizAttempts = [] } = useQuery({
+    queryKey: ['quiz-attempts-learner', currentLesson?.id],
+    queryFn: async () => {
+      if (!currentLesson?.id) return []
+      const res = await fetch(`/api/elearning/quiz/attempt?lesson_id=${currentLesson.id}`)
+      if (!res.ok) return []
+      const json = await res.json()
+      return json.attempts ?? []
+    },
+    enabled: !!currentLesson?.id && currentLesson?.lesson_type === 'quiz',
+    staleTime: 0,
+  })
+
   const completedLessons = Object.values(lessonProgress || {}).filter((p: any) => p.is_completed).length
   const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
@@ -1007,7 +1026,7 @@ export default function LearnerCourseDetailPage() {
                   organizationId={(course as any)?.organization_id || ''}
                   onComplete={handleCompleteLesson}
                 />
-              ) : (
+              ) : currentLesson.lesson_type === 'quiz' ? null : (
               <div className="relative aspect-video bg-gray-900">
                 {currentLesson.video_url ? (
                   <video
@@ -1017,20 +1036,6 @@ export default function LearnerCourseDetailPage() {
                     controls
                     onEnded={handleCompleteLesson}
                   />
-                ) : currentLesson.lesson_type === 'quiz' ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                    <ListChecks className="h-16 w-16 mb-4 text-brand-blue" />
-                    <h3 className="text-xl font-semibold mb-2">Quiz interactif</h3>
-                    <p className="text-gray-400 mb-4">Testez vos connaissances</p>
-                    <Link
-                      href={`/learner/evaluations/${currentLesson?.quizzes?.[0]?.id || currentLesson.id}`}
-                    >
-                      <Button>
-                        <Play className="h-4 w-4 mr-2" />
-                        Commencer le quiz
-                      </Button>
-                    </Link>
-                  </div>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center text-white">
@@ -1112,7 +1117,28 @@ export default function LearnerCourseDetailPage() {
                 </div>
 
                 {/* Contenu de la leçon */}
-                {activeContentTab === 'content' && renderLessonContent(currentLesson.content, currentLesson.id)}
+                {activeContentTab === 'content' && currentLesson.lesson_type === 'quiz' ? (
+                  (() => {
+                    let quizContent = null
+                    try { if (currentLesson.content) quizContent = JSON.parse(currentLesson.content) } catch { /* ignore */ }
+                    return quizContent ? (
+                      <QuizPlayer
+                        lessonId={currentLesson.id}
+                        content={quizContent}
+                        studentId={studentId || ''}
+                        organizationId={(course as any)?.organization_id || ''}
+                        previousAttempts={quizAttempts}
+                        onComplete={(passed) => { if (passed) handleCompleteLesson() }}
+                      />
+                    ) : (
+                      <div className="py-12 text-center text-sm text-gray-400">
+                        Ce quiz ne contient pas encore de questions.
+                      </div>
+                    )
+                  })()
+                ) : activeContentTab === 'content' ? (
+                  renderLessonContent(currentLesson.content, currentLesson.id)
+                ) : null}
 
                 {/* Notes personnelles */}
                 {activeContentTab === 'notes' && (
