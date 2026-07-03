@@ -168,12 +168,12 @@ export default function CourseDetailPage() {
 
         {/* Contenu */}
         <div className={cn(
-          "relative flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6 pb-10 flex flex-col",
+          "relative flex-1 w-full px-6 sm:px-8 lg:px-10 pt-6 pb-10 flex flex-col",
           course.cover_image_url ? "text-white" : "text-gray-900"
         )}>
 
           {/* Breadcrumb + Edit */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-5">
             <Link
               href="/dashboard/elearning"
               className={cn(
@@ -236,7 +236,7 @@ export default function CourseDetailPage() {
 
           {/* Titre */}
           <h1 className={cn(
-            "text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight leading-snug mb-3 max-w-3xl",
+            "text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight mb-3",
             !course.cover_image_url && "bg-gradient-to-r from-gray-900 via-brand-blue to-brand-blue-dark bg-clip-text text-transparent"
           )}>
             {course.title}
@@ -245,7 +245,7 @@ export default function CourseDetailPage() {
           {/* Description */}
           {course.short_description && (
             <p className={cn(
-              "text-base md:text-lg leading-relaxed max-w-2xl mb-6",
+              "text-base md:text-lg leading-relaxed max-w-3xl mb-5",
               course.cover_image_url ? "text-white/70" : "text-gray-500"
             )}>
               {course.short_description}
