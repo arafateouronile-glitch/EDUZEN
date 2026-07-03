@@ -1138,14 +1138,14 @@ export default function LearnerCourseDetailPage() {
     return (
       <div className="pb-24 lg:pb-8 -mx-4 sm:-mx-6 lg:-mx-8 -mt-6">
         {/* Sticky bar skeleton */}
-        <div className="sticky top-16 z-30 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
-          <div className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse shrink-0" />
+        <div className="sticky top-16 z-30 bg-gradient-to-r from-brand-blue to-brand-blue-dark border-b border-brand-blue-dark/50 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 bg-white/20 rounded-lg animate-pulse shrink-0" />
           <div className="flex-1 space-y-1.5">
-            <div className="h-3.5 w-52 bg-gray-100 rounded animate-pulse" />
-            <div className="h-1.5 w-36 bg-gray-100 rounded-full animate-pulse" />
+            <div className="h-3.5 w-52 bg-white/20 rounded animate-pulse" />
+            <div className="h-1.5 w-36 bg-white/20 rounded-full animate-pulse" />
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px]">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] min-h-screen">
           {/* Content skeleton */}
           <div className="px-6 md:px-10 py-8 space-y-5 border-r border-gray-100">
             <div className="h-3.5 w-28 bg-gray-100 rounded animate-pulse" />
@@ -1197,51 +1197,51 @@ export default function LearnerCourseDetailPage() {
   }
 
   return (
-    <div className="pb-24 lg:pb-8 -mx-4 sm:-mx-6 lg:-mx-8 -mt-6">
+    <div className="pb-24 lg:pb-8 -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 relative">
       {/* Sticky top bar */}
-      <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 shadow-sm">
+      <div className="sticky top-16 z-30 bg-gradient-to-r from-brand-blue to-brand-blue-dark backdrop-blur-xl border-b border-brand-blue-dark/50 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 shadow-lg shadow-brand-blue/20">
         <Link href="/learner/elearning">
-          <button className="p-1.5 -ml-1 rounded-lg hover:bg-gray-100 transition-colors text-gray-500" title="Retour aux cours">
+          <button className="p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white" title="Retour aux cours">
             <ArrowLeft className="h-5 w-5" />
           </button>
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-semibold text-gray-900 truncate leading-tight">{course.title}</h1>
+          <h1 className="text-sm font-semibold text-white truncate leading-tight">{course.title}</h1>
           <div className="flex items-center gap-2 mt-1">
-            <div className="flex-1 max-w-[180px] h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div className="flex-1 max-w-[180px] h-1 bg-white/20 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
+                className="h-full bg-white rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercentage}%` }}
                 transition={{ duration: 0.5 }}
               />
             </div>
-            <span className="text-xs font-medium text-brand-blue">{progressPercentage}%</span>
+            <span className="text-xs font-bold text-white/90">{progressPercentage}%</span>
           </div>
         </div>
-        <div className="hidden md:flex items-center gap-3 text-xs text-gray-400 shrink-0">
+        <div className="hidden md:flex items-center gap-3 text-xs text-white/60 shrink-0">
           <span>
-            <span className="font-semibold text-gray-600">{completedLessons}</span>/{totalLessons} leçons
+            <span className="font-semibold text-white">{completedLessons}</span><span className="text-white/60">/{totalLessons} leçons</span>
           </span>
           {Object.keys(timeSpent).length > 0 && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 text-white/60">
               <Timer className="h-3 w-3" />
               {formatTimeSpent(Object.values(timeSpent).reduce((a, b) => a + b, 0))}
             </span>
           )}
           {progressPercentage >= 100 && (
-            <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-100 rounded-full px-2 py-0.5 text-[11px] font-medium">
+            <span className="inline-flex items-center gap-1 bg-white/20 text-white border border-white/30 rounded-full px-2 py-0.5 text-[11px] font-medium">
               <Award className="h-3 w-3" />Terminé
             </span>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] min-h-screen">
         {/* Contenu principal */}
         <div className="min-h-screen border-r border-gray-100">
           {currentLesson && (
-            <div ref={lessonCardRef} className="bg-white">
+            <div ref={lessonCardRef} className="bg-white/90 backdrop-blur-sm">
               {/* Barre de progression scroll */}
               <div className="h-0.5 bg-gray-100 overflow-hidden">
                 <div
@@ -1265,21 +1265,21 @@ export default function LearnerCourseDetailPage() {
                     transition={{ duration: 0.25 }}
                     className="overflow-hidden"
                   >
-                    <div className="bg-green-50 border-b border-green-100 px-6 md:px-10 py-2.5 flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                      <span className="text-sm font-medium text-green-700">Leçon terminée</span>
+                    <div className="bg-gradient-to-r from-brand-blue/10 to-brand-cyan/10 border-b border-brand-cyan/20 px-6 md:px-10 py-2.5 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-brand-cyan shrink-0" />
+                      <span className="text-sm font-medium text-brand-blue">Leçon terminée</span>
                       {autoAdvanceCountdown !== null && currentLessonIndex < totalLessons - 1 && (
-                        <span className="ml-auto flex items-center gap-3 text-sm text-green-600">
+                        <span className="ml-auto flex items-center gap-3 text-sm text-brand-blue">
                           <span>Leçon suivante dans <strong>{autoAdvanceCountdown}s</strong></span>
                           <button
                             onClick={() => setAutoAdvanceCountdown(null)}
-                            className="text-xs text-green-500 underline hover:text-green-700 transition-colors"
+                            className="text-xs text-brand-blue underline hover:text-brand-blue-dark transition-colors"
                           >
                             Annuler
                           </button>
                           <button
                             onClick={() => { setAutoAdvanceCountdown(null); setCurrentLessonIndex(i => i + 1) }}
-                            className="flex items-center gap-1 bg-green-600 text-white text-xs font-semibold px-3 py-1 rounded-full hover:bg-green-700 transition-colors"
+                            className="flex items-center gap-1 bg-gradient-to-r from-brand-blue to-brand-cyan text-white text-xs font-semibold px-3 py-1 rounded-full hover:from-brand-blue-dark hover:to-brand-cyan-dark transition-all"
                           >
                             Suivant <ChevronRight className="h-3.5 w-3.5" />
                           </button>
@@ -1344,12 +1344,12 @@ export default function LearnerCourseDetailPage() {
               <div className="px-6 md:px-10 pt-7 pb-0">
                 {/* Breadcrumb section */}
                 {currentLesson.sectionTitle && currentLesson.sectionTitle !== 'Sans section' && (
-                  <p className="text-xs font-semibold text-brand-blue uppercase tracking-wider mb-2">
+                  <p className="text-xs font-semibold text-brand-cyan uppercase tracking-wider mb-2">
                     {currentLesson.sectionTitle}
                   </p>
                 )}
                 <div className="flex items-start justify-between gap-4 mb-1">
-                  <h2 className="text-2xl font-bold text-gray-900 leading-snug">
+                  <h2 className="text-2xl font-bold leading-snug bg-gradient-to-r from-gray-900 to-brand-blue bg-clip-text text-transparent">
                     {currentLesson.title}
                   </h2>
                   <div className="flex items-center gap-2 mt-1 shrink-0">
@@ -1407,7 +1407,7 @@ export default function LearnerCourseDetailPage() {
                     onClick={() => setActiveContentTab('content')}
                     className={`flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 transition-colors mr-1 ${
                       activeContentTab === 'content'
-                        ? 'border-brand-blue text-brand-blue'
+                        ? 'border-brand-cyan text-brand-blue'
                         : 'border-transparent text-gray-400 hover:text-gray-700'
                     }`}
                   >
@@ -1419,7 +1419,7 @@ export default function LearnerCourseDetailPage() {
                     onClick={() => setActiveContentTab('notes')}
                     className={`flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 transition-colors ${
                       activeContentTab === 'notes'
-                        ? 'border-brand-blue text-brand-blue'
+                        ? 'border-brand-cyan text-brand-blue'
                         : 'border-transparent text-gray-400 hover:text-gray-700'
                     }`}
                   >
@@ -1509,7 +1509,7 @@ export default function LearnerCourseDetailPage() {
                   <Button
                     onClick={handleNextLesson}
                     disabled={currentLessonIndex >= totalLessons - 1}
-                    className="gap-2"
+                    className="gap-2 bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan-dark text-white border-0 shadow-md shadow-brand-blue/20"
                   >
                     Suivant
                     <ChevronRight className="h-4 w-4" />
@@ -1521,7 +1521,7 @@ export default function LearnerCourseDetailPage() {
           )}
 
           {!currentLesson && (
-            <div className="m-6 p-6 border border-amber-200 bg-amber-50/40 rounded-2xl">
+            <div className="m-6 p-6 border border-brand-cyan/20 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5 rounded-2xl backdrop-blur-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Impossible de démarrer le cours</h3>
               <p className="text-sm text-gray-700 mb-4">
                 Ce cours ne contient pas encore de leçons, ou l’accès aux sections/leçons n’est pas encore autorisé.
@@ -1542,15 +1542,15 @@ export default function LearnerCourseDetailPage() {
         </div>
 
         {/* Sidebar - Liste des leçons */}
-        <div className="hidden lg:block border-l border-gray-100 bg-white">
+        <div className="hidden lg:block border-l border-white/20 bg-white/60 backdrop-blur-xl">
           <div className="sticky top-[112px] max-h-[calc(100vh-112px)] overflow-y-auto flex flex-col">
             {/* Progress summary */}
-            <div className="px-4 py-4 border-b border-gray-100 bg-gray-50/80">
+            <div className="px-4 py-4 border-b border-white/20 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Progression</span>
-                <span className="text-xs font-bold text-brand-blue">{progressPercentage}%</span>
+                <span className="text-[11px] font-bold text-brand-blue uppercase tracking-widest">Progression</span>
+                <span className="text-xs font-bold text-brand-cyan">{progressPercentage}%</span>
               </div>
-              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-brand-blue/10 rounded-full overflow-hidden">
                 <motion.div
                   className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
                   initial={{ width: 0 }}
@@ -1595,7 +1595,7 @@ export default function LearnerCourseDetailPage() {
                         onClick={() => setCurrentLessonIndex(idx)}
                         className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all mb-0.5 ${
                           isActive
-                            ? 'bg-brand-blue shadow-md'
+                            ? 'bg-gradient-to-r from-brand-blue to-brand-cyan shadow-md shadow-brand-blue/30'
                             : isComplete
                             ? 'hover:bg-green-50'
                             : 'hover:bg-gray-50'
@@ -1603,7 +1603,7 @@ export default function LearnerCourseDetailPage() {
                       >
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
                           isActive
-                            ? 'bg-white/20 text-white'
+                            ? 'bg-white/25 text-white'
                             : isComplete
                             ? 'bg-green-100 text-green-600'
                             : 'bg-gray-100 text-gray-400'
@@ -1648,13 +1648,13 @@ export default function LearnerCourseDetailPage() {
 
             {/* Certificate */}
             {progressPercentage >= 100 && (
-              <div className="mx-3 mb-4 p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200">
+              <div className="mx-3 mb-4 p-4 rounded-2xl bg-gradient-to-br from-brand-blue/10 to-brand-cyan/10 border border-brand-cyan/20 backdrop-blur-sm">
                 <div className="flex items-center gap-2 mb-1">
-                  <Award className="h-5 w-5 text-amber-500" />
+                  <Award className="h-5 w-5 text-brand-cyan" />
                   <h4 className="text-sm font-bold text-gray-900">Félicitations !</h4>
                 </div>
                 <p className="text-xs text-gray-500 mb-3">Vous avez terminé ce cours.</p>
-                <Button variant="outline" size="sm" className="w-full text-xs gap-1.5 border-amber-300 hover:bg-amber-50">
+                <Button size="sm" className="w-full text-xs gap-1.5 bg-gradient-to-r from-brand-blue to-brand-cyan text-white border-0 hover:from-brand-blue-dark hover:to-brand-cyan-dark">
                   <Download className="h-3.5 w-3.5" />
                   Télécharger le certificat
                 </Button>
@@ -1668,7 +1668,7 @@ export default function LearnerCourseDetailPage() {
       <div className="fixed bottom-20 right-4 z-40 lg:hidden">
         <button
           onClick={() => setMobileDrawerOpen(true)}
-          className="flex items-center gap-2 bg-brand-blue text-white rounded-full pl-3 pr-4 py-2.5 shadow-lg text-sm font-semibold active:scale-95 transition-transform"
+          className="flex items-center gap-2 bg-gradient-to-r from-brand-blue to-brand-cyan text-white rounded-full pl-3 pr-4 py-2.5 shadow-lg shadow-brand-blue/30 text-sm font-semibold active:scale-95 transition-transform"
         >
           <BookOpen className="h-4 w-4" />
           <span>{completedLessons}/{totalLessons}</span>
@@ -1696,7 +1696,7 @@ export default function LearnerCourseDetailPage() {
               className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white rounded-t-2xl max-h-[78vh] flex flex-col shadow-2xl"
             >
               {/* Handle + header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0 bg-gradient-to-r from-brand-blue/5 to-brand-cyan/5">
                 <div>
                   <h3 className="font-bold text-gray-900 text-sm">Contenu du cours</h3>
                   <p className="text-xs text-gray-400 mt-0.5">{completedLessons}/{totalLessons} leçons · {progressPercentage}%</p>
@@ -1736,7 +1736,7 @@ export default function LearnerCourseDetailPage() {
                       <button
                         onClick={() => { setCurrentLessonIndex(idx); setMobileDrawerOpen(false) }}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all mb-0.5 ${
-                          isActive ? 'bg-brand-blue shadow-md' : isComplete ? 'hover:bg-green-50' : 'hover:bg-gray-50'
+                          isActive ? 'bg-gradient-to-r from-brand-blue to-brand-cyan shadow-md' : isComplete ? 'hover:bg-green-50' : 'hover:bg-gray-50'
                         }`}
                       >
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
