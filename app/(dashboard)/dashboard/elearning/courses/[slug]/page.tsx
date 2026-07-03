@@ -245,7 +245,7 @@ export default function CourseDetailPage() {
           {/* Description */}
           {course.short_description && (
             <p className={cn(
-              "text-base md:text-lg leading-relaxed max-w-3xl mb-5",
+              "text-lg md:text-xl leading-relaxed mb-5",
               course.cover_image_url ? "text-white/70" : "text-gray-500"
             )}>
               {course.short_description}
