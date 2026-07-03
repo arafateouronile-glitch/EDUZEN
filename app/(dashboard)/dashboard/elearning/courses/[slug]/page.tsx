@@ -140,96 +140,144 @@ export default function CourseDetailPage() {
   return (
     <div className="min-h-screen flex flex-col -mt-6 -mx-4 sm:-mx-6 lg:-mx-8">
 
-      {/* ── Hero gradient ─────────────────────────────────────────── */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-brand-blue via-brand-blue-dark to-slate-900 text-white">
-        {/* Orbs décoratifs */}
-        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-brand-cyan/10 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full bg-brand-cyan/5 blur-2xl pointer-events-none" />
+      {/* ── Hero ──────────────────────────────────────────────────── */}
+      <header className="relative overflow-hidden min-h-[320px] flex flex-col">
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
+        {/* Fond : image cover en full-bleed OU gradient light */}
+        {course.cover_image_url ? (
+          <>
+            <img
+              src={course.cover_image_url}
+              alt=""
+              aria-hidden
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {/* Overlay : opaque à gauche, transparent à droite */}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/75 to-slate-900/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-brand-cyan-ghost/40 to-brand-blue-ghost/60" />
+            {/* Grid décoratif subtil */}
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#274472 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+            {/* Orb accent */}
+            <div className="absolute -top-20 right-0 w-[480px] h-[480px] rounded-full bg-gradient-to-br from-brand-cyan/20 to-brand-blue/10 blur-3xl pointer-events-none" />
+          </>
+        )}
+
+        {/* Contenu */}
+        <div className={cn(
+          "relative flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-6 pb-10 flex flex-col",
+          course.cover_image_url ? "text-white" : "text-gray-900"
+        )}>
+
           {/* Breadcrumb + Edit */}
           <div className="flex items-center justify-between mb-8">
-            <Link href="/dashboard/elearning" className="inline-flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors">
+            <Link
+              href="/dashboard/elearning"
+              className={cn(
+                "inline-flex items-center gap-1.5 text-sm transition-colors",
+                course.cover_image_url ? "text-white/50 hover:text-white" : "text-gray-400 hover:text-gray-700"
+              )}
+            >
               <ArrowLeft className="h-4 w-4" />
               Retour au catalogue
             </Link>
             <Link href={`/dashboard/elearning/courses/${slug}/edit`}>
-              <Button variant="outline" size="sm" className="gap-2 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "gap-2 backdrop-blur-sm",
+                  course.cover_image_url
+                    ? "border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-white/30"
+                    : "border-brand-blue/20 bg-white/80 text-brand-blue hover:bg-white hover:border-brand-blue/40"
+                )}
+              >
                 <Edit className="h-3.5 w-3.5" />
                 Éditer
               </Button>
             </Link>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-            {/* Left: meta + title + stats */}
-            <div className="flex-1 space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/15 border border-white/20 backdrop-blur-sm">
-                  <DifficultyIcon className="h-3 w-3" />
-                  {difficultyConfig.label}
-                </span>
-                {course.is_featured && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-400/20 border border-amber-400/30 text-amber-300">
-                    <Sparkles className="h-3 w-3" />
-                    Populaire
-                  </span>
-                )}
-                {course.is_published ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-cyan/20 border border-brand-cyan/30 text-brand-cyan">
-                    Publié
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/10 border border-white/15 text-white/60">
-                    Brouillon
-                  </span>
-                )}
-              </div>
-
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight leading-snug">
-                {course.title}
-              </h1>
-
-              {course.short_description && (
-                <p className="text-white/70 text-base md:text-lg leading-relaxed max-w-2xl">
-                  {course.short_description}
-                </p>
-              )}
-
-              {/* Stats row */}
-              <div className="flex flex-wrap items-center gap-5 pt-2">
-                <div className="flex items-center gap-2 text-sm text-white/70">
-                  <Users className="h-4 w-4 text-brand-cyan" />
-                  <span><strong className="text-white font-semibold">{course.total_students || 0}</strong> étudiant{(course.total_students || 0) > 1 ? 's' : ''}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-white/70">
-                  <Clock className="h-4 w-4 text-brand-cyan" />
-                  <span><strong className="text-white font-semibold">{course.estimated_duration_hours || 0}h</strong> de contenu</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-white/70">
-                  <BookOpen className="h-4 w-4 text-brand-cyan" />
-                  <span><strong className="text-white font-semibold">{totalLessons}</strong> leçon{totalLessons > 1 ? 's' : ''}</span>
-                </div>
-                {ratingStats && ratingStats.total > 0 && (
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <Star className="h-4 w-4 text-amber-400 fill-current" />
-                    <strong className="text-white font-semibold">{ratingStats.average.toFixed(1)}</strong>
-                    <span className="text-white/50">({ratingStats.total} avis)</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right: cover image in hero */}
-            {course.cover_image_url && (
-              <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
-                <div className="rounded-2xl overflow-hidden border border-white/20 shadow-2xl ring-1 ring-white/10">
-                  <img src={course.cover_image_url} alt={course.title} className="w-full aspect-video object-cover" />
-                </div>
-              </div>
+          {/* Badges */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <span className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm",
+              course.cover_image_url
+                ? "bg-white/15 border border-white/20 text-white"
+                : "bg-brand-blue/10 border border-brand-blue/20 text-brand-blue"
+            )}>
+              <DifficultyIcon className="h-3 w-3" />
+              {difficultyConfig.label}
+            </span>
+            {course.is_featured && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-400/20 border border-amber-400/30 text-amber-400 backdrop-blur-sm">
+                <Sparkles className="h-3 w-3" />
+                Populaire
+              </span>
+            )}
+            {course.is_published ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-cyan/20 border border-brand-cyan/30 text-brand-cyan backdrop-blur-sm">
+                Publié
+              </span>
+            ) : (
+              <span className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm",
+                course.cover_image_url
+                  ? "bg-white/10 border border-white/15 text-white/50"
+                  : "bg-gray-100 border border-gray-200 text-gray-400"
+              )}>
+                Brouillon
+              </span>
             )}
           </div>
+
+          {/* Titre */}
+          <h1 className={cn(
+            "text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight leading-snug mb-3 max-w-3xl",
+            !course.cover_image_url && "bg-gradient-to-r from-gray-900 via-brand-blue to-brand-blue-dark bg-clip-text text-transparent"
+          )}>
+            {course.title}
+          </h1>
+
+          {/* Description */}
+          {course.short_description && (
+            <p className={cn(
+              "text-base md:text-lg leading-relaxed max-w-2xl mb-6",
+              course.cover_image_url ? "text-white/70" : "text-gray-500"
+            )}>
+              {course.short_description}
+            </p>
+          )}
+
+          {/* Stats chips */}
+          <div className="flex flex-wrap items-center gap-2 mt-auto">
+            {[
+              { icon: Users,    value: `${course.total_students || 0} étudiant${(course.total_students || 0) > 1 ? 's' : ''}` },
+              { icon: Clock,    value: `${course.estimated_duration_hours || 0}h de contenu` },
+              { icon: BookOpen, value: `${totalLessons} leçon${totalLessons > 1 ? 's' : ''}` },
+              ...(ratingStats?.total > 0 ? [{ icon: Star, value: `${ratingStats.average.toFixed(1)} / 5 (${ratingStats.total} avis)` }] : []),
+            ].map(({ icon: Icon, value }) => (
+              <span
+                key={value}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm",
+                  course.cover_image_url
+                    ? "bg-white/10 border border-white/15 text-white/80"
+                    : "bg-white border border-gray-200 text-gray-600 shadow-sm"
+                )}
+              >
+                <Icon className={cn("h-3.5 w-3.5", course.cover_image_url ? "text-brand-cyan" : "text-brand-blue")} />
+                {value}
+              </span>
+            ))}
+          </div>
         </div>
+
+        {/* Ligne accent en bas */}
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-brand-blue via-brand-cyan to-transparent opacity-60" />
       </header>
 
       {/* ── Main ──────────────────────────────────────────────────── */}
