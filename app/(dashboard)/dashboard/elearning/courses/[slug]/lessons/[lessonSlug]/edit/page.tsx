@@ -97,6 +97,7 @@ interface ContentBlock {
     mediaType?: 'image' | 'video' | 'audio' | 'file'
     mediaUrl?: string
     caption?: string
+    required_percentage?: number
     question?: string
     options?: { id: string; text: string; isCorrect: boolean }[]
     explanation?: string
@@ -1079,6 +1080,31 @@ export default function EditLessonPage() {
                                       placeholder="Légende du média..."
                                     />
                                   </div>
+
+                                  {/* Seuil de visionnage obligatoire (vidéo uniquement) */}
+                                  {block.data.mediaType === 'video' && (
+                                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+                                      <label className="block text-sm font-semibold text-amber-800">
+                                        Seuil de visionnage obligatoire
+                                      </label>
+                                      <div className="flex items-center gap-3">
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          value={block.data.required_percentage ?? 0}
+                                          onChange={(e) => updateBlock(block.id, { required_percentage: Number(e.target.value) })}
+                                          className="w-24 px-3 py-2 border-2 border-amber-300 rounded-xl text-sm focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 transition-all bg-white"
+                                        />
+                                        <span className="text-sm text-amber-700">%</span>
+                                        <p className="text-xs text-amber-600 flex-1">
+                                          {(block.data.required_percentage ?? 0) > 0
+                                            ? `L'apprenant doit regarder ${block.data.required_percentage}% avant de continuer.`
+                                            : 'Aucun seuil — la vidéo ne bloque pas la progression.'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
 

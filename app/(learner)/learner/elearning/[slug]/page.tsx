@@ -73,6 +73,7 @@ export default function LearnerCourseDetailPage() {
   const [videoDurationSecs, setVideoDurationSecs] = useState(0)
   const [videoCurrentSecs, setVideoCurrentSecs] = useState(0)
   const prevProgressRef = useRef<number | null>(null)
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null)
   const [openAccordionItems, setOpenAccordionItems] = useState<Record<string, boolean>>({})
   const [lessonNotes, setLessonNotes] = useState<Record<string, string>>({})
   const [timeSpent, setTimeSpent] = useState<Record<string, number>>({})
@@ -409,13 +410,14 @@ export default function LearnerCourseDetailPage() {
     })
   }, [inlineQuizAnswers, currentLesson?.id])
 
-  // Reset gating + progression scroll + vidéo quand on change de leçon
+  // Reset gating + progression scroll + vidéo + auto-advance quand on change de leçon
   useEffect(() => {
     setBlockCompletions({})
     setScrollProgress(0)
     setVideoPercent(0)
     setVideoDurationSecs(0)
     setVideoCurrentSecs(0)
+    setAutoAdvanceCountdown(null)
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [currentLesson?.id])
 
@@ -603,13 +605,13 @@ export default function LearnerCourseDetailPage() {
         .eq('student_id', studentData.id)
       */
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['learner-lesson-progress'] })
       queryClient.invalidateQueries({ queryKey: ['learner-course-enrollment'] })
-      addToast({
-        type: 'success',
-        title: 'Leçon terminée !',
-        description: 'Votre progression a été enregistrée.',
+      // Déclencher l'auto-avance si ce n'est pas la dernière leçon
+      setCurrentLessonIndex(currentIdx => {
+        if (currentIdx < totalLessons - 1) setAutoAdvanceCountdown(4)
+        return currentIdx
       })
     },
     onError: (error: any) => {
@@ -638,6 +640,18 @@ export default function LearnerCourseDetailPage() {
       setCurrentLessonIndex(currentLessonIndex - 1)
     }
   }
+
+  // Auto-avance : décompte puis passage à la leçon suivante
+  useEffect(() => {
+    if (autoAdvanceCountdown === null) return
+    if (autoAdvanceCountdown <= 0) {
+      setAutoAdvanceCountdown(null)
+      setCurrentLessonIndex(i => Math.min(i + 1, totalLessons - 1))
+      return
+    }
+    const t = setTimeout(() => setAutoAdvanceCountdown(c => (c !== null ? c - 1 : null)), 1000)
+    return () => clearTimeout(t)
+  }, [autoAdvanceCountdown, totalLessons])
 
   // Célébration quand le cours passe à 100 %
   useEffect(() => {
@@ -1240,6 +1254,41 @@ export default function LearnerCourseDetailPage() {
                   }}
                 />
               </div>
+
+              {/* Bandeau "Leçon terminée" */}
+              <AnimatePresence>
+                {isLessonCompleted(currentLesson.id) && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-green-50 border-b border-green-100 px-6 md:px-10 py-2.5 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                      <span className="text-sm font-medium text-green-700">Leçon terminée</span>
+                      {autoAdvanceCountdown !== null && currentLessonIndex < totalLessons - 1 && (
+                        <span className="ml-auto flex items-center gap-3 text-sm text-green-600">
+                          <span>Leçon suivante dans <strong>{autoAdvanceCountdown}s</strong></span>
+                          <button
+                            onClick={() => setAutoAdvanceCountdown(null)}
+                            className="text-xs text-green-500 underline hover:text-green-700 transition-colors"
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            onClick={() => { setAutoAdvanceCountdown(null); setCurrentLessonIndex(i => i + 1) }}
+                            className="flex items-center gap-1 bg-green-600 text-white text-xs font-semibold px-3 py-1 rounded-full hover:bg-green-700 transition-colors"
+                          >
+                            Suivant <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               {/* Video/Content Area */}
               {currentLesson.lesson_type === 'scorm' && currentLesson.scorm_packages?.[0] ? (
                 <ScormPlayer
