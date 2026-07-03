@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { createClient } from '@/lib/supabase/client'
 import { elearningService } from '@/lib/services/elearning.service.client'
 import {
   ArrowLeft, Save, X, Monitor, Smartphone, GripVertical,
@@ -471,21 +472,68 @@ function EditableQCMBlock({
 // ─── Editable image block ────────────────────────────────────────────
 
 function EditableImageBlock({
-  block, onChange,
+  block, onChange, onUpload,
 }: {
   block: { id: string; type: 'image'; data: ImageBlockData }
   onChange: (id: string, data: ImageBlockData) => void
+  onUpload?: (file: File) => Promise<string>
 }) {
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !onUpload) return
+    setUploading(true)
+    try {
+      const url = await onUpload(file)
+      onChange(block.id, { ...block.data, url })
+    } catch {
+      // silently ignore — user keeps the URL field
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
   return (
     <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
       {block.data.url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={block.data.url} alt={block.data.caption} className="w-full rounded-xl object-cover max-h-64 mb-2" />
-      ) : (
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center text-gray-300 mb-2">
-          <ImageIcon className="h-8 w-8 mb-2" />
-          <p className="text-xs">Entrez une URL d'image ci-dessous</p>
+        <div className="relative group mb-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={block.data.url} alt={block.data.caption} className="w-full rounded-xl object-cover max-h-64" />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 rounded-xl transition-all opacity-0 group-hover:opacity-100 text-white text-xs font-semibold gap-1.5"
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            {uploading ? 'Import...' : 'Changer'}
+          </button>
         </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="w-full border-2 border-dashed border-gray-200 hover:border-brand-blue/40 hover:bg-brand-blue/5 rounded-xl p-8 flex flex-col items-center text-gray-300 hover:text-brand-blue/60 mb-2 transition-all cursor-pointer disabled:cursor-wait"
+        >
+          {uploading ? (
+            <Loader2 className="h-8 w-8 mb-2 animate-spin" />
+          ) : (
+            <ImageIcon className="h-8 w-8 mb-2" />
+          )}
+          <p className="text-xs font-medium">{uploading ? 'Import en cours…' : 'Cliquez pour importer une image'}</p>
+          <p className="text-[10px] mt-0.5 text-gray-300">ou entrez une URL ci-dessous</p>
+        </button>
       )}
       <input
         value={block.data.url ?? ''}
@@ -673,7 +721,7 @@ function SortableBlockItem({ id, children }: { id: string; children: React.React
 
 function BlockEditor({
   lessonTitle, setLessonTitle, blocks, onChangeBlock, onAddBlock, onReorderBlocks,
-  onSave, onCancel, isSaving, isDirty, hasLesson,
+  onSave, onCancel, isSaving, isDirty, hasLesson, onImageUpload,
 }: {
   lessonTitle: string
   setLessonTitle: (v: string) => void
@@ -686,6 +734,7 @@ function BlockEditor({
   isSaving: boolean
   isDirty: boolean
   hasLesson: boolean
+  onImageUpload?: (file: File) => Promise<string>
 }) {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop')
   const [toolbarVisible, setToolbarVisible] = useState(false)
@@ -824,7 +873,7 @@ function BlockEditor({
                   {blocks.map(block => (
                     <SortableBlockItem key={block.id} id={block.id}>
                       {block.type === 'text' && <EditableTextBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
-                      {block.type === 'image' && <EditableImageBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
+                      {block.type === 'image' && <EditableImageBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} onUpload={onImageUpload} />}
                       {block.type === 'media' && <EditableMediaBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
                       {block.type === 'interaction' && <EditableInteractionBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
                       {block.type === 'quiz' && <EditableQCMBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
@@ -1423,6 +1472,21 @@ export default function EditPage() {
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, data } as ContentBlock : b))
   }, [])
 
+  const handleImageUpload = useCallback(async (file: File): Promise<string> => {
+    const supabase = createClient()
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${user?.organization_id}/courses/images/${Date.now()}.${fileExt}`
+    const tryBuckets = ['course-thumbnails', 'elearning-media', 'course-media']
+    for (const bucket of tryBuckets) {
+      const { error } = await supabase.storage.from(bucket).upload(fileName, file, { cacheControl: '3600', upsert: false })
+      if (!error) {
+        const { data } = supabase.storage.from(bucket).getPublicUrl(fileName)
+        return data.publicUrl
+      }
+    }
+    throw new Error("Impossible d'uploader l'image")
+  }, [user?.organization_id])
+
   const handleAddBlock = useCallback((type: string) => {
     const id = crypto.randomUUID()
     switch (type) {
@@ -1750,6 +1814,7 @@ export default function EditPage() {
                 isSaving={updateLessonMutation.isPending}
                 isDirty={isDirty}
                 hasLesson={!!selectedLessonId}
+                onImageUpload={handleImageUpload}
               />
             )
           })()}
