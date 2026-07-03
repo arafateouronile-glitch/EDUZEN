@@ -697,14 +697,14 @@ function EditablePollBlock({
 
 // ─── Sortable block wrapper ──────────────────────────────────────────
 
-function SortableBlockItem({ id, children }: { id: string; children: React.ReactNode }) {
+function SortableBlockItem({ id, children, onDelete }: { id: string; children: React.ReactNode; onDelete?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
-      className={cn('group/blk relative pl-7', isDragging && 'opacity-30')}
+      className={cn('group/blk relative pl-7 pr-7', isDragging && 'opacity-30')}
     >
       <div
         {...listeners}
@@ -712,6 +712,16 @@ function SortableBlockItem({ id, children }: { id: string; children: React.React
       >
         <GripVertical className="h-5 w-5 text-gray-300 hover:text-gray-400" />
       </div>
+      {onDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="absolute right-0 top-1 opacity-0 group-hover/blk:opacity-100 text-gray-300 hover:text-red-400 transition-colors"
+          title="Supprimer ce bloc"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
       {children}
     </div>
   )
@@ -721,7 +731,7 @@ function SortableBlockItem({ id, children }: { id: string; children: React.React
 
 function BlockEditor({
   lessonTitle, setLessonTitle, blocks, onChangeBlock, onAddBlock, onReorderBlocks,
-  onSave, onCancel, isSaving, isDirty, hasLesson, onImageUpload,
+  onSave, onCancel, isSaving, isDirty, hasLesson, onImageUpload, onDeleteBlock,
 }: {
   lessonTitle: string
   setLessonTitle: (v: string) => void
@@ -735,6 +745,7 @@ function BlockEditor({
   isDirty: boolean
   hasLesson: boolean
   onImageUpload?: (file: File) => Promise<string>
+  onDeleteBlock?: (id: string) => void
 }) {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop')
   const [toolbarVisible, setToolbarVisible] = useState(false)
@@ -871,7 +882,7 @@ function BlockEditor({
               >
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                   {blocks.map(block => (
-                    <SortableBlockItem key={block.id} id={block.id}>
+                    <SortableBlockItem key={block.id} id={block.id} onDelete={onDeleteBlock ? () => onDeleteBlock(block.id) : undefined}>
                       {block.type === 'text' && <EditableTextBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
                       {block.type === 'image' && <EditableImageBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} onUpload={onImageUpload} />}
                       {block.type === 'media' && <EditableMediaBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
@@ -1472,6 +1483,10 @@ export default function EditPage() {
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, data } as ContentBlock : b))
   }, [])
 
+  const handleDeleteBlock = useCallback((id: string) => {
+    setBlocks(prev => prev.filter(b => b.id !== id))
+  }, [])
+
   const handleImageUpload = useCallback(async (file: File): Promise<string> => {
     const supabase = createClient()
     const fileExt = file.name.split('.').pop()
@@ -1815,6 +1830,7 @@ export default function EditPage() {
                 isDirty={isDirty}
                 hasLesson={!!selectedLessonId}
                 onImageUpload={handleImageUpload}
+                onDeleteBlock={handleDeleteBlock}
               />
             )
           })()}
