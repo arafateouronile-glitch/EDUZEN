@@ -11,7 +11,7 @@ import {
   ArrowLeft, Save, X, Monitor, Smartphone, GripVertical,
   ChevronDown, Plus, Image as ImageIcon, Bold, Italic,
   AlignLeft, List, Palette, Type, Video, Zap, HelpCircle,
-  BarChart2, BookOpen, Camera, Check, FileText, Eye, Loader2,
+  BarChart2, BookOpen, Camera, Check, FileText, Eye, Loader2, Minus,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { cn } from '@/lib/utils'
@@ -62,6 +62,7 @@ type ContentBlock =
   | { id: string; type: 'media'; data: MediaBlockData }
   | { id: string; type: 'interaction'; data: InteractionBlockData }
   | { id: string; type: 'poll'; data: PollBlockData }
+  | { id: string; type: 'separator'; data: Record<string, never> }
 
 interface LessonSettings {
   replayable?: boolean
@@ -275,6 +276,7 @@ const DOCK_ITEMS = [
   { id: 'interaction', label: 'Interactions', icon: Zap        },
   { id: 'quiz',        label: 'Quiz',         icon: HelpCircle },
   { id: 'poll',        label: 'Sondage',      icon: BarChart2  },
+  { id: 'separator',   label: 'Séparateur',   icon: Minus      },
 ]
 
 // ─── Floating toolbar ────────────────────────────────────────────────
@@ -889,6 +891,13 @@ function BlockEditor({
                       {block.type === 'interaction' && <EditableInteractionBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
                       {block.type === 'quiz' && <EditableQCMBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
                       {block.type === 'poll' && <EditablePollBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
+                      {block.type === 'separator' && (
+                        <div className="py-3 flex items-center gap-3">
+                          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+                          <Minus className="h-3 w-3 text-gray-300 shrink-0" />
+                          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+                        </div>
+                      )}
                     </SortableBlockItem>
                   ))}
                 </SortableContext>
@@ -1538,6 +1547,9 @@ export default function EditPage() {
             options: [{ text: '' }, { text: '' }],
           },
         }])
+        break
+      case 'separator':
+        setBlocks(prev => [...prev, { id, type: 'separator', data: {} }])
         break
     }
   }, [])
