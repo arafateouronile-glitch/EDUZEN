@@ -93,6 +93,18 @@ export function DemoContent() {
             </p>
           </div>
 
+          {/* Aperçu vidéo */}
+          <div className="rounded-xl overflow-hidden shadow-xl shadow-brand-blue/10 ring-1 ring-black/5">
+            <video
+              src="/videos/VIDEO LP EDUZEN 1.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full block"
+            />
+          </div>
+
           {/* Stats */}
           <div className="flex gap-2.5">
             {STATS.map((stat) => (
@@ -172,6 +184,73 @@ export function DemoContent() {
             <span className="bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">30 minutes chrono.</span>
           </h1>
           <p className="text-gray-500 text-sm mb-4">Une démo en visio, en direct, adaptée à votre situation.</p>
+          <div className="rounded-xl overflow-hidden shadow-lg shadow-brand-blue/10 ring-1 ring-black/5 mb-4">
+            <video
+              src="/videos/VIDEO LP EDUZEN 1.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full block"
+            />
+          </div>
+
+          {/* Stats */}
+          <div className="flex gap-2.5 mb-4">
+            {STATS.map((stat) => (
+              <GlassCard key={stat.label} variant="default" className="flex-1 py-3 px-2 text-center">
+                <div className="font-display font-bold text-lg bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">{stat.value}</div>
+                <div className="text-gray-400 text-[10px] mt-0.5 font-medium leading-tight">{stat.label}</div>
+              </GlassCard>
+            ))}
+          </div>
+
+          {/* Agenda */}
+          <GlassCard variant="default" className="p-4 border-brand-blue/15 mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CalendarCheck2 className="h-4 w-4 text-brand-blue" />
+              <p className="text-gray-700 text-sm font-semibold">Au programme de votre démo</p>
+            </div>
+            <div className="space-y-2">
+              {DEMO_AGENDA.map((item) => (
+                <div key={item} className="flex items-start gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-brand-cyan mt-0.5 flex-shrink-0" />
+                  <span className="text-gray-600 text-xs">{item}</span>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+
+          {/* Témoignages */}
+          <div className="space-y-3 mb-4">
+            {TESTIMONIALS.map((t) => (
+              <GlassCard key={t.author} variant="subtle" className="border-l-4 border-l-brand-cyan rounded-l-none p-4">
+                <div className="flex gap-0.5 mb-2">
+                  {[...Array(5)].map((_, j) => <Star key={j} className="h-2.5 w-2.5 fill-brand-cyan text-brand-cyan" />)}
+                </div>
+                <p className="text-gray-700 text-sm italic leading-relaxed mb-2.5">&ldquo;{t.quote}&rdquo;</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-xs font-semibold">{t.author}</p>
+                    <p className="text-gray-400 text-xs">{t.role}</p>
+                  </div>
+                  <div className="bg-green-50 border border-green-100 rounded-lg px-2.5 py-1">
+                    <p className="text-green-700 text-[10px] font-bold leading-tight">{t.result}</p>
+                  </div>
+                </div>
+              </GlassCard>
+            ))}
+          </div>
+
+          {/* Trust row */}
+          <div className="flex flex-wrap gap-3 mb-2">
+            {TRUST_ROW.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-1.5 text-gray-400 text-xs font-medium">
+                <Icon className="h-3.5 w-3.5 text-brand-blue/60" />
+                {label}
+              </div>
+            ))}
+          </div>
         </div>
 
         <motion.div
