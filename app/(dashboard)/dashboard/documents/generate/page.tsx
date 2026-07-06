@@ -827,26 +827,32 @@ export default function GenerateDocumentPage() {
 
     setSendingEmail(true)
     try {
+      // Convertir les emails séparés par des virgules en tableau
+      const toEmails = emailForm.to.split(',').map((e) => e.trim()).filter(Boolean)
+
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: emailForm.to,
+          to: toEmails.length === 1 ? toEmails[0] : toEmails,
           subject: emailForm.subject,
           message: emailForm.message,
-          attachmentUrl: generatedDocument.fileUrl,
+          attachmentUrl: generatedDocument.fileUrl.startsWith('blob:') ? undefined : generatedDocument.fileUrl,
           attachmentName: generatedDocument.filename,
         }),
       })
 
-      if (!response.ok) throw new Error('Erreur lors de l\'envoi de l\'email')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.details || errorData.error || 'Erreur lors de l\'envoi de l\'email')
+      }
 
       alert('Email envoyé avec succès !')
       setShowEmailModal(false)
       setEmailForm({ to: '', subject: '', message: '' })
     } catch (error) {
       logger.error('Erreur lors de l\'envoi de l\'email:', error)
-      alert('Erreur lors de l\'envoi de l\'email')
+      alert(error instanceof Error ? error.message : 'Erreur lors de l\'envoi de l\'email')
     } finally {
       setSendingEmail(false)
     }
