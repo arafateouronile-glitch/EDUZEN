@@ -85,6 +85,7 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   const { slug } = await params
   const resolvedSearchParams = await searchParams
   const search = typeof resolvedSearchParams.search === 'string' ? resolvedSearchParams.search : undefined
+  const isEmbed = resolvedSearchParams.embed === '1'
   const supabase = await createClient()
 
   // Récupérer l'organisation par son code (slug)
@@ -174,12 +175,14 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   return (
     <>
       <CatalogStyles primaryColor={primaryColor} />
-      <CatalogNavbar 
-        organizationName={organization.name}
-        logoUrl={logoUrl}
-        primaryColor={primaryColor}
-      />
-      <div className="min-h-screen bg-white">
+      {!isEmbed && (
+        <CatalogNavbar
+          organizationName={organization.name}
+          logoUrl={logoUrl}
+          primaryColor={primaryColor}
+        />
+      )}
+      <div className={isEmbed ? 'bg-white' : 'min-h-screen bg-white'}>
         {/* Hero Section Premium */}
         <CatalogHero
           title={heroTitle}
@@ -263,14 +266,32 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
           </div>
         </section>
       </div>
-      <CatalogFooter
-        organizationName={organization.name}
-        footerContent={catalogSettings?.footer_text}
-        contactEmail={catalogSettings?.contact_email || organization.email}
-        contactPhone={catalogSettings?.contact_phone || organization.phone}
-        contactAddress={catalogSettings?.contact_address || organization.address}
-        primaryColor={primaryColor}
-      />
+      {!isEmbed && (
+        <CatalogFooter
+          organizationName={organization.name}
+          footerContent={catalogSettings?.footer_text}
+          contactEmail={catalogSettings?.contact_email || organization.email}
+          contactPhone={catalogSettings?.contact_phone || organization.phone}
+          contactAddress={catalogSettings?.contact_address || organization.address}
+          primaryColor={primaryColor}
+        />
+      )}
+      {isEmbed && (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  function sendHeight() {
+    var h = document.documentElement.scrollHeight;
+    window.parent.postMessage({ type: 'eduzen-resize', height: h }, '*');
+  }
+  sendHeight();
+  new ResizeObserver(sendHeight).observe(document.body);
+})();
+            `.trim(),
+          }}
+        />
+      )}
     </>
   )
 }

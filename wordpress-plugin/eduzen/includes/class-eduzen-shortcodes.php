@@ -7,11 +7,58 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Eduzen_Shortcodes {
 
 	public function init() {
+		add_shortcode( 'eduzen_catalogue', [ $this, 'render_catalogue' ] );
 		add_shortcode( 'eduzen_programs', [ $this, 'render_programs' ] );
 		add_shortcode( 'eduzen_sessions', [ $this, 'render_sessions' ] );
 		add_shortcode( 'eduzen_formations', [ $this, 'render_formations' ] );
 
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
+	}
+
+	public function render_catalogue( $atts ) {
+		$atts = shortcode_atts( [
+			'slug'   => get_option( 'eduzen_org_slug', '' ),
+			'height' => '800',
+		], $atts, 'eduzen_catalogue' );
+
+		$slug = sanitize_text_field( $atts['slug'] );
+		if ( ! $slug ) {
+			return '<div class="eduzen-notice eduzen-notice--error">'
+				. esc_html__( 'EDUZEN : renseignez l\'identifiant organisation dans Réglages → EDUZEN.', 'eduzen' )
+				. '</div>';
+		}
+
+		$height    = absint( $atts['height'] ) ?: 800;
+		$iframe_id = 'eduzen-catalogue-' . esc_attr( substr( md5( $slug ), 0, 8 ) );
+		$src       = esc_url( 'https://www.eduzen.io/cataloguepublic/' . rawurlencode( $slug ) . '?embed=1' );
+
+		ob_start();
+		?>
+<div class="eduzen-catalogue-wrapper" style="width:100%;overflow:hidden;">
+  <iframe
+    id="<?php echo esc_attr( $iframe_id ); ?>"
+    src="<?php echo $src; ?>"
+    width="100%"
+    height="<?php echo esc_attr( $height ); ?>"
+    frameborder="0"
+    scrolling="no"
+    allow="fullscreen"
+    loading="lazy"
+    style="width:100%;border:none;display:block;transition:height .2s ease;"
+  ></iframe>
+</div>
+<script>
+(function() {
+  var iframe = document.getElementById(<?php echo json_encode( $iframe_id ); ?>);
+  if (!iframe) return;
+  window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'eduzen-resize') return;
+    iframe.style.height = (e.data.height + 32) + 'px';
+  }, false);
+})();
+</script>
+		<?php
+		return ob_get_clean();
 	}
 
 	public function enqueue_styles() {

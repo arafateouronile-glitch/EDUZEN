@@ -30,6 +30,9 @@ class Eduzen_Admin {
 	}
 
 	public function register_settings() {
+		register_setting( 'eduzen_options', 'eduzen_org_slug', [
+			'sanitize_callback' => 'sanitize_text_field',
+		] );
 		register_setting( 'eduzen_options', 'eduzen_api_key', [
 			'sanitize_callback' => 'sanitize_text_field',
 		] );
