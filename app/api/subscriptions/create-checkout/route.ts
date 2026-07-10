@@ -147,6 +147,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'subscription',
+      allow_promotion_codes: true,
       success_url: `${APP_URLS.getBaseUrl()}/dashboard/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${APP_URLS.getBaseUrl()}/dashboard/subscribe?canceled=true`,
       metadata: {

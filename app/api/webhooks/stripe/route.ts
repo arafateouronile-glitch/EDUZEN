@@ -389,6 +389,7 @@ async function sendTrialWillEndEmail(subscription: Stripe.Subscription) {
             payment_method_types: ['card'],
             line_items: [{ price: priceId, quantity: 1 }],
             mode: 'subscription',
+            allow_promotion_codes: true,
             success_url: `${APP_URLS.getBaseUrl()}/dashboard/subscribe/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${APP_URLS.getBaseUrl()}/dashboard/subscribe?canceled=true`,
             expires_at: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
