@@ -30,7 +30,7 @@ class Eduzen_Shortcodes {
 
 		$height    = absint( $atts['height'] ) ?: 800;
 		$iframe_id = 'eduzen-catalogue-' . esc_attr( substr( md5( $slug ), 0, 8 ) );
-		$src       = esc_url( 'https://www.eduzen.io/cataloguepublic/' . rawurlencode( $slug ) . '?embed=1' );
+		$src       = esc_url( 'https://www.eduzen.io/embed/' . rawurlencode( $slug ) );
 
 		ob_start();
 		?>

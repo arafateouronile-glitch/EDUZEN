@@ -168,6 +168,17 @@ const nextConfig = {
         ],
       },
       {
+        // Pages d'embed catalogue : autoriser l'intégration dans des iframes externes (WordPress, etc.)
+        source: '/embed/:path*',
+        headers: [
+          { key: 'X-Frame-Options',             value: 'ALLOWALL' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy',   value: 'unsafe-none' },
+          { key: 'Content-Security-Policy',      value: "frame-ancestors *; default-src 'self' 'unsafe-inline' 'unsafe-eval' https:; img-src 'self' data: https: blob:; font-src 'self' data: https:;" },
+        ],
+      },
+      {
         // API v1 publique : autoriser les appels cross-origin (sites WordPress, apps externes)
         source: '/api/v1/:path*',
         headers: [
