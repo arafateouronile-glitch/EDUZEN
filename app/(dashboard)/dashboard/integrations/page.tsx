@@ -43,31 +43,33 @@ import { APIPaywall } from '@/components/integrations/api-paywall'
 import type { PlanTier } from '@/lib/services/plan-limits'
 
 const WEBHOOK_EVENTS = [
-  { value: 'learner.created', label: 'Apprenant cr\u00e9\u00e9', category: 'Apprenants' },
-  { value: 'learner.updated', label: 'Apprenant modifi\u00e9', category: 'Apprenants' },
-  { value: 'learner.deleted', label: 'Apprenant supprim\u00e9', category: 'Apprenants' },
-  { value: 'document.signed', label: 'Document sign\u00e9', category: 'Documents' },
-  { value: 'document.generated', label: 'Document g\u00e9n\u00e9r\u00e9', category: 'Documents' },
-  { value: 'diploma.expired', label: 'Dipl\u00f4me expir\u00e9', category: 'Documents' },
-  { value: 'diploma.expiring_soon', label: 'Dipl\u00f4me expirant bient\u00f4t', category: 'Documents' },
-  { value: 'payment.received', label: 'Paiement re\u00e7u', category: 'Paiements' },
+  { value: 'learner.created', label: 'Apprenant créé', category: 'Apprenants' },
+  { value: 'learner.updated', label: 'Apprenant modifié', category: 'Apprenants' },
+  { value: 'learner.deleted', label: 'Apprenant supprimé', category: 'Apprenants' },
+  { value: 'document.signed', label: 'Document signé', category: 'Documents' },
+  { value: 'document.generated', label: 'Document généré', category: 'Documents' },
+  { value: 'diploma.expired', label: 'Diplôme expiré', category: 'Documents' },
+  { value: 'diploma.expiring_soon', label: 'Diplôme expirant bientôt', category: 'Documents' },
+  { value: 'payment.received', label: 'Paiement reçu', category: 'Paiements' },
   { value: 'payment.overdue', label: 'Paiement en retard', category: 'Paiements' },
-  { value: 'invoice.created', label: 'Facture cr\u00e9\u00e9e', category: 'Paiements' },
-  { value: 'session.started', label: 'Session d\u00e9marr\u00e9e', category: 'Sessions' },
-  { value: 'session.completed', label: 'Session termin\u00e9e', category: 'Sessions' },
-  { value: 'attendance.marked', label: 'Pr\u00e9sence enregistr\u00e9e', category: 'Sessions' },
+  { value: 'invoice.created', label: 'Facture créée', category: 'Paiements' },
+  { value: 'session.started', label: 'Session démarrée', category: 'Sessions' },
+  { value: 'session.completed', label: 'Session terminée', category: 'Sessions' },
+  { value: 'attendance.marked', label: 'Présence enregistrée', category: 'Sessions' },
 ]
 
 const API_SCOPES = [
   { value: 'read:students', label: 'Lire les apprenants' },
-  { value: 'write:students', label: 'Cr\u00e9er/modifier les apprenants' },
-  { value: 'read:documents', label: 'Lire les documents' },
-  { value: 'write:documents', label: 'Cr\u00e9er/modifier les documents' },
-  { value: 'read:payments', label: 'Lire les paiements' },
-  { value: 'write:payments', label: 'Cr\u00e9er/modifier les paiements' },
+  { value: 'write:students', label: 'Créer/modifier les apprenants' },
+  { value: 'read:programs', label: 'Lire les programmes (WordPress)' },
+  { value: 'read:formations', label: 'Lire les formations (WordPress)' },
   { value: 'read:sessions', label: 'Lire les sessions' },
-  { value: 'write:sessions', label: 'Cr\u00e9er/modifier les sessions' },
-  { value: '*', label: 'Tous les acc\u00e8s (admin)' },
+  { value: 'write:sessions', label: 'Créer/modifier les sessions' },
+  { value: 'read:documents', label: 'Lire les documents' },
+  { value: 'write:documents', label: 'Créer/modifier les documents' },
+  { value: 'read:payments', label: 'Lire les paiements' },
+  { value: 'write:payments', label: 'Créer/modifier les paiements' },
+  { value: '*', label: 'Tous les accès (admin)' },
 ]
 
 export default function IntegrationsPage() {
@@ -82,6 +84,7 @@ export default function IntegrationsPage() {
   const [createdKey, setCreatedKey] = useState<string | null>(null)
   const [showKey, setShowKey] = useState(false)
   const [createKeyOpen, setCreateKeyOpen] = useState(false)
+
 
   // State for webhook creation
   const [newWebhookName, setNewWebhookName] = useState('')
@@ -162,7 +165,7 @@ export default function IntegrationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] })
-      addToast({ title: 'Cl\u00e9 r\u00e9voqu\u00e9e', description: 'La cl\u00e9 API a \u00e9t\u00e9 r\u00e9voqu\u00e9e avec succ\u00e8s.', type: 'success' })
+      addToast({ title: 'Clé révoquée', description: 'La clé API a été révoquée avec succès.', type: 'success' })
     },
   })
 
@@ -186,7 +189,7 @@ export default function IntegrationsPage() {
       setNewWebhookName('')
       setNewWebhookUrl('')
       setNewWebhookEvents([])
-      addToast({ title: 'Webhook cr\u00e9\u00e9', description: 'Le webhook a \u00e9t\u00e9 configur\u00e9 avec succ\u00e8s.', type: 'success' })
+      addToast({ title: 'Webhook créé', description: 'Le webhook a été configuré avec succès.', type: 'success' })
     },
     onError: (error: Error) => {
       addToast({ title: 'Erreur', description: error.message, type: 'error' })
@@ -201,7 +204,7 @@ export default function IntegrationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] })
-      addToast({ title: 'Webhook supprim\u00e9', description: 'Le webhook a \u00e9t\u00e9 supprim\u00e9.', type: 'success' })
+      addToast({ title: 'Webhook supprimé', description: 'Le webhook a été supprimé.', type: 'success' })
     },
   })
 
@@ -222,7 +225,7 @@ export default function IntegrationsPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
-    addToast({ title: 'Copi\u00e9', description: 'Copi\u00e9 dans le presse-papiers.', type: 'success' })
+    addToast({ title: 'Copié', description: 'Copié dans le presse-papiers.', type: 'success' })
   }
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://eduzen.io'
@@ -252,7 +255,7 @@ export default function IntegrationsPage() {
         <TabsList className="bg-gray-100/80 p-1 rounded-xl">
           <TabsTrigger value="keys" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm gap-2">
             <Key className="h-4 w-4" />
-            Cl\u00e9s API
+            Clés API
           </TabsTrigger>
           <TabsTrigger value="webhooks" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm gap-2">
             <Webhook className="h-4 w-4" />
@@ -269,31 +272,31 @@ export default function IntegrationsPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Cl\u00e9s API</h2>
-                <p className="text-sm text-gray-500">G\u00e9rez vos cl\u00e9s d'acc\u00e8s \u00e0 l'API REST EDUZEN</p>
+                <h2 className="text-xl font-bold text-gray-900">Clés API</h2>
+                <p className="text-sm text-gray-500">Gérez vos clés d'accès à l'API REST EDUZEN</p>
               </div>
               <Dialog open={createKeyOpen} onOpenChange={setCreateKeyOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-blue shadow-lg shadow-brand-blue/20">
                     <Plus className="h-4 w-4 mr-2" />
-                    G\u00e9n\u00e9rer une cl\u00e9
+                    Générer une clé
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Nouvelle cl\u00e9 API</DialogTitle>
+                    <DialogTitle>Nouvelle clé API</DialogTitle>
                     <DialogDescription>
-                      Cr\u00e9ez une cl\u00e9 pour authentifier vos requ\u00eates vers l'API EDUZEN.
+                      Créez une clé pour authentifier vos requêtes vers l'API EDUZEN.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
                     <div className="space-y-2">
-                      <Label htmlFor="key-name">Nom de la cl\u00e9</Label>
+                      <Label htmlFor="key-name">Nom de la clé</Label>
                       <Input
                         id="key-name"
                         value={newKeyName}
                         onChange={(e) => setNewKeyName(e.target.value)}
-                        placeholder="Ex: Production, D\u00e9veloppement, Zapier"
+                        placeholder="Ex: Production, Développement, Zapier"
                         className="font-mono text-sm"
                       />
                     </div>
@@ -303,7 +306,7 @@ export default function IntegrationsPage() {
                         id="key-desc"
                         value={newKeyDescription}
                         onChange={(e) => setNewKeyDescription(e.target.value)}
-                        placeholder="Usage de cette cl\u00e9..."
+                        placeholder="Usage de cette clé..."
                       />
                     </div>
                     <div className="space-y-2">
@@ -333,7 +336,7 @@ export default function IntegrationsPage() {
                       disabled={!newKeyName || createKeyMutation.isPending}
                       className="w-full"
                     >
-                      {createKeyMutation.isPending ? 'Cr\u00e9ation...' : 'G\u00e9n\u00e9rer la cl\u00e9'}
+                      {createKeyMutation.isPending ? 'Création...' : 'Générer la clé'}
                     </Button>
                   </div>
                 </DialogContent>
@@ -346,10 +349,10 @@ export default function IntegrationsPage() {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-emerald-500" />
-                    Cl\u00e9 API g\u00e9n\u00e9r\u00e9e
+                    Clé API générée
                   </DialogTitle>
                   <DialogDescription>
-                    Copiez cette cl\u00e9 maintenant. Elle ne sera plus jamais affich\u00e9e.
+                    Copiez cette clé maintenant. Elle ne sera plus jamais affichée.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -372,7 +375,7 @@ export default function IntegrationsPage() {
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-amber-800">Cette cl\u00e9 ne sera affich\u00e9e qu'une seule fois</p>
+                      <p className="text-sm font-semibold text-amber-800">Cette clé ne sera affichée qu'une seule fois</p>
                       <p className="text-xs text-amber-700 mt-1">Stockez-la dans un gestionnaire de secrets (ex: .env, Vault).</p>
                     </div>
                   </div>
@@ -404,7 +407,7 @@ export default function IntegrationsPage() {
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                                  R\u00e9voqu\u00e9e
+                                  Révoquée
                                 </span>
                               )}
                             </div>
@@ -420,9 +423,9 @@ export default function IntegrationsPage() {
                               </Button>
                             </div>
                             <div className="flex items-center gap-4 text-xs text-gray-400">
-                              <span>Cr\u00e9\u00e9e le {formatDate(key.created_at)}</span>
-                              {key.last_used_at && <span>Utilis\u00e9e le {formatDate(key.last_used_at)}</span>}
-                              <span>{key.request_count || 0} requ\u00eates</span>
+                              <span>Créée le {formatDate(key.created_at)}</span>
+                              {key.last_used_at && <span>Utilisée le {formatDate(key.last_used_at)}</span>}
+                              <span>{key.request_count || 0} requêtes</span>
                             </div>
                             {key.scopes && key.scopes.length > 0 && (
                               <div className="flex flex-wrap gap-1.5 mt-1">
@@ -454,8 +457,8 @@ export default function IntegrationsPage() {
               <Card className="border-dashed border-2 border-gray-200">
                 <CardContent className="py-12 text-center">
                   <Key className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">Aucune cl\u00e9 API</p>
-                  <p className="text-sm text-gray-400 mt-1">G\u00e9n\u00e9rez votre premi\u00e8re cl\u00e9 pour commencer \u00e0 int\u00e9grer EDUZEN.</p>
+                  <p className="text-gray-500 font-medium">Aucune clé API</p>
+                  <p className="text-sm text-gray-400 mt-1">Générez votre première clé pour commencer à intégrer EDUZEN.</p>
                 </CardContent>
               </Card>
             )}
@@ -468,7 +471,7 @@ export default function IntegrationsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Webhooks</h2>
-                <p className="text-sm text-gray-500">Recevez des notifications en temps r\u00e9el quand des \u00e9v\u00e9nements se produisent</p>
+                <p className="text-sm text-gray-500">Recevez des notifications en temps réel quand des événements se produisent</p>
               </div>
               <Dialog open={createWebhookOpen} onOpenChange={setCreateWebhookOpen}>
                 <DialogTrigger asChild>
@@ -481,7 +484,7 @@ export default function IntegrationsPage() {
                   <DialogHeader>
                     <DialogTitle>Nouveau webhook</DialogTitle>
                     <DialogDescription>
-                      Configurez une URL de destination et les \u00e9v\u00e9nements \u00e0 \u00e9couter.
+                      Configurez une URL de destination et les événements à écouter.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
@@ -503,7 +506,7 @@ export default function IntegrationsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>\u00c9v\u00e9nements</Label>
+                      <Label>Événements</Label>
                       <div className="max-h-56 overflow-y-auto p-3 bg-gray-50 rounded-lg border space-y-3">
                         {Object.entries(
                           WEBHOOK_EVENTS.reduce((acc, evt) => {
@@ -543,7 +546,7 @@ export default function IntegrationsPage() {
                       disabled={!newWebhookName || !newWebhookUrl || newWebhookEvents.length === 0 || createWebhookMutation.isPending}
                       className="w-full bg-purple-600 hover:bg-purple-700"
                     >
-                      {createWebhookMutation.isPending ? 'Cr\u00e9ation...' : 'Cr\u00e9er le webhook'}
+                      {createWebhookMutation.isPending ? 'Création...' : 'Créer le webhook'}
                     </Button>
                   </div>
                 </DialogContent>
@@ -589,11 +592,11 @@ export default function IntegrationsPage() {
                             <div className="flex items-center gap-4 text-xs text-gray-400">
                               <span className="flex items-center gap-1">
                                 <CheckCircle className="h-3 w-3 text-emerald-400" />
-                                {webhook.success_count || 0} succ\u00e8s
+                                {webhook.success_count || 0} succès
                               </span>
                               <span className="flex items-center gap-1">
                                 <AlertCircle className="h-3 w-3 text-red-400" />
-                                {webhook.failure_count || 0} \u00e9checs
+                                {webhook.failure_count || 0} échecs
                               </span>
                               {webhook.last_triggered_at && (
                                 <span>Dernier : {formatDate(webhook.last_triggered_at)}</span>
@@ -618,8 +621,8 @@ export default function IntegrationsPage() {
               <Card className="border-dashed border-2 border-gray-200">
                 <CardContent className="py-12 text-center">
                   <Webhook className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">Aucun webhook configur\u00e9</p>
-                  <p className="text-sm text-gray-400 mt-1">Ajoutez un webhook pour recevoir des notifications en temps r\u00e9el.</p>
+                  <p className="text-gray-500 font-medium">Aucun webhook configuré</p>
+                  <p className="text-sm text-gray-400 mt-1">Ajoutez un webhook pour recevoir des notifications en temps réel.</p>
                 </CardContent>
               </Card>
             )}
@@ -631,7 +634,7 @@ export default function IntegrationsPage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900">Documentation rapide</h2>
-              <p className="text-sm text-gray-500">Tout ce qu'il faut pour commencer \u00e0 utiliser l'API EDUZEN</p>
+              <p className="text-sm text-gray-500">Tout ce qu'il faut pour commencer à utiliser l'API EDUZEN</p>
             </div>
 
             {/* Quick start */}
@@ -642,7 +645,7 @@ export default function IntegrationsPage() {
                   <CardTitle className="text-sm font-mono text-emerald-400">Authentification</CardTitle>
                 </div>
                 <CardDescription className="text-gray-400 text-xs">
-                  Ajoutez votre cl\u00e9 API dans le header <code className="text-emerald-300">x-eduzen-api-key</code>
+                  Ajoutez votre clé API dans le header <code className="text-emerald-300">x-eduzen-api-key</code>
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -680,9 +683,9 @@ export default function IntegrationsPage() {
                 <div className="divide-y">
                   {[
                     { method: 'GET', path: '/api/v1/students', desc: 'Liste des apprenants', color: 'text-emerald-600 bg-emerald-50' },
-                    { method: 'GET', path: '/api/v1/documents/generate', desc: 'G\u00e9n\u00e9rer un document', color: 'text-emerald-600 bg-emerald-50' },
-                    { method: 'GET', path: '/api/v1/document-templates', desc: 'Liste des mod\u00e8les', color: 'text-emerald-600 bg-emerald-50' },
-                    { method: 'GET', path: '/api/v1/document-templates/:id', desc: 'D\u00e9tails d\'un mod\u00e8le', color: 'text-emerald-600 bg-emerald-50' },
+                    { method: 'GET', path: '/api/v1/documents/generate', desc: 'Générer un document', color: 'text-emerald-600 bg-emerald-50' },
+                    { method: 'GET', path: '/api/v1/document-templates', desc: 'Liste des modèles', color: 'text-emerald-600 bg-emerald-50' },
+                    { method: 'GET', path: '/api/v1/document-templates/:id', desc: 'Détails d\'un modèle', color: 'text-emerald-600 bg-emerald-50' },
                     { method: 'GET', path: '/api/v1/docs', desc: 'Documentation OpenAPI', color: 'text-emerald-600 bg-emerald-50' },
                   ].map((endpoint) => (
                     <div key={endpoint.path} className="flex items-center gap-3 py-3">
@@ -702,10 +705,10 @@ export default function IntegrationsPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-purple-400" />
-                  <CardTitle className="text-sm font-mono text-purple-400">V\u00e9rification signature Webhook</CardTitle>
+                  <CardTitle className="text-sm font-mono text-purple-400">Vérification signature Webhook</CardTitle>
                 </div>
                 <CardDescription className="text-gray-400 text-xs">
-                  V\u00e9rifiez l'en-t\u00eate <code className="text-purple-300">X-Webhook-Signature</code> pour s\u00e9curiser la r\u00e9ception
+                  Vérifiez l'en-tête <code className="text-purple-300">X-Webhook-Signature</code> pour sécuriser la réception
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -735,7 +738,7 @@ function verifySignature(payload, signature, secret) {
                     <ExternalLink className="h-5 w-5 text-brand-blue" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">Documentation compl\u00e8te</h3>
+                    <h3 className="font-semibold text-gray-900">Documentation complète</h3>
                     <p className="text-sm text-gray-500">OpenAPI / Swagger</p>
                   </div>
                 </CardContent>
@@ -747,8 +750,8 @@ function verifySignature(payload, signature, secret) {
                     <Zap className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">Int\u00e9gration Zapier</h3>
-                    <p className="text-sm text-gray-500">Connectez \u00e0 5 000+ applications</p>
+                    <h3 className="font-semibold text-gray-900">Intégration Zapier</h3>
+                    <p className="text-sm text-gray-500">Connectez à 5 000+ applications</p>
                   </div>
                 </CardContent>
               </Card>
@@ -773,10 +776,10 @@ function PageHeader() {
         </div>
         <div>
           <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">
-            Int\u00e9grations & API
+            Intégrations & API
           </h1>
           <p className="text-gray-500 text-sm">
-            Connectez EDUZEN \u00e0 vos outils : Zapier, Make, HubSpot, et plus encore
+            Connectez EDUZEN à vos outils : Zapier, Make, HubSpot, et plus encore
           </p>
         </div>
       </div>

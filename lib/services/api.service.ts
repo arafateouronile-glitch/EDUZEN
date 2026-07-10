@@ -294,37 +294,62 @@ export class APIService {
   ): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
     const { data: quota } = await this.db
       .from('api_quotas')
-      .select('*')
+      .select('requests_per_minute, requests_per_hour, requests_per_day')
       .eq('organization_id', organizationId)
-      .single()
+      .maybeSingle()
 
     if (!quota) {
-      // Créer un quota par défaut
       await this.ensureQuotaExists(organizationId)
       return { allowed: true, remaining: 10000, resetAt: new Date() }
     }
 
     const now = new Date()
-    // Vérifier les quotas
-    if (quota.requests_used_minute >= (quota.requests_per_minute || 120)) {
+    const oneMinuteAgo = new Date(now.getTime() - 60 * 1000)
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+    // Compter dynamiquement depuis api_requests (fenêtre glissante, jamais figée)
+    const { count: minuteCount } = await this.db
+      .from('api_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .gte('created_at', oneMinuteAgo.toISOString())
+
+    const { count: hourCount } = await this.db
+      .from('api_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .gte('created_at', oneHourAgo.toISOString())
+
+    const { count: dayCount } = await this.db
+      .from('api_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .gte('created_at', oneDayAgo.toISOString())
+
+    const limitMinute = quota.requests_per_minute || 120
+    const limitHour   = quota.requests_per_hour   || 2000
+    const limitDay    = quota.requests_per_day    || 20000
+
+    if (minuteCount && minuteCount >= limitMinute) {
       return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 60 * 1000) }
     }
 
-    if (quota.requests_used_hour >= (quota.requests_per_hour || 2000)) {
+    if (hourCount && hourCount >= limitHour) {
       return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 60 * 60 * 1000) }
     }
 
-    if (quota.requests_used_day >= (quota.requests_per_day || 20000)) {
+    if (dayCount && dayCount >= limitDay) {
       return { allowed: false, remaining: 0, resetAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) }
     }
 
     const remaining = Math.min(
-      (quota.requests_per_minute || 120) - quota.requests_used_minute,
-      (quota.requests_per_hour || 2000) - quota.requests_used_hour,
-      (quota.requests_per_day || 20000) - quota.requests_used_day
+      limitMinute - (minuteCount || 0),
+      limitHour   - (hourCount   || 0),
+      limitDay    - (dayCount    || 0)
     )
 
-    return { allowed: true, remaining, resetAt: new Date() }
+    return { allowed: true, remaining, resetAt: new Date(now.getTime() + 60 * 1000) }
   }
 
   /**

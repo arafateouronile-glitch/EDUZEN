@@ -21,7 +21,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'EDUZEN_VERSION', '1.0.0' );
 define( 'EDUZEN_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'EDUZEN_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'EDUZEN_API_URL', 'https://eduzen.fr/api/v1' );
+// Permet de surcharger l'URL via la constante wp-config.php ou la variable d'environnement EDUZEN_API_URL
+if ( ! defined( 'EDUZEN_API_URL' ) ) {
+	define( 'EDUZEN_API_URL', getenv( 'EDUZEN_API_URL' ) ?: 'https://www.eduzen.io/api/v1' );
+}
 
 require_once EDUZEN_PLUGIN_DIR . 'includes/class-eduzen-cache.php';
 require_once EDUZEN_PLUGIN_DIR . 'includes/class-eduzen-api.php';
