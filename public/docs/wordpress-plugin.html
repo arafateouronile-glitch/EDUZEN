@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDUZEN WordPress Plugin — Documentation</title>
+<style>
+/* ── Tokens ──────────────────────────────────────────────────── */
+:root {
+  --navy:        #274472;
+  --navy-dark:   #1a2e50;
+  --sky:         #4a8fd4;
+  --sky-soft:    #eff6ff;
+  --green:       #16a34a;
+  --green-soft:  #f0fdf4;
+  --amber:       #d97706;
+  --amber-soft:  #fffbeb;
+  --red:         #dc2626;
+  --red-soft:    #fef2f2;
+
+  --bg:          #f8fafc;
+  --surface:     #ffffff;
+  --sidebar-bg:  #ffffff;
+  --border:      #e2e8f0;
+  --border-soft: #f1f5f9;
+
+  --text:        #0f172a;
+  --text-2:      #475569;
+  --text-3:      #94a3b8;
+  --link:        #2563eb;
+
+  --code-bg:     #0d1b2e;
+  --code-text:   #cbd5e1;
+  --code-kw:     #7dd3fc;
+  --code-str:    #86efac;
+  --code-cmt:    #475569;
+  --code-fn:     #f9a8d4;
+  --code-num:    #fdba74;
+  --code-attr:   #c4b5fd;
+
+  --step-size:   28px;
+  --radius:      6px;
+  --sidebar-w:   268px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:          #0c1220;
+    --surface:     #111827;
+    --sidebar-bg:  #0f1829;
+    --border:      #1e3355;
+    --border-soft: #162040;
+    --text:        #e2e8f0;
+    --text-2:      #94a3b8;
+    --text-3:      #475569;
+    --link:        #60a5fa;
+    --sky-soft:    #1e3a5f;
+    --green-soft:  #052e16;
+    --amber-soft:  #1c1407;
+    --red-soft:    #1f0707;
+    --code-bg:     #060e1a;
+    --code-cmt:    #3d5068;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:          #0c1220;
+  --surface:     #111827;
+  --sidebar-bg:  #0f1829;
+  --border:      #1e3355;
+  --border-soft: #162040;
+  --text:        #e2e8f0;
+  --text-2:      #94a3b8;
+  --text-3:      #475569;
+  --link:        #60a5fa;
+  --sky-soft:    #1e3a5f;
+  --green-soft:  #052e16;
+  --amber-soft:  #1c1407;
+  --red-soft:    #1f0707;
+  --code-bg:     #060e1a;
+  --code-cmt:    #3d5068;
+}
+:root[data-theme="light"] {
+  --bg:          #f8fafc;
+  --surface:     #ffffff;
+  --sidebar-bg:  #ffffff;
+  --border:      #e2e8f0;
+  --border-soft: #f1f5f9;
+  --text:        #0f172a;
+  --text-2:      #475569;
+  --text-3:      #94a3b8;
+  --link:        #2563eb;
+  --sky-soft:    #eff6ff;
+  --green-soft:  #f0fdf4;
+  --amber-soft:  #fffbeb;
+  --red-soft:    #fef2f2;
+  --code-bg:     #0d1b2e;
+  --code-cmt:    #475569;
+}
+
+/* ── Reset & base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* ── Sidebar ──────────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  border-right: 2px solid var(--navy);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.sidebar-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.sidebar-logo {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--navy) 0%, #3d6491 100%);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  font-style: italic;
+  flex-shrink: 0;
+}
+.sidebar-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.sidebar-subtitle {
+  font-size: 10.5px;
+  color: var(--text-3);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.version-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  letter-spacing: .04em;
+  margin-top: 8px;
+}
+
+.sidebar-nav {
+  padding: 12px 0 24px;
+  flex: 1;
+}
+.nav-group-label {
+  padding: 8px 20px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 20px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: color .12s, background .12s;
+  border-left: 2px solid transparent;
+  margin-left: -2px;
+  line-height: 1.3;
+}
+.nav-link:hover { color: var(--text); background: var(--bg); text-decoration: none; }
+.nav-link.active { color: var(--navy); font-weight: 600; border-left-color: var(--navy); background: var(--sky-soft); }
+.nav-link .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background .12s;
+}
+.nav-link.active .dot, .nav-link:hover .dot { background: var(--sky); }
+
+/* ── Theme toggle ─────────────────────────────────────────────── */
+.theme-toggle {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.theme-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-3);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  width: 100%;
+  justify-content: center;
+}
+.theme-btn:hover { color: var(--text-2); border-color: var(--text-3); }
+
+/* ── Main content ─────────────────────────────────────────────── */
+.main {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+  padding: 0 0 80px;
+}
+
+.content {
+  max-width: 820px;
+  padding: 56px 48px;
+}
+
+/* ── Section headers ──────────────────────────────────────────── */
+.doc-section {
+  padding-top: 16px;
+  margin-bottom: 64px;
+  scroll-margin-top: 24px;
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -.03em;
+  color: var(--text);
+  text-wrap: balance;
+  margin-bottom: 16px;
+}
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--text);
+  text-wrap: balance;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+h3 {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--text);
+  margin: 24px 0 8px;
+}
+h4 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin: 20px 0 6px;
+}
+
+p { color: var(--text-2); margin-bottom: 14px; }
+p:last-child { margin-bottom: 0; }
+p strong { color: var(--text); font-weight: 600; }
+
+/* ── Hero / intro ─────────────────────────────────────────────── */
+.doc-hero {
+  background: linear-gradient(135deg, var(--navy) 0%, #1f5c9e 100%);
+  padding: 48px 48px 44px;
+  margin-bottom: 0;
+}
+.doc-hero h1 { color: #fff; margin-bottom: 12px; }
+.doc-hero .hero-sub { color: rgba(255,255,255,.75); font-size: 17px; margin-bottom: 24px; line-height: 1.55; max-width: 580px; }
+.hero-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.hero-pill {
+  padding: 4px 12px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  color: rgba(255,255,255,.9);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Mode cards ───────────────────────────────────────────────── */
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.mode-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  background: var(--surface);
+  transition: border-color .18s, box-shadow .18s;
+}
+.mode-card:hover { border-color: var(--sky); box-shadow: 0 2px 12px rgba(74,143,212,.12); }
+.mode-card-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+.mode-card h3 { margin: 0 0 6px; font-size: 14px; }
+.mode-card p { font-size: 13px; color: var(--text-2); margin: 0; }
+.tag-recommended {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--green);
+  background: var(--green-soft);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-bottom: 6px;
+}
+
+/* ── Steps (installation) ─────────────────────────────────────── */
+.steps { display: flex; flex-direction: column; gap: 0; margin: 24px 0; }
+.step {
+  display: grid;
+  grid-template-columns: var(--step-size) 1fr;
+  gap: 0 16px;
+  position: relative;
+}
+.step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--step-size) / 2 - .5px);
+  top: var(--step-size);
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.step-num {
+  width: var(--step-size);
+  height: var(--step-size);
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+  margin-top: 2px;
+}
+.step-content {
+  padding-bottom: 28px;
+}
+.step-content h3 { margin-top: 2px; }
+
+/* ── Code blocks ──────────────────────────────────────────────── */
+.code-wrap {
+  position: relative;
+  margin: 16px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.06);
+}
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.code-lang {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.4);
+  font-family: ui-monospace, "Cascadia Code", "JetBrains Mono", monospace;
+}
+.copy-btn {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,.4);
+  background: none;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.copy-btn:hover { color: rgba(255,255,255,.8); border-color: rgba(255,255,255,.3); }
+.copy-btn.copied { color: #86efac; border-color: #86efac44; }
+
+pre {
+  background: var(--code-bg);
+  padding: 16px 20px;
+  overflow-x: auto;
+  font-size: 13.5px;
+  line-height: 1.7;
+  margin: 0;
+}
+pre code {
+  font-family: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, monospace;
+  color: var(--code-text);
+}
+.kw  { color: var(--code-kw); }
+.str { color: var(--code-str); }
+.cmt { color: var(--code-cmt); font-style: italic; }
+.fn  { color: var(--code-fn); }
+.num { color: var(--code-num); }
+.at  { color: var(--code-attr); }
+
+code {
+  font-family: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, monospace;
+  font-size: .87em;
+  background: var(--border-soft);
+  color: var(--navy);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+:root[data-theme="dark"] code, @media (prefers-color-scheme: dark) { code { background: #1e3355; color: #7dd3fc; border-color: #1e3355; } }
+:root[data-theme="dark"] code { background: #1e3355; color: #7dd3fc; border-color: #1e3355; }
+
+/* ── Tables ───────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; margin: 16px 0; border-radius: 8px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+thead { background: var(--bg); }
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 10px 14px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+  line-height: 1.5;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg); }
+td code { font-size: .82em; }
+td strong { color: var(--text); }
+
+/* ── Callouts ─────────────────────────────────────────────────── */
+.callout {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  border: 1px solid;
+}
+.callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.callout-body { color: var(--text-2); }
+.callout-body strong { color: var(--text); }
+.callout.info { background: var(--sky-soft); border-color: #bfdbfe; }
+.callout.warning { background: var(--amber-soft); border-color: #fde68a; }
+.callout.danger { background: var(--red-soft); border-color: #fecaca; }
+.callout.success { background: var(--green-soft); border-color: #bbf7d0; }
+
+/* ── Shortcode badges ─────────────────────────────────────────── */
+.shortcode-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 12px 0;
+}
+.shortcode-name {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--sky-soft);
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 4px 12px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+:root[data-theme="dark"] .shortcode-name { background: #1e3355; border-color: #1e4080; color: var(--code-kw); }
+.shortcode-desc { font-size: 14px; color: var(--text-2); margin-bottom: 10px; }
+.attrs { display: flex; flex-direction: column; gap: 6px; }
+.attr {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0 12px;
+  font-size: 13px;
+  align-items: baseline;
+}
+.attr-name { font-family: ui-monospace, monospace; color: var(--code-attr); font-size: 12.5px; }
+:root[data-theme="dark"] .attr-name { color: var(--code-attr); }
+.attr-desc { color: var(--text-2); }
+.attr-desc .default { color: var(--text-3); font-size: 12px; }
+
+/* ── Options table rows by type ───────────────────────────────── */
+.pill {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+.pill-str { background: var(--sky-soft); color: var(--sky); }
+.pill-color { background: #fdf4ff; color: #9333ea; }
+.pill-int { background: var(--amber-soft); color: var(--amber); }
+.pill-url { background: var(--green-soft); color: var(--green); }
+.pill-json { background: #1e293b; color: #94a3b8; }
+.pill-ts { background: var(--border-soft); color: var(--text-3); }
+:root[data-theme="dark"] .pill-str { background: #1e3a5f; }
+:root[data-theme="dark"] .pill-color { background: #2e1048; }
+:root[data-theme="dark"] .pill-int { background: #2a1f06; }
+:root[data-theme="dark"] .pill-url { background: #052e16; }
+
+/* ── Troubleshoot items ───────────────────────────────────────── */
+.trouble-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+.trouble-q {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  list-style: none;
+}
+.trouble-q::-webkit-details-marker { display: none; }
+.trouble-q::after { content: '▾'; font-size: 12px; color: var(--text-3); transition: transform .2s; }
+details[open] .trouble-q::after { transform: rotate(-180deg); }
+.trouble-a {
+  padding: 14px 16px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg);
+  line-height: 1.65;
+}
+.trouble-a p { margin-bottom: 8px; }
+.trouble-a p:last-child { margin-bottom: 0; }
+
+/* ── Divider ──────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 40px 0; }
+
+/* ── Meta row ─────────────────────────────────────────────────── */
+.meta-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.meta-item { display: flex; align-items: center; gap: 5px; }
+.meta-dot { width: 4px; height: 4px; background: var(--border); border-radius: 50%; }
+
+/* ── Screenshot placeholder ───────────────────────────────────── */
+.screenshot {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 24px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+  margin: 16px 0;
+}
+.screenshot-inner {
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 32px;
+  background: var(--bg);
+}
+
+/* ── URL anatomy ──────────────────────────────────────────────── */
+.url-anatomy {
+  background: var(--code-bg);
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin: 14px 0;
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  color: var(--code-text);
+  overflow-x: auto;
+}
+.url-segment { display: inline; }
+.url-base { color: var(--code-cmt); }
+.url-slug { color: var(--code-kw); font-weight: 700; }
+.url-sep { color: rgba(255,255,255,.3); }
+.url-post { color: var(--code-str); }
+.url-labels {
+  display: flex;
+  gap: 0;
+  margin-top: 8px;
+  font-size: 11px;
+}
+.url-label { color: var(--text-3); flex: 1; text-align: center; font-family: ui-sans-serif, sans-serif; }
+
+/* ── Responsive ───────────────────────────────────────────────── */
+@media (max-width: 800px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .content { padding: 32px 20px; }
+  .attr { grid-template-columns: 1fr; }
+  h1 { font-size: 24px; }
+  .doc-hero { padding: 32px 20px; }
+  .mode-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ─────────────────────────────────────────────── -->
+<nav class="sidebar" aria-label="Documentation">
+  <div class="sidebar-header">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">E</div>
+      <div>
+        <div class="sidebar-title">EDUZEN Plugin</div>
+        <div class="sidebar-subtitle">WordPress</div>
+      </div>
+    </div>
+    <span class="version-badge">v2.0.0</span>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-group-label">Introduction</div>
+    <a class="nav-link active" href="#overview"><span class="dot"></span>Vue d'ensemble</a>
+    <a class="nav-link" href="#requirements"><span class="dot"></span>Prérequis</a>
+
+    <div class="nav-group-label">Installation</div>
+    <a class="nav-link" href="#install"><span class="dot"></span>Installation</a>
+    <a class="nav-link" href="#config"><span class="dot"></span>Configuration initiale</a>
+
+    <div class="nav-group-label">Catalogue CPT</div>
+    <a class="nav-link" href="#cpt-intro"><span class="dot"></span>Présentation</a>
+    <a class="nav-link" href="#sync"><span class="dot"></span>Synchronisation</a>
+    <a class="nav-link" href="#urls"><span class="dot"></span>URLs générées</a>
+    <a class="nav-link" href="#seo"><span class="dot"></span>SEO & Schema.org</a>
+    <a class="nav-link" href="#branding"><span class="dot"></span>Personnalisation</a>
+
+    <div class="nav-group-label">Intégrations</div>
+    <a class="nav-link" href="#iframe"><span class="dot"></span>Iframe catalogue</a>
+    <a class="nav-link" href="#shortcodes"><span class="dot"></span>Shortcodes API</a>
+
+    <div class="nav-group-label">Référence</div>
+    <a class="nav-link" href="#options"><span class="dot"></span>Options WordPress</a>
+    <a class="nav-link" href="#cron"><span class="dot"></span>WP-Cron</a>
+    <a class="nav-link" href="#troubleshoot"><span class="dot"></span>Dépannage</a>
+  </div>
+
+  <div class="theme-toggle">
+    <button class="theme-btn" id="themeBtn" aria-label="Changer le thème">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/></svg>
+      Thème clair / sombre
+    </button>
+  </div>
+</nav>
+
+<!-- ── Main ────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- Hero -->
+  <div class="doc-hero">
+    <div class="eyebrow" style="color:rgba(255,255,255,.5);">Documentation officielle</div>
+    <h1>EDUZEN Connexion Site</h1>
+    <p class="hero-sub">Intégrez votre catalogue de formations EDUZEN dans WordPress — pages indexables par Google, synchronisation automatique, design personnalisable.</p>
+    <div class="hero-pills">
+      <span class="hero-pill">WordPress 5.8+</span>
+      <span class="hero-pill">PHP 7.4+</span>
+      <span class="hero-pill">Plan Enterprise</span>
+      <span class="hero-pill">GPL-2.0</span>
+    </div>
+    <div style="margin-top:24px;">
+      <a href="/downloads/eduzen-wordpress-plugin.zip" download
+         style="display:inline-flex;align-items:center;gap:10px;background:#fff;color:#274472;font-weight:700;font-size:15px;padding:12px 24px;border-radius:8px;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.18);transition:box-shadow .15s;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Télécharger le plugin (.zip)
+      </a>
+      <span style="display:inline-block;margin-left:16px;color:rgba(255,255,255,.6);font-size:13px;">v2.0.0 · eduzen-wordpress-plugin.zip</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+  <!-- ── Vue d'ensemble ──────────────────────────────────────── -->
+  <section class="doc-section" id="overview">
+    <div class="eyebrow">Introduction</div>
+    <h2>Vue d'ensemble</h2>
+
+    <p>Le plugin <strong>EDUZEN Connexion Site</strong> connecte votre site WordPress à votre espace EDUZEN. Il propose trois modes d'intégration selon vos besoins :</p>
+
+    <div class="mode-grid">
+      <div class="mode-card">
+        <div class="mode-card-icon" style="background:#eff6ff;">📄</div>
+        <div class="tag-recommended">Recommandé</div>
+        <h3>Catalogue CPT</h3>
+        <p>Pages WordPress réelles, indexées par Google. Synchronisation automatique quotidienne depuis EDUZEN.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-card-icon" style="background:#f0f9ff;">🖼</div>
+        <h3>Iframe catalogue</h3>
+        <p>Shortcode <code>[eduzen_catalogue]</code> — intègre votre catalogue EDUZEN en iframe plein écran sur n'importe quelle page.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mode-card-icon" style="background:#fdf4ff;">⚡</div>
+        <h3>Shortcodes API</h3>
+        <p>Affichage partiel et personnalisé : programmes, sessions, formations via des shortcodes flexibles.</p>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div class="callout-body">
+        <strong>Plan Enterprise requis.</strong> Ce plugin est exclusivement disponible pour les clients EDUZEN ayant souscrit au plan Enterprise. La clé API et l'identifiant organisation sont nécessaires pour la synchronisation des données.
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Prérequis ───────────────────────────────────────────── -->
+  <section class="doc-section" id="requirements">
+    <div class="eyebrow">Avant de commencer</div>
+    <h2>Prérequis</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Composant</th><th>Version minimale</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>WordPress</strong></td><td>5.8</td><td>Requis pour les Custom Post Types modernes et WP-Cron fiable</td></tr>
+          <tr><td><strong>PHP</strong></td><td>7.4</td><td>PHP 8.1+ recommandé (closures arrow functions)</td></tr>
+          <tr><td><strong>Plan EDUZEN</strong></td><td>Enterprise</td><td>Clé API + identifiant organisation fournis dans votre dashboard</td></tr>
+          <tr><td><strong>HTTPS</strong></td><td>Obligatoire</td><td>L'API EDUZEN rejette les connexions non sécurisées</td></tr>
+          <tr><td><strong>WP-Cron</strong></td><td>Activé</td><td>Nécessaire pour la synchronisation automatique quotidienne</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Récupérer vos identifiants EDUZEN</h3>
+    <p>Dans votre dashboard EDUZEN :</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content"><p><strong>Identifiant organisation</strong> : Réglages → Profil organisation → champ <em>Code organisation</em>. Exemple : <code>UNIPARISIVRY2025</code></p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content"><p><strong>Clé API</strong> : Réglages → Intégrations → Clés API → <em>Générer une clé</em>. La clé commence par <code>eduz_</code></p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Installation ────────────────────────────────────────── -->
+  <section class="doc-section" id="install">
+    <div class="eyebrow">Mise en place</div>
+    <h2>Installation</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Télécharger le plugin</h3>
+          <p>Récupérez le fichier <code>eduzen.zip</code> depuis votre espace client EDUZEN (section <em>Téléchargements</em>) ou directement depuis votre dashboard Enterprise.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Uploader dans WordPress</h3>
+          <p>Dans l'admin WordPress : <strong>Extensions → Ajouter → Téléverser une extension</strong>. Sélectionnez le fichier <code>eduzen.zip</code> et cliquez <em>Installer maintenant</em>.</p>
+          <p>Ou, en SSH/FTP, décompressez le fichier dans <code>/wp-content/plugins/</code> :</p>
+          <div class="code-wrap">
+            <div class="code-header"><span class="code-lang">bash</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+            <pre><code>unzip eduzen.zip -d /var/www/html/wp-content/plugins/</code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Activer le plugin</h3>
+          <p>Extensions → <strong>EDUZEN Connexion Site</strong> → <em>Activer</em>. L'activation enregistre automatiquement le Custom Post Type et planifie la synchronisation quotidienne.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h3>Régénérer les permaliens</h3>
+          <p>Obligatoire après l'activation pour que les URLs du catalogue fonctionnent.</p>
+          <p><strong>Réglages → Permaliens</strong> → cliquez <em>Enregistrer les modifications</em> sans rien changer.</p>
+          <div class="callout warning">
+            <span class="callout-icon">⚠️</span>
+            <div class="callout-body">Sans cette étape, les pages <code>/formations/</code> et fiches programme renvoient une erreur 404.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Configuration ───────────────────────────────────────── -->
+  <section class="doc-section" id="config">
+    <div class="eyebrow">Mise en place</div>
+    <h2>Configuration initiale</h2>
+
+    <p>Accédez aux réglages via <strong>Réglages → EDUZEN</strong> dans l'admin WordPress.</p>
+
+    <h3>Section Connexion EDUZEN</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Champ</th><th>Valeur</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Identifiant organisation</strong></td>
+            <td><code>UNIPARISIVRY2025</code></td>
+            <td>Code organisation EDUZEN — utilisé par le shortcode <code>[eduzen_catalogue]</code></td>
+          </tr>
+          <tr>
+            <td><strong>Clé API</strong></td>
+            <td><code>eduz_xxxx…</code></td>
+            <td>Authentifie les appels à l'API EDUZEN. Cliquez <em>Tester la connexion</em> pour valider.</td>
+          </tr>
+          <tr>
+            <td><strong>Cache API</strong></td>
+            <td><code>15</code> (minutes)</td>
+            <td>Durée de mise en cache des réponses API pour les shortcodes. Sans effet sur le CPT.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Section Catalogue CPT</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Champ</th><th>Défaut</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>URL du catalogue</strong></td>
+            <td><code>formations</code></td>
+            <td>Segment de l'URL : <code>votre-site.fr/<strong>formations</strong>/</code>. Modifiez selon votre arborescence.</td>
+          </tr>
+          <tr>
+            <td><strong>Titre catalogue</strong></td>
+            <td>Catalogue des formations</td>
+            <td>Titre affiché dans le hero de la page d'archive.</td>
+          </tr>
+          <tr>
+            <td><strong>Sous-titre catalogue</strong></td>
+            <td>Découvrez nos programmes…</td>
+            <td>Texte sous le titre dans le hero.</td>
+          </tr>
+          <tr>
+            <td><strong>Couleur principale</strong></td>
+            <td><code>#274472</code></td>
+            <td>Couleur de votre charte — injectée en variable CSS sur toutes les pages du catalogue.</td>
+          </tr>
+          <tr>
+            <td><strong>URL contact / inscription</strong></td>
+            <td><code>#contact</code></td>
+            <td>Cible des boutons "Demander des informations" et "S'inscrire" sur les fiches programme.</td>
+          </tr>
+          <tr>
+            <td><strong>Texte du bouton CTA</strong></td>
+            <td>Demander des informations</td>
+            <td>Label du bouton principal sur les fiches programme.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">Après avoir changé l'<strong>URL du catalogue</strong>, retournez dans <em>Réglages → Permaliens</em> et cliquez <em>Enregistrer</em> pour prendre en compte le nouveau slug.</div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ── CPT Intro ───────────────────────────────────────────── -->
+  <section class="doc-section" id="cpt-intro">
+    <div class="eyebrow">Catalogue CPT</div>
+    <h2>Présentation du catalogue WordPress</h2>
+
+    <p>Le mode <strong>Catalogue CPT</strong> crée de vraies pages WordPress pour chacun de vos programmes EDUZEN, indexées par Google avec des balises Schema.org et des URLs propres. C'est l'équivalent du <em>Catalogue de formations WordPress</em> proposé par Digiforma.</p>
+
+    <p>Deux types de pages sont générées automatiquement :</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Page</th><th>URL</th><th>Contenu</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Archive (catalogue)</strong></td>
+            <td><code>/formations/</code></td>
+            <td>Grille de toutes les formations avec filtre par catégorie, statistiques, prix</td>
+          </tr>
+          <tr>
+            <td><strong>Catégorie</strong></td>
+            <td><code>/formations/categorie/cybersecurite/</code></td>
+            <td>Sous-catalogue filtré par catégorie EDUZEN</td>
+          </tr>
+          <tr>
+            <td><strong>Fiche programme</strong></td>
+            <td><code>/formations/ssiap-1/</code></td>
+            <td>Description, sessions à venir, modules, prix, statistiques, Schema.org</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Synchronisation ─────────────────────────────────────── -->
+  <section class="doc-section" id="sync">
+    <div class="eyebrow">Catalogue CPT</div>
+    <h2>Synchronisation</h2>
+
+    <h3>Lancement manuel</h3>
+    <p>Dans <strong>Réglages → EDUZEN → section Synchronisation</strong>, cliquez <em>🔄 Synchroniser maintenant</em>. Le plugin récupère l'ensemble de vos programmes, formations et sessions depuis l'API EDUZEN, puis crée ou met à jour les posts WordPress correspondants.</p>
+
+    <h3>Ce que fait la synchronisation</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Action</th><th>Comportement</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Nouveau programme</strong></td><td>Crée un post <code>eduzen_program</code> avec le titre, la description, l'excerpt et toutes les métadonnées.</td></tr>
+          <tr><td><strong>Programme modifié dans EDUZEN</strong></td><td>Met à jour le post WordPress existant (titre, contenu, prix, sessions, etc.).</td></tr>
+          <tr><td><strong>Programme retiré de EDUZEN</strong></td><td>Passe le post en <code>draft</code> — il disparaît du site sans être supprimé.</td></tr>
+          <tr><td><strong>Catégories</strong></td><td>Crée ou met à jour les termes de la taxonomie <code>eduzen_category</code>.</td></tr>
+          <tr><td><strong>Permaliens</strong></td><td>Regénère les règles de réécriture après chaque sync.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Synchronisation automatique</h3>
+    <p>Un événement WP-Cron <code>eduzen_daily_sync</code> est planifié à l'activation du plugin. Il s'exécute <strong>une fois par jour</strong> et maintient votre catalogue WordPress à jour sans intervention manuelle.</p>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">
+        <strong>WP-Cron et trafic.</strong> WP-Cron ne se déclenche que lors d'une visite sur le site. Sur les sites à faible trafic, ajoutez un vrai cron système pour garantir l'exécution quotidienne :
+        <div class="code-wrap" style="margin-top:10px;">
+          <div class="code-header"><span class="code-lang">bash — crontab système</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code>0 3 * * * wget -q -O- https://votre-site.fr/wp-cron.php?doing_wp_cron >/dev/null</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <h3>Données synchronisées par programme</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Champ WordPress</th><th>Source EDUZEN</th></tr></thead>
+        <tbody>
+          <tr><td><code>post_title</code></td><td><code>program.name</code></td></tr>
+          <tr><td><code>post_content</code></td><td>Description + modules + sessions (HTML indexable)</td></tr>
+          <tr><td><code>post_excerpt</code></td><td><code>program.public_description</code></td></tr>
+          <tr><td><code>_eduzen_price</code></td><td><code>program.price</code> ou <code>price_individual</code></td></tr>
+          <tr><td><code>_eduzen_success_rate</code></td><td><code>program.success_rate</code> (%)</td></tr>
+          <tr><td><code>_eduzen_satisfaction_rate</code></td><td><code>program.satisfaction_rate</code> (%)</td></tr>
+          <tr><td><code>_eduzen_total_learners</code></td><td><code>program.total_learners</code></td></tr>
+          <tr><td><code>_eduzen_image_url</code></td><td><code>program.public_image_url</code></td></tr>
+          <tr><td><code>_eduzen_sessions</code></td><td>JSON — toutes les sessions du programme</td></tr>
+          <tr><td><code>_eduzen_formations</code></td><td>JSON — tous les modules du programme</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── URLs ────────────────────────────────────────────────── -->
+  <section class="doc-section" id="urls">
+    <div class="eyebrow">Catalogue CPT</div>
+    <h2>URLs générées</h2>
+
+    <p>L'URL de chaque page est composée du <strong>slug du catalogue</strong> (configurable) et du slug WordPress du titre du programme :</p>
+
+    <div class="url-anatomy">
+      <span class="url-base">https://votre-site.fr</span><span class="url-sep">/</span><span class="url-slug">formations</span><span class="url-sep">/</span><span class="url-post">ssiap-1-agent-de-securite-incendie</span><span class="url-sep">/</span>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">🔗</span>
+      <div class="callout-body">
+        <strong>Conflit de slug.</strong> Si une page WordPress classique a déjà le même slug que votre catalogue (ex : une page <code>/formations/</code> existante), WordPress donne la priorité à la page statique. Supprimez ou renommez cette page, ou changez l'URL du catalogue dans les réglages.
+      </div>
+    </div>
+
+    <h3>Modifier le slug du catalogue</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">php — wp-config.php (optionnel)</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code><span class="cmt">// Surcharger le slug sans passer par l'admin WordPress</span>
+<span class="fn">update_option</span>( <span class="str">'eduzen_catalogue_slug'</span>, <span class="str">'nos-formations'</span> );
+<span class="cmt">// Puis régénérer les permaliens :</span>
+<span class="fn">flush_rewrite_rules</span>();</code></pre>
+    </div>
+  </section>
+
+  <!-- ── SEO ─────────────────────────────────────────────────── -->
+  <section class="doc-section" id="seo">
+    <div class="eyebrow">Catalogue CPT</div>
+    <h2>SEO &amp; Schema.org</h2>
+
+    <p>Chaque fiche programme injecte automatiquement un bloc <strong>JSON-LD Schema.org</strong> de type <code>Course</code> dans le <code>&lt;head&gt;</code> de la page :</p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">json-ld — exemple généré</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code>{
+  <span class="at">"@context"</span>: <span class="str">"https://schema.org"</span>,
+  <span class="at">"@type"</span>:    <span class="str">"Course"</span>,
+  <span class="at">"name"</span>:     <span class="str">"SSIAP 1 — Agent de Sécurité Incendie"</span>,
+  <span class="at">"description"</span>: <span class="str">"Formation obligatoire permettant…"</span>,
+  <span class="at">"url"</span>:      <span class="str">"https://votre-site.fr/formations/ssiap-1/"</span>,
+  <span class="at">"provider"</span>: { <span class="at">"@type"</span>: <span class="str">"Organization"</span>, <span class="at">"name"</span>: <span class="str">"INSSI Formation"</span> },
+  <span class="at">"offers"</span>: {
+    <span class="at">"@type"</span>:         <span class="str">"Offer"</span>,
+    <span class="at">"price"</span>:          <span class="num">1350</span>,
+    <span class="at">"priceCurrency"</span>: <span class="str">"EUR"</span>,
+    <span class="at">"availability"</span>:  <span class="str">"https://schema.org/InStock"</span>
+  },
+  <span class="at">"hasCourseInstance"</span>: [{
+    <span class="at">"@type"</span>:      <span class="str">"CourseInstance"</span>,
+    <span class="at">"courseMode"</span>: <span class="str">"onsite"</span>,
+    <span class="at">"startDate"</span>:  <span class="str">"2026-03-23"</span>,
+    <span class="at">"endDate"</span>:    <span class="str">"2026-04-19"</span>,
+    <span class="at">"location"</span>: { <span class="at">"@type"</span>: <span class="str">"Place"</span>, <span class="at">"name"</span>: <span class="str">"Paris 12e"</span> }
+  }]
+}</code></pre>
+    </div>
+
+    <h3>Compatibilité Yoast SEO / Rank Math</h3>
+    <p>Le Custom Post Type <code>eduzen_program</code> est compatible avec les plugins SEO standards. Yoast SEO et Rank Math détecteront automatiquement les fiches programme et vous permettront de personnaliser les balises <code>&lt;title&gt;</code> et <code>&lt;meta description&gt;</code> pour chaque formation.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Signal SEO</th><th>Implémentation</th></tr></thead>
+        <tbody>
+          <tr><td>Balise title</td><td>Nom du programme — thème WordPress</td></tr>
+          <tr><td>Meta description</td><td><code>post_excerpt</code> (public_description EDUZEN)</td></tr>
+          <tr><td>JSON-LD Course</td><td>Injecté automatiquement dans <code>&lt;head&gt;</code></td></tr>
+          <tr><td>Slug URL</td><td>Généré depuis le titre du programme</td></tr>
+          <tr><td>Taxonomie catégorie</td><td>Pages d'archive par catégorie indexables</td></tr>
+          <tr><td>Pagination</td><td>Prise en charge via <code>paginate_links()</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Branding ────────────────────────────────────────────── -->
+  <section class="doc-section" id="branding">
+    <div class="eyebrow">Catalogue CPT</div>
+    <h2>Personnalisation visuelle</h2>
+
+    <p>Le catalogue s'adapte à votre charte graphique via une variable CSS injectée en haut de chaque page de type <code>eduzen_program</code> :</p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">css — injecté automatiquement</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code>:root { --eduzen-primary: <span class="str">#274472</span>; } <span class="cmt">/* votre couleur configurée */</span></code></pre>
+    </div>
+
+    <p>Tous les boutons, badges, icônes et barres d'accent utilisent cette variable. Changez simplement la <strong>Couleur principale</strong> dans les réglages — la synchronisation suivante n'est pas nécessaire, c'est pris en compte immédiatement.</p>
+
+    <h3>Surcharger les templates</h3>
+    <p>Les templates CPT peuvent être surchargés depuis votre thème enfant. Le plugin cherche les fichiers dans cet ordre :</p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">priorité de chargement des templates</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code><span class="num">1.</span> wp-content/themes/<span class="at">votre-theme</span>/eduzen/single-eduzen_program.php
+<span class="num">2.</span> wp-content/themes/<span class="at">votre-theme-enfant</span>/eduzen/single-eduzen_program.php
+<span class="num">3.</span> wp-content/plugins/eduzen/public/templates/single-eduzen_program.php <span class="cmt">(défaut)</span></code></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">Les templates surchargés depuis le thème <strong>ne sont pas écrasés lors des mises à jour du plugin</strong>. C'est la méthode recommandée pour des personnalisations avancées.</div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ── Iframe ──────────────────────────────────────────────── -->
+  <section class="doc-section" id="iframe">
+    <div class="eyebrow">Intégrations</div>
+    <h2>Intégration iframe — <code>[eduzen_catalogue]</code></h2>
+
+    <p>Ce shortcode intègre votre catalogue EDUZEN en iframe directement sur n'importe quelle page WordPress. Le design est identique à votre catalogue public EDUZEN — même interface, mêmes couleurs, mise à jour en temps réel sans synchronisation.</p>
+
+    <div class="shortcode-block">
+      <div class="shortcode-name">[eduzen_catalogue]</div>
+      <p class="shortcode-desc">Insère votre catalogue EDUZEN en iframe plein écran. La hauteur s'ajuste automatiquement au contenu via postMessage.</p>
+      <div class="attrs">
+        <div class="attr">
+          <span class="attr-name">slug</span>
+          <span class="attr-desc">Identifiant organisation EDUZEN. <span class="default">Défaut : valeur configurée dans les réglages.</span></span>
+        </div>
+        <div class="attr">
+          <span class="attr-name">height</span>
+          <span class="attr-desc">Hauteur initiale en pixels avant le premier message de redimensionnement. <span class="default">Défaut : <code>800</code></span></span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Exemples d'utilisation</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">shortcode</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code><span class="cmt"># Catalogue avec configuration par défaut</span>
+[eduzen_catalogue]
+
+<span class="cmt"># Hauteur initiale personnalisée</span>
+[eduzen_catalogue height="1000"]
+
+<span class="cmt"># Forcer un identifiant organisation spécifique</span>
+[eduzen_catalogue slug="UNIPARISIVRY2025"]</code></pre>
+    </div>
+
+    <h3>Auto-resize</h3>
+    <p>Le shortcode injecte automatiquement un écouteur <code>postMessage</code> qui adapte la hauteur de l'iframe au contenu. L'iframe EDUZEN émet l'événement <code>{ type: 'eduzen-resize', height: number }</code> à chaque changement de hauteur de page.</p>
+
+    <h3>Thèmes Block (WordPress 5.9+)</h3>
+    <p>Sur les thèmes bloc comme Twenty Twenty-Five, le contenu est enfermé dans un container <code>.is-layout-constrained</code> à largeur limitée. Le shortcode injecte du CSS pour forcer le plein écran :</p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">css — injecté par le shortcode</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code>.eduzen-catalogue-fullbleed {
+  width: <span class="num">100vw</span> !important;
+  margin-left:  <span class="fn">calc</span>(<span class="num">50%</span> - <span class="num">50vw</span>) !important;
+  margin-right: <span class="fn">calc</span>(<span class="num">50%</span> - <span class="num">50vw</span>) !important;
+}</code></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <div class="callout-body">Cette technique (<em>full-bleed CSS</em>) fonctionne quand le container parent est centré — ce qui est le cas de tous les thèmes WordPress standards. Si votre thème utilise un layout inhabituel, créez une règle CSS supplémentaire depuis <strong>Apparence → Personnaliser → CSS additionnel</strong>.</div>
+    </div>
+  </section>
+
+  <!-- ── Shortcodes API ──────────────────────────────────────── -->
+  <section class="doc-section" id="shortcodes">
+    <div class="eyebrow">Intégrations</div>
+    <h2>Shortcodes API</h2>
+
+    <p>Ces shortcodes interrogent l'API EDUZEN en temps réel et affichent des données partielles. Ils nécessitent une <strong>clé API valide</strong>. Les réponses sont mises en cache selon la durée configurée (défaut 15 minutes).</p>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div class="callout-body">Pour afficher votre catalogue complet avec les fiches programme, préférez le <strong>mode CPT</strong>. Les shortcodes API sont utiles pour intégrer des données dans des pages existantes (ex : une session précise sur la page d'accueil).</div>
+    </div>
+
+    <!-- eduzen_programs -->
+    <div class="shortcode-block">
+      <div class="shortcode-name">[eduzen_programs]</div>
+      <p class="shortcode-desc">Affiche une grille de programmes de formation avec statistiques.</p>
+      <div class="attrs">
+        <div class="attr"><span class="attr-name">limit</span><span class="attr-desc">Nombre de programmes à afficher. <span class="default">Défaut : <code>10</code></span></span></div>
+        <div class="attr"><span class="attr-name">columns</span><span class="attr-desc">Nombre de colonnes de la grille. <span class="default">Défaut : <code>3</code></span></span></div>
+        <div class="attr"><span class="attr-name">is_public</span><span class="attr-desc">Filtrer sur les programmes publics uniquement. <span class="default">Défaut : <code>true</code></span></span></div>
+        <div class="attr"><span class="attr-name">show_stats</span><span class="attr-desc">Afficher les barres de statistiques (réussite, satisfaction). <span class="default">Défaut : <code>true</code></span></span></div>
+        <div class="attr"><span class="attr-name">search</span><span class="attr-desc">Filtre textuel sur le nom et la description. <span class="default">Défaut : aucun</span></span></div>
+      </div>
+    </div>
+
+    <!-- eduzen_sessions -->
+    <div class="shortcode-block">
+      <div class="shortcode-name">[eduzen_sessions]</div>
+      <p class="shortcode-desc">Affiche les sessions de formation à venir.</p>
+      <div class="attrs">
+        <div class="attr"><span class="attr-name">limit</span><span class="attr-desc">Nombre de sessions à afficher. <span class="default">Défaut : <code>10</code></span></span></div>
+        <div class="attr"><span class="attr-name">columns</span><span class="attr-desc">Colonnes de la grille. <span class="default">Défaut : <code>2</code></span></span></div>
+        <div class="attr"><span class="attr-name">status</span><span class="attr-desc"><code>scheduled</code>, <code>ongoing</code> ou <code>completed</code>. <span class="default">Défaut : toutes</span></span></div>
+        <div class="attr"><span class="attr-name">formation_id</span><span class="attr-desc">Filtrer par identifiant de formation EDUZEN (UUID).</span></div>
+      </div>
+    </div>
+
+    <!-- eduzen_formations -->
+    <div class="shortcode-block">
+      <div class="shortcode-name">[eduzen_formations]</div>
+      <p class="shortcode-desc">Affiche la liste des formations (modules) de votre catalogue.</p>
+      <div class="attrs">
+        <div class="attr"><span class="attr-name">limit</span><span class="attr-desc">Nombre de formations. <span class="default">Défaut : <code>10</code></span></span></div>
+        <div class="attr"><span class="attr-name">columns</span><span class="attr-desc">Colonnes de la grille. <span class="default">Défaut : <code>3</code></span></span></div>
+        <div class="attr"><span class="attr-name">search</span><span class="attr-desc">Filtre textuel. <span class="default">Défaut : aucun</span></span></div>
+      </div>
+    </div>
+
+    <h3>Exemples combinés</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">shortcodes</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code><span class="cmt"># 6 programmes en 2 colonnes, filtrés sur "sécurité"</span>
+[eduzen_programs limit="6" columns="2" search="sécurité"]
+
+<span class="cmt"># 5 prochaines sessions planifiées</span>
+[eduzen_sessions limit="5" status="scheduled"]
+
+<span class="cmt"># Sessions d'une formation précise</span>
+[eduzen_sessions formation_id="3f2e1a-xxxx" limit="3"]</code></pre>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ── Options ─────────────────────────────────────────────── -->
+  <section class="doc-section" id="options">
+    <div class="eyebrow">Référence</div>
+    <h2>Options WordPress</h2>
+
+    <p>Toutes les options sont stockées via l'API <code>wp_options</code> et accessibles via <code>get_option()</code> / <code>update_option()</code>.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Option</th><th>Type</th><th>Défaut</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>eduzen_org_slug</code></td>
+            <td><span class="pill pill-str">string</span></td>
+            <td>—</td>
+            <td>Code organisation EDUZEN (ex: <code>UNIPARISIVRY2025</code>)</td>
+          </tr>
+          <tr>
+            <td><code>eduzen_api_key</code></td>
+            <td><span class="pill pill-str">string</span></td>
+            <td>—</td>
+            <td>Clé API EDUZEN commençant par <code>eduz_</code></td>
+          </tr>
+          <tr>
+            <td><code>eduzen_cache_ttl</code></td>
+            <td><span class="pill pill-int">int</span></td>
+            <td><code>15</code></td>
+            <td>Durée du cache API en minutes (shortcodes uniquement)</td>
+          </tr>
+          <tr>
+            <td><code>eduzen_catalogue_slug</code></td>
+            <td><span class="pill pill-str">string</span></td>
+            <td><code>formations</code></td>
+            <td>Slug URL de l'archive et des fiches programme</td>
+          </tr>
+          <tr>
+            <td><code>eduzen_catalogue_title</code></td>
+            <td><span class="pill pill-str">string</span></td>
+            <td>Catalogue des formations</td>
+            <td>Titre affiché dans le hero de la page d'archive</td>
+          </tr>
+          <tr>
+            <td><code>eduzen_catalogue_subtitle</code></td>
+            <td><span class="pill pill-str">string</span></td>
+            <td>Découvrez nos programmes…</td>
+            <td>Sous-titre de la page d'archive</td>
+          </tr>
+          <tr>
+            <td><code>eduzen_primary_color</code></td>
+            <td><span class="pill pill-color">hex color</span></td>
+            <td><code>#274472</code></td>
+            <td>Couleur principale injectée en variable CSS <code>--eduzen-primary</code></td>
+          </tr>
+          <tr>
+            <td><code>eduzen_cta_url</code></td>
+            <td><span class="pill pill-url">URL</span></td>
+            <td><code>#contact</code></td>
+            <td>URL des boutons "Demander des informations" et "S'inscrire"</td>
+          </tr>
+          <tr>
+            <td><code>eduzen_cta_label</code></td>
+            <td><span class="pill pill-str">string</span></td>
+            <td>Demander des informations</td>
+            <td>Texte du bouton CTA sur les fiches programme</td>
+          </tr>
+          <tr>
+            <td><code>eduzen_last_sync</code></td>
+            <td><span class="pill pill-ts">datetime</span></td>
+            <td>—</td>
+            <td>Date/heure MySQL de la dernière synchronisation réussie</td>
+          </tr>
+          <tr>
+            <td><code>eduzen_sync_count</code></td>
+            <td><span class="pill pill-int">int</span></td>
+            <td><code>0</code></td>
+            <td>Nombre de programmes lors de la dernière synchronisation</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Post meta des programmes CPT</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Clé meta</th><th>Contenu</th></tr></thead>
+        <tbody>
+          <tr><td><code>_eduzen_program_id</code></td><td>UUID du programme dans EDUZEN (clé de réconciliation)</td></tr>
+          <tr><td><code>_eduzen_price</code></td><td>Prix individuel HT</td></tr>
+          <tr><td><code>_eduzen_price_enterprise</code></td><td>Prix entreprise HT</td></tr>
+          <tr><td><code>_eduzen_price_freelance</code></td><td>Prix freelance HT</td></tr>
+          <tr><td><code>_eduzen_success_rate</code></td><td>Taux de réussite (%)</td></tr>
+          <tr><td><code>_eduzen_satisfaction_rate</code></td><td>Taux de satisfaction (%)</td></tr>
+          <tr><td><code>_eduzen_completion_rate</code></td><td>Taux de complétion (%)</td></tr>
+          <tr><td><code>_eduzen_total_learners</code></td><td>Nombre total d'apprenants formés</td></tr>
+          <tr><td><code>_eduzen_image_url</code></td><td>URL de l'image de couverture du programme</td></tr>
+          <tr><td><code>_eduzen_category</code></td><td>Catégorie (texte — utilisée aussi pour la taxonomie)</td></tr>
+          <tr><td><code>_eduzen_sessions</code></td><td>JSON — tableau des sessions avec dates, lieux, places</td></tr>
+          <tr><td><code>_eduzen_formations</code></td><td>JSON — tableau des modules/formations du programme</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Cron ────────────────────────────────────────────────── -->
+  <section class="doc-section" id="cron">
+    <div class="eyebrow">Référence</div>
+    <h2>WP-Cron &amp; automatisation</h2>
+
+    <h3>Événement enregistré</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Hook</th><th>Fréquence</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>eduzen_daily_sync</code></td>
+            <td>Toutes les 24h (<code>eduzen_daily</code>)</td>
+            <td>Appelle <code>Eduzen_Sync::sync()</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Déclencher manuellement via WP-CLI</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">bash — WP-CLI</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code><span class="cmt"># Déclencher la synchronisation immédiatement</span>
+wp eval <span class="str">'$s = new Eduzen_Sync(); print_r($s->sync());'</span> --allow-root
+
+<span class="cmt"># Voir les crons planifiés</span>
+wp cron event list --allow-root
+
+<span class="cmt"># Vérifier la prochaine exécution</span>
+wp cron event list --hook=eduzen_daily_sync --allow-root</code></pre>
+    </div>
+
+    <h3>Désactiver le cron automatique</h3>
+    <p>Si vous utilisez un cron système à la place, vous pouvez retirer l'événement WP-Cron :</p>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">php — functions.php</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+      <pre><code><span class="fn">add_action</span>( <span class="str">'init'</span>, <span class="kw">function</span>() {
+  <span class="fn">wp_clear_scheduled_hook</span>( <span class="str">'eduzen_daily_sync'</span> );
+} );</code></pre>
+    </div>
+  </section>
+
+  <!-- ── Dépannage ───────────────────────────────────────────── -->
+  <section class="doc-section" id="troubleshoot">
+    <div class="eyebrow">Support</div>
+    <h2>Dépannage</h2>
+
+    <details class="trouble-item">
+      <summary class="trouble-q">La page /formations/ affiche une erreur 404</summary>
+      <div class="trouble-a">
+        <p><strong>Cause :</strong> Les règles de réécriture WordPress ne sont pas à jour.</p>
+        <p><strong>Solution :</strong> Allez dans <em>Réglages → Permaliens</em> et cliquez <em>Enregistrer les modifications</em>. Ce geste régénère les règles htaccess. Si le problème persiste, vérifiez que le module <code>mod_rewrite</code> est activé sur votre serveur Apache.</p>
+      </div>
+    </details>
+
+    <details class="trouble-item">
+      <summary class="trouble-q">La synchronisation échoue : "Clé API invalide ou révoquée"</summary>
+      <div class="trouble-a">
+        <p><strong>Cause :</strong> La clé API a expiré, a été révoquée, ou n'a pas les droits de lecture sur l'endpoint <code>/api/v1/programs</code>.</p>
+        <p><strong>Solution :</strong> Dans votre dashboard EDUZEN, générez une nouvelle clé API (<em>Réglages → Intégrations → Clés API</em>) et mettez-la à jour dans <em>Réglages → EDUZEN</em>. Testez la connexion avec le bouton prévu à cet effet.</p>
+      </div>
+    </details>
+
+    <details class="trouble-item">
+      <summary class="trouble-q">Rate limit dépassé — synchronisation bloquée</summary>
+      <div class="trouble-a">
+        <p><strong>Cause :</strong> L'API EDUZEN limite les appels à 200 requêtes/minute par organisation. Les syncs répétées en développement peuvent épuiser ce quota.</p>
+        <p><strong>Solution :</strong> Attendez 1 minute et relancez. En développement, évitez de déclencher la sync plusieurs fois en moins d'une minute. La sync automatique quotidienne n'atteint jamais cette limite en production.</p>
+      </div>
+    </details>
+
+    <details class="trouble-item">
+      <summary class="trouble-q">Les programmes ne s'affichent pas en plein écran (marges importantes)</summary>
+      <div class="trouble-a">
+        <p><strong>Cause :</strong> Votre thème utilise un container <code>.is-layout-constrained</code> (thèmes bloc WordPress 5.9+) qui limite la largeur du contenu à ~645px.</p>
+        <p><strong>Solution :</strong> Le plugin injecte automatiquement du CSS full-bleed. Si le problème persiste, ajoutez dans <em>Apparence → Personnaliser → CSS additionnel</em> :</p>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">css</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code>.eduzen-catalogue-fullbleed,
+.eduzen-archive,
+.eduzen-single {
+  max-width: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}</code></pre>
+        </div>
+      </div>
+    </details>
+
+    <details class="trouble-item">
+      <summary class="trouble-q">Une page WordPress classique "prend la place" de l'archive /formations/</summary>
+      <div class="trouble-a">
+        <p><strong>Cause :</strong> Une page WordPress avec le slug <code>formations</code> (ou votre slug configuré) existe déjà. WordPress donne la priorité aux pages statiques sur les archives CPT.</p>
+        <p><strong>Solution :</strong> Deux options — soit supprimez ou renommez la page WordPress conflictuelle, soit changez le slug du catalogue dans <em>Réglages → EDUZEN → URL du catalogue</em> (ex: <code>nos-formations</code>), puis régénérez les permaliens.</p>
+      </div>
+    </details>
+
+    <details class="trouble-item">
+      <summary class="trouble-q">La synchronisation automatique ne s'exécute pas</summary>
+      <div class="trouble-a">
+        <p><strong>Cause :</strong> WP-Cron nécessite du trafic vers le site pour se déclencher. Sur les sites peu visités, l'événement peut ne pas s'exécuter à l'heure prévue.</p>
+        <p><strong>Solution :</strong> Ajoutez un cron système qui appelle WP-Cron directement :</p>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">crontab</span><button class="copy-btn" onclick="copyCode(this)">Copier</button></div>
+          <pre><code>0 3 * * * wget -q -O- https://votre-site.fr/wp-cron.php?doing_wp_cron >/dev/null 2>&amp;1</code></pre>
+        </div>
+        <p>Puis désactivez WP-Cron interne en ajoutant dans <code>wp-config.php</code> : <code>define('DISABLE_WP_CRON', true);</code></p>
+      </div>
+    </details>
+
+    <details class="trouble-item">
+      <summary class="trouble-q">Les fiches programme n'affichent pas de sessions</summary>
+      <div class="trouble-a">
+        <p><strong>Cause :</strong> Soit vos sessions EDUZEN ont un statut <code>completed</code> ou une date passée, soit elles n'ont pas encore été synchronisées.</p>
+        <p><strong>Solution :</strong> Relancez une synchronisation manuelle. Vérifiez dans votre dashboard EDUZEN que les sessions ont bien le statut <code>scheduled</code> ou <code>ongoing</code> et une date future.</p>
+      </div>
+    </details>
+
+    <details class="trouble-item">
+      <summary class="trouble-q">L'iframe [eduzen_catalogue] affiche "www.eduzen.io n'autorise pas la connexion"</summary>
+      <div class="trouble-a">
+        <p><strong>Cause :</strong> Le shortcode pointe vers <code>www.eduzen.io/embed/</code> qui est la route autorisée pour l'embedding. Si vous voyez ce message, la route <code>/embed/</code> n'existe pas ou la slug organisation est incorrecte.</p>
+        <p><strong>Solution :</strong> Vérifiez l'identifiant organisation dans les réglages (ex: <code>UNIPARISIVRY2025</code>). Testez l'URL directement dans un onglet : <code>https://www.eduzen.io/cataloguepublic/VOTRE_SLUG</code>. Si elle charge, l'embed devrait fonctionner.</p>
+      </div>
+    </details>
+
+    <div class="callout success" style="margin-top:24px;">
+      <span class="callout-icon">💬</span>
+      <div class="callout-body">
+        <strong>Besoin d'aide ?</strong> Contactez le support EDUZEN depuis votre dashboard Enterprise (<em>? → Support</em>) en joignant les informations de version WordPress, PHP, et le message d'erreur exact.
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <div class="meta-row" style="margin-bottom: 40px;">
+    <div class="meta-item"><span>Plugin v2.0.0</span></div>
+    <div class="meta-dot"></div>
+    <div class="meta-item"><span>Dernière mise à jour : juillet 2026</span></div>
+    <div class="meta-dot"></div>
+    <div class="meta-item"><a href="https://www.eduzen.io" style="color: var(--text-3);">eduzen.io</a></div>
+  </div>
+
+  </div><!-- /.content -->
+</main>
+
+<script>
+// ── Theme toggle ──────────────────────────────────────────────
+const root = document.documentElement;
+const btn  = document.getElementById('themeBtn');
+
+function getTheme() {
+  return localStorage.getItem('theme') ||
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+}
+function applyTheme(t) {
+  root.setAttribute('data-theme', t);
+  localStorage.setItem('theme', t);
+}
+applyTheme(getTheme());
+
+btn.addEventListener('click', () => {
+  applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+});
+
+// ── Copy code ─────────────────────────────────────────────────
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'Copié !';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copier'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// ── Active nav on scroll ───────────────────────────────────────
+const sections = document.querySelectorAll('.doc-section[id]');
+const links    = document.querySelectorAll('.nav-link');
+
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id);
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+sections.forEach(s => obs.observe(s));
+</script>
+
+</body>
+</html>

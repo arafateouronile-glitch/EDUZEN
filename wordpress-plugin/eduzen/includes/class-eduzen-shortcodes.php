@@ -34,7 +34,28 @@ class Eduzen_Shortcodes {
 
 		ob_start();
 		?>
-<div class="eduzen-catalogue-wrapper" style="width:100%;overflow:hidden;">
+<style>
+.eduzen-catalogue-fullbleed {
+  /* Breakout du container is-layout-constrained des thèmes block (TwentyTwentyFive, etc.)
+     La règle width:100vw + marges négatives pousse jusqu'aux bords de la fenêtre. */
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin-left:  calc(50% - 50vw) !important;
+  margin-right: calc(50% - 50vw) !important;
+  padding-left:  0 !important;
+  padding-right: 0 !important;
+  overflow: hidden;
+  display: block;
+}
+.eduzen-catalogue-fullbleed iframe {
+  width: 100%;
+  min-width: 100%;
+  border: none;
+  display: block;
+  transition: height .2s ease;
+}
+</style>
+<div id="<?php echo esc_attr( $iframe_id . '-wrap' ); ?>" class="eduzen-catalogue-fullbleed alignfull">
   <iframe
     id="<?php echo esc_attr( $iframe_id ); ?>"
     src="<?php echo $src; ?>"
@@ -44,7 +65,6 @@ class Eduzen_Shortcodes {
     scrolling="no"
     allow="fullscreen"
     loading="lazy"
-    style="width:100%;border:none;display:block;transition:height .2s ease;"
   ></iframe>
 </div>
 <script>

@@ -1,27 +1,36 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 
 export function Preloader() {
+  const pathname = usePathname()
   const [isLoading, setIsLoading] = useState(true)
 
+  // Pas de preloader sur les pages publiques (catalogue, embed) — le visiteur
+  // voit le contenu de l'organisme, pas le branding EDUZEN.
+  const isPublicRoute =
+    pathname.startsWith('/cataloguepublic') ||
+    pathname.startsWith('/embed')
+
   useEffect(() => {
-    // Force un minimum de temps d'affichage pour l'effet premium
-    // et s'assure que la page est chargée
+    if (isPublicRoute) return
+
     const timer = setTimeout(() => {
       setIsLoading(false)
       document.body.style.overflow = 'auto'
     }, 2000)
 
-    // Bloquer le scroll pendant le chargement
     document.body.style.overflow = 'hidden'
 
     return () => {
       clearTimeout(timer)
       document.body.style.overflow = 'auto'
     }
-  }, [])
+  }, [isPublicRoute])
+
+  if (isPublicRoute) return null
 
   return (
     <AnimatePresence>
@@ -44,7 +53,7 @@ export function Preloader() {
                 <span className="text-white font-black text-3xl md:text-4xl italic">E</span>
               </div>
               {/* Pulse effect */}
-              <motion.div 
+              <motion.div
                 className="absolute inset-0 rounded-2xl bg-brand-cyan/20 z-[-1]"
                 animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}

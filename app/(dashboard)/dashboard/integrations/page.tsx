@@ -730,7 +730,7 @@ function verifySignature(payload, signature, secret) {
             </Card>
 
             {/* Links */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="hover:border-brand-blue/30 transition-colors cursor-pointer group"
                 onClick={() => window.open(`${baseUrl}/api/v1/docs`, '_blank')}>
                 <CardContent className="p-5 flex items-center gap-4">
@@ -752,6 +752,18 @@ function verifySignature(payload, signature, secret) {
                   <div>
                     <h3 className="font-semibold text-gray-900">Intégration Zapier</h3>
                     <p className="text-sm text-gray-500">Connectez à 5 000+ applications</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="hover:border-orange-300 transition-colors cursor-pointer group"
+                onClick={() => window.open('/docs/wordpress-plugin.html', '_blank')}>
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className="p-3 bg-orange-50 rounded-xl group-hover:bg-orange-100 transition-colors">
+                    <Code className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Plugin WordPress</h3>
+                    <p className="text-sm text-gray-500">Guide d'installation & intégration</p>
                   </div>
                 </CardContent>
               </Card>
