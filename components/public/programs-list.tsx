@@ -17,9 +17,10 @@ type Program = TableRow<'programs'> & {
 interface PublicProgramsListProps {
   programs: Program[]
   primaryColor?: string
+  isEmbed?: boolean
 }
 
-export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.primary }: PublicProgramsListProps) {
+export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.primary, isEmbed = false }: PublicProgramsListProps) {
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('fr-FR', {
       day: 'numeric',
@@ -55,7 +56,7 @@ export function PublicProgramsList({ programs, primaryColor = BRAND_COLORS.prima
             }}
             className="h-full"
           >
-            <Link href={`/programmes/${program.id}`} className="block h-full">
+            <Link href={`/programmes/${program.id}`} className="block h-full" target={isEmbed ? '_blank' : undefined} rel={isEmbed ? 'noopener noreferrer' : undefined}>
               <GlassCard 
                 variant="premium"
                 hoverable

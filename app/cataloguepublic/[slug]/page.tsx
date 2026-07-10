@@ -250,7 +250,7 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
             </div>
 
             {programsWithActiveContent.length > 0 ? (
-              <PublicProgramsList programs={programsWithActiveContent as Parameters<typeof PublicProgramsList>[0]['programs']} primaryColor={primaryColor} />
+              <PublicProgramsList programs={programsWithActiveContent as Parameters<typeof PublicProgramsList>[0]['programs']} primaryColor={primaryColor} isEmbed={isEmbed} />
             ) : (
               <div className="text-center py-24">
                 <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 mb-8 shadow-lg">
