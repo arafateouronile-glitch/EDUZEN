@@ -2,6 +2,7 @@
 
 import { motion } from '@/components/ui/motion'
 import { Users, Award, BookOpen, GraduationCap } from 'lucide-react'
+import { lightenHexColor } from '@/lib/utils'
 
 interface CatalogStatsProps {
   primaryColor: string
@@ -14,6 +15,7 @@ interface CatalogStatsProps {
 }
 
 export function CatalogStats({ primaryColor, stats }: CatalogStatsProps) {
+  const accentColor = lightenHexColor(primaryColor, 0.4)
   const items = [
     {
       icon: Users,
@@ -54,16 +56,13 @@ export function CatalogStats({ primaryColor, stats }: CatalogStatsProps) {
               transition={{ duration: 0.5, delay: item.delay }}
               className="text-center group"
             >
-              <div 
-                className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
-                style={{ backgroundColor: `${primaryColor}10` }}
+              <div
+                className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 text-white shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`, boxShadow: `0 8px 24px -8px ${primaryColor}50` }}
               >
-                <item.icon 
-                  className="w-8 h-8" 
-                  style={{ color: primaryColor }} 
-                />
+                <item.icon className="w-8 h-8" />
               </div>
-              <h3 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">
+              <h3 className="font-display text-4xl font-bold text-gray-900 mb-2 tracking-tight">
                 {item.value}
               </h3>
               <p className="text-gray-500 font-medium">{item.label}</p>

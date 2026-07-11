@@ -7,6 +7,7 @@
 import type { Metadata } from 'next'
 // Revalider régulièrement pour afficher les mises à jour des programmes (image, description, etc.)
 export const revalidate = 60
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { PublicProgramsList } from '@/components/public/programs-list'
 import { createClient } from '@/lib/supabase/server'
@@ -15,6 +16,8 @@ import { CatalogFooter } from '@/components/public/catalog-footer'
 import { CatalogStyles } from '@/components/public/catalog-styles'
 import { CatalogHero } from '@/components/public/catalog-hero'
 import { CatalogOrganizationInfo } from '@/components/public/catalog-organization-info'
+import { CatalogSearchFilters } from '@/components/public/catalog-search-filters'
+import { CatalogTestimonials, type CatalogTestimonial } from '@/components/public/catalog-testimonials'
 
 import { CatalogStats } from '@/components/public/catalog-stats'
 
@@ -85,6 +88,8 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   const { slug } = await params
   const resolvedSearchParams = await searchParams
   const search = typeof resolvedSearchParams.search === 'string' ? resolvedSearchParams.search : undefined
+  const category = typeof resolvedSearchParams.category === 'string' ? resolvedSearchParams.category : undefined
+  const cpfOnly = resolvedSearchParams.cpf === '1'
   const isEmbed = resolvedSearchParams.embed === '1'
   const supabase = await createClient()
 
@@ -146,9 +151,30 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   if (search) {
     programsQuery = programsQuery.or(`name.ilike.%${search}%,description.ilike.%${search}%,public_description.ilike.%${search}%`)
   }
+  if (category) {
+    programsQuery = programsQuery.eq('category', category)
+  }
+  if (cpfOnly) {
+    programsQuery = programsQuery.eq('eligible_cpf', true)
+  }
 
   const { data: programsData } = await programsQuery.order('created_at', { ascending: false })
   const programs = programsData ?? []
+
+  // Catégories disponibles pour les pastilles de filtre + compteur CPF pour la barre de confiance
+  // du hero : indépendants des filtres actifs (search/category/cpf) pour rester stables et pour
+  // que le hero reflète l'ensemble du catalogue, pas seulement la sélection filtrée.
+  const { data: facetRows } = await supabase
+    .from('programs')
+    .select('category, eligible_cpf')
+    .eq('organization_id', organization.id)
+    .eq('is_public', true)
+    .eq('is_active', true)
+
+  const availableCategories = Array.from(
+    new Set((facetRows ?? []).map((row) => (row as { category: string | null }).category).filter((c): c is string => Boolean(c && c.trim())))
+  ).sort((a, b) => a.localeCompare(b, 'fr'))
+  const cpfEligibleCount = (facetRows ?? []).filter((row) => (row as { eligible_cpf?: boolean }).eligible_cpf).length
 
   // Filtrer les formations et sessions inactives
   type FormationRow = { is_active?: boolean; sessions?: Array<{ status?: string }> }
@@ -157,7 +183,7 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
     ...program,
     formations: (program.formations || []).filter((f) => f.is_active).map((formation) => ({
       ...formation,
-      sessions: (formation.sessions || []).filter((s: { status?: string }) => s.status === 'scheduled' || s.status === 'ongoing'),
+      sessions: (formation.sessions || []).filter((s: { status?: string }) => s.status === 'planned' || s.status === 'ongoing'),
     })),
   }))
 
@@ -171,6 +197,8 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   const logoUrl = catalogSettings?.logo_url || organization.logo_url
   const primaryColor = catalogSettings?.primary_color || '#274472'
   const coverImageUrl = catalogSettings?.cover_image_url
+  const totalLearners = (catalogSettings as { stats_trained_students?: number } | null)?.stats_trained_students ?? 1200
+  const testimonials = ((catalogSettings as { testimonials?: unknown } | null)?.testimonials ?? []) as CatalogTestimonial[]
 
   return (
     <>
@@ -192,6 +220,9 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
           buttonLink={heroButtonLink}
           coverImageUrl={coverImageUrl}
           primaryColor={primaryColor}
+          hasQualiopi={Boolean(organization.qualiopi_certificate_url)}
+          cpfEligibleCount={cpfEligibleCount}
+          totalLearners={totalLearners}
         />
 
         {/* Informations de l'organisme Premium */}
@@ -229,8 +260,8 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
           <div className="relative container mx-auto px-6 lg:px-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-16">
               <div className="flex-1">
-                <h2 className="text-4xl lg:text-6xl xl:text-7xl font-extrabold text-gray-900 mb-4 tracking-tight leading-tight">
-                  {search ? `Résultats pour "${search}"` : 'Nos programmes de formation'}
+                <h2 className="font-display text-4xl lg:text-6xl xl:text-7xl font-bold text-gray-900 mb-4 tracking-tight leading-tight">
+                  {search ? `Résultats pour "${search}"` : category || cpfOnly ? 'Nos programmes filtrés' : 'Nos programmes de formation'}
                 </h2>
                 <div className="flex items-center gap-4">
                   <div 
@@ -249,6 +280,10 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
               </div>
             </div>
 
+            <Suspense fallback={<div className="h-[76px] rounded-2xl bg-white/60 mb-10 animate-pulse" />}>
+              <CatalogSearchFilters categories={availableCategories} primaryColor={primaryColor} />
+            </Suspense>
+
             {programsWithActiveContent.length > 0 ? (
               <PublicProgramsList programs={programsWithActiveContent as Parameters<typeof PublicProgramsList>[0]['programs']} primaryColor={primaryColor} isEmbed={isEmbed} />
             ) : (
@@ -259,12 +294,14 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
                   </svg>
                 </div>
                 <p className="text-gray-600 text-xl font-semibold">
-                  Aucun programme disponible pour le moment.
+                  {search || category || cpfOnly ? 'Aucun programme ne correspond à ces critères.' : 'Aucun programme disponible pour le moment.'}
                 </p>
               </div>
             )}
           </div>
         </section>
+
+        <CatalogTestimonials testimonials={testimonials} primaryColor={primaryColor} />
       </div>
       {!isEmbed && (
         <CatalogFooter

@@ -73,7 +73,7 @@ export function CatalogOrganizationInfo({ organization, logoUrl, primaryColor }:
                 )}
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight">
+                    <h2 className="font-display text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight">
                       {organization.name}
                     </h2>
                     <motion.div

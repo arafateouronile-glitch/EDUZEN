@@ -5,6 +5,24 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Éclaircit une couleur hex vers le blanc (0 = inchangée, 1 = blanc).
+ * Utilisé pour dériver un dégradé à deux tons à partir d'une seule couleur
+ * de marque dynamique (ex: catalogue public par organisation).
+ */
+export function lightenHexColor(hex: string, amount: number): string {
+  const normalized = hex.replace('#', '')
+  const bigint = parseInt(normalized.length === 3
+    ? normalized.split('').map((c) => c + c).join('')
+    : normalized, 16)
+  if (Number.isNaN(bigint)) return hex
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  const mix = (channel: number) => Math.round(channel + (255 - channel) * amount)
+  return `#${[mix(r), mix(g), mix(b)].map((c) => c.toString(16).padStart(2, '0')).join('')}`
+}
+
 export function formatCurrency(amount: number, currency: string = 'EUR'): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',

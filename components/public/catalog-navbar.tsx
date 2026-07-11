@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from '@/components/ui/motion'
 import { BRAND_COLORS } from '@/lib/config/app-config'
+import { lightenHexColor } from '@/lib/utils'
 
 interface CatalogNavbarProps {
   organizationName: string
@@ -12,6 +13,7 @@ interface CatalogNavbarProps {
 
 export function CatalogNavbar({ organizationName, logoUrl, primaryColor = BRAND_COLORS.primary }: CatalogNavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false)
+  const accentColor = lightenHexColor(primaryColor, 0.4)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,10 +30,15 @@ export function CatalogNavbar({ organizationName, logoUrl, primaryColor = BRAND_
       transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-white/95 backdrop-blur-xl border-b border-gray-200/80 shadow-lg shadow-black/5'
+          ? 'bg-white/95 backdrop-blur-xl border-b border-gray-200/80 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)]'
           : 'bg-white/80 backdrop-blur-md border-b border-gray-200/50'
       }`}
     >
+      {/* Ligne d'accent en dégradé (motif landing page) */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px"
+        style={{ background: `linear-gradient(to right, transparent, ${accentColor}80, transparent)` }}
+      />
       <div className="container mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <motion.div
@@ -39,7 +46,7 @@ export function CatalogNavbar({ organizationName, logoUrl, primaryColor = BRAND_
             whileHover={{ scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 400, damping: 17 }}
           >
-            {logoUrl && (
+            {logoUrl ? (
               <motion.img
                 src={logoUrl}
                 alt={organizationName}
@@ -48,9 +55,16 @@ export function CatalogNavbar({ organizationName, logoUrl, primaryColor = BRAND_
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               />
+            ) : (
+              <div
+                className="flex items-center justify-center w-10 h-10 rounded-xl font-display font-bold text-white text-lg shadow-md"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
+              >
+                {organizationName.charAt(0).toUpperCase()}
+              </div>
             )}
             <span
-              className="text-2xl font-bold tracking-tight"
+              className="font-display text-2xl font-bold tracking-tight"
               style={{ color: primaryColor }}
             >
               {organizationName}
