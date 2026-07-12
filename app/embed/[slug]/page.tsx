@@ -113,7 +113,15 @@ export default async function EmbedCatalogPage({ params, searchParams }: PagePro
   const coverImageUrl   = catalogSettings?.cover_image_url
   const logoUrl         = catalogSettings?.logo_url || organization.logo_url
   const totalLearners   = (catalogSettings as { stats_trained_students?: number } | null)?.stats_trained_students ?? 1200
-  const testimonials    = ((catalogSettings as { testimonials?: unknown } | null)?.testimonials ?? []) as CatalogTestimonial[]
+  // Témoignages réels issus des évaluations de fin de formation, voir get_catalog_testimonials
+  // (migration 20260710000002) — jamais de contenu saisi/hardcodé.
+  // Cast `any` nécessaire : fonction absente des types générés tant que la migration n'a
+  // pas été appliquée + `npm run db:generate` relancé.
+  const { data: testimonialRows } = await supabase.rpc(
+    'get_catalog_testimonials' as any,
+    { p_organization_id: organization.id, p_limit: 9 } as any
+  )
+  const testimonials    = (testimonialRows ?? []) as CatalogTestimonial[]
 
   return (
     <>

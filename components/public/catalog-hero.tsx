@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { motion, useMotionValue, useSpring } from '@/components/ui/motion'
+import { useRef } from 'react'
+import { motion, useScroll, useTransform } from '@/components/ui/motion'
 import { ArrowDown, Sparkles } from 'lucide-react'
 import { lightenHexColor } from '@/lib/utils'
 import { CatalogTrustBar } from '@/components/public/catalog-trust-bar'
+import { MagneticButton } from '@/components/public/magnetic-button'
+import { HeroBlobs } from '@/components/public/hero-blobs'
 
 interface CatalogHeroProps {
   title: string
@@ -17,98 +19,6 @@ interface CatalogHeroProps {
   hasQualiopi?: boolean
   cpfEligibleCount?: number
   totalLearners?: number | string | null
-}
-
-// Bouton CTA "magnétique" : suit légèrement le curseur (repris de components/landing/Hero.tsx),
-// désactivé sur tactile/prefers-reduced-motion.
-function MagneticButton({ children, className, href, style }: { children: React.ReactNode; className?: string; href: string; style?: React.CSSProperties }) {
-  const ref = useRef<HTMLAnchorElement>(null)
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  const frameRef = useRef<number | null>(null)
-  const pointerRef = useRef<{ x: number; y: number } | null>(null)
-  const [isMagneticEnabled, setIsMagneticEnabled] = useState(false)
-
-  const springConfig = { damping: 15, stiffness: 150, mass: 0.1 }
-  const springX = useSpring(x, springConfig)
-  const springY = useSpring(y, springConfig)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const hoverFine = window.matchMedia('(hover: hover) and (pointer: fine)')
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
-
-    const update = () => setIsMagneticEnabled(hoverFine.matches && !reducedMotion.matches)
-    update()
-
-    hoverFine.addEventListener('change', update)
-    reducedMotion.addEventListener('change', update)
-
-    return () => {
-      hoverFine.removeEventListener('change', update)
-      reducedMotion.removeEventListener('change', update)
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
-    }
-  }, [])
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!isMagneticEnabled || !ref.current) return
-    pointerRef.current = { x: e.clientX, y: e.clientY }
-    if (frameRef.current !== null) return
-
-    frameRef.current = requestAnimationFrame(() => {
-      frameRef.current = null
-      if (!ref.current || !pointerRef.current) return
-      const { left, top, width, height } = ref.current.getBoundingClientRect()
-      const centerX = left + width / 2
-      const centerY = top + height / 2
-      x.set((pointerRef.current.x - centerX) * 0.2)
-      y.set((pointerRef.current.y - centerY) * 0.2)
-    })
-  }
-
-  const handleMouseLeave = () => {
-    if (frameRef.current !== null) {
-      cancelAnimationFrame(frameRef.current)
-      frameRef.current = null
-    }
-    pointerRef.current = null
-    x.set(0)
-    y.set(0)
-  }
-
-  return (
-    <motion.a
-      ref={ref}
-      href={href}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ x: springX, y: springY, ...style }}
-      className={className}
-    >
-      {children}
-    </motion.a>
-  )
-}
-
-// Blobs de couleur flottants en arrière-plan (motif landing page)
-function HeroBlobs({ primaryColor, accentColor }: { primaryColor: string; accentColor: string }) {
-  return (
-    <div className="absolute inset-0 pointer-events-none">
-      <motion.div
-        className="absolute left-[-6%] top-[10%] w-[420px] h-[420px] rounded-full blur-[110px]"
-        style={{ backgroundColor: accentColor, opacity: 0.25 }}
-        animate={{ y: [0, -24, 0] }}
-        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        className="absolute right-[-8%] bottom-[-5%] w-[520px] h-[520px] rounded-full blur-[130px]"
-        style={{ backgroundColor: primaryColor, opacity: 0.3 }}
-        animate={{ y: [0, 20, 0] }}
-        transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-      />
-    </div>
-  )
 }
 
 export function CatalogHero({
@@ -129,14 +39,20 @@ export function CatalogHero({
     transition: { duration: 0.8, ease: 'easeInOut' as const },
   }
   const accentColor = lightenHexColor(primaryColor, 0.4)
+  const heroRef = useRef<HTMLElement>(null)
+  const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
+  const bgParallaxY = useTransform(scrollYProgress, [0, 1], ['0%', '25%'])
+  const blobsParallaxY = useTransform(scrollYProgress, [0, 1], ['0%', '15%'])
+  const contentParallaxY = useTransform(scrollYProgress, [0, 1], ['0%', '40%'])
+  const contentParallaxOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.15])
 
   if (coverImageUrl) {
     return (
-      <section className="relative h-[650px] lg:h-[750px] w-full overflow-hidden">
+      <section ref={heroRef} className="relative h-[650px] lg:h-[750px] w-full overflow-hidden">
         {/* Image de couverture avec effet Ken Burns et overlay gradient sophistiqué */}
         <motion.div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${coverImageUrl})` }}
+          style={{ backgroundImage: `url(${coverImageUrl})`, y: bgParallaxY }}
           initial={{ scale: 1 }}
           animate={{ scale: 1.07 }}
           transition={{ duration: 20, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
@@ -149,9 +65,14 @@ export function CatalogHero({
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff14_1px,transparent_1px),linear-gradient(to_bottom,#ffffff14_1px,transparent_1px)] bg-[size:56px_56px] opacity-60 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)]" />
         </motion.div>
 
-        <HeroBlobs primaryColor={primaryColor} accentColor={accentColor} />
+        <motion.div style={{ y: blobsParallaxY }} className="absolute inset-0">
+          <HeroBlobs primaryColor={primaryColor} accentColor={accentColor} />
+        </motion.div>
 
-        <div className="relative container mx-auto px-6 lg:px-8 h-full flex items-center">
+        <motion.div
+          style={{ y: contentParallaxY, opacity: contentParallaxOpacity }}
+          className="relative container mx-auto px-6 lg:px-8 h-full flex items-center"
+        >
           <div className="max-w-5xl">
             {/* Badge accent */}
             <motion.div
@@ -218,11 +139,11 @@ export function CatalogHero({
             <CatalogTrustBar
               primaryColor={primaryColor}
               hasQualiopi={hasQualiopi}
-              cpfEligibleCount={cpfEligibleCount}
+              cpfEligible={cpfEligibleCount}
               totalLearners={totalLearners}
             />
           </div>
-        </div>
+        </motion.div>
 
         {/* Scroll indicator amélioré */}
         <motion.div
@@ -248,16 +169,24 @@ export function CatalogHero({
   }
 
   return (
-    <section className="relative text-white py-28 lg:py-36 overflow-hidden" style={{ backgroundColor: primaryColor }}>
+    <section ref={heroRef} className="relative text-white py-28 lg:py-36 overflow-hidden" style={{ backgroundColor: primaryColor }}>
       {/* Grille en pointillés masquée (motif landing page) */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff14_1px,transparent_1px),linear-gradient(to_bottom,#ffffff14_1px,transparent_1px)] bg-[size:56px_56px] opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)]" />
+      <motion.div
+        style={{ y: bgParallaxY }}
+        className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff14_1px,transparent_1px),linear-gradient(to_bottom,#ffffff14_1px,transparent_1px)] bg-[size:56px_56px] opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)]"
+      />
 
       {/* Gradient overlays multiples pour profondeur */}
       <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-transparent to-black/20" />
 
-      <HeroBlobs primaryColor="rgba(255,255,255,0.5)" accentColor={accentColor} />
+      <motion.div style={{ y: blobsParallaxY }} className="absolute inset-0">
+        <HeroBlobs primaryColor="rgba(255,255,255,0.5)" accentColor={accentColor} />
+      </motion.div>
 
-      <div className="relative container mx-auto px-6 lg:px-8">
+      <motion.div
+        style={{ y: contentParallaxY, opacity: contentParallaxOpacity }}
+        className="relative container mx-auto px-6 lg:px-8"
+      >
         <div className="max-w-5xl mx-auto text-center">
           {/* Badge accent */}
           <motion.div
@@ -325,12 +254,12 @@ export function CatalogHero({
           <CatalogTrustBar
             primaryColor={primaryColor}
             hasQualiopi={hasQualiopi}
-            cpfEligibleCount={cpfEligibleCount}
+            cpfEligible={cpfEligibleCount}
             totalLearners={totalLearners}
             align="center"
           />
         </div>
-      </div>
+      </motion.div>
     </section>
   )
 }

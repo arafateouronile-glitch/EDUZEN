@@ -8,11 +8,14 @@ export function Preloader() {
   const pathname = usePathname()
   const [isLoading, setIsLoading] = useState(true)
 
-  // Pas de preloader sur les pages publiques (catalogue, embed) — le visiteur
-  // voit le contenu de l'organisme, pas le branding EDUZEN.
+  // Pas de preloader sur les pages publiques (catalogue, embed, fiche
+  // programme) — le visiteur voit le contenu de l'organisme, pas le
+  // branding EDUZEN. Le catalogue générique /programmes (branding EDUZEN,
+  // Navbar/Footer landing) n'est volontairement pas exclu.
   const isPublicRoute =
     pathname.startsWith('/cataloguepublic') ||
-    pathname.startsWith('/embed')
+    pathname.startsWith('/embed') ||
+    /^\/programmes\/.+/.test(pathname)
 
   useEffect(() => {
     if (isPublicRoute) return

@@ -9,7 +9,7 @@ import { Calendar, ArrowRight, BookOpen, Euro } from 'lucide-react'
 import { GlassCard } from '@/components/ui/glass-card'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { BRAND_COLORS } from '@/lib/config/app-config'
-import { lightenHexColor } from '@/lib/utils'
+import { lightenHexColor, shimmerDataURL } from '@/lib/utils'
 
 type Program = TableRow<'programs'> & {
   formations?: Array<TableRow<'formations'> & {
@@ -174,6 +174,8 @@ function ProgramCard({ program, primaryColor, isEmbed, index }: ProgramCardProps
                 alt={program.name}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                placeholder="blur"
+                blurDataURL={shimmerDataURL(700, 440)}
                 className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
               />
               {/* Teinte duotone couleur de marque */}

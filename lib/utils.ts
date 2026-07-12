@@ -23,6 +23,28 @@ export function lightenHexColor(hex: string, amount: number): string {
   return `#${[mix(r), mix(g), mix(b)].map((c) => c.toString(16).padStart(2, '0')).join('')}`
 }
 
+/**
+ * Placeholder "shimmer" générique en base64, à utiliser comme `blurDataURL` pour les
+ * images distantes (uploadées par les organismes) dont on ne peut pas calculer de vrai
+ * blurhash à la volée. Donne un fondu de chargement plutôt qu'un "pop-in" brutal.
+ */
+export function shimmerDataURL(width: number, height: number): string {
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g">
+          <stop stop-color="#e5e7eb" offset="20%" />
+          <stop stop-color="#f3f4f6" offset="50%" />
+          <stop stop-color="#e5e7eb" offset="70%" />
+        </linearGradient>
+      </defs>
+      <rect width="${width}" height="${height}" fill="#e5e7eb" />
+      <rect width="${width}" height="${height}" fill="url(#g)" />
+    </svg>`
+  const toBase64 = typeof window === 'undefined' ? (str: string) => Buffer.from(str).toString('base64') : btoa
+  return `data:image/svg+xml;base64,${toBase64(svg)}`
+}
+
 export function formatCurrency(amount: number, currency: string = 'EUR'): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',

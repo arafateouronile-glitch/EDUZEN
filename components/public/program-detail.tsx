@@ -36,13 +36,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { BRAND_COLORS } from '@/lib/config/app-config'
-import { cn } from '@/lib/utils'
-
-type ProgramSettings = {
-  logo_url?: string | null
-  qualiopi_certificate_url?: string | null
-  [key: string]: unknown
-}
+import { cn, lightenHexColor, shimmerDataURL } from '@/lib/utils'
+import { motion, AnimatePresence, useScroll, useTransform } from '@/components/ui/motion'
+import { MagneticButton } from '@/components/public/magnetic-button'
+import { HeroBlobs } from '@/components/public/hero-blobs'
+import { CatalogTrustBar } from '@/components/public/catalog-trust-bar'
+import { AnimatedCounter } from '@/components/public/animated-counter'
 
 type TabItem = { id: string; title: string; content: string }
 
@@ -68,12 +67,13 @@ type Program = TableRow<'programs'> & {
   pedagogical_methods?: string | null
   access_delay_days?: number | null
   accessibility_info?: string | null
+  capacity_min?: number | null
+  capacity_max?: number | null
+  rs_title_name?: string | null
   formations?: Array<TableRow<'formations'> & {
     sessions?: TableRow<'sessions'>[]
   }>
-  organizations?: TableRow<'organizations'> & {
-    settings?: ProgramSettings | null
-  }
+  organizations?: TableRow<'organizations'>
 }
 
 // Convertit les tabs JSONB en texte plat (fallback si champ texte vide)
@@ -108,6 +108,24 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
       window.location.href = `/s/${token}`
     } else if (contactEmail) {
       window.location.href = `mailto:${contactEmail}?subject=Demande d'inscription — ${program.name}`
+    } else {
+      scrollToSessions()
+    }
+  }
+
+  function handleRequestQuote() {
+    if (contactEmail) {
+      window.location.href = `mailto:${contactEmail}?subject=Demande de devis — ${program.name}`
+    } else {
+      scrollToSessions()
+    }
+  }
+
+  function handleContactUs() {
+    if (contactEmail) {
+      window.location.href = `mailto:${contactEmail}?subject=${program.name}`
+    } else if (organization?.phone) {
+      window.location.href = `tel:${organization.phone}`
     } else {
       scrollToSessions()
     }
@@ -155,34 +173,83 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
   const hasStats = stats.successRate !== null || stats.satisfactionRate !== null ||
                    stats.totalLearners !== null || stats.completionRate !== null
 
-  // Points forts du programme
+  // Points forts du programme — dérivés des données réelles, jamais de contenu générique
+  // qui pourrait être faux pour ce programme précis (ex: annoncer "certifiante" alors
+  // qu'aucune modalité de certification n'a été renseignée).
   const highlights = [
-    { icon: Award, label: 'Formation certifiante', description: 'Certification reconnue par l\'État' },
-    { icon: Users, label: 'Petits groupes', description: 'Maximum 12 participants par session' },
-    { icon: BookOpen, label: 'Supports inclus', description: 'Documentation complète fournie' },
-    { icon: Shield, label: 'Garantie réussite', description: 'Accompagnement personnalisé' },
-  ]
+    program.eligible_cpf && {
+      icon: BadgeCheck,
+      label: 'Éligible CPF',
+      description: program.cpf_code ? `Code CPF ${program.cpf_code}` : 'Finançable via votre Compte Personnel de Formation',
+    },
+    (program.capacity_min || program.capacity_max) && {
+      icon: Users,
+      label: 'Groupe restreint',
+      description: program.capacity_min && program.capacity_max
+        ? `De ${program.capacity_min} à ${program.capacity_max} participants`
+        : program.capacity_max
+          ? `Jusqu'à ${program.capacity_max} participants`
+          : `À partir de ${program.capacity_min} participants`,
+    },
+    program.certification_modalities && {
+      icon: Award,
+      label: 'Formation certifiante',
+      description: program.rs_title_name || 'Certification à l\'issue de la formation',
+    },
+    program.access_delay_days != null && {
+      icon: Clock,
+      label: 'Accès rapide',
+      description: `Démarrage possible sous ${program.access_delay_days} jour${program.access_delay_days > 1 ? 's' : ''}`,
+    },
+    organization?.qualiopi_certificate_url && {
+      icon: Shield,
+      label: 'Certifié Qualiopi',
+      description: 'Organisme certifié qualité',
+    },
+  ].filter((h): h is { icon: typeof Award; label: string; description: string } => Boolean(h))
+
+  const accentColor = lightenHexColor(primaryColor, 0.4)
+  const coverImage = program.public_image_url || program.photo_url
+  const fadeInUp = {
+    initial: { opacity: 0, y: 30 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.6, ease: 'easeOut' as const },
+  }
+
+  const heroRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress: heroScrollProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
+  const heroBgY = useTransform(heroScrollProgress, [0, 1], ['0%', '25%'])
+  const heroBlobsY = useTransform(heroScrollProgress, [0, 1], ['0%', '15%'])
+  const heroContentY = useTransform(heroScrollProgress, [0, 1], ['0%', '40%'])
+  const heroContentOpacity = useTransform(heroScrollProgress, [0, 0.8], [1, 0.15])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section Premium */}
-      <div className="relative">
+      <div ref={heroRef} className="relative overflow-hidden">
         {/* Background avec overlay */}
-        <div
+        <motion.div
           className="absolute inset-0 h-[500px]"
           style={{
-            background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 50%, ${primaryColor}99 100%)`
+            background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 50%, ${primaryColor}99 100%)`,
+            y: heroBgY,
           }}
         />
 
-        {/* Pattern décoratif */}
-        <div className="absolute inset-0 h-[500px] opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
-        </div>
+        {/* Grille en pointillés masquée (motif landing page) */}
+        <motion.div
+          style={{ y: heroBgY }}
+          className="absolute inset-0 h-[500px] bg-[linear-gradient(to_right,#ffffff14_1px,transparent_1px),linear-gradient(to_bottom,#ffffff14_1px,transparent_1px)] bg-[size:56px_56px] opacity-70 [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)]"
+        />
 
-        <div className="relative container mx-auto px-4 pt-8 pb-32">
+        <motion.div style={{ y: heroBlobsY }} className="absolute inset-0 h-[500px]">
+          <HeroBlobs primaryColor={primaryColor} accentColor={accentColor} />
+        </motion.div>
+
+        <motion.div
+          style={{ y: heroContentY, opacity: heroContentOpacity }}
+          className="relative container mx-auto px-4 pt-8 pb-32"
+        >
           {/* Navigation retour */}
           <Link
             href={organizationCode ? `/cataloguepublic/${organizationCode}` : '/programmes'}
@@ -196,39 +263,51 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
             {/* Contenu texte */}
             <div className="text-white">
               {/* Badges */}
-              <div className="flex flex-wrap gap-2 mb-6">
+              <motion.div {...fadeInUp} className="flex flex-wrap gap-2 mb-6">
                 {program.category && (
                   <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
                     {program.category}
                   </Badge>
                 )}
                 {program.eligible_cpf && (
-                  <Badge className="bg-emerald-500/90 text-white border-0">
+                  <Badge className="bg-emerald-400/20 text-white border-emerald-300/40 backdrop-blur-md">
                     <BadgeCheck className="w-3 h-3 mr-1" />
                     Éligible CPF
                   </Badge>
                 )}
                 {program.certification_modalities && (
-                  <Badge className="bg-amber-500/90 text-white border-0">
+                  <Badge className="bg-amber-400/20 text-white border-amber-300/40 backdrop-blur-md">
                     <Award className="w-3 h-3 mr-1" />
                     Certifiant
                   </Badge>
                 )}
-              </div>
+              </motion.div>
 
               {/* Titre */}
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+              <motion.h1
+                {...fadeInUp}
+                transition={{ ...fadeInUp.transition, delay: 0.1 }}
+                className="font-display text-4xl md:text-5xl font-bold mb-4 leading-tight"
+              >
                 {program.name}
-              </h1>
+              </motion.h1>
 
               {program.subtitle && (
-                <p className="text-xl text-white/90 mb-6">
+                <motion.p
+                  {...fadeInUp}
+                  transition={{ ...fadeInUp.transition, delay: 0.15 }}
+                  className="text-xl text-white/90 mb-6"
+                >
                   {program.subtitle}
-                </p>
+                </motion.p>
               )}
 
               {/* Métriques clés */}
-              <div className="flex flex-wrap gap-6 mb-8">
+              <motion.div
+                {...fadeInUp}
+                transition={{ ...fadeInUp.transition, delay: 0.2 }}
+                className="flex flex-wrap gap-6 mb-8"
+              >
                 {program.duration_days && (
                   <div className="flex items-center gap-2">
                     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
@@ -262,57 +341,80 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                     </div>
                   </div>
                 )}
-              </div>
+              </motion.div>
 
               {/* CTA */}
-              <div className="flex flex-wrap gap-4">
-                <Button
-                  size="lg"
-                  className="bg-white hover:bg-white/90 shadow-lg"
-                  style={{ color: primaryColor }}
+              <motion.div
+                {...fadeInUp}
+                transition={{ ...fadeInUp.transition, delay: 0.25 }}
+                className="flex flex-wrap gap-4"
+              >
+                <MagneticButton
                   onClick={scrollToSessions}
+                  className="group relative inline-flex items-center gap-2 px-6 py-3.5 bg-white rounded-full font-bold shadow-lg hover:shadow-xl transition-shadow overflow-hidden"
+                  style={{ color: primaryColor }}
                 >
-                  <Play className="w-4 h-4 mr-2" />
-                  S'inscrire maintenant
-                </Button>
+                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  <Play className="w-4 h-4 relative z-10" />
+                  <span className="relative z-10">S&apos;inscrire maintenant</span>
+                </MagneticButton>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10"
+                  className="border-white/30 text-white hover:bg-white/10 rounded-full"
+                  onClick={() => window.print()}
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   Télécharger le programme
                 </Button>
-              </div>
+              </motion.div>
             </div>
 
             {/* Image ou stats card */}
             <div className="hidden lg:block">
-              {(program.public_image_url || program.photo_url) ? (
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
-                  <Image
-                    src={(program.public_image_url || program.photo_url) as string}
-                    alt={program.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                </div>
+              {coverImage ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
+                  className="relative aspect-[4/3] rounded-[28px] overflow-hidden shadow-2xl"
+                >
+                  <motion.div
+                    className="absolute inset-0"
+                    initial={{ scale: 1 }}
+                    animate={{ scale: 1.08 }}
+                    transition={{ duration: 20, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
+                  >
+                    <Image
+                      src={coverImage as string}
+                      alt={program.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      placeholder="blur"
+                      blurDataURL={shimmerDataURL(640, 480)}
+                      className="object-cover"
+                    />
+                  </motion.div>
+                  {/* Teinte duotone couleur de marque */}
+                  <div className="absolute inset-0" style={{ backgroundColor: primaryColor, mixBlendMode: 'color', opacity: 0.35 }} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                </motion.div>
               ) : hasStats ? (
-                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-                  <h3 className="text-white text-lg font-semibold mb-6">Nos résultats</h3>
+                <div className="bg-white/10 backdrop-blur-lg rounded-[28px] p-8 border border-white/20">
+                  <h3 className="font-display text-white text-lg font-semibold mb-6">Nos résultats</h3>
                   <div className="grid grid-cols-2 gap-6">
                     {stats.successRate !== null && (
                       <div className="text-center p-4 bg-white/10 rounded-xl">
-                        <div className="text-4xl font-bold text-white mb-1">{stats.successRate}%</div>
+                        <div className="font-display text-4xl font-bold text-white mb-1">
+                          <AnimatedCounter value={stats.successRate} suffix="%" />
+                        </div>
                         <div className="text-sm text-white/70">Taux de réussite</div>
                       </div>
                     )}
                     {stats.satisfactionRate !== null && (
                       <div className="text-center p-4 bg-white/10 rounded-xl">
-                        <div className="text-4xl font-bold text-white mb-1 flex items-center justify-center gap-1">
-                          {stats.satisfactionRate}
+                        <div className="font-display text-4xl font-bold text-white mb-1 flex items-center justify-center gap-1">
+                          <AnimatedCounter value={stats.satisfactionRate} />
                           <Star className="w-6 h-6 fill-amber-400 text-amber-400" />
                         </div>
                         <div className="text-sm text-white/70">Satisfaction</div>
@@ -320,13 +422,17 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                     )}
                     {stats.totalLearners !== null && (
                       <div className="text-center p-4 bg-white/10 rounded-xl">
-                        <div className="text-4xl font-bold text-white mb-1">{stats.totalLearners.toLocaleString()}+</div>
+                        <div className="font-display text-4xl font-bold text-white mb-1">
+                          <AnimatedCounter value={stats.totalLearners} suffix="+" />
+                        </div>
                         <div className="text-sm text-white/70">Apprenants formés</div>
                       </div>
                     )}
                     {stats.completionRate !== null && (
                       <div className="text-center p-4 bg-white/10 rounded-xl">
-                        <div className="text-4xl font-bold text-white mb-1">{stats.completionRate}%</div>
+                        <div className="font-display text-4xl font-bold text-white mb-1">
+                          <AnimatedCounter value={stats.completionRate} suffix="%" />
+                        </div>
                         <div className="text-sm text-white/70">Taux de complétion</div>
                       </div>
                     )}
@@ -335,7 +441,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
               ) : null}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Contenu principal */}
@@ -346,14 +452,16 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
             <div className="grid grid-cols-2 gap-3">
               {stats.successRate !== null && (
                 <div className="bg-white rounded-xl p-4 shadow-lg text-center">
-                  <div className="text-2xl font-bold" style={{ color: primaryColor }}>{stats.successRate}%</div>
+                  <div className="text-2xl font-bold" style={{ color: primaryColor }}>
+                    <AnimatedCounter value={stats.successRate} suffix="%" />
+                  </div>
                   <div className="text-xs text-gray-500">Taux de réussite</div>
                 </div>
               )}
               {stats.satisfactionRate !== null && (
                 <div className="bg-white rounded-xl p-4 shadow-lg text-center">
                   <div className="text-2xl font-bold flex items-center justify-center gap-1" style={{ color: primaryColor }}>
-                    {stats.satisfactionRate}
+                    <AnimatedCounter value={stats.satisfactionRate} />
                     <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                   </div>
                   <div className="text-xs text-gray-500">Satisfaction</div>
@@ -361,13 +469,17 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
               )}
               {stats.totalLearners !== null && !stats.successRate && (
                 <div className="bg-white rounded-xl p-4 shadow-lg text-center">
-                  <div className="text-2xl font-bold" style={{ color: primaryColor }}>{stats.totalLearners.toLocaleString()}+</div>
+                  <div className="text-2xl font-bold" style={{ color: primaryColor }}>
+                    <AnimatedCounter value={stats.totalLearners} suffix="+" />
+                  </div>
                   <div className="text-xs text-gray-500">Apprenants formés</div>
                 </div>
               )}
               {stats.completionRate !== null && !stats.satisfactionRate && (
                 <div className="bg-white rounded-xl p-4 shadow-lg text-center">
-                  <div className="text-2xl font-bold" style={{ color: primaryColor }}>{stats.completionRate}%</div>
+                  <div className="text-2xl font-bold" style={{ color: primaryColor }}>
+                    <AnimatedCounter value={stats.completionRate} suffix="%" />
+                  </div>
                   <div className="text-xs text-gray-500">Taux de complétion</div>
                 </div>
               )}
@@ -376,32 +488,38 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
         )}
 
         {/* Points forts */}
+        {highlights.length > 0 && (
         <div className="grid md:grid-cols-4 gap-4 mb-12">
           {highlights.map((highlight, index) => (
-            <div
+            <motion.div
               key={index}
-              className="bg-white rounded-xl p-5 shadow-lg hover:shadow-xl transition-shadow border border-gray-100"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.4, delay: index * 0.08 }}
+              className="bg-white rounded-[24px] p-5 shadow-lg hover:shadow-xl transition-shadow border border-gray-100"
             >
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                style={{ backgroundColor: `${primaryColor}15` }}
+                className="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-white shadow-md"
+                style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
               >
-                <highlight.icon className="w-6 h-6" style={{ color: primaryColor }} />
+                <highlight.icon className="w-6 h-6" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">{highlight.label}</h3>
+              <h3 className="font-display font-semibold text-gray-900 mb-1">{highlight.label}</h3>
               <p className="text-sm text-gray-500">{highlight.description}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Colonne principale */}
           <div className="lg:col-span-2 space-y-8">
             {/* Description */}
-            <Card className="shadow-lg border-0 overflow-hidden">
+            <Card id="description" className="shadow-lg border-0 overflow-hidden rounded-[28px] scroll-mt-24">
               <div className="h-1" style={{ backgroundColor: primaryColor }} />
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="font-display flex items-center gap-2">
                   <BookOpen className="w-5 h-5" style={{ color: primaryColor }} />
                   Présentation de la formation
                 </CardTitle>
@@ -417,10 +535,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Objectifs pédagogiques — Qualiopi ind. 1 */}
             {objectives && (
-              <Card className="shadow-lg border-0 overflow-hidden">
+              <Card className="shadow-lg border-0 overflow-hidden rounded-[28px]">
                 <div className="h-1" style={{ backgroundColor: primaryColor }} />
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="font-display flex items-center gap-2">
                     <Target className="w-5 h-5" style={{ color: primaryColor }} />
                     Objectifs pédagogiques
                   </CardTitle>
@@ -445,10 +563,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Public visé — Qualiopi ind. 1 */}
             {learnerProfile && (
-              <Card className="shadow-lg border-0 overflow-hidden">
+              <Card className="shadow-lg border-0 overflow-hidden rounded-[28px]">
                 <div className="h-1" style={{ backgroundColor: primaryColor }} />
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="font-display flex items-center gap-2">
                     <UserCheck className="w-5 h-5" style={{ color: primaryColor }} />
                     Public concerné
                   </CardTitle>
@@ -461,10 +579,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Prérequis — Qualiopi ind. 3 */}
             {program.prerequisites && (
-              <Card className="shadow-lg border-0 overflow-hidden">
+              <Card className="shadow-lg border-0 overflow-hidden rounded-[28px]">
                 <div className="h-1" style={{ backgroundColor: primaryColor }} />
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="font-display flex items-center gap-2">
                     <ClipboardCheck className="w-5 h-5" style={{ color: primaryColor }} />
                     Prérequis et niveau d'entrée
                   </CardTitle>
@@ -484,10 +602,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Méthodes pédagogiques — Qualiopi ind. 5 */}
             {program.pedagogical_methods && (
-              <Card className="shadow-lg border-0 overflow-hidden">
+              <Card className="shadow-lg border-0 overflow-hidden rounded-[28px]">
                 <div className="h-1" style={{ backgroundColor: primaryColor }} />
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="font-display flex items-center gap-2">
                     <BookOpen className="w-5 h-5" style={{ color: primaryColor }} />
                     Méthodes pédagogiques et modalités d'évaluation
                   </CardTitle>
@@ -500,10 +618,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Contenu de la formation — Qualiopi ind. 1 */}
             {trainingContent && (
-              <Card className="shadow-lg border-0 overflow-hidden">
+              <Card className="shadow-lg border-0 overflow-hidden rounded-[28px]">
                 <div className="h-1" style={{ backgroundColor: primaryColor }} />
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="font-display flex items-center gap-2">
                     <Layers className="w-5 h-5" style={{ color: primaryColor }} />
                     Contenu pédagogique
                   </CardTitle>
@@ -532,10 +650,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Suivi de l'exécution */}
             {executionFollowUp && (
-              <Card className="shadow-lg border-0 overflow-hidden">
+              <Card className="shadow-lg border-0 overflow-hidden rounded-[28px]">
                 <div className="h-1" style={{ backgroundColor: primaryColor }} />
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="font-display flex items-center gap-2">
                     <TrendingUp className="w-5 h-5" style={{ color: primaryColor }} />
                     Suivi de l'exécution et évaluation des résultats
                   </CardTitle>
@@ -548,10 +666,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Modalités d'évaluation et certification */}
             {program.certification_modalities && (
-              <Card className="shadow-lg border-0 overflow-hidden">
+              <Card className="shadow-lg border-0 overflow-hidden rounded-[28px]">
                 <div className="h-1 bg-gradient-to-r from-amber-400 to-amber-600" />
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="font-display flex items-center gap-2">
                     <GraduationCap className="w-5 h-5 text-amber-500" />
                     Modalités d'évaluation et certification
                   </CardTitle>
@@ -566,10 +684,10 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
             {/* Sessions disponibles */}
             {program.formations && program.formations.length > 0 && (
-              <Card ref={sessionsRef} className="shadow-lg border-0 overflow-hidden scroll-mt-24">
+              <Card id="sessions" ref={sessionsRef} className="shadow-lg border-0 overflow-hidden scroll-mt-24 rounded-[28px]">
                 <div className="h-1 bg-gradient-to-r" style={{ background: `linear-gradient(to right, ${primaryColor}, ${primaryColor}80)` }} />
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="font-display flex items-center gap-2">
                     <Calendar className="w-5 h-5" style={{ color: primaryColor }} />
                     Sessions de formation disponibles
                   </CardTitle>
@@ -605,8 +723,17 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                       </div>
 
                       {/* Sessions de cette formation */}
+                      <AnimatePresence initial={false}>
                       {(selectedFormation === formation.id || !selectedFormation) && formation.sessions && formation.sessions.length > 0 && (
-                        <div className="space-y-3 pl-4">
+                        <motion.div
+                          key="sessions"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.35, ease: 'easeInOut' }}
+                          className="overflow-hidden"
+                        >
+                        <div className="space-y-3 pl-4 pt-1">
                           {formation.sessions.map((session: any) => {
                             const isUpcoming = new Date(session.start_date) > new Date()
                             const isSoon = new Date(session.start_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -662,7 +789,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
 
                                   <Button
                                     className="text-white shadow-md hover:shadow-lg transition-all"
-                                    style={{ backgroundColor: primaryColor }}
+                                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
                                     onClick={() => handleSessionEnroll(session.id)}
                                   >
                                     S'inscrire
@@ -673,7 +800,9 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                             )
                           })}
                         </div>
+                        </motion.div>
                       )}
+                      </AnimatePresence>
 
                       {formation.sessions?.length === 0 && (
                         <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-lg">
@@ -689,36 +818,47 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
             )}
 
             {/* Accessibilité et délais d'accès — Qualiopi ind. 7 */}
-            <Card className="shadow-lg border-0 overflow-hidden">
-              <div className="h-1" style={{ backgroundColor: primaryColor }} />
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Accessibility className="w-5 h-5" style={{ color: primaryColor }} />
-                  Accessibilité et délais d'accès
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {program.access_delay_days != null && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <Clock className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Délai d'accès moyen :</span>
-                      <span className="text-sm text-gray-600 ml-1">{program.access_delay_days} jours ouvrés</span>
+            {(program.access_delay_days != null || program.accessibility_info) && (
+              <Card id="accessibilite" className="shadow-lg border-0 overflow-hidden rounded-[28px] scroll-mt-24">
+                <div className="h-1" style={{ backgroundColor: primaryColor }} />
+                <CardHeader>
+                  <CardTitle className="font-display flex items-center gap-2">
+                    <Accessibility className="w-5 h-5" style={{ color: primaryColor }} />
+                    Accessibilité et délais d'accès
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {program.access_delay_days != null && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <Clock className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">Délai d'accès moyen :</span>
+                        <span className="text-sm text-gray-600 ml-1">{program.access_delay_days} jours ouvrés</span>
+                      </div>
                     </div>
-                  </div>
-                )}
-                <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                  {program.accessibility_info || 'Cette formation est accessible aux personnes en situation de handicap. Notre référent handicap est à votre disposition pour étudier les adaptations nécessaires à votre parcours de formation.'}
-                </p>
-              </CardContent>
-            </Card>
+                  )}
+                  {program.accessibility_info ? (
+                    <p className="text-gray-600 leading-relaxed whitespace-pre-line">
+                      {program.accessibility_info}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">
+                      Les modalités d&apos;accessibilité n&apos;ont pas été renseignées pour cette formation.
+                      {contactEmail && (
+                        <> Contactez <a href={`mailto:${contactEmail}`} className="underline hover:text-gray-700">l&apos;organisme</a> pour toute question relative à l&apos;accessibilité.</>
+                      )}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Card inscription sticky */}
-            <Card className="shadow-xl border-0 sticky top-8 overflow-hidden">
-              <div className="h-2" style={{ backgroundColor: primaryColor }} />
+            <Card className="shadow-xl border border-white/60 bg-white/80 backdrop-blur-xl sticky top-8 overflow-hidden rounded-[28px]">
+              <div className="h-2" style={{ background: `linear-gradient(90deg, ${primaryColor}, ${accentColor})` }} />
               <CardContent className="p-6 space-y-6">
                 {/* Prix si disponible (programme ou première formation) */}
                 {(() => {
@@ -736,7 +876,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                   return (
                     <div className="text-center pb-4 border-b">
                       <div className="text-sm text-gray-500 mb-1">À partir de</div>
-                      <div className="text-4xl font-bold" style={{ color: primaryColor }}>
+                      <div className="font-display text-4xl font-bold" style={{ color: primaryColor }}>
                         {Number(price).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         <span className="text-lg font-normal text-gray-500"> {currencySymbol}</span>
                       </div>
@@ -829,7 +969,7 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                 <div className="space-y-3 pt-4">
                   <Button
                     className="w-full text-white shadow-lg hover:shadow-xl transition-all h-12 text-base"
-                    style={{ backgroundColor: primaryColor }}
+                    style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }}
                     onClick={() =>
                       upcomingSessions.length > 0
                         ? handleSessionEnroll(upcomingSessions[0].id)
@@ -839,43 +979,36 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                     <Play className="w-4 h-4 mr-2" />
                     S'inscrire maintenant
                   </Button>
-                  <Button variant="outline" className="w-full h-12">
+                  <Button variant="outline" className="w-full h-12" onClick={handleRequestQuote}>
                     <FileText className="w-4 h-4 mr-2" />
                     Demander un devis
                   </Button>
                 </div>
 
-                {/* Badges confiance */}
-                <div className="flex items-center justify-center gap-3 pt-4 border-t">
-                  <div className="text-center">
-                    <CheckCircle className="w-5 h-5 mx-auto text-emerald-500 mb-1" />
-                    <div className="text-xs text-gray-500">Qualiopi</div>
-                  </div>
-                  {program.eligible_cpf && (
-                    <div className="text-center">
-                      <BadgeCheck className="w-5 h-5 mx-auto text-blue-500 mb-1" />
-                      <div className="text-xs text-gray-500">CPF</div>
-                    </div>
-                  )}
-                  <div className="text-center">
-                    <Shield className="w-5 h-5 mx-auto text-purple-500 mb-1" />
-                    <div className="text-xs text-gray-500">Certifié</div>
-                  </div>
+                {/* Badges confiance — uniquement des faits réels et vérifiables */}
+                <div className="pt-2 border-t">
+                  <CatalogTrustBar
+                    primaryColor={primaryColor}
+                    hasQualiopi={Boolean(organization?.qualiopi_certificate_url)}
+                    cpfEligible={Boolean(program.eligible_cpf)}
+                    align="left"
+                    theme="onLight"
+                  />
                 </div>
               </CardContent>
             </Card>
 
             {/* Organisme de formation */}
             {organization && (
-              <Card className="shadow-lg border-0">
+              <Card className="shadow-lg border border-white/60 bg-white/80 backdrop-blur-xl rounded-[28px]">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Organisme de formation</CardTitle>
+                  <CardTitle className="font-display text-base">Organisme de formation</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4">
-                    {(organization.logo_url || (organization.settings && typeof organization.settings === 'object' && 'logo_url' in organization.settings)) && (
+                    {organization.logo_url && (
                       <img
-                        src={organization.logo_url ?? organization.settings?.logo_url ?? undefined}
+                        src={organization.logo_url}
                         alt={organization.name}
                         className="h-14 w-auto object-contain"
                       />
@@ -914,9 +1047,9 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
                   </div>
 
                   {/* Badge Qualiopi */}
-                  {organization.settings && typeof organization.settings === 'object' && 'qualiopi_certificate_url' in organization.settings && (
+                  {organization.qualiopi_certificate_url && (
                     <a
-                      href={(organization.settings.qualiopi_certificate_url as string | null | undefined) ?? undefined}
+                      href={organization.qualiopi_certificate_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors"
@@ -930,13 +1063,13 @@ export function PublicProgramDetail({ program, primaryColor = BRAND_COLORS.prima
             )}
 
             {/* Besoin d'aide */}
-            <Card className="shadow-lg border-0 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+            <Card className="shadow-lg border border-white/10 bg-gray-900/80 backdrop-blur-xl text-white rounded-[28px]">
               <CardContent className="p-6">
                 <h3 className="font-semibold mb-2">Besoin d'aide ?</h3>
                 <p className="text-sm text-gray-300 mb-4">
                   Notre équipe est à votre disposition pour répondre à vos questions
                 </p>
-                <Button variant="secondary" className="w-full">
+                <Button variant="secondary" className="w-full" onClick={handleContactUs}>
                   <Phone className="w-4 h-4 mr-2" />
                   Nous contacter
                 </Button>

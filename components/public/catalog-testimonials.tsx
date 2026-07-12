@@ -22,7 +22,7 @@ export function CatalogTestimonials({ testimonials, primaryColor }: CatalogTesti
   const accentColor = lightenHexColor(primaryColor, 0.4)
 
   return (
-    <section className="relative py-20 lg:py-24 bg-white overflow-hidden">
+    <section id="avis" className="relative py-20 lg:py-24 bg-white overflow-hidden scroll-mt-32">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
 
       <div className="relative container mx-auto px-6 lg:px-8">

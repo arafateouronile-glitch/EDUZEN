@@ -15,6 +15,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { CatalogNavbar } from '@/components/public/catalog-navbar'
 import { CatalogFooter } from '@/components/public/catalog-footer'
 import { CatalogStyles } from '@/components/public/catalog-styles'
+import { CatalogTestimonials, type CatalogTestimonial } from '@/components/public/catalog-testimonials'
+import { CatalogSubNav } from '@/components/public/catalog-sub-nav'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -100,7 +102,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
     .flatMap((f) => {
       const formation = f as { sessions?: Array<{ id: string; status?: string }>; [key: string]: unknown }
       return (formation.sessions || []).filter(
-        (s) => s.status === 'scheduled' || s.status === 'ongoing'
+        (s) => s.status === 'planned' || s.status === 'ongoing'
       )
     })
 
@@ -113,7 +115,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
         return {
           ...f,
           sessions: (f.sessions || []).filter(
-            (s) => (s as { status?: string }).status === 'scheduled' || (s as { status?: string }).status === 'ongoing'
+            (s) => (s as { status?: string }).status === 'planned' || (s as { status?: string }).status === 'ongoing'
           ),
         }
       }),
@@ -152,18 +154,77 @@ export default async function ProgramDetailPage({ params }: PageProps) {
   )
   const generalEnrollmentToken: string | undefined = generalLinkResult.data?.token ?? undefined
 
+  // Témoignages réels issus des évaluations de fin de formation, restreints à CE
+  // programme (voir get_catalog_testimonials, migration 20260710000002) — jamais
+  // de contenu saisi/hardcodé.
+  const { data: testimonialRows } = await supabase.rpc(
+    'get_catalog_testimonials' as any,
+    { p_organization_id: organization.id, p_limit: 6, p_program_id: id } as any
+  )
+  const testimonials = (testimonialRows ?? []) as CatalogTestimonial[]
 
   // Utiliser les valeurs des settings ou celles par défaut
   const logoUrl = catalogSettings?.logo_url || organization.logo_url
   const primaryColor = catalogSettings?.primary_color || '#274472'
 
+  // Données structurées SEO (schema.org Course) — prix, sessions, organisme.
+  // Échappement de "<" pour empêcher toute évasion du <script> via un champ
+  // saisi par l'organisme (nom de programme, description, etc.).
+  const programPrice = (program as { price?: number; price_enterprise?: number; price_individual?: number }).price
+    ?? (program as { price_enterprise?: number }).price_enterprise
+    ?? (program as { price_individual?: number }).price_individual
+  const currency = (program as { currency?: string }).currency || 'EUR'
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name: program.name,
+    description: program.public_description || program.description || undefined,
+    provider: {
+      '@type': 'Organization',
+      name: organization.name,
+    },
+    ...(programPrice != null && Number(programPrice) > 0 ? {
+      offers: {
+        '@type': 'Offer',
+        price: Number(programPrice),
+        priceCurrency: currency,
+        availability: 'https://schema.org/InStock',
+      },
+    } : {}),
+    ...(activeSessions.length > 0 ? {
+      hasCourseInstance: activeSessions.map((s) => ({
+        '@type': 'CourseInstance',
+        courseMode: (program as { modalities?: string }).modalities || 'Blended',
+        startDate: (s as { start_date?: string }).start_date,
+        endDate: (s as { end_date?: string }).end_date || undefined,
+        ...((s as { location?: string }).location ? { location: { '@type': 'Place', name: (s as { location?: string }).location } } : {}),
+      })),
+    } : {}),
+  }
+  const jsonLdScript = JSON.stringify(jsonLd).replace(/</g, '\\u003c')
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript }}
+      />
       <CatalogStyles primaryColor={primaryColor} />
       <CatalogNavbar
         organizationName={organization.name ?? ''}
         logoUrl={logoUrl}
         primaryColor={primaryColor}
+      />
+      <CatalogSubNav
+        primaryColor={primaryColor}
+        hasNavbar
+        hasTestimonials={testimonials.length > 0}
+        links={[
+          { href: '#description', label: 'Présentation', iconKey: 'book' },
+          ...(activeSessions.length > 0 ? [{ href: '#sessions', label: 'Sessions', iconKey: 'calendar' as const }] : []),
+          ...((program.access_delay_days != null || program.accessibility_info) ? [{ href: '#accessibilite', label: 'Accessibilité', iconKey: 'accessibility' as const }] : []),
+          ...(testimonials.length > 0 ? [{ href: '#avis', label: 'Avis', iconKey: 'message' as const }] : []),
+        ]}
       />
       <div className="min-h-screen bg-white">
         <PublicProgramDetail
@@ -174,6 +235,7 @@ export default async function ProgramDetailPage({ params }: PageProps) {
           generalEnrollmentToken={generalEnrollmentToken}
           contactEmail={catalogSettings?.contact_email ?? organization.email ?? undefined}
         />
+        <CatalogTestimonials testimonials={testimonials} primaryColor={primaryColor} />
       </div>
       <CatalogFooter
         organizationName={organization.name ?? ''}

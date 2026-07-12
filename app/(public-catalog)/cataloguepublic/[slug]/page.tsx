@@ -18,6 +18,8 @@ import { CatalogHero } from '@/components/public/catalog-hero'
 import { CatalogOrganizationInfo } from '@/components/public/catalog-organization-info'
 import { CatalogSearchFilters } from '@/components/public/catalog-search-filters'
 import { CatalogTestimonials, type CatalogTestimonial } from '@/components/public/catalog-testimonials'
+import { CatalogScrollProgress } from '@/components/public/catalog-scroll-progress'
+import { CatalogSubNav } from '@/components/public/catalog-sub-nav'
 
 import { CatalogStats } from '@/components/public/catalog-stats'
 
@@ -198,11 +200,23 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   const primaryColor = catalogSettings?.primary_color || '#274472'
   const coverImageUrl = catalogSettings?.cover_image_url
   const totalLearners = (catalogSettings as { stats_trained_students?: number } | null)?.stats_trained_students ?? 1200
-  const testimonials = ((catalogSettings as { testimonials?: unknown } | null)?.testimonials ?? []) as CatalogTestimonial[]
+
+  // Témoignages réels issus des évaluations de fin de formation (grades.rating + réponse
+  // "essai"), jamais de contenu saisi/hardcodé — voir get_catalog_testimonials (migration
+  // 20260710000002). La fonction est SECURITY DEFINER : elle ne renvoie que les 4 colonnes
+  // sûres (note, citation, prénom + initiale), jamais les tables sources.
+  // Cast `any` nécessaire : fonction absente des types générés tant que la migration n'a
+  // pas été appliquée + `npm run db:generate` relancé.
+  const { data: testimonialRows } = await supabase.rpc(
+    'get_catalog_testimonials' as any,
+    { p_organization_id: organization.id, p_limit: 9 } as any
+  )
+  const testimonials = (testimonialRows ?? []) as CatalogTestimonial[]
 
   return (
     <>
       <CatalogStyles primaryColor={primaryColor} />
+      <CatalogScrollProgress primaryColor={primaryColor} />
       {!isEmbed && (
         <CatalogNavbar
           organizationName={organization.name}
@@ -210,6 +224,7 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
           primaryColor={primaryColor}
         />
       )}
+      <CatalogSubNav primaryColor={primaryColor} hasNavbar={!isEmbed} hasTestimonials={testimonials.length > 0} />
       <div className={isEmbed ? 'bg-white' : 'min-h-screen bg-white'}>
         {/* Hero Section Premium */}
         <CatalogHero

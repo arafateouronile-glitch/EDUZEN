@@ -14,7 +14,7 @@ interface CatalogOrganizationInfoProps {
 
 export function CatalogOrganizationInfo({ organization, logoUrl, primaryColor }: CatalogOrganizationInfoProps) {
   return (
-    <section className="relative py-20 lg:py-24 bg-gradient-to-b from-white via-gray-50/30 to-white">
+    <section id="contact" className="relative py-20 lg:py-24 bg-gradient-to-b from-white via-gray-50/30 to-white scroll-mt-32">
       {/* Pattern de fond subtil */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
       

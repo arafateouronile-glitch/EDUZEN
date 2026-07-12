@@ -3,6 +3,7 @@
 import { motion } from '@/components/ui/motion'
 import { Users, Award, BookOpen, GraduationCap } from 'lucide-react'
 import { lightenHexColor } from '@/lib/utils'
+import { AnimatedCounter } from '@/components/public/animated-counter'
 
 interface CatalogStatsProps {
   primaryColor: string
@@ -19,25 +20,29 @@ export function CatalogStats({ primaryColor, stats }: CatalogStatsProps) {
   const items = [
     {
       icon: Users,
-      value: typeof stats?.learners === 'number' ? stats.learners.toLocaleString('fr-FR') : (stats?.learners || '5000+'),
+      numericValue: typeof stats?.learners === 'number' ? stats.learners : 5000,
+      suffix: typeof stats?.learners === 'number' ? '' : '+',
       label: 'Apprenants formés',
       delay: 0.1,
     },
     {
       icon: BookOpen,
-      value: typeof stats?.courses === 'number' ? stats.courses.toString() : (stats?.courses || '50+'),
+      numericValue: typeof stats?.courses === 'number' ? stats.courses : 50,
+      suffix: typeof stats?.courses === 'number' ? '' : '+',
       label: 'Programmes de formation',
       delay: 0.2,
     },
     {
       icon: Award,
-      value: typeof stats?.certifications === 'number' ? `${stats.certifications}%` : (stats?.certifications || '98%'),
+      numericValue: typeof stats?.certifications === 'number' ? stats.certifications : 98,
+      suffix: '%',
       label: 'Taux de satisfaction',
       delay: 0.3,
     },
     {
       icon: GraduationCap,
-      value: typeof stats?.successRate === 'number' ? `${stats.successRate}%` : (stats?.successRate || '95%'),
+      numericValue: typeof stats?.successRate === 'number' ? stats.successRate : 95,
+      suffix: '%',
       label: 'Taux de réussite',
       delay: 0.4,
     },
@@ -63,7 +68,7 @@ export function CatalogStats({ primaryColor, stats }: CatalogStatsProps) {
                 <item.icon className="w-8 h-8" />
               </div>
               <h3 className="font-display text-4xl font-bold text-gray-900 mb-2 tracking-tight">
-                {item.value}
+                <AnimatedCounter value={item.numericValue} suffix={item.suffix} />
               </h3>
               <p className="text-gray-500 font-medium">{item.label}</p>
             </motion.div>
