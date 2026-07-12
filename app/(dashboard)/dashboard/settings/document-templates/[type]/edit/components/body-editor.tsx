@@ -25,7 +25,6 @@ const SignatureField = dynamic(() => import('@/components/document-editor/signat
 const MapEmbed = dynamic(() => import('@/components/document-editor/map-embed').then(mod => ({ default: mod.MapEmbed })), { ssr: false })
 const AttachmentEmbed = dynamic(() => import('@/components/document-editor/attachment-embed').then(mod => ({ default: mod.AttachmentEmbed })), { ssr: false })
 const FormFieldEditor = dynamic(() => import('@/components/document-editor/form-field-editor').then(mod => ({ default: mod.FormFieldEditor })), { ssr: false })
-const CollaborationUsers = dynamic(() => import('@/components/document-editor/collaboration-users').then(mod => ({ default: mod.CollaborationUsers })), { ssr: false })
 
 // Types et hooks (non-lazy car ce sont juste des types/fonctions)
 import type { ImageConfig } from '@/components/document-editor/image-resizer'
@@ -38,8 +37,6 @@ import { Info, Eye, EyeOff, FileText, Grid3x3, ZoomOut, ZoomIn, Maximize2 } from
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/lib/hooks/use-auth'
-import { realtimeCollaborationService } from '@/lib/services/realtime-collaboration.service.client'
 import { getDefaultTemplateContent } from '@/lib/utils/document-template-defaults'
 import { convertTagsToVariableNodes, convertVariableNodesToTags } from '@/lib/utils/document-generation/template-converter'
 import { logger, sanitizeError } from '@/lib/utils/logger'
@@ -52,7 +49,6 @@ interface BodyEditorProps {
 }
 
 export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isActive }: BodyEditorProps) {
-  const { user } = useAuth()
   const editorRef = useRef<RichTextEditorRef>(null)
   const isSyncingFromTemplateRef = useRef(false) // Pour éviter les boucles lors de la synchronisation
   const [bodyContent, setBodyContent] = useState(() => {
@@ -144,7 +140,6 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id, template.type, template.content]) // Se déclenche aussi quand le contenu change
-  const [collaborationEnabled, setCollaborationEnabled] = useState(false)
   const [showTableEditor, setShowTableEditor] = useState(false)
   const [showShapeEditor, setShowShapeEditor] = useState(false)
   const [showElementPalette, setShowElementPalette] = useState(false)
@@ -178,56 +173,6 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
   const [fullPagePreview, setFullPagePreview] = useState(false)
   
   const snapPosition = useSnapToGrid(gridSettings.gridSize, gridSettings.snapToGrid)
-
-  // Initialiser la collaboration en temps réel (seulement si un serveur WebSocket est configuré)
-  useEffect(() => {
-    if (!template.id || !user?.id) return
-    
-    // Vérifier si un serveur WebSocket est configuré
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL
-    if (!wsUrl) {
-      // Pas de serveur WebSocket configuré, désactiver la collaboration silencieusement
-      setCollaborationEnabled(false)
-      return
-    }
-
-    let isMounted = true
-
-    const initCollaboration = async () => {
-      try {
-        await realtimeCollaborationService.initializeCollaboration(
-          template.id!,
-          user.id,
-          user.full_name || user.email || 'Utilisateur',
-          user.email || '',
-          user.avatar_url || undefined
-        )
-        if (isMounted) {
-          setCollaborationEnabled(true)
-        }
-      } catch (error) {
-        // La collaboration échoue silencieusement si le serveur WebSocket n'est pas disponible
-        if (isMounted) {
-          setCollaborationEnabled(false)
-          // Ne pas afficher d'erreur si c'est simplement que le serveur n'est pas configuré
-          const errorMessage = error instanceof Error ? error.message : String(error)
-          if (!errorMessage.includes('désactivée') && !errorMessage.includes('aucun serveur')) {
-            logger.warn('Collaboration non disponible', { errorMessage })
-          }
-        }
-      }
-    }
-
-    initCollaboration()
-
-    // Nettoyer à la déconnexion
-    return () => {
-      isMounted = false
-      if (template.id && user?.id) {
-        realtimeCollaborationService.disconnect(template.id, user.id)
-      }
-    }
-  }, [template.id, user?.id, user?.email, user?.full_name, user?.avatar_url])
 
   const handleContentChange = (content: string) => {
     // Ne pas déclencher onTemplateChange si on est en train de synchroniser depuis le template
@@ -317,9 +262,6 @@ export function BodyEditor({ template, onTemplateChange, onEditorRefReady, isAct
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {collaborationEnabled && template.id && user?.id && (
-                <CollaborationUsers templateId={template.id} currentUserId={user.id} />
-              )}
               <Button
                 variant="outline"
                 size="sm"
