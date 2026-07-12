@@ -4,11 +4,13 @@
  *
  * questionnaire_links est une table récente non encore dans les types générés.
  * Les appels sur cette table utilisent (admin as unknown as any) pour contourner.
+ * Rate limit: 20 req/min par IP (anti brute-force du token), cf. sign/public/[token].
  */
 
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { withDistributedRateLimit } from '@/lib/utils/rate-limiter-distributed'
 
 interface QLinkRow {
   id: string
@@ -27,9 +29,10 @@ interface QLinkRow {
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  return withDistributedRateLimit(req, 'public', async () => {
   const { token } = await params
   const admin = createAdminClient() as any // questionnaire_links pas encore dans les types générés
 
@@ -76,6 +79,7 @@ export async function GET(
     },
     questions: (questions as unknown[]) ?? [],
   })
+  })
 }
 
 // ── POST ──────────────────────────────────────────────────────────────────────
@@ -84,6 +88,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  return withDistributedRateLimit(req, 'public', async () => {
   const { token } = await params
   const admin = createAdminClient() as any // questionnaire_links pas encore dans les types générés
 
@@ -151,4 +156,5 @@ export async function POST(
     .eq('token', token)
 
   return NextResponse.json({ success: true })
+  })
 }
