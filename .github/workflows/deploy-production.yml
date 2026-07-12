@@ -29,6 +29,9 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      - name: Run tests
+        run: npm run test -- --run
+
       - name: Build
         run: npm run build
         env:
@@ -86,3 +89,35 @@ jobs:
             | head -c 500
           echo ""
           echo "Requête API envoyée. Vérifier Vercel → Deployments."
+
+  healthcheck:
+    name: Healthcheck post-déploiement
+    runs-on: ubuntu-latest
+    needs: trigger-vercel
+    steps:
+      - name: Vérifier /api/health
+        run: |
+          URL="${{ secrets.PRODUCTION_URL }}"
+          if [ -z "$URL" ]; then
+            echo "→ Secret PRODUCTION_URL absent. GitHub → Settings → Secrets and variables → Actions → New repository secret : PRODUCTION_URL (ex: https://app.eduzen.io)"
+            echo "→ Sans ce secret, aucun healthcheck automatique n'est fait après le déploiement."
+            exit 0
+          fi
+
+          echo "Attente du build Vercel avant de vérifier ${URL}/api/health ..."
+          for i in $(seq 1 20); do
+            sleep 15
+            code=$(curl -s -o /tmp/health_body.json -w "%{http_code}" "${URL}/api/health" || echo "000")
+            echo "Tentative $i/20 → HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "✅ Healthcheck OK"
+              cat /tmp/health_body.json
+              exit 0
+            fi
+          done
+
+          echo "❌ Healthcheck en échec après 5 minutes (dernier code: $code)."
+          echo "→ Le déploiement Vercel a été déclenché mais /api/health ne répond pas correctement."
+          echo "→ Vérifier Vercel → Deployments, et envisager de repromouvoir le déploiement précédent (Vercel → Deployments → ... → Promote to Production)."
+          cat /tmp/health_body.json 2>/dev/null
+          exit 1
