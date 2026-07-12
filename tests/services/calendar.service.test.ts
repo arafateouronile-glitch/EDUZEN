@@ -4,14 +4,19 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-// Mock du module calendar.service avant l'import
+// Mock du module calendar.service avant l'import.
+// calendar.service.client.ts fait `new CalendarService(createClient())` au
+// chargement : la classe mockée doit renvoyer la même instance stubée que
+// celle exportée directement, sinon calendarService se retrouve vide au runtime.
 vi.mock('@/lib/services/calendar.service', () => {
+  const instance = {
+    getTodos: vi.fn(),
+    getTodoById: vi.fn(),
+    createTodo: vi.fn(),
+  }
   return {
-    calendarService: {
-      getTodos: vi.fn(),
-      getTodoById: vi.fn(),
-      createTodo: vi.fn(),
-    },
+    calendarService: instance,
+    CalendarService: vi.fn(function () { return instance }),
   }
 })
 

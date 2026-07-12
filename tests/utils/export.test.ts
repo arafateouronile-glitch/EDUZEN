@@ -11,6 +11,7 @@ import {
 
 vi.mock('@/lib/services/export-history.service', () => ({
   exportHistoryService: { create: vi.fn().mockResolvedValue(null) },
+  ExportHistoryService: vi.fn(),
 }))
 
 describe('export utils', () => {

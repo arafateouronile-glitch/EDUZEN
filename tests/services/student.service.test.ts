@@ -12,8 +12,10 @@ const { mockSupabase } = vi.hoisted(() => {
     from: vi.fn(),
     select: vi.fn(),
     eq: vi.fn(),
+    neq: vi.fn(),
     in: vi.fn(),
     or: vi.fn(),
+    like: vi.fn(),
     single: vi.fn(),
     maybeSingle: vi.fn(),
     insert: vi.fn(),
@@ -27,7 +29,7 @@ const { mockSupabase } = vi.hoisted(() => {
   
   // Toutes les méthodes chainables retournent le mock lui-même
   // Utiliser mockImplementation pour que cela persiste même après mockClear()
-  const chainableMethods = ['from', 'select', 'eq', 'in', 'or', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
+  const chainableMethods = ['from', 'select', 'eq', 'neq', 'in', 'or', 'like', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
   chainableMethods.forEach((method) => {
     mock[method].mockImplementation(() => mock)
   })
@@ -55,7 +57,7 @@ describe('StudentService', () => {
     vi.clearAllMocks()
     // Réinitialiser le chaînage après clearAllMocks
     // Utiliser mockImplementation pour que cela persiste même après mockClear()
-    const chainableMethods = ['from', 'select', 'eq', 'in', 'or', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
+    const chainableMethods = ['from', 'select', 'eq', 'neq', 'in', 'or', 'like', 'insert', 'update', 'upsert', 'delete', 'order', 'limit']
     chainableMethods.forEach((method) => {
       ;(mockSupabase as any)[method].mockImplementation(() => mockSupabase)
     })
@@ -113,10 +115,23 @@ describe('StudentService', () => {
       await expect(service.getAll(organizationId)).rejects.toThrow('Database error')
     })
 
-    it('devrait filtrer par classId', async () => {
-      mockSupabase.range.mockResolvedValueOnce({ data: [], error: null, count: 0 })
+    it('devrait filtrer par classId (résolu via les inscriptions de session)', async () => {
+      // getAll() traite classId comme un alias de sessionId : il résout d'abord
+      // les student_id inscrits (non annulés) via la table enrollments avant de
+      // filtrer les étudiants, plutôt que d'appliquer un .eq('class_id', ...).
+      const enrollmentsChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockResolvedValue({ data: [{ student_id: 's1' }], error: null }),
+      }
+      const fromImpl = vi.fn((table: string) => (table === 'enrollments' ? enrollmentsChain : mockSupabase))
+      ;(mockSupabase as any).from.mockImplementation(fromImpl)
+
       await service.getAll('org-1', { classId: 'class-1' })
-      expect(mockSupabase.eq).toHaveBeenCalledWith('class_id', 'class-1')
+
+      expect(enrollmentsChain.eq).toHaveBeenCalledWith('session_id', 'class-1')
+      expect(enrollmentsChain.neq).toHaveBeenCalledWith('status', 'cancelled')
+      expect(mockSupabase.in).toHaveBeenCalledWith('id', ['s1'])
     })
 
     it('devrait ignorer erreur récupération classes (catch l.97-100) et enrichir avec classesMap vide', async () => {
@@ -442,6 +457,17 @@ describe('StudentService', () => {
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: { code: 'ORG' }, error: null }),
       }
+      // import() interroge d'abord `students` pour trouver le dernier numéro
+      // séquentiel existant (select/eq/like/order/limit/maybeSingle), avant
+      // d'appeler une seconde fois `students` pour l'insert(...).select().
+      const lookupChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        like: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
       const inserted = [
         { id: 's1', organization_id: 'org-1', first_name: 'A', last_name: 'B', student_number: 'EDU-ORG25-000001' },
       ]
@@ -449,8 +475,13 @@ describe('StudentService', () => {
         insert: vi.fn().mockReturnThis(),
         select: vi.fn().mockResolvedValue({ data: inserted, error: null }),
       }
+      let studentsCallCount = 0
       const fromImpl = vi.fn((table: string) => {
         if (table === 'organizations') return orgChain
+        if (table === 'students') {
+          studentsCallCount++
+          return studentsCallCount === 1 ? lookupChain : insertChain
+        }
         return insertChain
       })
       ;(mockSupabase as any).from.mockImplementation(fromImpl)
@@ -461,6 +492,7 @@ describe('StudentService', () => {
 
       expect(result).toEqual(inserted)
       expect(orgChain.single).toHaveBeenCalled()
+      expect(lookupChain.maybeSingle).toHaveBeenCalled()
       expect(insertChain.insert).toHaveBeenCalled()
     })
 

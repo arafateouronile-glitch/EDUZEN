@@ -15,18 +15,26 @@ vi.mock('@/lib/services/document-template.service.client', () => ({
     createTemplate: vi.fn().mockResolvedValue({}),
   },
 }))
-vi.mock('@/lib/services/qualiopi.service', () => ({
-  qualiopiService: { initializeIndicators: vi.fn().mockResolvedValue(undefined) },
-}))
-vi.mock('@/lib/services/session.service', () => ({
-  sessionService: { createSession: vi.fn().mockResolvedValue({}) },
-}))
-vi.mock('@/lib/services/program.service', () => ({
-  programService: { createProgram: vi.fn().mockResolvedValue({ id: 'prog-1' }) },
-}))
-vi.mock('@/lib/services/formation.service', () => ({
-  formationService: { createFormation: vi.fn().mockResolvedValue({ id: 'form-1' }) },
-}))
+// Les fichiers .client.ts (importés par organization-setup.service.ts) font
+// `export const xxxService = new XxxService(createClient())` au chargement du
+// module : la classe mockée doit donc renvoyer la même instance stubée que
+// celle exportée directement, sinon xxxService se retrouve vide au runtime.
+vi.mock('@/lib/services/qualiopi.service', () => {
+  const instance = { initializeIndicators: vi.fn().mockResolvedValue(undefined) }
+  return { qualiopiService: instance, QualiopiService: vi.fn(function () { return instance }) }
+})
+vi.mock('@/lib/services/session.service', () => {
+  const instance = { createSession: vi.fn().mockResolvedValue({}) }
+  return { sessionService: instance, SessionService: vi.fn(function () { return instance }) }
+})
+vi.mock('@/lib/services/program.service', () => {
+  const instance = { createProgram: vi.fn().mockResolvedValue({ id: 'prog-1' }) }
+  return { programService: instance, ProgramService: vi.fn(function () { return instance }) }
+})
+vi.mock('@/lib/services/formation.service', () => {
+  const instance = { createFormation: vi.fn().mockResolvedValue({ id: 'form-1' }) }
+  return { formationService: instance, FormationService: vi.fn(function () { return instance }) }
+})
 
 import { createClient } from '@/lib/supabase/client'
 import { OrganizationSetupService } from '@/lib/services/organization-setup.service'

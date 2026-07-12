@@ -32,10 +32,12 @@ describe('API /api/v1/docs', () => {
 
     expect(data.components?.schemas?.Student).toBeDefined()
     expect(data.components?.schemas?.DocumentTemplate).toBeDefined()
-    expect(data.components?.securitySchemes?.ApiKeyAuth).toMatchObject({
+    // Header primaire documenté par la route (voir app/api/v1/middleware.ts,
+    // qui accepte aussi x-api-key et Authorization: Bearer en alternative).
+    expect(data.components?.securitySchemes?.ApiKey).toMatchObject({
       type: 'apiKey',
       in: 'header',
-      name: 'X-API-Key',
+      name: 'x-eduzen-api-key',
     })
   })
 })
