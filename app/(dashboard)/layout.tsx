@@ -85,16 +85,21 @@ export default async function DashboardLayout({
       const paymentMethodAdded = settings.payment_method_added === true
       const onboardingCompleted = settings.onboarding_completed === true
 
-      if (!onboardingCompleted) {
+      const trialEndAt = subscription?.trial_end_at
+        ? new Date(subscription.trial_end_at)
+        : null
+      const now = new Date()
+      // Un trial actif (prolongé manuellement ou non) donne toujours accès au
+      // dashboard, même si le wizard d'onboarding n'a jamais été terminé —
+      // sinon une prolongation en base reste sans effet pour le client.
+      const hasActiveTrial = !!trialEndAt && trialEndAt > now
+
+      if (!onboardingCompleted && !hasActiveTrial) {
         redirect('/dashboard/onboarding')
       }
 
-      if (!paymentMethodAdded) {
+      if (!paymentMethodAdded && onboardingCompleted) {
         if (subscription) {
-          const trialEndAt = subscription.trial_end_at
-            ? new Date(subscription.trial_end_at)
-            : null
-          const now = new Date()
           if (trialEndAt && trialEndAt < now) {
             redirect('/dashboard/onboarding?reason=trial_expired&step=4')
           }
