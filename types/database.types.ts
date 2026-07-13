@@ -17708,36 +17708,57 @@ export type Database = {
       }
       session_entity_reservations: {
         Row: {
+          billing_mode: string | null
           created_at: string | null
           created_by: string | null
           entity_id: string
+          enrollment_date: string | null
           expected_count: number
+          funding_type_id: string | null
           id: string
           notes: string | null
           organization_id: string
+          paid_amount: number | null
+          payment_status: string | null
           session_id: string
+          status: string
+          total_amount: number | null
           updated_at: string | null
         }
         Insert: {
+          billing_mode?: string | null
           created_at?: string | null
           created_by?: string | null
           entity_id: string
+          enrollment_date?: string | null
           expected_count: number
+          funding_type_id?: string | null
           id?: string
           notes?: string | null
           organization_id: string
+          paid_amount?: number | null
+          payment_status?: string | null
           session_id: string
+          status?: string
+          total_amount?: number | null
           updated_at?: string | null
         }
         Update: {
+          billing_mode?: string | null
           created_at?: string | null
           created_by?: string | null
           entity_id?: string
+          enrollment_date?: string | null
           expected_count?: number
+          funding_type_id?: string | null
           id?: string
           notes?: string | null
           organization_id?: string
+          paid_amount?: number | null
+          payment_status?: string | null
           session_id?: string
+          status?: string
+          total_amount?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -17753,6 +17774,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "external_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_entity_reservations_funding_type_id_fkey"
+            columns: ["funding_type_id"]
+            isOneToOne: false
+            referencedRelation: "funding_types"
             referencedColumns: ["id"]
           },
           {

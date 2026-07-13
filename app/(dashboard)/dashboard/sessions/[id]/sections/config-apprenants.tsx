@@ -129,6 +129,20 @@ export function ConfigApprenants({
   } | null>(null)
   const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null)
 
+  const [showEntityReservationForm, setShowEntityReservationForm] = useState(false)
+  const [entityReservationForm, setEntityReservationForm] = useState({
+    entity_id: '',
+    entity_name: '',
+    expected_count: '',
+    billing_mode: '',
+    enrollment_date: new Date().toISOString().split('T')[0],
+    status: 'confirmed' as 'pending' | 'confirmed',
+    payment_status: 'pending' as 'pending' | 'partial' | 'paid',
+    total_amount: '',
+    paid_amount: '0',
+    funding_type_id: '',
+  })
+
   // Récupérer les types de financement
   const { data: fundingTypes } = useQuery({
     queryKey: ['funding-types', user?.organization_id],
@@ -240,10 +254,19 @@ export function ConfigApprenants({
     enabled: !!sessionId,
   })
 
-  const [reservationDrafts, setReservationDrafts] = useState<Record<string, string>>({})
-
   const saveReservationMutation = useMutation({
-    mutationFn: async ({ entityId, expectedCount }: { entityId: string; expectedCount: number; isNew: boolean }) => {
+    mutationFn: async (payload: {
+      entityId: string
+      isNew: boolean
+      expectedCount: number
+      billingMode: string | null
+      enrollmentDate: string
+      status: string
+      paymentStatus: string
+      totalAmount: number
+      paidAmount: number
+      fundingTypeId: string | null
+    }) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
       const { error } = await supabase
         .from('session_entity_reservations')
@@ -251,8 +274,15 @@ export function ConfigApprenants({
           {
             organization_id: user.organization_id,
             session_id: sessionId,
-            entity_id: entityId,
-            expected_count: expectedCount,
+            entity_id: payload.entityId,
+            expected_count: payload.expectedCount,
+            billing_mode: payload.billingMode,
+            enrollment_date: payload.enrollmentDate,
+            status: payload.status,
+            payment_status: payload.paymentStatus,
+            total_amount: payload.totalAmount,
+            paid_amount: payload.paidAmount,
+            funding_type_id: payload.fundingTypeId,
           },
           { onConflict: 'session_id,entity_id' }
         )
@@ -260,6 +290,7 @@ export function ConfigApprenants({
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['session-entity-reservations', sessionId] })
+      setShowEntityReservationForm(false)
       addToast({
         type: 'success',
         title: variables.isNew ? 'Entreprise inscrite à la session' : 'Effectif mis à jour',
@@ -294,6 +325,41 @@ export function ConfigApprenants({
 
   const getReservationForEntity = (entityId: string) =>
     entityReservations?.find((r: { entity_id: string }) => r.entity_id === entityId)
+
+  const handleOpenEntityReservation = (
+    entity: { id: string; name?: string | null },
+    existing?: ReturnType<typeof getReservationForEntity>
+  ) => {
+    setEntityReservationForm({
+      entity_id: entity.id,
+      entity_name: entity.name ?? '',
+      expected_count: existing ? String(existing.expected_count) : '',
+      billing_mode: existing?.billing_mode ?? '',
+      enrollment_date: existing?.enrollment_date ?? new Date().toISOString().split('T')[0],
+      status: (existing?.status as 'pending' | 'confirmed') ?? 'confirmed',
+      payment_status: (existing?.payment_status as 'pending' | 'partial' | 'paid') ?? 'pending',
+      total_amount: existing?.total_amount != null ? String(existing.total_amount) : defaultAmount.toString(),
+      paid_amount: existing?.paid_amount != null ? String(existing.paid_amount) : '0',
+      funding_type_id: existing?.funding_type_id ?? '',
+    })
+    setShowEntityReservationForm(true)
+  }
+
+  const handleSubmitEntityReservation = () => {
+    const existing = getReservationForEntity(entityReservationForm.entity_id)
+    saveReservationMutation.mutate({
+      entityId: entityReservationForm.entity_id,
+      isNew: !existing,
+      expectedCount: Number(entityReservationForm.expected_count),
+      billingMode: entityReservationForm.billing_mode || null,
+      enrollmentDate: entityReservationForm.enrollment_date,
+      status: entityReservationForm.status,
+      paymentStatus: entityReservationForm.payment_status,
+      totalAmount: parseFloat(entityReservationForm.total_amount) || 0,
+      paidAmount: parseFloat(entityReservationForm.paid_amount) || 0,
+      fundingTypeId: entityReservationForm.funding_type_id || null,
+    })
+  }
 
   // Emails des étudiants déjà inscrits (pour détecter si un candidat catalogue est déjà inscrit)
   const enrolledStudentEmails = useMemo(
@@ -1033,51 +1099,21 @@ export function ConfigApprenants({
                       <div className="mt-3 pt-3 border-t border-orange-200">
                         {(() => {
                           const reservation = getReservationForEntity(e.id)
-                          const draft = reservationDrafts[e.id] ?? (reservation ? String(reservation.expected_count) : '')
                           return (
-                            <div className="space-y-2">
-                              <p className="text-xs text-gray-500 text-center">
+                            <div className="space-y-2 text-center">
+                              <p className="text-xs text-gray-500">
                                 {reservation
                                   ? `Entreprise inscrite : ${reservation.expected_count} apprenant${reservation.expected_count > 1 ? 's' : ''} prévu${reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)`
-                                  : 'Aucun apprenant nommé rattaché — inscrire l\'entreprise avec un effectif prévisionnel'}
+                                  : 'Aucun apprenant nommé rattaché à cette entité'}
                               </p>
-                              <div className="flex items-center justify-center gap-2">
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  placeholder="Nb. apprenants prévus"
-                                  value={draft}
-                                  onChange={(ev) =>
-                                    setReservationDrafts((prev) => ({ ...prev, [e.id]: ev.target.value }))
-                                  }
-                                  className="h-8 w-36 text-xs"
-                                />
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  disabled={saveReservationMutation.isPending || !draft || Number(draft) <= 0}
-                                  onClick={() =>
-                                    saveReservationMutation.mutate({
-                                      entityId: e.id,
-                                      expectedCount: Number(draft),
-                                      isNew: !reservation,
-                                    })
-                                  }
-                                >
-                                  {reservation ? 'Mettre à jour l\'effectif' : 'Inscrire l\'entreprise'}
-                                </Button>
-                                {reservation && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                                    disabled={removeReservationMutation.isPending}
-                                    onClick={() => removeReservationMutation.mutate(reservation.id)}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenEntityReservation({ id: e.id, name: e.name }, reservation)}
+                              >
+                                <Building2 className="h-3 w-3 mr-1" />
+                                {reservation ? "Modifier l'inscription" : "Inscrire l'entreprise"}
+                              </Button>
                             </div>
                           )
                         })()}
@@ -1482,8 +1518,17 @@ export function ConfigApprenants({
             {entityReservations.map((reservation) => {
               const r = reservation as {
                 id: string
+                entity_id: string
                 expected_count: number
+                billing_mode?: string | null
+                total_amount?: number | null
                 external_entities?: { name?: string | null; type?: string | null } | null
+              }
+              const billingModeLabels: Record<string, string> = {
+                per_client: 'Par client',
+                per_group: 'Par groupe',
+                per_student: 'Par apprenant',
+                per_hour: 'Par heures',
               }
               return (
                 <motion.div
@@ -1500,20 +1545,47 @@ export function ConfigApprenants({
                       <p className="font-medium text-gray-900 truncate">
                         {r.external_entities?.name ?? 'Entreprise'}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {r.expected_count} apprenant{r.expected_count > 1 ? 's' : ''} prévu{r.expected_count > 1 ? 's' : ''} (noms non communiqués)
-                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-xs text-gray-500">
+                          {r.expected_count} apprenant{r.expected_count > 1 ? 's' : ''} prévu{r.expected_count > 1 ? 's' : ''} (noms non communiqués)
+                        </span>
+                        {r.billing_mode && (
+                          <Badge variant="outline" className="text-xs">
+                            {billingModeLabels[r.billing_mode] ?? r.billing_mode}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
-                    onClick={() => removeReservationMutation.mutate(r.id)}
-                    disabled={removeReservationMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                    {r.total_amount != null && r.total_amount > 0 && (
+                      <Badge variant="outline" className="text-xs whitespace-nowrap">
+                        {formatCurrency(r.total_amount)}
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                      onClick={() =>
+                        handleOpenEntityReservation(
+                          { id: r.entity_id, name: r.external_entities?.name },
+                          reservation
+                        )
+                      }
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => removeReservationMutation.mutate(r.id)}
+                      disabled={removeReservationMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </motion.div>
               )
             })}
@@ -1752,6 +1824,218 @@ export function ConfigApprenants({
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showEntityReservationForm && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+          >
+            <GlassCard variant="premium" className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {getReservationForEntity(entityReservationForm.entity_id) ? "Modifier l'inscription" : 'Inscrire une entreprise'}
+                  </h3>
+                  {entityReservationForm.entity_name && (
+                    <p className="text-sm text-gray-500 mt-0.5">{entityReservationForm.entity_name}</p>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowEntityReservationForm(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="entity_expected_count">Nombre d'apprenants prévus *</Label>
+                    <Input
+                      id="entity_expected_count"
+                      type="number"
+                      min={1}
+                      value={entityReservationForm.expected_count}
+                      onChange={(e) =>
+                        setEntityReservationForm({ ...entityReservationForm, expected_count: e.target.value })
+                      }
+                      placeholder="Ex: 5"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="entity_billing_mode">Mode de facturation</Label>
+                    <select
+                      id="entity_billing_mode"
+                      value={entityReservationForm.billing_mode}
+                      onChange={(e) =>
+                        setEntityReservationForm({ ...entityReservationForm, billing_mode: e.target.value })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm"
+                    >
+                      <option value="">Non défini</option>
+                      <option value="per_client">Par client</option>
+                      <option value="per_group">Par groupe</option>
+                      <option value="per_student">Par apprenant</option>
+                      <option value="per_hour">Par heures</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="entity_enrollment_date">Date d'inscription *</Label>
+                    <Input
+                      id="entity_enrollment_date"
+                      type="date"
+                      value={entityReservationForm.enrollment_date}
+                      onChange={(e) =>
+                        setEntityReservationForm({ ...entityReservationForm, enrollment_date: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="entity_status">Statut *</Label>
+                    <select
+                      id="entity_status"
+                      value={entityReservationForm.status}
+                      onChange={(e) =>
+                        setEntityReservationForm({
+                          ...entityReservationForm,
+                          status: e.target.value as 'pending' | 'confirmed',
+                        })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm"
+                    >
+                      <option value="pending">En attente</option>
+                      <option value="confirmed">Confirmé</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="entity_total_amount">Montant total</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="entity_total_amount"
+                        type="number"
+                        step="0.01"
+                        value={entityReservationForm.total_amount}
+                        onChange={(e) =>
+                          setEntityReservationForm({ ...entityReservationForm, total_amount: e.target.value })
+                        }
+                        className="pl-10"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="entity_paid_amount">Montant payé</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="entity_paid_amount"
+                        type="number"
+                        step="0.01"
+                        value={entityReservationForm.paid_amount}
+                        onChange={(e) =>
+                          setEntityReservationForm({ ...entityReservationForm, paid_amount: e.target.value })
+                        }
+                        className="pl-10"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="entity_payment_status">Statut de paiement</Label>
+                  <select
+                    id="entity_payment_status"
+                    value={entityReservationForm.payment_status}
+                    onChange={(e) =>
+                      setEntityReservationForm({
+                        ...entityReservationForm,
+                        payment_status: e.target.value as 'pending' | 'partial' | 'paid',
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm"
+                  >
+                    <option value="pending">En attente</option>
+                    <option value="partial">Partiel</option>
+                    <option value="paid">Payé</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="entity_funding_type_id">Type de financement</Label>
+                  <select
+                    id="entity_funding_type_id"
+                    value={entityReservationForm.funding_type_id}
+                    onChange={(e) =>
+                      setEntityReservationForm({ ...entityReservationForm, funding_type_id: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue text-sm"
+                  >
+                    <option value="">Aucun</option>
+                    {fundingTypes && fundingTypes.length > 0 &&
+                      fundingTypes.map((type) => {
+                        const ft = type as { id?: string; name?: string; code?: string }
+                        return (
+                          <option key={ft.id} value={ft.id ?? ''}>
+                            {ft.name ?? ''} {ft.code ? `(${ft.code})` : ''}
+                          </option>
+                        )
+                      })}
+                  </select>
+                </div>
+
+                {saveReservationMutation.error && (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                    <p className="text-sm text-red-600">
+                      {saveReservationMutation.error instanceof Error
+                        ? saveReservationMutation.error.message
+                        : 'Une erreur est survenue'}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowEntityReservationForm(false)}>
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={handleSubmitEntityReservation}
+                    disabled={
+                      saveReservationMutation.isPending ||
+                      !entityReservationForm.expected_count ||
+                      Number(entityReservationForm.expected_count) <= 0
+                    }
+                    className="shadow-lg shadow-brand-blue/20"
+                  >
+                    {saveReservationMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Enregistrement...
+                      </>
+                    ) : (
+                      <>
+                        <Building2 className="h-4 w-4 mr-2" />
+                        {getReservationForEntity(entityReservationForm.entity_id) ? 'Mettre à jour' : "Inscrire l'entreprise"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Dialog de création d'un nouvel apprenant */}
       <Dialog open={showNewStudentForm} onOpenChange={(open) => { if (!open) { setShowNewStudentForm(false); setNewStudentForm({ first_name: '', last_name: '', email: '', phone: '', date_of_birth: '' }) } }}>
