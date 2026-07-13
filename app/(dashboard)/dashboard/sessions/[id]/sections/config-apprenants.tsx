@@ -273,31 +273,24 @@ export function ConfigApprenants({
       .filter((s): s is { id: string } => s != null && !enrolledStudentIds.has(s.id))
   }
 
-  // Filtrer les entités externes
+  // Filtrer les entités externes par recherche textuelle uniquement — une entité
+  // sans apprenant disponible doit rester visible (le bloc de rendu affiche déjà
+  // "Aucun apprenant disponible rattaché à cette entité" dans ce cas), sinon une
+  // entreprise pourtant listée sur /dashboard/entities semble introuvable ici.
   const filteredEntities = useMemo(() => {
     if (!externalEntities || !Array.isArray(externalEntities)) return []
-    
-    // Filtrer par recherche textuelle
-    let filtered = externalEntities
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = externalEntities.filter((entity) => {
-        const e = entity as { name?: string | null; code?: string | null; siret?: string | null; email?: string | null; activity_sector?: string | null }
-        return e.name?.toLowerCase().includes(query) ||
-          e.code?.toLowerCase().includes(query) ||
-          e.siret?.toLowerCase().includes(query) ||
-          e.email?.toLowerCase().includes(query) ||
-          e.activity_sector?.toLowerCase().includes(query)
-      })
-    }
-    return filtered.filter((entity) => {
-      const id = (entity as { id?: string }).id
-      if (!id) return false
-      const students = getStudentsForEntity(id)
-      return students.length > 0
+    if (!searchQuery) return externalEntities
+
+    const query = searchQuery.toLowerCase()
+    return externalEntities.filter((entity) => {
+      const e = entity as { name?: string | null; code?: string | null; siret?: string | null; email?: string | null; activity_sector?: string | null }
+      return e.name?.toLowerCase().includes(query) ||
+        e.code?.toLowerCase().includes(query) ||
+        e.siret?.toLowerCase().includes(query) ||
+        e.email?.toLowerCase().includes(query) ||
+        e.activity_sector?.toLowerCase().includes(query)
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- getStudentsForEntity reads from state, deps sufficient
-  }, [externalEntities, searchQuery, studentEntities, enrolledStudentIds])
+  }, [externalEntities, searchQuery])
 
   // Candidats catalogue non encore inscrits (par email)
   const availableCandidates = useMemo(
