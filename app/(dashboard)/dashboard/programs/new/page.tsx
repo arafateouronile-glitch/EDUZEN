@@ -57,8 +57,8 @@ export default function NewProgramPage() {
     mutationFn: async (data: ProgramFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
 
-      const duration_days = data.duration_days ? parseFloat(data.duration_days) : null
-      const duration_hours = data.duration_hours ? parseFloat(data.duration_hours) : null
+      const duration_days = data.duration_days ? parseInt(data.duration_days, 10) : null
+      const duration_hours = data.duration_hours ? parseInt(data.duration_hours, 10) : null
       const price = data.price_enterprise
         ? parseFloat(data.price_enterprise)
         : data.price

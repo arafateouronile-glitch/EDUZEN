@@ -233,7 +233,7 @@ export default function EditProgramPage() {
       // Mettre à jour la formation liée avec duration_hours et price
       if (firstFormation?.id) {
         await formationService.updateFormation(firstFormation.id, {
-          duration_hours: formData.duration_hours ? parseFloat(formData.duration_hours) : null,
+          duration_hours: formData.duration_hours ? parseInt(formData.duration_hours, 10) : null,
           price: formData.price ? parseFloat(formData.price) : 0,
           currency: formData.currency || 'EUR',
         } as any)
