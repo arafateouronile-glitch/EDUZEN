@@ -223,16 +223,17 @@ export function ConfigApprenants({
     enabled: !!user?.organization_id && !!externalEntities && externalEntities.length > 0,
   })
 
-  // Effectifs prévisionnels non-nominatifs saisis par entité pour cette session
-  // (utilisé quand l'entreprise n'a pas encore communiqué les noms des apprenants)
+  // Entreprises/organismes inscrits à la session sans liste nominative
+  // (effectif prévisionnel saisi quand l'entité n'a pas encore communiqué les noms)
   const { data: entityReservations } = useQuery({
     queryKey: ['session-entity-reservations', sessionId],
     queryFn: async () => {
       if (!sessionId) return []
       const { data, error } = await supabase
         .from('session_entity_reservations')
-        .select('*')
+        .select('*, external_entities(name, type)')
         .eq('session_id', sessionId)
+        .order('created_at', { ascending: true })
       if (error) throw error
       return data || []
     },
@@ -242,7 +243,7 @@ export function ConfigApprenants({
   const [reservationDrafts, setReservationDrafts] = useState<Record<string, string>>({})
 
   const saveReservationMutation = useMutation({
-    mutationFn: async ({ entityId, expectedCount }: { entityId: string; expectedCount: number }) => {
+    mutationFn: async ({ entityId, expectedCount }: { entityId: string; expectedCount: number; isNew: boolean }) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
       const { error } = await supabase
         .from('session_entity_reservations')
@@ -257,9 +258,30 @@ export function ConfigApprenants({
         )
       if (error) throw error
     },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['session-entity-reservations', sessionId] })
+      addToast({
+        type: 'success',
+        title: variables.isNew ? 'Entreprise inscrite à la session' : 'Effectif mis à jour',
+      })
+    },
+    onError: (error) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue',
+      })
+    },
+  })
+
+  const removeReservationMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('session_entity_reservations').delete().eq('id', id)
+      if (error) throw error
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['session-entity-reservations', sessionId] })
-      addToast({ type: 'success', title: 'Effectif enregistré' })
+      addToast({ type: 'success', title: 'Entreprise retirée de la session' })
     },
     onError: (error) => {
       addToast({
@@ -1016,8 +1038,8 @@ export function ConfigApprenants({
                             <div className="space-y-2">
                               <p className="text-xs text-gray-500 text-center">
                                 {reservation
-                                  ? `${reservation.expected_count} apprenant${reservation.expected_count > 1 ? 's' : ''} prévu${reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)`
-                                  : 'Aucun apprenant disponible rattaché à cette entité'}
+                                  ? `Entreprise inscrite : ${reservation.expected_count} apprenant${reservation.expected_count > 1 ? 's' : ''} prévu${reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)`
+                                  : 'Aucun apprenant nommé rattaché — inscrire l\'entreprise avec un effectif prévisionnel'}
                               </p>
                               <div className="flex items-center justify-center gap-2">
                                 <Input
@@ -1035,11 +1057,26 @@ export function ConfigApprenants({
                                   variant="outline"
                                   disabled={saveReservationMutation.isPending || !draft || Number(draft) <= 0}
                                   onClick={() =>
-                                    saveReservationMutation.mutate({ entityId: e.id, expectedCount: Number(draft) })
+                                    saveReservationMutation.mutate({
+                                      entityId: e.id,
+                                      expectedCount: Number(draft),
+                                      isNew: !reservation,
+                                    })
                                   }
                                 >
-                                  {reservation ? 'Mettre à jour' : 'Enregistrer'}
+                                  {reservation ? 'Mettre à jour l\'effectif' : 'Inscrire l\'entreprise'}
                                 </Button>
+                                {reservation && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                    disabled={removeReservationMutation.isPending}
+                                    onClick={() => removeReservationMutation.mutate(reservation.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           )
@@ -1419,6 +1456,64 @@ export function ConfigApprenants({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Entreprises/organismes inscrits à la session (effectif sans liste nominative) */}
+      {entityReservations && entityReservations.length > 0 && (
+        <GlassCard variant="premium" className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-orange-600" />
+                Entreprises inscrites
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {entityReservations.length} entreprise{entityReservations.length > 1 ? 's' : ''} inscrite{entityReservations.length > 1 ? 's' : ''} à cette session avec un effectif prévisionnel
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {entityReservations.map((reservation) => {
+              const r = reservation as {
+                id: string
+                expected_count: number
+                external_entities?: { name?: string | null; type?: string | null } | null
+              }
+              return (
+                <motion.div
+                  key={r.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center justify-between p-3 rounded-lg bg-orange-50/50 border border-orange-200 hover:bg-orange-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {r.external_entities?.name ?? 'Entreprise'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {r.expected_count} apprenant{r.expected_count > 1 ? 's' : ''} prévu{r.expected_count > 1 ? 's' : ''} (noms non communiqués)
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
+                    onClick={() => removeReservationMutation.mutate(r.id)}
+                    disabled={removeReservationMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </motion.div>
               )
             })}
