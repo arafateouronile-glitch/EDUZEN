@@ -223,6 +223,56 @@ export function ConfigApprenants({
     enabled: !!user?.organization_id && !!externalEntities && externalEntities.length > 0,
   })
 
+  // Effectifs prévisionnels non-nominatifs saisis par entité pour cette session
+  // (utilisé quand l'entreprise n'a pas encore communiqué les noms des apprenants)
+  const { data: entityReservations } = useQuery({
+    queryKey: ['session-entity-reservations', sessionId],
+    queryFn: async () => {
+      if (!sessionId) return []
+      const { data, error } = await supabase
+        .from('session_entity_reservations')
+        .select('*')
+        .eq('session_id', sessionId)
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!sessionId,
+  })
+
+  const [reservationDrafts, setReservationDrafts] = useState<Record<string, string>>({})
+
+  const saveReservationMutation = useMutation({
+    mutationFn: async ({ entityId, expectedCount }: { entityId: string; expectedCount: number }) => {
+      if (!user?.organization_id) throw new Error('Organization ID manquant')
+      const { error } = await supabase
+        .from('session_entity_reservations')
+        .upsert(
+          {
+            organization_id: user.organization_id,
+            session_id: sessionId,
+            entity_id: entityId,
+            expected_count: expectedCount,
+          },
+          { onConflict: 'session_id,entity_id' }
+        )
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session-entity-reservations', sessionId] })
+      addToast({ type: 'success', title: 'Effectif enregistré' })
+    },
+    onError: (error) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue',
+      })
+    },
+  })
+
+  const getReservationForEntity = (entityId: string) =>
+    entityReservations?.find((r: { entity_id: string }) => r.entity_id === entityId)
+
   // Emails des étudiants déjà inscrits (pour détecter si un candidat catalogue est déjà inscrit)
   const enrolledStudentEmails = useMemo(
     () => new Set(
@@ -959,9 +1009,41 @@ export function ConfigApprenants({
                       </div>
                     ) : (
                       <div className="mt-3 pt-3 border-t border-orange-200">
-                        <p className="text-xs text-gray-500 text-center">
-                          Aucun apprenant disponible rattaché à cette entité
-                        </p>
+                        {(() => {
+                          const reservation = getReservationForEntity(e.id)
+                          const draft = reservationDrafts[e.id] ?? (reservation ? String(reservation.expected_count) : '')
+                          return (
+                            <div className="space-y-2">
+                              <p className="text-xs text-gray-500 text-center">
+                                {reservation
+                                  ? `${reservation.expected_count} apprenant${reservation.expected_count > 1 ? 's' : ''} prévu${reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)`
+                                  : 'Aucun apprenant disponible rattaché à cette entité'}
+                              </p>
+                              <div className="flex items-center justify-center gap-2">
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  placeholder="Nb. apprenants prévus"
+                                  value={draft}
+                                  onChange={(ev) =>
+                                    setReservationDrafts((prev) => ({ ...prev, [e.id]: ev.target.value }))
+                                  }
+                                  className="h-8 w-36 text-xs"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={saveReservationMutation.isPending || !draft || Number(draft) <= 0}
+                                  onClick={() =>
+                                    saveReservationMutation.mutate({ entityId: e.id, expectedCount: Number(draft) })
+                                  }
+                                >
+                                  {reservation ? 'Mettre à jour' : 'Enregistrer'}
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        })()}
                       </div>
                     )
                   })()}
