@@ -183,12 +183,12 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
   let modulesLignes: string
 
   if (sessionModules && sessionModules.length > 0) {
-    const total = sessionModules.reduce((s, m) => s + Number(m.amount), 0)
+    const total = sessionModules.reduce((s, m) => s + Number(m.amount), 0) * moduleQuantity
     montantHt = total.toFixed(2)
     const currency = sessionModules[0]?.currency || 'EUR'
     // Générer une ligne par module avec 3 colonnes (Désignation, Durée, Prix HT)
     modulesLignes = sessionModules.map((m) => {
-      const a = Number(m.amount).toFixed(2)
+      const a = (Number(m.amount) * moduleQuantity).toFixed(2)
       return `<tr><td style="padding: 12px; border-bottom: 1px solid #e9ecef;"><p style="margin: 0; font-weight: 500;">${escapeHtml(m.name)}</p><p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Du ${sessionDebut} au ${sessionFin}</p></td><td style="padding: 12px; text-align: center; border-bottom: 1px solid #e9ecef;">${formationDuree}</td><td style="padding: 12px; text-align: right; border-bottom: 1px solid #e9ecef; font-weight: 500;">${a} ${currency}</td></tr>`
     }).join('')
   } else {
@@ -338,7 +338,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     formation_ressources: form?.resources || prog?.resources || '',
     formation_supports: form?.materials || prog?.materials || '',
     session_lieu: sessionLieu,
-    session_effectif: sess?.enrollment_count?.toString() || sess?.student_count?.toString() || (sessionModules?.length ? String(sessionModules.length) : '') || '1',
+    session_effectif: sess?.enrollment_count?.toString() || sess?.student_count?.toString() || (effectif ? String(effectif) : '') || '1',
     diplome_ou_certification: form?.certification || prog?.certification || '',
     ecole_region: (typeof orgRegion === 'string' ? orgRegion : '') || org?.region || org?.administrative_region || '',
     formation_prix: form?.price != null ? `${Number(form.price).toFixed(2)} ${form?.currency || 'EUR'}` : (invoice?.amount != null ? `${Number(invoice.amount).toFixed(2)} ${invoice?.currency || 'EUR'}` : (montantHt ? `${montantHt} EUR` : '')),
