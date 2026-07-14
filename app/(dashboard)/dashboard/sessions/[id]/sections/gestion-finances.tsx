@@ -1907,7 +1907,11 @@ export function GestionFinances({
                       per_student: 'Par apprenant',
                       per_hour: 'Par heures',
                     }
-                    const fallbackTotal = Number(reservation.total_amount || 0)
+                    // Montant = prix du module × effectif (groupes/clients/apprenants selon le mode
+                    // de facturation), sinon le montant saisi manuellement à l'inscription de l'entité.
+                    const fallbackTotal = sessionModulesTotal > 0
+                      ? sessionModulesTotal * reservation.expected_count
+                      : Number(reservation.total_amount || 0)
                     const total = getEntityReservationDisplayTotal(reservation.id, fallbackTotal)
                     const paid = Number(reservation.paid_amount || 0)
                     const reservationInvoices = getInvoicesForEntityReservation(reservation.id)
