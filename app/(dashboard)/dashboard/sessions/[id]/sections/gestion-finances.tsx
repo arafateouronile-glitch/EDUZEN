@@ -436,6 +436,7 @@ export function GestionFinances({
       const resolvedModules = freshModules ?? (sessionModules?.length ? sessionModules : undefined)
 
       let invoiceCompany = null
+      let effectif: number | undefined
       if (student?.id) {
         const { data: seRow } = await supabase.from('student_entities').select('external_entities(*)').eq('student_id', student.id).eq('is_current', true).limit(1).single()
         if (seRow?.external_entities && !Array.isArray(seRow.external_entities)) {
@@ -444,11 +445,19 @@ export function GestionFinances({
           const { data: ce } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).single()
           if (ce?.companies && !Array.isArray(ce.companies)) invoiceCompany = ce.companies
         }
+      } else if (invoiceData.entity_id) {
+        // Devis/facture émis directement à une entreprise (pas d'apprenant nommé) :
+        // on va chercher l'entité et son effectif frais en base plutôt que de
+        // dépendre du state local (potentiellement obsolète au moment du téléchargement).
+        const [{ data: entityRow }, { data: reservationRow }] = await Promise.all([
+          supabase.from('external_entities').select('*').eq('id', invoiceData.entity_id).single(),
+          invoiceData.session_entity_reservation_id
+            ? supabase.from('session_entity_reservations').select('expected_count').eq('id', invoiceData.session_entity_reservation_id).single()
+            : Promise.resolve({ data: null }),
+        ])
+        if (entityRow) invoiceCompany = entityRow
+        effectif = reservationRow?.expected_count ?? undefined
       }
-
-      const entityReservation = invoiceData.session_entity_reservation_id
-        ? entityReservations.find((r: { id: string }) => r.id === invoiceData.session_entity_reservation_id)
-        : undefined
 
       const variables = extractDocumentVariables({
         student,
@@ -460,7 +469,7 @@ export function GestionFinances({
         company: invoiceCompany as any,
         language: 'fr',
         issueDate: invoice.issue_date ?? undefined,
-        effectif: entityReservation?.expected_count,
+        effectif,
       })
 
       // Utiliser l'API pour générer le PDF
@@ -556,6 +565,7 @@ export function GestionFinances({
       const resolvedModules2 = freshModules2 ?? (sessionModules?.length ? sessionModules : undefined)
 
       let emailInvoiceCompany = null
+      let emailEffectif: number | undefined
       if (student?.id) {
         const { data: seRow2 } = await supabase.from('student_entities').select('external_entities(*)').eq('student_id', student.id).eq('is_current', true).limit(1).single()
         if (seRow2?.external_entities && !Array.isArray(seRow2.external_entities)) {
@@ -564,11 +574,16 @@ export function GestionFinances({
           const { data: ce2 } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).single()
           if (ce2?.companies && !Array.isArray(ce2.companies)) emailInvoiceCompany = ce2.companies
         }
+      } else if (invoiceData.entity_id) {
+        const [{ data: entityRow2 }, { data: reservationRow2 }] = await Promise.all([
+          supabase.from('external_entities').select('*').eq('id', invoiceData.entity_id).single(),
+          invoiceData.session_entity_reservation_id
+            ? supabase.from('session_entity_reservations').select('expected_count').eq('id', invoiceData.session_entity_reservation_id).single()
+            : Promise.resolve({ data: null }),
+        ])
+        if (entityRow2) emailInvoiceCompany = entityRow2
+        emailEffectif = reservationRow2?.expected_count ?? undefined
       }
-
-      const emailEntityReservation = invoiceData.session_entity_reservation_id
-        ? entityReservations.find((r: { id: string }) => r.id === invoiceData.session_entity_reservation_id)
-        : undefined
 
       const variables = extractDocumentVariables({
         student,
@@ -580,7 +595,7 @@ export function GestionFinances({
         company: emailInvoiceCompany as any,
         language: 'fr',
         issueDate: invoice.issue_date ?? undefined,
-        effectif: emailEntityReservation?.expected_count,
+        effectif: emailEffectif,
       })
 
       // Utiliser l'API pour générer le PDF
