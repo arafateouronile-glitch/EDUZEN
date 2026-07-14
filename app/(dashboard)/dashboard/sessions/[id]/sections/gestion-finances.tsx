@@ -626,16 +626,32 @@ export function GestionFinances({
   }
 
   // Ouvrir la fenêtre d'édition avant envoi
+  // Destinataire d'un devis/facture : l'apprenant nommé, ou l'entreprise
+  // externe quand le document a été émis directement à une entité.
+  const getInvoiceRecipient = (invoice: InvoiceWithRelations): { email: string | null; name: string } => {
+    const student = invoice.students as (StudentWithRelations & { email?: string | null }) | undefined
+    if (student) {
+      return {
+        email: student.email || null,
+        name: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
+      }
+    }
+    const entity = invoice.external_entities
+    return {
+      email: entity?.email || null,
+      name: entity?.name || 'Entreprise',
+    }
+  }
+
   const handleSendDocumentByEmail = async (invoice: InvoiceWithRelations, type: 'invoice' | 'quote') => {
     if (!org || !invoice) {
       addToast({ type: 'error', title: 'Erreur', description: 'Données manquantes pour l’envoi du document.' })
       return
     }
 
-    const student = invoice.students as (StudentWithRelations & { email?: string | null }) | undefined
-    const studentEmail = student?.email || null
-    if (!studentEmail) {
-      addToast({ type: 'error', title: 'Email manquant', description: 'Aucun email n’est renseigné pour cet apprenant.' })
+    const recipient = getInvoiceRecipient(invoice)
+    if (!recipient.email) {
+      addToast({ type: 'error', title: 'Email manquant', description: 'Aucun email n’est renseigné pour ce destinataire.' })
       return
     }
 
@@ -650,19 +666,40 @@ export function GestionFinances({
     const subject = `${docLabel} ${invoiceNumber}${sessionName} (${orgName})`
 
     const bodyText =
-      `Bonjour ${student?.first_name || ''} ${student?.last_name || ''},\n\n` +
+      `Bonjour ${recipient.name},\n\n` +
       `Veuillez trouver en pièce jointe votre ${docLabel.toLowerCase()} ${invoiceNumber}.\n\n` +
       `Cordialement,\n${orgName}\n`
 
     setEmailPreview({
       invoice,
       type,
-      to: studentEmail,
+      to: recipient.email,
       subject,
       bodyText,
       filename,
       docLabel,
       invoiceNumber,
+    })
+  }
+
+  const handleOpenSignatureRequest = (invoice: InvoiceWithRelations, type: 'invoice' | 'quote') => {
+    const recipient = getInvoiceRecipient(invoice)
+    if (!recipient.email) {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: 'Aucun email n\'est renseigné pour ce destinataire.',
+      })
+      return
+    }
+    const docLabel = type === 'invoice' ? 'Facture' : 'Devis'
+    const verb = type === 'invoice' ? 'la signer' : 'le signer'
+    setSignatureRequestDialog({ invoice, type })
+    setSignatureRequestForm({
+      recipientEmail: recipient.email,
+      recipientName: recipient.name,
+      subject: `Demande de signature : ${docLabel} ${invoice.invoice_number || 'Brouillon'} - ${recipient.name}`,
+      message: `Bonjour ${recipient.name},\n\nVeuillez trouver ci-joint votre ${docLabel.toLowerCase()} ${invoice.invoice_number || ''} pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir ${verb} en ligne.\n\nCordialement,\n${org?.name || ''}`,
     })
   }
 
@@ -1726,27 +1763,7 @@ export function GestionFinances({
                                     {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
                                   </button>
                                   <button
-                                    onClick={() => {
-                                      const student = quote.students
-                                      if (!student?.email) {
-                                        addToast({
-                                          type: 'error',
-                                          title: 'Erreur',
-                                          description: 'L\'étudiant n\'a pas d\'email enregistré.',
-                                        })
-                                        return
-                                      }
-                                      setSignatureRequestDialog({
-                                        invoice: quote,
-                                        type: 'quote',
-                                      })
-                                      setSignatureRequestForm({
-                                        recipientEmail: student.email || '',
-                                        recipientName: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
-                                        subject: `Demande de signature : Devis ${quote.invoice_number || 'Brouillon'} - ${student.first_name} ${student.last_name}`,
-                                        message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre devis ${quote.invoice_number || ''} pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir le signer en ligne.\n\nCordialement,\n${org?.name || ''}`,
-                                      })
-                                    }}
+                                    onClick={() => handleOpenSignatureRequest(quote, 'quote')}
                                     disabled={!quote.students?.email}
                                     className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Envoyer en demande de signature"
@@ -1792,27 +1809,7 @@ export function GestionFinances({
                                     {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
                                   </button>
                                   <button
-                                    onClick={() => {
-                                      const student = invoice.students
-                                      if (!student?.email) {
-                                        addToast({
-                                          type: 'error',
-                                          title: 'Erreur',
-                                          description: 'L\'étudiant n\'a pas d\'email enregistré.',
-                                        })
-                                        return
-                                      }
-                                      setSignatureRequestDialog({
-                                        invoice: invoice,
-                                        type: 'invoice',
-                                      })
-                                      setSignatureRequestForm({
-                                        recipientEmail: student.email || '',
-                                        recipientName: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
-                                        subject: `Demande de signature : Facture ${invoice.invoice_number || 'Brouillon'} - ${student.first_name} ${student.last_name}`,
-                                        message: `Bonjour ${student.first_name},\n\nVeuillez trouver ci-joint votre facture ${invoice.invoice_number || ''} pour la session "${sessionData?.name || ''}".\n\nMerci de bien vouloir la signer en ligne.\n\nCordialement,\n${org?.name || ''}`,
-                                      })
-                                    }}
+                                    onClick={() => handleOpenSignatureRequest(invoice, 'invoice')}
                                     disabled={!invoice.students?.email}
                                     className="text-gray-400 hover:text-brand-blue transition-colors"
                                     title="Envoyer en demande de signature"
@@ -2008,6 +2005,34 @@ export function GestionFinances({
                                   >
                                     {isDownloading === quote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
                                   </button>
+                                  <button
+                                    onClick={() => handleSendDocumentByEmail(quote as InvoiceWithRelations, 'quote')}
+                                    disabled={isEmailSending === quote.id}
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
+                                    title="Envoyer par email"
+                                  >
+                                    {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenSignatureRequest(quote as InvoiceWithRelations, 'quote')}
+                                    disabled={!(quote as InvoiceWithRelations).external_entities?.email}
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
+                                    title="Envoyer en demande de signature"
+                                  >
+                                    <PenTool className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      const ok = window.confirm('Transformer ce devis en facture ? (La facture sera créée en brouillon)')
+                                      if (!ok) return
+                                      convertQuoteToInvoiceMutation.mutate(quote.id)
+                                    }}
+                                    disabled={convertingQuoteId === quote.id}
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
+                                    title="Convertir en facture"
+                                  >
+                                    {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -2023,6 +2048,22 @@ export function GestionFinances({
                                     title="Télécharger PDF"
                                   >
                                     {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                  </button>
+                                  <button
+                                    onClick={() => handleSendDocumentByEmail(invoice as InvoiceWithRelations, 'invoice')}
+                                    disabled={isEmailSending === invoice.id}
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
+                                    title="Envoyer par email"
+                                  >
+                                    {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenSignatureRequest(invoice as InvoiceWithRelations, 'invoice')}
+                                    disabled={!(invoice as InvoiceWithRelations).external_entities?.email}
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
+                                    title="Envoyer en demande de signature"
+                                  >
+                                    <PenTool className="h-3 w-3" />
                                   </button>
                                   <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
                                     <Eye className="h-3 w-3" />
@@ -2570,9 +2611,10 @@ export function GestionFinances({
                   })
                   
                   const student = signatureRequestDialog.invoice.students
+                  const recipientName = getInvoiceRecipient(signatureRequestDialog.invoice).name
                   const documentTitle = signatureRequestDialog.type === 'quote'
-                    ? `Devis ${signatureRequestDialog.invoice.invoice_number || 'Brouillon'} - ${student?.first_name || ''} ${student?.last_name || ''}`
-                    : `Facture ${signatureRequestDialog.invoice.invoice_number || 'Brouillon'} - ${student?.first_name || ''} ${student?.last_name || ''}`
+                    ? `Devis ${signatureRequestDialog.invoice.invoice_number || 'Brouillon'} - ${recipientName}`
+                    : `Facture ${signatureRequestDialog.invoice.invoice_number || 'Brouillon'} - ${recipientName}`
                   
                   const response = await fetch('/api/signature-requests/send-from-invoice', {
                     method: 'POST',
