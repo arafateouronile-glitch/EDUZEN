@@ -326,6 +326,21 @@ export function ConfigApprenants({
   const getReservationForEntity = (entityId: string) =>
     entityReservations?.find((r: { entity_id: string }) => r.entity_id === entityId)
 
+  // Le champ "effectif" compte des unités différentes selon le mode de facturation :
+  // des apprenants (par défaut), des groupes, ou des clients.
+  const getReservationUnitLabel = (billingMode: string | null | undefined, count: number) => {
+    const plural = count > 1 ? 's' : ''
+    if (billingMode === 'per_group') return `groupe${plural}`
+    if (billingMode === 'per_client') return `client${plural}`
+    return `apprenant${plural}`
+  }
+
+  const getReservationCountFieldLabel = (billingMode: string) => {
+    if (billingMode === 'per_group') return 'Nombre de groupes prévus *'
+    if (billingMode === 'per_client') return 'Nombre de clients prévus *'
+    return 'Nombre d\'apprenants prévus *'
+  }
+
   const handleOpenEntityReservation = (
     entity: { id: string; name?: string | null },
     existing?: ReturnType<typeof getReservationForEntity>
@@ -1103,7 +1118,7 @@ export function ConfigApprenants({
                             <div className="space-y-2 text-center">
                               <p className="text-xs text-gray-500">
                                 {reservation
-                                  ? `Entreprise inscrite : ${reservation.expected_count} apprenant${reservation.expected_count > 1 ? 's' : ''} prévu${reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)`
+                                  ? `Entreprise inscrite : ${reservation.expected_count} ${getReservationUnitLabel(reservation.billing_mode, reservation.expected_count)} prévu${reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)`
                                   : 'Aucun apprenant nommé rattaché à cette entité'}
                               </p>
                               <Button
@@ -1547,7 +1562,7 @@ export function ConfigApprenants({
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-xs text-gray-500">
-                          {r.expected_count} apprenant{r.expected_count > 1 ? 's' : ''} prévu{r.expected_count > 1 ? 's' : ''} (noms non communiqués)
+                          {r.expected_count} {getReservationUnitLabel(r.billing_mode, r.expected_count)} prévu{r.expected_count > 1 ? 's' : ''} (noms non communiqués)
                         </span>
                         {r.billing_mode && (
                           <Badge variant="outline" className="text-xs">
@@ -1853,7 +1868,9 @@ export function ConfigApprenants({
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="entity_expected_count">Nombre d'apprenants prévus *</Label>
+                    <Label htmlFor="entity_expected_count">
+                      {getReservationCountFieldLabel(entityReservationForm.billing_mode)}
+                    </Label>
                     <Input
                       id="entity_expected_count"
                       type="number"
