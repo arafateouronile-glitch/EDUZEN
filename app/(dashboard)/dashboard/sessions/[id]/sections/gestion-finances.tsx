@@ -446,6 +446,10 @@ export function GestionFinances({
         }
       }
 
+      const entityReservation = invoiceData.session_entity_reservation_id
+        ? entityReservations.find((r: { id: string }) => r.id === invoiceData.session_entity_reservation_id)
+        : undefined
+
       const variables = extractDocumentVariables({
         student,
         organization: org ?? undefined,
@@ -456,6 +460,7 @@ export function GestionFinances({
         company: invoiceCompany as any,
         language: 'fr',
         issueDate: invoice.issue_date ?? undefined,
+        effectif: entityReservation?.expected_count,
       })
 
       // Utiliser l'API pour générer le PDF
@@ -561,6 +566,10 @@ export function GestionFinances({
         }
       }
 
+      const emailEntityReservation = invoiceData.session_entity_reservation_id
+        ? entityReservations.find((r: { id: string }) => r.id === invoiceData.session_entity_reservation_id)
+        : undefined
+
       const variables = extractDocumentVariables({
         student,
         organization: org ?? undefined,
@@ -571,6 +580,7 @@ export function GestionFinances({
         company: emailInvoiceCompany as any,
         language: 'fr',
         issueDate: invoice.issue_date ?? undefined,
+        effectif: emailEntityReservation?.expected_count,
       })
 
       // Utiliser l'API pour générer le PDF

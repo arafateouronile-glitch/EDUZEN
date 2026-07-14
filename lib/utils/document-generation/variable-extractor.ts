@@ -117,6 +117,8 @@ export interface ExtractVariablesOptions {
   language?: 'fr' | 'en'
   issueDate?: string
   company?: Company | null
+  /** Effectif facturé (ex: nombre de groupes/clients/apprenants d'une entité) — multiplie la quantité des lignes de modules, sinon 1 */
+  effectif?: number
 }
 
 /**
@@ -134,7 +136,10 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     language = 'fr',
     issueDate = new Date().toISOString(),
     company,
+    effectif,
   } = options
+
+  const moduleQuantity = effectif && effectif > 0 ? effectif : 1
 
   const org = organization as OrgExtended | undefined
   const sess = session as SessionExtended | undefined
@@ -401,8 +406,13 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
       if (sessionModules && sessionModules.length > 0) {
         return sessionModules.map((m) => {
           const amount = Number(m.amount)
-          const a = (Number.isFinite(amount) ? amount : 0).toFixed(2)
-          return { nom: m.name || fallbackDesignation, prix_ht: a, total_ht: a, quantite: 1 }
+          const unit = Number.isFinite(amount) ? amount : 0
+          return {
+            nom: m.name || fallbackDesignation,
+            prix_ht: unit.toFixed(2),
+            total_ht: (unit * moduleQuantity).toFixed(2),
+            quantite: moduleQuantity,
+          }
         })
       }
       // Facture sans session : construire les lignes à partir des items de la facture
@@ -439,8 +449,13 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
         if (sessionModules && sessionModules.length > 0) {
           return sessionModules.map((m) => {
             const amount = Number(m.amount)
-            const a = (Number.isFinite(amount) ? amount : 0).toFixed(2)
-            return { nom: m.name || fallbackDesignation, prix_ht: a, total_ht: a, quantite: 1 }
+            const unit = Number.isFinite(amount) ? amount : 0
+            return {
+              nom: m.name || fallbackDesignation,
+              prix_ht: unit.toFixed(2),
+              total_ht: (unit * moduleQuantity).toFixed(2),
+              quantite: moduleQuantity,
+            }
           })
         }
         const items = invoice?.items
