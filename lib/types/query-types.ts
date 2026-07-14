@@ -57,6 +57,7 @@ export type PaymentWithRelations = TableRow<'payments'> & {
 export type InvoiceWithRelations = TableRow<'invoices'> & {
   enrollments?: EnrollmentWithRelations[]
   students?: StudentWithRelations
+  external_entities?: { id: string; name?: string | null; type?: string | null; email?: string | null } | null
 }
 
 // Types pour les documents avec relations

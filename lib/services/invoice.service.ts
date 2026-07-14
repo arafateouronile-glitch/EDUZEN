@@ -115,10 +115,18 @@ export class InvoiceService {
   async create(invoice: InvoiceInsert) {
     try {
       // Utiliser le helper de validation pour réduire la duplication
-      validateRequired(invoice, ['organization_id', 'student_id'])
+      validateRequired(invoice, ['organization_id'])
 
       // Générer le numéro de facture si vide ou non fourni
-      const invoiceData = invoice as InvoiceInsert & { invoice_number?: string; document_type?: 'quote' | 'invoice' }
+      const invoiceData = invoice as InvoiceInsert & { invoice_number?: string; document_type?: 'quote' | 'invoice'; entity_id?: string | null }
+
+      // Un devis/une facture est adressé soit à un apprenant, soit à une entité externe
+      if (!invoice.student_id && !invoiceData.entity_id) {
+        throw errorHandler.createValidationError(
+          'Un devis ou une facture doit être associé à un apprenant ou à une entité.',
+          'student_id'
+        )
+      }
       let invoiceNumber = invoiceData.invoice_number
       const shouldAutoGenerateNumber = !invoiceNumber || invoiceNumber.trim() === ''
       if (shouldAutoGenerateNumber) {

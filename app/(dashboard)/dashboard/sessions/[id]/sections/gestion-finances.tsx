@@ -39,11 +39,11 @@ import {
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import Link from 'next/link'
-import { 
-  Download, FileText, Plus, Receipt, DollarSign, 
+import {
+  Download, FileText, Plus, Receipt, DollarSign,
   FileCheck, FileX, Eye, CreditCard, ChevronDown, ChevronUp,
   Trash2, Edit, TrendingDown, ArrowRightLeft, Wallet, PieChart as PieChartIcon,
-  TrendingUp, AlertCircle, CheckCircle2, Mail, PenTool, Send
+  TrendingUp, AlertCircle, CheckCircle2, Mail, PenTool, Send, Building2
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 // Lazy load recharts pour réduire le bundle initial
@@ -69,7 +69,7 @@ interface SessionModule {
   currency: string
 }
 
-type InvoiceRow = { id?: string; enrollment_id?: string; document_type?: string; _optimistic?: boolean; payments?: Array<{ status?: string; amount?: number }>; total_amount?: number; amount?: number; tax_amount?: number; invoice_number?: string; currency?: string }
+type InvoiceRow = { id?: string; enrollment_id?: string; session_entity_reservation_id?: string; document_type?: string; _optimistic?: boolean; payments?: Array<{ status?: string; amount?: number }>; total_amount?: number; amount?: number; tax_amount?: number; invoice_number?: string; currency?: string }
 
 interface GestionFinancesProps {
   enrollments?: EnrollmentWithRelations[]
@@ -110,6 +110,7 @@ export function GestionFinances({
   const { addToast } = useToast()
   
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string | null>(null)
+  const [selectedEntityReservationId, setSelectedEntityReservationId] = useState<string | null>(null)
   const [selectedPaymentInvoiceId, setSelectedPaymentInvoiceId] = useState<string | null>(null)
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [showInvoiceForm, setShowInvoiceForm] = useState(false)
@@ -170,27 +171,69 @@ export function GestionFinances({
   // Filtrer les modèles de devis
   const quoteTemplates = allTemplates?.filter((t): t is NonNullable<typeof t> => t != null && t.type === 'devis') || []
 
-  // Récupérer les factures et devis liés aux inscriptions de cette session uniquement
-  const enrollmentIds = enrollments.map((e) => e.id).filter(Boolean) as string[]
-  const { data: invoices, isLoading: isInvoicesLoading } = useQuery({
-    queryKey: ['session-invoices', sessionId, enrollmentIds],
+  // Entreprises/organismes inscrits à cette session avec un effectif prévisionnel
+  // (même requête que l'onglet apprenants — clé de query partagée pour profiter du cache)
+  const { data: entityReservations = [] } = useQuery({
+    queryKey: ['session-entity-reservations', sessionId],
     queryFn: async () => {
-      if (!user?.organization_id || enrollmentIds.length === 0) return []
+      if (!sessionId) return []
+      const { data, error } = await supabase
+        .from('session_entity_reservations')
+        .select('*, external_entities(id, name, type, email, phone, address, city, postal_code)')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!sessionId,
+  })
+
+  // Types de financement de l'organisation (pour reprendre celui saisi à l'inscription)
+  const { data: fundingTypes } = useQuery({
+    queryKey: ['funding-types', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('funding_types')
+        .select('id, name, code')
+        .eq('organization_id', user.organization_id)
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Récupérer les factures et devis liés aux inscriptions (apprenants) et aux
+  // entreprises inscrites de cette session uniquement
+  const enrollmentIds = enrollments.map((e) => e.id).filter(Boolean) as string[]
+  const entityReservationIds = entityReservations.map((r: { id: string }) => r.id).filter(Boolean)
+  const { data: invoices, isLoading: isInvoicesLoading } = useQuery({
+    queryKey: ['session-invoices', sessionId, enrollmentIds, entityReservationIds],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const orFilters: string[] = []
+      if (enrollmentIds.length > 0) orFilters.push(`enrollment_id.in.(${enrollmentIds.join(',')})`)
+      if (entityReservationIds.length > 0) orFilters.push(`session_entity_reservation_id.in.(${entityReservationIds.join(',')})`)
+      if (orFilters.length === 0) return []
+
       const { data, error } = await supabase
         .from('invoices')
         .select(`
           *,
           students(id, first_name, last_name, student_number, email, address, postal_code, city, phone, date_of_birth),
           payments(id, amount, status, paid_at),
-          enrollments(id, session_id, students(id, first_name, last_name, student_number, email, address, postal_code, city, phone, date_of_birth))
+          enrollments(id, session_id, students(id, first_name, last_name, student_number, email, address, postal_code, city, phone, date_of_birth)),
+          external_entities(id, name, type, email)
         `)
         .eq('organization_id', user.organization_id)
-        .in('enrollment_id', enrollmentIds)
+        .or(orFilters.join(','))
         .order('issue_date', { ascending: false })
       if (error) throw error
       return (data || []) as unknown as InvoiceWithRelations[]
     },
-    enabled: !!user?.organization_id && enrollmentIds.length > 0,
+    enabled: !!user?.organization_id && (enrollmentIds.length > 0 || entityReservationIds.length > 0),
     staleTime: 60 * 1000, // 1 min (invalidate après création facture/devis)
   })
 
@@ -327,6 +370,7 @@ export function GestionFinances({
     issue_date: new Date().toISOString().split('T')[0],
     due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     notes: '',
+    funding_type_id: '',
   })
 
   // États pour les modèles sélectionnés lors de la création
@@ -649,20 +693,45 @@ export function GestionFinances({
   const createInvoiceMutation = useMutation({
     mutationFn: async () => {
       if (!user?.organization_id) throw new Error('Données manquantes')
-      if (!selectedEnrollmentId) {
-        throw new Error('Veuillez sélectionner un étudiant depuis la liste ci-dessus.')
-      }
-      const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
-      if (!enrollment || !enrollment.students) throw new Error('Inscription non trouvée')
 
       const amount = parseFloat(invoiceForm.amount) || 0
       const taxAmount = parseFloat(invoiceForm.tax_amount) || 0
       const totalAmount = amount + taxAmount
+      const fundingTypeId = invoiceForm.funding_type_id || null
+
+      if (selectedEntityReservationId) {
+        const reservation = entityReservations.find((r: { id: string }) => r.id === selectedEntityReservationId)
+        if (!reservation) throw new Error('Entreprise non trouvée')
+        return invoiceService.create({
+          organization_id: user.organization_id,
+          entity_id: reservation.entity_id,
+          session_entity_reservation_id: reservation.id,
+          funding_type_id: fundingTypeId,
+          invoice_number: '',
+          type: 'tuition',
+          document_type: 'invoice',
+          issue_date: invoiceForm.issue_date,
+          due_date: invoiceForm.due_date,
+          amount,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
+          currency: invoiceForm.currency,
+          status: 'sent',
+          notes: invoiceForm.notes,
+        })
+      }
+
+      if (!selectedEnrollmentId) {
+        throw new Error('Veuillez sélectionner un étudiant ou une entreprise depuis la liste ci-dessus.')
+      }
+      const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
+      if (!enrollment || !enrollment.students) throw new Error('Inscription non trouvée')
 
       return invoiceService.create({
         organization_id: user.organization_id,
         student_id: enrollment.student_id,
         enrollment_id: enrollment.id,
+        funding_type_id: fundingTypeId,
         invoice_number: '',
         type: 'tuition',
         document_type: 'invoice',
@@ -677,9 +746,10 @@ export function GestionFinances({
       })
     },
     onMutate: async () => {
+      if (selectedEntityReservationId) return {}
       const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
       if (!enrollment?.student_id) return {}
-      const key = ['session-invoices', sessionId, enrollmentIds] as const
+      const key = ['session-invoices', sessionId, enrollmentIds, entityReservationIds] as const
       const prev = queryClient.getQueryData(key)
       const optimistic = {
         id: `opt-inv-${Date.now()}`,
@@ -703,6 +773,7 @@ export function GestionFinances({
         description: 'La facture a été créée avec succès.',
       })
       setShowInvoiceForm(false)
+      setSelectedEntityReservationId(null)
       setInvoiceForm({
         amount: '',
         tax_amount: '0',
@@ -710,13 +781,14 @@ export function GestionFinances({
         issue_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: '',
+        funding_type_id: '',
       })
       setInvoiceFormTemplateId(undefined)
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
     onError: (error: unknown, _vars: unknown, ctx: { previous?: unknown } | undefined) => {
       if (ctx?.previous != null) {
-        queryClient.setQueryData(['session-invoices', sessionId, enrollmentIds], ctx.previous)
+        queryClient.setQueryData(['session-invoices', sessionId, enrollmentIds, entityReservationIds], ctx.previous)
       }
       addToast({
         type: 'error',
@@ -730,20 +802,45 @@ export function GestionFinances({
   const createQuoteMutation = useMutation({
     mutationFn: async () => {
       if (!user?.organization_id) throw new Error('Données manquantes')
-      if (!selectedEnrollmentId) {
-        throw new Error('Veuillez sélectionner un étudiant depuis la liste ci-dessus.')
-      }
-      const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
-      if (!enrollment || !enrollment.students) throw new Error('Inscription non trouvée')
 
       const amount = parseFloat(invoiceForm.amount) || 0
       const taxAmount = parseFloat(invoiceForm.tax_amount) || 0
       const totalAmount = amount + taxAmount
+      const fundingTypeId = invoiceForm.funding_type_id || null
+
+      if (selectedEntityReservationId) {
+        const reservation = entityReservations.find((r: { id: string }) => r.id === selectedEntityReservationId)
+        if (!reservation) throw new Error('Entreprise non trouvée')
+        return invoiceService.create({
+          organization_id: user.organization_id,
+          entity_id: reservation.entity_id,
+          session_entity_reservation_id: reservation.id,
+          funding_type_id: fundingTypeId,
+          invoice_number: '',
+          type: 'tuition',
+          document_type: 'quote',
+          issue_date: invoiceForm.issue_date,
+          due_date: invoiceForm.due_date,
+          amount,
+          tax_amount: taxAmount,
+          total_amount: totalAmount,
+          currency: invoiceForm.currency,
+          status: 'draft',
+          notes: invoiceForm.notes,
+        })
+      }
+
+      if (!selectedEnrollmentId) {
+        throw new Error('Veuillez sélectionner un étudiant ou une entreprise depuis la liste ci-dessus.')
+      }
+      const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
+      if (!enrollment || !enrollment.students) throw new Error('Inscription non trouvée')
 
       return invoiceService.create({
         organization_id: user.organization_id,
         student_id: enrollment.student_id,
         enrollment_id: enrollment.id,
+        funding_type_id: fundingTypeId,
         invoice_number: '',
         type: 'tuition',
         document_type: 'quote',
@@ -758,9 +855,10 @@ export function GestionFinances({
       })
     },
     onMutate: async () => {
+      if (selectedEntityReservationId) return {}
       const enrollment = enrollments.find((e) => e.id === selectedEnrollmentId)
       if (!enrollment?.student_id) return {}
-      const key = ['session-invoices', sessionId, enrollmentIds] as const
+      const key = ['session-invoices', sessionId, enrollmentIds, entityReservationIds] as const
       const prev = queryClient.getQueryData(key)
       const optimistic = {
         id: `opt-quote-${Date.now()}`,
@@ -784,6 +882,7 @@ export function GestionFinances({
         description: 'Le devis a été créé avec succès.',
       })
       setShowQuoteForm(false)
+      setSelectedEntityReservationId(null)
       setInvoiceForm({
         amount: '',
         tax_amount: '0',
@@ -791,13 +890,14 @@ export function GestionFinances({
         issue_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: '',
+        funding_type_id: '',
       })
       setQuoteFormTemplateId(undefined)
       queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
     },
     onError: (error: unknown, _vars: unknown, ctx: { previous?: unknown } | undefined) => {
       if (ctx?.previous != null) {
-        queryClient.setQueryData(['session-invoices', sessionId, enrollmentIds], ctx.previous)
+        queryClient.setQueryData(['session-invoices', sessionId, enrollmentIds, entityReservationIds], ctx.previous)
       }
       addToast({
         type: 'error',
@@ -940,6 +1040,11 @@ export function GestionFinances({
     return invoices?.filter((inv) => (inv as InvoiceRow).enrollment_id === enrollmentId) || []
   }
 
+  // Obtenir les factures et devis pour une entreprise inscrite (session_entity_reservations)
+  const getInvoicesForEntityReservation = (reservationId: string) => {
+    return invoices?.filter((inv) => (inv as InvoiceRow).session_entity_reservation_id === reservationId) || []
+  }
+
   const getInvoiceTotal = (inv: InvoiceRow) => {
     const totalAmount = inv?.total_amount != null ? Number(inv.total_amount) : null
     if (totalAmount != null && !Number.isNaN(totalAmount)) return totalAmount
@@ -986,6 +1091,18 @@ export function GestionFinances({
 
     // Priorité 3: Total des modules de la session
     return sessionModulesTotal
+  }
+
+  // Même logique de priorité que getEnrollmentDisplayTotal, pour une entreprise
+  // inscrite : Facture > Devis > montant saisi à l'inscription de l'entité
+  const getEntityReservationDisplayTotal = (reservationId: string, fallbackTotal: number) => {
+    const reservationInvoices = getInvoicesForEntityReservation(reservationId)
+    const invoicesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice' && !(inv as InvoiceRow)?._optimistic)
+    const quotesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote' && !(inv as InvoiceRow)?._optimistic)
+
+    if (invoicesList.length > 0) return getInvoiceTotal(invoicesList[0] as InvoiceRow)
+    if (quotesList.length > 0) return getInvoiceTotal(quotesList[0] as InvoiceRow)
+    return fallbackTotal
   }
 
   // Calculs du résumé financier (utilise les montants dynamiques)
@@ -1681,12 +1798,16 @@ export function GestionFinances({
                               className="h-7 text-xs text-gray-600 hover:text-brand-blue hover:bg-brand-blue/5"
                               onClick={() => {
                                 setSelectedEnrollmentId(enrollment.id)
+                                setSelectedEntityReservationId(null)
                                 setShowPaymentForm(false)
                                 setShowInvoiceForm(false)
                                 setShowChargeForm(false)
                                 setInvoiceForm({
                                   ...invoiceForm,
-                                  amount: sessionModulesTotal > 0 ? String(sessionModulesTotal) : '0',
+                                  amount: enrollment.total_amount
+                                    ? String(enrollment.total_amount)
+                                    : sessionModulesTotal > 0 ? String(sessionModulesTotal) : '0',
+                                  funding_type_id: enrollment.funding_type_id || '',
                                 })
                                 setShowQuoteForm(true)
                               }}
@@ -1699,12 +1820,16 @@ export function GestionFinances({
                               className="h-7 text-xs text-gray-600 hover:text-brand-blue hover:bg-brand-blue/5"
                               onClick={() => {
                                 setSelectedEnrollmentId(enrollment.id)
+                                setSelectedEntityReservationId(null)
                                 setShowPaymentForm(false)
                                 setShowQuoteForm(false)
                                 setShowChargeForm(false)
                                 setInvoiceForm({
                                   ...invoiceForm,
-                                  amount: sessionModulesTotal > 0 ? String(sessionModulesTotal) : '0',
+                                  amount: enrollment.total_amount
+                                    ? String(enrollment.total_amount)
+                                    : sessionModulesTotal > 0 ? String(sessionModulesTotal) : '0',
+                                  funding_type_id: enrollment.funding_type_id || '',
                                 })
                                 setShowInvoiceForm(true)
                               }}
@@ -1716,6 +1841,7 @@ export function GestionFinances({
                               className="h-7 text-xs bg-brand-blue hover:bg-brand-blue-dark text-white shadow-sm"
                               onClick={() => {
                                 setSelectedEnrollmentId(enrollment.id)
+                                setSelectedEntityReservationId(null)
                                 const defaultInvoice =
                                   (studentInvoicesList || []).find((inv) => !(inv as InvoiceRow)?._optimistic && getInvoiceRemaining(inv as InvoiceRow) > 0) ||
                                   (studentInvoicesList || []).find((inv) => !(inv as InvoiceRow)?._optimistic) ||
@@ -1744,6 +1870,172 @@ export function GestionFinances({
             </div>
           </GlassCard>
           </motion.div>
+
+          {/* Entreprises/organismes inscrits à la session */}
+          {entityReservations.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <GlassCard variant="premium" className="overflow-hidden border border-gray-200/50 shadow-xl shadow-gray-200/20">
+                <div className="p-5 border-b border-gray-100 bg-white">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-orange-50 rounded-xl">
+                      <Building2 className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Entreprises inscrites</h3>
+                      <p className="text-sm text-gray-500">Devis et factures des entreprises/organismes de cette session</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {entityReservations.map((reservation: {
+                    id: string
+                    entity_id: string
+                    expected_count: number
+                    billing_mode?: string | null
+                    total_amount?: number | null
+                    paid_amount?: number | null
+                    funding_type_id?: string | null
+                    external_entities?: { name?: string | null } | null
+                  }) => {
+                    const billingModeLabels: Record<string, string> = {
+                      per_client: 'Par client',
+                      per_group: 'Par groupe',
+                      per_student: 'Par apprenant',
+                      per_hour: 'Par heures',
+                    }
+                    const fallbackTotal = Number(reservation.total_amount || 0)
+                    const total = getEntityReservationDisplayTotal(reservation.id, fallbackTotal)
+                    const paid = Number(reservation.paid_amount || 0)
+                    const reservationInvoices = getInvoicesForEntityReservation(reservation.id)
+                    const reservationInvoicesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice')
+                    const reservationQuotesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote')
+
+                    return (
+                      <motion.div
+                        key={reservation.id}
+                        className="p-5 hover:bg-gray-50/80 transition-colors group"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                              <Building2 className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900">{reservation.external_entities?.name ?? 'Entreprise'}</p>
+                              <p className="text-xs text-gray-500 font-medium">
+                                {reservation.expected_count} apprenant{reservation.expected_count > 1 ? 's' : ''} prévu{reservation.expected_count > 1 ? 's' : ''}
+                                {reservation.billing_mode && ` · ${billingModeLabels[reservation.billing_mode] ?? reservation.billing_mode}`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-6 text-sm">
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total</p>
+                              <p className="font-bold text-gray-900">{formatCurrency(total, 'EUR')}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Payé</p>
+                              <p className="font-bold text-brand-blue">{formatCurrency(paid, 'EUR')}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pl-14">
+                          <div className="flex flex-wrap gap-2">
+                            {reservationQuotesList.map((quote) => (
+                              <div key={quote.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
+                                <FileText className="h-3 w-3 text-gray-500 mr-1.5" />
+                                <span className="text-xs font-medium text-gray-700 mr-2">{quote.invoice_number || 'Brouillon'}</span>
+                                <div className="flex gap-1 border-l border-gray-200 pl-2">
+                                  <button
+                                    onClick={() => handleDownloadDocument(quote as InvoiceWithRelations, 'quote', selectedQuoteTemplateId)}
+                                    disabled={isDownloading === quote.id}
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
+                                    title="Télécharger PDF"
+                                  >
+                                    {isDownloading === quote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            {reservationInvoicesList.map((invoice) => (
+                              <div key={invoice.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
+                                <Receipt className="h-3 w-3 text-brand-blue mr-1.5" />
+                                <span className="text-xs font-medium text-gray-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
+                                <div className="flex gap-1 border-l border-gray-200 pl-2">
+                                  <button
+                                    onClick={() => handleDownloadDocument(invoice as InvoiceWithRelations, 'invoice', selectedInvoiceTemplateId)}
+                                    disabled={isDownloading === invoice.id}
+                                    className="text-gray-400 hover:text-brand-blue transition-colors"
+                                    title="Télécharger PDF"
+                                  >
+                                    {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                  </button>
+                                  <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
+                                    <Eye className="h-3 w-3" />
+                                  </Link>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-gray-600 hover:text-brand-blue hover:bg-brand-blue/5"
+                              onClick={() => {
+                                setSelectedEntityReservationId(reservation.id)
+                                setSelectedEnrollmentId(null)
+                                setShowPaymentForm(false)
+                                setShowInvoiceForm(false)
+                                setShowChargeForm(false)
+                                setInvoiceForm({
+                                  ...invoiceForm,
+                                  amount: fallbackTotal > 0 ? String(fallbackTotal) : '0',
+                                  funding_type_id: reservation.funding_type_id || '',
+                                })
+                                setShowQuoteForm(true)
+                              }}
+                            >
+                              <Plus className="mr-1 h-3 w-3" /> Devis
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-gray-600 hover:text-brand-blue hover:bg-brand-blue/5"
+                              onClick={() => {
+                                setSelectedEntityReservationId(reservation.id)
+                                setSelectedEnrollmentId(null)
+                                setShowPaymentForm(false)
+                                setShowQuoteForm(false)
+                                setShowChargeForm(false)
+                                setInvoiceForm({
+                                  ...invoiceForm,
+                                  amount: fallbackTotal > 0 ? String(fallbackTotal) : '0',
+                                  funding_type_id: reservation.funding_type_id || '',
+                                })
+                                setShowInvoiceForm(true)
+                              }}
+                            >
+                              <Plus className="mr-1 h-3 w-3" /> Facture
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </GlassCard>
+            </motion.div>
+          )}
 
           {/* Paiements récents */}
           {payments.length > 0 && (
@@ -2471,17 +2763,20 @@ export function GestionFinances({
         open={showInvoiceForm}
         onOpenChange={(open) => {
           setShowInvoiceForm(open)
-          if (!open) setSelectedEnrollmentId(null)
+          if (!open) {
+            setSelectedEnrollmentId(null)
+            setSelectedEntityReservationId(null)
+          }
         }}
       >
         <DialogContent className="max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Créer une facture</DialogTitle>
           </DialogHeader>
-          {!selectedEnrollmentId && (
+          {!selectedEnrollmentId && !selectedEntityReservationId && (
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
-                ⚠️ Veuillez sélectionner un étudiant depuis la liste ci-dessus avant de créer la facture.
+                ⚠️ Veuillez sélectionner un étudiant ou une entreprise depuis la liste ci-dessus avant de créer la facture.
               </p>
             </div>
           )}
@@ -2489,6 +2784,13 @@ export function GestionFinances({
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
                 Étudiant sélectionné : {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.first_name} {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.last_name}
+              </p>
+            </div>
+          )}
+          {selectedEntityReservationId && (
+            <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-sm text-orange-800">
+                Entreprise sélectionnée : {entityReservations.find((r: { id: string }) => r.id === selectedEntityReservationId)?.external_entities?.name}
               </p>
             </div>
           )}
@@ -2551,6 +2853,22 @@ export function GestionFinances({
               </div>
 
               <div>
+                <label className="block text-sm font-medium mb-2">Type de financement</label>
+                <select
+                  value={invoiceForm.funding_type_id}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, funding_type_id: e.target.value })}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                >
+                  <option value="">Aucun (financement personnel)</option>
+                  {fundingTypes && fundingTypes.map((ft) => (
+                    <option key={ft.id} value={ft.id}>
+                      {ft.name} {ft.code ? `(${ft.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-2">Notes</label>
                 <textarea
                   value={invoiceForm.notes}
@@ -2595,13 +2913,18 @@ export function GestionFinances({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => { setShowInvoiceForm(false); setSelectedEnrollmentId(null); setInvoiceFormTemplateId(undefined) }}
+                onClick={() => {
+                  setShowInvoiceForm(false)
+                  setSelectedEnrollmentId(null)
+                  setSelectedEntityReservationId(null)
+                  setInvoiceFormTemplateId(undefined)
+                }}
               >
                 Annuler
               </Button>
               <Button
                 type="submit"
-                disabled={createInvoiceMutation.isPending || !selectedEnrollmentId}
+                disabled={createInvoiceMutation.isPending || (!selectedEnrollmentId && !selectedEntityReservationId)}
               >
                 {createInvoiceMutation.isPending ? 'Création...' : 'Créer la facture'}
               </Button>
@@ -2615,17 +2938,20 @@ export function GestionFinances({
         open={showQuoteForm}
         onOpenChange={(open) => {
           setShowQuoteForm(open)
-          if (!open) setSelectedEnrollmentId(null)
+          if (!open) {
+            setSelectedEnrollmentId(null)
+            setSelectedEntityReservationId(null)
+          }
         }}
       >
         <DialogContent className="max-w-md" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Créer un devis</DialogTitle>
           </DialogHeader>
-          {!selectedEnrollmentId && (
+          {!selectedEnrollmentId && !selectedEntityReservationId && (
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
-                ⚠️ Veuillez sélectionner un étudiant depuis la liste ci-dessus avant de créer le devis.
+                ⚠️ Veuillez sélectionner un étudiant ou une entreprise depuis la liste ci-dessus avant de créer le devis.
               </p>
             </div>
           )}
@@ -2633,6 +2959,13 @@ export function GestionFinances({
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
                 Étudiant sélectionné : {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.first_name} {enrollments.find((e) => e.id === selectedEnrollmentId)?.students?.last_name}
+              </p>
+            </div>
+          )}
+          {selectedEntityReservationId && (
+            <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-sm text-orange-800">
+                Entreprise sélectionnée : {entityReservations.find((r: { id: string }) => r.id === selectedEntityReservationId)?.external_entities?.name}
               </p>
             </div>
           )}
@@ -2695,6 +3028,22 @@ export function GestionFinances({
               </div>
 
               <div>
+                <label className="block text-sm font-medium mb-2">Type de financement</label>
+                <select
+                  value={invoiceForm.funding_type_id}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, funding_type_id: e.target.value })}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                >
+                  <option value="">Aucun (financement personnel)</option>
+                  {fundingTypes && fundingTypes.map((ft) => (
+                    <option key={ft.id} value={ft.id}>
+                      {ft.name} {ft.code ? `(${ft.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-2">Notes</label>
                 <textarea
                   value={invoiceForm.notes}
@@ -2739,13 +3088,18 @@ export function GestionFinances({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => { setShowQuoteForm(false); setSelectedEnrollmentId(null); setQuoteFormTemplateId(undefined) }}
+                onClick={() => {
+                  setShowQuoteForm(false)
+                  setSelectedEnrollmentId(null)
+                  setSelectedEntityReservationId(null)
+                  setQuoteFormTemplateId(undefined)
+                }}
               >
                 Annuler
               </Button>
               <Button
                 type="submit"
-                disabled={createQuoteMutation.isPending || !selectedEnrollmentId}
+                disabled={createQuoteMutation.isPending || (!selectedEnrollmentId && !selectedEntityReservationId)}
               >
                 {createQuoteMutation.isPending ? 'Création...' : 'Créer le devis'}
               </Button>

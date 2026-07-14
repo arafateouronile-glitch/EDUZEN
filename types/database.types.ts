@@ -10418,6 +10418,8 @@ export type Database = {
           document_type: string | null
           due_date: string
           enrollment_id: string | null
+          entity_id: string | null
+          funding_type_id: string | null
           id: string
           invoice_number: string
           issue_date: string | null
@@ -10425,6 +10427,7 @@ export type Database = {
           notes: string | null
           organization_id: string | null
           pdf_url: string | null
+          session_entity_reservation_id: string | null
           status: string | null
           student_id: string | null
           tax_amount: number | null
@@ -10439,6 +10442,8 @@ export type Database = {
           document_type?: string | null
           due_date: string
           enrollment_id?: string | null
+          entity_id?: string | null
+          funding_type_id?: string | null
           id?: string
           invoice_number: string
           issue_date?: string | null
@@ -10446,6 +10451,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           pdf_url?: string | null
+          session_entity_reservation_id?: string | null
           status?: string | null
           student_id?: string | null
           tax_amount?: number | null
@@ -10460,6 +10466,8 @@ export type Database = {
           document_type?: string | null
           due_date?: string
           enrollment_id?: string | null
+          entity_id?: string | null
+          funding_type_id?: string | null
           id?: string
           invoice_number?: string
           issue_date?: string | null
@@ -10467,6 +10475,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           pdf_url?: string | null
+          session_entity_reservation_id?: string | null
           status?: string | null
           student_id?: string | null
           tax_amount?: number | null
@@ -10480,6 +10489,27 @@ export type Database = {
             columns: ["enrollment_id"]
             isOneToOne: false
             referencedRelation: "enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "external_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_funding_type_id_fkey"
+            columns: ["funding_type_id"]
+            isOneToOne: false
+            referencedRelation: "funding_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_session_entity_reservation_id_fkey"
+            columns: ["session_entity_reservation_id"]
+            isOneToOne: false
+            referencedRelation: "session_entity_reservations"
             referencedColumns: ["id"]
           },
           {
