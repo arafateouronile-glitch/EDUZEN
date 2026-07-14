@@ -17739,6 +17739,7 @@ export type Database = {
       session_entity_reservations: {
         Row: {
           billing_mode: string | null
+          billing_quantity: number | null
           created_at: string | null
           created_by: string | null
           entity_id: string
@@ -17757,6 +17758,7 @@ export type Database = {
         }
         Insert: {
           billing_mode?: string | null
+          billing_quantity?: number | null
           created_at?: string | null
           created_by?: string | null
           entity_id: string
@@ -17775,6 +17777,7 @@ export type Database = {
         }
         Update: {
           billing_mode?: string | null
+          billing_quantity?: number | null
           created_at?: string | null
           created_by?: string | null
           entity_id?: string

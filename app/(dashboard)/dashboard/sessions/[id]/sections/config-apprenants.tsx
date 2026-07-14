@@ -135,6 +135,7 @@ export function ConfigApprenants({
     entity_name: '',
     expected_count: '',
     billing_mode: '',
+    billing_quantity: '',
     enrollment_date: new Date().toISOString().split('T')[0],
     status: 'confirmed' as 'pending' | 'confirmed',
     payment_status: 'pending' as 'pending' | 'partial' | 'paid',
@@ -260,6 +261,7 @@ export function ConfigApprenants({
       isNew: boolean
       expectedCount: number
       billingMode: string | null
+      billingQuantity: number | null
       enrollmentDate: string
       status: string
       paymentStatus: string
@@ -277,6 +279,7 @@ export function ConfigApprenants({
             entity_id: payload.entityId,
             expected_count: payload.expectedCount,
             billing_mode: payload.billingMode,
+            billing_quantity: payload.billingQuantity,
             enrollment_date: payload.enrollmentDate,
             status: payload.status,
             payment_status: payload.paymentStatus,
@@ -326,19 +329,36 @@ export function ConfigApprenants({
   const getReservationForEntity = (entityId: string) =>
     entityReservations?.find((r: { entity_id: string }) => r.entity_id === entityId)
 
-  // Le champ "effectif" compte des unités différentes selon le mode de facturation :
-  // des apprenants (par défaut), des groupes, ou des clients.
-  const getReservationUnitLabel = (billingMode: string | null | undefined, count: number) => {
+  // L'effectif (expected_count) est toujours un nombre d'apprenants, quel que
+  // soit le mode de facturation — nommés (student_entities) et/ou en nombre.
+  // La quantité facturée (billing_quantity) est un concept séparé, propre aux
+  // modes per_group/per_client/per_hour (ex: 2 groupes facturés pour un
+  // effectif réel de 12 apprenants). En mode per_student (ou non défini), la
+  // quantité facturée est directement l'effectif.
+  const billingQuantityRequired = (billingMode: string) =>
+    billingMode === 'per_group' || billingMode === 'per_client' || billingMode === 'per_hour'
+
+  const getBillingQuantityFieldLabel = (billingMode: string) => {
+    if (billingMode === 'per_group') return 'Nombre de groupes facturés *'
+    if (billingMode === 'per_client') return 'Nombre de clients facturés *'
+    if (billingMode === 'per_hour') return 'Nombre d\'heures facturées *'
+    return 'Quantité facturée'
+  }
+
+  const getBillingQuantityUnitLabel = (billingMode: string | null | undefined, count: number) => {
     const plural = count > 1 ? 's' : ''
     if (billingMode === 'per_group') return `groupe${plural}`
     if (billingMode === 'per_client') return `client${plural}`
+    if (billingMode === 'per_hour') return `heure${plural}`
     return `apprenant${plural}`
   }
 
-  const getReservationCountFieldLabel = (billingMode: string) => {
-    if (billingMode === 'per_group') return 'Nombre de groupes prévus *'
-    if (billingMode === 'per_client') return 'Nombre de clients prévus *'
-    return 'Nombre d\'apprenants prévus *'
+  // Note optionnelle affichée à côté de l'effectif quand la quantité facturée en diffère
+  const getBillingQuantityNote = (reservation: { billing_mode?: string | null; billing_quantity?: number | null }) => {
+    if (!reservation.billing_mode || !billingQuantityRequired(reservation.billing_mode) || !reservation.billing_quantity) {
+      return ''
+    }
+    return ` · facturé : ${reservation.billing_quantity} ${getBillingQuantityUnitLabel(reservation.billing_mode, reservation.billing_quantity)}`
   }
 
   const handleOpenEntityReservation = (
@@ -350,6 +370,7 @@ export function ConfigApprenants({
       entity_name: entity.name ?? '',
       expected_count: existing ? String(existing.expected_count) : '',
       billing_mode: existing?.billing_mode ?? '',
+      billing_quantity: existing?.billing_quantity != null ? String(existing.billing_quantity) : '',
       enrollment_date: existing?.enrollment_date ?? new Date().toISOString().split('T')[0],
       status: (existing?.status as 'pending' | 'confirmed') ?? 'confirmed',
       payment_status: (existing?.payment_status as 'pending' | 'partial' | 'paid') ?? 'pending',
@@ -367,6 +388,9 @@ export function ConfigApprenants({
       isNew: !existing,
       expectedCount: Number(entityReservationForm.expected_count),
       billingMode: entityReservationForm.billing_mode || null,
+      billingQuantity: billingQuantityRequired(entityReservationForm.billing_mode) && entityReservationForm.billing_quantity
+        ? Number(entityReservationForm.billing_quantity)
+        : null,
       enrollmentDate: entityReservationForm.enrollment_date,
       status: entityReservationForm.status,
       paymentStatus: entityReservationForm.payment_status,
@@ -1118,7 +1142,7 @@ export function ConfigApprenants({
                             <div className="space-y-2 text-center">
                               <p className="text-xs text-gray-500">
                                 {reservation
-                                  ? `Entreprise inscrite : ${reservation.expected_count} ${getReservationUnitLabel(reservation.billing_mode, reservation.expected_count)} prévu${reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)`
+                                  ? `Entreprise inscrite : ${reservation.expected_count} apprenant${reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)${getBillingQuantityNote(reservation)}`
                                   : 'Aucun apprenant nommé rattaché à cette entité'}
                               </p>
                               <Button
@@ -1536,6 +1560,7 @@ export function ConfigApprenants({
                 entity_id: string
                 expected_count: number
                 billing_mode?: string | null
+                billing_quantity?: number | null
                 total_amount?: number | null
                 external_entities?: { name?: string | null; type?: string | null } | null
               }
@@ -1562,7 +1587,7 @@ export function ConfigApprenants({
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-xs text-gray-500">
-                          {r.expected_count} {getReservationUnitLabel(r.billing_mode, r.expected_count)} prévu{r.expected_count > 1 ? 's' : ''} (noms non communiqués)
+                          {r.expected_count} apprenant{r.expected_count > 1 ? 's' : ''} prévu{r.expected_count > 1 ? 's' : ''} (noms non communiqués){getBillingQuantityNote(r)}
                         </span>
                         {r.billing_mode && (
                           <Badge variant="outline" className="text-xs">
@@ -1868,9 +1893,7 @@ export function ConfigApprenants({
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="entity_expected_count">
-                      {getReservationCountFieldLabel(entityReservationForm.billing_mode)}
-                    </Label>
+                    <Label htmlFor="entity_expected_count">Effectif (nombre d'apprenants) *</Label>
                     <Input
                       id="entity_expected_count"
                       type="number"
@@ -1879,8 +1902,11 @@ export function ConfigApprenants({
                       onChange={(e) =>
                         setEntityReservationForm({ ...entityReservationForm, expected_count: e.target.value })
                       }
-                      placeholder="Ex: 5"
+                      placeholder="Ex: 12"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Nombre réel d'apprenants de cette entité, en plus de ceux inscrits nominativement.
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="entity_billing_mode">Mode de facturation</Label>
@@ -1900,6 +1926,28 @@ export function ConfigApprenants({
                     </select>
                   </div>
                 </div>
+
+                {billingQuantityRequired(entityReservationForm.billing_mode) && (
+                  <div>
+                    <Label htmlFor="entity_billing_quantity">
+                      {getBillingQuantityFieldLabel(entityReservationForm.billing_mode)}
+                    </Label>
+                    <Input
+                      id="entity_billing_quantity"
+                      type="number"
+                      min={1}
+                      value={entityReservationForm.billing_quantity}
+                      onChange={(e) =>
+                        setEntityReservationForm({ ...entityReservationForm, billing_quantity: e.target.value })
+                      }
+                      placeholder="Ex: 2"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Quantité utilisée pour calculer le montant du devis/de la facture — distincte de l'effectif.
+                      Laissé vide, l'effectif sera utilisé par défaut.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>

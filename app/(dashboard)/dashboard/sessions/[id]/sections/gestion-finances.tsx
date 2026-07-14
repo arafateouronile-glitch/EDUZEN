@@ -447,16 +447,17 @@ export function GestionFinances({
         }
       } else if (invoiceData.entity_id) {
         // Devis/facture émis directement à une entreprise (pas d'apprenant nommé) :
-        // on va chercher l'entité et son effectif frais en base plutôt que de
-        // dépendre du state local (potentiellement obsolète au moment du téléchargement).
+        // on va chercher l'entité et sa quantité de facturation fraîches en base
+        // plutôt que de dépendre du state local (potentiellement obsolète au
+        // moment du téléchargement).
         const [{ data: entityRow }, { data: reservationRow }] = await Promise.all([
           supabase.from('external_entities').select('*').eq('id', invoiceData.entity_id).single(),
           invoiceData.session_entity_reservation_id
-            ? supabase.from('session_entity_reservations').select('expected_count').eq('id', invoiceData.session_entity_reservation_id).single()
+            ? supabase.from('session_entity_reservations').select('expected_count, billing_mode, billing_quantity').eq('id', invoiceData.session_entity_reservation_id).single()
             : Promise.resolve({ data: null }),
         ])
         if (entityRow) invoiceCompany = entityRow
-        effectif = reservationRow?.expected_count ?? undefined
+        effectif = reservationRow ? getBillingQuantity(reservationRow) : undefined
       }
 
       const variables = extractDocumentVariables({
@@ -578,11 +579,11 @@ export function GestionFinances({
         const [{ data: entityRow2 }, { data: reservationRow2 }] = await Promise.all([
           supabase.from('external_entities').select('*').eq('id', invoiceData.entity_id).single(),
           invoiceData.session_entity_reservation_id
-            ? supabase.from('session_entity_reservations').select('expected_count').eq('id', invoiceData.session_entity_reservation_id).single()
+            ? supabase.from('session_entity_reservations').select('expected_count, billing_mode, billing_quantity').eq('id', invoiceData.session_entity_reservation_id).single()
             : Promise.resolve({ data: null }),
         ])
         if (entityRow2) emailInvoiceCompany = entityRow2
-        emailEffectif = reservationRow2?.expected_count ?? undefined
+        emailEffectif = reservationRow2 ? getBillingQuantity(reservationRow2) : undefined
       }
 
       const variables = extractDocumentVariables({
@@ -1116,6 +1117,16 @@ export function GestionFinances({
 
     // Priorité 3: Total des modules de la session
     return sessionModulesTotal
+  }
+
+  // Quantité utilisée pour la facturation d'une entité : l'effectif (nombre
+  // d'apprenants) sauf en mode per_group/per_client/per_hour où une quantité
+  // de facturation distincte peut être saisie (ex: 2 groupes facturés pour un
+  // effectif réel de 12 apprenants).
+  const getBillingQuantity = (reservation: { billing_mode?: string | null; expected_count: number; billing_quantity?: number | null }) => {
+    const needsSeparateQuantity = reservation.billing_mode === 'per_group' || reservation.billing_mode === 'per_client' || reservation.billing_mode === 'per_hour'
+    if (needsSeparateQuantity && reservation.billing_quantity) return reservation.billing_quantity
+    return reservation.expected_count
   }
 
   // Même logique de priorité que getEnrollmentDisplayTotal, pour une entreprise
@@ -1921,6 +1932,7 @@ export function GestionFinances({
                     entity_id: string
                     expected_count: number
                     billing_mode?: string | null
+                    billing_quantity?: number | null
                     total_amount?: number | null
                     paid_amount?: number | null
                     funding_type_id?: string | null
@@ -1932,10 +1944,12 @@ export function GestionFinances({
                       per_student: 'Par apprenant',
                       per_hour: 'Par heures',
                     }
-                    // Montant = prix du module × effectif (groupes/clients/apprenants selon le mode
-                    // de facturation), sinon le montant saisi manuellement à l'inscription de l'entité.
+                    // Montant = prix du module × quantité facturée (effectif, ou quantité de
+                    // facturation distincte en mode per_group/per_client/per_hour), sinon le
+                    // montant saisi manuellement à l'inscription de l'entité.
+                    const billingQty = getBillingQuantity(reservation)
                     const fallbackTotal = sessionModulesTotal > 0
-                      ? sessionModulesTotal * reservation.expected_count
+                      ? sessionModulesTotal * billingQty
                       : Number(reservation.total_amount || 0)
                     const total = getEntityReservationDisplayTotal(reservation.id, fallbackTotal)
                     const paid = Number(reservation.paid_amount || 0)
@@ -1960,6 +1974,9 @@ export function GestionFinances({
                               <p className="text-xs text-gray-500 font-medium">
                                 {reservation.expected_count} apprenant{reservation.expected_count > 1 ? 's' : ''} prévu{reservation.expected_count > 1 ? 's' : ''}
                                 {reservation.billing_mode && ` · ${billingModeLabels[reservation.billing_mode] ?? reservation.billing_mode}`}
+                                {reservation.billing_mode && reservation.billing_mode !== 'per_student' && reservation.billing_quantity
+                                  ? ` (${reservation.billing_quantity} facturé${reservation.billing_quantity > 1 ? 's' : ''})`
+                                  : ''}
                               </p>
                             </div>
                           </div>
