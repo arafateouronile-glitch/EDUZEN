@@ -69,9 +69,19 @@ export async function POST(request: NextRequest) {
     const pdfBuffer = Buffer.from(pdfBase64, 'base64')
 
     // Uploader le PDF vers Supabase Storage
+    // Supabase Storage rejette les clés contenant des caractères accentués
+    // ou hors [A-Za-z0-9._-] (ex: noms d'apprenants/entités avec accents)
+    const sanitizeStorageKey = (value: string) =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9._-]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+
     const documentService = new DocumentService(supabase)
     const timestamp = Date.now()
-    const fileName = `${documentTitle.replace(/\s+/g, '_')}.pdf`
+    const fileName = `${sanitizeStorageKey(documentTitle)}.pdf`
     const filePath = `signatures/${userData.organization_id}/${timestamp}_${fileName}`
     
     const { data: uploadData, error: uploadError } = await supabase.storage
