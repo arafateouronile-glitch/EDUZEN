@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -41,6 +41,8 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function NewStudentPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const sessionId = searchParams.get('sessionId') || ''
   const auth = useAuth()
   const { user, isLoading: userLoading, session } = auth
   const supabase = createClient()
@@ -87,7 +89,7 @@ export default function NewStudentPage() {
       company_phone: '',
       company_email: '',
       company_siret: '',
-      class_id: '',
+      class_id: sessionId,
       enrollment_date: new Date().toISOString().split('T')[0],
     },
   })
@@ -381,7 +383,11 @@ export default function NewStudentPage() {
       return student
     },
     onSuccess: (student) => {
-      router.push(`/dashboard/students/${student.id}`)
+      if (sessionId) {
+        router.push(`/dashboard/sessions/${sessionId}?step=configuration&tab=apprenants`)
+      } else {
+        router.push(`/dashboard/students/${student.id}`)
+      }
     },
     onError: (error) => {
       logger.error('Student creation mutation error:', error)
@@ -490,17 +496,20 @@ export default function NewStudentPage() {
       {/* Header */}
       <motion.div variants={itemVariants} className="mb-8 space-y-4">
         <nav className="flex items-center text-sm text-gray-500 mb-4">
-          <Link href="/dashboard/students" className="hover:text-brand-blue transition-colors flex items-center gap-1">
+          <Link
+            href={sessionId ? `/dashboard/sessions/${sessionId}?step=configuration&tab=apprenants` : '/dashboard/students'}
+            className="hover:text-brand-blue transition-colors flex items-center gap-1"
+          >
             <Users className="h-4 w-4" />
-            Élèves
+            {sessionId ? 'Retour à la session' : 'Élèves'}
           </Link>
           <ChevronRight className="h-4 w-4 mx-2 text-gray-300" />
           <span className="text-brand-blue font-medium bg-brand-blue/10 px-2 py-0.5 rounded-full text-xs">Nouveau</span>
         </nav>
-        
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard/students">
+            <Link href={sessionId ? `/dashboard/sessions/${sessionId}?step=configuration&tab=apprenants` : '/dashboard/students'}>
               <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white/50">
                 <ArrowLeft className="h-5 w-5 text-gray-500" />
               </Button>
