@@ -420,6 +420,7 @@ export function useDocumentGeneration({
         company: studentCompany,
         language: 'fr',
         issueDate: new Date().toISOString(),
+        enrollmentAmount: enrollment.total_amount || undefined,
       })
 
       // Utiliser l'API pour générer le PDF (même système que la page de génération)
@@ -451,7 +452,7 @@ export function useDocumentGeneration({
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      
+
       addToast({
         type: 'success',
         title: 'Contrat généré',
@@ -2333,6 +2334,7 @@ export function useDocumentGeneration({
           company: previewContractCompany,
           language: 'fr',
           issueDate: new Date().toISOString(),
+          enrollmentAmount: enrollment!.total_amount || undefined,
         })
         const response = await fetch('/api/documents/generate-pdf', {
           method: 'POST',
@@ -2744,6 +2746,7 @@ export function useDocumentGeneration({
         company: conventionStudentCompany,
         language: 'fr',
         issueDate: new Date().toISOString(),
+        enrollmentAmount: enrollment.total_amount || undefined,
       })
 
       const response = await fetch('/api/documents/generate-pdf', {

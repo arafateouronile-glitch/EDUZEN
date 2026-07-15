@@ -119,6 +119,8 @@ export interface ExtractVariablesOptions {
   company?: Company | null
   /** Effectif facturé (ex: nombre de groupes/clients/apprenants d'une entité) — multiplie la quantité des lignes de modules, sinon 1 */
   effectif?: number
+  /** Montant rempli/négocié lors de l'inscription (enrollment.total_amount ou équivalent entité) — prioritaire sur le prix catalogue de la formation pour les conventions/contrats */
+  enrollmentAmount?: number
 }
 
 /**
@@ -137,6 +139,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     issueDate = new Date().toISOString(),
     company,
     effectif,
+    enrollmentAmount,
   } = options
 
   const moduleQuantity = effectif && effectif > 0 ? effectif : 1
@@ -192,7 +195,10 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
       return `<tr><td style="padding: 12px; border-bottom: 1px solid #e9ecef;"><p style="margin: 0; font-weight: 500;">${escapeHtml(m.name)}</p><p style="margin: 4px 0 0 0; font-size: 9pt; color: #666;">Du ${sessionDebut} au ${sessionFin}</p></td><td style="padding: 12px; text-align: center; border-bottom: 1px solid #e9ecef;">${formationDuree}</td><td style="padding: 12px; text-align: right; border-bottom: 1px solid #e9ecef; font-weight: 500;">${a} ${currency}</td></tr>`
     }).join('')
   } else {
-    const fallbackAmount = (invoice?.amount != null ? Number(invoice.amount) : form?.price != null ? Number(form.price) : 0)
+    // Priorité : montant rempli à l'inscription (enrollment/entité) > facture > prix catalogue de la formation
+    const fallbackAmount = enrollmentAmount != null && enrollmentAmount > 0
+      ? enrollmentAmount
+      : (invoice?.amount != null ? Number(invoice.amount) : form?.price != null ? Number(form.price) : 0)
     montantHt = fallbackAmount.toFixed(2)
     const cur = form?.currency || invoice?.currency || 'EUR'
     // Ligne par défaut avec le nom de la formation (3 colonnes)
@@ -492,7 +498,9 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
         )
         .join('')
     })(),
-    montant_ttc: sessionModules?.length ? montantHt : (invoice?.total_amount ? Number(invoice.total_amount).toFixed(2) : '0.00'),
+    montant_ttc: (sessionModules?.length || (enrollmentAmount != null && enrollmentAmount > 0))
+      ? montantHt
+      : (invoice?.total_amount ? Number(invoice.total_amount).toFixed(2) : '0.00'),
     tva: sessionModules?.length ? '0.00' : (invoice?.tax_amount ? Number(invoice.tax_amount).toFixed(2) : '0.00'),
     taux_tva: sessionModules?.length ? '0.00' : (invoice?.tax_amount && invoice?.amount ? ((Number(invoice.tax_amount) / Number(invoice.amount)) * 100).toFixed(2) : '0.00'),
     facture_montant: invoice?.amount ? Number(invoice.amount).toFixed(2) : '0.00',
