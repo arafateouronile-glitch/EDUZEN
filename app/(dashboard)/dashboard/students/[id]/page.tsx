@@ -208,6 +208,19 @@ export default function StudentDetailPage() {
         ;(generatedDocs as GRow[]).forEach(d => allDocs.push({ id: d.id, name: d.file_name || `Document ${d.type}`, type: d.type || 'other', file_url: d.file_url ?? null, date: d.created_at || null, source: 'generated_documents' }))
       }
 
+      // Devis/factures/attestations créés (ex: depuis les demandes de signature
+      // envoyées sur une facture/un devis de session)
+      const { data: invoiceDocs } = await supabase
+        .from('documents')
+        .select('id, title, type, file_url, created_at')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+
+      if (invoiceDocs) {
+        type IRow = { id: string; title?: string; type?: string; file_url?: string | null; created_at?: string | null }
+        ;(invoiceDocs as IRow[]).forEach(d => allDocs.push({ id: d.id, name: d.title || `Document ${d.type}`, type: d.type || 'other', file_url: d.file_url ?? null, date: d.created_at || null, source: 'documents' }))
+      }
+
       return allDocs.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
     },
     enabled: !!studentId,
@@ -550,12 +563,14 @@ export default function StudentDetailPage() {
                               doc.type === 'attestation' ? 'bg-brand-cyan-ghost text-brand-cyan' :
                               doc.type === 'certificate' ? 'bg-green-100 text-green-800' :
                               doc.type === 'invoice' ? 'bg-gray-100 text-gray-800' :
+                              doc.type === 'quote' ? 'bg-orange-100 text-orange-800' :
                               'bg-gray-100 text-gray-700'
                             }`}>
                               {doc.type === 'convocation' ? 'Convocation' :
                                doc.type === 'attestation' ? 'Attestation' :
                                doc.type === 'certificate' ? 'Certificat' :
                                doc.type === 'invoice' ? 'Facture' :
+                               doc.type === 'quote' ? 'Devis' :
                                doc.type === 'convention' ? 'Convention' :
                                doc.type}
                             </span>
