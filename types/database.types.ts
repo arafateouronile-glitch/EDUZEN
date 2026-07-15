@@ -19218,6 +19218,61 @@ export type Database = {
           },
         ]
       }
+      subscription_cancellation_feedback: {
+        Row: {
+          created_at: string
+          id: string
+          improvement_suggestions: string | null
+          organization_id: string
+          reason_code: string | null
+          reason_detail: string | null
+          subscription_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          improvement_suggestions?: string | null
+          organization_id: string
+          reason_code?: string | null
+          reason_detail?: string | null
+          subscription_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          improvement_suggestions?: string | null
+          organization_id?: string
+          reason_code?: string | null
+          reason_detail?: string | null
+          subscription_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_cancellation_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_cancellation_feedback_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_cancellation_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_invoices: {
         Row: {
           amount: number

@@ -17,8 +17,9 @@ import {
   Layout, Code, Save, Building2, Mail, Phone, MapPin,
   Calendar, DollarSign, Languages, Moon, Sun, Key,
   Briefcase, Video, GraduationCap, ChevronRight, ChevronDown, Upload, Image as ImageIcon, Award, Palette, X, Clock, Receipt, FileSignature, User,
-  Lock, FileDown, ClipboardCheck, ClipboardList, Accessibility, Plug, Zap, ArrowRight, DoorOpen, Tag
+  Lock, FileDown, ClipboardCheck, ClipboardList, Accessibility, Plug, Zap, ArrowRight, DoorOpen, Tag, AlertTriangle, RotateCcw
 } from 'lucide-react'
+import { CancelSubscriptionDialog } from '@/components/settings/cancel-subscription-dialog'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
@@ -32,7 +33,9 @@ export default function SettingsPage() {
   const { addToast } = useToast()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('organization')
-  
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [isReactivating, setIsReactivating] = useState(false)
+
   // Rediriger les enseignants vers le dashboard
   useEffect(() => {
     if (!authLoading && user?.role === 'teacher') {
@@ -131,30 +134,46 @@ export default function SettingsPage() {
   })
 
   // Récupérer l'abonnement actif + plan + factures
+  // NB: subscriptions/plans sont les tables réellement alimentées par le flux Stripe
+  // (checkout + webhooks) — organization_subscriptions/subscription_plans ne sont jamais
+  // écrites par ce flux et restent vides pour tous les clients réels.
   const { data: subscriptionData } = useQuery({
     queryKey: ['subscription', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return null
       const { data } = await supabase
-        .from('organization_subscriptions')
+        .from('subscriptions')
         .select(`
           id,
-          current_period_end,
-          current_period_start,
-          billing_cycle,
           status,
-          trial_ends_at,
-          subscription_plans(id, name, features, max_users, max_students, max_storage_gb, price_monthly, price_yearly)
+          current_period_start,
+          current_period_end,
+          cancel_at_period_end,
+          stripe_subscription_id,
+          trial_end_at,
+          plans(id, name, description, features, max_students, max_sessions_per_month, price_monthly_ht, price_yearly_ht)
         `)
         .eq('organization_id', user.organization_id)
-        .eq('status', 'active')
-        .order('current_period_end', { ascending: false })
-        .limit(1)
         .maybeSingle()
       return data
     },
     enabled: !!user?.organization_id,
   })
+
+  const handleReactivateSubscription = async () => {
+    setIsReactivating(true)
+    try {
+      const res = await fetch('/api/subscriptions/reactivate', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Une erreur est survenue')
+      addToast({ type: 'success', title: 'Abonnement réactivé', description: 'Votre résiliation a été annulée.' })
+      queryClient.invalidateQueries({ queryKey: ['subscription', user?.organization_id] })
+    } catch (error) {
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Une erreur est survenue.' })
+    } finally {
+      setIsReactivating(false)
+    }
+  }
 
   const { data: invoices } = useQuery({
     queryKey: ['subscription-invoices', user?.organization_id],
@@ -1802,9 +1821,9 @@ export default function SettingsPage() {
                           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #34B9EE 0%, transparent 60%)' }} />
                           {(() => {
                             const plan = subscriptionData
-                              ? (Array.isArray((subscriptionData as any).subscription_plans)
-                                  ? (subscriptionData as any).subscription_plans[0]
-                                  : (subscriptionData as any).subscription_plans)
+                              ? (Array.isArray((subscriptionData as any).plans)
+                                  ? (subscriptionData as any).plans[0]
+                                  : (subscriptionData as any).plans)
                               : null
                             const renewalDate = subscriptionData?.current_period_end
                               ? new Date(subscriptionData.current_period_end).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -1815,6 +1834,12 @@ export default function SettingsPage() {
                                 : organization.subscription_tier === 'professional' ? 'Professionnel'
                                 : organization.subscription_tier === 'enterprise' ? 'Enterprise'
                                 : organization.subscription_tier ?? 'Gratuit')
+
+                            // Pas de billing_cycle stocké : on l'infère de la durée de la période en cours.
+                            const periodDays = subscriptionData?.current_period_start && subscriptionData?.current_period_end
+                              ? (new Date(subscriptionData.current_period_end).getTime() - new Date(subscriptionData.current_period_start).getTime()) / 86_400_000
+                              : null
+                            const billingCycle = periodDays == null ? null : periodDays > 300 ? 'yearly' : periodDays >= 25 ? 'monthly' : null
 
                             return (
                               <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1827,9 +1852,9 @@ export default function SettingsPage() {
                                         Actif
                                       </span>
                                     )}
-                                    {subscriptionData?.billing_cycle && (
+                                    {billingCycle && (
                                       <span className="text-xs text-white/60 bg-white/10 px-2.5 py-1 rounded-full border border-white/15">
-                                        {subscriptionData.billing_cycle === 'yearly' ? 'Annuel' : 'Mensuel'}
+                                        {billingCycle === 'yearly' ? 'Annuel' : 'Mensuel'}
                                       </span>
                                     )}
                                   </div>
@@ -1840,11 +1865,22 @@ export default function SettingsPage() {
                                     {renewalDate ? `Renouvellement le ${renewalDate}` : 'Aucun renouvellement planifié'}
                                   </p>
                                 </div>
-                                <Link href="/dashboard/subscribe">
-                                  <Button className="bg-white text-brand-blue hover:bg-brand-blue-ghost font-semibold shadow-sm border-0 shrink-0">
-                                    Changer de plan
-                                  </Button>
-                                </Link>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Link href="/dashboard/subscribe">
+                                    <Button className="bg-white text-brand-blue hover:bg-brand-blue-ghost font-semibold shadow-sm border-0">
+                                      Changer de plan
+                                    </Button>
+                                  </Link>
+                                  {subscriptionData?.status === 'active' && !subscriptionData?.cancel_at_period_end && (
+                                    <Button
+                                      variant="ghost"
+                                      className="text-white/70 hover:text-white hover:bg-white/10"
+                                      onClick={() => setShowCancelDialog(true)}
+                                    >
+                                      Annuler mon abonnement
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             )
                           })()}
@@ -1857,9 +1893,9 @@ export default function SettingsPage() {
                             <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Inclus dans votre offre</h4>
                             {(() => {
                               const plan = subscriptionData
-                                ? (Array.isArray((subscriptionData as any).subscription_plans)
-                                    ? (subscriptionData as any).subscription_plans[0]
-                                    : (subscriptionData as any).subscription_plans)
+                                ? (Array.isArray((subscriptionData as any).plans)
+                                    ? (subscriptionData as any).plans[0]
+                                    : (subscriptionData as any).plans)
                                 : null
                               const planFeatures: string[] = Array.isArray(plan?.features)
                                 ? plan.features as string[]
@@ -1880,14 +1916,6 @@ export default function SettingsPage() {
                                 </ul>
                               ) : (
                                 <ul className="space-y-2.5 text-sm text-gray-700">
-                                  {plan?.max_users && (
-                                    <li className="flex items-center gap-2.5">
-                                      <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
-                                        <Users className="h-3 w-3 text-brand-blue" />
-                                      </div>
-                                      <span>{plan.max_users === -1 ? 'Utilisateurs illimités' : `${plan.max_users} utilisateurs max`}</span>
-                                    </li>
-                                  )}
                                   {plan?.max_students && (
                                     <li className="flex items-center gap-2.5">
                                       <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
@@ -1896,12 +1924,12 @@ export default function SettingsPage() {
                                       <span>{plan.max_students === -1 ? 'Apprenants illimités' : `${plan.max_students} apprenants max`}</span>
                                     </li>
                                   )}
-                                  {plan?.max_storage_gb && (
+                                  {plan?.max_sessions_per_month && (
                                     <li className="flex items-center gap-2.5">
                                       <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
-                                        <Globe className="h-3 w-3 text-brand-blue" />
+                                        <Users className="h-3 w-3 text-brand-blue" />
                                       </div>
-                                      <span>{plan.max_storage_gb} Go de stockage</span>
+                                      <span>{plan.max_sessions_per_month === -1 ? 'Sessions illimitées' : `${plan.max_sessions_per_month} sessions/mois max`}</span>
                                     </li>
                                   )}
                                   {!plan && (
@@ -1955,6 +1983,38 @@ export default function SettingsPage() {
                         </div>
                       </div>
 
+                      {/* Bannière résiliation programmée */}
+                      {subscriptionData?.status === 'active' && subscriptionData?.cancel_at_period_end && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-6 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col md:flex-row items-center justify-between gap-4"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-amber-100 rounded-xl flex-shrink-0">
+                              <AlertTriangle className="h-5 w-5 text-amber-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-900 text-base">Résiliation programmée</h4>
+                              <p className="text-sm text-gray-600">
+                                {subscriptionData.current_period_end
+                                  ? `Votre abonnement sera résilié le ${new Date(subscriptionData.current_period_end).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}.`
+                                  : 'Votre abonnement sera résilié à la fin de la période en cours.'}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            className="border-amber-300 text-amber-700 hover:bg-amber-100 gap-2 flex-shrink-0"
+                            onClick={handleReactivateSubscription}
+                            isLoading={isReactivating}
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                            Réactiver mon abonnement
+                          </Button>
+                        </motion.div>
+                      )}
+
                       {/* CTA souscrire si pas d'abonnement actif */}
                       {(!subscriptionData || subscriptionData.status !== 'active') && (
                         <motion.div
@@ -1984,6 +2044,18 @@ export default function SettingsPage() {
                     </div>
                   )}
                 </GlassCard>
+                <CancelSubscriptionDialog
+                  open={showCancelDialog}
+                  onOpenChange={setShowCancelDialog}
+                  planName={(() => {
+                    const plan = subscriptionData
+                      ? (Array.isArray((subscriptionData as any).plans) ? (subscriptionData as any).plans[0] : (subscriptionData as any).plans)
+                      : null
+                    return plan?.name ?? 'votre plan actuel'
+                  })()}
+                  currentPeriodEnd={subscriptionData?.current_period_end ?? null}
+                  onCancelled={() => queryClient.invalidateQueries({ queryKey: ['subscription', user?.organization_id] })}
+                />
               </motion.div>
             )}
           </AnimatePresence>
