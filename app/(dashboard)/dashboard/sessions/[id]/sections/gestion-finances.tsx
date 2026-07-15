@@ -438,11 +438,11 @@ export function GestionFinances({
       let invoiceCompany = null
       let effectif: number | undefined
       if (student?.id) {
-        const { data: seRow } = await supabase.from('student_entities').select('external_entities(*)').eq('student_id', student.id).eq('is_current', true).limit(1).single()
+        const { data: seRow } = await supabase.from('student_entities').select('external_entities(*)').eq('student_id', student.id).eq('is_current', true).limit(1).maybeSingle()
         if (seRow?.external_entities && !Array.isArray(seRow.external_entities)) {
           invoiceCompany = seRow.external_entities
         } else {
-          const { data: ce } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).single()
+          const { data: ce } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).maybeSingle()
           if (ce?.companies && !Array.isArray(ce.companies)) invoiceCompany = ce.companies
         }
       } else if (invoiceData.entity_id) {
@@ -568,11 +568,11 @@ export function GestionFinances({
       let emailInvoiceCompany = null
       let emailEffectif: number | undefined
       if (student?.id) {
-        const { data: seRow2 } = await supabase.from('student_entities').select('external_entities(*)').eq('student_id', student.id).eq('is_current', true).limit(1).single()
+        const { data: seRow2 } = await supabase.from('student_entities').select('external_entities(*)').eq('student_id', student.id).eq('is_current', true).limit(1).maybeSingle()
         if (seRow2?.external_entities && !Array.isArray(seRow2.external_entities)) {
           emailInvoiceCompany = seRow2.external_entities
         } else {
-          const { data: ce2 } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).single()
+          const { data: ce2 } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).maybeSingle()
           if (ce2?.companies && !Array.isArray(ce2.companies)) emailInvoiceCompany = ce2.companies
         }
       } else if (invoiceData.entity_id) {
