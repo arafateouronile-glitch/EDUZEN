@@ -9,12 +9,41 @@ import { paymentService } from '@/lib/services/payment.service.client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Users, FileText, DollarSign, Link as LinkIcon, Check, UserCheck, UserX, Loader2, BookOpen, Download, Eye, ExternalLink, GraduationCap } from 'lucide-react'
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Users, FileText, DollarSign, Link as LinkIcon, Check, UserCheck, UserX, Loader2, BookOpen, Download, Eye, ExternalLink, GraduationCap, Send } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { useState } from 'react'
 import { useToast } from '@/components/ui/toast'
 import { logger } from '@/lib/utils/logger'
+
+const EMAIL_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  sent: { label: 'Envoyé', color: 'bg-blue-100 text-blue-700' },
+  delivered: { label: 'Livré', color: 'bg-green-100 text-green-700' },
+  opened: { label: 'Ouvert', color: 'bg-purple-100 text-purple-700' },
+  clicked: { label: 'Cliqué', color: 'bg-indigo-100 text-indigo-700' },
+  bounced: { label: 'Rejeté', color: 'bg-red-100 text-red-700' },
+  failed: { label: 'Échoué', color: 'bg-red-100 text-red-700' },
+  complained: { label: 'Spam', color: 'bg-orange-100 text-orange-700' },
+  pending: { label: 'En attente', color: 'bg-gray-100 text-gray-600' },
+}
+
+const SIGNATURE_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  pending: { label: 'En attente de signature', color: 'bg-amber-100 text-amber-700' },
+  signed: { label: 'Signé', color: 'bg-green-100 text-green-700' },
+  expired: { label: 'Expiré', color: 'bg-gray-100 text-gray-600' },
+  declined: { label: 'Refusé', color: 'bg-red-100 text-red-700' },
+  cancelled: { label: 'Annulé', color: 'bg-gray-100 text-gray-600' },
+}
+
+const TEMPLATE_TYPE_LABELS: Record<string, string> = {
+  session_reminder: 'Convocation session',
+  convention: 'Convention',
+  contrat: 'Contrat',
+  facture: 'Facture',
+  devis: 'Devis',
+  attestation: 'Attestation',
+  custom: 'Personnalisé',
+}
 
 export default function StudentDetailPage() {
   const params = useParams()
@@ -224,6 +253,67 @@ export default function StudentDetailPage() {
       return allDocs.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
     },
     enabled: !!studentId,
+  })
+
+  // Historique des emails envoyés à cet apprenant : email_logs (envois trackés
+  // via EmailService) + signature_requests (demandes de signature, non trackées
+  // dans email_logs). Le rattachement se fait par email, students n'ayant pas
+  // de lien direct vers ces deux tables.
+  const { data: emailHistory } = useQuery({
+    queryKey: ['student-email-history', studentId, student?.email],
+    queryFn: async () => {
+      type EmailHistoryItem = { id: string; subject: string; typeLabel: string; statusLabel: string; statusColor: string; date: string | null }
+      const items: EmailHistoryItem[] = []
+      if (!student?.email || !student.organization_id) return items
+      const organizationId = student.organization_id
+
+      const { data: logs } = await supabase
+        .from('email_logs')
+        .select('id, subject, status, template_type, created_at')
+        .eq('recipient', student.email)
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
+
+      if (logs) {
+        type LogRow = { id: string; subject?: string | null; status?: string | null; template_type?: string | null; created_at?: string | null }
+        ;(logs as LogRow[]).forEach((l) => {
+          const cfg = EMAIL_STATUS_CONFIG[l.status || 'sent'] || EMAIL_STATUS_CONFIG.sent
+          items.push({
+            id: `log-${l.id}`,
+            subject: l.subject || '(sans objet)',
+            typeLabel: TEMPLATE_TYPE_LABELS[l.template_type || ''] || l.template_type || 'Email',
+            statusLabel: cfg.label,
+            statusColor: cfg.color,
+            date: l.created_at ?? null,
+          })
+        })
+      }
+
+      const { data: sigRequests } = await supabase
+        .from('signature_requests')
+        .select('id, subject, status, created_at')
+        .eq('recipient_email', student.email)
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
+
+      if (sigRequests) {
+        type SigRow = { id: string; subject?: string | null; status?: string | null; created_at?: string | null }
+        ;(sigRequests as SigRow[]).forEach((s) => {
+          const cfg = SIGNATURE_STATUS_CONFIG[s.status || 'pending'] || SIGNATURE_STATUS_CONFIG.pending
+          items.push({
+            id: `sig-${s.id}`,
+            subject: s.subject || 'Demande de signature',
+            typeLabel: 'Demande de signature',
+            statusLabel: cfg.label,
+            statusColor: cfg.color,
+            date: s.created_at ?? null,
+          })
+        })
+      }
+
+      return items.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+    },
+    enabled: !!student?.email,
   })
 
   if (isLoading) {
@@ -614,6 +704,49 @@ export default function StudentDetailPage() {
                 </div>
               ) : (
                 <p className="text-muted-foreground">Aucun document</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Emails envoyés */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Send className="mr-2 h-5 w-5" />
+                Emails envoyés
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!student.email ? (
+                <p className="text-muted-foreground">Aucun email renseigné pour cet apprenant</p>
+              ) : emailHistory && emailHistory.length > 0 ? (
+                <div className="space-y-3">
+                  {emailHistory.slice(0, 10).map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="min-w-0">
+                          <h4 className="font-medium truncate">{item.subject}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {item.date ? formatDate(item.date) : '—'}
+                            {' · '}
+                            {item.typeLabel}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded text-xs whitespace-nowrap ${item.statusColor}`}>
+                        {item.statusLabel}
+                      </span>
+                    </div>
+                  ))}
+                  {emailHistory.length > 10 && (
+                    <p className="text-sm text-muted-foreground text-center pt-2">
+                      + {emailHistory.length - 10} autres emails
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">Aucun email envoyé</p>
               )}
             </CardContent>
           </Card>
