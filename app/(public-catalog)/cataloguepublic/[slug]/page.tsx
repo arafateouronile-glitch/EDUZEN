@@ -198,6 +198,9 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
   const heroButtonLink = catalogSettings?.hero_button_link || '#programmes'
   const logoUrl = catalogSettings?.logo_url || organization.logo_url
   const primaryColor = catalogSettings?.primary_color || '#274472'
+  const secondaryColor = catalogSettings?.secondary_color || null
+  const accentColor = catalogSettings?.accent_color || null
+  const backgroundColor = catalogSettings?.background_color || '#ffffff'
   const coverImageUrl = catalogSettings?.cover_image_url
   const totalLearners = (catalogSettings as { stats_trained_students?: number } | null)?.stats_trained_students ?? 1200
 
@@ -225,7 +228,7 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
         />
       )}
       <CatalogSubNav primaryColor={primaryColor} hasNavbar={!isEmbed} hasTestimonials={testimonials.length > 0} />
-      <div className={isEmbed ? 'bg-white' : 'min-h-screen bg-white'}>
+      <div className={isEmbed ? undefined : 'min-h-screen'} style={{ backgroundColor }}>
         {/* Hero Section Premium */}
         <CatalogHero
           title={heroTitle}
@@ -235,6 +238,8 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
           buttonLink={heroButtonLink}
           coverImageUrl={coverImageUrl}
           primaryColor={primaryColor}
+          accentColor={accentColor}
+          secondaryColor={secondaryColor}
           hasQualiopi={Boolean(organization.qualiopi_certificate_url)}
           cpfEligibleCount={cpfEligibleCount}
           totalLearners={totalLearners}

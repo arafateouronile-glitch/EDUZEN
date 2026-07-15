@@ -122,6 +122,8 @@ export default function CatalogSettingsPage() {
         type: 'success',
       })
       queryClient.invalidateQueries({ queryKey: ['public-catalog-settings'] })
+      // Rafraîchit immédiatement la page catalogue publique (sinon ISR 60s avant que ça apparaisse).
+      fetch('/api/catalog/revalidate', { method: 'POST' }).catch(() => {})
     },
     onError: (error: unknown) => {
       addToast({

@@ -16,6 +16,9 @@ interface CatalogHeroProps {
   buttonLink: string
   coverImageUrl?: string | null
   primaryColor: string
+  /** Couleur d'accent définie par l'organisme — retombe sur une version éclaircie de primaryColor si absente. */
+  accentColor?: string | null
+  secondaryColor?: string | null
   hasQualiopi?: boolean
   cpfEligibleCount?: number
   totalLearners?: number | string | null
@@ -29,6 +32,8 @@ export function CatalogHero({
   buttonLink,
   coverImageUrl,
   primaryColor,
+  accentColor: accentColorProp,
+  secondaryColor,
   hasQualiopi = false,
   cpfEligibleCount = 0,
   totalLearners,
@@ -38,7 +43,7 @@ export function CatalogHero({
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.8, ease: 'easeInOut' as const },
   }
-  const accentColor = lightenHexColor(primaryColor, 0.4)
+  const accentColor = accentColorProp || lightenHexColor(primaryColor, 0.4)
   const heroRef = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
   const bgParallaxY = useTransform(scrollYProgress, [0, 1], ['0%', '25%'])
@@ -66,7 +71,7 @@ export function CatalogHero({
         </motion.div>
 
         <motion.div style={{ y: blobsParallaxY }} className="absolute inset-0">
-          <HeroBlobs primaryColor={primaryColor} accentColor={accentColor} />
+          <HeroBlobs primaryColor={primaryColor} accentColor={accentColor} secondaryColor={secondaryColor ?? undefined} />
         </motion.div>
 
         <motion.div
@@ -180,7 +185,7 @@ export function CatalogHero({
       <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-transparent to-black/20" />
 
       <motion.div style={{ y: blobsParallaxY }} className="absolute inset-0">
-        <HeroBlobs primaryColor="rgba(255,255,255,0.5)" accentColor={accentColor} />
+        <HeroBlobs primaryColor="rgba(255,255,255,0.5)" accentColor={accentColor} secondaryColor={secondaryColor ?? undefined} />
       </motion.div>
 
       <motion.div

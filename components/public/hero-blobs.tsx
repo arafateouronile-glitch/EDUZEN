@@ -8,7 +8,16 @@ import { motion } from '@/components/ui/motion'
  * dérivent, pulsent en échelle et en opacité de façon désynchronisée pour un
  * effet organique plutôt qu'un simple flottement vertical.
  */
-export function HeroBlobs({ primaryColor, accentColor }: { primaryColor: string; accentColor: string }) {
+export function HeroBlobs({
+  primaryColor,
+  accentColor,
+  secondaryColor,
+}: {
+  primaryColor: string
+  accentColor: string
+  /** Couleur du 3e blob — retombe sur accentColor si non fournie (org sans couleur secondaire définie). */
+  secondaryColor?: string
+}) {
   return (
     <div className="absolute inset-0 pointer-events-none">
       <motion.div
@@ -25,7 +34,7 @@ export function HeroBlobs({ primaryColor, accentColor }: { primaryColor: string;
       />
       <motion.div
         className="absolute left-[35%] top-[45%] w-[320px] h-[320px] rounded-full blur-[100px]"
-        style={{ backgroundColor: accentColor }}
+        style={{ backgroundColor: secondaryColor || accentColor }}
         animate={{ y: [0, 18, 0], x: [0, -10, 0], scale: [1, 1.15, 1], opacity: [0.12, 0.22, 0.12] }}
         transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
       />
