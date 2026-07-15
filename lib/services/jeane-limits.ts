@@ -22,12 +22,16 @@ export interface JeaneQuota {
 }
 
 async function isTrialOrg(supabase: SupabaseClient, orgId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('subscriptions')
-    .select('status')
-    .eq('organization_id', orgId)
-    .maybeSingle()
-  return !data || data.status === 'trialing'
+  const [{ data: subscription }, { data: org }] = await Promise.all([
+    supabase.from('subscriptions').select('status').eq('organization_id', orgId).maybeSingle(),
+    supabase.from('organizations').select('settings').eq('id', orgId).single(),
+  ])
+  // payment_method_added est la source de vérité (cf app/(dashboard)/layout.tsx) :
+  // subscriptions.status peut rester bloqué sur 'trialing' si le webhook Stripe
+  // n'a pas encore synchronisé, alors que le paiement a bien été effectué.
+  const paymentMethodAdded = (org?.settings as Record<string, unknown> | null)?.payment_method_added === true
+  if (paymentMethodAdded) return false
+  return !subscription || subscription.status === 'trialing'
 }
 
 function getUsageFromSettings(settings: Record<string, unknown>): JeaneUsage {

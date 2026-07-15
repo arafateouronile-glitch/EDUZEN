@@ -100,12 +100,11 @@ export async function POST(request: NextRequest) {
 
     let customerId: string
 
-    // Vérifier si l'organisation a déjà un customer Stripe
+    // Récupérer la ligne subscriptions existante (même sans customer Stripe encore lié)
     const { data: existingSubscription } = await supabase
       .from('subscriptions')
       .select('stripe_customer_id, id')
       .eq('organization_id', orgId)
-      .not('stripe_customer_id', 'is', null)
       .maybeSingle()
 
     if (existingSubscription?.stripe_customer_id) {
@@ -124,16 +123,31 @@ export async function POST(request: NextRequest) {
           organizationId: orgId,
         })
         customerId = await createFreshCustomer()
-        // Mettre à jour le record existant avec le nouveau customer ID
-        if (existingSubscription.id) {
-          await supabase
-            .from('subscriptions')
-            .update({ stripe_customer_id: customerId })
-            .eq('id', existingSubscription.id)
-        }
       }
     } else {
       customerId = await createFreshCustomer()
+    }
+
+    // Persister immédiatement le lien organisation ↔ customer Stripe : sans ça,
+    // le webhook customer.subscription.created ne retrouve jamais l'organisation
+    // (recherche par stripe_customer_id) et la souscription reste bloquée sur son
+    // statut précédent (ex. "trialing") malgré un paiement Stripe réussi.
+    if (customerId !== existingSubscription?.stripe_customer_id) {
+      if (existingSubscription?.id) {
+        await supabase
+          .from('subscriptions')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', existingSubscription.id)
+      } else {
+        await supabase
+          .from('subscriptions')
+          .insert({
+            organization_id: orgId,
+            plan_id: planId,
+            status: 'incomplete',
+            stripe_customer_id: customerId,
+          })
+      }
     }
 
     // Créer la session de checkout Stripe

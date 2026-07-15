@@ -153,10 +153,12 @@ async function handleSubscriptionUpdate(
     const product = await stripe.products.retrieve(productId)
 
     // Trouver le plan dans notre base de données
+    // stripe_price_id est déprécié (toujours NULL) — les IDs live sont sur
+    // stripe_price_id_monthly / stripe_price_id_yearly depuis la migration du 25/03.
     const { data: plan } = await supabase
       .from('plans')
       .select('id')
-      .eq('stripe_price_id', planPriceId)
+      .or(`stripe_price_id.eq.${planPriceId},stripe_price_id_monthly.eq.${planPriceId},stripe_price_id_yearly.eq.${planPriceId}`)
       .single()
 
     if (!plan) {

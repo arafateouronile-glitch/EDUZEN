@@ -12,12 +12,16 @@ export function useTrial() {
     queryKey: ['is-trial', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return false
-      const { data } = await supabase
-        .from('subscriptions')
-        .select('status')
-        .eq('organization_id', user.organization_id)
-        .maybeSingle()
-      return !data || data.status === 'trialing'
+      const [{ data: subscription }, { data: org }] = await Promise.all([
+        supabase.from('subscriptions').select('status').eq('organization_id', user.organization_id).maybeSingle(),
+        supabase.from('organizations').select('settings').eq('id', user.organization_id).single(),
+      ])
+      // payment_method_added est la source de vérité (cf app/(dashboard)/layout.tsx) :
+      // subscriptions.status peut rester bloqué sur 'trialing' si le webhook Stripe
+      // n'a pas encore synchronisé, alors que le paiement a bien été effectué.
+      const paymentMethodAdded = (org?.settings as Record<string, unknown> | null)?.payment_method_added === true
+      if (paymentMethodAdded) return false
+      return !subscription || subscription.status === 'trialing'
     },
     enabled: !!user?.organization_id,
     staleTime: 5 * 60_000,
