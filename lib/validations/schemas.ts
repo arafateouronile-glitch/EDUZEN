@@ -99,7 +99,7 @@ export const programSchema = z.object({
 
 // Schéma pour la création d'une formation
 export const formationSchema = z.object({
-  program_id: z.string().min(1, 'Le programme est requis'),
+  program_id: z.string().optional().or(z.literal('')),
   code: z.string().min(1, 'Le code est requis').max(50, 'Le code est trop long'),
   name: z.string().min(1, 'Le nom est requis').max(200, 'Le nom est trop long'),
   subtitle: z.string().optional().or(z.literal('')),

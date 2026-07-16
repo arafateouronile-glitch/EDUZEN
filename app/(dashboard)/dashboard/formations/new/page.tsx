@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
@@ -31,7 +31,10 @@ import {
   Globe, 
   AlertCircle,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Search,
+  ArrowRight,
+  FilePlus2
 } from 'lucide-react'
 import Link from 'next/link'
 import { formationSchema, type FormationFormData } from '@/lib/validations/schemas'
@@ -44,10 +47,71 @@ import { logger, sanitizeError } from '@/lib/utils/logger'
 
 type Formation = TableRow<'formations'>
 
+const BLANK_FORMATION_DEFAULTS: FormationFormData = {
+  // Informations de base
+  program_id: '',
+  code: '',
+  name: '',
+  subtitle: '',
+  photo_url: '',
+  category: '',
+  description: '',
+
+  // Version
+  program_version: '',
+  version_date: '',
+
+  // Durée
+  duration_hours: '',
+  duration_days: '',
+  duration_unit: 'hours',
+
+  // Tarification
+  price: '',
+  currency: 'EUR',
+  payment_plan: 'full',
+
+  // Public cible
+  prerequisites: '',
+  capacity_max: '',
+  age_min: '',
+  age_max: '',
+
+  // Catalogue et CPF
+  published_online: false,
+  eligible_cpf: false,
+  cpf_code: '',
+
+  // Formation
+  modalities: '',
+  training_action_type: '',
+  pedagogical_objectives: '',
+  learner_profile: '',
+  training_content: '',
+  execution_follow_up: '',
+  certification_modalities: '',
+
+  // Qualité et comptabilité
+  quality: '',
+  accounting_product_config: '',
+  edof_export_fields: '',
+  competence_domains: '',
+
+  // Certification
+  certification_issued: false,
+  is_active: true,
+}
+
 export default function NewFormationPage() {
   const router = useRouter()
   const { user, isLoading: userLoading } = useAuth()
   const [selectedSessions, setSelectedSessions] = useState<string[]>([])
+
+  // Étape préalable : choisir un programme existant pour pré-remplir la formation,
+  // ou passer directement au formulaire vierge.
+  const [step, setStep] = useState<'pick' | 'form'>('pick')
+  const [selectedProgramId, setSelectedProgramId] = useState('')
+  const [pickerSearch, setPickerSearch] = useState('')
 
   // Récupérer les programmes pour la sélection
   const { data: programs } = useQuery({
@@ -59,6 +123,39 @@ export default function NewFormationPage() {
     },
     enabled: !!user?.organization_id && !userLoading,
   })
+
+  // Détails complets du programme choisi, pour pré-remplir le formulaire
+  const { data: selectedProgram, isFetching: isLoadingProgramPrefill } = useQuery({
+    queryKey: ['program-prefill', selectedProgramId],
+    queryFn: () => programService.getProgramById(selectedProgramId),
+    enabled: !!selectedProgramId,
+  })
+
+  // Codes déjà utilisés, pour suggérer un code interne libre au moment du pré-remplissage —
+  // sans ça le code (obligatoire) reste vide après un pré-remplissage depuis un programme et
+  // "Créer la formation" ne fait rien de visible (erreur de validation loin du bouton).
+  const { data: existingFormationCodes } = useQuery({
+    queryKey: ['formation-codes', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const result = await formationService.getAllFormations(user.organization_id)
+      const formations = Array.isArray(result) ? result : (result as any).data
+      return (formations ?? []).map((f: any) => f.code).filter(Boolean) as string[]
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  const suggestNextCode = () => {
+    const codes = existingFormationCodes ?? []
+    const numericCodes = codes.filter((c) => /^\d+$/.test(c))
+    const width = numericCodes.length > 0 ? numericCodes[0].length : 4
+    const maxNumeric = numericCodes.reduce((max, c) => Math.max(max, parseInt(c, 10)), 0)
+    let candidate = String(maxNumeric + 1).padStart(width, '0')
+    while (codes.includes(candidate)) {
+      candidate = String(parseInt(candidate, 10) + 1).padStart(width, '0')
+    }
+    return candidate
+  }
 
   // Récupérer les sessions pour la sélection multiple
   const { data: sessions } = useQuery({
@@ -79,66 +176,72 @@ export default function NewFormationPage() {
     formState: { errors, isDirty },
     watch,
     setValue,
+    reset,
   } = useForm<FormationFormData>({
     resolver: zodResolver(formationSchema),
     mode: 'onChange',
-    defaultValues: {
-      // Informations de base
-      program_id: '',
-      code: '',
-      name: '',
-      subtitle: '',
-      photo_url: '',
-      category: '',
-      description: '',
-      
-      // Version
-      program_version: '',
-      version_date: '',
-      
-      // Durée
-      duration_hours: '',
-      duration_days: '',
-      duration_unit: 'hours',
-      
-      // Tarification
-      price: '',
-      currency: 'EUR',
-      payment_plan: 'full',
-      
-      // Public cible
-      prerequisites: '',
-      capacity_max: '',
-      age_min: '',
-      age_max: '',
-      
-      // Catalogue et CPF
-      published_online: false,
-      eligible_cpf: false,
-      cpf_code: '',
-      
-      // Formation
-      modalities: '',
-      training_action_type: '',
-      pedagogical_objectives: '',
-      learner_profile: '',
-      training_content: '',
-      execution_follow_up: '',
-      certification_modalities: '',
-      
-      // Qualité et comptabilité
-      quality: '',
-      accounting_product_config: '',
-      edof_export_fields: '',
-      competence_domains: '',
-      
-      // Certification
-      certification_issued: false,
-      is_active: true,
-    },
+    defaultValues: BLANK_FORMATION_DEFAULTS,
   })
 
   const formData = watch()
+
+  // Pré-remplit le formulaire dès que les détails du programme choisi sont chargés,
+  // puis affiche le formulaire (étape 2). Le code interne n'est jamais recopié tel quel
+  // depuis le programme (un programme crée déjà une formation par défaut avec ce même
+  // code, le recopier provoquerait systématiquement une collision) — un code libre est
+  // suggéré à la place, sinon le champ obligatoire resterait vide et "Créer la formation"
+  // échouerait silencieusement à la validation.
+  useEffect(() => {
+    if (!selectedProgram) return
+    const p = selectedProgram as any
+    const price = p.price_enterprise ?? p.price ?? p.price_individual ?? p.price_freelance ?? null
+    reset({
+      ...BLANK_FORMATION_DEFAULTS,
+      program_id: selectedProgramId,
+      code: suggestNextCode(),
+      name: p.name || '',
+      subtitle: p.subtitle || '',
+      photo_url: p.photo_url || '',
+      category: p.category || '',
+      description: p.description || '',
+      program_version: p.program_version || '',
+      version_date: p.version_date || '',
+      duration_hours: p.duration_hours != null ? String(p.duration_hours) : '',
+      duration_days: p.duration_days != null ? String(p.duration_days) : '',
+      duration_unit: p.duration_unit || 'hours',
+      price: price != null ? String(price) : '',
+      currency: p.currency || 'EUR',
+      prerequisites: p.prerequisites || '',
+      capacity_max: p.capacity_max != null ? String(p.capacity_max) : '',
+      published_online: p.published_online ?? false,
+      eligible_cpf: p.eligible_cpf ?? false,
+      cpf_code: p.cpf_code || '',
+      modalities: p.modalities || '',
+      training_action_type: p.training_action_type || '',
+      pedagogical_objectives: p.pedagogical_objectives || '',
+      learner_profile: p.learner_profile || '',
+      training_content: p.training_content || '',
+      execution_follow_up: p.execution_follow_up || '',
+      certification_modalities: p.certification_modalities || '',
+      quality: p.quality || '',
+      accounting_product_config: p.accounting_product_config || '',
+      edof_export_fields: p.edof_export_fields ? JSON.stringify(p.edof_export_fields) : '',
+      competence_domains: p.competence_domains || '',
+    })
+    setStep('form')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProgram])
+
+  const handleSkipPicker = () => {
+    reset({ ...BLANK_FORMATION_DEFAULTS, code: suggestNextCode() })
+    setStep('form')
+  }
+
+  const handleBackToPicker = () => {
+    setSelectedProgramId('')
+    reset(BLANK_FORMATION_DEFAULTS)
+    setStep('pick')
+  }
 
   const createMutation = useMutation({
     mutationFn: async (data: FormationFormData) => {
@@ -252,8 +355,113 @@ export default function NewFormationPage() {
     }
   }
 
+  if (step === 'pick') {
+    const filteredPrograms = (programs ?? []).filter((p: any) =>
+      !pickerSearch.trim() || p.name?.toLowerCase().includes(pickerSearch.trim().toLowerCase()) || p.code?.toLowerCase().includes(pickerSearch.trim().toLowerCase())
+    )
+
+    return (
+      <motion.div
+        className="min-h-screen pb-24 relative max-w-4xl mx-auto"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={itemVariants} className="mb-8 space-y-4">
+          <nav className="flex items-center text-sm text-gray-500 mb-4">
+            <Link href="/dashboard/formations" className="hover:text-brand-blue transition-colors flex items-center gap-1">
+              <GraduationCap className="h-4 w-4" />
+              Formations
+            </Link>
+            <ChevronRight className="h-4 w-4 mx-2 text-gray-300" />
+            <span className="text-brand-blue font-medium bg-brand-blue/10 px-2 py-0.5 rounded-full text-xs">Création</span>
+          </nav>
+
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard/formations">
+              <Button variant="ghost" size="icon" className="rounded-xl hover:bg-white/50">
+                <ArrowLeft className="h-5 w-5 text-gray-500" />
+              </Button>
+            </Link>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="p-2 bg-gradient-to-br from-brand-blue to-brand-cyan rounded-lg shadow-lg shadow-brand-blue/20">
+                  <GraduationCap className="h-6 w-6 text-white" />
+                </div>
+                <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">
+                  Nouvelle formation
+                </h1>
+              </div>
+              <p className="text-gray-500 pl-[3.25rem]">
+                Partez d'un programme existant pour pré-remplir la formation, ou créez-la de zéro.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="relative mb-4">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={pickerSearch}
+            onChange={(e) => setPickerSearch(e.target.value)}
+            placeholder="Rechercher un programme..."
+            className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all"
+          />
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {filteredPrograms.map((program: any) => (
+            <button
+              key={program.id}
+              type="button"
+              disabled={isLoadingProgramPrefill}
+              onClick={() => setSelectedProgramId(program.id)}
+              className={cn(
+                "text-left p-5 bg-white border border-gray-200 rounded-xl hover:border-brand-blue hover:shadow-md transition-all group disabled:opacity-50 disabled:cursor-wait",
+                selectedProgramId === program.id && isLoadingProgramPrefill && "border-brand-blue shadow-md"
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">{program.name}</p>
+                  {program.code && <p className="text-xs text-gray-400 font-mono mt-0.5">{program.code}</p>}
+                  {program.category && (
+                    <Badge variant="outline" className="mt-2 text-xs">{program.category}</Badge>
+                  )}
+                </div>
+                {selectedProgramId === program.id && isLoadingProgramPrefill ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-brand-blue shrink-0 mt-1" />
+                ) : (
+                  <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-brand-blue transition-colors shrink-0 mt-1" />
+                )}
+              </div>
+            </button>
+          ))}
+          {programs && filteredPrograms.length === 0 && (
+            <div className="md:col-span-2 text-center py-8 text-sm text-gray-400 italic">
+              Aucun programme ne correspond à cette recherche.
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div variants={itemVariants} className="flex items-center gap-3 pt-4 border-t border-gray-100">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSkipPicker}
+            className="bg-white hover:bg-gray-50 border-gray-200"
+          >
+            <FilePlus2 className="h-4 w-4 mr-2" />
+            Créer une formation sans modèle
+          </Button>
+        </motion.div>
+      </motion.div>
+    )
+  }
+
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen pb-24 relative"
       variants={containerVariants}
       initial="hidden"
@@ -293,11 +501,20 @@ export default function NewFormationPage() {
                 </h1>
               </div>
               <p className="text-gray-500 pl-[3.25rem]">
-                Configurez les détails et le contenu de votre nouvelle formation.
+                {selectedProgramId ? (
+                  <>
+                    Pré-rempli depuis <span className="font-medium text-gray-700">{(selectedProgram as any)?.name}</span> ·{' '}
+                    <button type="button" onClick={handleBackToPicker} className="text-brand-blue hover:underline">
+                      Changer de programme
+                    </button>
+                  </>
+                ) : (
+                  'Configurez les détails et le contenu de votre nouvelle formation.'
+                )}
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <Link href="/dashboard/formations">
               <Button variant="outline" className="bg-white hover:bg-gray-50 border-gray-200">
