@@ -53,17 +53,20 @@ export function CategorySelect({
       }
       return res.json() as Promise<Category>
     },
-    onSuccess: (created) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['program-categories'] })
-      onChange(created.name)
-      setCreating(false)
-      setNewName('')
     },
   })
 
   const handleCreate = () => {
     const name = newName.trim()
     if (!name) return
+    // Met à jour le formulaire parent immédiatement : si l'utilisateur valide le
+    // formulaire principal avant que la requête de création de catégorie ait fini,
+    // la valeur sélectionnée doit déjà être la bonne (pas d'attente réseau ici).
+    onChange(name)
+    setCreating(false)
+    setNewName('')
     createMutation.mutate(name)
   }
 

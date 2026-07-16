@@ -656,7 +656,11 @@ export default function ProgramDetailPage() {
                     <AccordionContent className="px-6 pb-6">
                       {(() => {
                         const tabs = (program as any)?.learner_profile_tabs
-                        if (!Array.isArray(tabs) || tabs.length === 0) return <p className="text-sm text-gray-400 italic">Aucun profil renseigné</p>
+                        if (!Array.isArray(tabs) || tabs.length === 0) {
+                          const flat = (program as any)?.learner_profile
+                          if (flat) return <p className="text-sm text-gray-700 whitespace-pre-wrap">{flat}</p>
+                          return <p className="text-sm text-gray-400 italic">Aucun profil renseigné</p>
+                        }
                         return <div className="space-y-4">{tabs.map((tab: { id: string; title: string; content: string }) => (
                           <div key={tab.id} className="rounded-xl border border-gray-100 overflow-hidden">
                             <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-sm font-medium text-brand-blue">{tab.title}</div>
