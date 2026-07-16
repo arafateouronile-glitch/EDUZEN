@@ -56,7 +56,9 @@ export default function EditProgramPage() {
     duration_days: '',
     duration_unit: 'days',
     modalities: '',
-    price: '',
+    price_enterprise: '',
+    price_individual: '',
+    price_freelance: '',
     currency: 'EUR',
     payment_plan: 'full',
     prerequisites: '',
@@ -112,11 +114,13 @@ export default function EditProgramPage() {
         public_description: (program as any).public_description || '',
         public_image_url: (program as any).public_image_url || '',
         category: (program as any).category || '',
-        duration_hours: (firstFormation as any)?.duration_hours?.toString() || '',
+        duration_hours: ((program as any).duration_hours ?? (firstFormation as any)?.duration_hours)?.toString() || '',
         duration_days: (program as any).duration_days?.toString() || '',
         duration_unit: (program as any).duration_unit || 'days',
         modalities: (program as any).modalities || '',
-        price: (firstFormation as any)?.price?.toString() || '',
+        price_enterprise: (program as any).price_enterprise != null ? String((program as any).price_enterprise) : (firstFormation as any)?.price != null ? String((firstFormation as any).price) : '',
+        price_individual: (program as any).price_individual != null ? String((program as any).price_individual) : '',
+        price_freelance: (program as any).price_freelance != null ? String((program as any).price_freelance) : '',
         currency: (firstFormation as any)?.currency || 'EUR',
         payment_plan: (firstFormation as any)?.payment_plan || 'full',
         prerequisites: program.prerequisites || '',
@@ -185,6 +189,11 @@ export default function EditProgramPage() {
 
       logger.debug('Mise à jour du programme', { programId, formData })
       const firstFormation = program?.formations?.[0] as any
+      const price_enterprise = formData.price_enterprise ? parseFloat(formData.price_enterprise.replace(',', '.')) : null
+      const price_individual = formData.price_individual ? parseFloat(formData.price_individual.replace(',', '.')) : null
+      const price_freelance = formData.price_freelance ? parseFloat(formData.price_freelance.replace(',', '.')) : null
+      const price = price_enterprise ?? price_individual ?? price_freelance ?? null
+      const duration_hours = formData.duration_hours ? parseInt(formData.duration_hours, 10) : null
       const result = await programService.updateProgram(programId, {
         code: formData.code,
         name: formData.name,
@@ -194,8 +203,13 @@ export default function EditProgramPage() {
         public_image_url: formData.public_image_url || null,
         category: formData.category || null,
         duration_days: formData.duration_days ? parseInt(formData.duration_days) : null,
+        duration_hours: duration_hours,
         duration_unit: formData.duration_unit || null,
         modalities: formData.modalities || null,
+        price,
+        price_enterprise,
+        price_individual,
+        price_freelance,
         is_active: formData.is_active,
         is_public: formData.is_public,
         eligible_cpf: formData.eligible_cpf,
@@ -233,8 +247,8 @@ export default function EditProgramPage() {
       // Mettre à jour la formation liée avec duration_hours et price
       if (firstFormation?.id) {
         await formationService.updateFormation(firstFormation.id, {
-          duration_hours: formData.duration_hours ? parseInt(formData.duration_hours, 10) : null,
-          price: formData.price ? parseFloat(formData.price) : 0,
+          duration_hours: duration_hours,
+          price: price ?? 0,
           currency: formData.currency || 'EUR',
         } as any)
       }
@@ -556,6 +570,63 @@ export default function EditProgramPage() {
                       <option value="days">Jours</option>
                       <option value="hours">Heures</option>
                     </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Durée en heures</label>
+                  <input
+                    type="number"
+                    value={formData.duration_hours}
+                    onChange={(e) => setFormData({ ...formData, duration_hours: e.target.value })}
+                    className="w-full md:w-1/2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Ex: 210"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 flex items-center justify-between">
+                    <span>Tarification</span>
+                    <select
+                      value={formData.currency}
+                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                      className="px-2 py-1 text-xs border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                      <option value="EUR">EUR</option>
+                      <option value="XOF">XOF</option>
+                    </select>
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Entreprise</label>
+                      <input
+                        type="text"
+                        value={formData.price_enterprise}
+                        onChange={(e) => setFormData({ ...formData, price_enterprise: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Ex: 1590"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Particulier</label>
+                      <input
+                        type="text"
+                        value={formData.price_individual}
+                        onChange={(e) => setFormData({ ...formData, price_individual: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Ex: 1290"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">CPF</label>
+                      <input
+                        type="text"
+                        value={formData.price_freelance}
+                        onChange={(e) => setFormData({ ...formData, price_freelance: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Ex: 1290"
+                      />
+                    </div>
                   </div>
                 </div>
 
