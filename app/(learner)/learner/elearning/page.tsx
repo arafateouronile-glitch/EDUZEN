@@ -7,7 +7,6 @@ import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { motion } from '@/components/ui/motion'
 import {
   PlayCircle,
@@ -150,76 +149,6 @@ export default function LearnerElearningPage() {
 
   const isLoading = isLoadingSessionCourses
 
-  // Récupérer les cours disponibles (non inscrits)
-  const { data: availableCourses } = useQuery({
-    queryKey: ['learner-available-courses', studentData?.id, studentData?.organization_id],
-    queryFn: async () => {
-      if (!studentData?.id) return []
-      
-      const enrolledCourseIds = enrollments?.map((e: any) => e.course_id) || []
-      
-      try {
-        if (!supabase || !studentData.organization_id) return []
-        let query = supabase
-          .from('courses')
-          .select('*')
-          .eq('is_published', true)
-          .eq('organization_id', studentData.organization_id)
-        
-        if (enrolledCourseIds.length > 0) {
-          query = query.not('id', 'in', `(${enrolledCourseIds.join(',')})`)
-        }
-        
-        const { data, error } = await query.order('created_at', { ascending: false })
-        
-        if (error) {
-          // Si la table n'existe pas encore ou erreur 400, retourner un tableau vide
-          if (
-            error.code === 'PGRST116' ||
-            error.code === '42P01' ||
-            error.code === 'PGRST301' ||
-            (error as any).status === 400 ||
-            error.code === '400' ||
-            error.message?.includes('relation') ||
-            error.message?.includes('relationship') ||
-            error.message?.includes('does not exist') ||
-            error.message?.includes('schema cache')
-          ) {
-            logger.warn('Courses table does not exist yet or invalid query', {
-              studentId: maskId(studentData.id),
-              error: sanitizeError(error),
-            })
-            return []
-          }
-          throw error
-        }
-        
-        return data || []
-      } catch (error: any) {
-        // Gérer les erreurs de table inexistante ou erreurs 400
-        if (
-          error?.code === 'PGRST116' ||
-          error?.code === '42P01' ||
-          error?.code === 'PGRST301' ||
-          error?.status === 400 ||
-          error?.code === '400' ||
-          error?.message?.includes('relation') ||
-          error?.message?.includes('relationship') ||
-          error?.message?.includes('does not exist') ||
-          error?.message?.includes('schema cache')
-        ) {
-          logger.warn('Courses table does not exist yet or invalid query', {
-            studentId: maskId(studentData.id),
-            error: sanitizeError(error),
-          })
-          return []
-        }
-        throw error
-      }
-    },
-    enabled: !!studentData?.id && !!studentData?.organization_id,
-  })
-
   // Filtrer les cours
   const inProgressCourses = enrollments?.filter((e: any) => 
     e.status === 'in_progress'
@@ -254,8 +183,8 @@ export default function LearnerElearningPage() {
     )
   }
 
-  const CourseCard = ({ enrollment, isAvailable = false }: { enrollment: any, isAvailable?: boolean }) => {
-    const course = isAvailable ? enrollment : enrollment.courses
+  const CourseCard = ({ enrollment }: { enrollment: any }) => {
+    const course = enrollment.courses
     const progress = enrollment.progress_percentage || 0
 
     // Si le cours est assigné mais que la jointure RLS empêche de lire `courses`,
@@ -320,28 +249,26 @@ export default function LearnerElearningPage() {
               </div>
 
               {/* Status badge amélioré */}
-              {!isAvailable && (
-                <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
-                  {enrollment.status === 'completed' ? (
-                    <Badge className="bg-gradient-to-r from-brand-cyan to-brand-cyan-dark text-white border-0 shadow-lg">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Terminé
-                    </Badge>
-                  ) : progress > 0 ? (
-                    <Badge className="bg-gradient-to-r from-brand-blue to-brand-cyan text-white border-0 shadow-lg">
-                      En cours
-                    </Badge>
-                  ) : null}
-                  {enrollment.is_required && (
-                    <Badge className="bg-white/90 backdrop-blur-sm text-brand-cyan text-xs border-0 shadow">
-                      Obligatoire
-                    </Badge>
-                  )}
-                </div>
-              )}
+              <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
+                {enrollment.status === 'completed' ? (
+                  <Badge className="bg-gradient-to-r from-brand-cyan to-brand-cyan-dark text-white border-0 shadow-lg">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Terminé
+                  </Badge>
+                ) : progress > 0 ? (
+                  <Badge className="bg-gradient-to-r from-brand-blue to-brand-cyan text-white border-0 shadow-lg">
+                    En cours
+                  </Badge>
+                ) : null}
+                {enrollment.is_required && (
+                  <Badge className="bg-white/90 backdrop-blur-sm text-brand-cyan text-xs border-0 shadow">
+                    Obligatoire
+                  </Badge>
+                )}
+              </div>
 
               {/* Session name */}
-              {!isAvailable && enrollment.session?.name && (
+              {enrollment.session?.name && (
                 <div className="absolute bottom-3 left-3">
                   <Badge className="bg-white/90 backdrop-blur-sm text-gray-700 text-xs border-0 shadow">
                     {enrollment.session.name}
@@ -379,7 +306,7 @@ export default function LearnerElearningPage() {
               </div>
 
               {/* Due date */}
-              {!isAvailable && enrollment.due_date && (
+              {enrollment.due_date && (
                 <div className="text-xs text-brand-cyan mb-3 flex items-center gap-1.5 bg-brand-cyan-pale px-3 py-1.5 rounded-lg w-fit">
                   <Clock className="h-3.5 w-3.5" />
                   Échéance: {new Date(enrollment.due_date).toLocaleDateString('fr-FR')}
@@ -387,30 +314,22 @@ export default function LearnerElearningPage() {
               )}
 
               {/* Progress bar améliorée */}
-              {!isAvailable && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">
-                      {enrollment.completed_lessons}/{enrollment.total_lessons} leçons
-                    </span>
-                    <span className="font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">{progress}%</span>
-                  </div>
-                  <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
-                      className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
-                    />
-                  </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">
+                    {enrollment.completed_lessons}/{enrollment.total_lessons} leçons
+                  </span>
+                  <span className="font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent">{progress}%</span>
                 </div>
-              )}
-
-              {isAvailable && (
-                <Button className="w-full mt-2 bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-cyan-dark text-white border-0">
-                  Commencer le cours
-                </Button>
-              )}
+                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+                    className="h-full bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
+                  />
+                </div>
+              </div>
             </div>
           </GlassCard>
         </motion.div>
@@ -554,67 +473,30 @@ export default function LearnerElearningPage() {
 
       {/* Tabs */}
       <motion.div variants={itemVariants}>
-        <Tabs defaultValue="my-courses" className="space-y-6">
-          <TabsList className="bg-white/50 backdrop-blur-sm border border-gray-200/50 p-1 rounded-xl">
-            <TabsTrigger value="my-courses" className="rounded-lg data-[state=active]:bg-brand-blue data-[state=active]:text-white">
-              <BookOpen className="h-4 w-4 mr-2" />
-              Mes cours ({enrollments?.length || 0})
-            </TabsTrigger>
-            <TabsTrigger value="available" className="rounded-lg data-[state=active]:bg-brand-blue data-[state=active]:text-white">
-              <PlayCircle className="h-4 w-4 mr-2" />
-              Disponibles ({availableCourses?.length || 0})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="my-courses">
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-80 bg-gray-100 rounded-2xl animate-pulse" />
-                ))}
-              </div>
-            ) : filteredEnrollments.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredEnrollments.map((enrollment: any) => (
-                  <CourseCard key={enrollment.id} enrollment={enrollment} />
-                ))}
-              </div>
-            ) : (
-              <GlassCard className="p-12 text-center">
-                <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Aucun cours
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Vous n'êtes inscrit à aucun cours pour le moment
-                </p>
-                <Button variant="outline">
-                  Découvrir les cours disponibles
-                </Button>
-              </GlassCard>
-            )}
-          </TabsContent>
-
-          <TabsContent value="available">
-            {availableCourses && availableCourses.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {availableCourses.map((course: any) => (
-                  <CourseCard key={course.id} enrollment={course} isAvailable />
-                ))}
-              </div>
-            ) : (
-              <GlassCard className="p-12 text-center">
-                <PlayCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Tous les cours sont déjà attribués
-                </h3>
-                <p className="text-gray-500">
-                  Vous avez accès à tous les cours disponibles
-                </p>
-              </GlassCard>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Mes cours (assignés via une session) */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-80 bg-gray-100 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        ) : filteredEnrollments.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredEnrollments.map((enrollment: any) => (
+              <CourseCard key={enrollment.id} enrollment={enrollment} />
+            ))}
+          </div>
+        ) : (
+          <GlassCard className="p-12 text-center">
+            <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Aucun cours
+            </h3>
+            <p className="text-gray-500">
+              Aucune séquence e-learning ne vous a encore été assignée. Votre formateur vous préviendra dès que ce sera le cas.
+            </p>
+          </GlassCard>
+        )}
       </motion.div>
     </motion.div>
   )
