@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -53,6 +53,32 @@ export default function NewProgramPage() {
     },
   })
 
+  // Suggère un code interne libre pour éviter les collisions avec un code déjà utilisé
+  // (ex: réutiliser "0001" par erreur alors qu'un autre programme l'a déjà) — l'utilisateur
+  // peut toujours le modifier, ce n'est qu'une valeur de départ.
+  const { data: existingCodes } = useQuery({
+    queryKey: ['program-codes', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const result = await programService.getAllPrograms(user.organization_id)
+      const programs = Array.isArray(result) ? result : result.data
+      return programs.map((p) => p.code).filter(Boolean)
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  useEffect(() => {
+    if (!existingCodes || watch('code')) return
+    const numericCodes = existingCodes.filter((c) => /^\d+$/.test(c))
+    const width = numericCodes.length > 0 ? numericCodes[0].length : 4
+    const maxNumeric = numericCodes.reduce((max, c) => Math.max(max, parseInt(c, 10)), 0)
+    const nextCode = String(maxNumeric + 1).padStart(width, '0')
+    if (!existingCodes.includes(nextCode)) {
+      setValue('code', nextCode)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingCodes])
+
   const createMutation = useMutation({
     mutationFn: async (data: ProgramFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
@@ -97,15 +123,23 @@ export default function NewProgramPage() {
       } as any)
 
       // Créer une formation par défaut pour stocker duration_hours, price et currency
-      await formationService.createFormation({
-        program_id: program.id,
-        organization_id: user.organization_id,
-        code: data.code,
-        name: data.name,
-        duration_hours: duration_hours,
-        price: price,
-        currency: data.currency || 'EUR',
-      })
+      try {
+        await formationService.createFormation({
+          program_id: program.id,
+          organization_id: user.organization_id,
+          code: data.code,
+          name: data.name,
+          duration_hours: duration_hours,
+          price: price,
+          currency: data.currency || 'EUR',
+        })
+      } catch (formationError) {
+        // La formation n'a pas pu être créée (ex: code déjà utilisé côté formations) :
+        // on retire le programme pour éviter une ligne orpheline qui bloquerait toute
+        // nouvelle tentative avec le même code.
+        await programService.deleteProgram(program.id).catch(() => {})
+        throw formationError
+      }
 
       return program
     },
@@ -118,10 +152,14 @@ export default function NewProgramPage() {
       router.push(`/dashboard/programs/${program.id}`)
     },
     onError: (error) => {
+      const message = error instanceof Error ? error.message : ''
+      const isDuplicateCode = (error as { code?: string })?.code === '23505' || /duplicate key|already exists/i.test(message)
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: error instanceof Error ? error.message : 'Une erreur est survenue',
+        description: isDuplicateCode
+          ? 'Ce code interne est déjà utilisé par un autre programme. Choisissez-en un autre.'
+          : message || 'Une erreur est survenue',
       })
     }
   })
@@ -249,6 +287,7 @@ export default function NewProgramPage() {
                     )}
                     placeholder="Ex: PROG-2024-001"
                   />
+                  {errors.code && <p className="text-sm text-red-500 mt-1">{errors.code.message}</p>}
                 </div>
 
                 {/* Catégorie */}
