@@ -396,8 +396,8 @@ export default function EditLessonPage() {
     setContentBlocks(contentBlocks.filter((block) => block.id !== id))
   }
 
-  // Uploader une image
-  const handleImageUpload = async (blockId: string, file: File) => {
+  // Uploader un fichier (image ou document) pour un bloc média
+  const uploadBlockMedia = async (blockId: string, file: File) => {
     if (!user?.organization_id) {
       addToast({
         type: 'error',
@@ -439,27 +439,34 @@ export default function EditLessonPage() {
 
       addToast({
         type: 'success',
-        title: 'Image uploadée',
-        description: "L'image a été uploadée avec succès.",
+        title: 'Upload terminé',
+        description: 'Le fichier a été uploadé avec succès.',
       })
     } catch (error: any) {
       logger.error("Erreur lors de l'upload:", error)
       addToast({
         type: 'error',
         title: "Erreur d'upload",
-        description: error?.message || "Une erreur est survenue lors de l'upload de l'image.",
+        description: error?.message || "Une erreur est survenue lors de l'upload du fichier.",
       })
     } finally {
       setUploadingImages((prev) => ({ ...prev, [blockId]: false }))
     }
   }
 
+  const handleImageUpload = (blockId: string, file: File) => uploadBlockMedia(blockId, file)
+  const handleFileUpload = (blockId: string, file: File) => uploadBlockMedia(blockId, file)
+
   // Handle media drop
   const handleMediaDrop = (blockId: string, e: React.DragEvent) => {
     e.preventDefault()
     setIsDraggingMedia(null)
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith('image/')) {
+    if (!file) return
+    const block = contentBlocks.find((b) => b.id === blockId)
+    if (block?.data.mediaType === 'file') {
+      handleFileUpload(blockId, file)
+    } else if (file.type.startsWith('image/')) {
       handleImageUpload(blockId, file)
     }
   }
@@ -1057,7 +1064,88 @@ export default function EditLessonPage() {
                                     </div>
                                   )}
 
-                                  {block.data.mediaType !== 'image' && (
+                                  {block.data.mediaType === 'file' && (
+                                    <div>
+                                      <label className="block text-sm font-semibold text-gray-700 mb-2">Document (PDF)</label>
+                                      {block.data.mediaUrl ? (
+                                        <div className="flex items-center gap-3 p-4 border-2 border-gray-100 rounded-xl">
+                                          <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                            <File className="h-6 w-6 text-pink-500" />
+                                          </div>
+                                          <a
+                                            href={block.data.mediaUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 text-sm font-medium text-indigo-600 hover:underline truncate"
+                                          >
+                                            {decodeURIComponent(block.data.mediaUrl.split('/').pop() || 'Document')}
+                                          </a>
+                                          <label className="p-2.5 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-colors">
+                                            <Upload className="h-4 w-4 text-gray-700" />
+                                            <input
+                                              type="file"
+                                              accept="application/pdf,.pdf"
+                                              className="hidden"
+                                              onChange={(e) => {
+                                                const file = e.target.files?.[0]
+                                                if (file) handleFileUpload(block.id, file)
+                                              }}
+                                              disabled={uploadingImages[block.id]}
+                                            />
+                                          </label>
+                                          <button
+                                            type="button"
+                                            onClick={() => updateBlock(block.id, { mediaUrl: '' })}
+                                            className="p-2.5 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors flex-shrink-0"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div
+                                          onDragOver={(e) => { e.preventDefault(); setIsDraggingMedia(block.id) }}
+                                          onDragLeave={() => setIsDraggingMedia(null)}
+                                          onDrop={(e) => handleMediaDrop(block.id, e)}
+                                          className={cn(
+                                            "border-2 border-dashed rounded-xl p-10 text-center transition-all",
+                                            isDraggingMedia === block.id
+                                              ? "border-pink-500 bg-pink-50 scale-[1.01]"
+                                              : "border-gray-200 hover:border-pink-400 hover:bg-pink-50/50"
+                                          )}
+                                        >
+                                          {uploadingImages[block.id] ? (
+                                            <div className="flex flex-col items-center">
+                                              <Loader2 className="h-10 w-10 text-pink-500 animate-spin mb-3" />
+                                              <p className="text-gray-600 font-medium">Upload en cours...</p>
+                                            </div>
+                                          ) : (
+                                            <>
+                                              <div className="w-14 h-14 bg-pink-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                                <File className="h-7 w-7 text-pink-500" />
+                                              </div>
+                                              <p className="text-gray-700 font-medium mb-1">Glissez un PDF ici</p>
+                                              <p className="text-gray-500 text-sm mb-4">ou</p>
+                                              <label className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-lg hover:from-pink-600 hover:to-rose-700 transition-all cursor-pointer shadow-lg shadow-pink-500/25 text-sm font-medium">
+                                                <Upload className="h-4 w-4" />
+                                                Parcourir
+                                                <input
+                                                  type="file"
+                                                  accept="application/pdf,.pdf"
+                                                  className="hidden"
+                                                  onChange={(e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (file) handleFileUpload(block.id, file)
+                                                  }}
+                                                />
+                                              </label>
+                                            </>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {block.data.mediaType !== 'image' && block.data.mediaType !== 'file' && (
                                     <div>
                                       <label className="block text-sm font-semibold text-gray-700 mb-2">URL du média</label>
                                       <input

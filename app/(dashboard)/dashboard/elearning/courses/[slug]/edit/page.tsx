@@ -51,6 +51,7 @@ interface QuizOption { text: string; correct: boolean }
 interface QuizBlockData { question: string; options: QuizOption[]; explanation: string }
 interface ImageBlockData { url: string; caption: string }
 interface MediaBlockData { url: string; caption: string }
+interface FileBlockData { url: string; caption: string }
 interface InteractionBlockData { emoji: string; text: string }
 interface PollOption { text: string }
 interface PollBlockData { question: string; options: PollOption[] }
@@ -63,6 +64,7 @@ type ContentBlock =
   | { id: string; type: 'interaction'; data: InteractionBlockData }
   | { id: string; type: 'poll'; data: PollBlockData }
   | { id: string; type: 'separator'; data: Record<string, never> }
+  | { id: string; type: 'file'; data: FileBlockData }
 
 interface LessonSettings {
   replayable?: boolean
@@ -139,7 +141,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
 function SettingsPanel({
   title, setTitle, description, setDescription,
   scoreVisible, setScoreVisible, isPublished, setIsPublished,
-  thumbnailUrl, onSave, isSaving,
+  thumbnailUrl, onThumbnailChange, isUploadingThumbnail, onSave, isSaving,
 }: {
   title: string
   setTitle: (v: string) => void
@@ -150,10 +152,13 @@ function SettingsPanel({
   isPublished: boolean
   setIsPublished: (v: boolean) => void
   thumbnailUrl: string | null
+  onThumbnailChange: (file: File) => void
+  isUploadingThumbnail: boolean
   onSave: () => void
   isSaving: boolean
 }) {
   const [category, setCategory] = useState('')
+  const thumbnailInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div className="h-full overflow-y-auto bg-white border-r border-gray-200">
@@ -185,7 +190,12 @@ function SettingsPanel({
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
             Image de couverture
           </p>
-          <div className="relative aspect-video bg-gray-100 rounded-xl overflow-hidden group cursor-pointer border border-gray-200">
+          <button
+            type="button"
+            onClick={() => thumbnailInputRef.current?.click()}
+            disabled={isUploadingThumbnail}
+            className="relative w-full aspect-video bg-gray-100 rounded-xl overflow-hidden group cursor-pointer border border-gray-200 disabled:cursor-wait"
+          >
             {thumbnailUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
@@ -196,12 +206,27 @@ function SettingsPanel({
               </div>
             )}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-xs font-medium text-gray-700">
-                <Camera className="h-3.5 w-3.5" />
-                Modifier l'image
-              </span>
+              {isUploadingThumbnail ? (
+                <Loader2 className="h-4 w-4 text-white animate-spin" />
+              ) : (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-xs font-medium text-gray-700">
+                  <Camera className="h-3.5 w-3.5" />
+                  Modifier l'image
+                </span>
+              )}
             </div>
-          </div>
+            <input
+              ref={thumbnailInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (file) onThumbnailChange(file)
+                e.target.value = ''
+              }}
+            />
+          </button>
         </section>
 
         {/* Titre */}
@@ -273,6 +298,7 @@ const DOCK_ITEMS = [
   { id: 'text',        label: 'Textes',       icon: Type       },
   { id: 'image',       label: 'Images',       icon: ImageIcon  },
   { id: 'media',       label: 'Médias',       icon: Video      },
+  { id: 'file',        label: 'Fichiers',     icon: FileText   },
   { id: 'interaction', label: 'Interactions', icon: Zap        },
   { id: 'quiz',        label: 'Quiz',         icon: HelpCircle },
   { id: 'poll',        label: 'Sondage',      icon: BarChart2  },
@@ -621,6 +647,96 @@ function EditableMediaBlock({
   )
 }
 
+// ─── Editable file (PDF) block ───────────────────────────────────────
+
+function EditableFileBlock({
+  block, onChange, onUpload,
+}: {
+  block: { id: string; type: 'file'; data: FileBlockData }
+  onChange: (id: string, data: FileBlockData) => void
+  onUpload?: (file: File) => Promise<string>
+}) {
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !onUpload) return
+    setUploading(true)
+    try {
+      const url = await onUpload(file)
+      onChange(block.id, { ...block.data, url })
+    } catch {
+      // silently ignore — user keeps the URL field
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      {block.data.url ? (
+        <div className="flex items-center gap-3 p-3 mb-2 bg-gray-50 border border-gray-200 rounded-xl">
+          <div className="w-10 h-10 bg-white border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+            <FileText className="h-5 w-5 text-brand-blue" />
+          </div>
+          <a
+            href={block.data.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 text-sm font-medium text-brand-blue hover:underline truncate"
+          >
+            {decodeURIComponent(block.data.url.split('/').pop() || 'Document')}
+          </a>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="px-2.5 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-white transition-colors disabled:opacity-50"
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Changer'}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="w-full border-2 border-dashed border-gray-200 hover:border-brand-blue/40 hover:bg-brand-blue/5 rounded-xl p-8 flex flex-col items-center text-gray-300 hover:text-brand-blue/60 mb-2 transition-all cursor-pointer disabled:cursor-wait"
+        >
+          {uploading ? (
+            <Loader2 className="h-8 w-8 mb-2 animate-spin" />
+          ) : (
+            <FileText className="h-8 w-8 mb-2" />
+          )}
+          <p className="text-xs font-medium">{uploading ? 'Import en cours…' : 'Cliquez pour importer un PDF'}</p>
+          <p className="text-[10px] mt-0.5 text-gray-300">ou entrez une URL ci-dessous</p>
+        </button>
+      )}
+      <input
+        value={block.data.url ?? ''}
+        onChange={e => onChange(block.id, { ...block.data, url: e.target.value })}
+        placeholder="https://exemple.com/document.pdf"
+        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 mb-1 focus:outline-none focus:border-brand-blue/50 focus:ring-1 focus:ring-brand-blue/20"
+      />
+      <input
+        value={block.data.caption ?? ''}
+        onChange={e => onChange(block.id, { ...block.data, caption: e.target.value })}
+        placeholder="Légende du document..."
+        className="w-full text-xs text-gray-400 text-center bg-transparent focus:outline-none border-b border-transparent focus:border-gray-200"
+      />
+    </>
+  )
+}
+
 // ─── Editable interaction (callout) block ────────────────────────────
 
 function EditableInteractionBlock({
@@ -888,6 +1004,7 @@ function BlockEditor({
                       {block.type === 'text' && <EditableTextBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
                       {block.type === 'image' && <EditableImageBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} onUpload={onImageUpload} />}
                       {block.type === 'media' && <EditableMediaBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
+                      {block.type === 'file' && <EditableFileBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} onUpload={onImageUpload} />}
                       {block.type === 'interaction' && <EditableInteractionBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
                       {block.type === 'quiz' && <EditableQCMBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
                       {block.type === 'poll' && <EditablePollBlock block={block} onChange={(id, data) => onChangeBlock(id, data)} />}
@@ -966,6 +1083,7 @@ function lessonMeta(lesson: LessonItem) {
             case 'text':        label = 'Texte';      Icon = Type;       break
             case 'image':       label = 'Image';      Icon = ImageIcon;  break
             case 'media':       label = 'Vidéo';      Icon = Video;      break
+            case 'file':        label = 'Fichier';    Icon = FileText;   break
             case 'quiz':        label = 'Quiz';       Icon = HelpCircle; break
             case 'poll':        label = 'Sondage';    Icon = BarChart2;  break
             case 'interaction': label = 'Info';       Icon = Zap;        break
@@ -1523,6 +1641,9 @@ export default function EditPage() {
       case 'media':
         setBlocks(prev => [...prev, { id, type: 'media', data: { url: '', caption: '' } }])
         break
+      case 'file':
+        setBlocks(prev => [...prev, { id, type: 'file', data: { url: '', caption: '' } }])
+        break
       case 'interaction':
         setBlocks(prev => [...prev, { id, type: 'interaction', data: { emoji: '💡', text: '' } }])
         break
@@ -1553,6 +1674,17 @@ export default function EditPage() {
         break
     }
   }, [])
+
+  const updateThumbnailMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!course) throw new Error('Cours non chargé')
+      const url = await handleImageUpload(file)
+      await elearningService.updateCourse(course.id, { thumbnail_url: url })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['course-edit', slug] })
+    },
+  })
 
   // ── Mutations ───────────────────────────────────────────────────
   const updateCourseMutation = useMutation({
@@ -1736,6 +1868,8 @@ export default function EditPage() {
             isPublished={isPublished}
             setIsPublished={setIsPublished}
             thumbnailUrl={course?.thumbnail_url ?? null}
+            onThumbnailChange={file => updateThumbnailMutation.mutate(file)}
+            isUploadingThumbnail={updateThumbnailMutation.isPending}
             onSave={() => updateCourseMutation.mutate()}
             isSaving={updateCourseMutation.isPending}
           />

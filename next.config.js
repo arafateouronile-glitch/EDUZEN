@@ -226,6 +226,14 @@ const nextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
         ],
       },
+      {
+        // Route proxy fichiers e-learning (PDF...) : autoriser l'embedding depuis la même app.
+        source: '/api/elearning/file-proxy',
+        headers: [
+          { key: 'X-Frame-Options', value: 'ALLOWALL' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
     ]
   },
   // Configuration pour Puppeteer

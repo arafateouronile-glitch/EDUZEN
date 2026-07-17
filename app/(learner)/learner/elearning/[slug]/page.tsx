@@ -43,6 +43,108 @@ import { useParams, useRouter } from 'next/navigation'
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+import { toProxiedFileUrl } from '@/lib/utils/elearning-file-proxy'
+
+// Normalise les blocs venus de l'éditeur "studio" (courses/[slug]/edit) — qui
+// stocke un format différent (image/interaction en types dédiés, media sans
+// mediaType, options de quiz avec `correct`...) — vers le format canonique
+// attendu ci-dessous (text/media+mediaType/quiz/poll/code/callout/accordion).
+// Les blocs déjà au format canonique traversent inchangés.
+function normalizeContentBlock(block: any, idx: number): any {
+  const id = block?.id || `block-${idx}`
+  switch (block?.type) {
+    case 'text':
+      return {
+        id, type: 'text',
+        data: {
+          content: [block.data?.heading, block.data?.body].filter(Boolean).join('\n\n') || block.data?.content || '',
+        },
+      }
+    case 'image':
+      return {
+        id, type: 'media',
+        data: { mediaType: 'image', mediaUrl: block.data?.url || block.data?.mediaUrl || '', caption: block.data?.caption || '' },
+      }
+    case 'file':
+      return {
+        id, type: 'media',
+        data: { mediaType: 'file', mediaUrl: block.data?.url || block.data?.mediaUrl || '', caption: block.data?.caption || '' },
+      }
+    case 'media':
+      if (block.data?.mediaType) return block // déjà au format canonique
+      return {
+        id, type: 'media',
+        data: { mediaType: 'video', mediaUrl: block.data?.url || '', caption: block.data?.caption || '' },
+      }
+    case 'interaction':
+      return {
+        id, type: 'text',
+        data: { content: [block.data?.emoji, block.data?.text].filter(Boolean).join(' ') || '' },
+      }
+    case 'quiz':
+      return {
+        id, type: 'quiz',
+        data: {
+          ...block.data,
+          question: block.data?.question || '',
+          options: (block.data?.options ?? []).map((opt: any, i: number) => ({
+            id: opt.id || `${id}-opt-${i}`,
+            text: opt.text || '',
+            isCorrect: opt.isCorrect ?? opt.correct ?? false,
+          })),
+        },
+      }
+    case 'poll':
+      return {
+        id, type: 'poll',
+        data: {
+          pollQuestion: block.data?.question || block.data?.pollQuestion || '',
+          pollOptions: (block.data?.options ?? block.data?.pollOptions ?? []).map((opt: any, i: number) => ({
+            id: opt.id || `${id}-poll-${i}`,
+            text: opt.text || '',
+          })),
+        },
+      }
+    default:
+      return block
+  }
+}
+
+// Aperçu PDF chargé à la demande (clic) plutôt qu'au rendu de la page.
+// L'iframe pointe vers /api/elearning/file-proxy (same-origin) plutôt que
+// directement vers *.supabase.co, car certains navigateurs (Brave Shields,
+// Safari ITP...) bloquent silencieusement les iframes tierces même quand une
+// navigation directe vers ce même lien fonctionne. Le lien "Ouvrir dans un
+// nouvel onglet" pointe lui vers l'URL d'origine et reste en secours.
+function PdfBlockView({ url, caption }: { url: string; caption?: string }) {
+  const [showPreview, setShowPreview] = useState(false)
+  return (
+    <div className="space-y-2">
+      {showPreview ? (
+        <iframe
+          src={toProxiedFileUrl(url)}
+          title={caption || 'Document PDF'}
+          className="w-full h-[600px] rounded-lg border border-gray-200"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          className="w-full h-32 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-brand-blue hover:text-brand-blue transition-colors"
+        >
+          <FileText className="h-6 w-6" />
+          <span className="text-sm">Afficher l'aperçu du PDF</span>
+        </button>
+      )}
+      <div className="flex items-center justify-between p-3 border rounded-lg">
+        <span className="text-sm font-medium truncate">{caption || 'Document PDF'}</span>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-blue hover:underline flex-shrink-0 ml-2">
+          Ouvrir dans un nouvel onglet
+        </a>
+      </div>
+    </div>
+  )
+}
 
 const ScormPlayer = dynamic(
   () => import('@/components/elearning/ScormPlayer').then(m => m.ScormPlayer),
@@ -738,9 +840,10 @@ export default function LearnerCourseDetailPage() {
     try {
       const parsed = JSON.parse(content)
       if (Array.isArray(parsed)) {
+        const normalized = parsed.map((block: any, idx: number) => normalizeContentBlock(block, idx))
         return (
           <div className="space-y-4">
-            {parsed.map((block: any, idx: number) => {
+            {normalized.map((block: any, idx: number) => {
               if (!block?.type) return null
               const blockId = String(block?.id || `block-${idx}`)
               const isLocked = idx >= lockedFromIdx
@@ -763,6 +866,10 @@ export default function LearnerCourseDetailPage() {
                     <ReactMarkdown>{block?.data?.content || ''}</ReactMarkdown>
                   </div>
                 )
+              }
+
+              if (block.type === 'separator') {
+                return wrapBlock(<hr className="border-gray-200" />)
               }
 
               if (block.type === 'media') {
@@ -815,12 +922,18 @@ export default function LearnerCourseDetailPage() {
                 }
 
                 // file
+                const isPdf = /\.pdf(\?|#|$)/i.test(url)
+                if (isPdf) {
+                  return wrapBlock(<PdfBlockView url={url} caption={caption} />)
+                }
                 return wrapBlock(
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <span className="text-sm font-medium">{caption || 'Fichier'}</span>
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-blue hover:underline">
-                      Télécharger
-                    </a>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <span className="text-sm font-medium truncate">{caption || 'Fichier'}</span>
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-blue hover:underline flex-shrink-0 ml-2">
+                        Télécharger
+                      </a>
+                    </div>
                   </div>
                 )
               }

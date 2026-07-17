@@ -29,11 +29,51 @@ import ReactMarkdown from 'react-markdown'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import dynamic from 'next/dynamic'
+import { toProxiedFileUrl } from '@/lib/utils/elearning-file-proxy'
 
 const ScormPlayer = dynamic(
   () => import('@/components/elearning/ScormPlayer').then(m => m.ScormPlayer),
   { ssr: false }
 )
+
+// Aperçu PDF chargé à la demande (clic) plutôt qu'au rendu de la page.
+// L'iframe pointe vers /api/elearning/file-proxy (same-origin) plutôt que
+// directement vers *.supabase.co, car certains navigateurs (Brave Shields,
+// Safari ITP...) bloquent silencieusement les iframes tierces même quand une
+// navigation directe vers ce même lien fonctionne. Le lien "Ouvrir dans un
+// nouvel onglet" pointe lui vers l'URL d'origine et reste en secours.
+function PdfBlockPreview({ url, caption }: { url: string; caption?: string }) {
+  const [showPreview, setShowPreview] = useState(false)
+  return (
+    <div className="space-y-2">
+      {showPreview ? (
+        <iframe
+          src={toProxiedFileUrl(url)}
+          title={caption || 'Document PDF'}
+          className="w-full h-[600px] rounded-lg border border-gray-200"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          className="w-full h-32 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-brand-blue hover:text-brand-blue transition-colors"
+        >
+          <FileText className="h-6 w-6" />
+          <span className="text-sm">Afficher l'aperçu du PDF</span>
+        </button>
+      )}
+      <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+        <FileText className="h-8 w-8 text-brand-blue" />
+        <div className="flex-1">
+          <p className="font-medium">{caption || 'Document PDF'}</p>
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-blue hover:underline">
+            Ouvrir dans un nouvel onglet
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function toYouTubeEmbedUrl(url: string): string {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)
@@ -137,7 +177,15 @@ export default function LessonPage() {
               id, type: 'media' as const,
               data: { mediaType: 'image' as const, mediaUrl: block.data?.url || '', caption: block.data?.caption || '' },
             }
+          case 'file':
+            return {
+              id, type: 'media' as const,
+              data: { mediaType: 'file' as const, mediaUrl: block.data?.url || '', caption: block.data?.caption || '' },
+            }
           case 'media':
+            if (block.data?.mediaType) {
+              return { id, type: 'media' as const, data: block.data }
+            }
             return {
               id, type: 'media' as const,
               data: { mediaType: 'video' as const, mediaUrl: block.data?.url || '', caption: block.data?.caption || '' },
@@ -413,20 +461,24 @@ export default function LessonPage() {
                 </div>
               )}
               {block.data.mediaType === 'file' && block.data.mediaUrl && (
-                <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
-                  <FileText className="h-8 w-8 text-brand-blue" />
-                  <div className="flex-1">
-                    <p className="font-medium">{block.data.caption || 'Fichier'}</p>
-                    <a
-                      href={block.data.mediaUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-brand-blue hover:underline"
-                    >
-                      Télécharger
-                    </a>
+                /\.pdf(\?|#|$)/i.test(block.data.mediaUrl) ? (
+                  <PdfBlockPreview url={block.data.mediaUrl} caption={block.data.caption} />
+                ) : (
+                  <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg">
+                    <FileText className="h-8 w-8 text-brand-blue" />
+                    <div className="flex-1">
+                      <p className="font-medium">{block.data.caption || 'Fichier'}</p>
+                      <a
+                        href={block.data.mediaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-brand-blue hover:underline"
+                      >
+                        Télécharger
+                      </a>
+                    </div>
                   </div>
-                </div>
+                )
               )}
             </GlassCard>
           </motion.div>

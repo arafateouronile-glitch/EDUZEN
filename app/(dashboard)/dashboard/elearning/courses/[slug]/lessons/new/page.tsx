@@ -25,6 +25,7 @@ import {
   GripVertical,
   Upload,
   Loader2,
+  File,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
@@ -165,8 +166,8 @@ export default function NewLessonPage() {
     setContentBlocks(contentBlocks.filter((block) => block.id !== id))
   }
 
-  // Uploader une image
-  const handleImageUpload = async (blockId: string, file: File) => {
+  // Uploader un fichier (image ou document) pour un bloc média
+  const uploadBlockMedia = async (blockId: string, file: File) => {
     if (!user?.organization_id) {
       addToast({
         type: 'error',
@@ -181,7 +182,7 @@ export default function NewLessonPage() {
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `${user.organization_id}/elearning/lessons/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      
+
       const tryBuckets = ['elearning-media', 'course-media', 'course-thumbnails']
       let uploadedBucket: string | null = null
       let lastError: any = null
@@ -208,20 +209,23 @@ export default function NewLessonPage() {
 
       addToast({
         type: 'success',
-        title: 'Image uploadée',
-        description: 'L\'image a été uploadée avec succès.',
+        title: 'Upload terminé',
+        description: 'Le fichier a été uploadé avec succès.',
       })
     } catch (error: any) {
       logger.error('Erreur lors de l\'upload:', error)
       addToast({
         type: 'error',
         title: 'Erreur d\'upload',
-        description: error?.message || 'Une erreur est survenue lors de l\'upload de l\'image.',
+        description: error?.message || 'Une erreur est survenue lors de l\'upload du fichier.',
       })
     } finally {
       setUploadingImages((prev) => ({ ...prev, [blockId]: false }))
     }
   }
+
+  const handleImageUpload = (blockId: string, file: File) => uploadBlockMedia(blockId, file)
+  const handleFileUpload = (blockId: string, file: File) => uploadBlockMedia(blockId, file)
 
   // Ajouter une option à un quiz
   const addQuizOption = (blockId: string) => {
@@ -587,7 +591,62 @@ export default function NewLessonPage() {
                           )}
                         </div>
                       )}
-                      
+
+                      {block.data.mediaType === 'file' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Uploader un document (PDF)
+                          </label>
+                          <div className="flex items-center gap-4">
+                            <label className="flex-1 cursor-pointer">
+                              <input
+                                type="file"
+                                accept="application/pdf,.pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0]
+                                  if (file) {
+                                    handleFileUpload(block.id, file)
+                                  }
+                                }}
+                                disabled={uploadingImages[block.id]}
+                              />
+                              <div className={cn(
+                                "flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg transition-colors",
+                                uploadingImages[block.id]
+                                  ? "border-gray-300 bg-gray-50"
+                                  : "border-brand-blue/30 hover:border-brand-blue hover:bg-brand-blue-ghost"
+                              )}>
+                                {uploadingImages[block.id] ? (
+                                  <>
+                                    <Loader2 className="h-5 w-5 text-brand-blue animate-spin" />
+                                    <span className="text-sm text-gray-600">Upload en cours...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-5 w-5 text-brand-blue" />
+                                    <span className="text-sm font-medium text-brand-blue">Choisir un PDF</span>
+                                  </>
+                                )}
+                              </div>
+                            </label>
+                          </div>
+                          {block.data.mediaUrl && (
+                            <div className="mt-3 flex items-center gap-2 text-sm text-brand-blue">
+                              <File className="h-4 w-4 flex-shrink-0" />
+                              <a
+                                href={block.data.mediaUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline truncate"
+                              >
+                                {decodeURIComponent(block.data.mediaUrl.split('/').pop() || 'Document')}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           {block.data.mediaType === 'image' ? 'URL de l\'image (ou laisser vide si uploadée ci-dessus)' : 'URL du média'}
