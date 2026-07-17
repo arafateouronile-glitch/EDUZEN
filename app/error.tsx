@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import Link from 'next/link'
 import { logger } from '@/lib/utils/logger'
+import { SUPPORT_EMAIL } from '@/lib/config/app-config'
 
 export default function Error({
   error,
@@ -91,7 +92,9 @@ export default function Error({
 
             <div className="pt-4 border-t">
               <p className="text-xs text-muted-foreground">
-                Si le problème persiste, contactez le support technique avec ce code d'erreur :
+                Si le problème persiste, contactez le support technique (
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="underline hover:text-foreground">{SUPPORT_EMAIL}</a>
+                ) avec ce code d'erreur :
               </p>
               <code className="text-xs bg-gray-100 px-2 py-1 rounded mt-2 inline-block">
                 {error.digest || error.name || 'UNKNOWN_ERROR'}

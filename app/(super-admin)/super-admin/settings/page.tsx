@@ -125,7 +125,7 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="platform-email">Email de contact</Label>
-                <Input id="platform-email" type="email" defaultValue="contact@eduzen.com" />
+                <Input id="platform-email" type="email" defaultValue="contact@eduzen.io" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="timezone">Fuseau horaire</Label>

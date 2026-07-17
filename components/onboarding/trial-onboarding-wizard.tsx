@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import { logger } from '@/lib/utils/logger'
+import { SUPPORT_EMAIL } from '@/lib/config/app-config'
 
 // Import des composants d'étapes
 import {
@@ -569,7 +570,7 @@ export function TrialOnboardingWizard({
         <div className="text-center mt-8 space-y-2">
           <p className="text-sm text-gray-500">
             Une question ?{' '}
-            <a href="mailto:support@eduzen.fr" className="text-brand-blue font-medium hover:text-brand-blue-dark transition-colors">
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-brand-blue font-medium hover:text-brand-blue-dark transition-colors">
               Notre équipe vous répond en moins de 24h
             </a>
           </p>

@@ -4,6 +4,7 @@ import { Lock, Zap, Webhook, Key, Headphones, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { motion } from '@/components/ui/motion'
+import { SUPPORT_EMAIL } from '@/lib/config/app-config'
 
 const FEATURES = [
   { icon: Key, label: 'Clés API haute performance' },
@@ -95,7 +96,7 @@ export function APIPaywall() {
               <Button
                 size="lg"
                 className="w-full bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-brand-blue-dark hover:to-brand-blue text-white shadow-xl shadow-brand-blue/25 font-semibold text-base h-12 group"
-                onClick={() => window.open('mailto:support@eduzen.io?subject=Passage%20au%20plan%20Enterprise', '_blank')}
+                onClick={() => window.open(`mailto:${SUPPORT_EMAIL}?subject=Passage%20au%20plan%20Enterprise`, '_blank')}
               >
                 Passer au Plan Enterprise
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />

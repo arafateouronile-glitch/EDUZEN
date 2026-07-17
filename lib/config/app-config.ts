@@ -127,6 +127,13 @@ export const APP_URLS = {
 } as const
 
 /**
+ * Adresse e-mail de contact/support affichée aux utilisateurs (pages d'erreur,
+ * liens mailto, documentation API...). Source unique pour éviter que chaque
+ * écran hardcode sa propre variante (support@, contact@, mauvais domaine...).
+ */
+export const SUPPORT_EMAIL = 'contact@eduzen.io'
+
+/**
  * Configuration des emails
  */
 export const EMAIL_CONFIG = {

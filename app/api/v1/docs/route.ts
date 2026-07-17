@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { APP_URLS } from '@/lib/config/app-config'
+import { APP_URLS, SUPPORT_EMAIL } from '@/lib/config/app-config'
 
 /**
  * GET /api/v1/docs
@@ -82,7 +82,7 @@ Configurez des webhooks depuis le dashboard pour recevoir des notifications en t
 Chaque payload est signé HMAC-SHA256 via le header \`X-Webhook-Signature\`.`,
       contact: {
         name: 'Support EDUZEN',
-        email: 'support@eduzen.io',
+        email: SUPPORT_EMAIL,
       },
     },
     servers: [

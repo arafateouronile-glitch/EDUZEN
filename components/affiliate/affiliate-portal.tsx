@@ -43,12 +43,13 @@ import {
 } from '@/components/charts/recharts-wrapper'
 import { updateAffiliatePaymentDetails } from '@/lib/actions/affiliate-portal-actions'
 import type { AffiliatePortalData } from '@/app/api/affiliate/me/route'
+import { SUPPORT_EMAIL } from '@/lib/config/app-config'
 
 const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://eduzen.fr'
 const KIT_LOGO = process.env.NEXT_PUBLIC_AFFILIATE_KIT_URL || BASE_URL
 const KIT_BANNERS = process.env.NEXT_PUBLIC_AFFILIATE_KIT_URL || BASE_URL
 const KIT_PDF = process.env.NEXT_PUBLIC_AFFILIATE_KIT_URL || BASE_URL
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_AFFILIATE_CONTACT_EMAIL || 'arafate@eduzen.fr'
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_AFFILIATE_CONTACT_EMAIL || SUPPORT_EMAIL
 
 function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
@@ -457,7 +458,7 @@ export function AffiliatePortal({ data }: { data: AffiliatePortalData }) {
               className="inline-flex items-center gap-2 mt-2 text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 font-medium"
             >
               <Mail className="h-4 w-4" />
-              Contactez Arafate
+              Contactez le support
             </a>
           </CardContent>
         </Card>
