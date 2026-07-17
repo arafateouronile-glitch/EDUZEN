@@ -231,6 +231,7 @@ export async function submitEnrollmentForm(
           status: 'pending',
           total_amount: 0,
           enrollment_date: new Date().toISOString().split('T')[0],
+          source: 'enrollment_form',
           ...(enrollmentExtra.funding_type_id ? { funding_type_id: enrollmentExtra.funding_type_id } : {}),
         })
       if (enrollErr) {

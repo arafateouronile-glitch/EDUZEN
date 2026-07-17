@@ -154,21 +154,70 @@ export function ConfigApprenants({
     enabled: !!user?.organization_id,
   })
 
-  // Récupérer les candidats ayant postulé à cette session depuis le catalogue public
+  // Récupérer les candidats ayant postulé à cette session : depuis le catalogue public
+  // (public_enrollments) ET depuis le formulaire d'inscription public (/s/[slug]/[token],
+  // qui crée directement une ligne enrollments avec source='enrollment_form').
+  //
+  // public_enrollments.session_id n'est jamais renseigné à la candidature (un candidat
+  // postule à une FORMATION, pas à une session précise — l'affectation se fait ici, à la
+  // main, via le bouton "Inscrire") : on retrouve donc les candidats par formation_id
+  // plutôt que par session_id, en excluant ceux déjà affectés à une AUTRE session.
   const { data: formationCandidates } = useQuery({
-    queryKey: ['session-public-candidates', sessionId],
+    queryKey: ['session-public-candidates', sessionId, formationId],
     queryFn: async () => {
       if (!sessionId) return []
 
-      const { data, error } = await supabase
-        .from('public_enrollments')
-        .select('id, first_name, last_name, email, phone, status, created_at, candidate_notes')
-        .eq('session_id', sessionId)
-        .in('status', ['pending', 'confirmed'])
-        .order('created_at', { ascending: true })
+      const [catalogResult, formResult] = await Promise.all([
+        formationId
+          ? supabase
+              .from('public_enrollments')
+              .select('id, first_name, last_name, email, phone, status, created_at, candidate_notes, public_formations!inner(formation_id)')
+              .eq('public_formations.formation_id', formationId)
+              .in('status', ['pending', 'confirmed'])
+              .or(`session_id.is.null,session_id.eq.${sessionId}`)
+              .order('created_at', { ascending: true })
+          : Promise.resolve({ data: [], error: null }),
+        supabase
+          .from('enrollments')
+          .select('id, status, created_at, students(id, first_name, last_name, email, phone)')
+          .eq('session_id', sessionId)
+          .eq('source', 'enrollment_form')
+          .order('created_at', { ascending: true }),
+      ])
 
-      if (error) throw error
-      return data || []
+      if (catalogResult.error) throw catalogResult.error
+      if (formResult.error) throw formResult.error
+
+      const catalogCandidates = (catalogResult.data || []).map((c: any) => ({
+        id: c.id,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        email: c.email,
+        phone: c.phone,
+        status: c.status,
+        created_at: c.created_at,
+        candidate_notes: c.candidate_notes,
+        source: 'catalog' as const,
+      }))
+
+      // Les candidats formulaire ont déjà une vraie ligne enrollments : on utilise
+      // l'id de l'étudiant (pas celui de l'enrollment) pour que la dé-duplication avec
+      // la liste des étudiants existants (basée sur student.id) reste cohérente.
+      const formCandidates = (formResult.data || [])
+        .filter((e: any) => e.students)
+        .map((e: any) => ({
+          id: e.students.id,
+          first_name: e.students.first_name,
+          last_name: e.students.last_name,
+          email: e.students.email,
+          phone: e.students.phone,
+          status: e.status,
+          created_at: e.created_at,
+          candidate_notes: null as string | null,
+          source: 'enrollment_form' as const,
+        }))
+
+      return [...catalogCandidates, ...formCandidates]
     },
     enabled: !!sessionId,
   })
@@ -461,15 +510,18 @@ export function ConfigApprenants({
     })
   }, [externalEntities, searchQuery])
 
-  // Candidats catalogue non encore inscrits (par email)
+  // Candidats catalogue non encore inscrits (par email). Les candidats venus du
+  // formulaire d'inscription ont déjà une vraie ligne enrollments pour CETTE session
+  // (on les a récupérés via session_id) : ils vont toujours dans "déjà inscrits", sans
+  // dépendre de l'email (souvent absent — le formulaire ne le rend pas obligatoire).
   const availableCandidates = useMemo(
-    () => filteredCandidates.filter((c) => !enrolledStudentEmails.has((c.email || '').toLowerCase())),
+    () => filteredCandidates.filter((c) => c.source !== 'enrollment_form' && !enrolledStudentEmails.has((c.email || '').toLowerCase())),
     [filteredCandidates, enrolledStudentEmails]
   )
 
-  // Candidats catalogue déjà inscrits (par email)
+  // Candidats catalogue déjà inscrits (par email, ou par origine formulaire)
   const enrolledCandidates = useMemo(
-    () => filteredCandidates.filter((c) => enrolledStudentEmails.has((c.email || '').toLowerCase())),
+    () => filteredCandidates.filter((c) => c.source === 'enrollment_form' || enrolledStudentEmails.has((c.email || '').toLowerCase())),
     [filteredCandidates, enrolledStudentEmails]
   )
 
@@ -505,39 +557,54 @@ export function ConfigApprenants({
 
   // Inscrire un candidat catalogue : trouver ou créer le student par email puis ouvrir le formulaire
   const enrollPublicCandidateMutation = useMutation({
-    mutationFn: async (candidate: { first_name: string; last_name: string; email: string | null; phone: string | null }) => {
+    mutationFn: async (candidate: { id: string; first_name: string; last_name: string; email: string | null; phone: string | null }) => {
       if (!user?.organization_id) throw new Error('Organisation manquante')
 
+      let studentId: string
+
       // Chercher un étudiant existant par email dans l'organisation
-      if (candidate.email) {
-        const { data: existing } = await supabase
+      const existingByEmail = candidate.email
+        ? await supabase
+            .from('students')
+            .select('id')
+            .eq('organization_id', user.organization_id)
+            .eq('email', candidate.email)
+            .maybeSingle()
+        : null
+
+      if (existingByEmail?.data) {
+        studentId = existingByEmail.data.id
+      } else {
+        // Créer un nouvel étudiant depuis les données du candidat
+        const { data: created, error } = await supabase
           .from('students')
+          .insert({
+            first_name: candidate.first_name,
+            last_name: candidate.last_name,
+            email: candidate.email || null,
+            phone: candidate.phone || null,
+            organization_id: user.organization_id,
+            status: 'active',
+            student_number: '',
+          })
           .select('id')
-          .eq('organization_id', user.organization_id)
-          .eq('email', candidate.email)
-          .maybeSingle()
-        if (existing) return existing.id
+          .single()
+        if (error) throw error
+        studentId = created.id
       }
 
-      // Créer un nouvel étudiant depuis les données du candidat
-      const { data: created, error } = await supabase
-        .from('students')
-        .insert({
-          first_name: candidate.first_name,
-          last_name: candidate.last_name,
-          email: candidate.email || null,
-          phone: candidate.phone || null,
-          organization_id: user.organization_id,
-          status: 'active',
-          student_number: '',
-        })
-        .select('id')
-        .single()
-      if (error) throw error
-      return created.id
+      // Réserve le candidat pour cette session (évite qu'il reste "disponible" dans
+      // les autres sessions de la même formation une fois pris en charge ici).
+      await supabase
+        .from('public_enrollments')
+        .update({ session_id: sessionId, status: 'confirmed' })
+        .eq('id', candidate.id)
+
+      return studentId
     },
     onSuccess: (studentId) => {
       queryClient.invalidateQueries({ queryKey: ['students', user?.organization_id] })
+      queryClient.invalidateQueries({ queryKey: ['session-public-candidates', sessionId, formationId] })
       handleEnrollCandidate(studentId)
     },
     onError: (error) => {
@@ -847,7 +914,7 @@ export function ConfigApprenants({
                               <Button
                                 size="sm"
                                 className="w-full mt-3"
-                                onClick={() => enrollPublicCandidateMutation.mutate({ first_name: firstName, last_name: lastName, email: candidate.email, phone: candidate.phone })}
+                                onClick={() => enrollPublicCandidateMutation.mutate({ id: candidate.id, first_name: firstName, last_name: lastName, email: candidate.email, phone: candidate.phone })}
                                 disabled={enrollPublicCandidateMutation.isPending || createEnrollmentMutation.isPending}
                               >
                                 {enrollPublicCandidateMutation.isPending ? (
@@ -878,8 +945,10 @@ export function ConfigApprenants({
                       const lastName = candidate.last_name || ''
                       const email = candidate.email || ''
                       const phone = candidate.phone || ''
-                      const enrollment = enrollments.find(
-                        (e) => (e as EnrollmentWithRelations).students?.email?.toLowerCase() === email.toLowerCase()
+                      const enrollment = enrollments.find((e) =>
+                        candidate.source === 'enrollment_form'
+                          ? (e as EnrollmentWithRelations).student_id === candidate.id
+                          : (e as EnrollmentWithRelations).students?.email?.toLowerCase() === email.toLowerCase()
                       )
 
                       return (
@@ -900,6 +969,9 @@ export function ConfigApprenants({
                                   {firstName} {lastName}
                                 </p>
                                 <div className="flex items-center gap-1 flex-shrink-0">
+                                  <Badge variant="outline" className="text-xs border-purple-200 text-purple-600">
+                                    {candidate.source === 'enrollment_form' ? 'Formulaire' : 'Catalogue'}
+                                  </Badge>
                                   <Badge variant="outline" className="text-xs border-green-200 text-green-600">
                                     Inscrit
                                   </Badge>

@@ -8086,6 +8086,7 @@ export type Database = {
           paid_amount: number | null
           payment_status: string | null
           session_id: string | null
+          source: string | null
           status: string | null
           student_id: string | null
           total_amount: number
@@ -8099,6 +8100,7 @@ export type Database = {
           paid_amount?: number | null
           payment_status?: string | null
           session_id?: string | null
+          source?: string | null
           status?: string | null
           student_id?: string | null
           total_amount: number
@@ -8112,6 +8114,7 @@ export type Database = {
           paid_amount?: number | null
           payment_status?: string | null
           session_id?: string | null
+          source?: string | null
           status?: string | null
           student_id?: string | null
           total_amount?: number
