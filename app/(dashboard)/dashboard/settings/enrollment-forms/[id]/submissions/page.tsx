@@ -256,6 +256,15 @@ export default function SubmissionsPage() {
                         {sub.documents.length}
                       </div>
                     )}
+                    {sub.status === 'student_created' && !sub.sessions && (
+                      <Badge
+                        className="bg-amber-100 text-amber-700 border-0"
+                        title="L'apprenant a été créé mais aucune session n'a pu être déterminée automatiquement — à assigner manuellement."
+                      >
+                        <AlertCircle className="w-3 h-3 mr-1" />
+                        Session à assigner
+                      </Badge>
+                    )}
                     <Badge className={cfg.className}>
                       <StatusIcon className="w-3 h-3 mr-1" />
                       {cfg.label}

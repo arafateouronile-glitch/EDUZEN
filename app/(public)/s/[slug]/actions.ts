@@ -194,7 +194,25 @@ export async function submitEnrollmentForm(
 
   // 6. Create enrollment in session if session_id present and not already enrolled
   // Field-selected session_id takes priority over link's session_id
-  const effectiveSessionId = enrollmentExtra.session_id ?? link.session_id ?? null
+  let effectiveSessionId = enrollmentExtra.session_id ?? link.session_id ?? null
+
+  // Le champ "Session souhaitée" est optionnel et se réinitialise côté client dès que
+  // la formation change (cf enrollment-form) — un candidat qui choisit une formation
+  // sans rouvrir le sélecteur de session soumet donc souvent un session_id vide, et
+  // l'inscription était jusqu'ici silencieusement ignorée. Si la formation demandée n'a
+  // qu'une seule session encore pertinente (non terminée), on l'utilise automatiquement.
+  if (!effectiveSessionId && enrollmentExtra.program_id) {
+    const { data: candidateSessions } = await supabase
+      .from('sessions')
+      .select('id, formations!inner(program_id)')
+      .eq('formations.program_id', enrollmentExtra.program_id)
+      .neq('status', 'cancelled')
+      .gte('end_date', new Date().toISOString().split('T')[0])
+
+    if (candidateSessions?.length === 1) {
+      effectiveSessionId = candidateSessions[0].id
+    }
+  }
 
   if (effectiveSessionId && studentId) {
     const { data: existingEnrollment } = await supabase
