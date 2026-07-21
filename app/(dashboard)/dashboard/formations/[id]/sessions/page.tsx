@@ -14,6 +14,9 @@ import Link from 'next/link'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { AppError, ErrorCode } from '@/lib/errors'
+import { PaywallModal } from '@/components/quota/paywall-modal'
+import type { OrganizationUsage } from '@/lib/services/quota.service'
 
 type Enrollment = TableRow<'enrollments'>
 type Payment = TableRow<'payments'>
@@ -26,6 +29,7 @@ export default function FormationSessionsPage() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
 
+  const [paywallUsage, setPaywallUsage] = useState<OrganizationUsage | null>(null)
   const [showEnrollmentForm, setShowEnrollmentForm] = useState(false)
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [enrollmentForm, setEnrollmentForm] = useState({
@@ -147,6 +151,11 @@ export default function FormationSessionsPage() {
       })
       queryClient.invalidateQueries({ queryKey: ['formation-sessions', formationId] })
       refetch()
+    },
+    onError: (error) => {
+      if (error instanceof AppError && error.code === ErrorCode.QUOTA_EXCEEDED && error.context.usage) {
+        setPaywallUsage(error.context.usage as OrganizationUsage)
+      }
     },
   })
 
@@ -657,6 +666,15 @@ export default function FormationSessionsPage() {
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {paywallUsage && (
+        <PaywallModal
+          open={!!paywallUsage}
+          onOpenChange={(open) => !open && setPaywallUsage(null)}
+          usage={paywallUsage}
+          actionType="session"
+        />
       )}
     </div>
   )

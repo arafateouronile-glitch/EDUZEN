@@ -38,6 +38,10 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { studentService } from '@/lib/services/student.service.client'
+import { AppError, ErrorCode } from '@/lib/errors'
+import { PaywallModal } from '@/components/quota/paywall-modal'
+import type { OrganizationUsage } from '@/lib/services/quota.service'
 
 export default function NewStudentPage() {
   const router = useRouter()
@@ -46,6 +50,7 @@ export default function NewStudentPage() {
   const auth = useAuth()
   const { user, isLoading: userLoading, session } = auth
   const supabase = createClient()
+  const [paywallUsage, setPaywallUsage] = useState<OrganizationUsage | null>(null)
 
   const [step, setStep] = useState(1)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -254,36 +259,10 @@ export default function NewStudentPage() {
         }
       }
 
-      const { data: organization } = await supabase
-        .from('organizations')
-        .select('code')
-        .eq('id', targetOrganizationId)
-        .single()
-
-      const orgCode = organization?.code || 'EDUZEN'
-      const year = new Date().getFullYear().toString().slice(-2)
-      
-      const prefix = `${orgCode}${year}`
-      const { data: lastStudent } = await supabase
-        .from('students')
-        .select('student_number')
-        .eq('organization_id', targetOrganizationId)
-        .like('student_number', `${prefix}%`)
-        .order('student_number', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      
-      let sequence = 1
-      if (lastStudent?.student_number) {
-        const lastSequence = parseInt(lastStudent.student_number.slice(-4)) || 0
-        sequence = lastSequence + 1
-      }
-      
-      const studentNumber = `${prefix}${String(sequence).padStart(4, '0')}`
-
+      // Le numéro d'élève est généré par studentService.create() (numérotation
+      // canonique EDU<orgCode><année><séquence>, cf. lib/services/student.service.ts).
       const studentData: Record<string, unknown> = {
         organization_id: targetOrganizationId,
-        student_number: studentNumber,
         first_name: data.first_name,
         last_name: data.last_name,
         photo_url: uploadedPhotoUrl || null,
@@ -313,20 +292,17 @@ export default function NewStudentPage() {
         }
       }
 
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .insert(studentData as unknown as TableInsert<'students'>)
-        .select()
-        .single()
-
-      if (studentError) {
-        logger.error('Student creation error:', studentError)
-        if (studentError.code === '23505') {
+      let student: { id: string }
+      try {
+        student = await studentService.create(studentData as unknown as TableInsert<'students'>)
+      } catch (error) {
+        logger.error('Student creation error:', error)
+        if (error instanceof AppError && error.code === ErrorCode.VALIDATION_UNIQUE_CONSTRAINT) {
           throw new Error(
-            `Un élève avec le numéro "${studentNumber}" existe déjà dans votre organisation. Veuillez réessayer ou contacter le support.`
+            'Un élève avec ce numéro existe déjà dans votre organisation. Veuillez réessayer ou contacter le support.'
           )
         }
-        throw new Error(studentError.message || 'Une erreur est survenue lors de la création de l\'élève')
+        throw error
       }
 
       if (guardianId) {
@@ -391,6 +367,9 @@ export default function NewStudentPage() {
     },
     onError: (error) => {
       logger.error('Student creation mutation error:', error)
+      if (error instanceof AppError && error.code === ErrorCode.QUOTA_EXCEEDED && error.context.usage) {
+        setPaywallUsage(error.context.usage as OrganizationUsage)
+      }
     },
   })
 
@@ -1253,6 +1232,15 @@ export default function NewStudentPage() {
           </motion.div>
         </div>
       </div>
+
+      {paywallUsage && (
+        <PaywallModal
+          open={!!paywallUsage}
+          onOpenChange={(open) => !open && setPaywallUsage(null)}
+          usage={paywallUsage}
+          actionType="student"
+        />
+      )}
     </motion.div>
   )
 }

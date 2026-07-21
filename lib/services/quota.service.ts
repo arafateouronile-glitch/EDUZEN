@@ -9,6 +9,12 @@ export interface OrganizationUsage {
   current_sessions_count: number
   subscription_status: string | null
   features: Record<string, unknown> | null
+  /**
+   * Exemption permanente des quotas/features, posée une fois pour toutes sur
+   * les abonnements actifs au moment du déploiement de l'enforcement
+   * (2026-07-17). Ne jamais réévaluer/retirer ce flag automatiquement.
+   */
+  grandfathered: boolean
 }
 
 export interface QuotaCheckResult {
@@ -76,6 +82,7 @@ export class QuotaService {
           current_sessions_count: 0,
           subscription_status: null,
           features: null,
+          grandfathered: false,
         }
       }
 
@@ -95,8 +102,8 @@ export class QuotaService {
 
       const { count: sessionCount } = await this.supabase
         .from('sessions')
-        .select('*, formations!inner(organization_id)', { count: 'exact', head: true })
-        .eq('formations.organization_id', organizationId)
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
         .gte('created_at', startOfMonth.toISOString())
 
       return {
@@ -107,6 +114,7 @@ export class QuotaService {
         current_sessions_count: sessionCount || 0,
         subscription_status: subscription.status,
         features: plan.features || {},
+        grandfathered: subscription.grandfathered === true,
       }
     } catch (error) {
       logger.error('QuotaService - Erreur fallback usage', error, {
@@ -139,6 +147,11 @@ export class QuotaService {
       const usage = await this.getUsage(organizationId)
       if (!usage) {
         return { allowed: true } // Par défaut, autoriser si pas d'info
+      }
+
+      // Abonnement exempté (grandfathering)
+      if (usage.grandfathered) {
+        return { allowed: true, usage }
       }
 
       // Plan illimité
@@ -189,6 +202,11 @@ export class QuotaService {
         return { allowed: true }
       }
 
+      // Abonnement exempté (grandfathering)
+      if (usage.grandfathered) {
+        return { allowed: true, usage }
+      }
+
       // Plan illimité
       if (usage.max_sessions_per_month === null) {
         return { allowed: true, usage }
@@ -221,7 +239,16 @@ export class QuotaService {
   ): Promise<boolean> {
     try {
       const usage = await this.getUsage(organizationId)
-      if (!usage || !usage.features) {
+      if (!usage) {
+        return false
+      }
+
+      // Abonnement exempté (grandfathering) : accès à toutes les features
+      if (usage.grandfathered) {
+        return true
+      }
+
+      if (!usage.features) {
         return false
       }
 

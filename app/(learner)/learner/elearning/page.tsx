@@ -23,9 +23,10 @@ import {
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
+import { FeatureLocked } from '@/components/quota/feature-locked'
 
 export default function LearnerElearningPage() {
-  const { student: studentData, studentId } = useLearnerContext()
+  const { student: studentData, studentId, hasFeature, featuresLoading } = useLearnerContext()
   const supabase = useMemo(() => (studentId ? createLearnerClient(studentId) : null), [studentId])
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -148,6 +149,15 @@ export default function LearnerElearningPage() {
   }))
 
   const isLoading = isLoadingSessionCourses
+
+  if (!featuresLoading && !hasFeature('e_learning')) {
+    return (
+      <FeatureLocked
+        featureName="Portail e-learning"
+        featureDescription="Cette fonctionnalité n'est pas incluse dans le forfait de votre organisme de formation."
+      />
+    )
+  }
 
   // Filtrer les cours
   const inProgressCourses = enrollments?.filter((e: any) => 

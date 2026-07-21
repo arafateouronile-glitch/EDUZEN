@@ -758,10 +758,17 @@ async function createSession(input: ToolInput, supabase: SupabaseClient, orgId: 
     .single()
   if (!formationCheck) return `Formation introuvable ou n'appartient pas à votre organisation.`
 
+  const { QuotaService } = await import('@/lib/services/quota.service')
+  const quotaCheck = await new QuotaService(supabase).canCreateSession(orgId)
+  if (!quotaCheck.allowed) {
+    return quotaCheck.reason || 'Limite de sessions mensuelles atteinte pour votre plan.'
+  }
+
   const { data, error } = await supabase
     .from('sessions')
     .insert({
       formation_id: input.formation_id as string,
+      organization_id: orgId,
       name: input.name as string,
       start_date: input.start_date as string,
       end_date: input.end_date as string,
@@ -999,6 +1006,12 @@ async function createProgram(input: ToolInput, supabase: SupabaseClient, orgId: 
 }
 
 async function createStudent(input: ToolInput, supabase: SupabaseClient, orgId: string) {
+  const { QuotaService } = await import('@/lib/services/quota.service')
+  const quotaCheck = await new QuotaService(supabase).canAddStudent(orgId)
+  if (!quotaCheck.allowed) {
+    return quotaCheck.reason || 'Limite d\'étudiants atteinte pour votre plan.'
+  }
+
   // Generate student_number using the same logic as the dashboard
   const { data: org } = await supabase
     .from('organizations')

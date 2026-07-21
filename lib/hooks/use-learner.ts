@@ -270,6 +270,31 @@ export function useLearner() {
     setAccessToken(sessionToken)
   }, [sessionToken])
 
+  // Features du forfait de l'organisation (pour le gating de fonctionnalités
+  // premium côté apprenant, ex: e-learning). Passe par une RPC SECURITY
+  // DEFINER (get_learner_organization_features) car les policies RLS
+  // standard sur subscriptions/plans ne matchent jamais un client apprenant
+  // sans auth.uid().
+  const { data: organizationFeatures, isLoading: featuresLoading } = useQuery({
+    queryKey: ['learner-organization-features', studentId],
+    queryFn: async (): Promise<{ features: Record<string, unknown>; grandfathered: boolean }> => {
+      if (!studentId) return { features: {}, grandfathered: false }
+      const supabase = createLearnerClient(studentId)
+      const { data, error } = await supabase.rpc('get_learner_organization_features', {
+        p_student_id: studentId,
+      })
+      if (error || !data) {
+        logger.error('[useLearner] Error fetching organization features', error as Error, { studentId })
+        return { features: {}, grandfathered: false }
+      }
+      return data as { features: Record<string, unknown>; grandfathered: boolean }
+    },
+    enabled: !!studentId,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5,
+  })
+
   const isLoading = studentLoading
   const hasStudent = !!student && !!studentId
 
@@ -281,6 +306,9 @@ export function useLearner() {
     hasStudent,
     error: studentError,
     organizationId: student?.organization_id || null,
+    featuresLoading,
+    hasFeature: (featureName: string) =>
+      !!organizationFeatures?.grandfathered || organizationFeatures?.features?.[featureName] === true,
   }
 }
 

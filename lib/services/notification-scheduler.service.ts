@@ -10,6 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { Database } from '@/types/database.types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { QuotaService } from '@/lib/services/quota.service'
 
 type ScheduledNotification = {
   id: string
@@ -64,11 +65,17 @@ export class NotificationSchedulerService {
    */
   async scheduleSessionReminders(organizationId: string): Promise<void> {
     const supabaseAdmin = createAdminClient()
-    
+
+    const hasAutomatedReminders = await new QuotaService(supabaseAdmin).hasFeature(
+      organizationId,
+      'automated_reminders'
+    )
+    if (!hasAutomatedReminders) return
+
     // Récupérer les préférences de notification de l'organisation
     const { data: org } = await supabaseAdmin
       .from('organizations')
-      .select('settings, subscription_tier')
+      .select('settings')
       .eq('id', organizationId)
       .single()
 
@@ -76,10 +83,8 @@ export class NotificationSchedulerService {
 
     type OrgNotificationSettings = { notifications?: { whatsapp_enabled?: boolean; email_enabled?: boolean; reminder_hours_before?: number } }
     const settings = (org.settings as OrgNotificationSettings | null) ?? {}
-    const isPremium = ['premium', 'enterprise'].includes(org.subscription_tier || '')
-    
-    // WhatsApp uniquement pour les abonnements premium
-    const whatsappEnabled = isPremium && settings.notifications?.whatsapp_enabled
+
+    const whatsappEnabled = settings.notifications?.whatsapp_enabled
     const emailEnabled = settings.notifications?.email_enabled !== false
     const reminderHours = settings.notifications?.reminder_hours_before || 24
 

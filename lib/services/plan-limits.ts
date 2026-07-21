@@ -32,12 +32,17 @@ const PLAN_FEATURES: Record<PlanTier, {
     maxWebhooksCount: 0,
     maxRequestsPerMonth: 0,
   },
+  // @deprecated 'premium' n'est plus un plan vendable (le plan vendable
+  // au-dessus de Pro s'appelle "Enterprise"). Conservé en alias sur les
+  // mêmes valeurs qu'"enterprise" pour ne pas faire tomber en fail-closed
+  // silencieux une organisation dont `subscription_tier` porterait encore
+  // cette valeur legacy (champ texte libre, sans contrainte CHECK).
   premium: {
     apiAccess: true,
     webhooksAccess: true,
-    maxApiKeysCount: 5,
-    maxWebhooksCount: 10,
-    maxRequestsPerMonth: 10000,
+    maxApiKeysCount: 20,
+    maxWebhooksCount: 50,
+    maxRequestsPerMonth: -1,
   },
   enterprise: {
     apiAccess: true,

@@ -11,6 +11,8 @@ interface LearnerContextType {
   isLoading: boolean
   hasStudent: boolean
   organizationId: string | null
+  featuresLoading: boolean
+  hasFeature: (featureName: string) => boolean
 }
 
 const LearnerContext = createContext<LearnerContextType | null>(null)

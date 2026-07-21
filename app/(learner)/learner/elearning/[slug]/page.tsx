@@ -44,6 +44,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 import { toProxiedFileUrl } from '@/lib/utils/elearning-file-proxy'
+import { FeatureLocked } from '@/components/quota/feature-locked'
 
 // Normalise les blocs venus de l'éditeur "studio" (courses/[slug]/edit) — qui
 // stocke un format différent (image/interaction en types dédiés, media sans
@@ -159,7 +160,7 @@ export default function LearnerCourseDetailPage() {
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
-  const { student: studentData, studentId } = useLearnerContext()
+  const { student: studentData, studentId, hasFeature, featuresLoading } = useLearnerContext()
   const supabase = useMemo(() => (studentId ? createLearnerClient(studentId) : null), [studentId])
   const queryClient = useQueryClient()
   const { addToast } = useToast()
@@ -1306,6 +1307,15 @@ export default function LearnerCourseDetailPage() {
           </Button>
         </Link>
       </div>
+    )
+  }
+
+  if (!featuresLoading && !hasFeature('e_learning')) {
+    return (
+      <FeatureLocked
+        featureName="Portail e-learning"
+        featureDescription="Cette fonctionnalité n'est pas incluse dans le forfait de votre organisme de formation."
+      />
     )
   }
 

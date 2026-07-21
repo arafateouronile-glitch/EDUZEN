@@ -21,6 +21,9 @@ import { useToast } from '@/components/ui/toast'
 import { LocationSelect } from '@/components/ui/location-select'
 import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { AppError, ErrorCode } from '@/lib/errors'
+import { PaywallModal } from '@/components/quota/paywall-modal'
+import type { OrganizationUsage } from '@/lib/services/quota.service'
 
 const sessionSchema = z.object({
   name: z.string().min(3, 'Le nom doit contenir au moins 3 caractères'),
@@ -43,6 +46,7 @@ export default function NewSessionPage() {
   
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([])
   const [selectedFormations, setSelectedFormations] = useState<string[]>([])
+  const [paywallUsage, setPaywallUsage] = useState<OrganizationUsage | null>(null)
 
   // Récupérer les programmes
   const { data: programs } = useQuery({
@@ -102,6 +106,10 @@ export default function NewSessionPage() {
       router.push('/dashboard/sessions')
     },
     onError: (error: Error) => {
+      if (error instanceof AppError && error.code === ErrorCode.QUOTA_EXCEEDED && error.context.usage) {
+        setPaywallUsage(error.context.usage as OrganizationUsage)
+        return
+      }
       addToast({
         type: 'error',
         title: 'Erreur',
@@ -290,6 +298,15 @@ export default function NewSessionPage() {
           </Button>
         </div>
       </form>
+
+      {paywallUsage && (
+        <PaywallModal
+          open={!!paywallUsage}
+          onOpenChange={(open) => !open && setPaywallUsage(null)}
+          usage={paywallUsage}
+          actionType="session"
+        />
+      )}
     </motion.div>
   )
 }

@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserOrgId } from '@/lib/utils/with-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { BPFService } from '@/lib/services/bpf.service'
+import { QuotaService } from '@/lib/services/quota.service'
 import { logger } from '@/lib/utils/logger'
 import { heavyRateLimiter, createRateLimitResponse } from '@/lib/utils/rate-limiter'
 import type { BPFCerfaData } from '@/lib/services/bpf.service'
@@ -194,6 +195,14 @@ export async function POST(request: NextRequest) {
     const orgId = await getUserOrgId(supabase, user.id)
     if (!orgId) {
       return NextResponse.json({ error: 'Organisation introuvable' }, { status: 403 })
+    }
+
+    const hasBpfExport = await new QuotaService(supabase).hasFeature(orgId, 'bpf_export')
+    if (!hasBpfExport) {
+      return NextResponse.json(
+        { error: 'L\'export BPF n\'est pas disponible dans votre forfait', code: 'FEATURE_NOT_AVAILABLE' },
+        { status: 403 }
+      )
     }
 
     const bpfService = new BPFService(supabase)

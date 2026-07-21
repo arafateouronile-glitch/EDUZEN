@@ -9,6 +9,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { QuotaService } from '@/lib/services/quota.service'
 
 interface OrgNotificationSettings {
   notifications?: {
@@ -36,12 +37,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabaseAdmin = createAdminClient()
+    const quotaService = new QuotaService(supabaseAdmin)
     const results: { organizationId: string; scheduled: number; errors: string[] }[] = []
 
     // Récupérer toutes les organisations avec des abonnements actifs
     const { data: organizations } = await supabaseAdmin
       .from('organizations')
-      .select('id, name, settings, subscription_tier')
+      .select('id, name, settings')
       .eq('subscription_status', 'active')
 
     if (!organizations?.length) {
@@ -60,15 +62,19 @@ export async function GET(request: NextRequest) {
       }
 
       try {
+        const hasAutomatedReminders = await quotaService.hasFeature(org.id, 'automated_reminders')
+        if (!hasAutomatedReminders) {
+          continue
+        }
+
         const settings = (org.settings as OrgNotificationSettings) || {}
-        const isPremium = ['premium', 'enterprise'].includes(org.subscription_tier || '')
-        
+
         // Vérifier si les rappels sont activés
         if (settings.notifications?.reminder_enabled === false) {
           continue
         }
 
-        const whatsappEnabled = isPremium && settings.notifications?.whatsapp_enabled
+        const whatsappEnabled = settings.notifications?.whatsapp_enabled
         const emailEnabled = settings.notifications?.email_enabled !== false
         const reminderHours = settings.notifications?.reminder_hours_before || 24
 

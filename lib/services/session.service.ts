@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TableRow, TableInsert, TableUpdate, FlexibleInsert, FlexibleUpdate } from '@/lib/types/supabase-helpers'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { AppError, ErrorCode, ErrorSeverity } from '@/lib/errors'
+import { QuotaService } from './quota.service'
 
 // Types pour les sessions (niveau 3)
 type Session = TableRow<'sessions'>
@@ -165,7 +167,9 @@ export class SessionService {
   /**
    * Crée une nouvelle session avec optionnellement plusieurs programmes associés
    */
-  async createSession(session: FlexibleInsert<'sessions'>, programIds?: string[], organizationId?: string) {
+  async createSession(session: FlexibleInsert<'sessions'>, programIds?: string[]) {
+    let sessionToInsert = session
+
     // Vérifier d'abord que la formation existe et appartient à l'organisation de l'utilisateur
     if (session.formation_id) {
       const { data: formation, error: formationError } = await this.supabase
@@ -184,12 +188,29 @@ export class SessionService {
       }
 
       logger.debug('SessionService - Formation trouvée', { formationId: formation.id })
+
+      if (formation.organization_id) {
+        const quotaCheck = await new QuotaService(this.supabase).canCreateSession(formation.organization_id)
+        if (!quotaCheck.allowed) {
+          throw new AppError(
+            quotaCheck.reason || 'Limite de sessions mensuelles atteinte pour votre plan',
+            ErrorCode.QUOTA_EXCEEDED,
+            ErrorSeverity.MEDIUM,
+            { usage: quotaCheck.usage }
+          )
+        }
+
+        // La colonne organization_id de sessions n'est pas toujours renseignée
+        // par l'appelant : on la dérive de la formation pour fiabiliser le
+        // comptage d'usage (organization_usage compte sur sessions.organization_id).
+        sessionToInsert = { ...session, organization_id: formation.organization_id }
+      }
     }
 
     // Créer la session
     const { data, error } = await this.supabase
       .from('sessions')
-      .insert(session as SessionInsert)
+      .insert(sessionToInsert as SessionInsert)
       .select()
       .single()
 
@@ -425,6 +446,21 @@ export class SessionService {
         .eq('id', id)
         .single()
       if (fetchError) throw fetchError
+
+      if (original?.organization_id) {
+        const quotaCheck = await new QuotaService(this.supabase).canCreateSession(original.organization_id)
+        if (!quotaCheck.allowed) {
+          throw new AppError(
+            quotaCheck.reason || 'Limite de sessions mensuelles atteinte pour votre plan',
+            ErrorCode.QUOTA_EXCEEDED,
+            ErrorSeverity.MEDIUM,
+            { usage: quotaCheck.usage }
+          )
+        }
+      } else {
+        logger.warn('SessionService.duplicateSession - organization_id manquant sur la session d\'origine, quota non vérifié', { id })
+      }
+
       const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = original as any
       const copy = {
         ...rest,
@@ -666,6 +702,16 @@ export class SessionService {
     programIds?: string[],
     formationIds?: string[]
   ) {
+    const quotaCheck = await new QuotaService(this.supabase).canCreateSession(session.organization_id)
+    if (!quotaCheck.allowed) {
+      throw new AppError(
+        quotaCheck.reason || 'Limite de sessions mensuelles atteinte pour votre plan',
+        ErrorCode.QUOTA_EXCEEDED,
+        ErrorSeverity.MEDIUM,
+        { usage: quotaCheck.usage }
+      )
+    }
+
     // Créer la session sans formation_id
     const { data, error } = await this.supabase
       .from('sessions')

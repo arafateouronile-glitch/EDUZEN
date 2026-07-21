@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { studentService } from '@/lib/services/student.service.client'
 import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -576,20 +577,15 @@ export function ConfigApprenants({
         studentId = existingByEmail.data.id
       } else {
         // Créer un nouvel étudiant depuis les données du candidat
-        const { data: created, error } = await supabase
-          .from('students')
-          .insert({
-            first_name: candidate.first_name,
-            last_name: candidate.last_name,
-            email: candidate.email || null,
-            phone: candidate.phone || null,
-            organization_id: user.organization_id,
-            status: 'active',
-            student_number: '',
-          })
-          .select('id')
-          .single()
-        if (error) throw error
+        const created = await studentService.create({
+          first_name: candidate.first_name,
+          last_name: candidate.last_name,
+          email: candidate.email || null,
+          phone: candidate.phone || null,
+          organization_id: user.organization_id,
+          status: 'active',
+          student_number: '',
+        })
         studentId = created.id
       }
 

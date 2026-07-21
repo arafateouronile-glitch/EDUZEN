@@ -370,6 +370,26 @@ describe('QuotaService', () => {
 
       expect(result).toEqual({ allowed: true })
     })
+
+    it('devrait autoriser un abonnement grandfathered même si la limite est dépassée', async () => {
+      mockSupabase.rpc.mockReturnValueOnce(
+        Promise.resolve({ data: undefined, error: { message: 'RPC failed' } })
+      )
+      vi.spyOn(service, 'getUsage').mockResolvedValueOnce({
+        plan_name: 'Starter',
+        max_students: 20,
+        current_student_count: 999,
+        max_sessions_per_month: 5,
+        current_sessions_count: 0,
+        subscription_status: 'active',
+        features: {},
+        grandfathered: true,
+      })
+
+      const result = await service.canAddStudent('org-1')
+
+      expect(result.allowed).toBe(true)
+    })
   })
 
   describe('canCreateSession', () => {
@@ -482,6 +502,26 @@ describe('QuotaService', () => {
 
       expect(result).toEqual({ allowed: true })
     })
+
+    it('devrait autoriser un abonnement grandfathered même si la limite est dépassée', async () => {
+      mockSupabase.rpc.mockReturnValueOnce(
+        Promise.resolve({ data: undefined, error: { message: 'RPC failed' } })
+      )
+      vi.spyOn(service, 'getUsage').mockResolvedValueOnce({
+        plan_name: 'Starter',
+        max_students: 20,
+        current_student_count: 0,
+        max_sessions_per_month: 5,
+        current_sessions_count: 999,
+        subscription_status: 'active',
+        features: {},
+        grandfathered: true,
+      })
+
+      const result = await service.canCreateSession('org-1')
+
+      expect(result.allowed).toBe(true)
+    })
   })
 
   describe('hasFeature', () => {
@@ -540,6 +580,19 @@ describe('QuotaService', () => {
       const result = await service.hasFeature('org-1', 'advanced')
 
       expect(result).toBe(false)
+    })
+
+    it('devrait retourner true pour un abonnement grandfathered même sans la feature', async () => {
+      mockSupabase.rpc.mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: { features: { advanced: false }, grandfathered: true },
+          error: null,
+        }),
+      })
+
+      const result = await service.hasFeature('org-1', 'advanced')
+
+      expect(result).toBe(true)
     })
   })
 

@@ -19434,6 +19434,7 @@ export type Database = {
           created_at: string | null
           current_period_end: string | null
           current_period_start: string | null
+          grandfathered: boolean
           id: string
           organization_id: string
           payment_method_id: string | null
@@ -19450,6 +19451,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          grandfathered?: boolean
           id?: string
           organization_id: string
           payment_method_id?: string | null
@@ -19466,6 +19468,7 @@ export type Database = {
           created_at?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
+          grandfathered?: boolean
           id?: string
           organization_id?: string
           payment_method_id?: string | null
@@ -22494,6 +22497,7 @@ export type Database = {
           current_sessions_count: number | null
           current_student_count: number | null
           features: Json | null
+          grandfathered: boolean | null
           max_sessions_per_month: number | null
           max_students: number | null
           organization_id: string | null
@@ -22937,6 +22941,10 @@ export type Database = {
           total_amount: number
         }[]
       }
+      get_learner_organization_features: {
+        Args: { p_student_id: string }
+        Returns: Json
+      }
       get_learner_student: { Args: { p_student_id: string }; Returns: Json }
       get_learner_student_id: { Args: never; Returns: string }
       get_next_version_number: {
@@ -22949,6 +22957,7 @@ export type Database = {
           current_sessions_count: number
           current_student_count: number
           features: Json
+          grandfathered: boolean
           max_sessions_per_month: number
           max_students: number
           plan_name: string
