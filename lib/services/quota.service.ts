@@ -248,6 +248,14 @@ export class QuotaService {
         return true
       }
 
+      // Période d'essai : tous les modules sont débloqués quel que soit le
+      // plan choisi à l'inscription, pour permettre une évaluation complète
+      // du produit. Les quotas (étudiants/sessions) restent eux gouvernés
+      // par le plan sélectionné — seule cette méthode (features) bypass.
+      if (usage.subscription_status === 'trialing') {
+        return true
+      }
+
       if (!usage.features) {
         return false
       }

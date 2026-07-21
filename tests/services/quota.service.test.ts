@@ -594,6 +594,19 @@ describe('QuotaService', () => {
 
       expect(result).toBe(true)
     })
+
+    it('devrait retourner true pendant la période d\'essai même sans la feature', async () => {
+      mockSupabase.rpc.mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: { features: { advanced: false }, grandfathered: false, subscription_status: 'trialing' },
+          error: null,
+        }),
+      })
+
+      const result = await service.hasFeature('org-1', 'advanced')
+
+      expect(result).toBe(true)
+    })
   })
 
   describe('getCurrentPlan', () => {
