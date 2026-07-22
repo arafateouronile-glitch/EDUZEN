@@ -31,6 +31,39 @@ type Program = TableRow<'programs'>
 type Organization = TableRow<'organizations'>
 type Company = TableRow<'companies'>
 
+/** Mappe une ligne external_entities → Company pour compatibilité avec extractDocumentVariables */
+function mapExternalEntityToCompany(ext: Record<string, unknown>): Company {
+  return {
+    id: ext.id as string,
+    name: ext.name as string,
+    address: ext.address as string | null,
+    city: ext.city as string | null,
+    postal_code: ext.postal_code as string | null,
+    phone: ext.phone as string | null,
+    email: ext.email as string | null,
+    billing_email: ext.contact_email as string | null,
+    siret: ext.siret as string | null,
+    siren: ext.siren as string | null,
+    website: ext.website as string | null,
+    metadata: { tva_number: ext.vat_number },
+    organization_id: ext.organization_id as string,
+    is_active: ext.is_active as boolean,
+    billing_address: null,
+    country: ext.country as string | null,
+    legal_form: ext.legal_form as string | null,
+    logo_url: null,
+    notes: null,
+    opco_contact_email: null,
+    opco_id: null,
+    opco_name: null,
+    created_at: ext.created_at as string,
+    updated_at: ext.updated_at as string,
+    deleted_at: null,
+    deleted_by: null,
+    external_entity_id: null,
+  } as Company
+}
+
 /** Récupère l'entité principale d'un étudiant (external_entities via student_entities) */
 async function fetchStudentCompany(studentId: string): Promise<Company | null> {
   try {
@@ -44,37 +77,7 @@ async function fetchStudentCompany(studentId: string): Promise<Company | null> {
       .limit(1)
       .single()
     if (seData?.external_entities && !Array.isArray(seData.external_entities)) {
-      const ext = seData.external_entities as Record<string, unknown>
-      // Mapper external_entities → Company pour compatibilité avec extractDocumentVariables
-      return {
-        id: ext.id as string,
-        name: ext.name as string,
-        address: ext.address as string | null,
-        city: ext.city as string | null,
-        postal_code: ext.postal_code as string | null,
-        phone: ext.phone as string | null,
-        email: ext.email as string | null,
-        billing_email: ext.contact_email as string | null,
-        siret: ext.siret as string | null,
-        siren: ext.siren as string | null,
-        website: ext.website as string | null,
-        metadata: { tva_number: ext.vat_number },
-        organization_id: ext.organization_id as string,
-        is_active: ext.is_active as boolean,
-        billing_address: null,
-        country: ext.country as string | null,
-        legal_form: ext.legal_form as string | null,
-        logo_url: null,
-        notes: null,
-        opco_contact_email: null,
-        opco_id: null,
-        opco_name: null,
-        created_at: ext.created_at as string,
-        updated_at: ext.updated_at as string,
-        deleted_at: null,
-        deleted_by: null,
-        external_entity_id: null,
-      } as Company
+      return mapExternalEntityToCompany(seData.external_entities as Record<string, unknown>)
     }
     // Fallback : company_employees
     const { data: ceData } = await supabase
@@ -91,6 +94,35 @@ async function fetchStudentCompany(studentId: string): Promise<Company | null> {
   } catch {
     return null
   }
+}
+
+/**
+ * Récupère une entreprise inscrite à une session sans liste nominative
+ * (session_entity_reservations, cf. config-apprenants.tsx) et la mappe en
+ * Company pour compatibilité avec extractDocumentVariables.
+ */
+async function fetchEntityCompany(entityId: string): Promise<Company | null> {
+  try {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('external_entities')
+      .select('*')
+      .eq('id', entityId)
+      .single()
+    if (!data) return null
+    return mapExternalEntityToCompany(data as Record<string, unknown>)
+  } catch {
+    return null
+  }
+}
+
+/** Entreprise inscrite à une session sans liste nominative (session_entity_reservations) */
+export interface SessionEntityReservation {
+  id: string
+  entity_id: string
+  expected_count: number
+  total_amount?: number | null
+  external_entities?: { name?: string | null; type?: string | null } | null
 }
 
 interface DocumentGenerationProps {
@@ -1719,61 +1751,104 @@ export function useDocumentGeneration({
     }
 
     try {
-      // Générer le HTML de la convocation
-      const html = await generateConvocationHTML({
-        student: {
-          first_name: student.first_name,
-          last_name: student.last_name,
-          email: student.email || undefined,
-          phone: student.phone || undefined,
-        },
-        session: {
-          name: sessionData.name,
-          start_date: sessionData.start_date,
-          end_date: sessionData.end_date,
-          start_time: sessionData.start_time || undefined,
-          end_time: sessionData.end_time || undefined,
-          location: sessionData.location || undefined,
-        },
-        formation: {
-          name: formation.name,
-          code: formation.code || undefined,
-        },
-        program: program ? { name: program.name } : undefined,
-        organization: {
-          name: organization.name,
-          address: organization.address || undefined,
-          phone: organization.phone || undefined,
-          email: organization.email || undefined,
-          logo_url: organization.logo_url || undefined,
-        },
-        issueDate: new Date().toISOString(),
-        language: 'fr',
-        organizationId: organization.id,
-      })
+      const templateService = new DocumentTemplateService(createClient())
+      const template = await templateService.getDefaultTemplate(organization.id, 'convocation')
 
-      // Créer un élément temporaire pour générer le PDF
-      // generateConvocationHTML retourne un document HTML complet — utiliser DOMParser
-      // (même approche que physical-attendance-sheet-downloader)
-      const tempId = `temp-convocation-email-${Date.now()}`
-      const tempDiv = document.createElement('div')
-      tempDiv.id = tempId
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
-      tempDiv.style.top = '0'
-      tempDiv.style.width = '794px'
-      tempDiv.style.minHeight = '297mm'
-      tempDiv.style.backgroundColor = 'white'
-      const parsed = new DOMParser().parseFromString(html, 'text/html')
-      tempDiv.appendChild(parsed.documentElement)
-      document.body.appendChild(tempDiv)
+      let pdfBlob: Blob
 
-      let pdfBlob!: Blob
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        pdfBlob = await generatePDFBlobFromHTML(tempId)
-      } finally {
-        document.body.removeChild(tempDiv)
+      if (template) {
+        // Même pipeline que le téléchargement : API generate-pdf (Puppeteer) avec le
+        // jeu complet de variables (extractDocumentVariables). Sans ça, le template
+        // personnalisé de l'organisation (balises ecole_*/eleve_*/convocation_*) ne
+        // recevait que le petit jeu de variables codées en dur de generateConvocationHTML
+        // et restait rempli de balises {xxx} non remplacées dans l'email envoyé.
+        const emailConvocationCompany = await fetchStudentCompany(student.id)
+        const variables = extractDocumentVariables({
+          student: student as any,
+          session: {
+            ...sessionData,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            start_time: sessionData.start_time || undefined,
+            end_time: sessionData.end_time || undefined,
+            location: sessionData.location || undefined,
+            formations: formation,
+          } as any,
+          organization: organization as any,
+          program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+          company: emailConvocationCompany,
+          language: 'fr',
+          issueDate: new Date().toISOString(),
+        })
+
+        const response = await fetch('/api/documents/generate-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template, variables, documentId: undefined, organizationId: organization.id }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+          throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        }
+
+        pdfBlob = await response.blob()
+      } else {
+        // Fallback : pas de template personnalisé, génération client avec le template
+        // codé en dur (variables cohérentes entre elles dans ce cas)
+        const html = await generateConvocationHTML({
+          student: {
+            first_name: student.first_name,
+            last_name: student.last_name,
+            email: student.email || undefined,
+            phone: student.phone || undefined,
+          },
+          session: {
+            name: sessionData.name,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            start_time: sessionData.start_time || undefined,
+            end_time: sessionData.end_time || undefined,
+            location: sessionData.location || undefined,
+          },
+          formation: {
+            name: formation.name,
+            code: formation.code || undefined,
+          },
+          program: program ? { name: program.name } : undefined,
+          organization: {
+            name: organization.name,
+            address: organization.address || undefined,
+            phone: organization.phone || undefined,
+            email: organization.email || undefined,
+            logo_url: organization.logo_url || undefined,
+          },
+          issueDate: new Date().toISOString(),
+          language: 'fr',
+          organizationId: organization.id,
+        })
+
+        // generateConvocationHTML retourne un document HTML complet — utiliser DOMParser
+        // (même approche que physical-attendance-sheet-downloader)
+        const tempId = `temp-convocation-email-${Date.now()}`
+        const tempDiv = document.createElement('div')
+        tempDiv.id = tempId
+        tempDiv.style.position = 'absolute'
+        tempDiv.style.left = '-9999px'
+        tempDiv.style.top = '0'
+        tempDiv.style.width = '794px'
+        tempDiv.style.minHeight = '297mm'
+        tempDiv.style.backgroundColor = 'white'
+        const parsed = new DOMParser().parseFromString(html, 'text/html')
+        tempDiv.appendChild(parsed.documentElement)
+        document.body.appendChild(tempDiv)
+
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 500))
+          pdfBlob = await generatePDFBlobFromHTML(tempId)
+        } finally {
+          document.body.removeChild(tempDiv)
+        }
       }
 
       // Convertir le texte en HTML si nécessaire (ajouter des retours à la ligne)
@@ -1824,61 +1899,102 @@ export function useDocumentGeneration({
     }
 
     try {
-      // Générer le HTML de la convocation
-      const html = await generateConvocationHTML({
-        student: {
-          first_name: student.first_name,
-          last_name: student.last_name,
-          email: student.email || undefined,
-          phone: student.phone || undefined,
-        },
-        session: {
-          name: sessionData.name,
-          start_date: sessionData.start_date,
-          end_date: sessionData.end_date,
-          start_time: sessionData.start_time || undefined,
-          end_time: sessionData.end_time || undefined,
-          location: sessionData.location || undefined,
-        },
-        formation: {
-          name: formation.name,
-          code: formation.code || undefined,
-        },
-        program: program ? { name: program.name } : undefined,
-        organization: {
-          name: organization.name,
-          address: organization.address || undefined,
-          phone: organization.phone || undefined,
-          email: organization.email || undefined,
-          logo_url: organization.logo_url || undefined,
-        },
-        issueDate: new Date().toISOString(),
-        language: 'fr',
-        organizationId: organization.id,
-      })
+      const templateService = new DocumentTemplateService(createClient())
+      const template = await templateService.getDefaultTemplate(organization.id, 'convocation')
 
-      // Créer un élément temporaire pour générer le PDF
-      // generateConvocationHTML retourne un document HTML complet — utiliser DOMParser
-      // (même approche que physical-attendance-sheet-downloader)
-      const tempId2 = `temp-convocation-email-${Date.now()}`
-      const tempDiv = document.createElement('div')
-      tempDiv.id = tempId2
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
-      tempDiv.style.top = '0'
-      tempDiv.style.width = '794px'
-      tempDiv.style.minHeight = '297mm'
-      tempDiv.style.backgroundColor = 'white'
-      const parsed2 = new DOMParser().parseFromString(html, 'text/html')
-      tempDiv.appendChild(parsed2.documentElement)
-      document.body.appendChild(tempDiv)
+      let pdfBlob2: Blob
 
-      let pdfBlob2!: Blob
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        pdfBlob2 = await generatePDFBlobFromHTML(tempId2)
-      } finally {
-        document.body.removeChild(tempDiv)
+      if (template) {
+        // Même pipeline que le téléchargement : API generate-pdf (Puppeteer) avec le
+        // jeu complet de variables (extractDocumentVariables), sinon le template
+        // personnalisé de l'organisation reste rempli de balises {xxx} non remplacées.
+        const emailConvocationCompany = await fetchStudentCompany(student.id)
+        const variables = extractDocumentVariables({
+          student: student as any,
+          session: {
+            ...sessionData,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            start_time: sessionData.start_time || undefined,
+            end_time: sessionData.end_time || undefined,
+            location: sessionData.location || undefined,
+            formations: formation,
+          } as any,
+          organization: organization as any,
+          program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+          company: emailConvocationCompany,
+          language: 'fr',
+          issueDate: new Date().toISOString(),
+        })
+
+        const response = await fetch('/api/documents/generate-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template, variables, documentId: undefined, organizationId: organization.id }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+          throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        }
+
+        pdfBlob2 = await response.blob()
+      } else {
+        // Fallback : pas de template personnalisé, génération client avec le template
+        // codé en dur (variables cohérentes entre elles dans ce cas)
+        const html = await generateConvocationHTML({
+          student: {
+            first_name: student.first_name,
+            last_name: student.last_name,
+            email: student.email || undefined,
+            phone: student.phone || undefined,
+          },
+          session: {
+            name: sessionData.name,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            start_time: sessionData.start_time || undefined,
+            end_time: sessionData.end_time || undefined,
+            location: sessionData.location || undefined,
+          },
+          formation: {
+            name: formation.name,
+            code: formation.code || undefined,
+          },
+          program: program ? { name: program.name } : undefined,
+          organization: {
+            name: organization.name,
+            address: organization.address || undefined,
+            phone: organization.phone || undefined,
+            email: organization.email || undefined,
+            logo_url: organization.logo_url || undefined,
+          },
+          issueDate: new Date().toISOString(),
+          language: 'fr',
+          organizationId: organization.id,
+        })
+
+        // generateConvocationHTML retourne un document HTML complet — utiliser DOMParser
+        // (même approche que physical-attendance-sheet-downloader)
+        const tempId2 = `temp-convocation-email-${Date.now()}`
+        const tempDiv = document.createElement('div')
+        tempDiv.id = tempId2
+        tempDiv.style.position = 'absolute'
+        tempDiv.style.left = '-9999px'
+        tempDiv.style.top = '0'
+        tempDiv.style.width = '794px'
+        tempDiv.style.minHeight = '297mm'
+        tempDiv.style.backgroundColor = 'white'
+        const parsed2 = new DOMParser().parseFromString(html, 'text/html')
+        tempDiv.appendChild(parsed2.documentElement)
+        document.body.appendChild(tempDiv)
+
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 500))
+          pdfBlob2 = await generatePDFBlobFromHTML(tempId2)
+        } finally {
+          document.body.removeChild(tempDiv)
+        }
       }
 
       // Créer le corps de l'email
@@ -2530,81 +2646,122 @@ export function useDocumentGeneration({
     }
 
     try {
-      const html = await generateContractHTML({
-        student: {
-          first_name: student.first_name,
-          last_name: student.last_name,
-          email: student.email || undefined,
-          phone: student.phone || undefined,
-          address: student.address || undefined,
-          date_of_birth: student.date_of_birth || undefined,
-        },
-        session: {
-          name: sessionData.name,
-          start_date: sessionData.start_date,
-          end_date: sessionData.end_date,
-          location: sessionData.location || undefined,
-        },
-        formation: {
-          name: formation.name,
-          code: formation.code || undefined,
-          price: (formation as FormationWithRelations & { price?: number }).price || undefined,
-          duration_hours: (formation as FormationWithRelations & { duration_hours?: number }).duration_hours || undefined,
-        },
-        program: program ? { name: program.name } : undefined,
-        organization: {
-          name: organization.name,
-          address: organization.address || undefined,
-          phone: organization.phone || undefined,
-          email: organization.email || undefined,
-          logo_url: organization.logo_url || undefined,
-        },
-        enrollment: {
-          enrollment_date: enrollment.enrollment_date || '',
-          total_amount: enrollment.total_amount || 0,
-          paid_amount: enrollment.paid_amount || 0,
-        },
-        issueDate: new Date().toISOString(),
-        language: 'fr',
-        organizationId: organization.id,
-      })
+      const templateService = new DocumentTemplateService(createClient())
+      const template = await templateService.getDefaultTemplate(organization.id, 'contrat')
 
-      // Créer un élément temporaire pour générer le PDF
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = html
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
-      tempDiv.style.top = '-9999px'
-      tempDiv.style.width = '210mm'
-      tempDiv.style.minHeight = '297mm'
-      document.body.appendChild(tempDiv)
+      let pdfBlob: Blob
 
-      // Attendre que le DOM soit mis à jour
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      if (template) {
+        // Même pipeline que le téléchargement : API generate-pdf (Puppeteer) avec le
+        // jeu complet de variables (extractDocumentVariables), sinon le template
+        // personnalisé de l'organisation reste rempli de balises {xxx} non remplacées.
+        const emailContractCompany = await fetchStudentCompany(student.id)
+        const variables = extractDocumentVariables({
+          student: student as any,
+          session: {
+            ...sessionData,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            location: sessionData.location || undefined,
+          } as any,
+          organization: organization as any,
+          program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+          company: emailContractCompany,
+          language: 'fr',
+          issueDate: new Date().toISOString(),
+        })
 
-      // Chercher l'élément de document
-      let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
-      if (!element) {
-        // Essayer de chercher directement par ID
-        element = tempDiv.querySelector('#contract-document') as HTMLElement
-      }
-      if (!element) {
-        // Si toujours pas trouvé, utiliser le premier div
-        element = tempDiv.querySelector('div') as HTMLElement
-      }
-      if (!element) {
+        const response = await fetch('/api/documents/generate-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template, variables, documentId: undefined, organizationId: organization.id }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+          throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+        }
+
+        pdfBlob = await response.blob()
+      } else {
+        // Fallback : pas de template personnalisé, génération client avec le template
+        // codé en dur (variables cohérentes entre elles dans ce cas)
+        const html = await generateContractHTML({
+          student: {
+            first_name: student.first_name,
+            last_name: student.last_name,
+            email: student.email || undefined,
+            phone: student.phone || undefined,
+            address: student.address || undefined,
+            date_of_birth: student.date_of_birth || undefined,
+          },
+          session: {
+            name: sessionData.name,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            location: sessionData.location || undefined,
+          },
+          formation: {
+            name: formation.name,
+            code: formation.code || undefined,
+            price: (formation as FormationWithRelations & { price?: number }).price || undefined,
+            duration_hours: (formation as FormationWithRelations & { duration_hours?: number }).duration_hours || undefined,
+          },
+          program: program ? { name: program.name } : undefined,
+          organization: {
+            name: organization.name,
+            address: organization.address || undefined,
+            phone: organization.phone || undefined,
+            email: organization.email || undefined,
+            logo_url: organization.logo_url || undefined,
+          },
+          enrollment: {
+            enrollment_date: enrollment.enrollment_date || '',
+            total_amount: enrollment.total_amount || 0,
+            paid_amount: enrollment.paid_amount || 0,
+          },
+          issueDate: new Date().toISOString(),
+          language: 'fr',
+          organizationId: organization.id,
+        })
+
+        // Créer un élément temporaire pour générer le PDF
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = html
+        tempDiv.style.position = 'absolute'
+        tempDiv.style.left = '-9999px'
+        tempDiv.style.top = '-9999px'
+        tempDiv.style.width = '210mm'
+        tempDiv.style.minHeight = '297mm'
+        document.body.appendChild(tempDiv)
+
+        // Attendre que le DOM soit mis à jour
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        // Chercher l'élément de document
+        let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+        if (!element) {
+          // Essayer de chercher directement par ID
+          element = tempDiv.querySelector('#contract-document') as HTMLElement
+        }
+        if (!element) {
+          // Si toujours pas trouvé, utiliser le premier div
+          element = tempDiv.querySelector('div') as HTMLElement
+        }
+        if (!element) {
+          document.body.removeChild(tempDiv)
+          throw new Error('Élément de document non trouvé dans le HTML généré')
+        }
+
+        const elementId = `temp-contract-email-${Date.now()}`
+        element.id = elementId
+
+        // Attendre que l'ID soit appliqué
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        pdfBlob = await generatePDFBlobFromHTML(elementId)
         document.body.removeChild(tempDiv)
-        throw new Error('Élément de document non trouvé dans le HTML généré')
       }
-
-      const elementId = `temp-contract-email-${Date.now()}`
-      element.id = elementId
-      
-      // Attendre que l'ID soit appliqué
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      const pdfBlob = await generatePDFBlobFromHTML(elementId)
-      document.body.removeChild(tempDiv)
 
       const emailSubject = `Contrat de formation - ${formation.name}`
       const emailBody = `
@@ -2780,12 +2937,296 @@ export function useDocumentGeneration({
     }
   }
 
+  /**
+   * Génère une convention pour une entreprise inscrite à la session sans
+   * liste nominative (session_entity_reservations, cf. bloc "Entreprises
+   * inscrites" de config-apprenants.tsx) — pas d'étudiant, l'entreprise est
+   * directement la partie prenante de la convention.
+   */
+  const handleGenerateConventionForEntity = async (reservation: SessionEntityReservation, templateId?: string) => {
+    if (!sessionData || !formation || !organization) {
+      addToast({ type: 'error', title: 'Erreur', description: 'Données manquantes pour générer la convention.' })
+      return
+    }
+
+    const entityName = reservation.external_entities?.name || 'Entreprise'
+
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      let template: DocumentTemplate | null = null
+
+      if (templateId) {
+        template = await templateService.getTemplateById(templateId)
+      } else {
+        template = await templateService.getDefaultTemplate(organization.id, 'convention')
+      }
+
+      const entityCompany = await fetchEntityCompany(reservation.entity_id)
+
+      if (!template) {
+        // Fallback : generateConventionHTML ne requiert pas de student, l'entreprise
+        // est portée par les variables entreprise_* (cf variable-extractor.ts)
+        const html = await generateConventionHTML({
+          session: {
+            name: sessionData.name,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            location: sessionData.location || undefined,
+          },
+          formation: {
+            name: formation.name,
+            code: formation.code || undefined,
+            price: (formation as FormationWithRelations & { price?: number }).price || undefined,
+            duration_hours: (formation as FormationWithRelations & { duration_hours?: number }).duration_hours || undefined,
+          },
+          program: program ? { name: program.name } : undefined,
+          organization: {
+            name: organization.name,
+            address: organization.address || undefined,
+            phone: organization.phone || undefined,
+            email: organization.email || undefined,
+            logo_url: organization.logo_url || undefined,
+          },
+          issueDate: new Date().toISOString(),
+          language: 'fr',
+          organizationId: organization.id,
+          templateId,
+        })
+
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = html
+        tempDiv.style.position = 'absolute'
+        tempDiv.style.left = '-9999px'
+        tempDiv.style.top = '-9999px'
+        tempDiv.style.width = '210mm'
+        tempDiv.style.minHeight = '297mm'
+        document.body.appendChild(tempDiv)
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+        if (!element) element = tempDiv.querySelector('.document-container') as HTMLElement
+        if (!element) element = tempDiv.querySelector('div') as HTMLElement
+        if (!element) { document.body.removeChild(tempDiv); throw new Error('Élément de document non trouvé') }
+
+        const elementId = `temp-convention-entity-${Date.now()}`
+        element.id = elementId
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        const pdfBlob = await generatePDFBlobFromHTML(elementId)
+        document.body.removeChild(tempDiv)
+
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `convention_${entityName.replace(/\s+/g, '_')}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        addToast({ type: 'success', title: 'Convention générée', description: 'La convention a été générée et téléchargée avec succès.' })
+        return
+      }
+
+      const variables = extractDocumentVariables({
+        session: {
+          ...sessionData,
+          start_date: sessionData.start_date,
+          end_date: sessionData.end_date,
+          location: sessionData.location || undefined,
+        } as any,
+        organization: organization as any,
+        program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+        company: entityCompany,
+        language: 'fr',
+        issueDate: new Date().toISOString(),
+        effectif: reservation.expected_count || undefined,
+        enrollmentAmount: reservation.total_amount || undefined,
+      })
+
+      const response = await fetch('/api/documents/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template, variables, documentId: undefined, organizationId: organization.id }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+      }
+
+      const pdfBlob = await response.blob()
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `convention_${entityName.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      addToast({ type: 'success', title: 'Convention générée', description: 'La convention a été générée et téléchargée avec succès.' })
+    } catch (error) {
+      logger.error('Erreur lors de la génération de la convention entreprise', error as Error, {
+        entityId: reservation.entity_id,
+        sessionId: sessionData?.id,
+      })
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la génération de la convention.' })
+    }
+  }
+
+  /**
+   * Génère une convocation pour une entreprise inscrite à la session sans
+   * liste nominative — adressée à l'entreprise elle-même (pas de nom
+   * d'apprenant disponible, c'est tout l'intérêt de cette table).
+   */
+  const handleGenerateConvocationForEntity = async (reservation: SessionEntityReservation, templateId?: string) => {
+    if (!sessionData || !formation || !organization) {
+      addToast({ type: 'error', title: 'Erreur', description: 'Données manquantes pour générer la convocation.' })
+      return
+    }
+
+    const entityName = reservation.external_entities?.name || 'Entreprise'
+
+    try {
+      const templateService = new DocumentTemplateService(createClient())
+      let template: DocumentTemplate | null = null
+
+      if (templateId) {
+        template = await templateService.getTemplateById(templateId)
+      } else {
+        template = await templateService.getDefaultTemplate(organization.id, 'convocation')
+      }
+
+      const entityCompany = await fetchEntityCompany(reservation.entity_id)
+
+      if (!template) {
+        // Fallback : generateConvocationHTML requiert un student (nom du destinataire) ;
+        // on utilise le nom de l'entreprise comme destinataire faute d'apprenant nommé.
+        const html = await generateConvocationHTML({
+          student: {
+            first_name: entityName,
+            last_name: '',
+            email: entityCompany?.email || undefined,
+            phone: entityCompany?.phone || undefined,
+          },
+          session: {
+            name: sessionData.name,
+            start_date: sessionData.start_date,
+            end_date: sessionData.end_date,
+            start_time: sessionData.start_time || undefined,
+            end_time: sessionData.end_time || undefined,
+            location: sessionData.location || undefined,
+          },
+          formation: {
+            name: formation.name,
+            code: formation.code || undefined,
+          },
+          program: program ? { name: program.name } : undefined,
+          organization: {
+            name: organization.name,
+            address: organization.address || undefined,
+            phone: organization.phone || undefined,
+            email: organization.email || undefined,
+            logo_url: organization.logo_url || undefined,
+          },
+          issueDate: new Date().toISOString(),
+          language: 'fr',
+          organizationId: organization.id,
+        })
+
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = html
+        tempDiv.style.position = 'absolute'
+        tempDiv.style.left = '-9999px'
+        tempDiv.style.top = '-9999px'
+        tempDiv.style.width = '210mm'
+        tempDiv.style.minHeight = '297mm'
+        document.body.appendChild(tempDiv)
+        await new Promise((resolve) => setTimeout(resolve, 100))
+
+        let element = tempDiv.querySelector('[id$="-document"]') as HTMLElement
+        if (!element) element = tempDiv.querySelector('#convocation-document') as HTMLElement
+        if (!element) element = tempDiv.querySelector('.document-container') as HTMLElement
+        if (!element) element = tempDiv.querySelector('body > div') as HTMLElement
+        if (!element) element = tempDiv.querySelector('div') as HTMLElement
+        if (!element) { document.body.removeChild(tempDiv); throw new Error('Élément de document non trouvé') }
+
+        const elementId = `temp-convocation-entity-${Date.now()}`
+        element.id = elementId
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        const pdfBlob = await generatePDFBlobFromHTML(elementId)
+        document.body.removeChild(tempDiv)
+
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `convocation_${entityName.replace(/\s+/g, '_')}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        addToast({ type: 'success', title: 'Convocation générée', description: 'La convocation a été générée et téléchargée avec succès.' })
+        return
+      }
+
+      const variables = extractDocumentVariables({
+        session: {
+          ...sessionData,
+          start_date: sessionData.start_date,
+          end_date: sessionData.end_date,
+          start_time: sessionData.start_time || undefined,
+          end_time: sessionData.end_time || undefined,
+          location: sessionData.location || undefined,
+          formations: formation,
+        } as any,
+        organization: organization as any,
+        program: program ? { ...program, formations: formation ? [{ id: formation.id, name: formation.name, duration_hours: (formation as any).duration_hours }] : undefined } as any : undefined,
+        company: entityCompany,
+        language: 'fr',
+        issueDate: new Date().toISOString(),
+        effectif: reservation.expected_count || undefined,
+      })
+
+      const response = await fetch('/api/documents/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template, variables, documentId: undefined, organizationId: organization.id }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+        throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+      }
+
+      const pdfBlob = await response.blob()
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `convocation_${entityName.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      addToast({ type: 'success', title: 'Convocation générée', description: 'La convocation a été générée et téléchargée avec succès.' })
+    } catch (error) {
+      logger.error('Erreur lors de la génération de la convocation entreprise', error as Error, {
+        entityId: reservation.entity_id,
+        sessionId: sessionData?.id,
+      })
+      addToast({ type: 'error', title: 'Erreur', description: error instanceof Error ? error.message : 'Une erreur est survenue lors de la génération de la convocation.' })
+    }
+  }
+
   return {
     isGeneratingZip,
     zipGenerationProgress,
     lastZipGeneration,
     handleGenerateConvention,
     handleGenerateConventionForEnrollment,
+    handleGenerateConventionForEntity,
+    handleGenerateConvocationForEntity,
     handleGenerateContract,
     handleGenerateConvocation,
     handleGenerateProgram,

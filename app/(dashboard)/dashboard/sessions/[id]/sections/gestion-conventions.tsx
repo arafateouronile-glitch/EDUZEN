@@ -8,8 +8,8 @@ import { CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { FileText, Download, Mail, AlertCircle, UserPlus, CheckCircle2, Clock, FileCheck, Sparkles, Send, Eye, PenTool, Building2 } from 'lucide-react'
-import { formatDate, cn } from '@/lib/utils'
-import { useDocumentGeneration } from '../hooks/use-document-generation'
+import { formatDate, formatCurrency, cn } from '@/lib/utils'
+import { useDocumentGeneration, type SessionEntityReservation } from '../hooks/use-document-generation'
 import { useToast } from '@/components/ui/toast'
 import {
   Dialog,
@@ -98,6 +98,7 @@ export function GestionConventions({
     lastZipGeneration,
     handleGenerateConvention,
     handleGenerateConventionForEnrollment,
+    handleGenerateConventionForEntity,
     handleGenerateContract,
     handleGenerateAllConventionsZip,
     handleGenerateProgram,
@@ -251,6 +252,24 @@ export function GestionConventions({
     }
     return map
   }, [studentEntitiesData])
+
+  // Entreprises/organismes inscrits à la session sans liste nominative
+  // (effectif prévisionnel saisi depuis Configuration > Apprenants, cf. config-apprenants.tsx)
+  const { data: entityReservations } = useQuery({
+    queryKey: ['session-entity-reservations', sessionData?.id],
+    queryFn: async () => {
+      if (!sessionData?.id) return []
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('session_entity_reservations')
+        .select('id, entity_id, expected_count, total_amount, external_entities(name, type)')
+        .eq('session_id', sessionData.id)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data || []) as unknown as SessionEntityReservation[]
+    },
+    enabled: !!sessionData?.id,
+  })
 
   // Récupérer les templates d'email pour les contrats/conventions
   const { data: emailTemplates } = useQuery<EmailTemplate[]>({
@@ -644,6 +663,64 @@ export function GestionConventions({
           </div>
         </GlassCard>
       </motion.div>
+
+      {/* Entreprises/organismes inscrits à la session (effectif sans liste nominative) */}
+      {entityReservations && entityReservations.length > 0 && (
+        <motion.div variants={itemVariants}>
+          <GlassCard variant="premium" className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-orange-600" />
+                  Entreprises inscrites
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {entityReservations.length} entreprise{entityReservations.length > 1 ? 's' : ''} inscrite{entityReservations.length > 1 ? 's' : ''} à cette session avec un effectif prévisionnel (sans liste nominative)
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {entityReservations.map((reservation) => (
+                <div
+                  key={reservation.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-orange-50/50 border border-orange-200 hover:bg-orange-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {reservation.external_entities?.name ?? 'Entreprise'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {reservation.expected_count} apprenant{reservation.expected_count > 1 ? 's' : ''} prévu{reservation.expected_count > 1 ? 's' : ''} (noms non communiqués)
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                    {reservation.total_amount != null && reservation.total_amount > 0 && (
+                      <Badge variant="outline" className="text-xs whitespace-nowrap">
+                        {formatCurrency(reservation.total_amount)}
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleGenerateConventionForEntity(reservation, selectedConventionTemplateId)}
+                      className="h-9 w-9 p-0 rounded-full hover:bg-brand-blue/10 hover:text-brand-blue transition-colors"
+                      title="Télécharger la convention"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        </motion.div>
+      )}
 
       {/* Autres documents contractuels */}
       <motion.div variants={itemVariants}>
