@@ -23,6 +23,7 @@ describe('QuotaService', () => {
       from: vi.fn(),
       select: vi.fn(),
       eq: vi.fn(),
+      in: vi.fn(),
       gte: vi.fn(),
       maybeSingle: vi.fn(),
       single: vi.fn(),
@@ -31,6 +32,7 @@ describe('QuotaService', () => {
     chain.from.mockReturnValue(chain)
     chain.select.mockReturnValue(chain)
     chain.eq.mockReturnValue(chain)
+    chain.in.mockReturnValue(chain)
     chain.gte.mockReturnValue(chain)
     chain.maybeSingle.mockResolvedValue({ data: null, error: null })
     chain.single.mockResolvedValue({ data: null, error: null })
@@ -87,6 +89,7 @@ describe('QuotaService', () => {
       const subChain: any = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: subscription, error: null }),
       }
       mockSupabase.from.mockReturnValueOnce(subChain)
@@ -127,14 +130,16 @@ describe('QuotaService', () => {
         },
       }
       
-      // Mock subscription query: from -> select -> eq -> eq -> maybeSingle
+      // Mock subscription query: from -> select -> eq -> in -> maybeSingle
       const subscriptionChain = {
         select: vi.fn(),
         eq: vi.fn(),
+        in: vi.fn(),
         maybeSingle: vi.fn(),
       }
       subscriptionChain.select.mockReturnValue(subscriptionChain)
       subscriptionChain.eq.mockReturnValue(subscriptionChain)
+      subscriptionChain.in.mockReturnValue(subscriptionChain)
       subscriptionChain.maybeSingle.mockResolvedValue({ data: subscription, error: null })
       mockSupabase.from.mockReturnValueOnce(subscriptionChain)
 
@@ -247,6 +252,7 @@ describe('QuotaService', () => {
       const subChain: any = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: subscription, error: null }),
       }
       const studentChain: any = {

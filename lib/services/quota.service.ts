@@ -65,12 +65,14 @@ export class QuotaService {
    */
   private async getUsageFallback(organizationId: string): Promise<OrganizationUsage | null> {
     try {
-      // Récupérer la souscription
+      // Récupérer la souscription (active ou en essai — ce sont les deux
+      // seuls statuts pour lesquels QuotaService a une logique définie ;
+      // cohérent avec le JOIN de la vue organization_usage)
       const { data: subscription } = await this.supabase
         .from('subscriptions')
         .select('*, plans(*)')
         .eq('organization_id', organizationId)
-        .eq('status', 'active')
+        .in('status', ['active', 'trialing'])
         .maybeSingle()
 
       if (!subscription || !subscription.plans) {
