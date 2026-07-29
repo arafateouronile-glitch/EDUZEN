@@ -216,8 +216,14 @@ export function validateObject(
  * Valide un champ individuel selon sa configuration
  */
 function validateField(field: string, value: unknown, validation: FieldValidation): ValidationResult {
-  // Détecter contenu suspect
-  if (typeof value === 'string' && hasSuspiciousContent(value)) {
+  // Détecter contenu suspect — sauf pour les champs de type 'html', qui ont
+  // leur propre sanitisation dédiée (validateHTMLField → sanitizeHTML/DOMPurify).
+  // Cette regex générique est une heuristique naïve (ex: /on\w+\s*=/) conçue
+  // pour du texte utilisateur court ; sur du HTML légitime (un email complet
+  // avec balises <meta>, CSS...), elle déclenche de nombreux faux positifs —
+  // ex: "telephone=" dans <meta name="format-detection" content="telephone=no">
+  // matche /on\w+=/ et faisait rejeter des emails parfaitement valides.
+  if (validation.type !== 'html' && typeof value === 'string' && hasSuspiciousContent(value)) {
     logger.warn('API Validation - Suspicious content detected', {
       field,
       contentPreview: value.substring(0, 50),

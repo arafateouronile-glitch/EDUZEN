@@ -97,6 +97,18 @@ async function fetchStudentCompany(studentId: string): Promise<Company | null> {
 }
 
 /**
+ * Prépare le corps d'un email pour l'envoi : convertit les retours à la
+ * ligne en <br> uniquement si le contenu est du texte brut. Un contenu déjà
+ * en HTML (ex: un modèle d'email sélectionné, avec <!DOCTYPE>/<head>/<style>)
+ * ne doit pas être touché — y injecter des <br> casse la structure du
+ * document (des <br> entre <html>/<head>, voire au milieu d'un bloc <style>)
+ * et peut aussi déclencher à tort le détecteur de contenu suspect de l'API.
+ */
+function toEmailBodyHTML(body: string): string {
+  return /<[a-z][\s\S]*>/i.test(body) ? body : body.replace(/\n/g, '<br>')
+}
+
+/**
  * Récupère une entreprise inscrite à une session sans liste nominative
  * (session_entity_reservations, cf. config-apprenants.tsx) et la mappe en
  * Company pour compatibilité avec extractDocumentVariables.
@@ -1861,7 +1873,7 @@ export function useDocumentGeneration({
       }
 
       // Convertir le texte en HTML si nécessaire (ajouter des retours à la ligne)
-      const emailBodyHTML = customBody.replace(/\n/g, '<br>')
+      const emailBodyHTML = toEmailBodyHTML(customBody)
 
       // Envoyer l'email avec le contenu personnalisé
       await emailService.sendDocument(
@@ -2308,7 +2320,7 @@ export function useDocumentGeneration({
         document.body.removeChild(tempDiv)
       }
 
-      const emailBodyHTML = customBody.replace(/\n/g, '<br>')
+      const emailBodyHTML = toEmailBodyHTML(customBody)
       await emailService.sendDocument(
         student.email || '',
         customSubject,
