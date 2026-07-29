@@ -916,7 +916,8 @@ export function GestionConventions({
                   await handleSendContractByEmailWithCustomContent(
                     modifiedEnrollment,
                     editedEmail.subject,
-                    editedEmail.body
+                    editedEmail.body,
+                    selectedConventionTemplateId
                   )
                   setEmailPreview(null)
                   setEditedEmail(null)
@@ -1290,7 +1291,8 @@ export function GestionConventions({
                 await handleSendAllContractsByEmail(
                   enrollments,
                   bulkEmailContent.subject,
-                  bulkEmailContent.body
+                  bulkEmailContent.body,
+                  selectedConventionTemplateId
                 )
                 
                 setShowBulkSendDialog(false)

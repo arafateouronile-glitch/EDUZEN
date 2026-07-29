@@ -899,7 +899,8 @@ export function GestionConvocations({
                   await handleSendConvocationByEmailWithCustomContent(
                     modifiedEnrollment,
                     editedEmail.subject,
-                    editedEmail.body
+                    editedEmail.body,
+                    selectedConvocationTemplateId
                   )
                   setEmailPreview(null)
                   setEditedEmail(null)

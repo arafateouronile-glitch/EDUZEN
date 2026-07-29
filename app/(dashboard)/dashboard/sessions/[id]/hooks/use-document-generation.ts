@@ -1736,7 +1736,8 @@ export function useDocumentGeneration({
   const handleSendConvocationByEmailWithCustomContent = async (
     enrollment: EnrollmentWithRelations,
     customSubject: string,
-    customBody: string
+    customBody: string,
+    templateId?: string
   ) => {
     if (!sessionData || !formation || !organization || !enrollment) return
 
@@ -1752,7 +1753,15 @@ export function useDocumentGeneration({
 
     try {
       const templateService = new DocumentTemplateService(createClient())
-      const template = await templateService.getDefaultTemplate(organization.id, 'convocation')
+      // Utiliser le même template que celui sélectionné pour le téléchargement
+      // (une organisation a souvent plusieurs modèles de convocation — un par
+      // type d'examen/formation, avec des horaires différents en dur dans le
+      // contenu). Sans ce paramètre, l'email utilisait toujours le modèle
+      // "par défaut" de l'organisation au lieu de celui choisi par l'utilisateur,
+      // d'où un contenu (et une heure) différents de la version téléchargée.
+      const template = templateId
+        ? await templateService.getTemplateById(templateId)
+        : await templateService.getDefaultTemplate(organization.id, 'convocation')
 
       let pdfBlob: Blob
 
@@ -1885,7 +1894,7 @@ export function useDocumentGeneration({
   /**
    * Envoie une convocation par email à un étudiant
    */
-  const handleSendConvocationByEmail = async (enrollment: EnrollmentWithRelations) => {
+  const handleSendConvocationByEmail = async (enrollment: EnrollmentWithRelations, templateId?: string) => {
     if (!sessionData || !formation || !organization || !enrollment) return
 
     const student = enrollment.students
@@ -1900,7 +1909,11 @@ export function useDocumentGeneration({
 
     try {
       const templateService = new DocumentTemplateService(createClient())
-      const template = await templateService.getDefaultTemplate(organization.id, 'convocation')
+      // cf. handleSendConvocationByEmailWithCustomContent : utiliser le même
+      // template que celui sélectionné pour le téléchargement.
+      const template = templateId
+        ? await templateService.getTemplateById(templateId)
+        : await templateService.getDefaultTemplate(organization.id, 'convocation')
 
       let pdfBlob2: Blob
 
@@ -2104,10 +2117,10 @@ export function useDocumentGeneration({
               .replace(/{session_end_date}/g, sessionData.end_date ? formatDate(sessionData.end_date) : '')
               .replace(/{session_location}/g, sessionData.location || '')
 
-            await handleSendConvocationByEmailWithCustomContent(enrollment, subject, body)
+            await handleSendConvocationByEmailWithCustomContent(enrollment, subject, body, documentTemplateId)
           } else {
             // Utiliser le comportement par défaut
-            await handleSendConvocationByEmail(enrollment)
+            await handleSendConvocationByEmail(enrollment, documentTemplateId)
           }
           successCount++
         } catch (error) {
@@ -2169,7 +2182,8 @@ export function useDocumentGeneration({
   const handleSendContractByEmailWithCustomContent = async (
     enrollment: EnrollmentWithRelations,
     customSubject: string,
-    customBody: string
+    customBody: string,
+    templateId?: string
   ) => {
     if (!sessionData || !formation || !organization || !enrollment) return
 
@@ -2185,7 +2199,13 @@ export function useDocumentGeneration({
 
     try {
       const templateService = new DocumentTemplateService(createClient())
-      const template = await templateService.getDefaultTemplate(organization.id, 'contrat')
+      // Utiliser le même template que celui sélectionné pour le téléchargement
+      // (cf. handleSendConvocationByEmailWithCustomContent pour le même correctif
+      // côté convocations : sans ce paramètre, l'email ignorait le modèle choisi
+      // par l'utilisateur et utilisait toujours le modèle "par défaut").
+      const template = templateId
+        ? await templateService.getTemplateById(templateId)
+        : await templateService.getDefaultTemplate(organization.id, 'contrat')
 
       let pdfBlob: Blob
 
@@ -2322,7 +2342,8 @@ export function useDocumentGeneration({
   const handleSendAllContractsByEmail = async (
     enrollments: EnrollmentWithRelations[],
     customSubject?: string,
-    customBody?: string
+    customBody?: string,
+    templateId?: string
   ) => {
     if (!sessionData || !formation || !organization) return
 
@@ -2376,10 +2397,10 @@ export function useDocumentGeneration({
               .replace(/{session_end_date}/g, sessionData.end_date ? formatDate(sessionData.end_date) : '')
               .replace(/{session_location}/g, sessionData.location || '')
 
-            await handleSendContractByEmailWithCustomContent(enrollment, subject, body)
+            await handleSendContractByEmailWithCustomContent(enrollment, subject, body, templateId)
           } else {
             // Utiliser le comportement par défaut
-            await handleSendContractByEmail(enrollment)
+            await handleSendContractByEmail(enrollment, templateId)
           }
           successCount++
         } catch (error) {
@@ -2632,7 +2653,7 @@ export function useDocumentGeneration({
   /**
    * Envoie un contrat par email
    */
-  const handleSendContractByEmail = async (enrollment: EnrollmentWithRelations) => {
+  const handleSendContractByEmail = async (enrollment: EnrollmentWithRelations, templateId?: string) => {
     if (!sessionData || !formation || !organization || !enrollment) return
 
     const student = enrollment.students
@@ -2647,7 +2668,11 @@ export function useDocumentGeneration({
 
     try {
       const templateService = new DocumentTemplateService(createClient())
-      const template = await templateService.getDefaultTemplate(organization.id, 'contrat')
+      // cf. handleSendContractByEmailWithCustomContent : utiliser le même
+      // template que celui sélectionné pour le téléchargement.
+      const template = templateId
+        ? await templateService.getTemplateById(templateId)
+        : await templateService.getDefaultTemplate(organization.id, 'contrat')
 
       let pdfBlob: Blob
 
