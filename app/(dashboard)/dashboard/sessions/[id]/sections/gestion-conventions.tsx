@@ -166,7 +166,7 @@ export function GestionConventions({
         .from('documents')
         .select('id, student_id, metadata, status, signed_at, signed_file_url')
         .eq('organization_id', user.organization_id)
-        .eq('type', 'contract')
+        .in('type', ['contract', 'convention'])
       const list = (data ?? []) as unknown as Array<{ id: string; student_id: string | null; metadata: Record<string, unknown> | null; status: string | null; signed_at?: string | null; signed_file_url?: string | null }>
       return list.filter((d) => (d.metadata as Record<string, unknown> | null)?.session_id === sessionData?.id)
     },
