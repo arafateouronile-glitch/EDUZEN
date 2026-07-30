@@ -560,6 +560,18 @@ export function GestionConventions({
                               ) : (
                                 <span className="text-xs text-gray-500">Non généré</span>
                               )}
+                              {enrollment.contract_sent_at && (
+                                <>
+                                  <span className="text-xs text-gray-400">•</span>
+                                  <span
+                                    className="text-xs text-cyan-600 flex items-center gap-1"
+                                    title={`Envoyé le ${formatDate(enrollment.contract_sent_at)}`}
+                                  >
+                                    <Mail className="h-3.5 w-3.5" />
+                                    {hasCompany ? 'Convention envoyée' : 'Contrat envoyé'}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                             )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { generatePDFFromHTML, createZipFromPDFs, generatePDFBlobFromHTML } from '@/lib/utils/pdf-generator'
 import {
   generateConventionHTML,
@@ -109,6 +110,29 @@ function toEmailBodyHTML(body: string): string {
 }
 
 /**
+ * Marque l'inscription comme ayant reçu sa convocation/son contrat par email
+ * (colonnes enrollments.convocation_sent_at / contract_sent_at). Ne doit pas
+ * faire échouer l'envoi si la mise à jour du statut échoue — c'est un
+ * indicateur secondaire, pas une condition de succès de l'envoi lui-même.
+ */
+async function markEnrollmentDocumentSent(
+  enrollmentId: string,
+  field: 'convocation_sent_at' | 'contract_sent_at'
+): Promise<void> {
+  try {
+    const { error } = await createClient()
+      .from('enrollments')
+      .update({ [field]: new Date().toISOString() })
+      .eq('id', enrollmentId)
+    if (error) {
+      logger.error('Erreur lors de la mise à jour du statut d\'envoi', error, { enrollmentId, field })
+    }
+  } catch (error) {
+    logger.error('Erreur lors de la mise à jour du statut d\'envoi', error as Error, { enrollmentId, field })
+  }
+}
+
+/**
  * Récupère une entreprise inscrite à une session sans liste nominative
  * (session_entity_reservations, cf. config-apprenants.tsx) et la mappe en
  * Company pour compatibilité avec extractDocumentVariables.
@@ -158,6 +182,7 @@ export function useDocumentGeneration({
 }: DocumentGenerationProps) {
   const { addToast } = useToast()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [isGeneratingZip, setIsGeneratingZip] = useState(false)
   const [zipGenerationProgress, setZipGenerationProgress] = useState({ current: 0, total: 0 })
   const [lastZipGeneration, setLastZipGeneration] = useState<Date | null>(null)
@@ -1886,6 +1911,9 @@ export function useDocumentGeneration({
         'convocation'
       )
 
+      await markEnrollmentDocumentSent(enrollment.id, 'convocation_sent_at')
+      queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionData.id] })
+
       addToast({
         type: 'success',
         title: 'Email envoyé',
@@ -2048,6 +2076,9 @@ export function useDocumentGeneration({
         undefined,
         'convocation'
       )
+
+      await markEnrollmentDocumentSent(enrollment.id, 'convocation_sent_at')
+      queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionData.id] })
 
       addToast({
         type: 'success',
@@ -2330,6 +2361,9 @@ export function useDocumentGeneration({
         undefined,
         'contrat'
       )
+
+      await markEnrollmentDocumentSent(enrollment.id, 'contract_sent_at')
+      queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionData.id] })
 
       addToast({
         type: 'success',
@@ -2816,6 +2850,9 @@ export function useDocumentGeneration({
         undefined,
         'contrat'
       )
+
+      await markEnrollmentDocumentSent(enrollment.id, 'contract_sent_at')
+      queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionData.id] })
 
       addToast({
         type: 'success',

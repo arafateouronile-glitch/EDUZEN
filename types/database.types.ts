@@ -8079,6 +8079,8 @@ export type Database = {
       }
       enrollments: {
         Row: {
+          contract_sent_at: string | null
+          convocation_sent_at: string | null
           created_at: string | null
           enrollment_date: string | null
           funding_type_id: string | null
@@ -8093,6 +8095,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          contract_sent_at?: string | null
+          convocation_sent_at?: string | null
           created_at?: string | null
           enrollment_date?: string | null
           funding_type_id?: string | null
@@ -8107,6 +8111,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          contract_sent_at?: string | null
+          convocation_sent_at?: string | null
           created_at?: string | null
           enrollment_date?: string | null
           funding_type_id?: string | null

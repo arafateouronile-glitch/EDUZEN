@@ -672,10 +672,27 @@ export function GestionConvocations({
                                  enrollment.payment_status === 'partial' ? 'Partiel' :
                                  enrollment.payment_status === 'overdue' ? 'En retard' : 'En attente'}
                               </Badge>
+                              {enrollment.convocation_sent_at ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] px-1.5 py-0 h-5 border bg-cyan-50 text-cyan-700 border-cyan-200"
+                                  title={`Envoyée le ${formatDate(enrollment.convocation_sent_at)}`}
+                                >
+                                  <Mail className="h-2.5 w-2.5 mr-1" />
+                                  Convocation envoyée
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] px-1.5 py-0 h-5 border bg-gray-50 text-gray-500 border-gray-200"
+                                >
+                                  Convocation non envoyée
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                           {enrollment.status !== 'cancelled' && (
                             <>
