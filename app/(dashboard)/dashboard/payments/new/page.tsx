@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -68,6 +68,7 @@ export default function NewInvoicePage() {
     defaultValues: {
       student_id: '',
       document_type: 'quote',
+      invoice_number: '',
       type: 'tuition',
       amount: '',
       tax_amount: '',
@@ -75,6 +76,7 @@ export default function NewInvoicePage() {
       issue_date: new Date().toISOString().split('T')[0],
       due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +30 jours
       notes: '',
+      mentions_libres: '',
       status: 'draft',
     },
   })
@@ -86,6 +88,16 @@ export default function NewInvoicePage() {
     setDocumentType(type)
     setValue('document_type', type)
   }
+
+  // Aperçu du prochain numéro (facture ou devis, séquences séparées),
+  // modifiable ensuite par l'utilisateur avant soumission.
+  useEffect(() => {
+    if (!user?.organization_id) return
+    invoiceService
+      .previewNextInvoiceNumber(user.organization_id, documentType)
+      .then((number) => setValue('invoice_number', number))
+      .catch(() => {})
+  }, [documentType, user?.organization_id, setValue])
 
   const createMutation = useMutation({
     mutationFn: async (data: InvoiceFormData) => {
@@ -106,7 +118,7 @@ export default function NewInvoicePage() {
         return invoiceService.create({
           organization_id: user.organization_id,
           student_id: data.student_id,
-          invoice_number: '', // Sera généré par la fonction SQL
+          invoice_number: data.invoice_number || '',
           type: data.type,
           document_type: data.document_type || 'invoice',
           issue_date: data.issue_date,
@@ -118,6 +130,7 @@ export default function NewInvoicePage() {
           status: data.status || 'draft',
           items: [],
           notes: data.notes || null,
+          mentions_libres: data.mentions_libres || null,
         } as Parameters<typeof invoiceService.create>[0] & { document_type?: 'quote' | 'invoice' })
       }
     },
@@ -241,6 +254,19 @@ export default function NewInvoicePage() {
                 </p>
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Numéro {documentType === 'quote' ? 'de devis' : 'de facture'}
+              </label>
+              <input
+                type="text"
+                {...register('invoice_number')}
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono min-touch-target"
+                placeholder="Généré automatiquement"
+              />
+              <p className="text-sm text-muted-foreground mt-1">Numéro proposé automatiquement — modifiable si besoin.</p>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -369,15 +395,30 @@ export default function NewInvoicePage() {
             </div>
 
             {invoiceType === 'single' && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Notes</label>
-                <textarea
-                  {...register('notes')}
-                  rows={3}
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Notes supplémentaires..."
-                />
-              </div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Notes</label>
+                  <textarea
+                    {...register('notes')}
+                    rows={3}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Notes supplémentaires..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Mentions libres</label>
+                  <textarea
+                    {...register('mentions_libres')}
+                    rows={3}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder={`Texte qui apparaîtra tel quel sur le ${documentType === 'quote' ? 'devis' : 'la facture'}...`}
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Apparaît sur le PDF si votre modèle de document inclut la variable {'{mentions_libres}'}.
+                  </p>
+                </div>
+              </>
             )}
 
             {formData.amount && (

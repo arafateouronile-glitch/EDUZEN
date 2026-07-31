@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
@@ -364,14 +364,30 @@ export function GestionFinances({
 
   // Formulaire de facture/devis
   const [invoiceForm, setInvoiceForm] = useState({
+    invoice_number: '',
     amount: '',
     tax_amount: '0',
     currency: 'EUR',
     issue_date: new Date().toISOString().split('T')[0],
     due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     notes: '',
+    mentions_libres: '',
     funding_type_id: '',
   })
+
+  // Aperçu du prochain numéro (facture ou devis, séquences séparées) à
+  // l'ouverture du dialogue — modifiable ensuite par l'utilisateur avant
+  // soumission (InvoiceService.create() respecte un numéro fourni manuellement).
+  useEffect(() => {
+    if (!showInvoiceForm && !showQuoteForm) return
+    if (!user?.organization_id) return
+    const documentType = showQuoteForm ? 'quote' : 'invoice'
+    invoiceService
+      .previewNextInvoiceNumber(user.organization_id, documentType)
+      .then((number) => setInvoiceForm((prev) => ({ ...prev, invoice_number: number })))
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showInvoiceForm, showQuoteForm, user?.organization_id])
 
   // États pour les modèles sélectionnés lors de la création
   const [invoiceFormTemplateId, setInvoiceFormTemplateId] = useState<string | undefined>()
@@ -770,7 +786,7 @@ export function GestionFinances({
           entity_id: reservation.entity_id,
           session_entity_reservation_id: reservation.id,
           funding_type_id: fundingTypeId,
-          invoice_number: '',
+          invoice_number: invoiceForm.invoice_number,
           type: 'tuition',
           document_type: 'invoice',
           issue_date: invoiceForm.issue_date,
@@ -781,6 +797,7 @@ export function GestionFinances({
           currency: invoiceForm.currency,
           status: 'sent',
           notes: invoiceForm.notes,
+          mentions_libres: invoiceForm.mentions_libres || null,
         })
       }
 
@@ -795,7 +812,7 @@ export function GestionFinances({
         student_id: enrollment.student_id,
         enrollment_id: enrollment.id,
         funding_type_id: fundingTypeId,
-        invoice_number: '',
+        invoice_number: invoiceForm.invoice_number,
         type: 'tuition',
         document_type: 'invoice',
         issue_date: invoiceForm.issue_date,
@@ -806,6 +823,7 @@ export function GestionFinances({
         currency: invoiceForm.currency,
         status: 'sent',
         notes: invoiceForm.notes,
+        mentions_libres: invoiceForm.mentions_libres || null,
       })
     },
     onMutate: async () => {
@@ -838,12 +856,14 @@ export function GestionFinances({
       setShowInvoiceForm(false)
       setSelectedEntityReservationId(null)
       setInvoiceForm({
+        invoice_number: '',
         amount: '',
         tax_amount: '0',
         currency: 'EUR',
         issue_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: '',
+        mentions_libres: '',
         funding_type_id: '',
       })
       setInvoiceFormTemplateId(undefined)
@@ -879,7 +899,7 @@ export function GestionFinances({
           entity_id: reservation.entity_id,
           session_entity_reservation_id: reservation.id,
           funding_type_id: fundingTypeId,
-          invoice_number: '',
+          invoice_number: invoiceForm.invoice_number,
           type: 'tuition',
           document_type: 'quote',
           issue_date: invoiceForm.issue_date,
@@ -890,6 +910,7 @@ export function GestionFinances({
           currency: invoiceForm.currency,
           status: 'draft',
           notes: invoiceForm.notes,
+          mentions_libres: invoiceForm.mentions_libres || null,
         })
       }
 
@@ -904,7 +925,7 @@ export function GestionFinances({
         student_id: enrollment.student_id,
         enrollment_id: enrollment.id,
         funding_type_id: fundingTypeId,
-        invoice_number: '',
+        invoice_number: invoiceForm.invoice_number,
         type: 'tuition',
         document_type: 'quote',
         issue_date: invoiceForm.issue_date,
@@ -915,6 +936,7 @@ export function GestionFinances({
         currency: invoiceForm.currency,
         status: 'draft',
         notes: invoiceForm.notes,
+        mentions_libres: invoiceForm.mentions_libres || null,
       })
     },
     onMutate: async () => {
@@ -947,12 +969,14 @@ export function GestionFinances({
       setShowQuoteForm(false)
       setSelectedEntityReservationId(null)
       setInvoiceForm({
+        invoice_number: '',
         amount: '',
         tax_amount: '0',
         currency: 'EUR',
         issue_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: '',
+        mentions_libres: '',
         funding_type_id: '',
       })
       setQuoteFormTemplateId(undefined)
@@ -2891,6 +2915,18 @@ export function GestionFinances({
           >
             <fieldset disabled={createInvoiceMutation.isPending} className="border-0 p-0 m-0 min-w-0 space-y-4">
               <div>
+                <label className="block text-sm font-medium mb-2">Numéro de facture</label>
+                <input
+                  type="text"
+                  value={invoiceForm.invoice_number}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
+                  placeholder="Généré automatiquement"
+                />
+                <p className="text-xs text-gray-500 mt-1">Numéro proposé automatiquement — modifiable si besoin.</p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-2">Montant HT *</label>
                 <input
                   type="number"
@@ -2965,6 +3001,20 @@ export function GestionFinances({
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Notes supplémentaires..."
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Mentions libres</label>
+                <textarea
+                  value={invoiceForm.mentions_libres}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, mentions_libres: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Texte qui apparaîtra tel quel sur la facture..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Apparaît sur le PDF si votre modèle de document inclut la variable {'{mentions_libres}'}.
+                </p>
               </div>
 
               <div>
@@ -3066,6 +3116,18 @@ export function GestionFinances({
           >
             <fieldset disabled={createQuoteMutation.isPending} className="border-0 p-0 m-0 min-w-0 space-y-4">
               <div>
+                <label className="block text-sm font-medium mb-2">Numéro de devis</label>
+                <input
+                  type="text"
+                  value={invoiceForm.invoice_number}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
+                  placeholder="Généré automatiquement"
+                />
+                <p className="text-xs text-gray-500 mt-1">Numéro proposé automatiquement — modifiable si besoin.</p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium mb-2">Montant HT *</label>
                 <input
                   type="number"
@@ -3140,6 +3202,20 @@ export function GestionFinances({
                   className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Notes supplémentaires..."
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Mentions libres</label>
+                <textarea
+                  value={invoiceForm.mentions_libres}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, mentions_libres: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Texte qui apparaîtra tel quel sur le devis..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Apparaît sur le PDF si votre modèle de document inclut la variable {'{mentions_libres}'}.
+                </p>
               </div>
 
               <div>

@@ -240,6 +240,7 @@ export const invoiceSchema = z.object({
   currency: z.string().default('XOF'),
   status: z.enum(['draft', 'sent', 'partial', 'paid', 'overdue', 'cancelled']).default('draft'),
   notes: z.string().optional().or(z.literal('')),
+  mentions_libres: z.string().optional().or(z.literal('')),
   enrollment_id: z.string().optional().or(z.literal('')),
 }).refine((data) => {
   if (data.issue_date && data.due_date) {

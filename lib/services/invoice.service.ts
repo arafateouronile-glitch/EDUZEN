@@ -81,8 +81,13 @@ export class InvoiceService {
   /**
    * Génère un numéro unique : devis (DEV-YYYY-NNN) ou facture (FAC-YYYY-NNN).
    * Les devis et les factures ont des séquences séparées.
+   *
+   * Public pour permettre à l'UI d'afficher un aperçu du prochain numéro
+   * avant création (cf. gestion-finances.tsx). Comme `create()` accepte déjà
+   * un `invoice_number` fourni manuellement (voir plus bas), cet aperçu peut
+   * être modifié par l'utilisateur avant soumission sans changer ce service.
    */
-  private async generateInvoiceNumber(organizationId: string, documentType: 'quote' | 'invoice' = 'invoice'): Promise<string> {
+  async previewNextInvoiceNumber(organizationId: string, documentType: 'quote' | 'invoice' = 'invoice'): Promise<string> {
     const year = new Date().getFullYear().toString()
     const prefix = documentType === 'quote' ? 'DEV' : 'FAC'
     const pattern = `${prefix}-${year}-%`
@@ -134,7 +139,7 @@ export class InvoiceService {
         if (!orgId) {
           throw errorHandler.createValidationError('Organization ID is required to create an invoice.')
         }
-        invoiceNumber = await this.generateInvoiceNumber(
+        invoiceNumber = await this.previewNextInvoiceNumber(
           orgId,
           invoiceData.document_type || 'invoice'
         )
@@ -168,7 +173,7 @@ export class InvoiceService {
 
         if (shouldAutoGenerateNumber && isInvoiceNumberConflict && attempt < maxAttempts) {
           // Régénérer et réessayer (collision possible en cas de créations simultanées)
-          invoiceNumber = await this.generateInvoiceNumber(
+          invoiceNumber = await this.previewNextInvoiceNumber(
             invoice.organization_id as string,
             invoiceData.document_type || 'invoice'
           )
@@ -452,7 +457,7 @@ export class InvoiceService {
     if (!orgId) {
       throw errorHandler.createValidationError('Le devis doit avoir une organisation.')
     }
-    const newInvoiceNumber = await this.generateInvoiceNumber(orgId, 'invoice')
+    const newInvoiceNumber = await this.previewNextInvoiceNumber(orgId, 'invoice')
     const quoteRef = `Devis de référence : ${quote.invoice_number}`
     const updatedNotes = quote.notes?.trim()
       ? `${quote.notes.trim()}\n${quoteRef}`

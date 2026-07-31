@@ -389,6 +389,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     // Facture
     numero_facture: invoice?.invoice_number || '',
     facture_numero: invoice?.invoice_number || '',
+    mentions_libres: invoice?.mentions_libres || '',
     reference_devis: (() => {
       const n = invoice?.notes
       if (!n) return ''

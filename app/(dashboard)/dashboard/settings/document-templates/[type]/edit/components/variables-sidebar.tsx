@@ -120,6 +120,7 @@ const VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: 'numero_devis', label: 'Numéro de devis' },
       { key: 'validite_devis', label: 'Validité du devis' },
       { key: 'modules_lignes', label: 'Lignes modules (nom, dates, prix) pour devis' },
+      { key: 'mentions_libres', label: 'Mentions libres' },
     ],
   },
   {

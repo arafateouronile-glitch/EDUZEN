@@ -381,6 +381,7 @@ export interface DocumentVariables {
   mode_paiement?: string
   numero_facture?: string
   facture_numero?: string
+  mentions_libres?: string
   reference_devis?: string
   facture_date_emission?: string
   facture_date_echeance?: string

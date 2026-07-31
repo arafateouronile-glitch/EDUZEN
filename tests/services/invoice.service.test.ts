@@ -179,8 +179,8 @@ describe('InvoiceService', () => {
 
       const createdInvoice = { id: '1', invoice_number: '2025-001', ...newInvoice }
 
-      // Mock generateInvoiceNumber pour éviter l'appel à maybeSingle
-      const generateSpy = vi.spyOn(InvoiceService.prototype as any, 'generateInvoiceNumber')
+      // Mock previewNextInvoiceNumber pour éviter l'appel à maybeSingle
+      const generateSpy = vi.spyOn(InvoiceService.prototype as any, 'previewNextInvoiceNumber')
       generateSpy.mockResolvedValue('2025-001')
 
       // Mock la chaîne insert().select().single()

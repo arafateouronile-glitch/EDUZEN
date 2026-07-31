@@ -10433,6 +10433,7 @@ export type Database = {
           invoice_number: string
           issue_date: string | null
           items: Json | null
+          mentions_libres: string | null
           notes: string | null
           organization_id: string | null
           pdf_url: string | null
@@ -10457,6 +10458,7 @@ export type Database = {
           invoice_number: string
           issue_date?: string | null
           items?: Json | null
+          mentions_libres?: string | null
           notes?: string | null
           organization_id?: string | null
           pdf_url?: string | null
@@ -10481,6 +10483,7 @@ export type Database = {
           invoice_number?: string
           issue_date?: string | null
           items?: Json | null
+          mentions_libres?: string | null
           notes?: string | null
           organization_id?: string | null
           pdf_url?: string | null
