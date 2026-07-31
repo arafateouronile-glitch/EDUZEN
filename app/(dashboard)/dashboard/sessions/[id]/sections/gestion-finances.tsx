@@ -1112,18 +1112,21 @@ export function GestionFinances({
         const currentPaid = Number(enrollment.paid_amount || 0)
         const newPaidAmount = currentPaid + amountNumber
 
-        // Calculer le total dynamique: facture > devis > modules session
+        // Calculer le total dynamique: facture > devis > modules session, net des avoirs
         const enrollmentInvoices = invoices?.filter((inv) => (inv as InvoiceRow).enrollment_id === selectedEnrollmentId) || []
         const invoicesList = enrollmentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice' && !(inv as InvoiceRow)?._optimistic)
         const quotesList = enrollmentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote' && !(inv as InvoiceRow)?._optimistic)
+        const creditNotesTotal = enrollmentInvoices
+          .filter((inv) => (inv as InvoiceRow).document_type === 'credit_note')
+          .reduce((sum, cn) => sum + Number((cn as InvoiceRow)?.total_amount || (cn as InvoiceRow)?.amount || 0), 0)
 
         let totalAmount = 0
         if (invoicesList.length > 0) {
-          totalAmount = Number(invoicesList[0]?.total_amount || invoicesList[0]?.amount || 0)
+          totalAmount = Number(invoicesList[0]?.total_amount || invoicesList[0]?.amount || 0) + creditNotesTotal
         } else if (quotesList.length > 0) {
-          totalAmount = Number(quotesList[0]?.total_amount || quotesList[0]?.amount || 0)
+          totalAmount = Number(quotesList[0]?.total_amount || quotesList[0]?.amount || 0) + creditNotesTotal
         } else {
-          totalAmount = sessionModules.reduce((sum, m) => sum + Number(m.amount || 0), 0)
+          totalAmount = sessionModules.reduce((sum, m) => sum + Number(m.amount || 0), 0) + creditNotesTotal
         }
 
         // Déterminer le nouveau statut de paiement
@@ -1216,21 +1219,26 @@ export function GestionFinances({
     const enrollmentInvoices = getInvoicesForEnrollment(enrollmentId)
     const invoicesList = enrollmentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice' && !(inv as InvoiceRow)?._optimistic)
     const quotesList = enrollmentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote' && !(inv as InvoiceRow)?._optimistic)
+    // Les avoirs (montants négatifs) doivent réduire le revenu affiché, quelle
+    // que soit la branche de priorité retenue ci-dessous.
+    const creditNotesTotal = enrollmentInvoices
+      .filter((inv) => (inv as InvoiceRow).document_type === 'credit_note')
+      .reduce((sum, cn) => sum + getInvoiceTotal(cn as InvoiceRow), 0)
 
     // Priorité 1: Facture
     if (invoicesList.length > 0) {
       // Prendre le total de la facture la plus récente
-      return getInvoiceTotal(invoicesList[0] as InvoiceRow)
+      return getInvoiceTotal(invoicesList[0] as InvoiceRow) + creditNotesTotal
     }
 
     // Priorité 2: Devis
     if (quotesList.length > 0) {
       // Prendre le total du devis le plus récent
-      return getInvoiceTotal(quotesList[0] as InvoiceRow)
+      return getInvoiceTotal(quotesList[0] as InvoiceRow) + creditNotesTotal
     }
 
     // Priorité 3: Total des modules de la session
-    return sessionModulesTotal
+    return sessionModulesTotal + creditNotesTotal
   }
 
   // Quantité utilisée pour la facturation d'une entité : l'effectif (nombre
@@ -1249,10 +1257,13 @@ export function GestionFinances({
     const reservationInvoices = getInvoicesForEntityReservation(reservationId)
     const invoicesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice' && !(inv as InvoiceRow)?._optimistic)
     const quotesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote' && !(inv as InvoiceRow)?._optimistic)
+    const creditNotesTotal = reservationInvoices
+      .filter((inv) => (inv as InvoiceRow).document_type === 'credit_note')
+      .reduce((sum, cn) => sum + getInvoiceTotal(cn as InvoiceRow), 0)
 
-    if (invoicesList.length > 0) return getInvoiceTotal(invoicesList[0] as InvoiceRow)
-    if (quotesList.length > 0) return getInvoiceTotal(quotesList[0] as InvoiceRow)
-    return fallbackTotal
+    if (invoicesList.length > 0) return getInvoiceTotal(invoicesList[0] as InvoiceRow) + creditNotesTotal
+    if (quotesList.length > 0) return getInvoiceTotal(quotesList[0] as InvoiceRow) + creditNotesTotal
+    return fallbackTotal + creditNotesTotal
   }
 
   // Calculs du résumé financier (utilise les montants dynamiques)

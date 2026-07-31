@@ -265,6 +265,9 @@ export class InvoiceService {
       if (original.document_type === 'credit_note') {
         throw errorHandler.createValidationError('Impossible de créer un avoir sur un avoir.', 'originalInvoiceId')
       }
+      if (original.document_type === 'quote') {
+        throw errorHandler.createValidationError('Impossible de créer un avoir sur un devis (document non facturé).', 'originalInvoiceId')
+      }
 
       // Avoirs déjà émis sur cette facture, pour plafonner le solde créditable
       const { data: existingCreditNotes } = await this.supabase
