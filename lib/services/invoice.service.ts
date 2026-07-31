@@ -79,17 +79,17 @@ export class InvoiceService {
   }
 
   /**
-   * Génère un numéro unique : devis (DEV-YYYY-NNN) ou facture (FAC-YYYY-NNN).
-   * Les devis et les factures ont des séquences séparées.
+   * Génère un numéro unique : devis (DEV-YYYY-NNN), facture (FAC-YYYY-NNN)
+   * ou avoir (AVO-YYYY-NNN). Chaque type de document a sa propre séquence.
    *
    * Public pour permettre à l'UI d'afficher un aperçu du prochain numéro
    * avant création (cf. gestion-finances.tsx). Comme `create()` accepte déjà
    * un `invoice_number` fourni manuellement (voir plus bas), cet aperçu peut
    * être modifié par l'utilisateur avant soumission sans changer ce service.
    */
-  async previewNextInvoiceNumber(organizationId: string, documentType: 'quote' | 'invoice' = 'invoice'): Promise<string> {
+  async previewNextInvoiceNumber(organizationId: string, documentType: 'quote' | 'invoice' | 'credit_note' = 'invoice'): Promise<string> {
     const year = new Date().getFullYear().toString()
-    const prefix = documentType === 'quote' ? 'DEV' : 'FAC'
+    const prefix = documentType === 'quote' ? 'DEV' : documentType === 'credit_note' ? 'AVO' : 'FAC'
     const pattern = `${prefix}-${year}-%`
 
     const { data: lastDoc } = await this.supabase
@@ -123,7 +123,7 @@ export class InvoiceService {
       validateRequired(invoice, ['organization_id'])
 
       // Générer le numéro de facture si vide ou non fourni
-      const invoiceData = invoice as InvoiceInsert & { invoice_number?: string; document_type?: 'quote' | 'invoice'; entity_id?: string | null }
+      const invoiceData = invoice as InvoiceInsert & { invoice_number?: string; document_type?: 'quote' | 'invoice' | 'credit_note'; entity_id?: string | null }
 
       // Un devis/une facture est adressé soit à un apprenant, soit à une entité externe
       if (!invoice.student_id && !invoiceData.entity_id) {
@@ -220,6 +220,121 @@ export class InvoiceService {
       throw errorHandler.handleError(error, {
         operation: 'create',
         invoice,
+      })
+    }
+  }
+
+  /**
+   * Crée un avoir (note de crédit) sur une facture existante.
+   *
+   * Génère un numéro dédié (AVO-YYYY-NNN, séquence séparée des factures et
+   * devis), copie les informations pertinentes de la facture d'origine
+   * (client, financement, devise) et enregistre des montants négatifs.
+   * Le montant est plafonné au solde encore « créditable » de la facture
+   * (son montant total moins les avoirs déjà émis dessus), pour empêcher de
+   * créditer plus que ce qui a été facturé même en plusieurs avoirs successifs.
+   */
+  async createCreditNote(params: {
+    organizationId: string
+    originalInvoiceId: string
+    /** Montant HT positif à créditer */
+    amount: number
+    /** Montant de TVA positif à créditer (0 par défaut) */
+    taxAmount?: number
+    reason: string
+  }) {
+    const { organizationId, originalInvoiceId, amount, reason } = params
+    const taxAmount = params.taxAmount ?? 0
+
+    try {
+      if (!(amount > 0)) {
+        throw errorHandler.createValidationError('Le montant de l\'avoir doit être supérieur à 0.', 'amount')
+      }
+
+      const { data: original, error: fetchError } = await this.supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', originalInvoiceId)
+        .eq('organization_id', organizationId)
+        .single()
+
+      if (fetchError || !original) {
+        throw errorHandler.createValidationError('Facture d\'origine introuvable.', 'originalInvoiceId')
+      }
+
+      if (original.document_type === 'credit_note') {
+        throw errorHandler.createValidationError('Impossible de créer un avoir sur un avoir.', 'originalInvoiceId')
+      }
+
+      // Avoirs déjà émis sur cette facture, pour plafonner le solde créditable
+      const { data: existingCreditNotes } = await this.supabase
+        .from('invoices')
+        .select('total_amount')
+        .eq('original_invoice_id', originalInvoiceId)
+
+      const alreadyCredited = (existingCreditNotes || []).reduce(
+        (sum, cn) => sum + Math.abs(Number(cn.total_amount) || 0),
+        0
+      )
+      const creditableBalance = Number(original.total_amount) - alreadyCredited
+      const requestedTotal = amount + taxAmount
+
+      if (requestedTotal > creditableBalance + 0.001) {
+        throw errorHandler.createValidationError(
+          `Le montant de l'avoir (${requestedTotal.toFixed(2)}) dépasse le solde encore créditable de la facture (${creditableBalance.toFixed(2)}).`,
+          'amount'
+        )
+      }
+
+      const invoiceNumber = await this.previewNextInvoiceNumber(organizationId, 'credit_note')
+
+      const { data, error } = await this.supabase
+        .from('invoices')
+        .insert({
+          organization_id: organizationId,
+          student_id: original.student_id,
+          entity_id: original.entity_id,
+          enrollment_id: original.enrollment_id,
+          session_entity_reservation_id: original.session_entity_reservation_id,
+          funding_type_id: original.funding_type_id,
+          original_invoice_id: originalInvoiceId,
+          invoice_number: invoiceNumber,
+          type: original.type,
+          document_type: 'credit_note',
+          issue_date: new Date().toISOString().split('T')[0],
+          due_date: new Date().toISOString().split('T')[0],
+          amount: -amount,
+          tax_amount: -taxAmount,
+          total_amount: -(amount + taxAmount),
+          currency: original.currency,
+          status: 'sent',
+          notes: reason,
+        } as InvoiceInsert)
+        .select()
+        .single()
+
+      if (error) {
+        throw errorHandler.handleError(error, {
+          operation: 'createCreditNote',
+          originalInvoiceId,
+        })
+      }
+
+      logger.info('Avoir créé avec succès', {
+        id: data?.id,
+        organizationId,
+        originalInvoiceId,
+        invoiceNumber: data?.invoice_number,
+      })
+
+      return data
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error
+      }
+      throw errorHandler.handleError(error, {
+        operation: 'createCreditNote',
+        originalInvoiceId,
       })
     }
   }

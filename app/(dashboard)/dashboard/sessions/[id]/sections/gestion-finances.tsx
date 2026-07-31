@@ -43,7 +43,7 @@ import {
   Download, FileText, Plus, Receipt, DollarSign,
   FileCheck, FileX, Eye, CreditCard, ChevronDown, ChevronUp,
   Trash2, Edit, TrendingDown, ArrowRightLeft, Wallet, PieChart as PieChartIcon,
-  TrendingUp, AlertCircle, CheckCircle2, Mail, PenTool, Send, Building2
+  TrendingUp, AlertCircle, CheckCircle2, Mail, PenTool, Send, Building2, Undo2
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 // Lazy load recharts pour réduire le bundle initial
@@ -121,6 +121,9 @@ export function GestionFinances({
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
   const [convertingQuoteId, setConvertingQuoteId] = useState<string | null>(null)
   const [showCharges, setShowCharges] = useState(true)
+  const [showCreditNoteForm, setShowCreditNoteForm] = useState(false)
+  const [creditNoteInvoice, setCreditNoteInvoice] = useState<InvoiceWithRelations | null>(null)
+  const [creditNoteForm, setCreditNoteForm] = useState({ amount: '', tax_amount: '0', reason: '' })
   const [showChargeForm, setShowChargeForm] = useState(false)
   const [editingCharge, setEditingCharge] = useState<SessionChargeWithCategory | null>(null)
 
@@ -994,6 +997,56 @@ export function GestionFinances({
     },
   })
 
+  // Mutation pour créer un avoir sur une facture existante
+  const createCreditNoteMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.organization_id || !creditNoteInvoice) throw new Error('Données manquantes')
+
+      const amount = parseFloat(creditNoteForm.amount) || 0
+      const taxAmount = parseFloat(creditNoteForm.tax_amount) || 0
+
+      if (amount <= 0) {
+        throw new Error("Le montant de l'avoir doit être supérieur à 0.")
+      }
+
+      return invoiceService.createCreditNote({
+        organizationId: user.organization_id,
+        originalInvoiceId: creditNoteInvoice.id,
+        amount,
+        taxAmount,
+        reason: creditNoteForm.reason.trim() || 'Avoir',
+      })
+    },
+    onSuccess: () => {
+      addToast({
+        type: 'success',
+        title: 'Avoir créé',
+        description: "L'avoir a été créé avec succès.",
+      })
+      setShowCreditNoteForm(false)
+      setCreditNoteInvoice(null)
+      setCreditNoteForm({ amount: '', tax_amount: '0', reason: '' })
+      queryClient.invalidateQueries({ queryKey: ['session-invoices', sessionId] })
+    },
+    onError: (error: unknown) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : "Erreur lors de la création de l'avoir.",
+      })
+    },
+  })
+
+  const handleOpenCreditNoteForm = (invoice: InvoiceWithRelations) => {
+    setCreditNoteInvoice(invoice)
+    setCreditNoteForm({
+      amount: invoice.amount != null ? String(invoice.amount) : '',
+      tax_amount: invoice.tax_amount != null ? String(invoice.tax_amount) : '0',
+      reason: '',
+    })
+    setShowCreditNoteForm(true)
+  }
+
   // Mutation pour convertir un devis en facture
   const convertQuoteToInvoiceMutation = useMutation({
     mutationFn: async (quoteId: string) => {
@@ -1716,6 +1769,7 @@ export function GestionFinances({
                     const studentInvoices = enrollment.id ? getInvoicesForEnrollment(enrollment.id) : []
                     const studentInvoicesList = studentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice')
                     const studentQuotesList = studentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote')
+                    const studentCreditNotesList = studentInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'credit_note')
 
                     return (
                       <motion.div 
@@ -1840,9 +1894,44 @@ export function GestionFinances({
                                   >
                                     <PenTool className="h-3 w-3" />
                                   </button>
+                                  <button
+                                    onClick={() => handleOpenCreditNoteForm(invoice)}
+                                    className="text-gray-400 hover:text-orange-600 transition-colors"
+                                    title="Créer un avoir"
+                                  >
+                                    <Undo2 className="h-3 w-3" />
+                                  </button>
                                   <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
                                     <Eye className="h-3 w-3" />
                                   </Link>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Avoirs */}
+                            {studentCreditNotesList.map((creditNote: InvoiceWithRelations) => (
+                              <div key={creditNote.id} className="flex items-center bg-orange-50 border border-orange-200 rounded-md px-2 py-1">
+                                <Undo2 className="h-3 w-3 text-orange-600 mr-1.5" />
+                                <span className="text-xs font-medium text-orange-800 mr-2">
+                                  {creditNote.invoice_number} ({formatCurrency(Number(creditNote.total_amount), creditNote.currency || 'EUR')})
+                                </span>
+                                <div className="flex gap-1 border-l border-orange-200 pl-2">
+                                  <button
+                                    onClick={() => handleDownloadDocument(creditNote, 'invoice', selectedInvoiceTemplateId)}
+                                    disabled={isDownloading === creditNote.id}
+                                    className="text-orange-400 hover:text-orange-700 transition-colors"
+                                    title="Télécharger PDF"
+                                  >
+                                    {isDownloading === creditNote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                  </button>
+                                  <button
+                                    onClick={() => handleSendDocumentByEmail(creditNote, 'invoice')}
+                                    disabled={isEmailSending === creditNote.id}
+                                    className="text-orange-400 hover:text-orange-700 transition-colors"
+                                    title="Envoyer par email"
+                                  >
+                                    {isEmailSending === creditNote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -1977,6 +2066,7 @@ export function GestionFinances({
                     const reservationInvoices = getInvoicesForEntityReservation(reservation.id)
                     const reservationInvoicesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'invoice')
                     const reservationQuotesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'quote')
+                    const reservationCreditNotesList = reservationInvoices.filter((inv) => (inv as InvoiceRow).document_type === 'credit_note')
 
                     return (
                       <motion.div
@@ -2089,9 +2179,44 @@ export function GestionFinances({
                                   >
                                     <PenTool className="h-3 w-3" />
                                   </button>
+                                  <button
+                                    onClick={() => handleOpenCreditNoteForm(invoice as InvoiceWithRelations)}
+                                    className="text-gray-400 hover:text-orange-600 transition-colors"
+                                    title="Créer un avoir"
+                                  >
+                                    <Undo2 className="h-3 w-3" />
+                                  </button>
                                   <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
                                     <Eye className="h-3 w-3" />
                                   </Link>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Avoirs */}
+                            {reservationCreditNotesList.map((creditNote) => (
+                              <div key={creditNote.id} className="flex items-center bg-orange-50 border border-orange-200 rounded-md px-2 py-1">
+                                <Undo2 className="h-3 w-3 text-orange-600 mr-1.5" />
+                                <span className="text-xs font-medium text-orange-800 mr-2">
+                                  {creditNote.invoice_number} ({formatCurrency(Number(creditNote.total_amount), creditNote.currency || 'EUR')})
+                                </span>
+                                <div className="flex gap-1 border-l border-orange-200 pl-2">
+                                  <button
+                                    onClick={() => handleDownloadDocument(creditNote as InvoiceWithRelations, 'invoice', selectedInvoiceTemplateId)}
+                                    disabled={isDownloading === creditNote.id}
+                                    className="text-orange-400 hover:text-orange-700 transition-colors"
+                                    title="Télécharger PDF"
+                                  >
+                                    {isDownloading === creditNote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                  </button>
+                                  <button
+                                    onClick={() => handleSendDocumentByEmail(creditNote as InvoiceWithRelations, 'invoice')}
+                                    disabled={isEmailSending === creditNote.id}
+                                    className="text-orange-400 hover:text-orange-700 transition-colors"
+                                    title="Envoyer par email"
+                                  >
+                                    {isEmailSending === creditNote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -3266,6 +3391,106 @@ export function GestionFinances({
                 disabled={createQuoteMutation.isPending || (!selectedEnrollmentId && !selectedEntityReservationId)}
               >
                 {createQuoteMutation.isPending ? 'Création...' : 'Créer le devis'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Formulaire d'avoir (Dialog) */}
+      <Dialog
+        open={showCreditNoteForm}
+        onOpenChange={(open) => {
+          setShowCreditNoteForm(open)
+          if (!open) {
+            setCreditNoteInvoice(null)
+            setCreditNoteForm({ amount: '', tax_amount: '0', reason: '' })
+          }
+        }}
+      >
+        <DialogContent className="max-w-md" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Créer un avoir</DialogTitle>
+          </DialogHeader>
+          {creditNoteInvoice && (
+            <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <p className="text-sm text-orange-800">
+                Avoir sur la facture <span className="font-semibold">{creditNoteInvoice.invoice_number}</span>
+                {' '}— Total {formatCurrency(Number(creditNoteInvoice.total_amount), creditNoteInvoice.currency || 'EUR')}
+              </p>
+            </div>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              createCreditNoteMutation.mutate()
+            }}
+            className="space-y-4"
+          >
+            <fieldset disabled={createCreditNoteMutation.isPending} className="border-0 p-0 m-0 min-w-0 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Montant HT à créditer *</label>
+                <input
+                  type="number"
+                  required
+                  step="0.01"
+                  min="0.01"
+                  max={creditNoteInvoice?.amount != null ? Number(creditNoteInvoice.amount) : undefined}
+                  value={creditNoteForm.amount}
+                  onChange={(e) => setCreditNoteForm({ ...creditNoteForm, amount: e.target.value })}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">TVA à créditer</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={creditNoteForm.tax_amount}
+                  onChange={(e) => setCreditNoteForm({ ...creditNoteForm, tax_amount: e.target.value })}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Raison de l'avoir</label>
+                <Textarea
+                  value={creditNoteForm.reason}
+                  onChange={(e) => setCreditNoteForm({ ...creditNoteForm, reason: e.target.value })}
+                  rows={2}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Ex: erreur de facturation, annulation partielle..."
+                />
+                <p className="text-xs text-gray-500 mt-1">Apparaît sur le PDF de l'avoir.</p>
+              </div>
+
+              {createCreditNoteMutation.error != null && (
+                <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-lg text-sm">
+                  {createCreditNoteMutation.error instanceof Error
+                    ? createCreditNoteMutation.error.message
+                    : "Une erreur est survenue lors de la création de l'avoir."}
+                </div>
+              )}
+            </fieldset>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowCreditNoteForm(false)
+                  setCreditNoteInvoice(null)
+                  setCreditNoteForm({ amount: '', tax_amount: '0', reason: '' })
+                }}
+              >
+                Annuler
+              </Button>
+              <Button type="submit" disabled={createCreditNoteMutation.isPending}>
+                {createCreditNoteMutation.isPending ? 'Création...' : "Créer l'avoir"}
               </Button>
             </DialogFooter>
           </form>

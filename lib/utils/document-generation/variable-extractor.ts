@@ -184,8 +184,18 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
 
   let montantHt: string
   let modulesLignes: string
+  const isCreditNote = invoice?.document_type === 'credit_note'
 
-  if (sessionModules && sessionModules.length > 0) {
+  if (isCreditNote) {
+    // Un avoir porte son propre montant (négatif) — ne jamais le recalculer
+    // à partir des tarifs de modules de session ou du montant de l'inscription,
+    // qui sont positifs et n'ont aucun rapport avec le montant crédité.
+    const creditAmount = invoice?.amount != null ? Number(invoice.amount) : 0
+    montantHt = creditAmount.toFixed(2)
+    const cur = invoice?.currency || 'EUR'
+    const reason = invoice?.notes ? escapeHtml(String(invoice.notes)) : escapeHtml(formationName)
+    modulesLignes = `<tr><td style="padding: 12px; border-bottom: 1px solid #e9ecef;"><p style="margin: 0; font-weight: 500;">Avoir — ${reason}</p></td><td style="padding: 12px; text-align: center; border-bottom: 1px solid #e9ecef;"></td><td style="padding: 12px; text-align: right; border-bottom: 1px solid #e9ecef; font-weight: 500;">${montantHt} ${cur}</td></tr>`
+  } else if (sessionModules && sessionModules.length > 0) {
     const total = sessionModules.reduce((s, m) => s + Number(m.amount), 0) * moduleQuantity
     montantHt = total.toFixed(2)
     const currency = sessionModules[0]?.currency || 'EUR'
@@ -499,11 +509,17 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
         )
         .join('')
     })(),
-    montant_ttc: (sessionModules?.length || (enrollmentAmount != null && enrollmentAmount > 0))
-      ? montantHt
-      : (invoice?.total_amount ? Number(invoice.total_amount).toFixed(2) : '0.00'),
-    tva: sessionModules?.length ? '0.00' : (invoice?.tax_amount ? Number(invoice.tax_amount).toFixed(2) : '0.00'),
-    taux_tva: sessionModules?.length ? '0.00' : (invoice?.tax_amount && invoice?.amount ? ((Number(invoice.tax_amount) / Number(invoice.amount)) * 100).toFixed(2) : '0.00'),
+    montant_ttc: isCreditNote
+      ? (invoice?.total_amount != null ? Number(invoice.total_amount).toFixed(2) : montantHt)
+      : (sessionModules?.length || (enrollmentAmount != null && enrollmentAmount > 0))
+        ? montantHt
+        : (invoice?.total_amount ? Number(invoice.total_amount).toFixed(2) : '0.00'),
+    tva: isCreditNote
+      ? (invoice?.tax_amount != null ? Number(invoice.tax_amount).toFixed(2) : '0.00')
+      : sessionModules?.length ? '0.00' : (invoice?.tax_amount ? Number(invoice.tax_amount).toFixed(2) : '0.00'),
+    taux_tva: isCreditNote
+      ? (invoice?.tax_amount && invoice?.amount ? ((Number(invoice.tax_amount) / Number(invoice.amount)) * 100).toFixed(2) : '0.00')
+      : sessionModules?.length ? '0.00' : (invoice?.tax_amount && invoice?.amount ? ((Number(invoice.tax_amount) / Number(invoice.amount)) * 100).toFixed(2) : '0.00'),
     facture_montant: invoice?.amount ? Number(invoice.amount).toFixed(2) : '0.00',
     facture_tva: invoice?.tax_amount
       ? Number(invoice.tax_amount).toFixed(2)

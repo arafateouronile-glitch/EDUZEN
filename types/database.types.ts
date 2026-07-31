@@ -10436,6 +10436,7 @@ export type Database = {
           mentions_libres: string | null
           notes: string | null
           organization_id: string | null
+          original_invoice_id: string | null
           pdf_url: string | null
           session_entity_reservation_id: string | null
           status: string | null
@@ -10461,6 +10462,7 @@ export type Database = {
           mentions_libres?: string | null
           notes?: string | null
           organization_id?: string | null
+          original_invoice_id?: string | null
           pdf_url?: string | null
           session_entity_reservation_id?: string | null
           status?: string | null
@@ -10486,6 +10488,7 @@ export type Database = {
           mentions_libres?: string | null
           notes?: string | null
           organization_id?: string | null
+          original_invoice_id?: string | null
           pdf_url?: string | null
           session_entity_reservation_id?: string | null
           status?: string | null
@@ -10501,6 +10504,13 @@ export type Database = {
             columns: ["enrollment_id"]
             isOneToOne: false
             referencedRelation: "enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {

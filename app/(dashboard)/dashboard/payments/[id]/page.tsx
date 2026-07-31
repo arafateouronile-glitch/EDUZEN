@@ -207,50 +207,26 @@ export default function InvoiceDetailPage() {
   })
 
   // Mutation pour créer un avoir (doit être avant les returns conditionnels)
+  // Délègue à InvoiceService.createCreditNote : génère un numéro dédié
+  // (AVO-YYYY-NNN), plafonne le montant au solde encore créditable de la
+  // facture (en tenant compte des avoirs déjà émis dessus) et enregistre un
+  // vrai lien vers la facture d'origine (original_invoice_id).
   const createCreditNoteMutation = useMutation({
     mutationFn: async () => {
       if (!invoice) throw new Error('Facture non trouvée')
+      if (!user?.organization_id) throw new Error('Organisation manquante')
 
       const amountNumber = parseFloat(creditNoteForm.amount)
-
       if (isNaN(amountNumber) || amountNumber <= 0) {
         throw new Error('Montant de l\'avoir invalide')
       }
 
-      if (amountNumber > Number(invoice.total_amount)) {
-        throw new Error("Le montant de l'avoir ne peut pas dépasser le montant total de la facture")
-      }
-
-      // Créer un avoir (pour l'instant, on le stocke comme une facture avec un type spécial)
-      // NOTE: Fonctionnalité prévue - Nécessite création de la table credit_notes dans Supabase
-      // La table devrait contenir: id, invoice_id, amount, reason, created_at, created_by
-      const { data, error } = await supabase
-        .from('invoices')
-        .insert({
-          organization_id: invoice.organization_id,
-          student_id: invoice.student_id,
-          invoice_number: `AVOIR-${invoice.invoice_number}`,
-          type: 'credit_note',
-          document_type: 'invoice',
-          issue_date: new Date().toISOString().split('T')[0],
-          due_date: new Date().toISOString().split('T')[0],
-          amount: -amountNumber, // Montant négatif pour un avoir
-          tax_amount: 0,
-          total_amount: -amountNumber,
-          currency: invoice.currency,
-          status: 'sent',
-          notes: `Avoir pour la facture ${invoice.invoice_number}. Raison: ${creditNoteForm.reason}. ${creditNoteForm.notes}`,
-          metadata: {
-            original_invoice_id: invoice.id,
-            reason: creditNoteForm.reason,
-            notes: creditNoteForm.notes,
-          },
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
+      return invoiceService.createCreditNote({
+        organizationId: user.organization_id,
+        originalInvoiceId: invoice.id,
+        amount: amountNumber,
+        reason: [creditNoteForm.reason, creditNoteForm.notes].filter(Boolean).join(' — ') || 'Avoir',
+      })
     },
     onSuccess: () => {
       addToast({
@@ -532,10 +508,12 @@ export default function InvoiceDetailPage() {
               </Button>
             </>
           )}
-          <Button variant="outline" onClick={() => setShowCreditNoteForm(!showCreditNoteForm)}>
-            <Receipt className="mr-2 h-4 w-4" />
-            Créer un avoir
-          </Button>
+          {invoice.document_type !== 'credit_note' && invoice.document_type !== 'quote' && (
+            <Button variant="outline" onClick={() => setShowCreditNoteForm(!showCreditNoteForm)}>
+              <Receipt className="mr-2 h-4 w-4" />
+              Créer un avoir
+            </Button>
+          )}
         </div>
       </div>
 

@@ -224,6 +224,50 @@ describe('InvoiceService', () => {
     })
   })
 
+  describe('createCreditNote', () => {
+    it('devrait rejeter un montant nul ou négatif', async () => {
+      await expect(
+        invoiceService.createCreditNote({
+          organizationId: 'org-1',
+          originalInvoiceId: 'inv-1',
+          amount: 0,
+          reason: 'Test',
+        })
+      ).rejects.toThrow()
+    })
+
+    it('devrait rejeter si la facture d\'origine est introuvable', async () => {
+      const mockQuery = mockSupabase.from('invoices') as any
+      mockQuery.single.mockResolvedValueOnce({ data: null, error: { message: 'Not found' } })
+
+      await expect(
+        invoiceService.createCreditNote({
+          organizationId: 'org-1',
+          originalInvoiceId: 'inv-missing',
+          amount: 100,
+          reason: 'Test',
+        })
+      ).rejects.toThrow()
+    })
+
+    it('devrait rejeter la création d\'un avoir sur un avoir', async () => {
+      const mockQuery = mockSupabase.from('invoices') as any
+      mockQuery.single.mockResolvedValueOnce({
+        data: { id: 'inv-1', document_type: 'credit_note', total_amount: -100 },
+        error: null,
+      })
+
+      await expect(
+        invoiceService.createCreditNote({
+          organizationId: 'org-1',
+          originalInvoiceId: 'inv-1',
+          amount: 50,
+          reason: 'Test',
+        })
+      ).rejects.toThrow(/avoir sur un avoir/)
+    })
+  })
+
   describe('update', () => {
     it('devrait mettre à jour une facture', async () => {
       const updated = { id: '1', invoice_number: '2025-001', status: 'paid', organization_id: 'org-1' }
