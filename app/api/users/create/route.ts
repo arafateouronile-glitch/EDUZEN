@@ -73,7 +73,7 @@ async function postCreateUser(request: NextRequest) {
     role: {
       type: "string",
       required: false,
-      allowedValues: ["super_admin", "admin", "teacher", "student"],
+      allowedValues: ["super_admin", "admin", "teacher", "secretary", "accountant", "parent", "student"],
     },
     is_active: {
       type: "boolean",
