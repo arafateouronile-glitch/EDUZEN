@@ -25,6 +25,7 @@ import { AskAiButton } from '@/components/dashboard/ask-ai-button'
 import { useSessionDetail } from './hooks/use-session-detail'
 import { sessionService } from '@/lib/services/session.service.client'
 import { useToast } from '@/components/ui/toast'
+import { useTeacherSessionIds } from '@/lib/hooks/use-teacher-session-ids'
 import { SessionSidebar } from './components/session-sidebar'
 import { SkeletonLoader } from './components/skeleton-loader'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -124,6 +125,22 @@ export default function SessionDetailPage() {
   } = useSessionDetail(sessionId)
 
   const queryClient = useQueryClient()
+
+  // Un enseignant n'a accès qu'à ses propres sessions, et uniquement à l'onglet
+  // Suivi (émargements/évaluations) — pas à la configuration/gestion/finances.
+  const { isTeacher, teacherSessionIds } = useTeacherSessionIds()
+
+  useEffect(() => {
+    if (isTeacher && teacherSessionIds && !teacherSessionIds.includes(sessionId)) {
+      router.replace('/dashboard/attendance')
+    }
+  }, [isTeacher, teacherSessionIds, sessionId, router])
+
+  useEffect(() => {
+    if (isTeacher && activeStep !== 'suivi') {
+      setActiveStep('suivi')
+    }
+  }, [isTeacher, activeStep, setActiveStep])
 
   // Rafraîchir les données (timeline, stats) quand on ouvre l’étape Suivi
   useEffect(() => {
@@ -243,6 +260,14 @@ export default function SessionDetailPage() {
             </div>
           </GlassCard>
         </motion.div>
+      </div>
+    )
+  }
+
+  if (isTeacher && teacherSessionIds && !teacherSessionIds.includes(sessionId)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue" />
       </div>
     )
   }
@@ -390,6 +415,7 @@ export default function SessionDetailPage() {
                 setActiveTab={setActiveTab}
                 activeGestionTab={activeGestionTab}
                 setActiveGestionTab={setActiveGestionTab}
+                restrictedToSuivi={isTeacher}
               />
             </div>
 
@@ -626,6 +652,7 @@ export default function SessionDetailPage() {
                 setActiveTab={setActiveTab}
                 activeGestionTab={activeGestionTab}
                 setActiveGestionTab={setActiveGestionTab}
+                restrictedToSuivi={isTeacher}
               />
             </div>
           </div>
@@ -641,7 +668,7 @@ export default function SessionDetailPage() {
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
               >
               {/* Configuration Content */}
-              {activeStep === 'configuration' && activeTab === 'initialisation' && (
+              {!isTeacher && activeStep === 'configuration' && activeTab === 'initialisation' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <ConfigInitialisation
                     formData={formData}
@@ -651,7 +678,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'configuration' && activeTab === 'dates_prix' && (
+              {!isTeacher && activeStep === 'configuration' && activeTab === 'dates_prix' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <ConfigDatesPrix
                     sessionId={sessionId}
@@ -669,7 +696,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'configuration' && activeTab === 'programme' && (
+              {!isTeacher && activeStep === 'configuration' && activeTab === 'programme' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <ConfigProgramme
                     formData={formData}
@@ -683,7 +710,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'configuration' && activeTab === 'intervenants' && (
+              {!isTeacher && activeStep === 'configuration' && activeTab === 'intervenants' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <ConfigIntervenants
                     formData={formData}
@@ -694,7 +721,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'configuration' && activeTab === 'apprenants' && (
+              {!isTeacher && activeStep === 'configuration' && activeTab === 'apprenants' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <ConfigApprenants
                     sessionId={sessionId}
@@ -727,7 +754,7 @@ export default function SessionDetailPage() {
               )}
 
               {/* Gestion Content */}
-              {activeStep === 'gestion' && activeGestionTab === 'conventions' && (
+              {!isTeacher && activeStep === 'gestion' && activeGestionTab === 'conventions' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <GestionConventions
                     sessionData={sessionData}
@@ -745,7 +772,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'gestion' && activeGestionTab === 'convocations' && (
+              {!isTeacher && activeStep === 'gestion' && activeGestionTab === 'convocations' && (
                 <Suspense fallback={<SkeletonLoader />}>
                 <GestionConvocations
                   sessionId={sessionId}
@@ -777,7 +804,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'gestion' && activeGestionTab === 'evaluations' && (
+              {!isTeacher && activeStep === 'gestion' && activeGestionTab === 'evaluations' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <GestionEvaluations
                   sessionId={sessionId}
@@ -813,7 +840,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'gestion' && activeGestionTab === 'finances' && (
+              {!isTeacher && activeStep === 'gestion' && activeGestionTab === 'finances' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <GestionFinances
                     enrollments={enrollments}
@@ -826,7 +853,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'gestion' && activeGestionTab === 'espace_entreprise' && (
+              {!isTeacher && activeStep === 'gestion' && activeGestionTab === 'espace_entreprise' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <GestionEspaceEntreprise
                     sessionData={sessionData}
@@ -840,7 +867,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'gestion' && activeGestionTab === 'automatisation' && (
+              {!isTeacher && activeStep === 'gestion' && activeGestionTab === 'automatisation' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <GestionAutomatisation
                     sessionId={sessionId}
@@ -849,7 +876,7 @@ export default function SessionDetailPage() {
                 </Suspense>
               )}
 
-              {activeStep === 'gestion' && activeGestionTab === 'examen' && (
+              {!isTeacher && activeStep === 'gestion' && activeGestionTab === 'examen' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <GestionExamen
                     sessionId={sessionId}
@@ -859,7 +886,7 @@ export default function SessionDetailPage() {
               )}
 
               {/* Other Steps */}
-              {activeStep === 'espace_apprenant' && (
+              {!isTeacher && activeStep === 'espace_apprenant' && (
                 <Suspense fallback={<SkeletonLoader />}>
                   <EspaceApprenant
                     sessionId={sessionId}

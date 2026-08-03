@@ -34,6 +34,8 @@ interface SessionSidebarProps {
   activeGestionTab: GestionTab
   setActiveGestionTab: (tab: GestionTab) => void
   className?: string
+  /** Enseignant : n'affiche que l'étape "Suivi" (émargements/évaluations). */
+  restrictedToSuivi?: boolean
 }
 
 export function SessionSidebar({
@@ -43,10 +45,11 @@ export function SessionSidebar({
   setActiveTab,
   activeGestionTab,
   setActiveGestionTab,
-  className
+  className,
+  restrictedToSuivi = false,
 }: SessionSidebarProps) {
 
-  const menuItems = [
+  const allMenuItems = [
     {
       id: 'configuration',
       label: 'Configuration',
@@ -87,9 +90,13 @@ export function SessionSidebar({
       label: 'Suivi',
       icon: BarChart2,
       description: 'Analysez les performances',
-      items: [] 
+      items: []
     }
   ]
+
+  const menuItems = restrictedToSuivi
+    ? allMenuItems.filter(item => item.id === 'suivi')
+    : allMenuItems
 
   const handleMainClick = (stepId: string) => {
     setActiveStep(stepId as WorkflowStep)
@@ -113,7 +120,7 @@ export function SessionSidebar({
       <motion.div 
         className="absolute left-[2.25rem] top-4 w-0.5 bg-gradient-to-b from-brand-blue via-brand-cyan to-brand-purple -z-10"
         initial={{ height: "0%" }}
-        animate={{ height: `${(activeIndex / (menuItems.length - 1)) * 100}%` }}
+        animate={{ height: `${menuItems.length > 1 ? (activeIndex / (menuItems.length - 1)) * 100 : 100}%` }}
         transition={{ duration: 0.5, ease: "easeInOut" }}
       />
 
