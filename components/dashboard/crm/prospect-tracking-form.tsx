@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { updateProspectTracking } from '@/lib/actions/learner-crm-actions'
+import { COMMERCIAL_STATUS_LABELS, type ProspectCommercialStatus } from '@/lib/constants/crm-commercial-status'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -19,6 +20,7 @@ interface ProspectTrackingFormProps {
     contacted_at: string | null
     next_follow_up_date: string | null
     notes: string | null
+    commercial_status: ProspectCommercialStatus | null
   }
   invalidateKeys: unknown[][]
   onSaved?: () => void
@@ -30,6 +32,7 @@ export function ProspectTrackingForm({ studentId, initial, invalidateKeys, onSav
   const [contactedAt, setContactedAt] = useState(initial.contacted_at ?? '')
   const [nextFollowUp, setNextFollowUp] = useState(initial.next_follow_up_date ?? '')
   const [notes, setNotes]             = useState(initial.notes ?? '')
+  const [commercialStatus, setCommercialStatus] = useState<ProspectCommercialStatus | ''>(initial.commercial_status ?? '')
 
   const mutation = useMutation({
     mutationFn: () => updateProspectTracking(studentId, {
@@ -37,6 +40,7 @@ export function ProspectTrackingForm({ studentId, initial, invalidateKeys, onSav
       contacted_at: contacted ? (contactedAt || new Date().toISOString().slice(0, 10)) : null,
       next_follow_up_date: nextFollowUp || null,
       notes: notes.trim() || null,
+      commercial_status: commercialStatus || null,
     }),
     onSuccess: () => {
       invalidateKeys.forEach(key => queryClient.invalidateQueries({ queryKey: key }))
@@ -48,6 +52,20 @@ export function ProspectTrackingForm({ studentId, initial, invalidateKeys, onSav
 
   return (
     <div className="space-y-3">
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">Statut commercial</label>
+        <select
+          value={commercialStatus}
+          onChange={e => setCommercialStatus(e.target.value as ProspectCommercialStatus | '')}
+          className="w-full px-3 py-1.5 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue"
+        >
+          <option value="">Nouveau</option>
+          {(Object.entries(COMMERCIAL_STATUS_LABELS) as [ProspectCommercialStatus, string][]).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+      </div>
+
       <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
         <input
           type="checkbox"

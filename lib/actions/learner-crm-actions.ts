@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { LearnerEventType } from '@/lib/utils/track-learner-event'
+import type { ProspectCommercialStatus } from '@/lib/constants/crm-commercial-status'
+import { COMMERCIAL_STATUS_AUTO_ORDER } from '@/lib/constants/crm-commercial-status'
 
 // Tables email_logs et learner_events non dans le schéma généré — cast centralisé ici
 function untyped(client: ReturnType<typeof createAdminClient>): SupabaseClient {
@@ -58,6 +60,7 @@ export interface LearnerCard {
   contacted_at: string | null
   next_follow_up_date: string | null
   notes: string | null
+  commercial_status: ProspectCommercialStatus | null
 }
 
 export interface LearnerProfile {
@@ -90,6 +93,7 @@ export interface LearnerProfile {
   contacted_at: string | null
   next_follow_up_date: string | null
   notes: string | null
+  commercial_status: ProspectCommercialStatus | null
 }
 
 export interface LearnerPipelineData {
@@ -493,11 +497,11 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
 
   const trackingBatches = await Promise.all(idChunks.map(ids =>
     untyped(supabase).from('crm_prospect_tracking')
-      .select('student_id, contacted, contacted_at, next_follow_up_date, notes')
+      .select('student_id, contacted, contacted_at, next_follow_up_date, notes, commercial_status')
       .in('student_id', ids)
   ))
-  const trackingByStudent = new Map<string, { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null }>()
-  for (const row of trackingBatches.flatMap(r => (r.data ?? []) as { student_id: string; contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null }[])) {
+  const trackingByStudent = new Map<string, { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null; commercial_status: ProspectCommercialStatus | null }>()
+  for (const row of trackingBatches.flatMap(r => (r.data ?? []) as { student_id: string; contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null; commercial_status: ProspectCommercialStatus | null }[])) {
     trackingByStudent.set(row.student_id, row)
   }
 
@@ -604,6 +608,7 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       contacted_at:         tracking?.contacted_at ?? null,
       next_follow_up_date:  tracking?.next_follow_up_date ?? null,
       notes:                tracking?.notes ?? null,
+      commercial_status:    tracking?.commercial_status ?? null,
     })
   }
 
@@ -642,10 +647,10 @@ export async function getLearnerProfile(studentId: string): Promise<LearnerProfi
   // Suivi commercial manuel
   const { data: trackingRow } = await untyped(supabase)
     .from('crm_prospect_tracking')
-    .select('contacted, contacted_at, next_follow_up_date, notes')
+    .select('contacted, contacted_at, next_follow_up_date, notes, commercial_status')
     .eq('student_id', studentId)
     .maybeSingle()
-  const tracking = trackingRow as { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null } | null
+  const tracking = trackingRow as { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null; commercial_status: ProspectCommercialStatus | null } | null
 
   // Construction de la timeline depuis les vraies tables
   const events = await buildTimeline(supabase, studentId, student.email, orgId)
@@ -694,12 +699,13 @@ export async function getLearnerProfile(studentId: string): Promise<LearnerProfi
     contacted_at:         tracking?.contacted_at ?? null,
     next_follow_up_date:  tracking?.next_follow_up_date ?? null,
     notes:                tracking?.notes ?? null,
+    commercial_status:    tracking?.commercial_status ?? null,
   }
 }
 
 export async function updateProspectTracking(
   studentId: string,
-  data: { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null }
+  data: { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null; commercial_status: ProspectCommercialStatus | null }
 ): Promise<void> {
   const { orgId, userId } = await getAuthContext()
   const adminClient = createAdminClient()
@@ -711,8 +717,48 @@ export async function updateProspectTracking(
       contacted_at:         data.contacted_at,
       next_follow_up_date:  data.next_follow_up_date,
       notes:                data.notes,
+      commercial_status:    data.commercial_status,
       updated_at:           new Date().toISOString(),
       updated_by:           userId,
+    },
+    { onConflict: 'student_id' }
+  )
+}
+
+/**
+ * Fait progresser automatiquement le statut commercial d'un prospect suite à un
+ * événement système (devis/convention envoyé ou signé) — sans dépendre d'une
+ * session utilisateur (appelable depuis une route publique comme /api/sign/submit).
+ * Ne recule jamais et ne touche jamais un statut manuel hors chaîne (en_reflexion/perdu).
+ */
+export async function autoAdvanceProspectCommercialStatus(
+  orgId: string,
+  studentId: string,
+  status: ProspectCommercialStatus
+): Promise<void> {
+  const adminClient = createAdminClient()
+
+  const { data: currentRow } = await untyped(adminClient)
+    .from('crm_prospect_tracking')
+    .select('commercial_status')
+    .eq('student_id', studentId)
+    .maybeSingle()
+
+  const currentStatus = (currentRow as { commercial_status: ProspectCommercialStatus | null } | null)?.commercial_status ?? null
+  const currentRank = currentStatus ? COMMERCIAL_STATUS_AUTO_ORDER.indexOf(currentStatus) : -1
+  const newRank = COMMERCIAL_STATUS_AUTO_ORDER.indexOf(status)
+
+  // Statut manuel hors chaîne (en_reflexion/perdu) : verrouillé, on ne touche pas.
+  if (currentStatus && currentRank === -1) return
+  // Déjà à ce stade ou plus loin : ne jamais reculer.
+  if (currentRank >= newRank) return
+
+  await untyped(adminClient).from('crm_prospect_tracking').upsert(
+    {
+      student_id:       studentId,
+      organization_id:  orgId,
+      commercial_status: status,
+      updated_at:        new Date().toISOString(),
     },
     { onConflict: 'student_id' }
   )

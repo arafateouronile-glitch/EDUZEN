@@ -24,6 +24,7 @@ import {
 } from '@/lib/utils/sign-document-helpers'
 import { sendSignedPdfEmails, sendSignatureNotificationEmails } from '@/lib/utils/send-signed-pdf-email'
 import { logger } from '@/lib/utils/logger'
+import { autoAdvanceProspectCommercialStatus } from '@/lib/actions/learner-crm-actions'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 
@@ -670,6 +671,22 @@ export async function POST(request: NextRequest) {
           { error: 'Erreur lors de la mise à jour de la demande.' },
           { status: 500 }
         )
+      }
+
+      // Suivi commercial CRM : un devis/une convention signé fait progresser
+      // automatiquement le statut du prospect. Ne doit jamais faire échouer la
+      // signature côté signataire externe (pas de session ici, client admin uniquement).
+      const crmRecipientId = (resolved.sig as { recipient_id?: string | null }).recipient_id
+      if (crmRecipientId) {
+        try {
+          await autoAdvanceProspectCommercialStatus(
+            orgId,
+            crmRecipientId,
+            docType === 'quote' ? 'devis_signe' : 'convention_signee'
+          )
+        } catch (crmError) {
+          logger.error('Erreur mise à jour statut commercial CRM (signature):', crmError as Error)
+        }
       }
 
       const { error: evErr } = await db.from('digital_evidence').insert({

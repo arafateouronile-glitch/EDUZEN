@@ -5978,6 +5978,7 @@ export type Database = {
       }
       crm_prospect_tracking: {
         Row: {
+          commercial_status: string | null
           contacted: boolean
           contacted_at: string | null
           id: string
@@ -5989,6 +5990,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          commercial_status?: string | null
           contacted?: boolean
           contacted_at?: string | null
           id?: string
@@ -6000,6 +6002,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          commercial_status?: string | null
           contacted?: boolean
           contacted_at?: string | null
           id?: string

@@ -19,7 +19,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { AlertTriangle, User, Building2, CalendarClock, CheckCircle2 } from 'lucide-react'
 import type { CrmStatus, LearnerCard, LearnerPipelineData } from '@/lib/actions/learner-crm-actions'
+import { COMMERCIAL_STATUS_LABELS, type ProspectCommercialStatus } from '@/lib/constants/crm-commercial-status'
 import { ProspectTrackingForm, daysSinceContact } from '@/components/dashboard/crm/prospect-tracking-form'
+
+const COMMERCIAL_STATUS_BADGE: Record<ProspectCommercialStatus, string> = {
+  devis_envoye:       'bg-blue-50 text-blue-700',
+  en_reflexion:       'bg-amber-50 text-amber-700',
+  devis_signe:        'bg-emerald-50 text-emerald-700',
+  convention_envoyee: 'bg-cyan-50 text-cyan-700',
+  convention_signee:  'bg-teal-50 text-teal-700',
+  perdu:              'bg-gray-100 text-gray-500',
+}
 
 // ─── Configuration des colonnes ───────────────────────────────────────────────
 
@@ -81,6 +91,7 @@ function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard
                     contacted_at: learner.contacted_at,
                     next_follow_up_date: learner.next_follow_up_date,
                     notes: learner.notes,
+                    commercial_status: learner.commercial_status,
                   }}
                   invalidateKeys={[['learner-pipeline']]}
                 />
@@ -103,8 +114,13 @@ function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard
       </div>
 
       {/* Badges de suivi commercial */}
-      {(learner.contacted || learner.next_follow_up_date) && (
+      {(learner.contacted || learner.next_follow_up_date || learner.commercial_status) && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {learner.commercial_status && (
+            <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] ${COMMERCIAL_STATUS_BADGE[learner.commercial_status]}`}>
+              {COMMERCIAL_STATUS_LABELS[learner.commercial_status]}
+            </span>
+          )}
           {learner.contacted && (
             <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] text-emerald-700">
               <CheckCircle2 className="h-3 w-3" />

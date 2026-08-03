@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { SignatureRequestService } from '@/lib/services/signature-request.service'
 import { DocumentService } from '@/lib/services/document.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { autoAdvanceProspectCommercialStatus } from '@/lib/actions/learner-crm-actions'
 
 /**
  * POST /api/signature-requests/send-from-invoice
@@ -139,6 +140,16 @@ export async function POST(request: NextRequest) {
       message: message || null,
       expiresAt: expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
+
+    // Suivi commercial CRM : un devis envoyé fait progresser automatiquement le
+    // statut du prospect. Ne doit jamais faire échouer l'envoi réel.
+    if (type === 'quote' && invoice?.student_id) {
+      try {
+        await autoAdvanceProspectCommercialStatus(userData.organization_id, invoice.student_id, 'devis_envoye')
+      } catch (crmError) {
+        logger.error('Erreur mise à jour statut commercial CRM (devis envoyé):', crmError)
+      }
+    }
 
     return NextResponse.json({
       signatureRequest,

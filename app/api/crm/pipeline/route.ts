@@ -83,6 +83,7 @@ export async function GET() {
         contacted_at:         row.contacted_at ? String(row.contacted_at) : null,
         next_follow_up_date:  row.next_follow_up_date ? String(row.next_follow_up_date) : null,
         notes:                row.notes ?? null,
+        commercial_status:    row.commercial_status ?? null,
       }
 
       pipeline[status].push(card)

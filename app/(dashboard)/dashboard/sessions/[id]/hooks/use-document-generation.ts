@@ -20,6 +20,7 @@ import { formatDate } from '@/lib/utils'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import { createClient } from '@/lib/supabase/client'
 import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
+import { autoAdvanceProspectCommercialStatus } from '@/lib/actions/learner-crm-actions'
 import type { DocumentTemplate } from '@/lib/types/document-templates'
 import type { 
   SessionWithRelations, 
@@ -2363,6 +2364,13 @@ export function useDocumentGeneration({
       )
 
       await markEnrollmentDocumentSent(enrollment.id, 'contract_sent_at')
+      // Suivi commercial CRM : une convention envoyée fait progresser automatiquement
+      // le statut du prospect. Ne doit jamais faire échouer l'envoi réel.
+      try {
+        await autoAdvanceProspectCommercialStatus(organization.id, student.id, 'convention_envoyee')
+      } catch (crmError) {
+        logger.error('Erreur mise à jour statut commercial CRM (convention envoyée):', crmError as Error)
+      }
       queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionData.id] })
 
       addToast({
@@ -2852,6 +2860,13 @@ export function useDocumentGeneration({
       )
 
       await markEnrollmentDocumentSent(enrollment.id, 'contract_sent_at')
+      // Suivi commercial CRM : une convention envoyée fait progresser automatiquement
+      // le statut du prospect. Ne doit jamais faire échouer l'envoi réel.
+      try {
+        await autoAdvanceProspectCommercialStatus(organization.id, student.id, 'convention_envoyee')
+      } catch (crmError) {
+        logger.error('Erreur mise à jour statut commercial CRM (convention envoyée):', crmError as Error)
+      }
       queryClient.invalidateQueries({ queryKey: ['session-enrollments', sessionData.id] })
 
       addToast({

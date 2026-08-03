@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { LearnerPipeline } from '@/components/dashboard/crm/learner-pipeline'
 import type { CrmStatus, LearnerCard, LearnerPipelineData } from '@/lib/actions/learner-crm-actions'
+import { COMMERCIAL_STATUS_LABELS, type ProspectCommercialStatus } from '@/lib/constants/crm-commercial-status'
 
 async function fetchPipeline(): Promise<LearnerPipelineData> {
   const res = await fetch('/api/crm/pipeline')
@@ -22,6 +23,7 @@ interface Filters {
   program: string
   programCategory: string
   entityType: 'company' | 'individual' | ''
+  commercialStatus: ProspectCommercialStatus | ''
   status: CrmStatus | ''
   dateFrom: string
   dateTo: string
@@ -29,7 +31,7 @@ interface Filters {
 }
 
 const EMPTY_FILTERS: Filters = {
-  search: '', formation: '', session: '', program: '', programCategory: '', entityType: '',
+  search: '', formation: '', session: '', program: '', programCategory: '', entityType: '', commercialStatus: '',
   status: '', dateFrom: '', dateTo: '', qualiopiOnly: false,
 }
 
@@ -87,6 +89,7 @@ export function CrmClientPage() {
       if (filters.programCategory && card.program_category !== filters.programCategory) continue
       if (filters.entityType === 'company' && !card.is_company) continue
       if (filters.entityType === 'individual' && card.is_company) continue
+      if (filters.commercialStatus && card.commercial_status !== filters.commercialStatus) continue
       if (filters.qualiopiOnly && card.missing_qualiopi.length === 0) continue
       if (filters.dateFrom && card.session_start_date && card.session_start_date < filters.dateFrom) continue
       if (filters.dateTo && card.session_end_date && card.session_end_date > filters.dateTo) continue
@@ -252,7 +255,7 @@ export function CrmClientPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
             <select value={filters.status} onChange={e => set({ status: e.target.value as CrmStatus | '' })}
               className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
               <option value="">Tous les statuts</option>
@@ -265,6 +268,13 @@ export function CrmClientPage() {
               <option value="">Entreprise ou particulier</option>
               <option value="company">Entreprise</option>
               <option value="individual">Particulier</option>
+            </select>
+            <select value={filters.commercialStatus} onChange={e => set({ commercialStatus: e.target.value as Filters['commercialStatus'] })}
+              className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+              <option value="">Tous les statuts commerciaux</option>
+              {(Object.entries(COMMERCIAL_STATUS_LABELS) as [ProspectCommercialStatus, string][]).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Session — début à partir du</label>

@@ -239,6 +239,7 @@ export default function LearnerProfilePage() {
                   contacted_at: profile.contacted_at,
                   next_follow_up_date: profile.next_follow_up_date,
                   notes: profile.notes,
+                  commercial_status: profile.commercial_status,
                 }}
                 invalidateKeys={[['learner-profile', studentId]]}
               />

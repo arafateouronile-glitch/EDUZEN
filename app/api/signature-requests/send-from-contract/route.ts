@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { SignatureRequestService } from '@/lib/services/signature-request.service'
 import { DocumentService } from '@/lib/services/document.service'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { autoAdvanceProspectCommercialStatus } from '@/lib/actions/learner-crm-actions'
 
 /**
  * POST /api/signature-requests/send-from-contract
@@ -144,6 +145,16 @@ export async function POST(request: NextRequest) {
       message: message || null,
       expiresAt: expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
+
+    // Suivi commercial CRM : une convention envoyée fait progresser automatiquement
+    // le statut du prospect. Ne doit jamais faire échouer l'envoi réel.
+    if (resolvedRecipientType === 'student' && studentId) {
+      try {
+        await autoAdvanceProspectCommercialStatus(userData.organization_id, studentId, 'convention_envoyee')
+      } catch (crmError) {
+        logger.error('Erreur mise à jour statut commercial CRM (convention envoyée):', crmError)
+      }
+    }
 
     return NextResponse.json({
       signatureRequest,
