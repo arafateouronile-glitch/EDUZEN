@@ -73,10 +73,16 @@ export async function GET() {
         formation_id:       row.formation_id  ?? null,
         formation_name:     row.formation_name ?? null,
         program_name:       row.program_name  ?? null,
+        program_category:   row.program_category ?? null,
         company_name:       row.company_name  ?? null,
+        is_company:         row.is_company ?? false,
         missing_qualiopi:   missing,
         enrollment_id:      row.enrollment_id ?? null,
         created_at:         row.created_at ?? new Date().toISOString(),
+        contacted:            row.contacted ?? false,
+        contacted_at:         row.contacted_at ? String(row.contacted_at) : null,
+        next_follow_up_date:  row.next_follow_up_date ? String(row.next_follow_up_date) : null,
+        notes:                row.notes ?? null,
       }
 
       pipeline[status].push(card)

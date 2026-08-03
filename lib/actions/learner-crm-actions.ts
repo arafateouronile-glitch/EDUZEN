@@ -48,10 +48,16 @@ export interface LearnerCard {
   formation_name: string | null
   formation_id: string | null
   program_name: string | null
+  program_category: string | null
   company_name: string | null
+  is_company: boolean
   missing_qualiopi: string[]
   enrollment_id: string | null
   created_at: string
+  contacted: boolean
+  contacted_at: string | null
+  next_follow_up_date: string | null
+  notes: string | null
 }
 
 export interface LearnerProfile {
@@ -80,6 +86,10 @@ export interface LearnerProfile {
   company: { id: string; name: string } | null
   checklist: QualiopiChecklist
   events: LearnerEvent[]
+  contacted: boolean
+  contacted_at: string | null
+  next_follow_up_date: string | null
+  notes: string | null
 }
 
 export interface LearnerPipelineData {
@@ -471,7 +481,7 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       supabase.from('company_employees').select('student_id, companies(id, name)')
         .in('student_id', ids).eq('is_active', true)
     )),
-    supabase.from('formations').select('id, name, programs(name)').eq('organization_id', orgId),
+    supabase.from('formations').select('id, name, category, programs(name, category)').eq('organization_id', orgId),
   ])
 
   const rawEnrollments  = enrollmentBatches.flatMap(r => (r.data ?? []) as RawEnrollment[])
@@ -481,17 +491,29 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
   const evalsBatch      = evalBatches.flatMap(r => r.data ?? [])
   const companyEmployees = companyBatches.flatMap(r => r.data ?? [])
 
+  const trackingBatches = await Promise.all(idChunks.map(ids =>
+    untyped(supabase).from('crm_prospect_tracking')
+      .select('student_id, contacted, contacted_at, next_follow_up_date, notes')
+      .in('student_id', ids)
+  ))
+  const trackingByStudent = new Map<string, { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null }>()
+  for (const row of trackingBatches.flatMap(r => (r.data ?? []) as { student_id: string; contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null }[])) {
+    trackingByStudent.set(row.student_id, row)
+  }
+
   if (formationsError) console.error('[CRM] formations query error:', formationsError.message)
 
-  // Map formation_id → {name, program_name}
+  // Map formation_id → {name, program_name, category}
   // programs est un objet (join many-to-one formations→programs), pas un tableau
-  const formationMap = new Map<string, { name: string; program_name: string | null }>()
+  const formationMap = new Map<string, { name: string; program_name: string | null; category: string | null }>()
   for (const f of rawFormations ?? []) {
-    const prog = f.programs as { name: string } | { name: string }[] | null
-    const program_name = Array.isArray(prog)
-      ? (prog[0]?.name ?? null)
-      : ((prog as { name: string } | null)?.name ?? null)
-    formationMap.set(f.id, { name: f.name, program_name })
+    const prog = f.programs as { name: string; category: string | null } | { name: string; category: string | null }[] | null
+    const progObj = Array.isArray(prog) ? (prog[0] ?? null) : prog
+    formationMap.set(f.id, {
+      name: f.name,
+      program_name: progObj?.name ?? null,
+      category: progObj?.category ?? (f.category as string | null) ?? null,
+    })
   }
 
   // Grouper les enrollments par student_id (ordre created_at DESC conservé)
@@ -556,6 +578,8 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       ? computeCrmStatus(active.status, sess?.start_date ?? null, sess?.end_date ?? null)
       : 'prospect'
 
+    const tracking = trackingByStudent.get(student.id) ?? null
+
     pipeline[crm_status].push({
       id:             student.id,
       first_name:     student.first_name,
@@ -570,10 +594,16 @@ export async function getLearnerPipeline(): Promise<LearnerPipelineData> {
       formation_name:     sess?.formation_id ? (formationMap.get(sess.formation_id)?.name ?? null) : null,
       formation_id:       sess?.formation_id ?? null,
       program_name:       sess?.formation_id ? (formationMap.get(sess.formation_id)?.program_name ?? null) : null,
+      program_category:   sess?.formation_id ? (formationMap.get(sess.formation_id)?.category ?? null) : null,
       company_name:       companyByStudent.get(student.id) ?? null,
+      is_company:         companyByStudent.has(student.id),
       missing_qualiopi: getMissingQualiopi(student.id, student.email),
       enrollment_id:  active?.id ?? null,
       created_at:     student.created_at ?? new Date().toISOString(),
+      contacted:            tracking?.contacted ?? false,
+      contacted_at:         tracking?.contacted_at ?? null,
+      next_follow_up_date:  tracking?.next_follow_up_date ?? null,
+      notes:                tracking?.notes ?? null,
     })
   }
 
@@ -608,6 +638,14 @@ export async function getLearnerProfile(studentId: string): Promise<LearnerProfi
     .eq('is_active', true)
     .maybeSingle()
   const company = (companyEmployeeRow?.companies as { id: string; name: string } | null) ?? null
+
+  // Suivi commercial manuel
+  const { data: trackingRow } = await untyped(supabase)
+    .from('crm_prospect_tracking')
+    .select('contacted, contacted_at, next_follow_up_date, notes')
+    .eq('student_id', studentId)
+    .maybeSingle()
+  const tracking = trackingRow as { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null } | null
 
   // Construction de la timeline depuis les vraies tables
   const events = await buildTimeline(supabase, studentId, student.email, orgId)
@@ -652,7 +690,32 @@ export async function getLearnerProfile(studentId: string): Promise<LearnerProfi
     company,
     checklist,
     events,
+    contacted:            tracking?.contacted ?? false,
+    contacted_at:         tracking?.contacted_at ?? null,
+    next_follow_up_date:  tracking?.next_follow_up_date ?? null,
+    notes:                tracking?.notes ?? null,
   }
+}
+
+export async function updateProspectTracking(
+  studentId: string,
+  data: { contacted: boolean; contacted_at: string | null; next_follow_up_date: string | null; notes: string | null }
+): Promise<void> {
+  const { orgId, userId } = await getAuthContext()
+  const adminClient = createAdminClient()
+  await untyped(adminClient).from('crm_prospect_tracking').upsert(
+    {
+      student_id:          studentId,
+      organization_id:     orgId,
+      contacted:            data.contacted,
+      contacted_at:         data.contacted_at,
+      next_follow_up_date:  data.next_follow_up_date,
+      notes:                data.notes,
+      updated_at:           new Date().toISOString(),
+      updated_by:           userId,
+    },
+    { onConflict: 'student_id' }
+  )
 }
 
 export async function addLearnerNote(studentId: string, note: string): Promise<void> {

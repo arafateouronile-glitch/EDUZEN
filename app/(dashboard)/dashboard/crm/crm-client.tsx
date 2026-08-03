@@ -20,6 +20,8 @@ interface Filters {
   formation: string
   session: string
   program: string
+  programCategory: string
+  entityType: 'company' | 'individual' | ''
   status: CrmStatus | ''
   dateFrom: string
   dateTo: string
@@ -27,7 +29,7 @@ interface Filters {
 }
 
 const EMPTY_FILTERS: Filters = {
-  search: '', formation: '', session: '', program: '',
+  search: '', formation: '', session: '', program: '', programCategory: '', entityType: '',
   status: '', dateFrom: '', dateTo: '', qualiopiOnly: false,
 }
 
@@ -65,6 +67,10 @@ export function CrmClientPage() {
     [...new Set(allCards.map(c => c.program_name).filter(Boolean) as string[])].sort(),
     [allCards]
   )
+  const programCategories = useMemo(() =>
+    [...new Set(allCards.map(c => c.program_category).filter(Boolean) as string[])].sort(),
+    [allCards]
+  )
 
   const filteredData = useMemo<LearnerPipelineData>(() => {
     const result: LearnerPipelineData = { prospect: [], inscrit: [], en_cours: [], termine: [], abandon: [] }
@@ -78,6 +84,9 @@ export function CrmClientPage() {
       if (filters.formation && card.formation_name !== filters.formation) continue
       if (filters.session && card.session_name !== filters.session) continue
       if (filters.program && card.program_name !== filters.program) continue
+      if (filters.programCategory && card.program_category !== filters.programCategory) continue
+      if (filters.entityType === 'company' && !card.is_company) continue
+      if (filters.entityType === 'individual' && card.is_company) continue
       if (filters.qualiopiOnly && card.missing_qualiopi.length === 0) continue
       if (filters.dateFrom && card.session_start_date && card.session_start_date < filters.dateFrom) continue
       if (filters.dateTo && card.session_end_date && card.session_end_date > filters.dateTo) continue
@@ -212,7 +221,7 @@ export function CrmClientPage() {
       {/* Barre de filtres */}
       {showFilters && (
         <div className="rounded-xl border bg-white p-4 shadow-sm space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="relative sm:col-span-2 lg:col-span-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               <input
@@ -236,15 +245,26 @@ export function CrmClientPage() {
               <option value="">Toutes les sessions</option>
               {sessions.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+            <select value={filters.programCategory} onChange={e => set({ programCategory: e.target.value })}
+              className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+              <option value="">Toutes les catégories</option>
+              {programCategories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
             <select value={filters.status} onChange={e => set({ status: e.target.value as CrmStatus | '' })}
               className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
               <option value="">Tous les statuts</option>
               {(Object.entries(STATUS_LABELS) as [CrmStatus, string][]).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
+            </select>
+            <select value={filters.entityType} onChange={e => set({ entityType: e.target.value as Filters['entityType'] })}
+              className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+              <option value="">Entreprise ou particulier</option>
+              <option value="company">Entreprise</option>
+              <option value="individual">Particulier</option>
             </select>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Session — début à partir du</label>

@@ -7,6 +7,7 @@ import { addLearnerNote } from '@/lib/actions/learner-crm-actions'
 import type { LearnerProfile } from '@/lib/actions/learner-crm-actions'
 import { LearnerTimeline } from '@/components/dashboard/crm/learner-timeline'
 import { QualiopiChecklist } from '@/components/dashboard/crm/qualiopi-checklist'
+import { ProspectTrackingForm } from '@/components/dashboard/crm/prospect-tracking-form'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -225,6 +226,25 @@ export default function LearnerProfilePage() {
 
         {/* ── Colonne droite : Timeline + Note ── */}
         <div className="space-y-4 lg:col-span-2">
+          {/* Suivi commercial */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Suivi commercial</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ProspectTrackingForm
+                studentId={studentId}
+                initial={{
+                  contacted: profile.contacted,
+                  contacted_at: profile.contacted_at,
+                  next_follow_up_date: profile.next_follow_up_date,
+                  notes: profile.notes,
+                }}
+                invalidateKeys={[['learner-profile', studentId]]}
+              />
+            </CardContent>
+          </Card>
+
           {/* Ajouter une note */}
           <Card>
             <CardHeader className="pb-2">

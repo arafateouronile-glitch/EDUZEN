@@ -16,8 +16,10 @@ import { useDraggable } from '@dnd-kit/core'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { AlertTriangle, User, Building2 } from 'lucide-react'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { AlertTriangle, User, Building2, CalendarClock, CheckCircle2 } from 'lucide-react'
 import type { CrmStatus, LearnerCard, LearnerPipelineData } from '@/lib/actions/learner-crm-actions'
+import { ProspectTrackingForm, daysSinceContact } from '@/components/dashboard/crm/prospect-tracking-form'
 
 // ─── Configuration des colonnes ───────────────────────────────────────────────
 
@@ -33,6 +35,7 @@ const COLUMNS: { id: CrmStatus; label: string; color: string; bg: string; border
 
 function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard; isDragging?: boolean }) {
   const initials = `${learner.first_name[0] ?? ''}${learner.last_name[0] ?? ''}`.toUpperCase()
+  const isOverdue = !!learner.next_follow_up_date && learner.next_follow_up_date < new Date().toISOString().slice(0, 10)
 
   return (
     <div
@@ -46,13 +49,44 @@ function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard
           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <Link
-            href={`/dashboard/crm/${learner.id}`}
-            className="block truncate text-sm font-semibold text-gray-800 hover:text-brand-blue"
-            onClick={e => e.stopPropagation()}
-          >
-            {learner.first_name} {learner.last_name}
-          </Link>
+          <div className="flex items-center justify-between gap-1">
+            <Link
+              href={`/dashboard/crm/${learner.id}`}
+              className="block truncate text-sm font-semibold text-gray-800 hover:text-brand-blue"
+              onClick={e => e.stopPropagation()}
+            >
+              {learner.first_name} {learner.last_name}
+            </Link>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  onClick={e => e.stopPropagation()}
+                  onPointerDown={e => e.stopPropagation()}
+                  className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-blue"
+                  title="Suivi commercial"
+                >
+                  <CalendarClock className="h-3.5 w-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
+              >
+                <ProspectTrackingForm
+                  studentId={learner.id}
+                  initial={{
+                    contacted: learner.contacted,
+                    contacted_at: learner.contacted_at,
+                    next_follow_up_date: learner.next_follow_up_date,
+                    notes: learner.notes,
+                  }}
+                  invalidateKeys={[['learner-pipeline']]}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
           {learner.session_name && (
             <p className="truncate text-xs text-slate-400">{learner.session_name}</p>
           )}
@@ -67,6 +101,29 @@ function LearnerCardItem({ learner, isDragging = false }: { learner: LearnerCard
           )}
         </div>
       </div>
+
+      {/* Badges de suivi commercial */}
+      {(learner.contacted || learner.next_follow_up_date) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {learner.contacted && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] text-emerald-700">
+              <CheckCircle2 className="h-3 w-3" />
+              Contacté{(() => {
+                const d = daysSinceContact(learner.contacted_at)
+                return d !== null ? ` (${d}j)` : ''
+              })()}
+            </span>
+          )}
+          {learner.next_follow_up_date && (
+            <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${
+              isOverdue ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-600'
+            }`}>
+              <CalendarClock className="h-3 w-3" />
+              Relance {learner.next_follow_up_date}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Badge d'alerte Qualiopi */}
       {learner.missing_qualiopi.length > 0 && (

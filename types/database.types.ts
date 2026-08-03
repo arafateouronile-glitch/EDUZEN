@@ -5976,6 +5976,64 @@ export type Database = {
           },
         ]
       }
+      crm_prospect_tracking: {
+        Row: {
+          contacted: boolean
+          contacted_at: string | null
+          id: string
+          next_follow_up_date: string | null
+          notes: string | null
+          organization_id: string
+          student_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          contacted?: boolean
+          contacted_at?: string | null
+          id?: string
+          next_follow_up_date?: string | null
+          notes?: string | null
+          organization_id: string
+          student_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          contacted?: boolean
+          contacted_at?: string | null
+          id?: string
+          next_follow_up_date?: string | null
+          notes?: string | null
+          organization_id?: string
+          student_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_prospect_tracking_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_prospect_tracking_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_prospect_tracking_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_sync_logs: {
         Row: {
           completed_at: string | null
