@@ -20,6 +20,10 @@ import {
   ArrowRight,
   CreditCard,
   Loader2,
+  FileCheck,
+  GraduationCap,
+  Bell,
+  Building2,
 } from 'lucide-react'
 import { motion } from '@/components/ui/motion'
 import { formatCurrency, cn } from '@/lib/utils'
@@ -163,7 +167,7 @@ export default function SubscribePage() {
   const maxSavings = plans ? Math.max(...plans.map(getYearlySavings)) : 0
 
   const getPlanFeatures = (plan: Plan) => {
-    const features = plan.features || {}
+    const features = (plan.features || {}) as Record<string, unknown>
     return [
       {
         label: 'Apprenants',
@@ -175,8 +179,12 @@ export default function SubscribePage() {
         value: plan.max_sessions_per_month ? `${plan.max_sessions_per_month} sessions` : 'Illimité',
         icon: Calendar,
       },
-      ...(features.support ? [{ label: 'Support', value: features.support, icon: Shield }] : []),
-      ...(features.advanced_features ? [{ label: 'Fonctionnalités avancées', value: 'Inclus', icon: Zap }] : []),
+      ...(features.bpf_export === true ? [{ label: 'Export BPF automatisé', value: 'Inclus', icon: FileCheck }] : []),
+      ...(features.e_learning === true ? [{ label: 'Portail e-learning', value: 'Inclus', icon: GraduationCap }] : []),
+      ...(features.qualiopi_dashboard === true ? [{ label: 'Dashboard Qualiopi', value: 'Inclus', icon: Shield }] : []),
+      ...(features.automated_reminders === true ? [{ label: 'Relances automatiques', value: 'Inclus', icon: Bell }] : []),
+      ...(features.white_label === true ? [{ label: 'Marque blanche / URL personnalisée', value: 'Inclus', icon: Zap }] : []),
+      ...(features.multi_establishments === true ? [{ label: 'Multi-établissements', value: 'Inclus', icon: Building2 }] : []),
     ]
   }
 

@@ -20,6 +20,7 @@ import {
   Lock, FileDown, ClipboardCheck, ClipboardList, Accessibility, Plug, Zap, ArrowRight, DoorOpen, Tag, AlertTriangle, RotateCcw
 } from 'lucide-react'
 import { CancelSubscriptionDialog } from '@/components/settings/cancel-subscription-dialog'
+import { PlanFeatureList } from '@/components/subscription/plan-feature-list'
 import Link from 'next/link'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
@@ -1897,45 +1898,21 @@ export default function SettingsPage() {
                                     ? (subscriptionData as any).plans[0]
                                     : (subscriptionData as any).plans)
                                 : null
-                              const planFeatures: string[] = Array.isArray(plan?.features)
-                                ? plan.features as string[]
-                                : plan?.features && typeof plan.features === 'object'
-                                  ? Object.values(plan.features as Record<string, string>)
-                                  : []
 
-                              return planFeatures.length > 0 ? (
-                                <ul className="space-y-2.5 text-sm text-gray-700">
-                                  {planFeatures.map((feature, i) => (
-                                    <li key={i} className="flex items-center gap-2.5">
-                                      <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
-                                        <Shield className="h-3 w-3 text-brand-blue" />
-                                      </div>
-                                      <span>{feature}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <ul className="space-y-2.5 text-sm text-gray-700">
-                                  {plan?.max_students && (
-                                    <li className="flex items-center gap-2.5">
-                                      <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
-                                        <GraduationCap className="h-3 w-3 text-brand-blue" />
-                                      </div>
-                                      <span>{plan.max_students === -1 ? 'Apprenants illimités' : `${plan.max_students} apprenants max`}</span>
-                                    </li>
-                                  )}
-                                  {plan?.max_sessions_per_month && (
-                                    <li className="flex items-center gap-2.5">
-                                      <div className="w-5 h-5 rounded-full bg-brand-blue-ghost flex items-center justify-center flex-shrink-0">
-                                        <Users className="h-3 w-3 text-brand-blue" />
-                                      </div>
-                                      <span>{plan.max_sessions_per_month === -1 ? 'Sessions illimitées' : `${plan.max_sessions_per_month} sessions/mois max`}</span>
-                                    </li>
-                                  )}
-                                  {!plan && (
+                              if (!plan) {
+                                return (
+                                  <ul className="space-y-2.5 text-sm text-gray-700">
                                     <li className="text-gray-400 text-sm italic">Aucune information disponible</li>
-                                  )}
-                                </ul>
+                                  </ul>
+                                )
+                              }
+
+                              return (
+                                <PlanFeatureList
+                                  features={plan.features}
+                                  maxStudents={plan.max_students}
+                                  maxSessionsPerMonth={plan.max_sessions_per_month}
+                                />
                               )
                             })()}
                           </div>
