@@ -26,6 +26,11 @@ import { motion, AnimatePresence } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { useVocabulary } from '@/lib/hooks/use-vocabulary'
+import { getVocabulary } from '@/lib/utils/vocabulary'
+import { getNavigation } from '@/components/dashboard/sidebar'
+import { getNavAccessOverride, filterNavigationByRole, type NavigationSection } from '@/lib/navigation/nav-access'
 
 export default function SettingsPage() {
   const { user, isLoading: authLoading, session, isAuthenticated } = useAuth()
@@ -225,6 +230,108 @@ export default function SettingsPage() {
     enabled: !!user?.organization_id,
     retry: 2,
     refetchOnWindowFocus: true,
+  })
+
+  // --- Onglet Permissions : accès par section, par utilisateur ---
+  const vocab = useVocabulary() || getVocabulary('school')
+  const t = useTranslations()
+  const fullNavigation: NavigationSection[] = getNavigation(vocab, t)
+  const [selectedPermUserId, setSelectedPermUserId] = useState<string | null>(null)
+  const [permCheckedHrefs, setPermCheckedHrefs] = useState<string[]>([])
+
+  const { data: permUsers = [], isLoading: isLoadingPermUsers } = useQuery({
+    queryKey: ['organization-users-permissions', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, full_name, role, permissions')
+        .eq('organization_id', user.organization_id)
+        .neq('role', 'super_admin')
+        .order('full_name', { ascending: true })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user?.organization_id && activeTab === 'permissions',
+  })
+
+  const selectedPermUser = permUsers.find(u => u.id === selectedPermUserId) || null
+
+  // Liste des hrefs "feuilles" (pages) d'une navigation filtrée, hors tableau de bord (toujours accessible)
+  const flattenLeafHrefs = (navigation: NavigationSection[]): string[] =>
+    navigation.flatMap(section =>
+      section.items.flatMap(item =>
+        item.children
+          ? item.children.map(child => child.href)
+          : item.href && item.href !== '/dashboard' ? [item.href] : []
+      )
+    )
+
+  useEffect(() => {
+    if (!selectedPermUser) {
+      setPermCheckedHrefs([])
+      return
+    }
+    const override = getNavAccessOverride(selectedPermUser.permissions)
+    if (override) {
+      setPermCheckedHrefs(override)
+    } else {
+      // Pas d'override défini : pré-cocher ce que le rôle de l'utilisateur voit déjà aujourd'hui
+      setPermCheckedHrefs(flattenLeafHrefs(filterNavigationByRole(fullNavigation, selectedPermUser.role || undefined)))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne réinitialiser que lors du changement d'utilisateur sélectionné
+  }, [selectedPermUser?.id])
+
+  const togglePermHref = (href: string) => {
+    setPermCheckedHrefs(prev => prev.includes(href) ? prev.filter(h => h !== href) : [...prev, href])
+  }
+
+  const savePermissionsMutation = useMutation({
+    mutationFn: async (hrefs: string[]) => {
+      if (!selectedPermUserId) throw new Error('Aucun utilisateur sélectionné')
+      const res = await fetch(`/api/users/${selectedPermUserId}/permissions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nav_access: hrefs }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Erreur lors de l\'enregistrement')
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-users-permissions'] })
+      queryClient.invalidateQueries({ queryKey: ['organization-users'] })
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      addToast({ title: 'Permissions enregistrées', description: 'Les accès de cet utilisateur ont été mis à jour', type: 'success' })
+    },
+    onError: (error: unknown) => {
+      addToast({ title: 'Erreur', description: error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement', type: 'error' })
+    },
+  })
+
+  const resetPermissionsMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedPermUserId) throw new Error('Aucun utilisateur sélectionné')
+      const res = await fetch(`/api/users/${selectedPermUserId}/permissions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nav_access: null }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Erreur lors de la réinitialisation')
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-users-permissions'] })
+      queryClient.invalidateQueries({ queryKey: ['organization-users'] })
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      addToast({ title: 'Permissions réinitialisées', description: 'Cet utilisateur retrouve les accès par défaut de son rôle', type: 'success' })
+    },
+    onError: (error: unknown) => {
+      addToast({ title: 'Erreur', description: error instanceof Error ? error.message : 'Erreur lors de la réinitialisation', type: 'error' })
+    },
   })
 
   // Mettre à jour le formulaire quand organization change
@@ -2033,6 +2140,153 @@ export default function SettingsPage() {
                   currentPeriodEnd={subscriptionData?.current_period_end ?? null}
                   onCancelled={() => queryClient.invalidateQueries({ queryKey: ['subscription', user?.organization_id] })}
                 />
+              </motion.div>
+            )}
+
+            {activeTab === 'permissions' && (
+              <motion.div
+                key="permissions"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <GlassCard variant="premium" className="relative overflow-hidden p-8 border-2 border-gray-100/50 hover:border-brand-blue/20 transition-all duration-500 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)]">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="p-3 bg-gradient-to-br from-brand-blue to-brand-blue-dark rounded-2xl shadow-xl">
+                      <Shield className="h-6 w-6 text-white drop-shadow-lg" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-display font-bold text-gray-900 tracking-tight">Permissions</h2>
+                      <p className="text-gray-600 font-semibold tracking-tight">
+                        Choisissez, pour chaque utilisateur, les sections du menu auxquelles il a accès
+                      </p>
+                    </div>
+                  </div>
+
+                  {isLoadingPermUsers ? (
+                    <div className="flex items-center justify-center py-16">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
+                    </div>
+                  ) : permUsers.length === 0 ? (
+                    <p className="text-gray-500 text-center py-12">Aucun utilisateur à configurer</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8">
+                      {/* Sélecteur d'utilisateur */}
+                      <div className="space-y-1.5">
+                        {permUsers.map(u => {
+                          const hasOverride = !!getNavAccessOverride(u.permissions)
+                          return (
+                            <button
+                              key={u.id}
+                              onClick={() => setSelectedPermUserId(u.id)}
+                              className={cn(
+                                'w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-left text-sm font-semibold transition-all',
+                                selectedPermUserId === u.id
+                                  ? 'bg-gradient-to-br from-brand-blue to-brand-cyan text-white shadow-lg'
+                                  : 'text-gray-700 hover:bg-gray-100'
+                              )}
+                            >
+                              <span className="truncate">
+                                {u.full_name || u.email}
+                                <span className={cn('block text-xs font-normal', selectedPermUserId === u.id ? 'text-white/80' : 'text-gray-400')}>
+                                  {u.role}
+                                </span>
+                              </span>
+                              {hasOverride && (
+                                <span className={cn(
+                                  'shrink-0 h-2 w-2 rounded-full',
+                                  selectedPermUserId === u.id ? 'bg-white' : 'bg-brand-blue'
+                                )} title="Accès personnalisé actif" />
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Arbre de cases à cocher */}
+                      <div>
+                        {!selectedPermUser ? (
+                          <p className="text-gray-500 py-12 text-center">Sélectionnez un utilisateur pour configurer ses accès</p>
+                        ) : (
+                          <>
+                            <p className="text-xs text-gray-500 mb-6">
+                              Le tableau de bord reste toujours accessible, quels que soient les accès cochés ci-dessous.
+                            </p>
+                            <div className="space-y-6 max-h-[520px] overflow-y-auto pr-2">
+                              {fullNavigation.map(section => {
+                                const leafItems = section.items.filter(item => item.href && item.href !== '/dashboard')
+                                const groupItems = section.items.filter(item => item.children)
+                                if (leafItems.length === 0 && groupItems.length === 0) return null
+                                return (
+                                  <div key={section.title}>
+                                    <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">{section.title}</h4>
+                                    <div className="space-y-3">
+                                      {leafItems.map(item => (
+                                        <label key={item.href} className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
+                                          <input
+                                            type="checkbox"
+                                            checked={permCheckedHrefs.includes(item.href!)}
+                                            onChange={() => togglePermHref(item.href!)}
+                                            className="h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                                          />
+                                          <item.icon className="h-4 w-4 text-gray-400" />
+                                          {item.name}
+                                        </label>
+                                      ))}
+                                      {groupItems.map(item => (
+                                        <div key={item.name} className="pl-1">
+                                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
+                                            <item.icon className="h-4 w-4 text-gray-400" />
+                                            {item.name}
+                                          </div>
+                                          <div className="pl-6 space-y-2 border-l-2 border-gray-100">
+                                            {item.children?.map(child => (
+                                              <label key={child.href} className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer">
+                                                <input
+                                                  type="checkbox"
+                                                  checked={permCheckedHrefs.includes(child.href)}
+                                                  onChange={() => togglePermHref(child.href)}
+                                                  className="h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                                                />
+                                                <child.icon className="h-4 w-4 text-gray-400" />
+                                                {child.name}
+                                              </label>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+
+                            <div className="flex items-center gap-3 mt-8 pt-6 border-t border-gray-100">
+                              <Button
+                                onClick={() => savePermissionsMutation.mutate(permCheckedHrefs)}
+                                disabled={savePermissionsMutation.isPending}
+                                className="bg-brand-blue hover:bg-brand-blue-dark text-white font-semibold gap-2"
+                              >
+                                <Save className="h-4 w-4" />
+                                Enregistrer
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => resetPermissionsMutation.mutate()}
+                                disabled={resetPermissionsMutation.isPending || !getNavAccessOverride(selectedPermUser.permissions)}
+                                className="gap-2"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                                Réinitialiser (utiliser les permissions du rôle)
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </GlassCard>
               </motion.div>
             )}
           </AnimatePresence>

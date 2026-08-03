@@ -48,28 +48,14 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { useTrial } from '@/lib/hooks/use-trial'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 import { UsageIndicator } from '@/components/quota/usage-indicator'
+import {
+  type NavigationItem,
+  type NavigationSection,
+  filterNavigationByAccess,
+  getNavAccessOverride,
+} from '@/lib/navigation/nav-access'
 
-type NavigationItem = {
-  name: string
-  href?: string
-  icon: React.ComponentType<{ className?: string }>
-  allowedRoles?: string[]
-  trialLocked?: boolean
-  children?: Array<{
-    name: string
-    href: string
-    icon: React.ComponentType<{ className?: string }>
-    allowedRoles?: string[]
-    trialLocked?: boolean
-  }>
-}
-
-type NavigationSection = {
-  title: string
-  items: NavigationItem[]
-  // Rôles autorisés à voir cette section (si non défini, visible par tous)
-  allowedRoles?: string[]
-}
+export type { NavigationItem, NavigationSection }
 
 // Rôles avec accès administratif complet
 const ADMIN_ROLES = ['super_admin', 'admin', 'secretary', 'accountant']
@@ -79,7 +65,7 @@ const FINANCE_ROLES = ['super_admin', 'admin', 'secretary', 'accountant']
 const FORMATION_MANAGEMENT_ROLES = ['super_admin', 'admin', 'secretary']
 
 // Fonction pour générer la navigation avec le vocabulaire adaptatif et les traductions
-const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string) => string): NavigationSection[] => [
+export const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string) => string): NavigationSection[] => [
   {
     title: t('navigation.main'),
     items: [
@@ -162,44 +148,6 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
     ],
   },
 ]
-
-// Fonction pour filtrer la navigation en fonction du rôle
-const filterNavigationByRole = (navigation: NavigationSection[], userRole: string | undefined): NavigationSection[] => {
-  // Si le rôle n'est pas encore chargé, retourner la navigation complète pour éviter les problèmes d'hydratation
-  if (!userRole) return navigation
-  
-  return navigation
-    .filter(section => {
-      // Si la section a des rôles autorisés, vérifier si l'utilisateur a accès
-      if (section.allowedRoles && !section.allowedRoles.includes(userRole)) {
-        return false
-      }
-      return true
-    })
-    .map(section => ({
-      ...section,
-      items: section.items
-        .filter(item => {
-          // Si l'élément a des rôles autorisés, vérifier si l'utilisateur a accès
-          if (item.allowedRoles && !item.allowedRoles.includes(userRole)) {
-            return false
-          }
-          return true
-        })
-        .map(item => ({
-          ...item,
-          // Filtrer également les enfants si présents
-          children: item.children?.filter(child => {
-            if (child.allowedRoles && !child.allowedRoles.includes(userRole)) {
-              return false
-            }
-            return true
-          }),
-        })),
-    }))
-    // Supprimer les sections vides
-    .filter(section => section.items.length > 0)
-}
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -303,7 +251,7 @@ export function Sidebar() {
   const fullNavigation = getNavigation(vocab, t)
   // Toujours retourner la navigation complète pendant l'hydratation pour éviter les différences
   const navigation = mounted && user?.role
-    ? filterNavigationByRole(fullNavigation, user.role)
+    ? filterNavigationByAccess(fullNavigation, getNavAccessOverride(user?.permissions), user.role)
     : fullNavigation
 
   return (

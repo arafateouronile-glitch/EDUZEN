@@ -1,12 +1,13 @@
 'use client'
 
 import { useAuth } from '@/lib/hooks/use-auth'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import { AlertCircle, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
+import { getNavAccessOverride, hasNavAccess } from '@/lib/navigation/nav-access'
 
 interface RoleGuardProps {
   children: React.ReactNode
@@ -30,14 +31,22 @@ export function RoleGuard({
 }: RoleGuardProps) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+
+  const checkAccess = () => {
+    if (!user) return false
+    const override = getNavAccessOverride(user.permissions)
+    if (override) return hasNavAccess(pathname || '', override)
+    return allowedRoles.includes(user.role || '')
+  }
 
   useEffect(() => {
     if (isLoading || !user) return
-    const access = allowedRoles.includes(user.role || '')
-    if (!access && redirectTo && !fallback) {
+    if (!checkAccess() && redirectTo && !fallback) {
       router.push(redirectTo)
     }
-  }, [user, isLoading, allowedRoles, redirectTo, router, fallback])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- checkAccess recreated each render, dépend de user/pathname/allowedRoles déjà listés
+  }, [user, isLoading, allowedRoles, redirectTo, router, fallback, pathname])
 
   // Pendant le chargement initial (pas de données en cache)
   if (isLoading) {
@@ -48,7 +57,7 @@ export function RoleGuard({
     )
   }
 
-  const hasAccess = user ? allowedRoles.includes(user.role || '') : false
+  const hasAccess = checkAccess()
 
   // Si l'utilisateur n'a pas accès
   if (!hasAccess) {
@@ -87,11 +96,15 @@ export function RoleGuard({
 // Hook pour vérifier l'accès basé sur le rôle
 export function useRoleAccess(allowedRoles: string[]): boolean {
   const { user, isLoading } = useAuth()
-  
+  const pathname = usePathname()
+
   if (isLoading || !user) {
     return false
   }
-  
+
+  const override = getNavAccessOverride(user.permissions)
+  if (override) return hasNavAccess(pathname || '', override)
+
   return allowedRoles.includes(user.role || '')
 }
 
