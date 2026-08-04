@@ -50,18 +50,47 @@ export async function GET(
 
   for (const source of sources) {
     if (source === 'programs') {
-      const { data } = await supabase
+      // Ne proposer que les formations ayant encore au moins une session programmée :
+      // un candidat qui choisit une formation sans session ne peut jamais être rattaché
+      // à une session automatiquement, et sa candidature reste orpheline sans qu'aucune
+      // erreur ne soit visible ni pour lui ni pour l'organisme.
+      const today = new Date().toISOString().split('T')[0]
+      const { data: relevantSessions } = await supabase
+        .from('sessions')
+        .select('formations!inner(program_id)')
+        .eq('organization_id', link.org_id)
+        .neq('status', 'cancelled')
+        .gte('end_date', today)
+      const programIdsWithSession = [...new Set(
+        (relevantSessions ?? [])
+          .map((s: { formations?: { program_id?: string | null } | null }) => s.formations?.program_id)
+          .filter((id: string | null | undefined): id is string => !!id)
+      )]
+
+      let programsQuery = supabase
         .from('programs')
         .select('id, name')
         .eq('organization_id', link.org_id)
         .eq('is_active', true)
         .order('name', { ascending: true })
+
+      if (programIdsWithSession.length > 0) {
+        programsQuery = programsQuery.in('id', programIdsWithSession)
+      } else {
+        // Aucune formation n'a de session à venir : ne rien proposer plutôt que de
+        // lister des formations qui mèneraient toutes à une candidature orpheline.
+        programsQuery = programsQuery.eq('id', '00000000-0000-0000-0000-000000000000')
+      }
+
+      const { data } = await programsQuery
       dynamicOptions.programs = (data ?? []).map((p: { id: string; name: string }) => ({ id: p.id, label: p.name }))
     } else if (source === 'sessions') {
       const { data } = await supabase
         .from('sessions')
         .select('id, name, start_date, formation_id, formations(program_id)')
         .eq('organization_id', link.org_id)
+        .neq('status', 'cancelled')
+        .gte('end_date', new Date().toISOString().split('T')[0])
         .order('start_date', { ascending: true })
       dynamicOptions.sessions = (data ?? []).map((s: { id: string; name: string; start_date: string | null; formation_id: string | null; formations?: { program_id?: string | null } | null }) => ({
         id: s.id,
