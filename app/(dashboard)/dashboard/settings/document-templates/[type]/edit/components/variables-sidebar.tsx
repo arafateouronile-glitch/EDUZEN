@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Search, GripVertical, Code, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DocumentVariables } from '@/lib/types/document-templates'
-import { GlassCard } from '@/components/ui/glass-card'
 import { motion, AnimatePresence } from '@/components/ui/motion'
 
 interface VariableCategory {
@@ -372,268 +371,181 @@ export function VariablesSidebar({ onVariableSelect, className }: VariablesSideb
         )}
       </CardContent>
       
-      {/* Section d'aide pour les conditions */}
-      <div className="border-t p-4">
-        <GlassCard variant="subtle" className="p-3">
-          <button
-            onClick={() => setShowConditionalsHelp(!showConditionalsHelp)}
-            className="w-full flex items-center justify-between text-sm font-semibold text-text-primary"
-          >
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4 text-brand-blue" />
-              <span>Conditions (IF/ELSE)</span>
-            </div>
-            {showConditionalsHelp ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-          
-          <AnimatePresence>
-            {showConditionalsHelp && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="mt-3 space-y-3 text-xs text-text-secondary overflow-hidden"
-              >
-              <div>
-                <p className="font-semibold mb-1">Condition simple :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{IF variable}\n  Contenu affiché si variable existe\n{ENDIF}`}
-                </code>
+      {/* Aide avancée (conditions, boucles, tableaux, visibilité, fonctions) —
+          un seul bloc compact au lieu de 5 cartes séparées, pour ne pas
+          repousser la liste des balises hors de vue dans la sidebar. */}
+      <div className="border-t p-2 space-y-0.5 flex-shrink-0">
+        {[
+          {
+            key: 'conditionals',
+            label: 'Conditions (IF/ELSE)',
+            show: showConditionalsHelp,
+            toggle: () => setShowConditionalsHelp(!showConditionalsHelp),
+            content: (
+              <>
+                <div>
+                  <p className="font-semibold mb-1">Condition simple :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{IF variable}\n  Contenu affiché si variable existe\n{ENDIF}`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Avec ELSE :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{IF variable}\n  Contenu si vrai\n{ELSE}\n  Contenu si faux\n{ENDIF}`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Comparaisons :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{IF montant > 1000}\n  Montant élevé\n{ENDIF}\n\n{IF eleve_classe == "Terminale"}\n  Classe terminale\n{ENDIF}`}
+                  </code>
+                </div>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-text-tertiary">
+                    Opérateurs supportés : <code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>
+                  </p>
+                </div>
+              </>
+            ),
+          },
+          {
+            key: 'loops',
+            label: 'Boucles (FOR/WHILE)',
+            show: showLoopsHelp,
+            toggle: () => setShowLoopsHelp(!showLoopsHelp),
+            content: (
+              <>
+                <div>
+                  <p className="font-semibold mb-1">Boucle FOR sur tableau :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{FOR item IN items}\n  {item.nom} - {item.prix}\n{ENDFOR}`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Boucle FOR sur plage :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{FOR i FROM 1 TO 10}\n  Ligne {i}\n{ENDFOR}`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Variables de boucle :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{item_index} - Index (0-based)\n{item_number} - Numéro (1-based)\n{item_is_first} - Première itération\n{item_is_last} - Dernière itération`}
+                  </code>
+                </div>
+              </>
+            ),
+          },
+          {
+            key: 'dynamicTables',
+            label: 'Tableaux dynamiques',
+            show: showDynamicTablesHelp,
+            toggle: () => setShowDynamicTablesHelp(!showDynamicTablesHelp),
+            content: (
+              <>
+                <div>
+                  <p className="font-semibold mb-1">Tableau dynamique :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{TABLE items}\n  <table>\n    <thead>...</thead>\n    {ROW}\n      <tr><td>{item.nom}</td></tr>\n    {ENDROW}\n  </table>\n{ENDTABLE}`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Ligne conditionnelle :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{IF_ROW item.prix > 100}\n  <tr class="highlight">...</tr>\n{ENDIF_ROW}`}
+                  </code>
+                </div>
+              </>
+            ),
+          },
+          {
+            key: 'visibility',
+            label: 'Visibilité conditionnelle',
+            show: showVisibilityHelp,
+            toggle: () => setShowVisibilityHelp(!showVisibilityHelp),
+            content: (
+              <>
+                <div>
+                  <p className="font-semibold mb-1">Afficher conditionnellement :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{SHOW_IF condition}\n  Contenu affiché si vrai\n{ELSE}\n  Contenu alternatif\n{END_SHOW}`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Masquer conditionnellement :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{HIDE_IF condition}\n  Contenu masqué si vrai\n{END_HIDE}`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Classes CSS conditionnelles :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`<div class="{IF condition}visible{ELSE}hidden{ENDIF}">`}
+                  </code>
+                </div>
+              </>
+            ),
+          },
+          {
+            key: 'calculated',
+            label: 'Fonctions calculées',
+            show: showCalculatedHelp,
+            toggle: () => setShowCalculatedHelp(!showCalculatedHelp),
+            content: (
+              <>
+                <div>
+                  <p className="font-semibold mb-1">Calculs :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{SUM notes} - Somme\n{AVERAGE notes} - Moyenne\n{COUNT items} - Nombre\n{MIN values} - Minimum\n{MAX values} - Maximum`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Formatage :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{ROUND montant 2} - Arrondir\n{FORMAT_CURRENCY montant EUR} - Devise\n{FORMAT_DATE date DD/MM/YYYY} - Date`}
+                  </code>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Texte :</p>
+                  <code className="block bg-gray-100 p-2 rounded text-xs">
+                    {`{UPPERCASE texte} - Majuscules\n{LOWERCASE texte} - Minuscules\n{CAPITALIZE texte} - Première lettre majuscule`}
+                  </code>
+                </div>
+              </>
+            ),
+          },
+        ].map((section) => (
+          <div key={section.key}>
+            <button
+              onClick={section.toggle}
+              className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-text-primary hover:bg-bg-gray-100 rounded transition-colors"
+            >
+              <div className="flex items-center gap-1.5">
+                <Code className="h-3.5 w-3.5 text-brand-blue" />
+                <span>{section.label}</span>
               </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Avec ELSE :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{IF variable}\n  Contenu si vrai\n{ELSE}\n  Contenu si faux\n{ENDIF}`}
-                </code>
-              </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Comparaisons :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{IF montant > 1000}\n  Montant élevé\n{ENDIF}\n\n{IF eleve_classe == "Terminale"}\n  Classe terminale\n{ENDIF}`}
-                </code>
-              </div>
-              
-              <div className="pt-2 border-t">
-                <p className="text-xs text-text-tertiary">
-                  Opérateurs supportés : <code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>
-                </p>
-              </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </GlassCard>
-      </div>
-
-      {/* Section d'aide pour les boucles */}
-      <div className="border-t p-4">
-        <GlassCard variant="subtle" className="p-3">
-          <button
-            onClick={() => setShowLoopsHelp(!showLoopsHelp)}
-            className="w-full flex items-center justify-between text-sm font-semibold text-text-primary"
-          >
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4 text-brand-blue" />
-              <span>Boucles (FOR/WHILE)</span>
-            </div>
-            {showLoopsHelp ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-          
-          <AnimatePresence>
-            {showLoopsHelp && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="mt-3 space-y-3 text-xs text-text-secondary overflow-hidden"
-              >
-              <div>
-                <p className="font-semibold mb-1">Boucle FOR sur tableau :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{FOR item IN items}\n  {item.nom} - {item.prix}\n{ENDFOR}`}
-                </code>
-              </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Boucle FOR sur plage :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{FOR i FROM 1 TO 10}\n  Ligne {i}\n{ENDFOR}`}
-                </code>
-              </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Variables de boucle :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{item_index} - Index (0-based)\n{item_number} - Numéro (1-based)\n{item_is_first} - Première itération\n{item_is_last} - Dernière itération`}
-                </code>
-              </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </GlassCard>
-      </div>
-
-      {/* Section d'aide pour les tableaux dynamiques */}
-      <div className="border-t p-4">
-        <GlassCard variant="subtle" className="p-3">
-          <button
-            onClick={() => setShowDynamicTablesHelp(!showDynamicTablesHelp)}
-            className="w-full flex items-center justify-between text-sm font-semibold text-text-primary"
-          >
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4 text-brand-blue" />
-              <span>Tableaux dynamiques</span>
-            </div>
-            {showDynamicTablesHelp ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-          
-          <AnimatePresence>
-            {showDynamicTablesHelp && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="mt-3 space-y-3 text-xs text-text-secondary overflow-hidden"
-              >
-              <div>
-                <p className="font-semibold mb-1">Tableau dynamique :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{TABLE items}\n  <table>\n    <thead>...</thead>\n    {ROW}\n      <tr><td>{item.nom}</td></tr>\n    {ENDROW}\n  </table>\n{ENDTABLE}`}
-                </code>
-              </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Ligne conditionnelle :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{IF_ROW item.prix > 100}\n  <tr class="highlight">...</tr>\n{ENDIF_ROW}`}
-                </code>
-              </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </GlassCard>
-      </div>
-
-      {/* Section d'aide pour la visibilité conditionnelle */}
-      <div className="border-t p-4">
-        <GlassCard variant="subtle" className="p-3">
-          <button
-            onClick={() => setShowVisibilityHelp(!showVisibilityHelp)}
-            className="w-full flex items-center justify-between text-sm font-semibold text-text-primary"
-          >
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4 text-brand-blue" />
-              <span>Visibilité conditionnelle</span>
-            </div>
-            {showVisibilityHelp ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-          
-          <AnimatePresence>
-            {showVisibilityHelp && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="mt-3 space-y-3 text-xs text-text-secondary overflow-hidden"
-              >
-              <div>
-                <p className="font-semibold mb-1">Afficher conditionnellement :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{SHOW_IF condition}\n  Contenu affiché si vrai\n{ELSE}\n  Contenu alternatif\n{END_SHOW}`}
-                </code>
-              </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Masquer conditionnellement :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{HIDE_IF condition}\n  Contenu masqué si vrai\n{END_HIDE}`}
-                </code>
-              </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Classes CSS conditionnelles :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`<div class="{IF condition}visible{ELSE}hidden{ENDIF}">`}
-                </code>
-              </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </GlassCard>
-      </div>
-
-      {/* Section d'aide pour les fonctions calculées */}
-      <div className="border-t p-4">
-        <GlassCard variant="subtle" className="p-3">
-          <button
-            onClick={() => setShowCalculatedHelp(!showCalculatedHelp)}
-            className="w-full flex items-center justify-between text-sm font-semibold text-text-primary"
-          >
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4 text-brand-blue" />
-              <span>Fonctions calculées</span>
-            </div>
-            {showCalculatedHelp ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-          
-          <AnimatePresence>
-            {showCalculatedHelp && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="mt-3 space-y-3 text-xs text-text-secondary overflow-hidden"
-              >
-              <div>
-                <p className="font-semibold mb-1">Calculs :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{SUM notes} - Somme\n{AVERAGE notes} - Moyenne\n{COUNT items} - Nombre\n{MIN values} - Minimum\n{MAX values} - Maximum`}
-                </code>
-              </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Formatage :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{ROUND montant 2} - Arrondir\n{FORMAT_CURRENCY montant EUR} - Devise\n{FORMAT_DATE date DD/MM/YYYY} - Date`}
-                </code>
-              </div>
-              
-              <div>
-                <p className="font-semibold mb-1">Texte :</p>
-                <code className="block bg-gray-100 p-2 rounded text-xs">
-                  {`{UPPERCASE texte} - Majuscules\n{LOWERCASE texte} - Minuscules\n{CAPITALIZE texte} - Première lettre majuscule`}
-                </code>
-              </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </GlassCard>
+              {section.show ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+            </button>
+            <AnimatePresence>
+              {section.show && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="px-2 pb-2 space-y-2 text-xs text-text-secondary overflow-hidden"
+                >
+                  {section.content}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
       </div>
     </Card>
   )
