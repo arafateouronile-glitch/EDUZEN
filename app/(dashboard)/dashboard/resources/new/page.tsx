@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -13,7 +13,7 @@ import { formationService } from '@/lib/services/formation.service.client'
 import { sessionService } from '@/lib/services/session.service.client'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
-import { ArrowLeft, Library, Save, Upload, X, FileText, Video, Image, Link as LinkIcon, Music, Users, Check, UserCheck } from 'lucide-react'
+import { ArrowLeft, Library, Save, Upload, X, FileText, Video, Image, Link as LinkIcon, Music, Users, Check, UserCheck, Folder } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
 import { motion } from '@/components/ui/motion'
@@ -66,8 +66,18 @@ const RESOURCE_TYPE_LABELS = {
   other: 'Autre',
 }
 
+function resourceTypeFromExtension(filename: string): ResourceFormData['resource_type'] {
+  const ext = (filename.split('.').pop() || '').toLowerCase()
+  if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) return 'document'
+  if (['mp4', 'webm', 'mov'].includes(ext)) return 'video'
+  if (['mp3', 'wav'].includes(ext)) return 'audio'
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return 'image'
+  return 'other'
+}
+
 export default function NewResourcePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const { addToast } = useToast()
   const [file, setFile] = useState<File | null>(null)
@@ -75,6 +85,8 @@ export default function NewResourcePage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
   const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([])
+  const [mode, setMode] = useState<'single' | 'folder'>(searchParams.get('mode') === 'folder' ? 'folder' : 'single')
+  const [folderFiles, setFolderFiles] = useState<File[]>([])
 
   // Récupérer les catégories
   const { data: categories } = useQuery({
@@ -189,6 +201,17 @@ export default function NewResourcePage() {
     }
   }
 
+  // Gérer l'ajout de fichiers en mode dossier (sélection multiple)
+  const handleFolderFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || [])
+    setFolderFiles(prev => [...prev, ...selected])
+    e.target.value = ''
+  }
+
+  const removeFolderFile = (index: number) => {
+    setFolderFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
   // Gérer l'upload de la miniature
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -205,6 +228,77 @@ export default function NewResourcePage() {
   const createMutation = useMutation({
     mutationFn: async (data: ResourceFormData) => {
       if (!user?.organization_id) throw new Error('Organization ID manquant')
+
+      // Parser les tags
+      const tagsArray = data.tags
+        ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+        : []
+
+      const visibilityScope = data.visibility_scope || 'all'
+      const learnerIds = visibilityScope === 'session' && selectedLearnerIds.length > 0
+        ? selectedLearnerIds
+        : null
+
+      if (mode === 'folder') {
+        if (folderFiles.length === 0) throw new Error('Sélectionnez au moins un fichier pour créer le dossier')
+
+        const collection = await educationalResourcesService.createCollection({
+          organization_id: user.organization_id,
+          user_id: user.id,
+          name: data.title,
+          description: data.description || null,
+          is_public: visibilityScope === 'all',
+        } as any)
+
+        for (const currentFile of folderFiles) {
+          const uploadFormData = new FormData()
+          uploadFormData.set('organization_id', user.organization_id)
+          uploadFormData.set('file', currentFile)
+
+          const res = await fetch('/api/educational-resources/upload', {
+            method: 'POST',
+            body: uploadFormData,
+          })
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error(err.error || err.details || `Erreur lors de l'upload de ${currentFile.name}`)
+          }
+
+          const uploadResult = await res.json()
+          const fileTitle = currentFile.name.replace(/\.[^/.]+$/, '')
+          const fileSlug = `${generateSlug(fileTitle)}-${Math.random().toString(36).slice(2, 8)}`
+
+          const resource = await educationalResourcesService.createResource({
+            organization_id: user.organization_id,
+            title: fileTitle,
+            slug: fileSlug,
+            description: data.description || null,
+            resource_type: resourceTypeFromExtension(currentFile.name),
+            category_id: data.category_id || null,
+            external_url: null,
+            file_url: uploadResult.fileUrl ?? null,
+            thumbnail_url: null,
+            file_size_bytes: currentFile.size,
+            tags: tagsArray.length > 0 ? tagsArray : null,
+            is_featured: data.is_featured,
+            status: data.status,
+            author_id: user.id,
+            view_count: 0,
+            download_count: 0,
+            favorite_count: 0,
+            visibility_scope: visibilityScope,
+            visibility_program_id: visibilityScope === 'program' ? data.visibility_program_id || null : null,
+            visibility_formation_id: visibilityScope === 'formation' ? data.visibility_formation_id || null : null,
+            visibility_session_id: visibilityScope === 'session' ? data.visibility_session_id || null : null,
+            visibility_learner_ids: learnerIds,
+          } as any)
+
+          await educationalResourcesService.addResourceToCollection(collection.id, resource.id, user.id)
+        }
+
+        return { kind: 'folder' as const, collection }
+      }
 
       let fileUrl: string | null = null
       let thumbnailUrl: string | null = null
@@ -232,17 +326,7 @@ export default function NewResourcePage() {
         if (file) fileSizeBytes = file.size
       }
 
-      // Parser les tags
-      const tagsArray = data.tags
-        ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-        : []
-
-      const visibilityScope = data.visibility_scope || 'all'
-      const learnerIds = visibilityScope === 'session' && selectedLearnerIds.length > 0
-        ? selectedLearnerIds
-        : null
-
-      return educationalResourcesService.createResource({
+      const resource = await educationalResourcesService.createResource({
         organization_id: user.organization_id,
         title: data.title,
         slug: data.slug,
@@ -266,14 +350,22 @@ export default function NewResourcePage() {
         visibility_session_id: visibilityScope === 'session' ? data.visibility_session_id || null : null,
         visibility_learner_ids: learnerIds,
       } as any)
+
+      return { kind: 'single' as const, resource }
     },
-    onSuccess: (resource) => {
+    onSuccess: (result) => {
       addToast({
         type: 'success',
-        title: 'Ressource créée avec succès',
-        description: 'Votre ressource a été ajoutée à la bibliothèque.',
+        title: result.kind === 'folder' ? 'Dossier créé avec succès' : 'Ressource créée avec succès',
+        description: result.kind === 'folder'
+          ? 'Votre dossier a été ajouté à la bibliothèque.'
+          : 'Votre ressource a été ajoutée à la bibliothèque.',
       })
-      router.push(`/dashboard/resources/${resource.slug}`)
+      if (result.kind === 'folder') {
+        router.push(`/dashboard/resources/folder/${result.collection.id}`)
+      } else {
+        router.push(`/dashboard/resources/${result.resource.slug}`)
+      }
     },
     onError: (error: Error) => {
       addToast({
@@ -313,14 +405,43 @@ export default function NewResourcePage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Mode : fichier unique ou dossier */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setMode('single')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
+              mode === 'single'
+                ? 'bg-brand-blue text-white border-brand-blue'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-brand-blue/40'
+            )}
+          >
+            Fichier unique
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('folder')}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium border transition-colors flex items-center gap-2',
+              mode === 'folder'
+                ? 'bg-brand-blue text-white border-brand-blue'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-brand-blue/40'
+            )}
+          >
+            <Folder className="h-4 w-4" />
+            Dossier (plusieurs fichiers)
+          </button>
+        </div>
+
         {/* Informations principales */}
         <GlassCard variant="premium" className="p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Informations principales</h2>
-          
+
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Titre de la ressource *
+                {mode === 'folder' ? 'Nom du dossier *' : 'Titre de la ressource *'}
               </label>
               <input
                 type="text"
@@ -337,24 +458,27 @@ export default function NewResourcePage() {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Slug (URL) *
-              </label>
-              <input
-                type="text"
-                {...register('slug')}
-                className={cn(
-                  "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all bg-gray-50",
-                  errors.slug ? 'border-red-500' : 'border-gray-200'
+            {mode === 'single' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Slug (URL) *
+                </label>
+                <input
+                  type="text"
+                  {...register('slug')}
+                  className={cn(
+                    "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all bg-gray-50",
+                    errors.slug ? 'border-red-500' : 'border-gray-200'
+                  )}
+                  placeholder="guide-complet-react"
+                />
+                {errors.slug && (
+                  <p className="text-sm text-red-600 mt-1">{errors.slug.message}</p>
                 )}
-                placeholder="guide-complet-react"
-              />
-              {errors.slug && (
-                <p className="text-sm text-red-600 mt-1">{errors.slug.message}</p>
-              )}
-            </div>
+              </div>
+            )}
 
+            {mode === 'single' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Type de ressource
@@ -373,6 +497,7 @@ export default function NewResourcePage() {
                 })}
               </select>
             </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -599,10 +724,56 @@ export default function NewResourcePage() {
         </GlassCard>
 
         {/* Fichier */}
-        {resourceType !== 'link' && (
+        {(mode === 'folder' || resourceType !== 'link') && (
           <GlassCard variant="premium" className="p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Fichier</h2>
-            
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              {mode === 'folder' ? 'Fichiers du dossier' : 'Fichier'}
+            </h2>
+
+            {mode === 'folder' ? (
+              <div className="space-y-4">
+                {folderFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {folderFiles.map((f, idx) => (
+                      <div key={`${f.name}-${idx}`} className="border border-gray-200 rounded-lg p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <FileText className="h-6 w-6 text-gray-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{f.name}</p>
+                            <p className="text-sm text-gray-500">{(f.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFolderFile(idx)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-brand-blue transition-colors">
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">Cliquez pour ajouter des fichiers au dossier</p>
+                  <p className="text-sm text-gray-500 mb-4">Tous les formats acceptés jusqu'à 100MB chacun</p>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFolderFilesChange}
+                    className="hidden"
+                    id="folder-files-upload"
+                  />
+                  <label
+                    htmlFor="folder-files-upload"
+                    className="inline-block px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-brand-blue/90 transition-colors cursor-pointer"
+                  >
+                    Choisir des fichiers
+                  </label>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-4">
               {filePreview ? (
                 <div className="relative">
@@ -659,10 +830,12 @@ export default function NewResourcePage() {
                 </div>
               )}
             </div>
+            )}
           </GlassCard>
         )}
 
         {/* Miniature */}
+        {mode === 'single' && (
         <GlassCard variant="premium" className="p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Miniature (optionnel)</h2>
           
@@ -707,6 +880,7 @@ export default function NewResourcePage() {
             )}
           </div>
         </GlassCard>
+        )}
 
         {/* Options de publication */}
         <GlassCard variant="premium" className="p-6">
@@ -750,7 +924,7 @@ export default function NewResourcePage() {
           </Link>
           <Button
             type="submit"
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || (mode === 'folder' && folderFiles.length === 0)}
             className="bg-brand-blue hover:bg-brand-blue/90 text-white shadow-lg shadow-brand-blue/20"
           >
             {createMutation.isPending ? (
@@ -758,7 +932,7 @@ export default function NewResourcePage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Créer la ressource
+                {mode === 'folder' ? 'Créer le dossier' : 'Créer la ressource'}
               </>
             )}
           </Button>

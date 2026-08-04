@@ -3,6 +3,7 @@
 import { useState, type ComponentType } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
+import { createClient } from '@/lib/supabase/client'
 import { educationalResourcesService } from '@/lib/services/educational-resources.service.client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import {
   Filter,
   Library,
   Plus,
+  Folder,
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
@@ -96,6 +98,35 @@ export default function ResourcesPage() {
     enabled: !!user?.id,
   })
 
+  // Récupérer les dossiers (collections) de l'organisation
+  const { data: collections } = useQuery({
+    queryKey: ['resource-collections', user?.organization_id],
+    queryFn: () => educationalResourcesService.getCollections(user?.organization_id || ''),
+    enabled: !!user?.organization_id,
+  })
+
+  // IDs des ressources déjà rattachées à un dossier, pour ne pas les afficher
+  // aussi comme cartes individuelles dans la grille (elles restent accessibles
+  // en ouvrant leur dossier).
+  const { data: collectionResourceIds } = useQuery({
+    queryKey: ['resource-collection-member-ids', collections?.map(c => c.id).join(',')],
+    queryFn: async () => {
+      const collectionIds = (collections || []).map(c => c.id)
+      if (collectionIds.length === 0) return new Set<string>()
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('collection_resources')
+        .select('resource_id')
+        .in('collection_id', collectionIds)
+      return new Set((data || []).map((row: { resource_id: string }) => row.resource_id))
+    },
+    enabled: !!collections,
+  })
+
+  const visibleResources = (resources || []).filter(
+    (resource: any) => !collectionResourceIds?.has(resource.id)
+  )
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'N/A'
     if (bytes < 1024) return `${bytes} B`
@@ -115,12 +146,20 @@ export default function ResourcesPage() {
             Accédez à une vaste collection de ressources pédagogiques
           </p>
         </div>
-        <Link href="/dashboard/resources/new">
-          <Button className="bg-brand-blue hover:bg-brand-blue/90 text-white shadow-lg shadow-brand-blue/20">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle ressource
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/resources/new?mode=folder">
+            <Button variant="outline">
+              <Folder className="h-4 w-4 mr-2" />
+              Nouveau dossier
+            </Button>
+          </Link>
+          <Link href="/dashboard/resources/new">
+            <Button className="bg-brand-blue hover:bg-brand-blue/90 text-white shadow-lg shadow-brand-blue/20">
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle ressource
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Barre de recherche et filtres */}
@@ -176,9 +215,31 @@ export default function ResourcesPage() {
 
         {/* Onglet Toutes les ressources */}
         <TabsContent value="all">
-          {resources && resources.length > 0 ? (
+          {(collections && collections.length > 0) || (visibleResources && visibleResources.length > 0) ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {resources.map((resource: any) => {
+              {collections?.map((collection: any) => (
+                <Link key={collection.id} href={`/dashboard/resources/folder/${collection.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow h-full border-brand-blue/20 bg-brand-blue/[0.02]">
+                    <CardHeader className="pb-3 pt-4">
+                      <div className="flex items-start gap-2">
+                        <Folder className="h-5 w-5 text-brand-blue flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <CardTitle className="text-lg line-clamp-2">{collection.name}</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {collection.resource_count || 0} fichier{(collection.resource_count || 0) > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    {collection.description && (
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{collection.description}</p>
+                      </CardContent>
+                    )}
+                  </Card>
+                </Link>
+              ))}
+              {visibleResources.map((resource: any) => {
                 const Icon = RESOURCE_TYPE_ICONS[resource.resource_type] || FileText
                 return (
                   <Card key={resource.id} className="hover:shadow-lg transition-shadow">
