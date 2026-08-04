@@ -22,18 +22,31 @@ export default function NewInvoicePage() {
   const supabase = createClient()
 
   // Récupérer les élèves
+  // PostgREST plafonne silencieusement chaque requête (souvent 1000 lignes) —
+  // sans pagination, un organisme avec beaucoup d'élèves ne voit que les
+  // premiers noms dans l'ordre alphabétique (ex: la liste s'arrête à "B").
+  // On boucle donc par pages jusqu'à épuisement des résultats.
   const { data: students } = useQuery({
     queryKey: ['students', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      const { data, error } = await supabase
-        .from('students')
-        .select('id, first_name, last_name, student_number, classes(name)')
-        .eq('organization_id', user.organization_id)
-        .eq('status', 'active')
-        .order('last_name')
-      if (error) throw error
-      return data || []
+      const pageSize = 1000
+      const allStudents = []
+      let from = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('students')
+          .select('id, first_name, last_name, student_number, classes(name)')
+          .eq('organization_id', user.organization_id)
+          .eq('status', 'active')
+          .order('last_name')
+          .range(from, from + pageSize - 1)
+        if (error) throw error
+        allStudents.push(...(data || []))
+        if (!data || data.length < pageSize) break
+        from += pageSize
+      }
+      return allStudents
     },
     enabled: !!user?.organization_id,
   })
@@ -144,6 +157,7 @@ export default function NewInvoicePage() {
       session_id: '',
       program_id: '',
       formation_id: '',
+      enrollment_id: '',
       expected_count: '1',
       document_type: 'quote',
       invoice_number: '',
@@ -160,6 +174,26 @@ export default function NewInvoicePage() {
   })
 
   const formData = watch()
+
+  // Inscriptions existantes de l'élève choisi (sélecteur de session en mode
+  // apprenant) — contrairement au mode entreprise, on ne peut pas créer une
+  // inscription à la volée depuis ce formulaire (ça aurait des effets de bord
+  // bien plus larges qu'une simple facturation : émargement, effectifs...),
+  // donc la session proposée est limitée aux inscriptions déjà existantes.
+  const { data: studentEnrollments } = useQuery({
+    queryKey: ['student-enrollments-for-invoice', formData.student_id],
+    queryFn: async () => {
+      if (!formData.student_id) return []
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('id, session_id, sessions(id, name)')
+        .eq('student_id', formData.student_id)
+        .order('enrollment_date', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: recipientType === 'student' && !!formData.student_id,
+  })
 
   // Synchroniser document_type avec le state
   const handleDocumentTypeChange = (type: 'quote' | 'invoice') => {
@@ -249,6 +283,9 @@ export default function NewInvoicePage() {
         return invoiceService.create({
           organization_id: user.organization_id,
           student_id: data.student_id,
+          enrollment_id: data.enrollment_id || null,
+          program_id: data.program_id || null,
+          formation_id: data.formation_id || null,
           invoice_number: invoiceNumberToSend,
           type: data.type,
           document_type: data.document_type || 'invoice',
@@ -385,8 +422,7 @@ export default function NewInvoicePage() {
                   setRecipientType('student')
                   setValue('entity_id', '')
                   setValue('session_id', '')
-                  setValue('program_id', '')
-                  setValue('formation_id', '')
+                  setValue('expected_count', '1')
                 }}
                 className={`flex-1 p-4 border-2 rounded-lg transition-colors ${
                   recipientType === 'student'
@@ -402,6 +438,7 @@ export default function NewInvoicePage() {
                 onClick={() => {
                   setRecipientType('entity')
                   setValue('student_id', '')
+                  setValue('enrollment_id', '')
                 }}
                 className={`flex-1 p-4 border-2 rounded-lg transition-colors ${
                   recipientType === 'entity'
@@ -467,6 +504,10 @@ export default function NewInvoicePage() {
                   <label className="block text-sm font-medium mb-2">Élève *</label>
                   <select
                     {...register('student_id')}
+                    onChange={(e) => {
+                      setValue('student_id', e.target.value)
+                      setValue('enrollment_id', '')
+                    }}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target ${
                       errors.student_id ? 'border-danger-primary' : ''
                     }`}
@@ -512,7 +553,7 @@ export default function NewInvoicePage() {
               )}
             </div>
 
-            {invoiceType === 'single' && recipientType === 'entity' && (
+            {invoiceType === 'single' && (recipientType === 'entity' || recipientType === 'student') && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Programme</label>
@@ -533,6 +574,9 @@ export default function NewInvoicePage() {
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Facultatif — sert à préremplir les variables du modèle de document.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Formation</label>
@@ -552,30 +596,55 @@ export default function NewInvoicePage() {
                     {watch('program_id') ? 'Formations du programme sélectionné.' : 'Facultatif — filtré par programme si un programme est choisi.'}
                   </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Session</label>
-                  <select
-                    {...register('session_id')}
-                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                  >
-                    <option value="">Aucune session précise</option>
-                    {sessions?.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name || s.id.slice(0, 8)}</option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Facultatif — peut être choisie plus tard si le devis est émis avant qu'une session précise ne soit retenue.
-                  </p>
-                </div>
-                {watch('session_id') && (
+                {recipientType === 'entity' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Session</label>
+                      <select
+                        {...register('session_id')}
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                      >
+                        <option value="">Aucune session précise</option>
+                        {sessions?.map((s) => (
+                          <option key={s.id} value={s.id}>{s.name || s.id.slice(0, 8)}</option>
+                        ))}
+                      </select>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Facultatif — peut être choisie plus tard si le devis est émis avant qu'une session précise ne soit retenue.
+                      </p>
+                    </div>
+                    {watch('session_id') && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Effectif prévisionnel</label>
+                        <input
+                          type="number"
+                          min={1}
+                          {...register('expected_count')}
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <div>
-                    <label className="block text-sm font-medium mb-2">Effectif prévisionnel</label>
-                    <input
-                      type="number"
-                      min={1}
-                      {...register('expected_count')}
-                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
-                    />
+                    <label className="block text-sm font-medium mb-2">Session</label>
+                    <select
+                      {...register('enrollment_id')}
+                      disabled={!formData.student_id}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target disabled:bg-gray-50 disabled:text-muted-foreground"
+                    >
+                      <option value="">Aucune session précise</option>
+                      {studentEnrollments?.map((e) => (
+                        <option key={e.id} value={e.id}>{e.sessions?.name || e.session_id?.slice(0, 8) || e.id.slice(0, 8)}</option>
+                      ))}
+                    </select>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {!formData.student_id
+                        ? 'Sélectionnez d\'abord un élève.'
+                        : studentEnrollments && studentEnrollments.length === 0
+                          ? 'Cet élève n\'a aucune inscription à une session — facultatif.'
+                          : 'Facultatif — limitée aux sessions où cet élève est déjà inscrit.'}
+                    </p>
                   </div>
                 )}
               </div>
