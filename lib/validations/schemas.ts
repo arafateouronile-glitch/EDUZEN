@@ -222,7 +222,15 @@ export const evaluationSchema = z.object({
 
 // Schéma pour la création d'une facture ou devis
 export const invoiceSchema = z.object({
-  student_id: z.string().min(1, 'L\'étudiant est requis'),
+  // Destinataire : un apprenant (student_id) OU une entité externe (entity_id) — voir refine ci-dessous.
+  student_id: z.string().optional().or(z.literal('')),
+  entity_id: z.string().optional().or(z.literal('')),
+  // Session et/ou programme auxquels rattacher le devis/la facture d'une entité — tous deux
+  // facultatifs (un devis peut être émis avant qu'une session précise ne soit choisie).
+  session_id: z.string().optional().or(z.literal('')),
+  program_id: z.string().optional().or(z.literal('')),
+  formation_id: z.string().optional().or(z.literal('')),
+  expected_count: z.string().optional().or(z.literal('')),
   document_type: z.enum(['quote', 'invoice']).default('invoice'),
   invoice_number: z.string().optional().or(z.literal('')), // Peut être généré automatiquement
   type: z.enum(['tuition', 'registration', 'other']).default('tuition'),
@@ -250,6 +258,9 @@ export const invoiceSchema = z.object({
 }, {
   message: 'La date d\'échéance doit être postérieure à la date d\'émission',
   path: ['due_date'],
+}).refine((data) => !!data.student_id || !!data.entity_id, {
+  message: 'Sélectionnez un apprenant ou une entreprise',
+  path: ['student_id'],
 })
 
 // Schéma pour la création d'un paiement

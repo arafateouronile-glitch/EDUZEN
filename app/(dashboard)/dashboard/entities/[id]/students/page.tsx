@@ -10,12 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
-import { 
-  ArrowLeft, Users, Search, Plus, X, Check, Loader2, UserPlus, 
-  Calendar, Briefcase, Mail, Phone, MapPin, Building2, ExternalLink
+import {
+  ArrowLeft, Users, Search, Plus, X, Check, Loader2, UserPlus,
+  Calendar, Briefcase, Mail, Phone, MapPin, Building2, ExternalLink,
+  FileText, Receipt, FolderOpen, BookOpen, Download,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { RoleGuard, ADMIN_ROLES } from '@/components/auth/role-guard'
 import Link from 'next/link'
@@ -68,6 +70,7 @@ function EntityStudentsPageContent() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState('students')
 
   // Formulaire pour le rattachement
   const [formData, setFormData] = useState({
@@ -116,31 +119,117 @@ function EntityStudentsPageContent() {
     enabled: !!entityId,
   })
 
-  // Sessions où cette entité a des apprenants inscrits (pour les liens "Espace entreprise")
+  // Réservations d'effectif prévisionnel de cette entité (sans liste nominative)
+  const { data: entityReservations } = useQuery({
+    queryKey: ['entity-reservations', entityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('session_entity_reservations')
+        .select('id, session_id, expected_count')
+        .eq('entity_id', entityId)
+      if (error) throw error
+      return (data || []) as { id: string; session_id: string; expected_count: number }[]
+    },
+    enabled: !!entityId,
+  })
+
+  // Sessions où cette entité a des apprenants inscrits nominativement (student_entities → enrollments)
+  // OU a réservé un effectif prévisionnel sans liste nominative (session_entity_reservations).
   const { data: entitySessions } = useQuery({
-    queryKey: ['entity-sessions', entityId],
+    queryKey: ['entity-sessions', entityId, entityReservations],
     queryFn: async () => {
       const studentIds =
         studentEntities?.filter((se) => se.is_current).map((se) => se.student_id) || []
-      if (studentIds.length === 0) return []
-      const { data: enrollmentsData, error: enrollmentsError } = await supabase
-        .from('enrollments')
-        .select('session_id')
-        .in('student_id', studentIds)
-        .in('status', ['pending', 'confirmed', 'in_progress', 'completed'])
-      if (enrollmentsError) throw enrollmentsError
-      const sessionIds = [...new Set((enrollmentsData || []).map((e: { session_id: string | null }) => e.session_id).filter((id): id is string => id != null))]
+
+      let namedSessionIds: string[] = []
+      if (studentIds.length > 0) {
+        const { data: enrollmentsData, error: enrollmentsError } = await supabase
+          .from('enrollments')
+          .select('session_id')
+          .in('student_id', studentIds)
+          .in('status', ['pending', 'confirmed', 'in_progress', 'completed'])
+        if (enrollmentsError) throw enrollmentsError
+        namedSessionIds = (enrollmentsData || [])
+          .map((e: { session_id: string | null }) => e.session_id)
+          .filter((id): id is string => id != null)
+      }
+
+      const reservationSessionIds = (entityReservations || []).map((r) => r.session_id)
+      const sessionIds = [...new Set([...namedSessionIds, ...reservationSessionIds])]
       if (sessionIds.length === 0) return []
+
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('sessions')
-        .select('id, name, code')
+        .select('id, name, start_date, end_date, formation_id, formations(id, name)')
         .in('id', sessionIds)
         .order('start_date', { ascending: false })
       if (sessionsError) throw sessionsError
-      return ((sessionsData || []) as unknown) as { id: string; name: string; code: string | null }[]
+      return ((sessionsData || []) as unknown) as {
+        id: string; name: string
+        start_date: string | null; end_date: string | null
+        formation_id: string | null; formations: { id: string; name: string } | null
+      }[]
     },
-    enabled: !!entityId && studentEntities !== undefined,
+    enabled: !!entityId && studentEntities !== undefined && entityReservations !== undefined,
   })
+
+  // Formations distinctes déduites des sessions liées à l'entité
+  const entityFormations = (() => {
+    const map = new Map<string, { id: string; name: string }>()
+    for (const s of entitySessions || []) {
+      if (s.formations) map.set(s.formations.id, s.formations)
+    }
+    return [...map.values()]
+  })()
+
+  // Devis et factures de cette entité
+  const { data: entityInvoices, isLoading: isLoadingInvoices } = useQuery({
+    queryKey: ['entity-invoices', entityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*, session_entity_reservations(session_id, sessions(name)), programs(name), formations(name)')
+        .eq('entity_id', entityId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as any[]
+    },
+    enabled: !!entityId,
+  })
+
+  // Documents déjà générés pour les sessions/apprenants de cette entité
+  const { data: entityDocuments, isLoading: isLoadingDocuments } = useQuery({
+    queryKey: ['entity-documents', entityId, entitySessions, studentEntities],
+    queryFn: async () => {
+      const sessionIds = (entitySessions || []).map((s) => s.id)
+      const studentIds = (studentEntities || []).filter((se) => se.is_current).map((se) => se.student_id)
+
+      const results: { id: string; file_name: string; type: string; file_url: string; created_at: string }[] = []
+
+      if (sessionIds.length > 0) {
+        const { data } = await (supabase as any)
+          .from('generated_documents')
+          .select('id, file_name, type, file_url, created_at')
+          .eq('related_entity_type', 'session')
+          .in('related_entity_id', sessionIds)
+          .is('deleted_at', null)
+        if (data) results.push(...data)
+      }
+      if (studentIds.length > 0) {
+        const { data } = await (supabase as any)
+          .from('generated_documents')
+          .select('id, file_name, type, file_url, created_at')
+          .eq('related_entity_type', 'student')
+          .in('related_entity_id', studentIds)
+          .is('deleted_at', null)
+        if (data) results.push(...data)
+      }
+
+      return results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    },
+    enabled: !!entityId && entitySessions !== undefined && studentEntities !== undefined,
+  })
+
 
   // Récupérer tous les apprenants de l'organisation (pour la sélection)
   const { data: allStudents, isLoading: isLoadingStudents } = useQuery({
@@ -342,7 +431,7 @@ function EntityStudentsPageContent() {
                 >
                   <Button variant="outline" size="sm" className="gap-2">
                     <Building2 className="h-4 w-4" />
-                    Espace entreprise – {s.name || s.code || s.id.slice(0, 8)}
+                    Espace entreprise – {s.name || s.id.slice(0, 8)}
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
                 </Link>
@@ -377,7 +466,7 @@ function EntityStudentsPageContent() {
                 >
                   <Button variant="outline" size="sm" className="gap-2">
                     <Building2 className="h-4 w-4" />
-                    {s.name || s.code || s.id.slice(0, 8)}
+                    {s.name || s.id.slice(0, 8)}
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
                 </Link>
@@ -426,6 +515,15 @@ function EntityStudentsPageContent() {
         </Card>
       </div>
 
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="students">Apprenants</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions &amp; Formations</TabsTrigger>
+          <TabsTrigger value="invoices">Devis &amp; Factures</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="students">
       {/* Liste des apprenants rattachés */}
       <Card>
         <CardHeader>
@@ -526,6 +624,169 @@ function EntityStudentsPageContent() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="sessions">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-brand-blue" />
+                Sessions &amp; Formations
+              </CardTitle>
+              <CardDescription>
+                Sessions où cette entité a des apprenants inscrits ou un effectif prévisionnel réservé
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {entitySessions && entitySessions.length > 0 ? (
+                <div className="space-y-3">
+                  {entitySessions.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="font-semibold">{s.name || s.id.slice(0, 8)}</p>
+                        {s.formations && (
+                          <p className="text-sm text-gray-600">{s.formations.name}</p>
+                        )}
+                        {(s.start_date || s.end_date) && (
+                          <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {s.start_date && formatDate(s.start_date)}
+                            {s.end_date && ` — ${formatDate(s.end_date)}`}
+                          </p>
+                        )}
+                      </div>
+                      <Link href={`/dashboard/sessions/${s.id}`}>
+                        <Button variant="outline" size="sm">Voir la session</Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>Aucune session liée à cette entité</p>
+                </div>
+              )}
+              {entityFormations.length > 0 && (
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="font-semibold mb-3">Formations concernées</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {entityFormations.map((f) => (
+                      <Badge key={f.id} variant="outline">{f.name}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="invoices">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-brand-blue" />
+                  Devis &amp; Factures
+                </CardTitle>
+                <CardDescription>Devis et factures rattachés à cette entité</CardDescription>
+              </div>
+              <Link href={`/dashboard/payments/new?entity_id=${entityId}`}>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer un devis
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {isLoadingInvoices ? (
+                <div className="text-center py-12 text-gray-500">Chargement...</div>
+              ) : entityInvoices && entityInvoices.length > 0 ? (
+                <div className="space-y-3">
+                  {entityInvoices.map((inv: any) => (
+                    <div key={inv.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{inv.invoice_number}</p>
+                          <Badge variant={inv.document_type === 'quote' ? 'outline' : 'default'}>
+                            {inv.document_type === 'quote' ? 'Devis' : inv.document_type === 'credit_note' ? 'Avoir' : 'Facture'}
+                          </Badge>
+                          <Badge variant="outline">{inv.status}</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {[
+                            inv.session_entity_reservations?.sessions?.name
+                              ? `Session : ${inv.session_entity_reservations.sessions.name}`
+                              : null,
+                            inv.programs?.name ? `Programme : ${inv.programs.name}` : null,
+                            inv.formations?.name ? `Formation : ${inv.formations.name}` : null,
+                          ].filter(Boolean).join(' • ') || 'Aucune session, programme ni formation liés'}
+                          {' • '}
+                          {inv.total_amount} {inv.currency}
+                        </p>
+                      </div>
+                      <Link href={`/dashboard/payments/${inv.id}`}>
+                        <Button variant="outline" size="sm">Voir</Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <Receipt className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>Aucun devis ou facture pour cette entité</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5 text-brand-blue" />
+                Documents
+              </CardTitle>
+              <CardDescription>
+                Documents déjà générés pour les sessions et apprenants de cette entité
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingDocuments ? (
+                <div className="text-center py-12 text-gray-500">Chargement...</div>
+              ) : entityDocuments && entityDocuments.length > 0 ? (
+                <div className="space-y-3">
+                  {entityDocuments.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-gray-400" />
+                        <div>
+                          <p className="font-medium">{doc.file_name}</p>
+                          <p className="text-sm text-gray-500">{doc.type} • {formatDate(doc.created_at)}</p>
+                        </div>
+                      </div>
+                      {doc.file_url && (
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
+                            <Download className="h-4 w-4 mr-2" />
+                            Télécharger
+                          </Button>
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <FolderOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>Aucun document généré pour cette entité</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Dialog pour rattacher des apprenants */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -723,6 +984,7 @@ function EntityStudentsPageContent() {
           </form>
         </DialogContent>
       </Dialog>
+
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -16,6 +16,8 @@ import { invoiceSchema, type InvoiceFormData } from '@/lib/validations/schemas'
 
 export default function NewInvoicePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const prefilledEntityId = searchParams.get('entity_id') || ''
   const { user } = useAuth()
   const supabase = createClient()
 
@@ -52,8 +54,79 @@ export default function NewInvoicePage() {
     enabled: !!user?.organization_id,
   })
 
+  // Récupérer les entités externes (entreprises/organismes) de l'organisation
+  const { data: entities } = useQuery({
+    queryKey: ['external-entities-for-invoice', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await (supabase.from('external_entities') as any)
+        .select('id, name, type')
+        .eq('organization_id', user.organization_id)
+        .order('name')
+      if (error) throw error
+      return (data || []) as { id: string; name: string; type: string | null }[]
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Récupérer les programmes de l'organisation (sélecteur pour le mode entreprise)
+  const { data: programs } = useQuery({
+    queryKey: ['programs-for-invoice', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('programs')
+        .select('id, name')
+        .eq('organization_id', user.organization_id)
+        .order('name')
+      if (error) throw error
+      return (data || []) as { id: string; name: string }[]
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Récupérer les formations de l'organisation (déclinaisons d'un programme —
+  // sélecteur pour le mode entreprise, filtré côté UI par le programme choisi)
+  const { data: formations } = useQuery({
+    queryKey: ['formations-for-invoice', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('formations')
+        .select('id, name, program_id')
+        .eq('organization_id', user.organization_id)
+        .order('name')
+      if (error) throw error
+      return (data || []) as { id: string; name: string; program_id: string | null }[]
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  // Récupérer toutes les sessions de l'organisation (sélecteur pour le mode entreprise)
+  const { data: sessions } = useQuery({
+    queryKey: ['sessions-for-invoice', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('id, name, start_date')
+        .eq('organization_id', user.organization_id)
+        .order('start_date', { ascending: false })
+      if (error) throw error
+      return (data || []) as { id: string; name: string; start_date: string | null }[]
+    },
+    enabled: !!user?.organization_id,
+  })
+
   const [invoiceType, setInvoiceType] = useState<'single' | 'bulk'>('single')
   const [documentType, setDocumentType] = useState<'quote' | 'invoice'>('quote') // Par défaut, créer un devis
+  const [recipientType, setRecipientType] = useState<'student' | 'entity'>(prefilledEntityId ? 'entity' : 'student')
+  // Numéro suggéré automatiquement — si l'utilisateur ne l'a pas modifié à la
+  // soumission, on envoie une chaîne vide pour laisser InvoiceService.create()
+  // le régénérer avec sa propre logique de retry sur collision (le numéro
+  // affiché ici peut devenir périmé si une autre facture/devis a été créé
+  // entre-temps, d'où l'erreur "duplicate key" sinon).
+  const [previewedInvoiceNumber, setPreviewedInvoiceNumber] = useState('')
 
   // React Hook Form avec validation Zod
   const {
@@ -67,6 +140,11 @@ export default function NewInvoicePage() {
     mode: 'onChange',
     defaultValues: {
       student_id: '',
+      entity_id: prefilledEntityId,
+      session_id: '',
+      program_id: '',
+      formation_id: '',
+      expected_count: '1',
       document_type: 'quote',
       invoice_number: '',
       type: 'tuition',
@@ -95,7 +173,10 @@ export default function NewInvoicePage() {
     if (!user?.organization_id) return
     invoiceService
       .previewNextInvoiceNumber(user.organization_id, documentType)
-      .then((number) => setValue('invoice_number', number))
+      .then((number) => {
+        setValue('invoice_number', number)
+        setPreviewedInvoiceNumber(number)
+      })
       .catch(() => {})
   }, [documentType, user?.organization_id, setValue])
 
@@ -114,11 +195,61 @@ export default function NewInvoicePage() {
         const amount = parseFloat(data.amount) || 0
         const taxAmount = parseFloat(data.tax_amount || '0') || 0
         const totalAmount = amount + taxAmount
+        // Si l'utilisateur n'a pas modifié le numéro suggéré, on envoie une
+        // chaîne vide pour laisser le service le régénérer avec retry en cas
+        // de collision (numéro devenu périmé entre l'affichage et l'envoi).
+        const invoiceNumberToSend = data.invoice_number === previewedInvoiceNumber ? '' : (data.invoice_number || '')
+
+        if (recipientType === 'entity') {
+          if (!data.entity_id) throw new Error('Veuillez sélectionner une entreprise')
+
+          // La session est facultative : un devis peut être émis avant qu'une
+          // session précise ne soit retenue. On ne crée/relie une réservation
+          // d'entité que si une session a été choisie.
+          let reservationId: string | null = null
+          if (data.session_id) {
+            const { data: reservation, error: reservationError } = await supabase
+              .from('session_entity_reservations')
+              .upsert(
+                {
+                  organization_id: user.organization_id,
+                  session_id: data.session_id,
+                  entity_id: data.entity_id,
+                  expected_count: parseInt(data.expected_count || '1', 10) || 1,
+                },
+                { onConflict: 'session_id,entity_id' }
+              )
+              .select('id')
+              .single()
+            if (reservationError) throw reservationError
+            reservationId = reservation.id
+          }
+
+          return invoiceService.create({
+            organization_id: user.organization_id,
+            entity_id: data.entity_id,
+            session_entity_reservation_id: reservationId,
+            program_id: data.program_id || null,
+            formation_id: data.formation_id || null,
+            invoice_number: invoiceNumberToSend,
+            type: data.type,
+            document_type: data.document_type || 'invoice',
+            issue_date: data.issue_date,
+            due_date: data.due_date,
+            amount: amount,
+            tax_amount: taxAmount,
+            total_amount: totalAmount,
+            currency: data.currency,
+            status: data.status || 'draft',
+            notes: data.notes || null,
+            mentions_libres: data.mentions_libres || null,
+          } as Parameters<typeof invoiceService.create>[0] & { document_type?: 'quote' | 'invoice' })
+        }
 
         return invoiceService.create({
           organization_id: user.organization_id,
           student_id: data.student_id,
-          invoice_number: data.invoice_number || '',
+          invoice_number: invoiceNumberToSend,
           type: data.type,
           document_type: data.document_type || 'invoice',
           issue_date: data.issue_date,
@@ -241,6 +372,51 @@ export default function NewInvoicePage() {
         </CardContent>
       </Card>
 
+      {invoiceType === 'single' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Destinataire</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex space-x-4 mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRecipientType('student')
+                  setValue('entity_id', '')
+                  setValue('session_id', '')
+                  setValue('program_id', '')
+                  setValue('formation_id', '')
+                }}
+                className={`flex-1 p-4 border-2 rounded-lg transition-colors ${
+                  recipientType === 'student'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-semibold">Apprenant</div>
+                <div className="text-sm text-muted-foreground mt-1">Un élève de l&apos;organisation</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRecipientType('entity')
+                  setValue('student_id', '')
+                }}
+                className={`flex-1 p-4 border-2 rounded-lg transition-colors ${
+                  recipientType === 'entity'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="font-semibold">Entreprise</div>
+                <div className="text-sm text-muted-foreground mt-1">Une entité externe, rattachée à une session</div>
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Informations du {documentType === 'quote' ? 'devis' : 'facture'}</CardTitle>
@@ -286,7 +462,7 @@ export default function NewInvoicePage() {
                 )}
               </div>
 
-              {invoiceType === 'single' ? (
+              {invoiceType === 'single' && recipientType === 'student' ? (
                 <div>
                   <label className="block text-sm font-medium mb-2">Élève *</label>
                   <select
@@ -306,6 +482,24 @@ export default function NewInvoicePage() {
                     <p className="text-sm text-danger-primary mt-1">{errors.student_id.message}</p>
                   )}
                 </div>
+              ) : invoiceType === 'single' && recipientType === 'entity' ? (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Entreprise *</label>
+                  <select
+                    {...register('entity_id')}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target ${
+                      errors.entity_id ? 'border-danger-primary' : ''
+                    }`}
+                  >
+                    <option value="">Sélectionner une entreprise</option>
+                    {entities?.map((entity) => (
+                      <option key={entity.id} value={entity.id}>{entity.name}</option>
+                    ))}
+                  </select>
+                  {errors.entity_id && (
+                    <p className="text-sm text-danger-primary mt-1">{errors.entity_id.message}</p>
+                  )}
+                </div>
               ) : (
                 <div>
                   <label className="block text-sm font-medium mb-2">Classe *</label>
@@ -317,6 +511,75 @@ export default function NewInvoicePage() {
                 </div>
               )}
             </div>
+
+            {invoiceType === 'single' && recipientType === 'entity' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Programme</label>
+                  <select
+                    {...register('program_id')}
+                    onChange={(e) => {
+                      setValue('program_id', e.target.value)
+                      // La formation choisie doit appartenir au programme sélectionné
+                      const currentFormation = formations?.find((f) => f.id === watch('formation_id'))
+                      if (currentFormation && currentFormation.program_id !== (e.target.value || null)) {
+                        setValue('formation_id', '')
+                      }
+                    }}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                  >
+                    <option value="">Aucun programme précis</option>
+                    {programs?.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Formation</label>
+                  <select
+                    {...register('formation_id')}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                  >
+                    <option value="">Aucune formation précise</option>
+                    {(watch('program_id')
+                      ? formations?.filter((f) => f.program_id === watch('program_id'))
+                      : formations
+                    )?.map((f) => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {watch('program_id') ? 'Formations du programme sélectionné.' : 'Facultatif — filtré par programme si un programme est choisi.'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Session</label>
+                  <select
+                    {...register('session_id')}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                  >
+                    <option value="">Aucune session précise</option>
+                    {sessions?.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name || s.id.slice(0, 8)}</option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Facultatif — peut être choisie plus tard si le devis est émis avant qu'une session précise ne soit retenue.
+                  </p>
+                </div>
+                {watch('session_id') && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Effectif prévisionnel</label>
+                    <input
+                      type="number"
+                      min={1}
+                      {...register('expected_count')}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent min-touch-target"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>

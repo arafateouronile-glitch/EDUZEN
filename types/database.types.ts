@@ -10489,6 +10489,7 @@ export type Database = {
           due_date: string
           enrollment_id: string | null
           entity_id: string | null
+          formation_id: string | null
           funding_type_id: string | null
           id: string
           invoice_number: string
@@ -10499,6 +10500,7 @@ export type Database = {
           organization_id: string | null
           original_invoice_id: string | null
           pdf_url: string | null
+          program_id: string | null
           session_entity_reservation_id: string | null
           status: string | null
           student_id: string | null
@@ -10515,6 +10517,7 @@ export type Database = {
           due_date: string
           enrollment_id?: string | null
           entity_id?: string | null
+          formation_id?: string | null
           funding_type_id?: string | null
           id?: string
           invoice_number: string
@@ -10525,6 +10528,7 @@ export type Database = {
           organization_id?: string | null
           original_invoice_id?: string | null
           pdf_url?: string | null
+          program_id?: string | null
           session_entity_reservation_id?: string | null
           status?: string | null
           student_id?: string | null
@@ -10541,6 +10545,7 @@ export type Database = {
           due_date?: string
           enrollment_id?: string | null
           entity_id?: string | null
+          formation_id?: string | null
           funding_type_id?: string | null
           id?: string
           invoice_number?: string
@@ -10551,6 +10556,7 @@ export type Database = {
           organization_id?: string | null
           original_invoice_id?: string | null
           pdf_url?: string | null
+          program_id?: string | null
           session_entity_reservation_id?: string | null
           status?: string | null
           student_id?: string | null

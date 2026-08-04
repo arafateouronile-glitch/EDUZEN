@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       expiresAt,
     } = body
 
-    if (!pdfBase64 || !documentTitle || !type || !invoiceId || !sessionId || !recipientEmail || !recipientName) {
+    if (!pdfBase64 || !documentTitle || !type || !invoiceId || !recipientEmail || !recipientName) {
       return NextResponse.json(
         { error: 'Données manquantes' },
         { status: 400 }
@@ -107,9 +107,10 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(filePath)
 
     // Récupérer les informations de la facture/devis pour obtenir le student_id
+    // (ou entity_id si le document a été émis directement à une entreprise)
     const { data: invoice } = await supabase
       .from('invoices')
-      .select('student_id')
+      .select('student_id, entity_id')
       .eq('id', invoiceId)
       .single()
 
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       organization_id: userData.organization_id,
       student_id: invoice?.student_id || null,
       metadata: {
-        session_id: sessionId,
+        session_id: sessionId || null,
         invoice_id: invoiceId,
         generated_at: new Date().toISOString(),
       },
@@ -134,8 +135,8 @@ export async function POST(request: NextRequest) {
       organizationId: userData.organization_id,
       recipientEmail,
       recipientName,
-      recipientType: 'student',
-      recipientId: recipientId || invoice?.student_id,
+      recipientType: invoice?.student_id ? 'student' : 'other',
+      recipientId: recipientId || invoice?.student_id || invoice?.entity_id,
       subject: subject || `Demande de signature : ${documentTitle}`,
       message: message || null,
       expiresAt: expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),

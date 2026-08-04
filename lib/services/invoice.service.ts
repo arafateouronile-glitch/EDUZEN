@@ -65,7 +65,7 @@ export class InvoiceService {
         this.supabase,
         'invoices',
         id,
-        '*, students(*), enrollments(*), payments(*)'
+        '*, students(*), enrollments(*), payments(*), external_entities(id, name, type, email)'
       )
     } catch (error) {
       if (error instanceof AppError) {

@@ -8,16 +8,31 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Plus, DollarSign, Calendar, FileText, CheckCircle, XCircle, Clock, CreditCard, Building2, Download, Receipt } from 'lucide-react'
+import { ArrowLeft, Plus, DollarSign, Calendar, FileText, CheckCircle, XCircle, Clock, CreditCard, Building2, Download, Receipt, Mail, PenTool, Send } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { useState } from 'react'
 import { useToast } from '@/components/ui/toast'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
-import { generateHTML } from '@/lib/utils/document-generation/html-generator'
-import { extractDocumentVariables, mapDocumentTypeToTemplateType } from '@/lib/utils/document-generation/variable-extractor'
-import { generatePDFFromHTML } from '@/lib/utils/pdf-generator'
+import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
+import { emailService } from '@/lib/services/email.service'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { StudentWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -89,19 +104,64 @@ export default function InvoiceDetailPage() {
     enabled: !!user?.organization_id,
   })
 
-  // Récupérer le template de facture par défaut
+  // Un devis et une facture n'utilisent pas le même modèle de document — un
+  // avoir réutilise le modèle facture (aucun modèle "avoir" dédié n'existe).
+  const documentTemplateType = invoice?.document_type === 'quote' ? 'devis' : 'facture'
+  const documentLabel = invoice?.document_type === 'quote' ? 'devis' : invoice?.document_type === 'credit_note' ? 'avoir' : 'facture'
+  const documentLabelCapitalized = documentLabel.charAt(0).toUpperCase() + documentLabel.slice(1)
+  // Articles grammaticaux : "devis" est masculin, "facture" est féminin, "avoir" est masculin à voyelle
+  const documentArticle = documentLabel === 'avoir' ? "l'" : documentLabel === 'facture' ? 'la ' : 'le '
+  const documentArticleDe = documentLabel === 'avoir' ? "de l'" : documentLabel === 'facture' ? 'de la ' : 'du '
+
+  // Récupérer le modèle par défaut correspondant au type de document (devis/facture)
   const { data: invoiceTemplate } = useQuery({
-    queryKey: ['invoice-template', user?.organization_id],
+    queryKey: ['invoice-template', user?.organization_id, documentTemplateType],
     queryFn: async () => {
       if (!user?.organization_id) return null
       const templates = await documentTemplateService.getTemplatesByType(
-        'facture',
+        documentTemplateType,
         user.organization_id
       )
       return templates.length > 0 ? templates[0] : null
     },
+    enabled: !!user?.organization_id && !!invoice,
+  })
+
+  // Tous les modèles actifs du type courant (devis/facture), pour permettre à
+  // l'utilisateur de choisir explicitement un autre modèle que le défaut avant
+  // de générer le document.
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>()
+  const { data: allTemplates } = useQuery({
+    queryKey: ['document-templates', 'all', user?.organization_id, documentTemplateType],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      return documentTemplateService.getAllTemplates(user.organization_id, { type: documentTemplateType, isActive: true })
+    },
     enabled: !!user?.organization_id,
   })
+  const availableTemplates = allTemplates || []
+  const effectiveTemplate = selectedTemplateId
+    ? availableTemplates.find((t) => t?.id === selectedTemplateId) || invoiceTemplate
+    : invoiceTemplate
+
+  // Envoi par email
+  const [emailPreview, setEmailPreview] = useState<{
+    to: string
+    subject: string
+    bodyText: string
+    filename: string
+  } | null>(null)
+  const [isEmailSending, setIsEmailSending] = useState(false)
+
+  // Demande de signature
+  const [signatureRequestOpen, setSignatureRequestOpen] = useState(false)
+  const [signatureRequestForm, setSignatureRequestForm] = useState<{
+    recipientEmail: string
+    recipientName: string
+    subject: string
+    message: string
+  } | null>(null)
+  const [isSendingSignatureRequest, setIsSendingSignatureRequest] = useState(false)
 
   // Formulaire de paiement
   const [paymentForm, setPaymentForm] = useState({
@@ -266,7 +326,7 @@ export default function InvoiceDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="text-muted-foreground">Facture non trouvée</div>
+          <div className="text-muted-foreground">Document non trouvé</div>
           <Link href="/dashboard/payments">
             <Button className="mt-4">Retour à la liste</Button>
           </Link>
@@ -340,13 +400,91 @@ export default function InvoiceDetailPage() {
     }
   }
 
-  // Fonction pour télécharger la facture
+  // Génère le PDF du document (devis/facture/avoir) via le modèle sélectionné
+  // (ou le modèle par défaut) en passant par la route serveur Puppeteer —
+  // le même pipeline que celui utilisé pour les factures/devis de session,
+  // pour garantir un rendu fidèle au modèle établi. Réutilisé par le
+  // téléchargement, l'envoi par email et la demande de signature.
+  const generateInvoicePdfBlob = async (): Promise<Blob> => {
+    if (!invoice || !organization || !effectiveTemplate || !user?.organization_id) {
+      throw new Error('Données manquantes pour la génération du document.')
+    }
+
+    const student = invoice.students as StudentWithRelations | undefined
+    const invoiceData = invoice as InvoiceWithRelations
+
+    let paymentCompany = null
+    let effectif: number | undefined
+    if (student?.id) {
+      const { data: ce } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).maybeSingle()
+      if (ce?.companies && !Array.isArray(ce.companies)) paymentCompany = ce.companies
+    } else if (invoiceData.entity_id) {
+      const [{ data: entityRow }, { data: reservationRow }] = await Promise.all([
+        supabase.from('external_entities').select('*').eq('id', invoiceData.entity_id).single(),
+        invoiceData.session_entity_reservation_id
+          ? supabase.from('session_entity_reservations').select('expected_count, billing_mode, billing_quantity').eq('id', invoiceData.session_entity_reservation_id).single()
+          : Promise.resolve({ data: null }),
+      ])
+      if (entityRow) paymentCompany = entityRow
+      if (reservationRow) {
+        const needsSeparateQuantity = reservationRow.billing_mode === 'per_group' || reservationRow.billing_mode === 'per_client' || reservationRow.billing_mode === 'per_hour'
+        effectif = needsSeparateQuantity && reservationRow.billing_quantity ? reservationRow.billing_quantity : reservationRow.expected_count
+      }
+    }
+
+    // Le programme et la formation choisis à la création du devis/facture ne
+    // sont pas automatiquement liés à une session — on les récupère donc ici
+    // pour alimenter les variables {programme_nom}/{formation_nom} du modèle.
+    // {formation_nom} n'existe côté extracteur que via session.formations,
+    // d'où l'objet "session" minimal ci-dessous ne portant que la formation.
+    const [{ data: programRow }, { data: formationRow }] = await Promise.all([
+      invoiceData.program_id
+        ? supabase.from('programs').select('*').eq('id', invoiceData.program_id).single()
+        : Promise.resolve({ data: null }),
+      invoiceData.formation_id
+        ? supabase.from('formations').select('*').eq('id', invoiceData.formation_id).single()
+        : Promise.resolve({ data: null }),
+    ])
+
+    const variables = extractDocumentVariables({
+      student,
+      organization: organization as TableRow<'organizations'>,
+      session: formationRow ? ({ formations: formationRow } as any) : undefined,
+      invoice: invoiceData,
+      academicYear,
+      company: paymentCompany as any,
+      program: (programRow as any) ?? undefined,
+      language: 'fr',
+      issueDate: invoice.issue_date ?? undefined,
+      effectif,
+    })
+
+    const response = await fetch('/api/documents/generate-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: effectiveTemplate,
+        variables,
+        documentId: undefined,
+        organizationId: user.organization_id,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }))
+      throw new Error(errorData.details || errorData.error || errorData.message || 'Erreur lors de la génération du PDF')
+    }
+
+    return await response.blob()
+  }
+
+  // Fonction pour télécharger le document (devis/facture/avoir)
   const handleDownloadInvoice = async () => {
-    if (!invoice || !organization || !invoiceTemplate) {
+    if (!invoice || !organization || !effectiveTemplate) {
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: 'Impossible de générer la facture. Données manquantes.',
+        description: `Impossible de générer ${documentArticle}${documentLabel}. Données manquantes.`,
       })
       return
     }
@@ -354,114 +492,190 @@ export default function InvoiceDetailPage() {
     setIsDownloadingInvoice(true)
 
     try {
-      // Extraire les variables
-      const student = invoice.students as StudentWithRelations | undefined
-      const invoiceData = invoice as InvoiceWithRelations
-
-      let paymentCompany = null
-      if (student?.id) {
-        const supabase = createClient()
-        const { data: ce } = await supabase.from('company_employees').select('companies(*)').eq('student_id', student.id).eq('is_active', true).limit(1).single()
-        if (ce?.companies && !Array.isArray(ce.companies)) paymentCompany = ce.companies
-      }
-
-      const variables = extractDocumentVariables({
-        student,
-        organization: organization as TableRow<'organizations'>,
-        session: undefined,
-        invoice: invoiceData,
-        academicYear,
-        company: paymentCompany as any,
-        language: 'fr',
-        issueDate: invoice.issue_date ?? undefined,
-      })
-
-      // Générer le HTML avec le template
-      const result = await generateHTML(
-        invoiceTemplate,
-        variables,
-        undefined,
-        user?.organization_id || undefined
-      )
-
-      // Générer le nom de fichier
-      const filename = `facture_${invoice.invoice_number}.pdf`
-
-      // Créer un élément temporaire avec les bonnes dimensions pour la génération PDF
-      const tempDiv = document.createElement('div')
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.left = '-9999px'
-      tempDiv.style.top = '0'
-      tempDiv.style.width = '794px'
-      tempDiv.style.minHeight = '1123px'
-      tempDiv.style.backgroundColor = '#ffffff'
-      tempDiv.style.overflow = 'visible'
-      tempDiv.style.fontFamily = 'Arial, sans-serif'
-      document.body.appendChild(tempDiv)
-
-      // Extraire le contenu du body
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(result.html, 'text/html')
-      const bodyContent = doc.body.innerHTML
-      tempDiv.innerHTML = bodyContent
-
-      // Trouver l'élément principal du document
-      // IMPORTANT: ne pas capturer uniquement le <header> racine (sinon PDF "vide")
-      let element = tempDiv.querySelector('.document-container') || tempDiv.querySelector('[id$="-document"]') || tempDiv
-
-      if (!element || !(element instanceof HTMLElement)) {
-        element = tempDiv
-      }
-
-      const elementId = `temp-pdf-invoice-${Date.now()}`
-      if (element instanceof HTMLElement) {
-        element.id = elementId
-        if (!element.style.width) {
-          element.style.width = '794px'
-        }
-        if (!element.style.minHeight) {
-          element.style.minHeight = '1123px'
-        }
-        element.style.backgroundColor = '#ffffff'
-      }
-
-      // Attendre que le DOM soit mis à jour
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Vérifier que l'élément est visible
-      if (element instanceof HTMLElement) {
-        const rect = element.getBoundingClientRect()
-        if (rect.width === 0 || rect.height === 0) {
-          element = tempDiv
-          tempDiv.id = elementId
-          tempDiv.style.width = '794px'
-          tempDiv.style.minHeight = '1123px'
-        }
-      }
-
-      await generatePDFFromHTML(elementId, filename)
+      const pdfBlob = await generateInvoicePdfBlob()
+      const filename = `${documentLabel}_${invoice.invoice_number}.pdf`
+      const url = URL.createObjectURL(pdfBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
 
       addToast({
         type: 'success',
-        title: 'Facture téléchargée',
-        description: 'La facture a été générée et téléchargée avec succès.',
+        title: `${documentLabelCapitalized} téléchargé${documentLabel === 'facture' ? 'e' : ''}`,
+        description: `${documentArticle.charAt(0).toUpperCase()}${documentArticle.slice(1)}${documentLabel} a été généré${documentLabel === 'facture' ? 'e' : ''} et téléchargé${documentLabel === 'facture' ? 'e' : ''} avec succès.`,
       })
     } catch (error) {
-      logger.error('Erreur lors de la génération de la facture:', error)
+      logger.error(`Erreur lors de la génération ${documentArticleDe}${documentLabel}:`, error)
       addToast({
         type: 'error',
         title: 'Erreur',
-        description: 'Une erreur est survenue lors de la génération de la facture.',
+        description: `Une erreur est survenue lors de la génération ${documentArticleDe}${documentLabel}.`,
       })
     } finally {
       setIsDownloadingInvoice(false)
-      // Nettoyer l'élément temporaire
-      const tempDivs = document.querySelectorAll('[id^="temp-pdf-invoice-"]')
-      tempDivs.forEach((div) => {
-        if (div.parentNode === document.body) {
-          document.body.removeChild(div)
-        }
+    }
+  }
+
+  // Destinataire du devis/facture : l'apprenant nommé, ou l'entreprise externe
+  // quand le document a été émis directement à une entité.
+  const getInvoiceRecipient = (): { email: string | null; name: string } => {
+    if (!invoice) return { email: null, name: '' }
+    const student = invoice.students as (StudentWithRelations & { email?: string | null }) | undefined
+    if (student) {
+      return {
+        email: student.email || null,
+        name: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
+      }
+    }
+    const entity = invoice.external_entities
+    return {
+      email: entity?.email || null,
+      name: entity?.name || 'Entreprise',
+    }
+  }
+
+  const handleOpenEmailDialog = () => {
+    if (!invoice) return
+    const recipient = getInvoiceRecipient()
+    if (!recipient.email) {
+      addToast({ type: 'error', title: 'Email manquant', description: 'Aucun email n\'est renseigné pour ce destinataire.' })
+      return
+    }
+
+    const invoiceNumber = invoice.invoice_number || 'Brouillon'
+    const filenameSafe = String(invoiceNumber).replace(/[^\w.-]+/g, '_')
+    const filename = `${documentLabel}_${filenameSafe}.pdf`
+    const orgName = (organization as { name?: string } | null)?.name ?? 'EDUZEN'
+    const subject = `${documentLabelCapitalized} ${invoiceNumber} (${orgName})`
+    const bodyText =
+      `Bonjour ${recipient.name},\n\n` +
+      `Veuillez trouver en pièce jointe ${documentArticle}${documentLabel} ${invoiceNumber}.\n\n` +
+      `Cordialement,\n${orgName}\n`
+
+    setEmailPreview({ to: recipient.email, subject, bodyText, filename })
+  }
+
+  const handleConfirmSendEmail = async () => {
+    if (!emailPreview) return
+
+    setIsEmailSending(true)
+    try {
+      const pdfBlob = await generateInvoicePdfBlob()
+
+      const escapeHtml = (value: string) =>
+        value
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;')
+
+      const htmlBody =
+        `<div style="font-family: Arial, sans-serif; line-height: 1.5; white-space: normal;">` +
+        `${escapeHtml(emailPreview.bodyText).replace(/\n/g, '<br/>')}` +
+        `</div>`
+
+      await emailService.sendDocument(emailPreview.to, emailPreview.subject, pdfBlob, emailPreview.filename, htmlBody, emailPreview.bodyText)
+
+      addToast({
+        type: 'success',
+        title: 'Email envoyé',
+        description: `${documentLabelCapitalized} envoyé${documentLabel === 'facture' ? 'e' : ''} à ${emailPreview.to}.`,
       })
+      setEmailPreview(null)
+    } catch (error) {
+      logger.error('Erreur lors de l\'envoi email du document:', error)
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue lors de l\'envoi par email.',
+      })
+    } finally {
+      setIsEmailSending(false)
+    }
+  }
+
+  const handleOpenSignatureRequest = () => {
+    if (!invoice) return
+    const recipient = getInvoiceRecipient()
+    if (!recipient.email) {
+      addToast({ type: 'error', title: 'Erreur', description: 'Aucun email n\'est renseigné pour ce destinataire.' })
+      return
+    }
+    const verb = documentLabel === 'facture' ? 'la signer' : 'le signer'
+    const orgName = (organization as { name?: string } | null)?.name ?? ''
+    setSignatureRequestForm({
+      recipientEmail: recipient.email,
+      recipientName: recipient.name,
+      subject: `Demande de signature : ${documentLabelCapitalized} ${invoice.invoice_number || 'Brouillon'} - ${recipient.name}`,
+      message:
+        `Bonjour ${recipient.name},\n\n` +
+        `Veuillez trouver ci-joint ${documentArticle}${documentLabel} ${invoice.invoice_number || ''}.\n\n` +
+        `Merci de bien vouloir ${verb} en ligne.\n\n` +
+        `Cordialement,\n${orgName}`,
+    })
+    setSignatureRequestOpen(true)
+  }
+
+  const handleConfirmSignatureRequest = async () => {
+    if (!invoice || !signatureRequestForm) return
+
+    setIsSendingSignatureRequest(true)
+    try {
+      const pdfBlob = await generateInvoicePdfBlob()
+      const pdfBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(pdfBlob)
+      })
+
+      const student = invoice.students as StudentWithRelations | undefined
+      const recipientName = getInvoiceRecipient().name
+      const documentTitle = `${documentLabelCapitalized} ${invoice.invoice_number || 'Brouillon'} - ${recipientName}`
+
+      const response = await fetch('/api/signature-requests/send-from-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pdfBase64,
+          documentTitle,
+          type: invoice.document_type === 'quote' ? 'quote' : 'invoice',
+          invoiceId: invoice.id,
+          recipientEmail: signatureRequestForm.recipientEmail,
+          recipientName: signatureRequestForm.recipientName,
+          recipientId: student?.id,
+          subject: signatureRequestForm.subject,
+          message: signatureRequestForm.message,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error.error || 'Erreur lors de l\'envoi')
+      }
+
+      setSignatureRequestOpen(false)
+      setSignatureRequestForm(null)
+      addToast({
+        type: 'success',
+        title: 'Demande de signature envoyée',
+        description: 'Le document a été généré et envoyé au destinataire pour signature en ligne.',
+      })
+    } catch (error) {
+      logger.error('Erreur lors de l\'envoi de la demande de signature:', error)
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Erreur lors de l\'envoi de la demande de signature',
+      })
+    } finally {
+      setIsSendingSignatureRequest(false)
     }
   }
 
@@ -476,22 +690,16 @@ export default function InvoiceDetailPage() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Facture {invoice.invoice_number}
+              {documentLabelCapitalized} {invoice.invoice_number}
             </h1>
             <p className="mt-2 text-sm text-gray-600">
-              {invoice.students?.first_name} {invoice.students?.last_name}
+              {(invoice as unknown as { entity_id?: string | null; external_entities?: { name: string } | null }).entity_id
+                ? (invoice as unknown as { external_entities?: { name: string } | null }).external_entities?.name
+                : `${invoice.students?.first_name ?? ''} ${invoice.students?.last_name ?? ''}`.trim()}
             </p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={handleDownloadInvoice}
-            disabled={isDownloadingInvoice || !invoiceTemplate}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {isDownloadingInvoice ? 'Génération...' : 'Télécharger la facture'}
-          </Button>
           {remainingAmount > 0 && (
             <>
               <Button onClick={() => setShowPaymentForm(!showPaymentForm)}>
@@ -517,13 +725,62 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
+      {/* Modèle de document + actions (téléchargement, email, signature) */}
+      <Card>
+        <CardContent className="flex flex-wrap items-end gap-3 pt-6">
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold text-gray-700">Modèle {documentArticleDe}{documentLabel}</Label>
+            <Select
+              value={selectedTemplateId || ''}
+              onValueChange={(value) => setSelectedTemplateId(value || undefined)}
+            >
+              <SelectTrigger className="w-[240px]">
+                <SelectValue placeholder="Modèle par défaut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Modèle par défaut</SelectItem>
+                {availableTemplates.map((template) => (
+                  <SelectItem key={template?.id ?? ''} value={template?.id ?? ''}>
+                    {template?.name ?? ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleDownloadInvoice}
+            disabled={isDownloadingInvoice || !effectiveTemplate}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {isDownloadingInvoice ? 'Génération...' : `Télécharger ${documentArticle}${documentLabel}`}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleOpenEmailDialog}
+            disabled={!effectiveTemplate}
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Envoyer par email
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleOpenSignatureRequest}
+            disabled={!effectiveTemplate}
+          >
+            <PenTool className="mr-2 h-4 w-4" />
+            Demande de signature
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Informations principales */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Détails de la facture</CardTitle>
+                <CardTitle>Détails {documentArticleDe}{documentLabel}</CardTitle>
                 <span className={`px-3 py-1 rounded text-sm font-medium ${getStatusColor(invoice.status || 'pending')}`}>
                   {getStatusLabel(invoice.status || 'pending')}
                 </span>
@@ -847,7 +1104,7 @@ export default function InvoiceDetailPage() {
                       placeholder="0.00"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Montant total de la facture: {formatCurrency(Number(invoice.total_amount), invoice.currency)}
+                      Montant total {documentArticleDe}{documentLabel}: {formatCurrency(Number(invoice.total_amount), invoice.currency)}
                     </p>
                   </div>
 
@@ -917,6 +1174,209 @@ export default function InvoiceDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Prévisualisation email + PDF avant envoi */}
+      <Dialog
+        open={!!emailPreview}
+        onOpenChange={(open) => {
+          if (!open) setEmailPreview(null)
+        }}
+      >
+        <DialogContent className="max-w-2xl" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Envoyer par e-mail</DialogTitle>
+          </DialogHeader>
+
+          {emailPreview && (
+            <div className="space-y-4">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-700">
+                  Document : <span className="font-semibold">{documentLabelCapitalized}</span> —{' '}
+                  <span className="font-semibold">{invoice.invoice_number}</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Pièce jointe : <span className="font-medium">{emailPreview.filename}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">À</label>
+                <input
+                  type="email"
+                  value={emailPreview.to}
+                  onChange={(e) => setEmailPreview((prev) => (prev ? { ...prev, to: e.target.value } : prev))}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="destinataire@exemple.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Objet</label>
+                <input
+                  type="text"
+                  value={emailPreview.subject}
+                  onChange={(e) => setEmailPreview((prev) => (prev ? { ...prev, subject: e.target.value } : prev))}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Contenu du mail</label>
+                <textarea
+                  value={emailPreview.bodyText}
+                  onChange={(e) => setEmailPreview((prev) => (prev ? { ...prev, bodyText: e.target.value } : prev))}
+                  rows={10}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Écris ton message ici..."
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Le document sera généré en PDF et joint automatiquement lors de l'envoi.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEmailPreview(null)}>
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmSendEmail}
+              disabled={!emailPreview || isEmailSending || !emailPreview.to?.trim() || !emailPreview.subject?.trim()}
+            >
+              {isEmailSending ? 'Envoi...' : 'Envoyer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Demande de signature */}
+      <Dialog
+        open={signatureRequestOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSignatureRequestOpen(false)
+            setSignatureRequestForm(null)
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white/95 backdrop-blur-xl border-white/20 shadow-2xl">
+          <div className="p-6 border-b border-gray-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                <PenTool className="h-5 w-5 text-purple-600" />
+                Envoyer en demande de signature
+              </DialogTitle>
+              <DialogDescription className="text-gray-500">
+                Le document sera généré et envoyé au destinataire pour signature en ligne.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {signatureRequestForm && (
+              <div className="space-y-4">
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    Document : <span className="font-semibold">{documentLabelCapitalized}</span> —{' '}
+                    <span className="font-semibold">{invoice.invoice_number || 'Brouillon'}</span>
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <label htmlFor="sig-recipient-email" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Email du destinataire</label>
+                  <div className="relative">
+                    <input
+                      id="sig-recipient-email"
+                      type="email"
+                      value={signatureRequestForm.recipientEmail}
+                      onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, recipientEmail: e.target.value })}
+                      className="w-full pl-10 px-4 py-3 border rounded-lg focus:ring-purple-600/20 focus:border-purple-600 transition-all"
+                      placeholder="email@example.com"
+                    />
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <label htmlFor="sig-recipient-name" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Nom du destinataire</label>
+                  <input
+                    id="sig-recipient-name"
+                    type="text"
+                    value={signatureRequestForm.recipientName}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, recipientName: e.target.value })}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-purple-600/20 focus:border-purple-600 transition-all font-medium"
+                    placeholder="Nom complet"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <label htmlFor="sig-subject" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sujet</label>
+                  <input
+                    id="sig-subject"
+                    type="text"
+                    value={signatureRequestForm.subject}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, subject: e.target.value })}
+                    className="w-full px-4 py-3 border rounded-lg focus:ring-purple-600/20 focus:border-purple-600 transition-all font-medium"
+                    placeholder="Sujet de l'email"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <label htmlFor="sig-message" className="text-xs font-bold text-gray-500 uppercase tracking-wide">Message</label>
+                  <textarea
+                    id="sig-message"
+                    value={signatureRequestForm.message}
+                    onChange={(e) => setSignatureRequestForm({ ...signatureRequestForm, message: e.target.value })}
+                    className="min-h-[200px] font-mono text-sm w-full px-4 py-3 border rounded-lg focus:ring-purple-600/20 focus:border-purple-600 transition-all"
+                    placeholder="Message personnalisé"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-100 rounded-xl text-sm text-purple-700">
+                  <div className="p-2 bg-white rounded-lg shadow-sm">
+                    <PenTool className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <p className="font-medium">
+                    Le destinataire recevra un email avec un lien sécurisé pour signer le document en ligne.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-6 bg-gray-50/50 border-t border-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSignatureRequestOpen(false)
+                setSignatureRequestForm(null)
+              }}
+              className="border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleConfirmSignatureRequest}
+              disabled={!signatureRequestForm?.recipientEmail || !signatureRequestForm?.recipientName || !signatureRequestForm?.subject || isSendingSignatureRequest}
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200"
+            >
+              {isSendingSignatureRequest ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer la demande
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
