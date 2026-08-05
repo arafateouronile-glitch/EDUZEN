@@ -40,7 +40,7 @@ import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import { documentTemplateService } from '@/lib/services/document-template.service.client'
 import { emailTemplateService } from '@/lib/services/email-template.service.client'
-import type { DocumentTemplate } from '@/lib/types/document-templates'
+import type { DocumentTemplate, DocumentType } from '@/lib/types/document-templates'
 import type { EmailTemplate } from '@/lib/services/email-template.service.client'
 
 type Program = TableRow<'programs'>
@@ -157,8 +157,27 @@ export function GestionConvocations({
     enabled: !!user?.organization_id,
   })
 
-  // Filtrer les modèles de convocations (tous les modèles, pas seulement les actifs)
-  const convocationTemplates = (allTemplates ?? []).filter((template: DocumentTemplate) => template.type === 'convocation')
+  // Types de modèles proposés dans cet onglet : convocations + les documents
+  // de fin/entrée en formation qu'on génère au même endroit dans le parcours.
+  // "Attestation de fin de formation" n'a pas de type dédié dans le système —
+  // on réutilise attestation_reussite (le plus proche sémantiquement).
+  const CONVOCATION_TAB_TEMPLATE_TYPES: DocumentType[] = [
+    'convocation', 'attestation_entree', 'attestation_reussite',
+    'certificat_scolarite', 'certificat_realisation',
+  ]
+  const CONVOCATION_TAB_TYPE_LABELS: Partial<Record<DocumentType, string>> = {
+    attestation_entree: 'Attestation d\'entrée en formation',
+    attestation_reussite: 'Attestation de fin de formation',
+    certificat_scolarite: 'Certificat de scolarité',
+    certificat_realisation: 'Certificat de réalisation',
+  }
+
+  // Filtrer les modèles de convocations + attestations/certificats (tous les
+  // modèles, pas seulement les actifs)
+  const convocationTemplates = (allTemplates ?? []).filter((template: DocumentTemplate) => CONVOCATION_TAB_TEMPLATE_TYPES.includes(template.type))
+  // Sous-ensemble actif seul, pour la fenêtre d'envoi en masse (comportement
+  // inchangé par rapport à l'ancienne requête getTemplatesByType dédiée)
+  const activeConvocationTabTemplates = convocationTemplates.filter((t) => t.is_active)
 
   // État pour le modèle sélectionné pour les convocations
   const [selectedConvocationTemplateId, setSelectedConvocationTemplateId] = useState<string | undefined>()
@@ -179,17 +198,6 @@ export function GestionConvocations({
       return (data || []) as unknown as SessionEntityReservation[]
     },
     enabled: !!sessionId,
-  })
-
-  // Récupérer les templates de documents (convocations) pour le dialog d'envoi en masse
-  const { data: documentTemplates } = useQuery({
-    queryKey: ['document-templates', 'convocation', user?.organization_id],
-    queryFn: async (): Promise<DocumentTemplate[]> => {
-      if (!user?.organization_id) return []
-      const list = await documentTemplateService.getTemplatesByType('convocation', user.organization_id)
-      return list.filter((t): t is DocumentTemplate => t != null)
-    },
-    enabled: !!user?.organization_id && showBulkSendDialog,
   })
 
   // Récupérer les templates d'email pour les convocations
@@ -471,11 +479,14 @@ export function GestionConvocations({
                     <SelectContent className="rounded-xl z-[9999]">
                       <SelectItem value="">Modèle par défaut</SelectItem>
                       {convocationTemplates && convocationTemplates.length > 0 ? (
-                        convocationTemplates.map((template: DocumentTemplate) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
-                          </SelectItem>
-                        ))
+                        convocationTemplates.map((template: DocumentTemplate) => {
+                          const typeLabel = CONVOCATION_TAB_TYPE_LABELS[template.type]
+                          return (
+                            <SelectItem key={template.id} value={template.id}>
+                              {typeLabel ? `(${typeLabel}) ${template.name}` : template.name}
+                            </SelectItem>
+                          )
+                        })
                       ) : (
                         <SelectItem value="" {...({ disabled: true } as Record<string, unknown>)}>
                           Aucun modèle disponible
@@ -962,11 +973,14 @@ export function GestionConvocations({
               >
                 <option value="">Sélectionner un modèle de document</option>
                 <option value="default">Modèle par défaut (système)</option>
-                {(documentTemplates ?? []).map((template: DocumentTemplate) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}{template.is_default ? ' (Par défaut)' : ''}
-                  </option>
-                ))}
+                {activeConvocationTabTemplates.map((template: DocumentTemplate) => {
+                  const typeLabel = CONVOCATION_TAB_TYPE_LABELS[template.type]
+                  return (
+                    <option key={template.id} value={template.id}>
+                      {typeLabel ? `(${typeLabel}) ` : ''}{template.name}{template.is_default ? ' (Par défaut)' : ''}
+                    </option>
+                  )
+                })}
               </select>
               <p className="text-xs text-gray-500">
                 Le modèle sélectionné sera utilisé pour générer les PDF des convocations.
