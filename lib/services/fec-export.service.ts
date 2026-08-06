@@ -3,8 +3,7 @@
  * Format standard français pour l'export comptable conforme à la norme fiscale
  */
 
-import { createClient as createServerClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database.types'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { TableRow } from '@/lib/types/supabase-helpers'
 
 type Invoice = TableRow<'invoices'>
@@ -49,16 +48,18 @@ export interface FECExportOptions {
 /**
  * Service d'export FEC
  * Client Supabase créé à la demande pour éviter d'exiger les env vars au build (Collecting page data).
+ * Utilise le client admin (clé service, bypass RLS) : la route appelante
+ * (/api/accounting/fec-export) authentifie déjà l'utilisateur et vérifie son
+ * rôle avant d'appeler ce service — avec un client anon sans session, les
+ * policies RLS bloquaient silencieusement toutes les lignes (export toujours
+ * vide, sans erreur).
  */
 export class FECExportService {
-  private _supabase: ReturnType<typeof createServerClient<Database>> | null = null
+  private _supabase: ReturnType<typeof createAdminClient> | null = null
 
-  private getSupabase(): ReturnType<typeof createServerClient<Database>> {
+  private getSupabase(): ReturnType<typeof createAdminClient> {
     if (!this._supabase) {
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      if (!url || !key) throw new Error('supabaseUrl is required')
-      this._supabase = createServerClient<Database>(url, key)
+      this._supabase = createAdminClient()
     }
     return this._supabase
   }
