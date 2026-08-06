@@ -1954,7 +1954,7 @@ export default function SettingsPage() {
                                 <div>
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xs font-semibold text-white/70 uppercase tracking-widest">Plan actuel</span>
-                                    {(organization.subscription_status === 'active' || subscriptionData?.status === 'active') && (
+                                    {subscriptionData?.status === 'active' && (
                                       <span className="flex items-center gap-1.5 text-xs font-semibold text-brand-cyan bg-white/10 px-2.5 py-1 rounded-full border border-brand-cyan/30">
                                         <span className="w-1.5 h-1.5 rounded-full bg-brand-cyan" />
                                         Actif

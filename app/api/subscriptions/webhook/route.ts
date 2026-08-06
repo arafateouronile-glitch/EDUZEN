@@ -75,6 +75,11 @@ export async function POST(request: NextRequest) {
   // Webhooks Stripe n'ont pas de session : utiliser service_role pour bypass RLS
   const supabase = createAdminClient()
 
+  // Endpoint legacy : ne devrait plus être enregistré côté Stripe (voir
+  // docs/STRIPE_WEBHOOKS.md — /api/webhooks/stripe est le seul endpoint à
+  // utiliser). Ce log permet de détecter s'il reçoit encore du trafic.
+  logger.warn('⚠️ Endpoint webhook legacy /api/subscriptions/webhook encore appelé — vérifier la configuration Stripe Dashboard (un seul endpoint doit être enregistré : /api/webhooks/stripe)', { eventType: event.type })
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {

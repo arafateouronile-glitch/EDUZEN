@@ -136,6 +136,28 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Garde organizations.subscription_status synchronisé avec subscriptions.status.
+ * Sans ça, plusieurs tâches cron (rappels, alertes de conformité, émargement
+ * automatique) continuent de traiter une organisation comme active
+ * indéfiniment après une résiliation, un échec de paiement, etc. — cette
+ * colonne n'est écrite qu'une fois à l'inscription/essai et n'était ensuite
+ * plus jamais mise à jour.
+ */
+async function syncOrganizationSubscriptionStatus(
+  supabase: SupabaseClient<Database>,
+  organizationId: string,
+  status: string
+) {
+  const { error } = await supabase
+    .from('organizations')
+    .update({ subscription_status: status })
+    .eq('id', organizationId)
+  if (error) {
+    logger.error('Stripe Webhook - Erreur sync organizations.subscription_status', error, { organizationId, status })
+  }
+}
+
+/**
  * Gère la création/mise à jour d'une souscription
  */
 async function handleSubscriptionUpdate(
@@ -199,6 +221,8 @@ async function handleSubscriptionUpdate(
       throw error
     }
 
+    await syncOrganizationSubscriptionStatus(supabase, existingSubscription.organization_id, subscriptionData.status)
+
     logger.info('Stripe Webhook - Souscription mise à jour', {
       subscriptionId: subscription.id,
       organizationId: existingSubscription.organization_id,
@@ -219,20 +243,24 @@ async function handleSubscriptionCancellation(
   subscription: Stripe.Subscription
 ) {
   try {
-    const customerId = subscription.customer as string
-
     // Mettre à jour le statut de la souscription
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('subscriptions')
       .update({
         status: 'canceled',
         updated_at: new Date().toISOString(),
       })
       .eq('stripe_subscription_id', subscription.id)
+      .select('organization_id')
+      .maybeSingle()
 
     if (error) {
       logger.error('Stripe Webhook - Erreur annulation souscription', error)
       throw error
+    }
+
+    if (updated?.organization_id) {
+      await syncOrganizationSubscriptionStatus(supabase, updated.organization_id, 'canceled')
     }
 
     logger.info('Stripe Webhook - Souscription annulée', {
@@ -278,17 +306,23 @@ async function handlePaymentSuccess(supabase: SupabaseClient<Database>, invoice:
     const subscriptionId = invoice.subscription as string
 
     // Mettre à jour le statut de la souscription en "active"
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('subscriptions')
       .update({
         status: 'active',
         updated_at: new Date().toISOString(),
       })
       .eq('stripe_subscription_id', subscriptionId)
+      .select('organization_id')
+      .maybeSingle()
 
     if (error) {
       logger.error('Stripe Webhook - Erreur paiement réussi', error)
       throw error
+    }
+
+    if (updated?.organization_id) {
+      await syncOrganizationSubscriptionStatus(supabase, updated.organization_id, 'active')
     }
 
     logger.info('Stripe Webhook - Paiement réussi', {
@@ -311,17 +345,23 @@ async function handlePaymentFailure(supabase: SupabaseClient<Database>, invoice:
     const subscriptionId = invoice.subscription as string
 
     // Mettre à jour le statut en "past_due"
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('subscriptions')
       .update({
         status: 'past_due',
         updated_at: new Date().toISOString(),
       })
       .eq('stripe_subscription_id', subscriptionId)
+      .select('organization_id')
+      .maybeSingle()
 
     if (error) {
       logger.error('Stripe Webhook - Erreur échec paiement', error)
       throw error
+    }
+
+    if (updated?.organization_id) {
+      await syncOrganizationSubscriptionStatus(supabase, updated.organization_id, 'past_due')
     }
 
     logger.warn('Stripe Webhook - Échec de paiement', {
