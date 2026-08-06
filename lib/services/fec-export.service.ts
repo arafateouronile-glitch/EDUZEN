@@ -121,17 +121,43 @@ export class FECExportService {
   }
 
   /**
-   * Récupère les écritures comptables depuis les factures et paiements
+   * Détermine le tiers (client) d'une écriture : un apprenant nommé, ou une
+   * entreprise externe quand la facture/l'avoir a été émis directement à une
+   * entité (sans quoi CompAuxNum/CompAuxLib restaient vides pour ces lignes).
+   */
+  private getTiers(
+    student: { student_number?: string | null; first_name?: string | null; last_name?: string | null } | null | undefined,
+    entity: { id?: string; name?: string | null } | null | undefined
+  ): { num?: string; lib?: string } {
+    if (student) {
+      return {
+        num: student.student_number || undefined,
+        lib: `${student.first_name || ''} ${student.last_name || ''}`.trim() || undefined,
+      }
+    }
+    if (entity?.id) {
+      return { num: entity.id.slice(0, 10), lib: entity.name || undefined }
+    }
+    return {}
+  }
+
+  /**
+   * Récupère les écritures comptables depuis les factures, avoirs et paiements
    */
   private async getAccountingEntries(options: FECExportOptions): Promise<FECEntry[]> {
     const entries: FECEntry[] = []
+    // Numéro d'écriture séquentiel unique sur l'ensemble du fichier (attendu
+    // par la norme FEC) — les deux/trois lignes d'une même facture partagent
+    // le même numéro, PieceRef reste le vrai numéro de facture/avoir.
+    let ecritureCounter = 1
+    const nextEcritureNum = () => String(ecritureCounter++).padStart(6, '0')
 
-    // Récupérer les factures
+    // Récupérer les factures ET les avoirs (un avoir omis fausserait l'export)
     let invoicesQuery = this.getSupabase()
       .from('invoices')
-      .select('*, students(id, first_name, last_name, student_number)')
+      .select('*, students(id, first_name, last_name, student_number), external_entities(id, name)')
       .eq('organization_id', options.organizationId)
-      .eq('document_type', 'invoice') // Seulement les factures, pas les devis
+      .in('document_type', ['invoice', 'credit_note']) // Factures + avoirs, pas les devis
       .order('issue_date', { ascending: true })
 
     if (options.startDate) {
@@ -147,17 +173,25 @@ export class FECExportService {
       throw new Error(`Erreur lors de la récupération des factures: ${invoicesError.message}`)
     }
 
-    // Convertir les factures en écritures comptables
+    // Convertir les factures/avoirs en écritures comptables
     for (const invoice of invoices || []) {
+      const isCreditNote = invoice.document_type === 'credit_note'
+      const docLabel = isCreditNote ? 'Avoir' : 'Facture'
       const invoiceDate = invoice.issue_date ? new Date(invoice.issue_date) : new Date(invoice.created_at || new Date().toISOString())
       const formattedDate = this.formatDateFEC(invoiceDate)
-      const ecritureNum = invoice.invoice_number || invoice.id.slice(0, 8).toUpperCase()
+      const ecritureNum = nextEcritureNum()
 
-      // Écriture 1 : Débit Client / Crédit Ventes (HT)
-      const amountHT = invoice.amount || 0
-      const taxAmount = invoice.tax_amount || 0
-      const amountTTC = invoice.total_amount || amountHT + taxAmount
+      const student = invoice.students as { id?: string; first_name?: string | null; last_name?: string | null; student_number?: string | null } | null
+      const entity = invoice.external_entities as { id?: string; name?: string | null } | null
+      const tiers = this.getTiers(student, entity)
 
+      // Un avoir porte son propre montant négatif — on travaille en valeur
+      // absolue et on inverse débit/crédit par rapport à une facture normale.
+      const amountHT = Math.abs(invoice.amount || 0)
+      const taxAmount = Math.abs(invoice.tax_amount || 0)
+      const amountTTC = Math.abs(invoice.total_amount || amountHT + taxAmount)
+
+      // Écriture 1 : Client / Ventes (TTC)
       entries.push({
         JournalCode: options.journalCode || 'VT',
         JournalLib: 'Ventes',
@@ -165,21 +199,19 @@ export class FECExportService {
         EcritureDate: formattedDate,
         CompteNum: '411000', // Compte client (à adapter selon le plan comptable)
         CompteLib: 'Clients',
-        CompAuxNum: invoice.student_id ? invoice.student_id.slice(0, 10) : undefined,
-        CompAuxLib: invoice.students
-          ? `${(invoice.students as { first_name?: string; last_name?: string }).first_name || ''} ${(invoice.students as { first_name?: string; last_name?: string }).last_name || ''}`.trim()
-          : undefined,
+        CompAuxNum: tiers.num,
+        CompAuxLib: tiers.lib,
         PieceRef: invoice.invoice_number || '',
         PieceDate: formattedDate,
-        EcritureLib: `Facture ${invoice.invoice_number || ecritureNum}`,
-        Debit: this.formatAmount(amountTTC),
-        Credit: '0.00',
+        EcritureLib: `${docLabel} ${invoice.invoice_number || ecritureNum}`,
+        Debit: isCreditNote ? '0.00' : this.formatAmount(amountTTC),
+        Credit: isCreditNote ? this.formatAmount(amountTTC) : '0.00',
         ValidDate: formattedDate,
         Idevise: invoice.currency || 'EUR',
         Montantdevise: invoice.currency && invoice.currency !== 'EUR' ? this.formatAmount(amountTTC) : undefined,
       })
 
-      // Écriture 2 : Débit Ventes / Crédit Produit des ventes (HT)
+      // Écriture 2 : Ventes (HT)
       entries.push({
         JournalCode: options.journalCode || 'VT',
         JournalLib: 'Ventes',
@@ -189,9 +221,9 @@ export class FECExportService {
         CompteLib: 'Ventes de produits finis',
         PieceRef: invoice.invoice_number || '',
         PieceDate: formattedDate,
-        EcritureLib: `Facture ${invoice.invoice_number || ecritureNum}`,
-        Debit: '0.00',
-        Credit: this.formatAmount(amountHT),
+        EcritureLib: `${docLabel} ${invoice.invoice_number || ecritureNum}`,
+        Debit: isCreditNote ? this.formatAmount(amountHT) : '0.00',
+        Credit: isCreditNote ? '0.00' : this.formatAmount(amountHT),
         ValidDate: formattedDate,
         Idevise: invoice.currency || 'EUR',
         Montantdevise: invoice.currency && invoice.currency !== 'EUR' ? this.formatAmount(amountHT) : undefined,
@@ -208,9 +240,9 @@ export class FECExportService {
           CompteLib: 'TVA collectée',
           PieceRef: invoice.invoice_number || '',
           PieceDate: formattedDate,
-          EcritureLib: `TVA Facture ${invoice.invoice_number || ecritureNum}`,
-          Debit: '0.00',
-          Credit: this.formatAmount(taxAmount),
+          EcritureLib: `TVA ${docLabel} ${invoice.invoice_number || ecritureNum}`,
+          Debit: isCreditNote ? this.formatAmount(taxAmount) : '0.00',
+          Credit: isCreditNote ? '0.00' : this.formatAmount(taxAmount),
           ValidDate: formattedDate,
           Idevise: invoice.currency || 'EUR',
           Montantdevise: invoice.currency && invoice.currency !== 'EUR' ? this.formatAmount(taxAmount) : undefined,
@@ -222,7 +254,7 @@ export class FECExportService {
     if (options.includePayments) {
       let paymentsQuery = this.getSupabase()
         .from('payments')
-        .select('*, invoices(invoice_number, issue_date, student_id, students(id, first_name, last_name))')
+        .select('*, invoices(invoice_number, issue_date, student_id, entity_id, students(id, first_name, last_name, student_number), external_entities(id, name))')
         .eq('organization_id', options.organizationId)
         .eq('status', 'paid') // Seulement les paiements effectués
         .order('paid_at', { ascending: true })
@@ -244,9 +276,15 @@ export class FECExportService {
       for (const payment of payments || []) {
         const paymentDate = payment.paid_at ? new Date(payment.paid_at) : new Date(payment.created_at || new Date().toISOString())
         const formattedDate = this.formatDateFEC(paymentDate)
-        const ecritureNum = `PAY-${payment.id.slice(0, 8).toUpperCase()}`
-        type InvoiceForFec = { invoice_number?: string; student_id?: string; students?: { first_name?: string; last_name?: string } }
+        const ecritureNum = nextEcritureNum()
+        type InvoiceForFec = {
+          invoice_number?: string
+          student_id?: string
+          students?: { id?: string; first_name?: string | null; last_name?: string | null; student_number?: string | null }
+          external_entities?: { id?: string; name?: string | null }
+        }
         const invoice = payment.invoices as InvoiceForFec | null
+        const tiers = this.getTiers(invoice?.students, invoice?.external_entities)
 
         // Écriture : Débit Banque / Crédit Client
         entries.push({
@@ -266,7 +304,6 @@ export class FECExportService {
           Montantdevise: payment.currency && payment.currency !== 'EUR' ? this.formatAmount(payment.amount || 0) : undefined,
         })
 
-        const invoiceData = invoice
         entries.push({
           JournalCode: options.journalCode || 'BQ',
           JournalLib: 'Banque',
@@ -274,10 +311,8 @@ export class FECExportService {
           EcritureDate: formattedDate,
           CompteNum: '411000', // Compte client
           CompteLib: 'Clients',
-          CompAuxNum: invoiceData?.student_id ? invoiceData.student_id.slice(0, 10) : undefined,
-          CompAuxLib: invoiceData?.students
-            ? `${invoiceData.students.first_name || ''} ${invoiceData.students.last_name || ''}`.trim()
-            : undefined,
+          CompAuxNum: tiers.num,
+          CompAuxLib: tiers.lib,
           PieceRef: invoice?.invoice_number || payment.id,
           PieceDate: formattedDate,
           EcritureLib: `Paiement ${invoice?.invoice_number || payment.id}`,
