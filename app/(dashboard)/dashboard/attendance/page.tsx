@@ -24,15 +24,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
 export default function AttendancePage() {
   const { user } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('')
+  const [selectedSessionId, setSelectedSessionId] = useState<string>(() => searchParams.get('session') ?? '')
   const [selectedSlotId, setSelectedSlotId] = useState<string>('')
   const [periodFilter, setPeriodFilter] = useState<string>('week') // week, month, quarter
   const [reportPeriod, setReportPeriod] = useState<'monthly' | 'yearly'>('monthly')
