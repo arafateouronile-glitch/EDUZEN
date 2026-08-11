@@ -9,27 +9,24 @@ on:
 
 jobs:
   lint:
-    name: Lint & Type Check
+    name: Lint
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run ESLint
         run: npx eslint . --ext .ts,.tsx,.js,.jsx --ignore-path .gitignore
-      
-      - name: Run TypeScript check
-        run: npm run type-check
 
   test:
     name: Run Tests
@@ -52,27 +49,34 @@ jobs:
         run: npm run test -- --run --coverage
 
   build:
-    name: Build Check
+    name: Build & Type Check
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
+      # Le build doit précéder le type-check : tsconfig.json inclut
+      # .next/types/**/*.ts, généré uniquement par `next build`/`next dev`.
+      # Sur un checkout propre, tsc échoue sinon avec des milliers de faux
+      # positifs ("params possibly null"...) faute de ce dossier.
       - name: Build application
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Run TypeScript check
+        run: npm run type-check
 
   security:
     name: Security Check
