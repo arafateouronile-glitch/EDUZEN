@@ -159,15 +159,29 @@ function TeachersPageContent() {
     queryKey: ['settings-teachers', user?.organization_id, showInactive],
     queryFn: async () => {
       if (!user?.organization_id) return []
+      // Pas de jointure PostgREST (teachers.user_id référence auth.users, pas
+      // public.users — PostgREST ne peut pas résoudre l'embed `user:users(...)`).
+      // On récupère les users séparément et on fusionne côté client.
       let q = supabase
         .from('teachers')
-        .select('*, user:users(id, email, full_name, avatar_url)')
+        .select('*')
         .eq('organization_id', user.organization_id)
         .order('created_at', { ascending: false })
       if (!showInactive) q = q.eq('is_active', true)
-      const { data, error } = await q
+      const { data: teacherRows, error } = await q
       if (error) throw error
-      return (data ?? []) as unknown as TeacherWithUser[]
+      const rows = teacherRows ?? []
+      if (rows.length === 0) return []
+
+      const userIds = rows.map((t: any) => t.user_id)
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, email, full_name, avatar_url')
+        .in('id', userIds)
+      if (usersError) throw usersError
+      const usersById = new Map((users ?? []).map((u: any) => [u.id, u]))
+
+      return rows.map((t: any) => ({ ...t, user: usersById.get(t.user_id) ?? null })) as unknown as TeacherWithUser[]
     },
     enabled: !!user?.organization_id,
   })
@@ -642,7 +656,7 @@ function DocumentsTab({ teacher, orgId }: { teacher: TeacherWithUser; orgId: str
               <Label>Type</Label>
               <Select value={uploadForm.document_type} onValueChange={v => setUploadForm(p => ({ ...p, document_type: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent portal={false}>
                   {Object.entries(DOCUMENT_TYPE_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
                 </SelectContent>
               </Select>

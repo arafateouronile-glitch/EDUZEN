@@ -53,6 +53,8 @@ export interface Teacher {
   specialization: string | null
   bio: string | null
   is_active: boolean
+  statut: 'independant' | 'salarie'
+  siret: string | null
   created_at: string
   updated_at: string
   user?: {

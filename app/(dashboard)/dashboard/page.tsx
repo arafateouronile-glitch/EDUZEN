@@ -474,17 +474,30 @@ function TeacherDashboard() {
               <p className="text-gray-600 capitalize font-medium">{currentDate}</p>
             </div>
           </div>
-          <Link href="/dashboard/attendance" aria-label="Accéder à la page d'émargement">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button variant="gradient" className="shadow-lg hover:shadow-xl">
-                <ClipboardList className="h-4 w-4 mr-2" />
-                Émargement
-              </Button>
-            </motion.div>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/teacher/documents" aria-label="Accéder à mes documents">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button variant="outline" className="shadow-sm hover:shadow-md bg-white">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Mes documents
+                </Button>
+              </motion.div>
+            </Link>
+            <Link href="/dashboard/attendance" aria-label="Accéder à la page d'émargement">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button variant="gradient" className="shadow-lg hover:shadow-xl">
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Émargement
+                </Button>
+              </motion.div>
+            </Link>
+          </div>
         </div>
       </motion.div>
 

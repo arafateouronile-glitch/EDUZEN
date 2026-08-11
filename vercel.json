@@ -46,6 +46,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/teacher-document-expiry-alerts",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/send-jury-convocations",
       "schedule": "0 8 * * *"
     },

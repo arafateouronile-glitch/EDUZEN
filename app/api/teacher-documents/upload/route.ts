@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     const document_type = formData.get('document_type') as string | null
     const expiry_date = formData.get('expiry_date') as string | null
     const target_teacher_user_id = formData.get('target_teacher_user_id') as string | null
+    const required_document_type_id = formData.get('required_document_type_id') as string | null
 
     if (!file || !title) {
       return NextResponse.json({ error: 'Fichier et titre requis' }, { status: 400 })
@@ -70,6 +71,19 @@ export async function POST(request: NextRequest) {
 
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json({ error: 'Fichier trop volumineux (max 10MB)' }, { status: 400 })
+    }
+
+    // Vérifier que le type de document requis (le cas échéant) appartient bien à l'organisation
+    if (required_document_type_id) {
+      const { data: requiredType } = await supabase
+        .from('teacher_required_document_types' as any)
+        .select('id')
+        .eq('id', required_document_type_id)
+        .eq('organization_id', userData.organization_id!)
+        .maybeSingle()
+      if (!requiredType) {
+        return NextResponse.json({ error: 'Type de document requis introuvable dans cette organisation' }, { status: 404 })
+      }
     }
 
     const fileName = `${teacherId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
@@ -104,6 +118,7 @@ export async function POST(request: NextRequest) {
       mime_type: file.type,
       uploaded_by: user.id,
       expiry_date: expiry_date || null,
+      required_document_type_id: required_document_type_id || null,
     }
 
     const { data: document, error: insertError } = await supabase

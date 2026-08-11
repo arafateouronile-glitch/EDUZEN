@@ -83,6 +83,7 @@ export const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: 
         allowedRoles: ADMIN_ROLES,
         children: [
           { name: vocab.students, href: '/dashboard/students', icon: Users },
+          { name: vocab.teachers, href: '/dashboard/formateurs', icon: GraduationCap, allowedRoles: FORMATION_MANAGEMENT_ROLES },
           { name: 'Entreprises & Organismes', href: '/dashboard/entities', icon: Building2 },
         ],
       },
@@ -175,9 +176,10 @@ export function Sidebar() {
       expanded.push(t('navigation.pedagogy'))
     }
     
-    // Répertoire (élèves + entreprises)
+    // Répertoire (élèves + entreprises + formateurs)
     if (clientPathname.startsWith('/dashboard/students') ||
-        clientPathname.startsWith('/dashboard/entities')) {
+        clientPathname.startsWith('/dashboard/entities') ||
+        clientPathname.startsWith('/dashboard/formateurs')) {
       expanded.push('Répertoire')
     }
     

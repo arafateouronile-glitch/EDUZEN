@@ -44,6 +44,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { ComplianceStatusBadge } from '@/components/documents/expiry-badge'
+import { useTeacherCompliance } from '@/lib/hooks/use-teacher-compliance'
+import { ShieldCheck } from 'lucide-react'
 
 type TeacherDocument = {
   id: string
@@ -94,8 +97,15 @@ export default function TeacherDocumentsPage() {
     description: '',
     document_type: 'other' as TeacherDocument['document_type'],
     expiry_date: '',
+    required_document_type_id: '',
     file: null as File | null,
   })
+
+  // Documents de conformité requis pour mon statut (indépendant/salarié)
+  const { data: compliance, isLoading: isComplianceLoading } = useTeacherCompliance(
+    user?.organization_id,
+    user?.id
+  )
 
   // Récupérer les documents de l'enseignant
   const { data: documents, isLoading } = useQuery({
@@ -136,12 +146,14 @@ export default function TeacherDocumentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-documents'] })
+      queryClient.invalidateQueries({ queryKey: ['teacher-compliance'] })
       setShowUploadModal(false)
       setUploadForm({
         title: '',
         description: '',
         document_type: 'other',
         expiry_date: '',
+        required_document_type_id: '',
         file: null,
       })
       if (fileInputRef.current) {
@@ -177,6 +189,7 @@ export default function TeacherDocumentsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-documents'] })
+      queryClient.invalidateQueries({ queryKey: ['teacher-compliance'] })
       addToast({
         type: 'success',
         title: 'Document supprimé',
@@ -231,6 +244,7 @@ export default function TeacherDocumentsPage() {
     formData.append('description', uploadForm.description)
     formData.append('document_type', uploadForm.document_type)
     if (uploadForm.expiry_date) formData.append('expiry_date', uploadForm.expiry_date)
+    if (uploadForm.required_document_type_id) formData.append('required_document_type_id', uploadForm.required_document_type_id)
 
     try {
       await uploadMutation.mutateAsync(formData)
@@ -306,6 +320,27 @@ export default function TeacherDocumentsPage() {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Documents requis pour la conformité (selon mon statut indépendant/salarié) */}
+      {!isComplianceLoading && compliance && compliance.length > 0 && (
+        <GlassCard variant="premium" className="p-6 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldCheck className="h-5 w-5 text-brand-blue" />
+            <h2 className="text-lg font-bold text-gray-900">Documents requis pour ma conformité</h2>
+          </div>
+          <div className="space-y-2">
+            {compliance.map(row => (
+              <div
+                key={row.required_document_type_id}
+                className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
+              >
+                <span className="text-sm font-medium text-gray-800">{row.label}</span>
+                <ComplianceStatusBadge status={row.status} />
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      )}
 
       {/* Documents List */}
       {isLoading ? (
@@ -448,7 +483,7 @@ export default function TeacherDocumentsPage() {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent portal={false}>
                   {Object.entries(documentTypeLabels).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
@@ -478,6 +513,29 @@ export default function TeacherDocumentsPage() {
                 rows={3}
               />
             </div>
+
+            {compliance && compliance.length > 0 && (
+              <div>
+                <Label htmlFor="required_document_type_id">Document requis couvert (optionnel)</Label>
+                <Select
+                  value={uploadForm.required_document_type_id || 'none'}
+                  onValueChange={(value) => setUploadForm(prev => ({ ...prev, required_document_type_id: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent portal={false}>
+                    <SelectItem value="none">Aucun</SelectItem>
+                    {compliance.map(row => (
+                      <SelectItem key={row.required_document_type_id} value={row.required_document_type_id}>
+                        {row.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-400 mt-1">Indiquez quel document de conformité requis ce fichier couvre</p>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="expiry_date">Date d'expiration (optionnel)</Label>

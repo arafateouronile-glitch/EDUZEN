@@ -133,14 +133,17 @@ export function Header({ onMenuClick }: HeaderProps) {
                       <motion.button
                         whileHover={{ x: 4 }}
                         onClick={() => {
-                          router.push('/dashboard/settings/profile')
+                          // Les paramètres de profil ne sont pas accessibles aux enseignants ;
+                          // on les redirige vers leur espace documents plutôt que de les
+                          // renvoyer dans le vide sur /dashboard.
+                          router.push(user?.role === 'teacher' ? '/dashboard/teacher/documents' : '/dashboard/settings/profile')
                           setIsUserMenuOpen(false)
                         }}
                         className="w-full flex items-center px-4 py-2.5 text-sm text-text-secondary hover:bg-bg-gray-100 transition-colors duration-200"
                         type="button"
                       >
                         <User className="h-4 w-4 mr-3 text-text-tertiary" />
-                        Mon profil
+                        {user?.role === 'teacher' ? 'Mes documents' : 'Mon profil'}
                       </motion.button>
                       {/* Masquer les paramètres pour les enseignants */}
                       {user?.role !== 'teacher' && (

@@ -92,10 +92,12 @@ const getNavigation = (vocab: ReturnType<typeof useVocabulary>, t: (key: string)
         allowedRoles: ADMIN_ROLES,
         children: [
           { name: vocab.students, href: '/dashboard/students', icon: Users },
+          { name: vocab.teachers, href: '/dashboard/formateurs', icon: GraduationCap, allowedRoles: FORMATION_MANAGEMENT_ROLES },
           { name: 'Entreprises & Organismes', href: '/dashboard/entities', icon: Building2 },
         ],
       },
       { name: t('navigation.myStudents'), href: '/dashboard/my-students', icon: Users, allowedRoles: ['teacher'] },
+      { name: 'Mes documents', href: '/dashboard/teacher/documents', icon: FileText, allowedRoles: ['teacher'] },
       {
         name: t('navigation.pedagogy'),
         icon: BookMarked,
@@ -216,7 +218,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     }
     
     if (clientPathname.startsWith('/dashboard/students') ||
-        clientPathname.startsWith('/dashboard/entities')) {
+        clientPathname.startsWith('/dashboard/entities') ||
+        clientPathname.startsWith('/dashboard/formateurs')) {
       expanded.push('Répertoire')
     }
     
