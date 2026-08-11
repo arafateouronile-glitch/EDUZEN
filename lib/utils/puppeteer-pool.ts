@@ -36,7 +36,13 @@ const getLaunchOptions = async (): Promise<Record<string, unknown>> => {
     try {
       const chromium = await import('@sparticuz/chromium-min')
       const chrom = chromium.default
-      const executablePath = await chrom.executablePath()
+      // @sparticuz/chromium-min n'embarque pas le binaire Chromium : il faut lui
+      // fournir l'URL d'un pack téléchargeable (le paquet "min" ne sert qu'à
+      // rester sous la limite de taille de déploiement Vercel). Sans ça,
+      // executablePath() cherche un dossier bin/ inexistant et échoue toujours.
+      const packUrl = process.env.CHROMIUM_PACK_URL
+        || 'https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar'
+      const executablePath = await chrom.executablePath(packUrl)
       logger.debug('[Puppeteer Pool] Vercel: @sparticuz/chromium-min', { executablePath: executablePath?.slice(0, 50) })
       return {
         executablePath,
