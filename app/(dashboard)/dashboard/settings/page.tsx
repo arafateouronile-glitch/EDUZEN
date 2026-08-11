@@ -844,7 +844,7 @@ export default function SettingsPage() {
         { id: 'sites', label: 'Sites', icon: MapPin, href: '/dashboard/settings/sites' },
         { id: 'lms', label: 'LMS', icon: GraduationCap, href: '/dashboard/settings/lms' },
         { id: 'rooms', label: 'Salles', icon: DoorOpen, href: '/dashboard/settings/rooms' },
-        { id: 'teachers', label: 'Enseignants', icon: GraduationCap, href: '/dashboard/settings/teachers' },
+        { id: 'teachers', label: 'Enseignants', icon: GraduationCap, href: '/dashboard/formateurs' },
         { id: 'categories', label: 'Catégories', icon: Tag, href: '/dashboard/settings/categories' },
       ]
     },

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useRef } from 'react'
+import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { useVocabulary } from '@/lib/hooks/use-vocabulary'
@@ -11,6 +12,7 @@ import { GlassCard } from '@/components/ui/glass-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
@@ -27,7 +29,8 @@ import {
 } from '@/lib/hooks/use-teacher-compliance'
 import {
   Users, Briefcase, AlertTriangle, ShieldCheck, Mail, Search,
-  Upload, Download, FileText, Send, Hash, ExternalLink, GraduationCap,
+  Upload, Download, FileText, Send, Hash, ExternalLink, GraduationCap, Settings2,
+  Calendar, Euro, Clock, PenLine, CheckCircle2,
 } from 'lucide-react'
 
 const supabase = createClient()
@@ -97,6 +100,8 @@ function FormateursPageContent() {
   const { user } = useAuth()
   const vocab = useVocabulary()
   const orgId = user?.organization_id
+  const { addToast } = useToast()
+  const queryClient = useQueryClient()
 
   const [search, setSearch] = useState('')
   const [statutFilter, setStatutFilter] = useState<'all' | 'independant' | 'salarie'>('all')
@@ -146,6 +151,16 @@ function FormateursPageContent() {
   })
 
   const { data: compliance, isLoading: isLoadingCompliance } = useOrganizationTeacherCompliance(orgId)
+
+  const { data: org } = useQuery({
+    queryKey: ['organization', orgId],
+    queryFn: async () => {
+      if (!orgId) return null
+      const { data } = await supabase.from('organizations').select('*').eq('id', orgId).maybeSingle()
+      return data
+    },
+    enabled: !!orgId,
+  })
 
   const complianceByTeacher = useMemo(() => {
     const map = new Map<string, TeacherComplianceRow[]>()
@@ -222,6 +237,46 @@ function FormateursPageContent() {
     setDialogTab('conformite')
   }
 
+  const nonConformeTeachers = (teachers ?? []).filter(t => {
+    const worst = worstComplianceStatus(complianceByTeacher.get(t.user_id) ?? [])
+    return worst === 'expired' || worst === 'missing'
+  })
+
+  const bulkRelanceMutation = useMutation({
+    mutationFn: async () => {
+      const relances = nonConformeTeachers.map(t => ({
+        teacher_user_id: t.user_id,
+        required_document_type_ids: (complianceByTeacher.get(t.user_id) ?? [])
+          .filter(r => r.status !== 'ok')
+          .map(r => r.required_document_type_id),
+      })).filter(r => r.required_document_type_ids.length > 0)
+
+      const res = await fetch('/api/teacher-documents/relance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ relances }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur relance groupée')
+      return json as { sent: number; errors: number }
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['teacher-compliance'] })
+      queryClient.invalidateQueries({ queryKey: ['teacher-alert-log'] })
+      addToast({
+        title: 'Relances envoyées',
+        description: `${result.sent} formateur${result.sent > 1 ? 's' : ''} relancé${result.sent > 1 ? 's' : ''}${result.errors > 0 ? `, ${result.errors} erreur(s)` : ''}`,
+        type: result.errors > 0 ? 'warning' : 'success',
+      })
+    },
+    onError: (e: any) => addToast({ title: 'Erreur', description: e.message, type: 'error' }),
+  })
+
+  const handleBulkRelance = () => {
+    if (!confirm(`Envoyer une relance à ${nonConformeTeachers.length} formateur${nonConformeTeachers.length > 1 ? 's' : ''} non conforme${nonConformeTeachers.length > 1 ? 's' : ''} ?`)) return
+    bulkRelanceMutation.mutate()
+  }
+
   return (
     <div className="p-6 space-y-8">
       {/* En-tête */}
@@ -229,18 +284,40 @@ function FormateursPageContent() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="flex items-center gap-3"
+        className="flex items-center justify-between gap-3"
       >
-        <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center shadow-sm shadow-brand-blue/20 flex-shrink-0">
-          <GraduationCap className="h-5 w-5 text-white" />
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-brand-blue to-brand-cyan flex items-center justify-center shadow-sm shadow-brand-blue/20 flex-shrink-0">
+            <GraduationCap className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent leading-tight">
+              {vocab.teachers}
+            </h1>
+            <p className="text-gray-500 text-sm mt-0.5">
+              Conformité des documents par statut ({vocab.teacher.toLowerCase()} indépendant ou salarié)
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-brand-blue to-brand-cyan bg-clip-text text-transparent leading-tight">
-            {vocab.teachers}
-          </h1>
-          <p className="text-gray-500 text-sm mt-0.5">
-            Conformité des documents par statut ({vocab.teacher.toLowerCase()} indépendant ou salarié)
-          </p>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {nonConformeCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkRelance}
+              disabled={bulkRelanceMutation.isPending}
+              className="border-amber-200 text-amber-700 hover:bg-amber-100"
+            >
+              <Send className="w-4 h-4 mr-1.5" />
+              {bulkRelanceMutation.isPending ? 'Envoi...' : `Relancer tous les non-conformes (${nonConformeCount})`}
+            </Button>
+          )}
+          <Link href="/dashboard/settings/teacher-document-types">
+            <Button variant="outline" size="sm">
+              <Settings2 className="w-4 h-4 mr-1.5" />
+              Documents requis
+            </Button>
+          </Link>
         </div>
       </motion.div>
 
@@ -371,6 +448,7 @@ function FormateursPageContent() {
                   <TabsTrigger value="conformite">Conformité</TabsTrigger>
                   <TabsTrigger value="profil">Profil</TabsTrigger>
                   <TabsTrigger value="documents">Documents</TabsTrigger>
+                  <TabsTrigger value="convention">Convention</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="conformite" className="pt-4">
@@ -391,14 +469,18 @@ function FormateursPageContent() {
                     requiredTypes={complianceByTeacher.get(selectedTeacher.user_id) ?? []}
                   />
                 </TabsContent>
+
+                <TabsContent value="convention" className="pt-4">
+                  <ConventionTab teacher={selectedTeacher} org={org} />
+                </TabsContent>
               </Tabs>
 
               <div className="pt-2 mt-2 border-t border-gray-100 flex justify-end">
                 <a
-                  href="/dashboard/settings/teachers"
+                  href="/dashboard/settings/teachers/remuneration"
                   className="text-xs text-gray-400 hover:text-brand-blue inline-flex items-center gap-1"
                 >
-                  Convention, rémunération et fiche complète <ExternalLink className="w-3 h-3" />
+                  Rémunération <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </>
@@ -458,9 +540,51 @@ function TeacherAvatar({ teacher, size = 'sm' }: { teacher: TeacherWithUser; siz
 
 // ─── ComplianceTab ────────────────────────────────────────────────────────
 
+interface AlertLogRow {
+  required_document_type_id: string | null
+  alert_type: string
+  sent_at: string
+  sent_by: string | null
+}
+
+function relanceAgeLabel(sentAt: string): string {
+  const days = Math.floor((Date.now() - new Date(sentAt).getTime()) / 86_400_000)
+  if (days <= 0) return "aujourd'hui"
+  if (days === 1) return 'hier'
+  return `il y a ${days} jours`
+}
+
+function relanceKindLabel(alertType: string): string {
+  if (alertType === 'missing_manual') return 'manuelle'
+  if (alertType === 'missing_weekly_digest') return 'digest hebdo'
+  return 'automatique'
+}
+
 function ComplianceTab({ teacher, rows }: { teacher: TeacherWithUser; rows: TeacherComplianceRow[] }) {
   const { addToast } = useToast()
   const queryClient = useQueryClient()
+
+  const { data: alertLog } = useQuery({
+    queryKey: ['teacher-alert-log', teacher.user_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teacher_document_alert_log' as any)
+        .select('required_document_type_id, alert_type, sent_at, sent_by')
+        .eq('teacher_id', teacher.user_id)
+        .order('sent_at', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as unknown as AlertLogRow[]
+    },
+  })
+
+  const latestAlertByType = useMemo(() => {
+    const map = new Map<string, AlertLogRow>()
+    ;(alertLog ?? []).forEach(a => {
+      if (!a.required_document_type_id) return
+      if (!map.has(a.required_document_type_id)) map.set(a.required_document_type_id, a)
+    })
+    return map
+  }, [alertLog])
 
   const relanceMutation = useMutation({
     mutationFn: async (requiredDocumentTypeIds: string[]) => {
@@ -475,6 +599,7 @@ function ComplianceTab({ teacher, rows }: { teacher: TeacherWithUser; rows: Teac
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teacher-compliance'] })
+      queryClient.invalidateQueries({ queryKey: ['teacher-alert-log', teacher.user_id] })
       addToast({ title: 'Relance envoyée', description: `Email et notification envoyés à ${teacher.user?.email}`, type: 'success' })
     },
     onError: (e: any) => addToast({ title: 'Erreur', description: e.message, type: 'error' }),
@@ -515,6 +640,11 @@ function ComplianceTab({ teacher, rows }: { teacher: TeacherWithUser; rows: Teac
               {row.effective_expiry_date && (
                 <p className="text-xs text-gray-400 mt-0.5">
                   {row.status === 'expired' ? 'Expiré le' : 'Expire le'} {new Date(row.effective_expiry_date).toLocaleDateString('fr-FR')}
+                </p>
+              )}
+              {latestAlertByType.has(row.required_document_type_id) && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Dernière relance {relanceKindLabel(latestAlertByType.get(row.required_document_type_id)!.alert_type)} : {relanceAgeLabel(latestAlertByType.get(row.required_document_type_id)!.sent_at)}
                 </p>
               )}
             </div>
@@ -612,6 +742,7 @@ function DocumentsTab({ teacher, orgId, requiredTypes }: {
   requiredTypes: TeacherComplianceRow[]
 }) {
   const { addToast } = useToast()
+  const { user: adminUser } = useAuth()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploadForm, setUploadForm] = useState({ title: '', document_type: 'diploma', expiry_date: '', required_document_type_id: '' })
@@ -645,6 +776,18 @@ function DocumentsTab({ teacher, orgId, requiredTypes }: {
       if (!res.ok) throw new Error((await res.json()).error ?? 'Erreur suppression')
     },
     onSuccess: () => { invalidateAll(); addToast({ title: 'Document supprimé', type: 'success' }) },
+    onError: (e: any) => addToast({ title: 'Erreur', description: e.message, type: 'error' }),
+  })
+
+  const verifyMutation = useMutation({
+    mutationFn: async (docId: string) => {
+      const { error } = await supabase
+        .from('teacher_documents' as any)
+        .update({ verified: true, verified_at: new Date().toISOString(), verified_by: adminUser?.id } as any)
+        .eq('id', docId)
+      if (error) throw error
+    },
+    onSuccess: () => { invalidateAll(); addToast({ title: 'Document vérifié', type: 'success' }) },
     onError: (e: any) => addToast({ title: 'Erreur', description: e.message, type: 'error' }),
   })
 
@@ -753,6 +896,17 @@ function DocumentsTab({ teacher, orgId, requiredTypes }: {
                 </div>
               </div>
               <div className="flex gap-1 flex-shrink-0">
+                {!doc.verified && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => verifyMutation.mutate(doc.id)}
+                    disabled={verifyMutation.isPending}
+                    title="Vérifier"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                  </Button>
+                )}
                 <Button variant="outline" size="icon" onClick={() => handleDownload(doc)} title="Télécharger">
                   <Download className="w-3.5 h-3.5" />
                 </Button>
@@ -837,6 +991,210 @@ function DocumentsTab({ teacher, orgId, requiredTypes }: {
           Ajouter un document
         </Button>
       )}
+    </div>
+  )
+}
+
+// ─── ConventionTab ────────────────────────────────────────────────────────
+
+interface ConventionFormData {
+  period_start: string
+  period_end: string
+  hourly_rate: string
+  total_hours: string
+  specialization: string
+  custom_notes: string
+}
+
+function ConventionTab({ teacher, org }: { teacher: TeacherWithUser; org: any }) {
+  const { addToast } = useToast()
+  const [form, setForm] = useState<ConventionFormData>({
+    period_start: '',
+    period_end: '',
+    hourly_rate: '',
+    total_hours: '',
+    specialization: teacher.specialization ?? '',
+    custom_notes: '',
+  })
+  const [isGenerating, setIsGenerating] = useState<'signature' | 'email' | null>(null)
+
+  const generatePdf = async (): Promise<Blob | null> => {
+    const res = await fetch('/api/teacher-documents/generate-convention', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        teacher: {
+          user_id: teacher.user_id,
+          full_name: teacher.user?.full_name ?? '',
+          email: teacher.user?.email ?? '',
+          specialization: teacher.specialization,
+        },
+        convention: {
+          period_start: form.period_start,
+          period_end: form.period_end,
+          hourly_rate: form.hourly_rate ? Number(form.hourly_rate) : null,
+          total_hours: form.total_hours ? Number(form.total_hours) : null,
+          specialization: form.specialization.trim() || null,
+          custom_notes: form.custom_notes.trim() || null,
+        },
+      }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      throw new Error(json.error ?? 'Erreur génération PDF')
+    }
+    return res.blob()
+  }
+
+  const blobToBase64 = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve((reader.result as string).split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+
+  const handleSendForSignature = async () => {
+    if (!form.period_start || !form.period_end) {
+      addToast({ title: 'La période est requise', type: 'error' })
+      return
+    }
+    setIsGenerating('signature')
+    try {
+      const blob = await generatePdf()
+      if (!blob) return
+      const pdfBase64 = await blobToBase64(blob)
+      const res = await fetch('/api/signature-requests/send-from-contract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pdfBase64,
+          documentTitle: `Convention de prestation — ${teacher.user?.full_name}`,
+          type: 'convention',
+          recipientEmail: teacher.user?.email,
+          recipientName: teacher.user?.full_name,
+          recipientId: teacher.user_id,
+          recipientType: 'teacher',
+          subject: `Convention de prestation à signer`,
+          message: `Bonjour ${teacher.user?.full_name},\n\nVeuillez trouver ci-joint votre convention de prestation. Merci de la signer électroniquement en cliquant sur le lien ci-dessous.`,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur envoi signature')
+      addToast({ title: 'Convention envoyée pour signature', description: `Email envoyé à ${teacher.user?.email}`, type: 'success' })
+    } catch (err: any) {
+      addToast({ title: 'Erreur', description: err.message, type: 'error' })
+    } finally {
+      setIsGenerating(null)
+    }
+  }
+
+  const handleSendByEmail = async () => {
+    if (!form.period_start || !form.period_end) {
+      addToast({ title: 'La période est requise', type: 'error' })
+      return
+    }
+    setIsGenerating('email')
+    try {
+      const blob = await generatePdf()
+      if (!blob) return
+
+      // Upload dans Supabase Storage pour obtenir une URL
+      const orgId = org?.id ?? 'unknown'
+      const fileName = `teacher-conventions/${orgId}/${teacher.user_id}/${Date.now()}.pdf`
+      const file = new File([blob], 'convention.pdf', { type: 'application/pdf' })
+      const { data: uploadData, error: uploadErr } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file, { upsert: true })
+      if (uploadErr) throw new Error('Erreur upload : ' + uploadErr.message)
+
+      const { data: signedData } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(uploadData.path, 3600 * 24 * 7)
+      if (!signedData?.signedUrl) throw new Error('Impossible d\'obtenir l\'URL du document')
+
+      const res = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: teacher.user?.email,
+          subject: `Convention de prestation — ${teacher.user?.full_name}`,
+          message: `Bonjour ${teacher.user?.full_name},\n\nVeuillez trouver en pièce jointe votre convention de prestation.\n\nCordialement,\n${org?.name ?? ''}`,
+          attachmentUrl: signedData.signedUrl,
+          attachmentName: `convention-${(teacher.user?.full_name ?? 'formateur').replace(/\s+/g, '-')}.pdf`,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erreur envoi email')
+      addToast({ title: 'Convention envoyée par email', description: `Email envoyé à ${teacher.user?.email}`, type: 'success' })
+    } catch (err: any) {
+      addToast({ title: 'Erreur', description: err.message, type: 'error' })
+    } finally {
+      setIsGenerating(null)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-gray-500">
+        Générez une convention de prestation pour <strong>{teacher.user?.full_name}</strong>, puis envoyez-la pour signature électronique ou par email.
+      </p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />Début de la convention *</Label>
+          <Input type="date" value={form.period_start} onChange={e => setForm(p => ({ ...p, period_start: e.target.value }))} required />
+        </div>
+        <div className="space-y-1">
+          <Label className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />Fin de la convention *</Label>
+          <Input type="date" value={form.period_end} onChange={e => setForm(p => ({ ...p, period_end: e.target.value }))} required />
+        </div>
+        <div className="space-y-1">
+          <Label className="flex items-center gap-1.5"><Euro className="w-3.5 h-3.5" />Tarif horaire HT (€)</Label>
+          <Input type="number" min="0" step="0.01" value={form.hourly_rate} onChange={e => setForm(p => ({ ...p, hourly_rate: e.target.value }))} placeholder="Ex: 75.00" />
+        </div>
+        <div className="space-y-1">
+          <Label className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />Volume horaire</Label>
+          <Input type="number" min="0" step="0.5" value={form.total_hours} onChange={e => setForm(p => ({ ...p, total_hours: e.target.value }))} placeholder="Ex: 14" />
+        </div>
+        <div className="col-span-2 space-y-1">
+          <Label className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" />Domaine / spécialité</Label>
+          <Input value={form.specialization} onChange={e => setForm(p => ({ ...p, specialization: e.target.value }))} placeholder="Ex: Sécurité incendie, Premiers secours..." />
+        </div>
+        <div className="col-span-2 space-y-1">
+          <Label>Clauses particulières</Label>
+          <Textarea value={form.custom_notes} onChange={e => setForm(p => ({ ...p, custom_notes: e.target.value }))} rows={3} placeholder="Conditions spécifiques, matériel fourni, etc." />
+        </div>
+      </div>
+
+      {form.hourly_rate && form.total_hours && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm">
+          <span className="text-gray-600">Montant total estimé HT : </span>
+          <strong className="text-brand-blue">
+            {(Number(form.hourly_rate) * Number(form.total_hours)).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+          </strong>
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <Button
+          onClick={handleSendForSignature}
+          disabled={!!isGenerating || !form.period_start || !form.period_end}
+          className="flex-1 bg-brand-blue hover:bg-brand-blue-dark"
+        >
+          <PenLine className="w-4 h-4 mr-2" />
+          {isGenerating === 'signature' ? 'Génération...' : 'Envoyer pour signature'}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleSendByEmail}
+          disabled={!!isGenerating || !form.period_start || !form.period_end}
+          className="flex-1"
+        >
+          <Mail className="w-4 h-4 mr-2" />
+          {isGenerating === 'email' ? 'Envoi...' : 'Envoyer par email'}
+        </Button>
+      </div>
     </div>
   )
 }

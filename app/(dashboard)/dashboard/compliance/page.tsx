@@ -428,7 +428,7 @@ export default function CompliancePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/dashboard/compliance/teacher-documents">
+              <Link href="/dashboard/formateurs">
                 <Button>Voir les documents</Button>
               </Link>
             </CardContent>
