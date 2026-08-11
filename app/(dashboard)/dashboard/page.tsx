@@ -674,7 +674,7 @@ function TeacherDashboard() {
                         transition={{ delay: index * 0.05, duration: 0.4 }}
                       >
                         <Link
-                          href={`/dashboard/attendance?session=${ts.session_id}`}
+                          href={`/dashboard/sessions/${ts.session_id}?step=suivi`}
                           className="block group"
                         >
                           <GlassCard
