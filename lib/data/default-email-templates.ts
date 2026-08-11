@@ -103,15 +103,20 @@ L'équipe {organization_name}`,
     name: 'Rappel de session',
     subject: 'Rappel : votre session {session_name} commence bientôt',
     description: 'Rappel envoyé avant le démarrage d\'une session de formation.',
-    available_variables: ['student_name', 'session_name', 'session_date', 'session_time', 'session_location', 'organization_name'],
+    // Noms alignés sur les balises réellement remplacées lors de l'envoi
+    // (onglet Convocations, envoi en masse) — session_date/session_time
+    // n'y étaient jamais substituées.
+    available_variables: ['student_name', 'session_name', 'session_start_date', 'session_start_time', 'session_location', 'espace_apprenant', 'organization_name'],
     body_text: `Bonjour {student_name},
 
 Nous vous rappelons que votre session de formation commence prochainement.
 
 **{session_name}**
-- Date : {session_date}
-- Heure : {session_time}
+- Date : {session_start_date}
+- Heure : {session_start_time}
 - Lieu : {session_location}
+
+Retrouvez toutes les informations de votre formation sur votre espace apprenant : {espace_apprenant}
 
 Merci de vous présenter à l'heure. En cas d'empêchement, contactez-nous dès que possible.
 
@@ -126,17 +131,18 @@ L'équipe {organization_name}`,
       <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin:20px 0;">
         <tr style="background:#f9fafb;">
           <td style="padding:10px 16px;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;width:40%;">Date</td>
-          <td style="padding:10px 16px;color:#374151;border-bottom:1px solid #e5e7eb;">{session_date}</td>
+          <td style="padding:10px 16px;color:#374151;border-bottom:1px solid #e5e7eb;">{session_start_date}</td>
         </tr>
         <tr style="background:#ffffff;">
           <td style="padding:10px 16px;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;width:40%;">Heure</td>
-          <td style="padding:10px 16px;color:#374151;border-bottom:1px solid #e5e7eb;">{session_time}</td>
+          <td style="padding:10px 16px;color:#374151;border-bottom:1px solid #e5e7eb;">{session_start_time}</td>
         </tr>
         <tr>
           <td style="padding:10px 16px;font-weight:600;color:#374151;width:40%;">Lieu</td>
           <td style="padding:10px 16px;color:#374151;">{session_location}</td>
         </tr>
       </table>
+      <p>Retrouvez toutes les informations de votre formation sur votre <a href="{espace_apprenant}">espace apprenant</a>.</p>
       <p>Merci de vous présenter à l'heure. En cas d'empêchement, contactez-nous dès que possible.</p>
       <p style="margin-bottom:0;">Cordialement,<br/><strong>L'équipe {organization_name}</strong></p>
     `),

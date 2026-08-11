@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { logger } from '@/lib/utils/logger'
 import { emailService } from '@/lib/services/email.service'
 import { formatDate } from '@/lib/utils'
+import { APP_URLS } from '@/lib/config/app-config'
 import { DocumentTemplateService } from '@/lib/services/document-template.service'
 import { createClient } from '@/lib/supabase/client'
 import { extractDocumentVariables } from '@/lib/utils/document-generation/variable-extractor'
@@ -1744,6 +1745,8 @@ export function useDocumentGeneration({
     const student = enrollment.students
     if (!student || !student.email) return null
 
+    const espaceApprenantUrl = `${APP_URLS.getBaseUrl()}/learner/access/${student.id}`
+
     const emailSubject = `Convocation - ${sessionData.name}`
     const emailBody = `
       <p>Bonjour ${student.first_name} ${student.last_name},</p>
@@ -1756,6 +1759,7 @@ export function useDocumentGeneration({
         ${sessionData.location ? `<li><strong>Lieu :</strong> ${sessionData.location}</li>` : ''}
       </ul>
       <p>Veuillez trouver ci-joint votre convocation en PDF.</p>
+      <p>Retrouvez toutes les informations de votre formation sur votre espace apprenant : <a href="${espaceApprenantUrl}">${espaceApprenantUrl}</a></p>
       <p>Cordialement,<br>${organization.name}</p>
     `
 
@@ -2052,6 +2056,7 @@ export function useDocumentGeneration({
       }
 
       // Créer le corps de l'email
+      const espaceApprenantUrl = `${APP_URLS.getBaseUrl()}/learner/access/${student.id}`
       const emailSubject = `Convocation - ${sessionData.name}`
       const emailBody = `
         <p>Bonjour ${student.first_name} ${student.last_name},</p>
@@ -2064,6 +2069,7 @@ export function useDocumentGeneration({
           ${sessionData.location ? `<li><strong>Lieu :</strong> ${sessionData.location}</li>` : ''}
         </ul>
         <p>Veuillez trouver ci-joint votre convocation en PDF.</p>
+        <p>Retrouvez toutes les informations de votre formation sur votre espace apprenant : <a href="${espaceApprenantUrl}">${espaceApprenantUrl}</a></p>
         <p>Cordialement,<br>${organization.name}</p>
       `
 
@@ -2142,24 +2148,28 @@ export function useDocumentGeneration({
             let subject = customSubject
             let body = customBody
 
-            // Remplacer les variables
-            subject = subject
-              .replace(/{student_first_name}/g, student.first_name || '')
-              .replace(/{student_last_name}/g, student.last_name || '')
-              .replace(/{session_name}/g, sessionData.name || '')
-              .replace(/{formation_name}/g, formation.name || '')
-              .replace(/{session_start_date}/g, sessionData.start_date ? formatDate(sessionData.start_date) : '')
-              .replace(/{session_end_date}/g, sessionData.end_date ? formatDate(sessionData.end_date) : '')
-              .replace(/{session_location}/g, sessionData.location || '')
+            // Jours restants avant le début de la session (arrondi), pour la
+            // balise {days_before} héritée du modèle "Rappel de session"
+            const daysBefore = sessionData.start_date
+              ? Math.max(0, Math.ceil((new Date(sessionData.start_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+              : 0
+            const espaceApprenantUrl = `${APP_URLS.getBaseUrl()}/learner/access/${student.id}`
 
-            body = body
+            const applyTags = (text: string) => text
               .replace(/{student_first_name}/g, student.first_name || '')
               .replace(/{student_last_name}/g, student.last_name || '')
+              .replace(/{student_name}/g, `${student.first_name || ''} ${student.last_name || ''}`.trim())
               .replace(/{session_name}/g, sessionData.name || '')
               .replace(/{formation_name}/g, formation.name || '')
               .replace(/{session_start_date}/g, sessionData.start_date ? formatDate(sessionData.start_date) : '')
               .replace(/{session_end_date}/g, sessionData.end_date ? formatDate(sessionData.end_date) : '')
+              .replace(/{session_start_time}/g, sessionData.start_time || '')
               .replace(/{session_location}/g, sessionData.location || '')
+              .replace(/{days_before}/g, String(daysBefore))
+              .replace(/{espace_apprenant}/g, espaceApprenantUrl)
+
+            subject = applyTags(subject)
+            body = applyTags(body)
 
             await handleSendConvocationByEmailWithCustomContent(enrollment, subject, body, documentTemplateId)
           } else {
