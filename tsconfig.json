@@ -60,6 +60,7 @@
     "test-results/**/*",
     "test-output/**/*",
     "scripts/**/*",
+    "mcp-server/**/*",
     "supabase/functions/**/*",
     "vitest.config.ts",
     "lib/services/_example-standardized.service.ts",
