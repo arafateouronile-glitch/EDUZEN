@@ -5,6 +5,11 @@
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+mcp-server/node_modules
+mcp-server/dist
+
+# claude code local settings (peut contenir des secrets dans les entrées de permission)
+.claude/settings.local.json
 
 # testing
 /coverage

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "eduzen-blog": {
+      "command": "node",
+      "args": ["/chemin/vers/EDUZEN/mcp-server/dist/index.js"],
+      "env": {
+        "EDUZEN_API_URL": "https://votre-site.com",
+        "EDUZEN_MCP_SECRET": "votre-secret-ici"
+      }
+    }
+  }
+}
