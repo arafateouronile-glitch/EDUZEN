@@ -2,6 +2,10 @@
 /* Variables CSS (couleurs, espacements, ombres) */
 @layer base {
   :root {
+    /* App volontairement en clair uniquement (pas de thème sombre implémenté) :
+       empêche les contrôles natifs (inputs, scrollbars) de passer en rendu sombre
+       côté navigateur/OS quand l'utilisateur a activé le mode sombre système. */
+    color-scheme: light only;
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;

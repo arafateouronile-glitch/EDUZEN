@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'media', // Évite l'avertissement Tailwind ; app en mode clair si pas de préférence système sombre
+  // 'class' (et non 'media') : les classes dark: ne s'activent que si .dark est posé sur <html>,
+  // ce qui n'arrive jamais (pas de ThemeProvider). Sinon les dark: éparpillés dans certains
+  // composants (ex: GlassCard) s'activaient tout seuls selon l'OS, créant un rendu mobile
+  // à moitié sombre (fond sombre + texte resté clair côté pages non couvertes) illisible.
+  darkMode: 'class',
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
