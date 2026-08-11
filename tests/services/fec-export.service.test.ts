@@ -8,6 +8,7 @@ const thenable = { data: [] as unknown[], error: null }
 const chain = {
   select: () => chain,
   eq: () => chain,
+  in: () => chain,
   order: () => chain,
   gte: () => chain,
   lte: () => chain,

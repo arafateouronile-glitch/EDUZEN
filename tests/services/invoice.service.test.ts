@@ -145,7 +145,7 @@ describe('InvoiceService', () => {
         expect.anything(),
         'invoices',
         '1',
-        '*, students(*), enrollments(*), payments(*)'
+        '*, students(*), enrollments(*), payments(*), external_entities(id, name, type, email)'
       )
     })
 

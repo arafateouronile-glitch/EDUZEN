@@ -5,6 +5,7 @@ vi.mock('@/lib/config/app-config', () => ({
   APP_URLS: {
     getBaseUrl: vi.fn(() => 'https://api.eduzen.com'),
   },
+  SUPPORT_EMAIL: 'contact@eduzen.io',
 }))
 
 describe('API /api/v1/docs', () => {
