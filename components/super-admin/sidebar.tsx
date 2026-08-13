@@ -36,6 +36,7 @@ import {
   Eye,
   Activity,
   Mail,
+  Video,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -212,6 +213,11 @@ const navigation: NavSection[] = [
             permission: 'moderate_comments',
           },
         ],
+      },
+      {
+        name: 'Tutoriels vidéo',
+        icon: Video,
+        href: '/super-admin/tutorials',
       },
     ],
   },

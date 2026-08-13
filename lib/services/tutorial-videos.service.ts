@@ -35,7 +35,7 @@ export class TutorialVideosService {
       .select('*')
       .eq('slug', slug)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     return data
@@ -45,7 +45,6 @@ export class TutorialVideosService {
 
   async getVideos(filters?: {
     moduleId?: string
-    moduleSlug?: string
     search?: string
     difficultyLevel?: string
     isPublished?: boolean
@@ -59,10 +58,6 @@ export class TutorialVideosService {
 
     if (filters?.moduleId) {
       query = query.eq('module_id', filters.moduleId)
-    }
-
-    if (filters?.moduleSlug) {
-      query = query.eq('module:tutorial_modules.slug', filters.moduleSlug)
     }
 
     if (filters?.search) {
@@ -88,16 +83,19 @@ export class TutorialVideosService {
   }
 
   async getVideoBySlug(moduleSlug: string, videoSlug: string) {
+    const tutorialModule = await this.getModuleBySlug(moduleSlug)
+    if (!tutorialModule) return null
+
     const { data, error } = await this.supabase
       .from('tutorial_videos')
       .select(`
         *,
         module:tutorial_modules(*)
       `)
+      .eq('module_id', tutorialModule.id)
       .eq('slug', videoSlug)
-      .eq('module:tutorial_modules.slug', moduleSlug)
       .eq('is_published', true)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     return data
