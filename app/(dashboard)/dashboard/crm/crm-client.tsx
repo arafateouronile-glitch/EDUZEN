@@ -11,7 +11,7 @@ async function fetchPipeline(): Promise<LearnerPipelineData> {
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
-import { Activity, RefreshCw, Search, SlidersHorizontal, X, AlertTriangle, Download } from 'lucide-react'
+import { Activity, RefreshCw, Search, SlidersHorizontal, X, AlertTriangle, Download, CalendarClock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +24,8 @@ interface Filters {
   programCategory: string
   entityType: 'company' | 'individual' | ''
   commercialStatus: ProspectCommercialStatus | ''
+  contacted: 'yes' | 'no' | ''
+  upcomingFollowUpOnly: boolean
   status: CrmStatus | ''
   dateFrom: string
   dateTo: string
@@ -32,6 +34,7 @@ interface Filters {
 
 const EMPTY_FILTERS: Filters = {
   search: '', formation: '', session: '', program: '', programCategory: '', entityType: '', commercialStatus: '',
+  contacted: '', upcomingFollowUpOnly: false,
   status: '', dateFrom: '', dateTo: '', qualiopiOnly: false,
 }
 
@@ -78,6 +81,7 @@ export function CrmClientPage() {
     const result: LearnerPipelineData = { prospect: [], inscrit: [], en_cours: [], termine: [], abandon: [] }
     if (!data) return result
     const searchLower = filters.search.toLowerCase()
+    const todayIso = new Date().toISOString().slice(0, 10)
     const seenIds = new Set<string>()
     for (const card of allCards) {
       if (seenIds.has(card.id)) continue
@@ -90,6 +94,9 @@ export function CrmClientPage() {
       if (filters.entityType === 'company' && !card.is_company) continue
       if (filters.entityType === 'individual' && card.is_company) continue
       if (filters.commercialStatus && card.commercial_status !== filters.commercialStatus) continue
+      if (filters.contacted === 'yes' && !card.contacted) continue
+      if (filters.contacted === 'no' && card.contacted) continue
+      if (filters.upcomingFollowUpOnly && (!card.next_follow_up_date || card.next_follow_up_date < todayIso)) continue
       if (filters.qualiopiOnly && card.missing_qualiopi.length === 0) continue
       if (filters.dateFrom && card.session_start_date && card.session_start_date < filters.dateFrom) continue
       if (filters.dateTo && card.session_end_date && card.session_end_date > filters.dateTo) continue
@@ -295,6 +302,26 @@ export function CrmClientPage() {
               <span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 group-hover:text-red-600 transition-colors">
                 <AlertTriangle className="h-4 w-4 text-red-400" />
                 Alertes Qualiopi uniquement
+              </span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+            <select value={filters.contacted} onChange={e => set({ contacted: e.target.value as Filters['contacted'] })}
+              className="w-full px-3 py-2 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue">
+              <option value="">Contacté ou non</option>
+              <option value="yes">Contactés</option>
+              <option value="no">Non contactés</option>
+            </select>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none group h-[38px]">
+              <div className="relative shrink-0">
+                <input type="checkbox" checked={filters.upcomingFollowUpOnly}
+                  onChange={e => set({ upcomingFollowUpOnly: e.target.checked })} className="sr-only peer" />
+                <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:bg-brand-blue after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+              </div>
+              <span className="flex items-center gap-1.5 text-sm font-medium text-gray-700 group-hover:text-brand-blue transition-colors">
+                <CalendarClock className="h-4 w-4 text-brand-blue/70" />
+                Relances à venir uniquement
               </span>
             </label>
           </div>
