@@ -169,6 +169,12 @@ export function SelectContent({ children, className }: SelectContentProps) {
         left: position.left,
         width: position.width,
         minWidth: '8rem',
+        // Une Dialog (Radix) modale met document.body en pointer-events:none
+        // pendant qu'elle est ouverte et ne réactive les clics que sur son
+        // propre contenu. Ce portail vit hors de ce contenu (autre enfant
+        // direct de body) : sans ce override, les items du menu deviennent
+        // cliquables en apparence mais ne reçoivent plus aucun clic.
+        pointerEvents: 'auto',
       }}
     >
       <div className="p-1 max-h-[300px] overflow-auto">{children}</div>
