@@ -210,6 +210,15 @@ const nextConfig = {
         ],
       },
       {
+        // Tutoriels vidéo : COEP relâché pour autoriser l'iframe YouTube du lecteur.
+        source: '/dashboard/tutorials/:path*',
+        headers: [
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+        ],
+      },
+      {
         // Page learner e-learning : COEP relâché pour l'iframe SCORM.
         source: '/learner/elearning/:path*',
         headers: [
