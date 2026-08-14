@@ -11,12 +11,18 @@ interface SelectContextValue {
   open: boolean
   setOpen: (open: boolean) => void
   triggerRef: React.RefObject<HTMLButtonElement>
+  registerLabel: (value: string, label: React.ReactNode) => void
+  unregisterLabel: (value: string) => void
+  selectedLabel: React.ReactNode
 }
 
 const SelectContext = React.createContext<SelectContextValue>({
   open: false,
   setOpen: () => {},
   triggerRef: React.createRef<HTMLButtonElement>(),
+  registerLabel: () => {},
+  unregisterLabel: () => {},
+  selectedLabel: undefined,
 })
 
 interface SelectProps {
@@ -28,9 +34,27 @@ interface SelectProps {
 export function Select({ value, onValueChange, children }: SelectProps) {
   const [open, setOpen] = React.useState(false)
   const triggerRef = React.useRef<HTMLButtonElement>(null)
+  // Permet à SelectValue d'afficher le libellé de l'item sélectionné (children
+  // de SelectItem) plutôt que la valeur brute (ex: un UUID) quand aucun
+  // children explicite n'est passé à SelectValue.
+  const labelsRef = React.useRef(new Map<string, React.ReactNode>())
+  const [, forceUpdate] = React.useState({})
+
+  const registerLabel = React.useCallback((itemValue: string, label: React.ReactNode) => {
+    labelsRef.current.set(itemValue, label)
+    forceUpdate({})
+  }, [])
+
+  const unregisterLabel = React.useCallback((itemValue: string) => {
+    labelsRef.current.delete(itemValue)
+  }, [])
+
+  const selectedLabel = value ? labelsRef.current.get(value) : undefined
 
   return (
-    <SelectContext.Provider value={{ value, onValueChange, open, setOpen, triggerRef }}>
+    <SelectContext.Provider
+      value={{ value, onValueChange, open, setOpen, triggerRef, registerLabel, unregisterLabel, selectedLabel }}
+    >
       <div className="relative">{children}</div>
     </SelectContext.Provider>
   )
@@ -68,8 +92,12 @@ interface SelectValueProps {
 }
 
 export function SelectValue({ placeholder, children }: SelectValueProps) {
-  const { value } = React.useContext(SelectContext)
-  return <span className="block truncate text-left">{children ?? value ?? placeholder}</span>
+  const { value, selectedLabel } = React.useContext(SelectContext)
+  return (
+    <span className="block truncate text-left">
+      {children ?? selectedLabel ?? value ?? placeholder}
+    </span>
+  )
 }
 
 interface SelectContentProps {
@@ -122,12 +150,16 @@ export function SelectContent({ children, className }: SelectContentProps) {
     }
   }, [open, setOpen, triggerRef])
 
-  if (!open) return null
-
+  // Toujours monté (même fermé, via `hidden`) : sinon les SelectItem ne
+  // s'enregistrent (registerLabel) qu'à la première ouverture du menu, et
+  // SelectValue ne peut pas afficher le libellé d'une valeur initiale
+  // (ex: édition d'un élément existant) avant que l'utilisateur n'ait ouvert
+  // le menu au moins une fois.
   const portalContent = (
     <div
       ref={contentRef}
       role="listbox"
+      hidden={!open}
       className={cn(
         'fixed z-[100] min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md',
         className
@@ -155,8 +187,15 @@ interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function SelectItem({ value, children, className, ...props }: SelectItemProps) {
-  const { value: selectedValue, onValueChange, setOpen } = React.useContext(SelectContext)
+  const { value: selectedValue, onValueChange, setOpen, registerLabel } = React.useContext(SelectContext)
   const isSelected = selectedValue === value
+
+  React.useEffect(() => {
+    registerLabel(value, children)
+    // Pas de désenregistrement au démontage : on garde le dernier libellé
+    // connu pour que SelectValue puisse l'afficher même quand le menu
+    // (et donc ses SelectItem) n'est pas monté.
+  }, [value, children, registerLabel])
 
   return (
     <div
