@@ -74,14 +74,10 @@ export class NotificationService {
 
       if (error) throw error
 
-      // Récupérer la notification créée
-      const { data: notification, error: fetchError } = await this.supabase
-        .from('notifications')
-        .select('*')
-        .eq('id', data)
-        .single()
-
-      if (fetchError) throw fetchError
+      // create_notification() renvoie directement la ligne complète (SECURITY
+      // DEFINER) : pas de SELECT de relecture, qui échouerait sous RLS quand
+      // on crée une notification pour un autre utilisateur que l'appelant.
+      const notification = Array.isArray(data) ? data[0] : data
 
       return notification as Notification
     } catch (error) {
