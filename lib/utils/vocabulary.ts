@@ -220,8 +220,8 @@ export const vocabularies: Record<OrganizationType, Vocabulary> = {
     groups: 'Groupes',
     
     // Autres
-    teacher: 'Professeur',
-    teachers: 'Professeurs',
+    teacher: 'Enseignant',
+    teachers: 'Enseignants',
     trainer: 'Enseignant',
     trainers: 'Enseignants',
     organization: 'Établissement',
