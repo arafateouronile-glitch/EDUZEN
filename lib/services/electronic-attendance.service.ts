@@ -209,9 +209,16 @@ export class ElectronicAttendanceService {
 
       if (enrollmentsError) throw enrollmentsError
 
-      const students = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
+      const enrolledStudents = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
         .map((e) => e.students)
-        .filter((s): s is StudentRef => !!s && !!s.email)
+        .filter((s): s is StudentRef => !!s)
+
+      const students = enrolledStudents.filter((s) => !!s.email)
+      // Inscrits sans email : ne recevront jamais la demande, on le signale
+      // à l'appelant au lieu de les exclure en silence.
+      const skippedNoEmail = enrolledStudents
+        .filter((s) => !s.email)
+        .map((s) => ({ id: s.id, name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() }))
 
       const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
 
@@ -243,23 +250,29 @@ export class ElectronicAttendanceService {
       if (updateError) throw updateError
 
       // Envoyer les emails si demandé (Resend direct pour éviter fetch vers /api/email/send)
+      let failedRecipients: Array<{ name: string; email: string }> = []
       if (sendEmails && createdRequests) {
-        await this.sendAttendanceRequestEmails(
+        const sendResult = await this.sendAttendanceRequestEmails(
           createdRequests,
           attendanceSession,
           (attendanceSession.session as { name?: string } | null)?.name ?? attendanceSession.title
         )
+        failedRecipients = sendResult.failedRecipients
       }
 
       logger.info('Session d\'émargement lancée', {
         attendanceSessionId,
         requestsSent: createdRequests?.length || 0,
         emailsSent: sendEmails,
+        skippedNoEmail: skippedNoEmail.length,
+        failedSends: failedRecipients.length,
       })
 
       return {
         attendanceSession,
         requests: createdRequests,
+        skippedNoEmail,
+        failedRecipients,
       }
     } catch (error) {
       if (error instanceof AppError) throw error
@@ -576,6 +589,7 @@ export class ElectronicAttendanceService {
       // Récupérer les données des étudiants non encore dans les requests
       const missingIds = learnerIds.filter((id) => !existingByStudentId.has(id))
       let newRequests: ElectronicAttendanceRequest[] = []
+      let skippedNoEmail: Array<{ id: string; name: string }> = []
 
       if (missingIds.length > 0) {
         const { data: enrollments } = await this.supabase
@@ -585,9 +599,14 @@ export class ElectronicAttendanceService {
           .in('student_id', missingIds)
           .in('status', ['confirmed', 'pending'])
 
-        const students = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
+        const enrolledStudents = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
           .map((e) => e.students)
-          .filter((s): s is StudentRef => !!s && !!s.email)
+          .filter((s): s is StudentRef => !!s)
+
+        const students = enrolledStudents.filter((s) => !!s.email)
+        skippedNoEmail = enrolledStudents
+          .filter((s) => !s.email)
+          .map((s) => ({ id: s.id, name: `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim() }))
 
         const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
         const toInsert = students.map((student) => ({
@@ -638,11 +657,25 @@ export class ElectronicAttendanceService {
       )
 
       const successful = results.filter((r) => r.status === 'fulfilled').length
-      const failed = results.filter((r) => r.status === 'rejected').length
+      const failedRecipients = results
+        .map((r, i) => ({ r, request: toSend[i] }))
+        .filter(({ r }) => r.status === 'rejected')
+        .map(({ request }) => ({ name: request.student_name, email: request.student_email }))
 
-      logger.info('Emails sélectifs envoyés', { attendanceSessionId, successful, failed })
+      logger.info('Emails sélectifs envoyés', {
+        attendanceSessionId,
+        successful,
+        failed: failedRecipients.length,
+        skippedNoEmail: skippedNoEmail.length,
+      })
 
-      return { successful, failed, total: toSend.length }
+      return {
+        successful,
+        failed: failedRecipients.length,
+        failedRecipients,
+        skippedNoEmail,
+        total: toSend.length,
+      }
     } catch (error) {
       if (error instanceof AppError) throw error
       throw errorHandler.handleError(error, { operation: 'sendSelectedEmails', attendanceSessionId })
@@ -993,13 +1026,20 @@ export class ElectronicAttendanceService {
     )
 
     const successful = results.filter((r) => r.status === 'fulfilled').length
-    const failed = results.filter((r) => r.status === 'rejected').length
+    // Nommer les échecs plutôt que se contenter d'un compteur, pour que
+    // l'admin sache qui relancer sans deviner.
+    const failedRecipients = results
+      .map((r, i) => ({ r, request: requests[i] }))
+      .filter(({ r }) => r.status === 'rejected')
+      .map(({ request }) => ({ name: request.student_name, email: request.student_email }))
 
     logger.info('Emails d\'émargement envoyés', {
       total: requests.length,
       successful,
-      failed,
+      failed: failedRecipients.length,
     })
+
+    return { successful, failedRecipients }
   }
 
   /**

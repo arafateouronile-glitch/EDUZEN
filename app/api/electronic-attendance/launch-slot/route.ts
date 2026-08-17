@@ -89,11 +89,15 @@ export async function POST(request: NextRequest) {
       .select('teacher_id, users:teacher_id(id, full_name, email)')
       .eq('session_id', sessionId)
 
-    const trainers = (sessionTeachers ?? [])
-      .map((st: any) => st.users)
-      .filter((u: any): u is { id: string; full_name: string | null; email: string } =>
-        !!u && !!u.email
-      )
+    const assignedTrainers = (sessionTeachers ?? []).map((st: any) => st.users).filter(Boolean)
+    const trainers = assignedTrainers.filter(
+      (u: any): u is { id: string; full_name: string | null; email: string } => !!u.email
+    )
+    const skippedTrainersNoEmail = assignedTrainers
+      .filter((u: any) => !u.email)
+      .map((u: any) => ({ id: u.id, name: u.full_name ?? 'Formateur sans nom' }))
+
+    const failedTrainerSends: Array<{ name: string; email: string }> = []
 
     if (trainers.length > 0) {
       const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
@@ -140,7 +144,10 @@ export async function POST(request: NextRequest) {
               <p><a href="${signingUrl}" style="background:#274472;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;margin:16px 0;">Signer l'émargement</a></p>
               <p style="color:#6b7280;font-size:13px;">Ce lien expire dans 4 heures.</p>
             `,
-          }).catch((err: unknown) => logger.warn('Email formateur non envoyé', { email: req.student_email, err }))
+          }).catch((err: unknown) => {
+            logger.warn('Email formateur non envoyé', { email: req.student_email, err })
+            failedTrainerSends.push({ name: req.student_name, email: req.student_email })
+          })
         }
       }
     }
@@ -150,6 +157,8 @@ export async function POST(request: NextRequest) {
       attendanceSessionId,
       studentRequestsSent: launched.requests?.length ?? 0,
       trainerRequestsSent: trainers.length,
+      skippedNoEmail: [...(launched.skippedNoEmail ?? []), ...skippedTrainersNoEmail],
+      failedSends: [...(launched.failedRecipients ?? []), ...failedTrainerSends],
     })
   } catch (error) {
     logger.error('Erreur launch-slot', error)

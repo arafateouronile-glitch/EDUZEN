@@ -371,7 +371,19 @@ export function ElectronicAttendanceManager({
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Erreur lors de l\'envoi')
-      showToast(`Émargements envoyés à ${data.successful} apprenant${data.successful > 1 ? 's' : ''}`)
+
+      let message = `Émargements envoyés à ${data.successful} apprenant${data.successful > 1 ? 's' : ''}`
+      const skipped = (data.skippedNoEmail ?? []) as Array<{ name: string }>
+      const failed = (data.failedRecipients ?? []) as Array<{ name: string }>
+      // Nommer qui n'a rien reçu plutôt que ne montrer que le compteur de
+      // succès : sinon un échec passe totalement inaperçu.
+      if (skipped.length > 0) {
+        message += ` — sans email : ${skipped.map((s) => s.name).join(', ')}`
+      }
+      if (failed.length > 0) {
+        message += ` — échec d'envoi : ${failed.map((s) => s.name).join(', ')}`
+      }
+      showToast(message)
       setSendModalOpen(false)
       loadSessions()
     } catch (err) {

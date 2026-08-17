@@ -94,6 +94,7 @@ export function PhysicalAttendanceSheetDownloader({
   const [electronicSessions, setElectronicSessions] = useState<ElectronicSession[]>([])
   const [sendingSlotId, setSendingSlotId] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [sendWarning, setSendWarning] = useState<string | null>(null)
   const [creatingLinkSlotId, setCreatingLinkSlotId] = useState<string | null>(null)
   const [togglingLinkSessionId, setTogglingLinkSessionId] = useState<string | null>(null)
   const [qrModal, setQrModal] = useState<{ url: string; title: string } | null>(null)
@@ -473,6 +474,7 @@ export function PhysicalAttendanceSheetDownloader({
   const launchSlot = async (slot: SessionSlot) => {
     setSendingSlotId(slot.id)
     setSendError(null)
+    setSendWarning(null)
     try {
       const res = await fetch('/api/electronic-attendance/launch-slot', {
         method: 'POST',
@@ -487,6 +489,23 @@ export function PhysicalAttendanceSheetDownloader({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erreur envoi')
+
+      // Signaler nommément qui n'a pas reçu la demande (email manquant ou
+      // échec d'envoi), plutôt que de laisser ces personnes disparaître
+      // silencieusement de l'émargement.
+      const skipped = (data.skippedNoEmail ?? []) as Array<{ name: string }>
+      const failed = (data.failedSends ?? []) as Array<{ name: string }>
+      if (skipped.length > 0 || failed.length > 0) {
+        const parts: string[] = []
+        if (skipped.length > 0) {
+          parts.push(`sans email : ${skipped.map((s) => s.name).join(', ')}`)
+        }
+        if (failed.length > 0) {
+          parts.push(`échec d'envoi : ${failed.map((s) => s.name).join(', ')}`)
+        }
+        setSendWarning(`N'ont pas reçu la demande d'émargement (${parts.join(' — ')})`)
+      }
+
       // Rafraîchir les sessions électroniques pour mettre à jour l'état du bouton
       const refreshed = await fetch(`/api/electronic-attendance/sessions?sessionId=${sessionId}`)
       if (refreshed.ok) {
@@ -899,6 +918,12 @@ export function PhysicalAttendanceSheetDownloader({
       {sendError && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
           {sendError}
+        </div>
+      )}
+
+      {sendWarning && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+          {sendWarning}
         </div>
       )}
 
