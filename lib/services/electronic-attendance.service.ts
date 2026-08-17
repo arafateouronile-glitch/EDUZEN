@@ -222,7 +222,24 @@ export class ElectronicAttendanceService {
 
       const tokenExpiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
 
-      const requests = students.map((student: StudentRef) => ({
+      // createAttendanceSession insère déjà une ligne par apprenant à la
+      // création (utilisée par le lien public/QR). Ne jamais en recréer ici :
+      // deux lignes pour le même (attendance_session_id, student_id) cassent
+      // le .single() de submitPublicEmargement et bloquent la signature QR.
+      const { data: existingRequestRows } = await this.supabase
+        .from('electronic_attendance_requests')
+        .select('*')
+        .eq('attendance_session_id', attendanceSessionId)
+
+      const existingByStudentId = new Map(
+        (existingRequestRows ?? [])
+          .filter((r): r is ElectronicAttendanceRequest & { student_id: string } => !!r.student_id)
+          .map((r) => [r.student_id, r])
+      )
+
+      const missingStudents = students.filter((s) => !existingByStudentId.has(s.id))
+
+      const newRequests = missingStudents.map((student: StudentRef) => ({
         organization_id: attendanceSession.organization_id,
         attendance_session_id: attendanceSessionId,
         student_id: student.id,
@@ -234,12 +251,23 @@ export class ElectronicAttendanceService {
         token_expires_at: tokenExpiresAt,
       }))
 
-      const { data: createdRequests, error: requestsError } = await this.supabase
-        .from('electronic_attendance_requests')
-        .insert(requests as ElectronicAttendanceRequestInsert[])
-        .select()
+      let insertedRequests: ElectronicAttendanceRequest[] = []
+      if (newRequests.length > 0) {
+        const { data, error: requestsError } = await this.supabase
+          .from('electronic_attendance_requests')
+          .insert(newRequests as ElectronicAttendanceRequestInsert[])
+          .select()
 
-      if (requestsError) throw requestsError
+        if (requestsError) throw requestsError
+        insertedRequests = data ?? []
+      }
+
+      const createdRequests: ElectronicAttendanceRequest[] = [
+        ...students
+          .filter((s) => existingByStudentId.has(s.id))
+          .map((s) => existingByStudentId.get(s.id)!),
+        ...insertedRequests,
+      ]
 
       // Mettre à jour le statut de la session
       const { error: updateError } = await this.supabase
