@@ -1284,9 +1284,9 @@ export default function LearnerCourseDetailPage() {
 
   if (loadingCourse) {
     return (
-      <div className="pb-24 lg:pb-8 -mx-4 sm:-mx-6 lg:-mx-8 -mt-6">
+      <div className="pb-24 lg:pb-8">
         {/* Sticky bar skeleton */}
-        <div className="sticky top-16 z-30 bg-gradient-to-r from-brand-blue to-brand-blue-dark border-b border-brand-blue-dark/50 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+        <div className="sticky top-0 z-30 bg-gradient-to-r from-brand-blue to-brand-blue-dark border-b border-brand-blue-dark/50 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-lg animate-pulse shrink-0" />
           <div className="flex-1 space-y-1.5">
             <div className="h-3.5 w-52 bg-white/20 rounded animate-pulse" />
@@ -1354,9 +1354,10 @@ export default function LearnerCourseDetailPage() {
   }
 
   return (
-    <div className="pb-24 lg:pb-8 -mx-4 sm:-mx-6 lg:-mx-8 -mt-6 relative">
-      {/* Sticky top bar */}
-      <div className="sticky top-16 z-30 bg-gradient-to-r from-brand-blue to-brand-blue-dark backdrop-blur-xl border-b border-brand-blue-dark/50 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 shadow-lg shadow-brand-blue/20">
+    <div className="pb-24 lg:pb-8 relative">
+      {/* Sticky top bar — top-0 : cette page s'affiche en plein écran, sans
+          le header du layout learner (cf. app/(learner)/learner/layout.tsx) */}
+      <div className="sticky top-0 z-30 bg-gradient-to-r from-brand-blue to-brand-blue-dark backdrop-blur-xl border-b border-brand-blue-dark/50 px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 shadow-lg shadow-brand-blue/20">
         <Link href="/learner/elearning">
           <button className="p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white" title="Retour aux cours">
             <ArrowLeft className="h-5 w-5" />

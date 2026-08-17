@@ -1,7 +1,7 @@
 'use client'
 
 import { LearnerProvider, useLearnerContext } from '@/lib/contexts/learner-context'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { LearnerSidebar } from '@/components/learner/sidebar'
 import { LearnerHeader } from '@/components/learner/header'
@@ -19,8 +19,13 @@ const LEARNER_STORAGE_KEY = 'learner_student_id'
 function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
   const { student, isLoading, hasStudent, studentId } = useLearnerContext()
   const router = useRouter()
+  const pathname = usePathname()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+
+  // Page d'une leçon/cours e-learning : plein écran, sans le chrome
+  // (sidebar/header/nav) qui empiète sur l'espace de lecture.
+  const isFullScreenElearning = /^\/learner\/elearning\/[^/]+/.test(pathname || '')
 
   // S'assurer que le composant est monté côté client pour éviter les problèmes d'hydratation
   useEffect(() => {
@@ -171,6 +176,18 @@ function LearnerLayoutContent({ children }: { children: React.ReactNode }) {
           <Loader2 className="h-12 w-12 animate-spin text-brand-blue mx-auto mb-4" />
           <p className="text-gray-600 font-medium">Chargement de votre espace...</p>
         </div>
+      </div>
+    )
+  }
+
+  // Vue plein écran : ni sidebar, ni header, ni nav mobile, ni padding —
+  // le contenu de la page (sa propre sidebar de leçons, etc.) occupe tout
+  // l'écran.
+  if (isFullScreenElearning) {
+    return (
+      <div className="min-h-screen bg-white relative">
+        <OfflineIndicator />
+        {children}
       </div>
     )
   }
