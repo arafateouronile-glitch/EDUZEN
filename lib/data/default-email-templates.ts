@@ -299,7 +299,92 @@ L'équipe {organization_name}`,
     `),
   },
 
-  // 7. Notification générale
+  // 7. Convocation
+  {
+    email_type: 'convocation',
+    name: 'Convocation',
+    subject: 'Convocation à votre session de formation {session_name}',
+    description: 'Convocation officielle envoyée à un apprenant pour une session, un examen ou un jury.',
+    available_variables: ['student_name', 'session_name', 'session_start_date', 'session_start_time', 'session_location', 'espace_apprenant', 'organization_name'],
+    body_text: `Bonjour {student_name},
+
+Nous vous convoquons à la session de formation suivante :
+
+**{session_name}**
+- Date : {session_start_date}
+- Heure : {session_start_time}
+- Lieu : {session_location}
+
+Merci de vous présenter muni(e) d'une pièce d'identité. Retrouvez toutes les informations sur votre espace apprenant : {espace_apprenant}
+
+En cas d'empêchement, merci de nous contacter au plus tôt.
+
+Cordialement,
+L'équipe {organization_name}`,
+    body_html: emailHtml('Convocation', `
+      <p style="font-size:17px;font-weight:600;color:#111827;margin-top:0;">Bonjour {student_name},</p>
+      <p>Nous vous convoquons à la session de formation suivante :</p>
+      <div style="background:#eff6ff;border-left:4px solid #1a56db;padding:16px 20px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:16px;font-weight:700;color:#1e3a8a;">{session_name}</p>
+      </div>
+      <table cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;margin:20px 0;">
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 16px;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;width:40%;">Date</td>
+          <td style="padding:10px 16px;color:#374151;border-bottom:1px solid #e5e7eb;">{session_start_date}</td>
+        </tr>
+        <tr style="background:#ffffff;">
+          <td style="padding:10px 16px;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;width:40%;">Heure</td>
+          <td style="padding:10px 16px;color:#374151;border-bottom:1px solid #e5e7eb;">{session_start_time}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 16px;font-weight:600;color:#374151;width:40%;">Lieu</td>
+          <td style="padding:10px 16px;color:#374151;">{session_location}</td>
+        </tr>
+      </table>
+      <p>Merci de vous présenter muni(e) d'une pièce d'identité. Retrouvez toutes les informations sur votre <a href="{espace_apprenant}">espace apprenant</a>.</p>
+      <p>En cas d'empêchement, merci de nous contacter au plus tôt.</p>
+      <p style="margin-bottom:0;">Cordialement,<br/><strong>L'équipe {organization_name}</strong></p>
+    `),
+  },
+
+  // 8. Convention
+  {
+    email_type: 'convention',
+    name: 'Convention de formation',
+    subject: 'Convention de formation — {session_name}',
+    description: 'Envoi d\'une convention de formation à signer (apprenant ou entreprise).',
+    available_variables: ['student_name', 'document_title', 'session_name', 'organization_name', 'document_url'],
+    body_text: `Bonjour {student_name},
+
+Veuillez trouver ci-joint la convention de formation relative à la session **{session_name}**.
+
+**{document_title}**
+
+Merci de la consulter et de la signer en suivant le lien ci-dessous :
+{document_url}
+
+Pour toute question, n'hésitez pas à nous contacter.
+
+Cordialement,
+L'équipe {organization_name}`,
+    body_html: emailHtml('Convention de formation', `
+      <p style="font-size:17px;font-weight:600;color:#111827;margin-top:0;">Bonjour {student_name},</p>
+      <p>Veuillez trouver ci-joint la convention de formation relative à la session :</p>
+      <div style="background:#eff6ff;border-left:4px solid #1a56db;padding:16px 20px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:16px;font-weight:700;color:#1e3a8a;">{session_name}</p>
+      </div>
+      <div style="background:#faf5ff;border-left:4px solid #7c3aed;padding:16px 20px;border-radius:4px;margin:20px 0;">
+        <p style="margin:0;font-size:15px;font-weight:600;color:#5b21b6;">{document_title}</p>
+      </div>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="{document_url}" style="display:inline-block;background:#1a56db;color:#ffffff;padding:13px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px;">Consulter et signer la convention</a>
+      </div>
+      <p>Pour toute question, n'hésitez pas à nous contacter.</p>
+      <p style="margin-bottom:0;">Cordialement,<br/><strong>L'équipe {organization_name}</strong></p>
+    `),
+  },
+
+  // 9. Notification générale
   {
     email_type: 'notification',
     name: 'Notification générale',

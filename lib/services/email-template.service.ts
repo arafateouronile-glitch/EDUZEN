@@ -11,6 +11,8 @@ export type EmailType =
   | 'enrollment_confirmation'
   | 'session_reminder'
   | 'certificate_issued'
+  | 'convocation'
+  | 'convention'
   | 'custom'
 
 export interface CreateEmailTemplateInput {
@@ -264,6 +266,18 @@ export class EmailTemplateService {
         label: 'Notification générale',
         description: 'Notification générale personnalisée',
         defaultVariables: ['recipient_name', 'message', 'organization_name', 'action_url'],
+      },
+      {
+        value: 'convocation',
+        label: 'Convocation',
+        description: 'Convocation officielle à une session, un examen ou un jury',
+        defaultVariables: ['student_name', 'session_name', 'session_start_date', 'session_start_time', 'session_location', 'espace_apprenant', 'organization_name'],
+      },
+      {
+        value: 'convention',
+        label: 'Convention',
+        description: 'Envoi d\'une convention de formation à signer (apprenant ou entreprise)',
+        defaultVariables: ['student_name', 'document_title', 'session_name', 'organization_name', 'document_url'],
       },
       {
         value: 'custom',
