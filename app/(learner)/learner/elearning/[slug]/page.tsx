@@ -45,6 +45,17 @@ import ReactMarkdown from 'react-markdown'
 import { logger, maskId, sanitizeError } from '@/lib/utils/logger'
 import { toProxiedFileUrl } from '@/lib/utils/elearning-file-proxy'
 import { FeatureLocked } from '@/components/quota/feature-locked'
+import { sanitizeBlogContent, escapeHtml } from '@/lib/utils/sanitize-html'
+
+/** Détecte un lien YouTube/Vimeo et renvoie son URL d'embed ; sinon renvoie l'URL telle quelle
+ *  (fichier vidéo direct, à lire avec une balise <video>). */
+function toVideoEmbedUrl(url: string): { embedUrl: string | null; isFile: boolean } {
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/)
+  if (yt) return { embedUrl: `https://www.youtube.com/embed/${yt[1]}?rel=0`, isFile: false }
+  const vimeo = url.match(/vimeo\.com\/(\d+)/)
+  if (vimeo) return { embedUrl: `https://player.vimeo.com/video/${vimeo[1]}`, isFile: false }
+  return { embedUrl: null, isFile: true }
+}
 
 // Normalise les blocs venus de l'éditeur "studio" (courses/[slug]/edit) — qui
 // stocke un format différent (image/interaction en types dédiés, media sans
@@ -54,13 +65,18 @@ import { FeatureLocked } from '@/components/quota/feature-locked'
 function normalizeContentBlock(block: any, idx: number): any {
   const id = block?.id || `block-${idx}`
   switch (block?.type) {
-    case 'text':
-      return {
-        id, type: 'text',
-        data: {
-          content: [block.data?.heading, block.data?.body].filter(Boolean).join('\n\n') || block.data?.content || '',
-        },
-      }
+    case 'text': {
+      const heading: string = block.data?.heading || ''
+      const body: string = block.data?.body || ''
+      // Le body peut être du HTML enrichi (gras/couleur/police/listes, saisi
+      // via l'éditeur de leçon) : dans ce cas on compose du HTML au lieu de
+      // concaténer en texte brut, sinon les balises seraient affichées
+      // telles quelles par le rendu Markdown.
+      const content = /<[a-z][\s\S]*>/i.test(body)
+        ? [heading ? `<h3>${escapeHtml(heading)}</h3>` : '', body].filter(Boolean).join('')
+        : [heading, body].filter(Boolean).join('\n\n') || block.data?.content || ''
+      return { id, type: 'text', data: { content } }
+    }
     case 'image':
       return {
         id, type: 'media',
@@ -862,9 +878,13 @@ export default function LearnerCourseDetailPage() {
               )
 
               if (block.type === 'text') {
+                const textContent = block?.data?.content || ''
+                const isHtml = /<[a-z][\s\S]*>/i.test(textContent)
                 return wrapBlock(
-                  <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown>{block?.data?.content || ''}</ReactMarkdown>
+                  <div className="prose prose-sm max-w-none [&_p]:mb-3 [&_ul]:mb-3 [&_ol]:mb-3">
+                    {isHtml
+                      ? <div dangerouslySetInnerHTML={{ __html: sanitizeBlogContent(textContent) }} />
+                      : <ReactMarkdown>{textContent}</ReactMarkdown>}
                   </div>
                 )
               }
@@ -890,20 +910,34 @@ export default function LearnerCourseDetailPage() {
                 }
 
                 if (mediaType === 'video') {
+                  const { embedUrl, isFile } = toVideoEmbedUrl(url)
                   return wrapBlock(
                     <div className="space-y-2">
-                      <video
-                        src={url}
-                        controls
-                        className="w-full rounded-lg"
-                        onTimeUpdate={requiredPct > 0 ? (e) => {
-                          const v = e.currentTarget
-                          if (v.duration > 0 && (v.currentTime / v.duration) * 100 >= requiredPct) {
-                            setBlockCompletions(prev => prev[blockId] ? prev : { ...prev, [blockId]: true })
-                          }
-                        } : undefined}
-                      />
-                      {requiredPct > 0 && !blockCompletions[blockId] && (
+                      {isFile ? (
+                        <video
+                          src={url}
+                          controls
+                          className="w-full rounded-lg"
+                          onTimeUpdate={requiredPct > 0 ? (e) => {
+                            const v = e.currentTarget
+                            if (v.duration > 0 && (v.currentTime / v.duration) * 100 >= requiredPct) {
+                              setBlockCompletions(prev => prev[blockId] ? prev : { ...prev, [blockId]: true })
+                            }
+                          } : undefined}
+                        />
+                      ) : (
+                        // Lien YouTube/Vimeo : lu via iframe, donc pas de suivi de
+                        // progression natif possible (currentTime inaccessible).
+                        <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                          <iframe
+                            src={embedUrl!}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                      )}
+                      {isFile && requiredPct > 0 && !blockCompletions[blockId] && (
                         <p className="text-xs text-amber-600 text-center">
                           Regardez au moins {requiredPct}% de la vidéo pour continuer
                         </p>
