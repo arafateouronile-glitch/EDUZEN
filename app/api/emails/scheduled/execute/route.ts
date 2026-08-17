@@ -12,6 +12,7 @@ import { type EmailType } from '@/lib/services/email-template.service.client'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { APP_URLS } from '@/lib/config/app-config'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
@@ -407,6 +408,8 @@ function replaceTemplateVariables(
       variables.session_end_date = session.end_date
         ? new Date(session.end_date).toLocaleDateString('fr-FR')
         : ''
+      variables.session_start_time = session.start_time || ''
+      variables.session_location = session.location || ''
     }
 
     if (recipient.context.student) {
@@ -415,6 +418,7 @@ function replaceTemplateVariables(
       variables.student_first_name = student.first_name || ''
       variables.student_last_name = student.last_name || ''
       variables.student_email = student.email || ''
+      variables.espace_apprenant = student.id ? `${APP_URLS.getBaseUrl()}/learner/access/${student.id}` : ''
     }
 
     if (recipient.context.evaluation) {

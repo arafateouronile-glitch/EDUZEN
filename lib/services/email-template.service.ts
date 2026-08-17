@@ -253,7 +253,7 @@ export class EmailTemplateService {
         value: 'session_reminder',
         label: 'Rappel de session',
         description: 'Email de rappel avant une session',
-        defaultVariables: ['student_name', 'session_name', 'session_date', 'session_time', 'session_location', 'organization_name'],
+        defaultVariables: ['student_name', 'session_name', 'session_start_date', 'session_start_time', 'session_location', 'espace_apprenant', 'organization_name'],
       },
       {
         value: 'certificate_issued',

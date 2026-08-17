@@ -52,6 +52,7 @@ const VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: 'eleve_ville', label: 'Ville de l\'élève' },
       { key: 'eleve_telephone', label: 'Téléphone de l\'élève' },
       { key: 'eleve_email', label: 'Email de l\'élève' },
+      { key: 'eleve_espace_apprenant', label: 'Lien espace apprenant' },
     ],
   },
   {
@@ -153,6 +154,7 @@ const VARIABLE_CATEGORIES: VariableCategory[] = [
       { key: 'convocation_duree', label: 'Durée prévue' },
       { key: 'convocation_contenu', label: 'Contenu/Ordre du jour' },
       { key: 'date_confirmation', label: 'Date limite de confirmation' },
+      { key: 'eleve_espace_apprenant', label: 'Lien espace apprenant' },
     ],
   },
   {

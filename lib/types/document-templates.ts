@@ -454,6 +454,7 @@ export interface DocumentVariables {
   eleve_ville?: string
   eleve_telephone?: string
   eleve_email?: string
+  eleve_espace_apprenant?: string
   taux_tva?: string
   date_echeance?: string
   numero_devis?: string

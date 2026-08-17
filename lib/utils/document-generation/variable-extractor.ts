@@ -5,6 +5,7 @@
 import type { DocumentVariables } from '@/lib/types/document-templates'
 import type { StudentWithRelations, SessionWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
 import type { TableRow } from '@/lib/types/supabase-helpers'
+import { APP_URLS } from '@/lib/config/app-config'
 
 type Organization = TableRow<'organizations'>
 type Student = TableRow<'students'>
@@ -269,6 +270,7 @@ export function extractDocumentVariables(options: ExtractVariablesOptions): Docu
     eleve_ville: stud?.city || '',
     eleve_telephone: stud?.phone || '',
     eleve_email: stud?.email || '',
+    eleve_espace_apprenant: student?.id ? `${APP_URLS.getBaseUrl()}/learner/access/${student.id}` : '',
 
     // Entreprise / Client (table companies ou external_entities via fallback)
     // Les deux tables ont des noms de champs légèrement différents — on lit les deux
