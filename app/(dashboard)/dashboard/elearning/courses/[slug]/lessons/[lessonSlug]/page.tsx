@@ -5,13 +5,11 @@ import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
 import { elearningService } from '@/lib/services/elearning.service.client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import {
   ArrowLeft,
   CheckCircle,
-  Circle,
   ChevronRight,
   ChevronLeft,
   Play,
@@ -30,6 +28,7 @@ import { motion } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
 import dynamic from 'next/dynamic'
 import { toProxiedFileUrl } from '@/lib/utils/elearning-file-proxy'
+import { sanitizeBlogContent, escapeHtml } from '@/lib/utils/sanitize-html'
 
 const ScormPlayer = dynamic(
   () => import('@/components/elearning/ScormPlayer').then(m => m.ScormPlayer),
@@ -124,6 +123,19 @@ export default function LessonPage() {
     enabled: !!courseSlug && !!user?.organization_id,
   })
 
+  // Progression globale du cours (leçons complétées, % d'avancement dans la séquence)
+  const { data: enrollment } = useQuery<{ progress_percentage?: number; completed_lessons?: string[]; [key: string]: any } | null>({
+    queryKey: ['course-enrollment', course?.id, user?.id],
+    queryFn: async () => {
+      if (!course?.id || !user?.id) return null
+      const enrollments = await elearningService.getStudentEnrollments(user.id)
+      return (enrollments.find((e: any) => e.course_id === (course as any).id) as any) ?? null
+    },
+    enabled: !!course?.id && !!user?.id,
+  })
+
+  const [isExpanded, setIsExpanded] = useState(false)
+
   // Récupérer la leçon
   const { data: lesson, isLoading: lessonLoading } = useQuery<{
     id: string;
@@ -165,13 +177,18 @@ export default function LessonPage() {
       const normalized: ContentBlock[] = raw.map((block: any, idx: number) => {
         const id: string = block.id || `block-${idx}`
         switch (block.type) {
-          case 'text':
-            return {
-              id, type: 'text' as const,
-              data: {
-                content: [block.data?.heading, block.data?.body].filter(Boolean).join('\n\n') || block.data?.content || '',
-              },
-            }
+          case 'text': {
+            const heading: string = block.data?.heading || ''
+            const body: string = block.data?.body || ''
+            // Le body peut être du HTML enrichi (gras/couleur/police/listes,
+            // saisi via l'éditeur de leçon) : dans ce cas on compose du HTML
+            // au lieu de concaténer en texte brut, sinon les balises seraient
+            // affichées telles quelles par le rendu Markdown ci-dessous.
+            const content = /<[a-z][\s\S]*>/i.test(body)
+              ? [heading ? `<h3>${escapeHtml(heading)}</h3>` : '', body].filter(Boolean).join('')
+              : [heading, body].filter(Boolean).join('\n\n') || block.data?.content || ''
+            return { id, type: 'text' as const, data: { content } }
+          }
           case 'image':
             return {
               id, type: 'media' as const,
@@ -394,18 +411,26 @@ export default function LessonPage() {
   // Fonction pour rendre un bloc de contenu
   const renderContentBlock = (block: ContentBlock, index: number) => {
     switch (block.type) {
-      case 'text':
+      case 'text': {
+        const content = block.data.content || ''
+        // Texte enrichi (HTML) saisi via l'éditeur de leçon vs. ancien contenu
+        // markdown/texte brut : les deux formats coexistent selon la date de
+        // création de la leçon.
+        const isHtml = /<[a-z][\s\S]*>/i.test(content)
         return (
           <motion.div
             key={block.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="prose prose-sm max-w-none mb-6 p-4 bg-gray-50 rounded-lg"
+            className="prose prose-sm max-w-none mb-6 p-4 bg-gray-50 rounded-lg [&_p]:mb-3 [&_ul]:mb-3 [&_ol]:mb-3"
           >
-            <ReactMarkdown>{block.data.content || ''}</ReactMarkdown>
+            {isHtml
+              ? <div dangerouslySetInnerHTML={{ __html: sanitizeBlogContent(content) }} />
+              : <ReactMarkdown>{content}</ReactMarkdown>}
           </motion.div>
         )
+      }
 
       case 'media':
         return (
@@ -645,29 +670,118 @@ export default function LessonPage() {
     }
   }
 
-  return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="mb-6 flex items-center justify-between">
-        <Link href={`/dashboard/elearning/courses/${courseSlug}`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour au cours
-          </Button>
-        </Link>
-        {canEdit && (
-          <Link href={`/dashboard/elearning/courses/${courseSlug}/lessons/${lessonSlug}/edit`}>
-            <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Modifier
-            </Button>
-          </Link>
-        )}
-      </div>
+  const courseProgressPercentage = Math.round(enrollment?.progress_percentage || 0)
+  const lessonProgressPercentage = Math.round((progress as any)?.completion_percentage || (isCompleted ? 100 : 0))
+  const completedLessonIds: string[] = enrollment?.completed_lessons || []
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Contenu principal */}
-        <div className="lg:col-span-3">
-          <GlassCard variant="premium" className="p-6">
+  return (
+    <div className="min-h-screen flex flex-col lg:flex-row -mt-6 -mx-4 sm:-mx-6 lg:-mx-8 bg-white">
+
+      {/* ── Sidebar — timeline des leçons ─────────────────────────── */}
+      {!isExpanded && (
+        <aside className="lg:w-[300px] flex-shrink-0 border-r border-gray-100 bg-white lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto">
+          <div className="p-5">
+            <Link
+              href={`/dashboard/elearning/courses/${courseSlug}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-blue hover:text-brand-blue-dark transition-colors mb-6"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Quitter
+            </Link>
+
+            <div className="space-y-0">
+              {lessons.map((l: any, index: number) => {
+                const isCurrent = l.id === lesson.id
+                const isDone = completedLessonIds.includes(l.id)
+                return (
+                  <div key={l.id} className="relative flex gap-3">
+                    {/* Ligne de connexion verticale */}
+                    {index < lessons.length - 1 && (
+                      <div className={cn(
+                        'absolute left-[15px] top-8 bottom-0 w-px',
+                        isDone ? 'bg-emerald-200' : 'bg-gray-200'
+                      )} />
+                    )}
+                    <div className="relative z-10 flex-shrink-0 pt-0.5">
+                      <div className={cn(
+                        'w-8 h-8 rounded-full flex items-center justify-center border-2 bg-white',
+                        isDone ? 'border-emerald-400 text-emerald-500'
+                          : isCurrent ? 'border-brand-blue text-brand-blue'
+                          : 'border-gray-200 text-gray-300'
+                      )}>
+                        {isDone ? <CheckCircle className="h-4 w-4" /> : <FileText className="h-3.5 w-3.5" />}
+                      </div>
+                    </div>
+                    <Link
+                      href={`/dashboard/elearning/courses/${courseSlug}/lessons/${l.slug}`}
+                      className={cn(
+                        'flex-1 min-w-0 rounded-xl px-3 py-2.5 mb-1 transition-colors',
+                        isCurrent ? 'bg-brand-blue/5 border border-brand-blue/20' : 'hover:bg-gray-50 border border-transparent'
+                      )}
+                    >
+                      <p className={cn(
+                        'text-sm leading-snug line-clamp-2',
+                        isCurrent ? 'font-semibold text-brand-blue' : 'font-medium text-gray-700'
+                      )}>
+                        {index + 1}. {l.title}
+                      </p>
+                      {l.video_duration_minutes && (
+                        <p className="text-xs text-gray-400 mt-1">{l.video_duration_minutes} minutes</p>
+                      )}
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* ── Contenu principal ──────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col lg:h-screen">
+        <div className="flex-1 overflow-y-auto">
+          <div className={cn('mx-auto w-full px-6 sm:px-10 py-6', isExpanded ? 'max-w-4xl' : 'max-w-3xl')}>
+
+            {canEdit && (
+              <div className="flex justify-end mb-2">
+                <Link href={`/dashboard/elearning/courses/${courseSlug}/lessons/${lessonSlug}/edit`}>
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Modifier
+                  </Button>
+                </Link>
+              </div>
+            )}
+
+            {/* Bannière du cours */}
+            <div className="relative rounded-2xl overflow-hidden mb-4 h-40 sm:h-48">
+              {course.cover_image_url ? (
+                <img src={course.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-brand-blue to-brand-cyan" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-900/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
+                <div className="inline-block bg-white rounded-xl px-4 py-2.5 shadow-lg max-w-full">
+                  <p className="font-bold text-gray-900 text-sm sm:text-base truncate">{course.title}</p>
+                  <div className="h-0.5 w-10 bg-brand-blue rounded-full mt-1.5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Progression de la séquence */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <BarChart3 className="h-4 w-4 text-brand-blue" />
+                Progression de la séquence
+                <span className="font-bold text-brand-blue">{courseProgressPercentage} %</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setIsExpanded(v => !v)} className="gap-1.5">
+                {isExpanded ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5 rotate-45" />}
+                {isExpanded ? 'Réduire' : 'Agrandir'}
+              </Button>
+            </div>
+
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{lesson.title}</h1>
@@ -676,7 +790,7 @@ export default function LessonPage() {
                 )}
               </div>
               {isCompleted && (
-                <div className="flex items-center gap-2 text-green-600">
+                <div className="flex items-center gap-2 text-green-600 flex-shrink-0 ml-3">
                   <CheckCircle className="h-5 w-5" />
                   <span className="text-sm font-medium">Complété</span>
                 </div>
@@ -804,48 +918,24 @@ export default function LessonPage() {
                 )}
               </div>
             </div>
-          </GlassCard>
+
+          </div>
         </div>
 
-        {/* Sidebar - Navigation */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-4">
-            <CardHeader>
-              <CardTitle className="text-lg">Leçons</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {lessons.map((l: any, index: number) => {
-                  const isCurrent = l.id === lesson.id
-                  return (
-                    <Link
-                      key={l.id}
-                      href={`/dashboard/elearning/courses/${courseSlug}/lessons/${l.slug}`}
-                    >
-                      <button
-                        className={cn(
-                          "w-full text-left p-2 rounded-lg transition-colors",
-                          isCurrent
-                            ? 'bg-brand-blue text-white'
-                            : 'bg-gray-50 hover:bg-gray-100'
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Circle className="h-4 w-4 flex-shrink-0" />
-                          <span className="text-sm font-medium">
-                            {index + 1}. {l.title}
-                          </span>
-                        </div>
-                        {l.video_duration_minutes && (
-                          <p className="text-xs mt-1 opacity-70">{l.video_duration_minutes} min</p>
-                        )}
-                      </button>
-                    </Link>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+        {/* ── Barre de progression sticky en bas ─────────────────── */}
+        <div className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 px-4 sm:px-6 py-3 flex items-center gap-3">
+          <Link
+            href={previousLesson ? `/dashboard/elearning/courses/${courseSlug}/lessons/${previousLesson.slug}` : `/dashboard/elearning/courses/${courseSlug}`}
+            className="flex-shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-brand-blue hover:border-brand-blue/30 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <p className="flex-1 min-w-0 text-sm font-medium text-brand-blue truncate text-center">
+            {currentIndex + 1}. {lesson.title}
+          </p>
+          <span className="flex-shrink-0 text-xs font-bold text-white bg-brand-blue rounded-full px-2.5 py-1">
+            {lessonProgressPercentage} %
+          </span>
         </div>
       </div>
     </div>

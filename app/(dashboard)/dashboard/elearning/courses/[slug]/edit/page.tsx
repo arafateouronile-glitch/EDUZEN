@@ -9,9 +9,9 @@ import { createClient } from '@/lib/supabase/client'
 import { elearningService } from '@/lib/services/elearning.service.client'
 import {
   ArrowLeft, Save, X, Monitor, Smartphone, GripVertical,
-  ChevronDown, Plus, Image as ImageIcon, Bold, Italic,
-  AlignLeft, List, Palette, Type, Video, Zap, HelpCircle,
-  BarChart2, BookOpen, Camera, Check, FileText, Eye, Loader2, Minus,
+  ChevronDown, Plus, Image as ImageIcon,
+  Type, Video, Zap, HelpCircle,
+  BarChart2, BookOpen, Camera, Check, FileText, Loader2, Minus,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,10 @@ const ScormUploader = dynamic(
 )
 const QuizBuilder = dynamic(
   () => import('@/components/elearning/QuizBuilder').then(m => m.QuizBuilder),
+  { ssr: false }
+)
+const LessonTextEditor = dynamic(
+  () => import('@/components/elearning/LessonTextEditor').then(m => m.LessonTextEditor),
   { ssr: false }
 )
 import {
@@ -305,33 +309,6 @@ const DOCK_ITEMS = [
   { id: 'separator',   label: 'Séparateur',   icon: Minus      },
 ]
 
-// ─── Floating toolbar ────────────────────────────────────────────────
-
-function FloatingToolbar({ visible }: { visible: boolean }) {
-  if (!visible) return null
-  const tools = [
-    { icon: Bold,      label: 'Gras'       },
-    { icon: Italic,    label: 'Italique'   },
-    { icon: Palette,   label: 'Couleur'    },
-    { icon: List,      label: 'Liste'      },
-    { icon: AlignLeft, label: 'Alignement' },
-  ]
-  return (
-    <div className="flex items-center gap-0.5 w-fit px-1.5 py-1 bg-gray-900 rounded-lg shadow-xl mb-3 mx-auto">
-      {tools.map(({ icon: Icon, label }) => (
-        <button
-          key={label}
-          type="button"
-          title={label}
-          className="p-1.5 rounded hover:bg-white/10 text-white/80 hover:text-white transition-colors"
-        >
-          <Icon className="h-3.5 w-3.5" />
-        </button>
-      ))}
-    </div>
-  )
-}
-
 // ─── Editable text block ─────────────────────────────────────────────
 
 function EditableTextBlock({
@@ -342,7 +319,7 @@ function EditableTextBlock({
 }) {
   return (
     <>
-      <div className="flex items-center gap-1.5 mb-1.5">
+      <div className="flex items-center gap-1.5 mb-3">
         <input
           value={block.data.emoji ?? ''}
           onChange={e => onChange(block.id, { ...block.data, emoji: e.target.value })}
@@ -355,12 +332,10 @@ function EditableTextBlock({
           className="flex-1 text-base font-semibold text-gray-800 bg-transparent focus:outline-none border-b border-transparent focus:border-gray-200"
         />
       </div>
-      <textarea
+      <LessonTextEditor
         value={block.data.body ?? ''}
-        onChange={e => onChange(block.id, { ...block.data, body: e.target.value })}
-        placeholder="Contenu du bloc..."
-        rows={3}
-        className="text-sm text-gray-600 leading-relaxed w-full bg-transparent focus:outline-none resize-none"
+        onChange={html => onChange(block.id, { ...block.data, body: html })}
+        placeholder="Contenu du bloc... (sélectionnez du texte pour le mettre en forme)"
       />
     </>
   )
@@ -866,7 +841,6 @@ function BlockEditor({
   onDeleteBlock?: (id: string) => void
 }) {
   const [view, setView] = useState<'desktop' | 'mobile'>('desktop')
-  const [toolbarVisible, setToolbarVisible] = useState(false)
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
 
   const blockSensors = useSensors(
@@ -938,19 +912,7 @@ function BlockEditor({
             <Smartphone className="h-4 w-4" />
           </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setToolbarVisible(v => !v)}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors',
-            toolbarVisible
-              ? 'border-brand-blue/40 text-brand-blue bg-brand-blue/5'
-              : 'border-gray-200 text-gray-400 hover:text-gray-600',
-          )}
-        >
-          <Eye className="h-3.5 w-3.5" />
-          Toolbar
-        </button>
+        <div className="w-[92px]" />
       </div>
 
       {/* Scrollable canvas */}
@@ -967,9 +929,7 @@ function BlockEditor({
               view === 'mobile' ? 'max-w-[380px]' : 'max-w-2xl',
             )}
           >
-            <div className="px-12 py-8 space-y-4">
-
-              <FloatingToolbar visible={toolbarVisible} />
+            <div className="px-12 py-8 space-y-8">
 
               {/* Header zone */}
               <div className="text-center space-y-1 pb-3">
