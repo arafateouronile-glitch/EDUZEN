@@ -41,6 +41,7 @@ import type { TableRow } from '@/lib/types/supabase-helpers'
 import type { DocumentType } from '@/lib/types/document-templates'
 import type { Json } from '@/types/database.types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { APP_URLS } from '@/lib/config/app-config'
 import { ContextualFAQ } from '@/components/knowledge-base/contextual-faq'
 
 type Organization = TableRow<'organizations'>
@@ -787,7 +788,10 @@ export default function GenerateDocumentPage() {
         
         const subject = `${generatedDocument.title}`
         const studentName = `${student.first_name || ''} ${student.last_name || ''}`.trim()
-        const message = `Bonjour ${studentName || 'Madame, Monsieur'},\n\nVeuillez trouver ci-joint votre document.\n\nCordialement,\nL'équipe EDUZEN`
+        const espaceApprenantLine = documentType === 'convocation'
+          ? `\n\nRetrouvez toutes les informations de votre formation sur votre espace apprenant : ${APP_URLS.getBaseUrl()}/learner/access/${generatedDocument.studentId}`
+          : ''
+        const message = `Bonjour ${studentName || 'Madame, Monsieur'},\n\nVeuillez trouver ci-joint votre document.${espaceApprenantLine}\n\nCordialement,\nL'équipe EDUZEN`
 
         setEmailForm({
           to: studentEmails.join(', '), // Joindre plusieurs emails avec des virgules
@@ -798,7 +802,10 @@ export default function GenerateDocumentPage() {
         // Fallback si l'étudiant n'est pas trouvé
         const studentEmail = generatedDocument.student?.email || ''
         const subject = `${generatedDocument.title}`
-        const message = `Bonjour ${generatedDocument.student?.first_name || ''} ${generatedDocument.student?.last_name || ''},\n\nVeuillez trouver ci-joint votre document.\n\nCordialement,\nL'équipe EDUZEN`
+        const espaceApprenantLine = documentType === 'convocation' && generatedDocument.studentId
+          ? `\n\nRetrouvez toutes les informations de votre formation sur votre espace apprenant : ${APP_URLS.getBaseUrl()}/learner/access/${generatedDocument.studentId}`
+          : ''
+        const message = `Bonjour ${generatedDocument.student?.first_name || ''} ${generatedDocument.student?.last_name || ''},\n\nVeuillez trouver ci-joint votre document.${espaceApprenantLine}\n\nCordialement,\nL'équipe EDUZEN`
 
         setEmailForm({
           to: studentEmail,
