@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
             .from('enrollments')
             .select('student_id, students(id, first_name, last_name, email)')
             .eq('session_id', session.id)
-            .in('status', ['confirmed', 'active'])
+            .in('status', ['confirmed', 'pending'])
 
           const students = (
             enrollments as Array<{

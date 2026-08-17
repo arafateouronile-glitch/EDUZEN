@@ -110,7 +110,7 @@ export async function POST(
       .from('enrollments')
       .select('student_id, students(id, first_name, last_name, email)')
       .eq('session_id', sessionId)
-      .in('status', ['confirmed', 'active'])
+      .in('status', ['confirmed', 'pending'])
 
     type StudentRow = { id: string; first_name: string; last_name: string; email: string }
     const students = (

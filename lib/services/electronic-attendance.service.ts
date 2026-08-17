@@ -93,7 +93,7 @@ export class ElectronicAttendanceService {
         .from('enrollments')
         .select('student_id, students(id, first_name, last_name, email)')
         .eq('session_id', params.sessionId)
-        .in('status', ['confirmed', 'active'])
+        .in('status', ['confirmed', 'pending'])
 
       if (enrollmentsError) throw enrollmentsError
 
@@ -205,7 +205,7 @@ export class ElectronicAttendanceService {
         .from('enrollments')
         .select('student_id, students(id, first_name, last_name, email)')
         .eq('session_id', attendanceSession.session_id)
-        .in('status', ['confirmed', 'active'])
+        .in('status', ['confirmed', 'pending'])
 
       if (enrollmentsError) throw enrollmentsError
 
@@ -583,7 +583,7 @@ export class ElectronicAttendanceService {
           .select('student_id, students(id, first_name, last_name, email)')
           .eq('session_id', attendanceSession.session_id)
           .in('student_id', missingIds)
-          .in('status', ['confirmed', 'active'])
+          .in('status', ['confirmed', 'pending'])
 
         const students = ((enrollments ?? []) as Array<{ students?: StudentRef | null }>)
           .map((e) => e.students)
