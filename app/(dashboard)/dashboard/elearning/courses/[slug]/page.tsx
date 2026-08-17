@@ -344,9 +344,9 @@ export default function CourseDetailPage() {
                 </div>
 
                 <div className="divide-y divide-gray-50">
-                  {course.sections && course.sections.length > 0 ? (
+                  {totalLessons > 0 ? (
                     <>
-                      {course.sections.map((section: any, sectionIndex: number) => {
+                      {(course.sections ?? []).map((section: any, sectionIndex: number) => {
                         const sectionLessons = lessonsBySection[section.id] || []
                         const isExpanded = expandedSections.includes(section.id)
                         const completedInSection = enrollment?.completed_lessons?.filter(
