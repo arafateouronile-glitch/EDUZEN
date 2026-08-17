@@ -881,7 +881,7 @@ export default function LearnerCourseDetailPage() {
                 const textContent = block?.data?.content || ''
                 const isHtml = /<[a-z][\s\S]*>/i.test(textContent)
                 return wrapBlock(
-                  <div className="prose prose-sm max-w-none [&_p]:mb-3 [&_ul]:mb-3 [&_ol]:mb-3">
+                  <div className="prose prose-sm max-w-none text-center [&_p]:mb-3 [&_ul]:mb-3 [&_ol]:mb-3">
                     {isHtml
                       ? <div dangerouslySetInnerHTML={{ __html: sanitizeBlogContent(textContent) }} />
                       : <ReactMarkdown>{textContent}</ReactMarkdown>}
