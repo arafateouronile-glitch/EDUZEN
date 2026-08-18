@@ -200,12 +200,14 @@ export function GestionConvocations({
     enabled: !!sessionId,
   })
 
-  // Récupérer les templates d'email pour les convocations
+  // Tous les modèles d'email de l'organisme (pas seulement le type
+  // "session_reminder") : l'utilisateur peut vouloir réutiliser un modèle
+  // "Convocation", "Convention" ou tout autre modèle personnalisé pour cet envoi.
   const { data: emailTemplates } = useQuery<EmailTemplate[]>({
-    queryKey: ['email-templates', 'session_reminder', user?.organization_id],
+    queryKey: ['email-templates', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return emailTemplateService.getByType(user.organization_id, 'session_reminder')
+      return emailTemplateService.getAll(user.organization_id)
     },
     enabled: !!user?.organization_id && showBulkSendDialog,
   })
@@ -1010,11 +1012,14 @@ export function GestionConvocations({
               >
                 <option value="">Sélectionner un modèle d'email</option>
                 <option value="default">Modèle par défaut (système)</option>
-                {emailTemplates?.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}{template.is_default ? ' (Par défaut)' : ''}
-                  </option>
-                ))}
+                {emailTemplates?.map((template) => {
+                  const typeLabel = emailTemplateService.getEmailTypes().find(t => t.value === template.email_type)?.label
+                  return (
+                    <option key={template.id} value={template.id}>
+                      {template.name}{typeLabel ? ` — ${typeLabel}` : ''}{template.is_default ? ' (Par défaut)' : ''}
+                    </option>
+                  )
+                })}
               </select>
               <p className="text-xs text-gray-500">
                 Le modèle sélectionné sera utilisé comme base pour le contenu de l'email.

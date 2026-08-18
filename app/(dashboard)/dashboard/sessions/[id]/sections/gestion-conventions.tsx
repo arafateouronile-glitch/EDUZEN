@@ -271,12 +271,14 @@ export function GestionConventions({
     enabled: !!sessionData?.id,
   })
 
-  // Récupérer les templates d'email pour les contrats/conventions
+  // Tous les modèles d'email de l'organisme (pas seulement le type
+  // "document_generated") : l'utilisateur peut vouloir réutiliser un modèle
+  // "Convention", "Convocation" ou tout autre modèle personnalisé pour cet envoi.
   const { data: emailTemplates } = useQuery<EmailTemplate[]>({
-    queryKey: ['email-templates', 'document_generated', user?.organization_id],
+    queryKey: ['email-templates', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
-      return emailTemplateService.getByType(user.organization_id, 'document_generated')
+      return emailTemplateService.getAll(user.organization_id)
     },
     enabled: !!user?.organization_id && showBulkSendDialog,
   })
@@ -1176,11 +1178,14 @@ export function GestionConventions({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default">Modèle par défaut (système)</SelectItem>
-                  {emailTemplates?.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name} {template.is_default && '(Par défaut)'}
-                    </SelectItem>
-                  ))}
+                  {emailTemplates?.map((template) => {
+                    const typeLabel = emailTemplateService.getEmailTypes().find(t => t.value === template.email_type)?.label
+                    return (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}{typeLabel ? ` — ${typeLabel}` : ''} {template.is_default && '(Par défaut)'}
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-xs text-gray-500">
