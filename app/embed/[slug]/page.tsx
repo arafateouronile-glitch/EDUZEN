@@ -52,7 +52,6 @@ export default async function EmbedCatalogPage({ params, searchParams }: PagePro
     .from('public_catalog_settings')
     .select('*')
     .eq('organization_id', organization.id)
-    .eq('is_enabled', true)
     .maybeSingle()
 
   let programsQuery = supabase

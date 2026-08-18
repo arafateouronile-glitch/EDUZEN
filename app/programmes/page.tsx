@@ -91,7 +91,6 @@ export default async function ProgrammesPage({
         .from('public_catalog_settings')
         .select('*')
         .eq('organization_id', orgId)
-        .eq('is_enabled', true)
         .maybeSingle()
     
       catalogSettings = settings

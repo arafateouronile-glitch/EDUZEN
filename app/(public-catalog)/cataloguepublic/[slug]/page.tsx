@@ -65,12 +65,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 
-  // Récupérer les paramètres du catalogue
+  // Récupérer les paramètres du catalogue — indépendamment de is_enabled
+  // ("Site vitrine actif"), qui ne contrôle pas l'accès à cette page mais
+  // n'est qu'un intitulé dans les réglages : le filtrer ici faisait
+  // silencieusement retomber toute la personnalisation (stats, titres...)
+  // sur les valeurs par défaut codées en dur dès que ce booléen était à false.
   const { data: settings } = await supabase
     .from('public_catalog_settings')
     .select('meta_title, meta_description, meta_image_url, site_title')
     .eq('organization_id', organization.id)
-    .eq('is_enabled', true)
     .maybeSingle()
 
   return {
@@ -128,12 +131,12 @@ export default async function PublicCatalogPage({ params, searchParams }: PagePr
     notFound()
   }
 
-  // Récupérer les paramètres du catalogue public
+  // Récupérer les paramètres du catalogue public — indépendamment de
+  // is_enabled, cf. commentaire équivalent dans generateMetadata ci-dessus.
   const { data: catalogSettings } = await supabase
     .from('public_catalog_settings')
     .select('*')
     .eq('organization_id', organization.id)
-    .eq('is_enabled', true)
     .maybeSingle()
 
   // Récupérer les programmes publics de cette organisation

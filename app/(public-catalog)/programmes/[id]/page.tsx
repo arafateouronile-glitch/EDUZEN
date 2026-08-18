@@ -93,7 +93,6 @@ export default async function ProgramDetailPage({ params }: PageProps) {
     .from('public_catalog_settings')
     .select('*')
     .eq('organization_id', organization.id)
-    .eq('is_enabled', true)
     .maybeSingle()
 
   // Filtrer les formations et sessions actives
