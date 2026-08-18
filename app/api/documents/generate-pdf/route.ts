@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
         page = await createPage()
         logger.debug('[PDF API] Page Puppeteer obtenue', { duration: `${Date.now() - puppeteerStart}ms` })
 
-        await page.setContent(html, { waitUntil: 'domcontentloaded' })
+        await page.setContent(html, { waitUntil: 'load', timeout: 30000 })
 
         const pdf = await page.pdf({
           format: 'A4',
@@ -169,6 +169,12 @@ export async function POST(request: NextRequest) {
             bottom: `${margins.bottom}mm`,
             left: `${margins.left}mm`,
           },
+          // Sans ça, Puppeteer ignore les sauts de page définis en CSS par le
+          // document (structure page par page de l'éditeur) et peut fusionner
+          // ou mal répartir le contenu sur les pages — cf. le même réglage
+          // dans lib/utils/document-generation/pdf-generator.tsx (pipeline
+          // utilisé par la prévisualisation existante, qui pagine correctement).
+          preferCSSPageSize: true,
         })
 
         await page.close()
