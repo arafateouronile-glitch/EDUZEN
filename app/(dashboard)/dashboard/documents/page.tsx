@@ -1043,20 +1043,31 @@ export default function DocumentsPage() {
 
       {/* Modal de prévisualisation */}
       <AnimatePresence>
-        {previewDocument && (
+        {previewDocument && (() => {
+          // Une fois signé, le PDF scellé est stocké à part dans
+          // signed_file_url — file_url reste l'original non signé.
+          const previewFileUrl = (previewDocument as { signed_file_url?: string | null }).signed_file_url || previewDocument.file_url
+          return (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="w-full max-w-5xl h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
             >
               <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <h3 className="font-bold text-gray-900">{previewDocument.title}</h3>
+                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                  {previewDocument.title}
+                  {previewDocument.status === 'signed' && (
+                    <span className="text-xs font-normal text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+                      Version signée
+                    </span>
+                  )}
+                </h3>
                 <div className="flex items-center space-x-2">
-                  {previewDocument.file_url && (
+                  {previewFileUrl && (
                     <a
-                      href={previewDocument.file_url}
+                      href={previewFileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       download
@@ -1077,19 +1088,19 @@ export default function DocumentsPage() {
                 </div>
               </div>
               <div className="flex-1 bg-gray-100 p-4 overflow-auto flex items-center justify-center">
-                {previewDocument.file_url && (
+                {previewFileUrl && (
                   <div className="w-full h-full flex items-center justify-center">
-                    {previewDocument.file_url.toLowerCase().endsWith('.pdf') ? (
+                    {previewFileUrl.toLowerCase().endsWith('.pdf') ? (
                       <iframe
-                        src={toProxiedFileUrl(previewDocument.file_url)}
+                        src={toProxiedFileUrl(previewFileUrl)}
                         className="w-full h-full rounded-lg shadow-lg bg-white"
                         title="Prévisualisation PDF"
                       />
                     ) : ['jpg', 'jpeg', 'png', 'gif', 'webp'].some(ext =>
-                        previewDocument.file_url?.toLowerCase().endsWith(`.${ext}`)
+                        previewFileUrl?.toLowerCase().endsWith(`.${ext}`)
                       ) ? (
                       <img
-                        src={previewDocument.file_url}
+                        src={previewFileUrl}
                         alt={previewDocument.title}
                         className="max-w-full max-h-full rounded-lg shadow-lg object-contain"
                       />
@@ -1103,7 +1114,7 @@ export default function DocumentsPage() {
                           Ce type de fichier ne peut pas être prévisualisé directement.
                         </p>
                         <a
-                          href={previewDocument.file_url}
+                          href={previewFileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           download
@@ -1120,7 +1131,8 @@ export default function DocumentsPage() {
               </div>
             </motion.div>
           </div>
-        )}
+          )
+        })()}
       </AnimatePresence>
     </motion.div>
   )

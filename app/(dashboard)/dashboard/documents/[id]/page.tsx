@@ -70,6 +70,12 @@ export default function DocumentDetailPage() {
   // Note: getSignaturesByDocument retourne déjà uniquement les signatures avec status === 'signed'
   const hasUserSigned = signatures?.some((sig) => sig.signer?.id === user?.id)
 
+  // Une fois signé, le PDF scellé (avec la signature apposée) est stocké à
+  // part dans signed_file_url — file_url reste l'original non signé. Sans
+  // ça, l'aperçu et le téléchargement montrent un document sans signature
+  // malgré un statut "signed".
+  const displayFileUrl = (document as { signed_file_url?: string | null }).signed_file_url || document.file_url
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
       {/* Header */}
@@ -108,7 +114,7 @@ export default function DocumentDetailPage() {
                   }
                 />
                 <a
-                  href={document.file_url}
+                  href={displayFileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   download
@@ -134,15 +140,22 @@ export default function DocumentDetailPage() {
         {/* Colonne principale - Document et signatures */}
         <div className="lg:col-span-2 space-y-6">
           {/* Aperçu du document */}
-          {document.file_url && (
+          {displayFileUrl && (
             <Card>
               <CardHeader>
-                <CardTitle>Aperçu du document</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Aperçu du document
+                  {document.status === 'signed' && (
+                    <span className="text-xs font-normal text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+                      Version signée
+                    </span>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="border rounded-lg overflow-hidden">
                   <iframe
-                    src={toProxiedFileUrl(document.file_url)}
+                    src={toProxiedFileUrl(displayFileUrl)}
                     className="w-full h-[600px]"
                     title="Aperçu du document"
                   />
