@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { motion } from '@/components/ui/motion'
 import { Loader2, CheckCircle, XCircle, User, BookOpen, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,8 +13,18 @@ import { secureSessionStorage, TTL } from '@/lib/utils/secure-storage'
 export default function LearnerAccessPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const studentId = params.id as string
-  
+
+  // Cible optionnelle après l'établissement de la session (ex: lien d'email
+  // "évaluation à froid" qui doit amener directement sur /learner/evaluations
+  // plutôt que sur le tableau de bord générique). Restreint à un chemin
+  // relatif sous /learner/ pour éviter tout open-redirect.
+  const redirectParam = searchParams.get('redirect')
+  const redirectTarget = redirectParam && /^\/learner\/[a-zA-Z0-9/_-]*$/.test(redirectParam)
+    ? redirectParam
+    : '/learner'
+
   const [status, setStatus] = useState<'validating' | 'valid' | 'invalid' | 'redirecting'>('validating')
   const [error, setError] = useState<string>('')
   
@@ -82,13 +92,13 @@ export default function LearnerAccessPage() {
         }
 
         setStatus('redirecting')
-        router.replace('/learner')
+        router.replace(redirectTarget)
 
         // Fallback si le router est ralenti/bloqué
         const fallback = setTimeout(() => {
           try {
             if (typeof window !== 'undefined' && window.location.pathname.startsWith('/learner/access')) {
-              window.location.replace('/learner')
+              window.location.replace(redirectTarget)
             }
           } catch (_e) {}
         }, 1000)
@@ -107,7 +117,7 @@ export default function LearnerAccessPage() {
     if (studentId) {
       validateAndRedirect()
     }
-  }, [studentId, router])
+  }, [studentId, router, redirectTarget])
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
@@ -205,7 +215,7 @@ export default function LearnerAccessPage() {
                   try {
                     if (typeof window !== 'undefined') {
                       secureSessionStorage.set('learner_student_id', studentId, { ttl: TTL.DAY })
-                      window.location.replace('/learner')
+                      window.location.replace(redirectTarget)
                     }
                   } catch (_e) {}
                 }}

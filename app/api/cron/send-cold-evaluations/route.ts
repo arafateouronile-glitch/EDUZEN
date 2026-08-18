@@ -15,6 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmailViaResend } from '@/lib/utils/send-email-resend'
 import { withCronSecurity } from '@/lib/utils/cron-security'
 import { logger } from '@/lib/utils/logger'
+import { APP_URLS } from '@/lib/config/app-config'
 
 const CRON_SECRET = process.env.CRON_SECRET
 const ALLOWED_IPS = process.env.CRON_ALLOWED_IPS?.split(',').map((ip) => ip.trim()) ?? []
@@ -139,9 +140,12 @@ export async function GET(request: NextRequest) {
                   .maybeSingle()
               }
 
-              // Envoyer l'email à l'apprenant
-              const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.eduzen.fr'
-              const evalLink = `${baseUrl}/learner/evaluations`
+              // Envoyer l'email à l'apprenant — passe par /learner/access/[id] pour
+              // établir la session apprenant (cookie + secureSessionStorage) avant
+              // de renvoyer sur /learner/evaluations. Un lien direct vers
+              // /learner/evaluations sans session laisse l'apprenant bloqué sur un
+              // spinner indéfini (aucune redirection réelle n'est déclenchée).
+              const evalLink = `${APP_URLS.getBaseUrl()}/learner/access/${enrollment.student_id}?redirect=/learner/evaluations`
 
               await sendEmailViaResend({
                 to: student.email,
