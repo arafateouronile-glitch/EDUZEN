@@ -25,6 +25,7 @@ import type { Database } from '@/types/database.types'
 import { SkeletonList } from '@/components/ui/skeleton'
 import { Pagination } from '@/components/ui/pagination'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { toProxiedFileUrl } from '@/lib/utils/elearning-file-proxy'
 
 type Document = TableRow<'documents'>
 type DocForAction = DocumentWithRelations | (TableRow<'documents'> & { students?: StudentWithRelations | null })
@@ -1080,7 +1081,7 @@ export default function DocumentsPage() {
                   <div className="w-full h-full flex items-center justify-center">
                     {previewDocument.file_url.toLowerCase().endsWith('.pdf') ? (
                       <iframe
-                        src={previewDocument.file_url}
+                        src={toProxiedFileUrl(previewDocument.file_url)}
                         className="w-full h-full rounded-lg shadow-lg bg-white"
                         title="Prévisualisation PDF"
                       />

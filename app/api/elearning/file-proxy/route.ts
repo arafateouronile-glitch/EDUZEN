@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 
-// Relaie un fichier des buckets Storage e-learning (publics) depuis notre
-// propre domaine, pour que les <iframe> d'aperçu restent same-origin et ne
-// soient pas bloquées par les protections anti-pistage des navigateurs.
-const ALLOWED_BUCKETS = ['elearning-media', 'course-media', 'course-thumbnails']
+// Relaie un fichier des buckets Storage publics depuis notre propre domaine,
+// pour que les <iframe> d'aperçu restent same-origin et ne soient pas
+// bloquées par les protections anti-pistage des navigateurs (Brave Shields,
+// Safari ITP...). Malgré le nom "elearning" (route historique), sert aussi
+// le bucket "documents" (aperçu dans /dashboard/documents/[id]) — déjà
+// public via getPublicUrl ailleurs dans l'app, ce relais ne change donc pas
+// le niveau d'exposition, seulement le transport (same-origin).
+const ALLOWED_BUCKETS = ['elearning-media', 'course-media', 'course-thumbnails', 'documents']
 
 function extractBucketAndPath(fileUrl: string, supabaseUrl: string): { bucket: string; path: string } | null {
   const prefix = `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/`

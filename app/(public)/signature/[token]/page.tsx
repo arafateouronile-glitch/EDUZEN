@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, FileText, Calendar, User, CheckCircle, XCircle } from 'lucide-react'
+import { toProxiedFileUrl } from '@/lib/utils/elearning-file-proxy'
 
 interface SignatureRequest {
   id: string
@@ -243,7 +244,7 @@ export default function SignaturePage() {
                 <h3 className="font-medium mb-2">Aperçu du document</h3>
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <iframe
-                    src={request.document.file_url}
+                    src={toProxiedFileUrl(request.document.file_url)}
                     className="w-full h-96"
                     title="Aperçu du document"
                   />

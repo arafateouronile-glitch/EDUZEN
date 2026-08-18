@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 import { SendSignatureRequestDialog } from '@/components/signatures'
 import { useState } from 'react'
+import { toProxiedFileUrl } from '@/lib/utils/elearning-file-proxy'
 
 export default function DocumentDetailPage() {
   const params = useParams()
@@ -141,7 +142,7 @@ export default function DocumentDetailPage() {
               <CardContent>
                 <div className="border rounded-lg overflow-hidden">
                   <iframe
-                    src={document.file_url}
+                    src={toProxiedFileUrl(document.file_url)}
                     className="w-full h-[600px]"
                     title="Aperçu du document"
                   />
