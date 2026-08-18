@@ -17,14 +17,23 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import type { SignZone } from '@/lib/types/sign-zones'
+import { DEFAULT_ZONE_IDS } from '@/lib/types/sign-zones'
 // react-rnd styles are included in the component
 
 const PDF_WORKER = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
 const SCALE = 1.5
 const DEFAULT_ZONE_W = 0.15
 const DEFAULT_ZONE_H = 0.05
+
+type ZoneTarget = typeof DEFAULT_ZONE_IDS.sig_stagiaire | typeof DEFAULT_ZONE_IDS.sig_of
+
+const ZONE_TARGET_LABELS: Record<ZoneTarget, string> = {
+  [DEFAULT_ZONE_IDS.sig_stagiaire]: 'Signature client / apprenant',
+  [DEFAULT_ZONE_IDS.sig_of]: 'Signature organisme de formation',
+}
 
 export interface SignZonePickerProps {
   /** PDF en tant que File ou URL (object URL). Si non fourni, upload interne. */
@@ -35,13 +44,7 @@ export interface SignZonePickerProps {
   onChange?: (zones: SignZone[]) => void
   /** Callback quand un PDF est choisi (mode uncontrolled) */
   onFileSelect?: (file: File) => void
-  /** Id de la zone « Signature Stagiaire » pour libellé par défaut */
-  defaultZoneId?: string
   className?: string
-}
-
-function generateZoneId(): string {
-  return `zone_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 }
 
 export function SignZonePicker({
@@ -49,9 +52,9 @@ export function SignZonePicker({
   zones: controlledZones,
   onChange,
   onFileSelect,
-  defaultZoneId = 'sig_stagiaire',
   className,
 }: SignZonePickerProps) {
+  const { addToast } = useToast()
   const [internalFile, setInternalFile] = useState<File | null>(null)
   const file = fileProp ?? internalFile
 
@@ -64,7 +67,7 @@ export function SignZonePicker({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [addMode, setAddMode] = useState(false)
+  const [addTarget, setAddTarget] = useState<ZoneTarget | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -179,7 +182,7 @@ export function SignZonePicker({
 
   const handlePageClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
-      if (!addMode || !pdfDoc) return
+      if (!addTarget || !pdfDoc) return
       if ((e.target as HTMLElement).closest('[data-rnd]')) return
       const pageNum = pageIndex + 1
       const el = e.currentTarget
@@ -193,13 +196,8 @@ export function SignZonePicker({
       const x = Math.max(0, Math.min(1 - DEFAULT_ZONE_W, cx / pw - DEFAULT_ZONE_W / 2))
       const y = Math.max(0, Math.min(1 - DEFAULT_ZONE_H, cy / ph - DEFAULT_ZONE_H / 2))
 
-      const id = zones.some((z) => z.id === defaultZoneId) ? generateZoneId() : defaultZoneId
-      const label =
-        id === defaultZoneId
-          ? 'Signature Stagiaire'
-          : zones.some((z) => z.id === defaultZoneId)
-            ? 'Signature OF'
-            : 'Nouvelle zone'
+      const id = addTarget
+      const zoneAlreadyExists = zones.some((z) => z.id === id)
       const zone: SignZone = {
         id,
         page: pageNum,
@@ -207,13 +205,16 @@ export function SignZonePicker({
         y,
         w: DEFAULT_ZONE_W,
         h: DEFAULT_ZONE_H,
-        label,
+        label: ZONE_TARGET_LABELS[addTarget],
       }
-      emit(zones.some((z) => z.id === id) ? zones.map((z) => (z.id === id ? zone : z)) : [...zones, zone])
-      setAddMode(false)
+      emit(zoneAlreadyExists ? zones.map((z) => (z.id === id ? zone : z)) : [...zones, zone])
+      if (zoneAlreadyExists) {
+        addToast({ title: 'Zone déplacée', description: `${ZONE_TARGET_LABELS[addTarget]} repositionnée.`, type: 'info' })
+      }
+      setAddTarget(null)
       setSelectedId(id)
     },
-    [addMode, pdfDoc, zones, defaultZoneId, emit]
+    [addTarget, pdfDoc, zones, emit, addToast]
   )
 
   const removeZone = useCallback(
@@ -302,19 +303,30 @@ export function SignZonePicker({
         )}
         {pdfDoc && (
           <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setAddMode(!addMode)}
-              className={cn(
-                'border-white/20 bg-white/5 text-white hover:bg-white/10',
-                addMode && 'ring-2 ring-[#34B9EE]'
-              )}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {addMode ? 'Cliquez sur la page pour placer' : 'Ajouter une zone'}
-            </Button>
+            {(Object.keys(ZONE_TARGET_LABELS) as ZoneTarget[]).map((target) => {
+              const isActive = addTarget === target
+              const alreadyPlaced = zones.some((z) => z.id === target)
+              return (
+                <Button
+                  key={target}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAddTarget(isActive ? null : target)}
+                  className={cn(
+                    'border-white/20 bg-white/5 text-white hover:bg-white/10',
+                    isActive && 'ring-2 ring-[#34B9EE]'
+                  )}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {isActive
+                    ? 'Cliquez sur la page pour placer'
+                    : alreadyPlaced
+                      ? `Déplacer : ${ZONE_TARGET_LABELS[target]}`
+                      : `Insérer zone ${ZONE_TARGET_LABELS[target].toLowerCase()}`}
+                </Button>
+              )
+            })}
             <div className="flex items-center gap-1 rounded-lg border border-white/20 bg-white/5 px-2 py-1">
               <Button
                 type="button"
@@ -400,7 +412,7 @@ export function SignZonePicker({
                 role="presentation"
                 className={cn(
                   'absolute inset-0',
-                  addMode && 'cursor-crosshair'
+                  addTarget && 'cursor-crosshair'
                 )}
                 style={{ width: pdfDoc.pageWidths[currentPage - 1], height: pdfDoc.pageHeights[currentPage - 1] }}
                 onClick={(e) => handlePageClick(e, currentPage - 1)}

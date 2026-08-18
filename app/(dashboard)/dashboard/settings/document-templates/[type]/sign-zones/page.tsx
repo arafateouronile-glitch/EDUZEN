@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/hooks/use-auth'
@@ -9,13 +9,14 @@ import type { DocumentType, DocumentTemplate, SignZoneTemplate } from '@/lib/typ
 import type { SignZone } from '@/lib/types/sign-zones'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Save, Loader2, MousePointer2 } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, MousePointer2, RefreshCw, FileWarning } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/toast'
 import { getDocumentTypeConfig } from '../edit/utils/document-type-config'
 import { cn } from '@/lib/utils'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 import { BRAND_COLORS } from '@/lib/config/app-config'
+import { getSampleDocumentVariables } from '@/lib/utils/document-generation/sample-variables'
 import dynamic from 'next/dynamic'
 
 const SignZonePicker = dynamic(() => import('@/components/sign/SignZonePicker').then(mod => ({ default: mod.SignZonePicker })), {
@@ -75,6 +76,59 @@ export default function SignZonesPage() {
     if (next.length > 0) setZones(next)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- sync zones when template.id or sign_zones change
   }, [template?.id])
+
+  // Aperçu PDF généré automatiquement à partir du contenu actuel du template
+  // (données fictives), pour ne plus exiger d'import manuel avant de placer
+  // les zones de signature.
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null)
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const [useCustomUpload, setUseCustomUpload] = useState(false)
+  const previewUrlRef = useRef<string | null>(null)
+
+  const generatePreviewPdf = useCallback(async () => {
+    if (!template || !user?.organization_id) return
+    setIsGeneratingPreview(true)
+    setPreviewError(null)
+    try {
+      const response = await fetch('/api/documents/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template,
+          variables: getSampleDocumentVariables(),
+          organizationId: user.organization_id,
+        }),
+      })
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Erreur ${response.status}`)
+      }
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = url
+      setPreviewPdfUrl(url)
+    } catch (e) {
+      logger.error('SignZones preview generation:', e)
+      setPreviewError(e instanceof Error ? e.message : 'Impossible de générer l\'aperçu du document.')
+    } finally {
+      setIsGeneratingPreview(false)
+    }
+  }, [template, user?.organization_id])
+
+  useEffect(() => {
+    if (template && !useCustomUpload) {
+      generatePreviewPdf()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ne régénérer qu'au changement de template ou de mode, pas à chaque re-render de generatePreviewPdf
+  }, [template?.id, useCustomUpload])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    }
+  }, [])
 
   const saveMutation = useMutation({
     mutationFn: async (payload: SignZone[]) => {
@@ -165,20 +219,62 @@ export default function SignZonesPage() {
       {!isLoading && template && (
         <Card className="overflow-hidden">
           <CardHeader className="border-b bg-muted/30">
-            <CardTitle className="text-base">
-              Template : {template.name}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Uploadez un PDF type (même mise en page que vos conventions), placez les zones, puis enregistrez. La signature sera tamponnée exactement là lors du scellement.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-base">
+                  Template : {template.name}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  L'aperçu ci-dessous est généré automatiquement à partir du contenu actuel du template. Insérez la zone de signature client et la zone signature organisme de formation, puis enregistrez : la signature sera tamponnée exactement là lors du scellement.
+                </p>
+              </div>
+              {!useCustomUpload && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={generatePreviewPdf}
+                  disabled={isGeneratingPreview}
+                  className="shrink-0"
+                >
+                  {isGeneratingPreview ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Régénérer l'aperçu
+                </Button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setUseCustomUpload((v) => !v)}
+              className="mt-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground w-fit"
+            >
+              {useCustomUpload ? 'Revenir à l\'aperçu automatique' : 'Utiliser un PDF importé à la place'}
+            </button>
           </CardHeader>
           <CardContent className="p-6">
-            <SignZonePicker
-              zones={zones.length ? zones : initialZones}
-              onChange={handleZonesChange}
-              defaultZoneId="sig_stagiaire"
-              className="min-h-[420px]"
-            />
+            {previewError && !useCustomUpload && (
+              <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+                <FileWarning className="h-5 w-5 shrink-0 text-amber-600" />
+                <span className="text-sm text-amber-800">{previewError}</span>
+              </div>
+            )}
+            {isGeneratingPreview && !previewPdfUrl && !useCustomUpload ? (
+              <div className="flex items-center justify-center gap-2 py-16">
+                <Loader2 className="h-6 w-6 animate-spin" style={{ color: BRAND_COLORS.secondary }} />
+                <span className="text-sm text-muted-foreground">Génération de l'aperçu…</span>
+              </div>
+            ) : (
+              <SignZonePicker
+                key={useCustomUpload ? 'upload' : 'auto'}
+                file={useCustomUpload ? undefined : previewPdfUrl}
+                zones={zones.length ? zones : initialZones}
+                onChange={handleZonesChange}
+                className="min-h-[420px]"
+              />
+            )}
           </CardContent>
         </Card>
       )}
