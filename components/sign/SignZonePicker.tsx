@@ -75,6 +75,7 @@ export function SignZonePicker({
   const containerRefs = useRef<Record<number, HTMLDivElement>>({})
   const pdfLibRef = useRef<typeof import('pdfjs-dist') | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const renderTaskRef = useRef<{ cancel: () => void } | null>(null)
 
   const emit = useCallback(
     (next: SignZone[]) => {
@@ -149,24 +150,43 @@ export function SignZonePicker({
     const pdfjs = pdfLibRef.current
     const src = typeof file === 'string' ? file : URL.createObjectURL(file as File)
     const objectUrl: string | null = typeof file === 'object' ? src : null
+    let cancelled = false
 
     const render = async () => {
       try {
         const doc = await pdfjs.getDocument(src).promise
+        if (cancelled) return
         const canvas = canvasRefs.current[currentPage]
         if (!canvas) return
         const page = await doc.getPage(currentPage)
+        if (cancelled) return
         const vp = page.getViewport({ scale: SCALE })
         const ctx = canvas.getContext('2d')
         if (!ctx) return
         canvas.width = vp.width
         canvas.height = vp.height
-        await page.render({ canvasContext: ctx, viewport: vp }).promise
+        // Annule un rendu précédent encore en cours sur ce même canvas (ex:
+        // double invocation React StrictMode, ou aperçu régénéré avant la
+        // fin du rendu précédent) — sinon pdf.js lève "Cannot use the same
+        // canvas during multiple render() operations" en erreur non gérée.
+        renderTaskRef.current?.cancel()
+        const task = page.render({ canvasContext: ctx, viewport: vp })
+        renderTaskRef.current = task
+        await task.promise
+      } catch (e) {
+        const name = (e as { name?: string } | null)?.name
+        if (name !== 'RenderingCancelledException' && !cancelled) {
+          setError(e instanceof Error ? e.message : 'Erreur affichage PDF')
+        }
       } finally {
         if (objectUrl) URL.revokeObjectURL(objectUrl)
       }
     }
     render()
+    return () => {
+      cancelled = true
+      renderTaskRef.current?.cancel()
+    }
   }, [pdfDoc, file, currentPage])
 
   const handleFileChange = useCallback(

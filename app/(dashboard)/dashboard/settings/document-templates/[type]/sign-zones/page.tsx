@@ -85,9 +85,20 @@ export default function SignZonesPage() {
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [useCustomUpload, setUseCustomUpload] = useState(false)
   const previewUrlRef = useRef<string | null>(null)
+  // Annule/ignore les générations concourantes (ex: double invocation React
+  // StrictMode en dev) : sans ça, deux appels se chevauchent, chacun coûteux
+  // (~9s de rendu Puppeteer), et le SignZonePicker peut recevoir deux URLs
+  // d'aperçu en succession rapide (cause du "Cannot use the same canvas
+  // during multiple render() operations" observé côté navigateur).
+  const generationIdRef = useRef(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const generatePreviewPdf = useCallback(async () => {
     if (!template || !user?.organization_id) return
+    abortControllerRef.current?.abort()
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+    const requestId = ++generationIdRef.current
     setIsGeneratingPreview(true)
     setPreviewError(null)
     try {
@@ -99,21 +110,26 @@ export default function SignZonesPage() {
           variables: getSampleDocumentVariables(),
           organizationId: user.organization_id,
         }),
+        signal: controller.signal,
       })
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || `Erreur ${response.status}`)
       }
       const blob = await response.blob()
+      if (requestId !== generationIdRef.current) return // une génération plus récente a pris le relais
       const url = URL.createObjectURL(blob)
       if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
       previewUrlRef.current = url
       setPreviewPdfUrl(url)
     } catch (e) {
-      logger.error('SignZones preview generation:', e)
-      setPreviewError(e instanceof Error ? e.message : 'Impossible de générer l\'aperçu du document.')
+      if (e instanceof Error && e.name === 'AbortError') return
+      if (requestId === generationIdRef.current) {
+        logger.error('SignZones preview generation:', e)
+        setPreviewError(e instanceof Error ? e.message : 'Impossible de générer l\'aperçu du document.')
+      }
     } finally {
-      setIsGeneratingPreview(false)
+      if (requestId === generationIdRef.current) setIsGeneratingPreview(false)
     }
   }, [template, user?.organization_id])
 
