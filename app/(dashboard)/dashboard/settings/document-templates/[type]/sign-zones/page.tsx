@@ -57,8 +57,15 @@ export default function SignZonesPage() {
     queryFn: async () => {
       if (!user?.organization_id) return null
       if (templateIdParam) {
-        const t = await documentTemplateService.getTemplateById(templateIdParam)
-        if (t && t.type === documentType) return t as DocumentTemplate & { sign_zones?: SignZoneTemplate[] }
+        try {
+          const t = await documentTemplateService.getTemplateById(templateIdParam)
+          if (t && t.type === documentType) return t as DocumentTemplate & { sign_zones?: SignZoneTemplate[] }
+        } catch (error) {
+          // Template inaccessible (RLS : appartient à un autre organisme, ou
+          // supprimé) — se replier sur le template par défaut de l'organisme
+          // courant plutôt que de planter la page, comme le fait /edit.
+          logger.error('SignZones: template spécifique inaccessible:', error)
+        }
       }
       const def = await documentTemplateService.getDefaultTemplate(user.organization_id, documentType)
       if (def) return def as DocumentTemplate & { sign_zones?: SignZoneTemplate[] }
