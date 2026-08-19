@@ -166,7 +166,10 @@ async function getRelatedPosts(postId: string, categoryId: string | null, limit:
   return (data || []) as Partial<BlogPost>[]
 }
 
-export const revalidate = 3600
+// force-dynamic (pas revalidate/ISR) : createClient() appelle cookies() en
+// interne, une API dynamique incompatible avec le rendu statique — sans ça,
+// Next.js plante en 500 sur toutes les pages d'articles en production.
+export const dynamic = 'force-dynamic'
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
