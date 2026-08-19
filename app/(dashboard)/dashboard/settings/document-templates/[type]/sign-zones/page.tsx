@@ -84,12 +84,16 @@ export default function SignZonesPage() {
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [useCustomUpload, setUseCustomUpload] = useState(false)
-  const previewUrlRef = useRef<string | null>(null)
+  // Toutes les URLs blob créées pendant la session d'édition, révoquées
+  // uniquement au démontage (voir plus bas). Les révoquer dès qu'une nouvelle
+  // génération arrive cassait le chargement en cours dans SignZonePicker :
+  // pdf.js lit le blob de façon asynchrone/streamée, et une révocation
+  // pendant cette lecture tronque le PDF — symptôme observé : un document de
+  // 6 pages qui n'affiche plus qu'une seule page dans l'aperçu.
+  const previewUrlsRef = useRef<string[]>([])
   // Annule/ignore les générations concourantes (ex: double invocation React
   // StrictMode en dev) : sans ça, deux appels se chevauchent, chacun coûteux
-  // (~9s de rendu Puppeteer), et le SignZonePicker peut recevoir deux URLs
-  // d'aperçu en succession rapide (cause du "Cannot use the same canvas
-  // during multiple render() operations" observé côté navigateur).
+  // (~9s de rendu Puppeteer).
   const generationIdRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -119,8 +123,7 @@ export default function SignZonesPage() {
       const blob = await response.blob()
       if (requestId !== generationIdRef.current) return // une génération plus récente a pris le relais
       const url = URL.createObjectURL(blob)
-      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
-      previewUrlRef.current = url
+      previewUrlsRef.current.push(url)
       setPreviewPdfUrl(url)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
@@ -135,14 +138,19 @@ export default function SignZonesPage() {
 
   useEffect(() => {
     if (template && !useCustomUpload) {
-      generatePreviewPdf()
+      // .catch() de sécurité : generatePreviewPdf gère déjà ses erreurs en
+      // interne (y compris AbortError), mais un appel non-awaité dans un
+      // effet peut sinon remonter comme rejet non géré (ex: double montage
+      // React StrictMode en dev qui annule un appel encore en vol).
+      generatePreviewPdf().catch(() => {})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- ne régénérer qu'au changement de template ou de mode, pas à chaque re-render de generatePreviewPdf
   }, [template?.id, useCustomUpload])
 
   useEffect(() => {
     return () => {
-      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      previewUrlsRef.current = []
     }
   }, [])
 
@@ -249,7 +257,7 @@ export default function SignZonesPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={generatePreviewPdf}
+                  onClick={() => generatePreviewPdf().catch(() => {})}
                   disabled={isGeneratingPreview}
                   className="shrink-0"
                 >
