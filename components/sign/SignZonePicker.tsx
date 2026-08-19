@@ -298,7 +298,7 @@ export function SignZonePicker({
   const showUpload = !fileProp
 
   return (
-    <div className={cn('flex flex-col gap-4', className)}>
+    <div className={cn('flex flex-col gap-4 rounded-xl bg-[#0f2847] p-4', className)}>
       <div className="flex flex-wrap items-center gap-3">
         {showUpload && (
           <>
