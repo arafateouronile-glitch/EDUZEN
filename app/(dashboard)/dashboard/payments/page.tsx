@@ -41,6 +41,8 @@ function PaymentsPageContent() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateRangeFilter, setDateRangeFilter] = useState<string>('all')
+  const [customDateStart, setCustomDateStart] = useState('')
+  const [customDateEnd, setCustomDateEnd] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [documentTypeFilter, setDocumentTypeFilter] = useState<'all' | 'quote' | 'invoice'>('all')
   const [activeTab, setActiveTab] = useState<'all' | 'quotes' | 'invoices'>('all')
@@ -294,6 +296,11 @@ function PaymentsPageContent() {
       case 'quarter':
         return date.getFullYear() === now.getFullYear() && Math.floor(date.getMonth() / 3) === Math.floor(now.getMonth() / 3)
       case 'year': return date.getFullYear() === now.getFullYear()
+      case 'custom': {
+        if (customDateStart && issueDate < customDateStart) return false
+        if (customDateEnd && issueDate > customDateEnd) return false
+        return true
+      }
       default: return true
     }
   }
@@ -336,11 +343,12 @@ function PaymentsPageContent() {
     error: paymentStatsError,
     refetch: refetchPaymentStats,
   } = useQuery({
-    queryKey: ['payment-stats', user?.organization_id, dateRangeFilter],
+    queryKey: ['payment-stats', user?.organization_id, dateRangeFilter, customDateStart, customDateEnd],
     queryFn: async () => {
       if (!user?.organization_id) return null
 
       let startDate: Date | null = null
+      let endDate: Date | null = null
       const now = new Date()
 
       switch (dateRangeFilter) {
@@ -360,12 +368,16 @@ function PaymentsPageContent() {
         case 'year':
           startDate = new Date(now.getFullYear(), 0, 1)
           break
+        case 'custom':
+          startDate = customDateStart ? new Date(customDateStart) : new Date(now.getFullYear(), now.getMonth() - 23, 1)
+          endDate = customDateEnd ? new Date(customDateEnd) : null
+          break
         default:
           // "Toutes les périodes" : limiter à 24 mois pour alléger la requête
           startDate = new Date(now.getFullYear(), now.getMonth() - 23, 1)
       }
 
-      const query = supabase
+      let query = supabase
         .from('payments')
         .select('amount, currency, payment_method, paid_at')
         .eq('organization_id', user.organization_id)
@@ -373,6 +385,8 @@ function PaymentsPageContent() {
         .gte('paid_at', startDate.toISOString())
         .order('paid_at', { ascending: false })
         .limit(5000)
+
+      if (endDate) query = query.lte('paid_at', endDate.toISOString())
 
       const { data: payments, error } = await query
 
@@ -837,6 +851,7 @@ function PaymentsPageContent() {
                       <option value="month">📅 Ce mois</option>
                       <option value="quarter">📊 Ce trimestre</option>
                       <option value="year">📆 Cette année</option>
+                      <option value="custom">🗂 Période personnalisée</option>
                     </select>
                   </motion.div>
 
@@ -860,6 +875,41 @@ function PaymentsPageContent() {
                       <option value="invoice">🧾 Factures</option>
                     </select>
                   </motion.div>
+
+                  {dateRangeFilter === 'custom' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-5"
+                    >
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-widest">
+                          <div className="w-1.5 h-1.5 rounded-full bg-brand-cyan" />
+                          Du
+                        </label>
+                        <input
+                          type="date"
+                          value={customDateStart}
+                          onChange={(e) => setCustomDateStart(e.target.value)}
+                          max={customDateEnd || undefined}
+                          className="w-full px-4 py-3 rounded-xl bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 focus:border-brand-cyan/50 focus:ring-4 focus:ring-brand-cyan/10 outline-none text-sm font-medium transition-all shadow-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 uppercase tracking-widest">
+                          <div className="w-1.5 h-1.5 rounded-full bg-brand-cyan" />
+                          Au
+                        </label>
+                        <input
+                          type="date"
+                          value={customDateEnd}
+                          onChange={(e) => setCustomDateEnd(e.target.value)}
+                          min={customDateStart || undefined}
+                          className="w-full px-4 py-3 rounded-xl bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 focus:border-brand-cyan/50 focus:ring-4 focus:ring-brand-cyan/10 outline-none text-sm font-medium transition-all shadow-sm"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             )}
