@@ -38,6 +38,8 @@ interface SendEmailOptions {
   bcc?: string | string[]
   replyTo?: string
   templateType?: string
+  /** Métadonnées libres enregistrées dans email_logs.metadata (ex: { invoice_id }) pour tracer l'envoi jusqu'au document d'origine */
+  metadata?: Record<string, unknown>
 }
 
 export class EmailService {
@@ -110,6 +112,7 @@ export class EmailService {
           bcc: options.bcc,
           replyTo: options.replyTo,
           template_type: options.templateType,
+          metadata: options.metadata,
         }),
       })
 
@@ -141,7 +144,8 @@ export class EmailService {
     filename: string,
     htmlBody?: string,
     textBody?: string,
-    templateType?: string
+    templateType?: string,
+    metadata?: Record<string, unknown>
   ): Promise<{ success: boolean; message: string }> {
     return this.sendEmail({
       to,
@@ -149,6 +153,7 @@ export class EmailService {
       html: htmlBody,
       text: textBody,
       templateType,
+      metadata,
       attachments: [
         {
           filename,

@@ -645,7 +645,16 @@ export default function InvoiceDetailPage() {
         `${escapeHtml(emailPreview.bodyText).replace(/\n/g, '<br/>')}` +
         `</div>`
 
-      await emailService.sendDocument(emailPreview.to, emailPreview.subject, pdfBlob, emailPreview.filename, htmlBody, emailPreview.bodyText)
+      await emailService.sendDocument(
+        emailPreview.to,
+        emailPreview.subject,
+        pdfBlob,
+        emailPreview.filename,
+        htmlBody,
+        emailPreview.bodyText,
+        invoice?.document_type === 'quote' ? 'devis_email' : 'facture_email',
+        invoice ? { invoice_id: invoice.id } : undefined
+      )
 
       addToast({
         type: 'success',

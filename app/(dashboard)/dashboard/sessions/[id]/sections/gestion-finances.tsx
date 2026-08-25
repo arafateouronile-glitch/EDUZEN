@@ -240,6 +240,98 @@ export function GestionFinances({
     staleTime: 60 * 1000, // 1 min (invalidate après création facture/devis)
   })
 
+  // Statut des demandes de signature (devis/factures) — le lien devis ↔
+  // signature n'est pas une FK directe : invoices.id =
+  // documents.metadata->>'invoice_id' = signature_requests.document_id
+  const { data: sessionSignatureRequests } = useQuery({
+    queryKey: ['session-signature-requests', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await (supabase.from('signature_requests') as any)
+        .select('status, signed_at, documents!inner(metadata)')
+        .eq('organization_id', user.organization_id)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as { status: string; signed_at: string | null; documents: { metadata: { invoice_id?: string } | null } }[]
+    },
+    enabled: !!user?.organization_id,
+    staleTime: 60 * 1000,
+  })
+
+  const signatureStatusByInvoiceId = new Map<string, { status: string; signed_at: string | null }>()
+  for (const sig of sessionSignatureRequests || []) {
+    const invId = sig.documents?.metadata?.invoice_id
+    // Le plus récent d'abord (déjà trié par created_at desc) : on garde la première rencontre.
+    if (invId && !signatureStatusByInvoiceId.has(invId)) {
+      signatureStatusByInvoiceId.set(invId, { status: sig.status, signed_at: sig.signed_at })
+    }
+  }
+
+  // Statut d'envoi par email (devis/factures uniquement — cf. template_type
+  // 'devis_email'/'facture_email' posé par handleConfirmSendFromPreview)
+  const { data: sessionEmailLogs } = useQuery({
+    queryKey: ['session-email-logs', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await (supabase.from('email_logs') as any)
+        .select('metadata, created_at')
+        .eq('organization_id', user.organization_id)
+        .in('template_type', ['devis_email', 'facture_email'])
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as { metadata: { invoice_id?: string } | null; created_at: string }[]
+    },
+    enabled: !!user?.organization_id,
+    staleTime: 60 * 1000,
+  })
+
+  const emailSentAtByInvoiceId = new Map<string, string>()
+  for (const log of sessionEmailLogs || []) {
+    const invId = log.metadata?.invoice_id
+    if (invId && !emailSentAtByInvoiceId.has(invId)) {
+      emailSentAtByInvoiceId.set(invId, log.created_at)
+    }
+  }
+
+  // Petits badges de statut affichés sous chaque chip devis/facture
+  const renderDocStatusBadges = (invoice: InvoiceWithRelations) => {
+    const sig = signatureStatusByInvoiceId.get(invoice.id)
+    const emailSentAt = emailSentAtByInvoiceId.get(invoice.id)
+    const validatedAt = (invoice as unknown as { validated_at?: string | null }).validated_at
+    const isSigned = sig?.status === 'signed'
+    if (!sig && !emailSentAt && !validatedAt) return null
+    return (
+      <div className="flex flex-wrap items-center gap-1 mt-1 pl-[18px]">
+        {emailSentAt && (
+          <span
+            title={`Envoyé par email le ${formatDate(emailSentAt)}`}
+            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border bg-brand-blue/10 text-brand-blue border-brand-blue/20"
+          >
+            Email envoyé
+          </span>
+        )}
+        {(isSigned || validatedAt) && (
+          <span
+            title={isSigned && sig?.signed_at ? `Signé le ${formatDate(sig.signed_at)}` : validatedAt ? `Validé le ${formatDate(validatedAt)}` : undefined}
+            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200"
+          >
+            {isSigned ? 'Signé' : 'Validé'}
+          </span>
+        )}
+        {sig && !isSigned && sig.status === 'pending' && !validatedAt && (
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+            Signature demandée
+          </span>
+        )}
+        {sig && (sig.status === 'declined' || sig.status === 'expired') && !validatedAt && (
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border bg-red-50 text-red-700 border-red-200">
+            {sig.status === 'declined' ? 'Signature refusée' : 'Signature expirée'}
+          </span>
+        )}
+      </div>
+    )
+  }
+
   // Récupérer l'organisation
   const { data: organizationData } = useQuery({
     queryKey: ['organization', user?.organization_id],
@@ -749,7 +841,9 @@ export function GestionFinances({
         pdfBlob,
         emailPreview.filename,
         htmlBody,
-        emailPreview.bodyText
+        emailPreview.bodyText,
+        emailPreview.type === 'quote' ? 'devis_email' : 'facture_email',
+        { invoice_id: emailPreview.invoice.id }
       )
 
       addToast({
@@ -1831,91 +1925,97 @@ export function GestionFinances({
                           <div className="flex flex-wrap gap-2">
                             {/* Devis */}
                             {studentQuotesList.map((quote: InvoiceWithRelations) => (
-                              <div key={quote.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
-                                <FileText className="h-3 w-3 text-gray-500 mr-1.5" />
-                                <span className="text-xs font-medium text-gray-700 mr-2">{quote.invoice_number || 'Brouillon'}</span>
-                                <div className="flex gap-1 border-l border-gray-200 pl-2">
-                                  <button 
-                                    onClick={() => handleDownloadDocument(quote, 'quote', selectedQuoteTemplateId)}
-                                    disabled={isDownloading === quote.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Télécharger PDF"
-                                  >
-                                    {isDownloading === quote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleSendDocumentByEmail(quote, 'quote')}
-                                    disabled={isEmailSending === quote.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Envoyer par email"
-                                  >
-                                    {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenSignatureRequest(quote, 'quote')}
-                                    disabled={!quote.students?.email}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Envoyer en demande de signature"
-                                  >
-                                    <PenTool className="h-3 w-3" />
-                                  </button>
-                                  <button 
-                                    onClick={() => {
-                                      const ok = window.confirm('Transformer ce devis en facture ? (La facture sera créée en brouillon)')
-                                      if (!ok) return
-                                      convertQuoteToInvoiceMutation.mutate(quote.id)
-                                    }}
-                                    disabled={convertingQuoteId === quote.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Convertir en facture"
-                                  >
-                                    {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
-                                  </button>
+                              <div key={quote.id} className="flex flex-col bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5">
+                                <div className="flex items-center">
+                                  <FileText className="h-3 w-3 text-gray-500 mr-1.5" />
+                                  <span className="text-xs font-medium text-gray-700 mr-2">{quote.invoice_number || 'Brouillon'}</span>
+                                  <div className="flex gap-1 border-l border-gray-200 pl-2">
+                                    <button
+                                      onClick={() => handleDownloadDocument(quote, 'quote', selectedQuoteTemplateId)}
+                                      disabled={isDownloading === quote.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Télécharger PDF"
+                                    >
+                                      {isDownloading === quote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleSendDocumentByEmail(quote, 'quote')}
+                                      disabled={isEmailSending === quote.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Envoyer par email"
+                                    >
+                                      {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenSignatureRequest(quote, 'quote')}
+                                      disabled={!quote.students?.email}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Envoyer en demande de signature"
+                                    >
+                                      <PenTool className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const ok = window.confirm('Transformer ce devis en facture ? (La facture sera créée en brouillon)')
+                                        if (!ok) return
+                                        convertQuoteToInvoiceMutation.mutate(quote.id)
+                                      }}
+                                      disabled={convertingQuoteId === quote.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Convertir en facture"
+                                    >
+                                      {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
+                                    </button>
+                                  </div>
                                 </div>
+                                {renderDocStatusBadges(quote)}
                               </div>
                             ))}
-                            
+
                             {/* Factures */}
                             {studentInvoicesList.map((invoice: InvoiceWithRelations) => (
-                              <div key={invoice.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
-                                <Receipt className="h-3 w-3 text-brand-blue mr-1.5" />
-                                <span className="text-xs font-medium text-gray-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
-                                <div className="flex gap-1 border-l border-gray-200 pl-2">
-                                  <button 
-                                    onClick={() => handleDownloadDocument(invoice, 'invoice', selectedInvoiceTemplateId)}
-                                    disabled={isDownloading === invoice.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Télécharger PDF"
-                                  >
-                                    {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleSendDocumentByEmail(invoice, 'invoice')}
-                                    disabled={isEmailSending === invoice.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Envoyer par email"
-                                  >
-                                    {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenSignatureRequest(invoice, 'invoice')}
-                                    disabled={!invoice.students?.email}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Envoyer en demande de signature"
-                                  >
-                                    <PenTool className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenCreditNoteForm(invoice)}
-                                    className="text-gray-400 hover:text-orange-600 transition-colors"
-                                    title="Créer un avoir"
-                                  >
-                                    <Undo2 className="h-3 w-3" />
-                                  </button>
-                                  <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
-                                    <Eye className="h-3 w-3" />
-                                  </Link>
+                              <div key={invoice.id} className="flex flex-col bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5">
+                                <div className="flex items-center">
+                                  <Receipt className="h-3 w-3 text-brand-blue mr-1.5" />
+                                  <span className="text-xs font-medium text-gray-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
+                                  <div className="flex gap-1 border-l border-gray-200 pl-2">
+                                    <button
+                                      onClick={() => handleDownloadDocument(invoice, 'invoice', selectedInvoiceTemplateId)}
+                                      disabled={isDownloading === invoice.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Télécharger PDF"
+                                    >
+                                      {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleSendDocumentByEmail(invoice, 'invoice')}
+                                      disabled={isEmailSending === invoice.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Envoyer par email"
+                                    >
+                                      {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenSignatureRequest(invoice, 'invoice')}
+                                      disabled={!invoice.students?.email}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Envoyer en demande de signature"
+                                    >
+                                      <PenTool className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenCreditNoteForm(invoice)}
+                                      className="text-gray-400 hover:text-orange-600 transition-colors"
+                                      title="Créer un avoir"
+                                    >
+                                      <Undo2 className="h-3 w-3" />
+                                    </button>
+                                    <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
+                                      <Eye className="h-3 w-3" />
+                                    </Link>
+                                  </div>
                                 </div>
+                                {renderDocStatusBadges(invoice)}
                               </div>
                             ))}
 
@@ -2118,89 +2218,95 @@ export function GestionFinances({
                         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pl-14">
                           <div className="flex flex-wrap gap-2">
                             {reservationQuotesList.map((quote) => (
-                              <div key={quote.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
-                                <FileText className="h-3 w-3 text-gray-500 mr-1.5" />
-                                <span className="text-xs font-medium text-gray-700 mr-2">{quote.invoice_number || 'Brouillon'}</span>
-                                <div className="flex gap-1 border-l border-gray-200 pl-2">
-                                  <button
-                                    onClick={() => handleDownloadDocument(quote as InvoiceWithRelations, 'quote', selectedQuoteTemplateId)}
-                                    disabled={isDownloading === quote.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Télécharger PDF"
-                                  >
-                                    {isDownloading === quote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleSendDocumentByEmail(quote as InvoiceWithRelations, 'quote')}
-                                    disabled={isEmailSending === quote.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Envoyer par email"
-                                  >
-                                    {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenSignatureRequest(quote as InvoiceWithRelations, 'quote')}
-                                    disabled={!(quote as InvoiceWithRelations).external_entities?.email}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Envoyer en demande de signature"
-                                  >
-                                    <PenTool className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      const ok = window.confirm('Transformer ce devis en facture ? (La facture sera créée en brouillon)')
-                                      if (!ok) return
-                                      convertQuoteToInvoiceMutation.mutate(quote.id)
-                                    }}
-                                    disabled={convertingQuoteId === quote.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Convertir en facture"
-                                  >
-                                    {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
-                                  </button>
+                              <div key={quote.id} className="flex flex-col bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5">
+                                <div className="flex items-center">
+                                  <FileText className="h-3 w-3 text-gray-500 mr-1.5" />
+                                  <span className="text-xs font-medium text-gray-700 mr-2">{quote.invoice_number || 'Brouillon'}</span>
+                                  <div className="flex gap-1 border-l border-gray-200 pl-2">
+                                    <button
+                                      onClick={() => handleDownloadDocument(quote as InvoiceWithRelations, 'quote', selectedQuoteTemplateId)}
+                                      disabled={isDownloading === quote.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Télécharger PDF"
+                                    >
+                                      {isDownloading === quote.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleSendDocumentByEmail(quote as InvoiceWithRelations, 'quote')}
+                                      disabled={isEmailSending === quote.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Envoyer par email"
+                                    >
+                                      {isEmailSending === quote.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenSignatureRequest(quote as InvoiceWithRelations, 'quote')}
+                                      disabled={!(quote as InvoiceWithRelations).external_entities?.email}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Envoyer en demande de signature"
+                                    >
+                                      <PenTool className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const ok = window.confirm('Transformer ce devis en facture ? (La facture sera créée en brouillon)')
+                                        if (!ok) return
+                                        convertQuoteToInvoiceMutation.mutate(quote.id)
+                                      }}
+                                      disabled={convertingQuoteId === quote.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Convertir en facture"
+                                    >
+                                      {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
+                                    </button>
+                                  </div>
                                 </div>
+                                {renderDocStatusBadges(quote as InvoiceWithRelations)}
                               </div>
                             ))}
                             {reservationInvoicesList.map((invoice) => (
-                              <div key={invoice.id} className="flex items-center bg-gray-50 border border-gray-200 rounded-md px-2 py-1">
-                                <Receipt className="h-3 w-3 text-brand-blue mr-1.5" />
-                                <span className="text-xs font-medium text-gray-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
-                                <div className="flex gap-1 border-l border-gray-200 pl-2">
-                                  <button
-                                    onClick={() => handleDownloadDocument(invoice as InvoiceWithRelations, 'invoice', selectedInvoiceTemplateId)}
-                                    disabled={isDownloading === invoice.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Télécharger PDF"
-                                  >
-                                    {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleSendDocumentByEmail(invoice as InvoiceWithRelations, 'invoice')}
-                                    disabled={isEmailSending === invoice.id}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Envoyer par email"
-                                  >
-                                    {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenSignatureRequest(invoice as InvoiceWithRelations, 'invoice')}
-                                    disabled={!(invoice as InvoiceWithRelations).external_entities?.email}
-                                    className="text-gray-400 hover:text-brand-blue transition-colors"
-                                    title="Envoyer en demande de signature"
-                                  >
-                                    <PenTool className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenCreditNoteForm(invoice as InvoiceWithRelations)}
-                                    className="text-gray-400 hover:text-orange-600 transition-colors"
-                                    title="Créer un avoir"
-                                  >
-                                    <Undo2 className="h-3 w-3" />
-                                  </button>
-                                  <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
-                                    <Eye className="h-3 w-3" />
-                                  </Link>
+                              <div key={invoice.id} className="flex flex-col bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5">
+                                <div className="flex items-center">
+                                  <Receipt className="h-3 w-3 text-brand-blue mr-1.5" />
+                                  <span className="text-xs font-medium text-gray-700 mr-2">{invoice.invoice_number || 'Brouillon'}</span>
+                                  <div className="flex gap-1 border-l border-gray-200 pl-2">
+                                    <button
+                                      onClick={() => handleDownloadDocument(invoice as InvoiceWithRelations, 'invoice', selectedInvoiceTemplateId)}
+                                      disabled={isDownloading === invoice.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Télécharger PDF"
+                                    >
+                                      {isDownloading === invoice.id ? <span className="animate-spin">⟳</span> : <Download className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleSendDocumentByEmail(invoice as InvoiceWithRelations, 'invoice')}
+                                      disabled={isEmailSending === invoice.id}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Envoyer par email"
+                                    >
+                                      {isEmailSending === invoice.id ? <span className="animate-spin">⟳</span> : <Mail className="h-3 w-3" />}
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenSignatureRequest(invoice as InvoiceWithRelations, 'invoice')}
+                                      disabled={!(invoice as InvoiceWithRelations).external_entities?.email}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Envoyer en demande de signature"
+                                    >
+                                      <PenTool className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenCreditNoteForm(invoice as InvoiceWithRelations)}
+                                      className="text-gray-400 hover:text-orange-600 transition-colors"
+                                      title="Créer un avoir"
+                                    >
+                                      <Undo2 className="h-3 w-3" />
+                                    </button>
+                                    <Link href={`/dashboard/payments/${invoice.id}`} className="text-gray-400 hover:text-brand-blue transition-colors" title="Voir détails">
+                                      <Eye className="h-3 w-3" />
+                                    </Link>
+                                  </div>
                                 </div>
+                                {renderDocStatusBadges(invoice as InvoiceWithRelations)}
                               </div>
                             ))}
 

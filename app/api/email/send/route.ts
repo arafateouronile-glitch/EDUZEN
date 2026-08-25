@@ -112,6 +112,13 @@ export async function POST(request: NextRequest) {
       const attachments = Array.isArray(rawBody?.attachments)
         ? (rawBody.attachments as EmailAttachment[])
         : undefined;
+      // Métadonnées libres non validées par le schéma (ex: { invoice_id }),
+      // enregistrées telles quelles dans email_logs pour tracer l'envoi
+      // jusqu'au document d'origine (statut "email envoyé" par devis/facture).
+      const callerMetadata =
+        rawBody?.metadata && typeof rawBody.metadata === "object" && !Array.isArray(rawBody.metadata)
+          ? (rawBody.metadata as Record<string, unknown>)
+          : undefined;
 
       // Créer le client Supabase avec les cookies de la requête
       const supabase = createServerClient<Database>(
@@ -219,7 +226,7 @@ export async function POST(request: NextRequest) {
             organization_id: userData.organization_id,
             resend_id: null,
             status: "sent",
-            metadata: { recipients, test_mode: true },
+            metadata: { recipients, test_mode: true, ...callerMetadata },
           });
         } catch (logError) {
           logger.warn("Email Send - Failed to insert test email_log", { error: logError instanceof Error ? logError.message : String(logError) });
@@ -298,7 +305,7 @@ export async function POST(request: NextRequest) {
             organization_id: userData.organization_id,
             resend_id: data?.id ?? null,
             status: "sent",
-            metadata: { recipients },
+            metadata: { recipients, ...callerMetadata },
           });
         } catch (logError) {
           // Non-bloquant : l'email est envoyé, on logue juste l'erreur
