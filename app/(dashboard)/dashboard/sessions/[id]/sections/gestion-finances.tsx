@@ -1966,6 +1966,13 @@ export function GestionFinances({
                                     >
                                       {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
                                     </button>
+                                    <Link
+                                      href={`/dashboard/payments/${quote.id}/edit`}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Modifier le devis"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Link>
                                   </div>
                                 </div>
                                 {renderDocStatusBadges(quote)}
@@ -2259,6 +2266,13 @@ export function GestionFinances({
                                     >
                                       {convertingQuoteId === quote.id ? <span className="animate-spin">⟳</span> : <ArrowRightLeft className="h-3 w-3" />}
                                     </button>
+                                    <Link
+                                      href={`/dashboard/payments/${quote.id}/edit`}
+                                      className="text-gray-400 hover:text-brand-blue transition-colors"
+                                      title="Modifier le devis"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Link>
                                   </div>
                                 </div>
                                 {renderDocStatusBadges(quote as InvoiceWithRelations)}
