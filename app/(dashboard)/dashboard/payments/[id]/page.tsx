@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/hooks/use-auth'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Plus, DollarSign, Calendar, FileText, CheckCircle, XCircle, Clock, CreditCard, Building2, Download, Receipt, Mail, PenTool, Send } from 'lucide-react'
+import { ArrowLeft, Plus, DollarSign, Calendar, FileText, CheckCircle, XCircle, Clock, CreditCard, Building2, Download, Receipt, Mail, PenTool, Send, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { useState } from 'react'
@@ -721,6 +721,14 @@ export default function InvoiceDetailPage() {
               <Receipt className="mr-2 h-4 w-4" />
               Créer un avoir
             </Button>
+          )}
+          {invoice.document_type === 'quote' && (
+            <Link href={`/dashboard/payments/${invoice.id}/edit`}>
+              <Button variant="outline">
+                <Pencil className="mr-2 h-4 w-4" />
+                Modifier
+              </Button>
+            </Link>
           )}
         </div>
       </div>
