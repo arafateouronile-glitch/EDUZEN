@@ -25,6 +25,7 @@ import {
 import { sendSignedPdfEmails, sendSignatureNotificationEmails } from '@/lib/utils/send-signed-pdf-email'
 import { logger } from '@/lib/utils/logger'
 import { autoAdvanceProspectCommercialStatus } from '@/lib/actions/learner-crm-actions'
+import { NotificationService } from '@/lib/services/notification.service'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 
@@ -686,6 +687,38 @@ export async function POST(request: NextRequest) {
           )
         } catch (crmError) {
           logger.error('Erreur mise à jour statut commercial CRM (signature):', crmError as Error)
+        }
+      }
+
+      // Alerte coordos : un devis signé peut nécessiter la planification d'une
+      // session. Ne doit jamais faire échouer la signature côté signataire externe.
+      if (docType === 'quote') {
+        try {
+          const signedInvoiceId = docMeta?.invoice_id as string | undefined
+          if (signedInvoiceId) {
+            const { data: coordUsers } = await db
+              .from('users')
+              .select('id')
+              .eq('organization_id', orgId)
+              // Doit rester aligné avec FORMATION_MANAGEMENT_ROLES (components/auth/role-guard.tsx)
+              .in('role', ['super_admin', 'admin', 'secretary'])
+
+            const coordUserIds = (coordUsers ?? []).map((u: { id: string }) => u.id)
+            if (coordUserIds.length > 0) {
+              const notificationService = new NotificationService(supabase)
+              await notificationService.createForUsers(
+                coordUserIds,
+                orgId,
+                'document',
+                'Devis signé',
+                `${docTitle} a été signé par ${signerName} — une session est peut-être à planifier.`,
+                { invoice_id: signedInvoiceId },
+                `/dashboard/payments/${signedInvoiceId}`
+              )
+            }
+          }
+        } catch (notifError) {
+          logger.error('Erreur notification devis signé:', notifError as Error)
         }
       }
 

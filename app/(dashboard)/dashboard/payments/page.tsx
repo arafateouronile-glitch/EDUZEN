@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button'
 import { GlassCard } from '@/components/ui/glass-card'
 import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Plus, Search, FileText, AlertCircle, CheckCircle, TrendingUp, X, DollarSign, Receipt, CreditCard, ArrowUpRight, SlidersHorizontal, TrendingDown, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
+import { Plus, Search, FileText, AlertCircle, CheckCircle, TrendingUp, X, DollarSign, Receipt, CreditCard, ArrowUpRight, SlidersHorizontal, TrendingDown, ChevronDown, ChevronUp, RefreshCw, PenTool } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
+import { isToday, isThisWeek, isThisMonth } from 'date-fns'
 import Link from 'next/link'
 import { BRAND_COLORS } from '@/lib/config/app-config'
 import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
@@ -43,6 +44,7 @@ function PaymentsPageContent() {
   const [showFilters, setShowFilters] = useState(false)
   const [documentTypeFilter, setDocumentTypeFilter] = useState<'all' | 'quote' | 'invoice'>('all')
   const [activeTab, setActiveTab] = useState<'all' | 'quotes' | 'invoices'>('all')
+  const [signedQuotesPeriod, setSignedQuotesPeriod] = useState<'today' | 'week' | 'month'>('today')
   const [showChargesSection, setShowChargesSection] = useState(false)
   const [showChargeForm, setShowChargeForm] = useState(false)
   const [selectedSessionId, setSelectedSessionId] = useState<string>('')
@@ -187,6 +189,41 @@ function PaymentsPageContent() {
     enabled: !!user?.organization_id,
     retry: false,
   })
+
+  // Devis signés électroniquement — le lien devis ↔ signature n'est pas une FK
+  // directe : invoices.id = documents.metadata->>'invoice_id' = signature_requests.document_id
+  const { data: signedQuoteSignatures } = useQuery({
+    queryKey: ['signed-quote-signatures', user?.organization_id],
+    queryFn: async () => {
+      if (!user?.organization_id) return []
+      const { data, error } = await (supabase.from('signature_requests') as any)
+        .select('signed_at, documents!inner(type, metadata)')
+        .eq('organization_id', user.organization_id)
+        .eq('status', 'signed')
+        .eq('documents.type', 'quote')
+        .order('signed_at', { ascending: false })
+      if (error) throw error
+      return (data || []) as { signed_at: string | null; documents: { type: string; metadata: { invoice_id?: string } | null } }[]
+    },
+    enabled: !!user?.organization_id,
+  })
+
+  const signedAtByInvoiceId = new Map<string, string>()
+  for (const sig of signedQuoteSignatures || []) {
+    const invId = sig.documents?.metadata?.invoice_id
+    if (invId && sig.signed_at) signedAtByInvoiceId.set(invId, sig.signed_at)
+  }
+
+  const isInSignedPeriod = (dateStr: string) => {
+    const date = new Date(dateStr)
+    if (signedQuotesPeriod === 'today') return isToday(date)
+    if (signedQuotesPeriod === 'week') return isThisWeek(date, { weekStartsOn: 1 })
+    return isThisMonth(date)
+  }
+
+  const signedQuotesInPeriod = (invoices || [])
+    .filter((inv) => signedAtByInvoiceId.has(inv.id) && isInSignedPeriod(signedAtByInvoiceId.get(inv.id)!))
+    .sort((a, b) => signedAtByInvoiceId.get(b.id)!.localeCompare(signedAtByInvoiceId.get(a.id)!))
 
   type InvRow = { document_type?: string; status?: string; total_amount?: number; paid_amount?: number }
   type ChargeRow = { id: string; amount?: number; payment_status?: string; category_id?: string; charge_date?: string; description?: string; currency?: string; vendor?: string; notes?: string; charge_categories?: { name?: string }; sessions?: { name?: string; start_date?: string } }
@@ -530,6 +567,71 @@ function PaymentsPageContent() {
           ))}
         </BentoGrid>
       </div>
+
+      {/* Devis signés — pour que les coordos sachent qu'une session est à planifier */}
+      <GlassCard variant="default" className="p-6 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600 flex items-center justify-center">
+              <PenTool className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Devis signés</h2>
+              <p className="text-sm text-gray-500">Une session est peut-être à planifier</p>
+            </div>
+          </div>
+          <div className="flex p-1 bg-gray-100 rounded-xl">
+            {([
+              { key: 'today', label: "Aujourd'hui" },
+              { key: 'week', label: 'Cette semaine' },
+              { key: 'month', label: 'Ce mois' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setSignedQuotesPeriod(opt.key)}
+                className={cn(
+                  'px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
+                  signedQuotesPeriod === opt.key
+                    ? 'bg-white text-brand-blue shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {signedQuotesInPeriod.length === 0 ? (
+          <p className="text-sm text-gray-500 py-6 text-center">
+            Aucun devis signé sur cette période.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {signedQuotesInPeriod.map((invoice) => {
+              const student = (invoice as unknown as { students?: { first_name?: string; last_name?: string } }).students
+              return (
+                <Link key={invoice.id} href={`/dashboard/payments/${invoice.id}`}>
+                  <div className="p-4 rounded-xl border-2 border-emerald-100 bg-emerald-50/40 hover:border-emerald-300 transition-colors h-full">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-gray-900">{invoice.invoice_number}</span>
+                      <span className="text-xs font-semibold text-emerald-700">
+                        Signé le {formatDate(signedAtByInvoiceId.get(invoice.id)!)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">
+                      {student ? `${student.first_name} ${student.last_name}` : 'Client inconnu'}
+                    </p>
+                    <p className="text-brand-blue font-bold">
+                      {formatCurrency(Number(invoice.total_amount), invoice.currency || 'EUR')}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </GlassCard>
 
       {/* Onglets et Filtres - Design Premium */}
       <div>
