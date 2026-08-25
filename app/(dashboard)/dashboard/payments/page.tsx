@@ -170,6 +170,12 @@ function PaymentsPageContent() {
     },
   })
 
+  // 'signature_pending' et 'quote_validated' ne sont pas des valeurs de la
+  // colonne invoices.status (payment_status) — ce sont des statuts calculés à
+  // partir de signature_requests / validated_at, filtrés côté client plus bas.
+  const DB_STATUSES = ['paid', 'sent', 'partial', 'overdue', 'draft', 'cancelled']
+  const isPseudoStatus = !DB_STATUSES.includes(statusFilter) && statusFilter !== 'all'
+
   const { data: invoices, isLoading } = useQuery({
     queryKey: ['invoices', user?.organization_id, search, statusFilter, documentTypeFilter],
     queryFn: async () => {
@@ -177,7 +183,7 @@ function PaymentsPageContent() {
       try {
         return await invoiceService.getAll(user.organization_id, {
           search,
-          status: statusFilter !== 'all' ? (statusFilter as Invoice['status']) : undefined,
+          status: !isPseudoStatus && statusFilter !== 'all' ? (statusFilter as Invoice['status']) : undefined,
           documentType: documentTypeFilter !== 'all' ? documentTypeFilter : undefined,
         })
       } catch (error: unknown) {
@@ -277,8 +283,14 @@ function PaymentsPageContent() {
   type SessionOption = { id: string; name?: string; start_date?: string; end_date?: string }
   const filteredInvoices = invoices?.filter((inv) => {
     const row = inv as InvRow
-    if (activeTab === 'quotes') return row.document_type === 'quote'
-    if (activeTab === 'invoices') return row.document_type === 'invoice' || !row.document_type
+    if (activeTab === 'quotes' && row.document_type !== 'quote') return false
+    if (activeTab === 'invoices' && row.document_type !== 'invoice' && row.document_type) return false
+    if (statusFilter === 'signature_pending') {
+      return signatureStatusByInvoiceId.get(inv.id)?.status === 'pending'
+    }
+    if (statusFilter === 'quote_validated') {
+      return validatedAtByInvoiceId.has(inv.id)
+    }
     return true
   }) || []
 
@@ -776,6 +788,8 @@ function PaymentsPageContent() {
                       <option value="partial">⚡ Partielle</option>
                       <option value="overdue">⚠ En retard</option>
                       <option value="draft">📝 Brouillon</option>
+                      <option value="signature_pending">🖊 Signature demandée</option>
+                      <option value="quote_validated">✅ Devis validé/signé</option>
                     </select>
                   </motion.div>
 
