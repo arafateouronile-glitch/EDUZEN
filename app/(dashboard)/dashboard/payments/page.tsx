@@ -190,31 +190,38 @@ function PaymentsPageContent() {
     retry: false,
   })
 
-  // Devis signés électroniquement — le lien devis ↔ signature n'est pas une FK
-  // directe : invoices.id = documents.metadata->>'invoice_id' = signature_requests.document_id
-  const { data: signedQuoteSignatures } = useQuery({
-    queryKey: ['signed-quote-signatures', user?.organization_id],
+  // Statut des demandes de signature (devis ET factures) — le lien devis/
+  // facture ↔ signature n'est pas une FK directe : invoices.id =
+  // documents.metadata->>'invoice_id' = signature_requests.document_id
+  const { data: allSignatureRequests } = useQuery({
+    queryKey: ['payments-signature-requests', user?.organization_id],
     queryFn: async () => {
       if (!user?.organization_id) return []
       const { data, error } = await (supabase.from('signature_requests') as any)
-        .select('signed_at, documents!inner(type, metadata)')
+        .select('status, signed_at, documents!inner(metadata)')
         .eq('organization_id', user.organization_id)
-        .eq('status', 'signed')
-        .eq('documents.type', 'quote')
-        .order('signed_at', { ascending: false })
+        .order('created_at', { ascending: false })
       if (error) throw error
-      return (data || []) as { signed_at: string | null; documents: { type: string; metadata: { invoice_id?: string } | null } }[]
+      return (data || []) as { status: string; signed_at: string | null; documents: { metadata: { invoice_id?: string } | null } }[]
     },
     enabled: !!user?.organization_id,
   })
+
+  const signatureStatusByInvoiceId = new Map<string, { status: string; signed_at: string | null }>()
+  for (const sig of allSignatureRequests || []) {
+    const invId = sig.documents?.metadata?.invoice_id
+    // Le plus récent d'abord (déjà trié par created_at desc) : on garde la première rencontre.
+    if (invId && !signatureStatusByInvoiceId.has(invId)) {
+      signatureStatusByInvoiceId.set(invId, { status: sig.status, signed_at: sig.signed_at })
+    }
+  }
 
   // Deux sources de validation : signature électronique (signature_requests)
   // et validation manuelle (invoices.validated_at) — on les fusionne pour la
   // section "Devis validés".
   const validatedAtByInvoiceId = new Map<string, string>()
-  for (const sig of signedQuoteSignatures || []) {
-    const invId = sig.documents?.metadata?.invoice_id
-    if (invId && sig.signed_at) validatedAtByInvoiceId.set(invId, sig.signed_at)
+  for (const [invId, sig] of signatureStatusByInvoiceId) {
+    if (sig.status === 'signed' && sig.signed_at) validatedAtByInvoiceId.set(invId, sig.signed_at)
   }
   for (const inv of invoices || []) {
     const validatedAt = (inv as { validated_at?: string | null }).validated_at
@@ -231,6 +238,39 @@ function PaymentsPageContent() {
   const signedQuotesInPeriod = (invoices || [])
     .filter((inv) => validatedAtByInvoiceId.has(inv.id) && isInSignedPeriod(validatedAtByInvoiceId.get(inv.id)!))
     .sort((a, b) => validatedAtByInvoiceId.get(b.id)!.localeCompare(validatedAtByInvoiceId.get(a.id)!))
+
+  // Badge complémentaire au statut principal (draft/sent/paid...) : signature
+  // demandée / signée / refusée / expirée, ou validation manuelle.
+  const renderSignatureBadge = (invoiceId: string, validatedAt?: string | null) => {
+    const sig = signatureStatusByInvoiceId.get(invoiceId)
+    const isSigned = sig?.status === 'signed'
+    if (!sig && !validatedAt) return null
+    if (isSigned || validatedAt) {
+      return (
+        <span
+          title={isSigned && sig?.signed_at ? `Signé le ${formatDate(sig.signed_at)}` : validatedAt ? `Validé le ${formatDate(validatedAt)}` : undefined}
+          className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200"
+        >
+          {isSigned ? 'Signé' : 'Validé'}
+        </span>
+      )
+    }
+    if (sig?.status === 'pending') {
+      return (
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+          Signature demandée
+        </span>
+      )
+    }
+    if (sig?.status === 'declined' || sig?.status === 'expired') {
+      return (
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full border bg-red-50 text-red-700 border-red-200">
+          {sig.status === 'declined' ? 'Signature refusée' : 'Signature expirée'}
+        </span>
+      )
+    }
+    return null
+  }
 
   type InvRow = { document_type?: string; status?: string; total_amount?: number; paid_amount?: number }
   type ChargeRow = { id: string; amount?: number; payment_status?: string; category_id?: string; charge_date?: string; description?: string; currency?: string; vendor?: string; notes?: string; charge_categories?: { name?: string }; sessions?: { name?: string; start_date?: string } }
@@ -962,6 +1002,7 @@ function PaymentsPageContent() {
                               {invoicesForStatus.map((invoice, index) => {
                                 const isQuote = (invoice as InvRow).document_type === 'quote'
                                 const student = invoice.students
+                                const signatureBadge = renderSignatureBadge(invoice.id, (invoice as { validated_at?: string | null }).validated_at)
                                 return (
                                   <motion.div
                                     key={invoice.id}
@@ -1016,6 +1057,7 @@ function PaymentsPageContent() {
                                               <p className="text-sm text-gray-500 mt-1.5 font-medium">
                                                 {student ? `${student.first_name} ${student.last_name}` : 'Client inconnu'}
                                               </p>
+                                              {signatureBadge && <div className="mt-1.5">{signatureBadge}</div>}
                                             </div>
 
                                             <div className="space-y-3 text-sm">
