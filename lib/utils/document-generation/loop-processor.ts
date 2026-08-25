@@ -48,3 +48,47 @@ export function processLoops(
       .join('')
   })
 }
+
+/**
+ * Vérifie qu'un template n'a pas de boucle {FOR:tableau}...{ENDFOR} cassée :
+ * soit vide (aucune variable {prefixe_...} à l'intérieur — elle ne
+ * produira donc jamais rien), soit dont des variables {prefixe_...}
+ * traînent en dehors du bloc (elles ne seront jamais remplacées).
+ *
+ * Piège fréquent en éditant un tableau dans l'éditeur visuel : les
+ * balises {FOR:...} et {ENDFOR} se retrouvent séparées de la ligne
+ * qu'elles étaient censées répéter (ex: incident du 25/08/2026 sur les
+ * modèles de devis — tableau "Prix de la formation" resté vide).
+ */
+export function validateLoopBlocks(html: string): string[] {
+  const warnings: string[] = []
+  const forRegex = /\{FOR:(\w+)\}([\s\S]*?)\{ENDFOR\}/g
+  const loopSpans: { start: number; end: number }[] = []
+  const prefixes = new Set<string>()
+
+  let match: RegExpExecArray | null
+  while ((match = forRegex.exec(html)) !== null) {
+    const [full, arrayName, blockContent] = match
+    const prefix = arrayName.endsWith('s') ? arrayName.slice(0, -1) + '_' : arrayName + '_'
+    prefixes.add(prefix)
+    loopSpans.push({ start: match.index, end: match.index + full.length })
+    if (!blockContent.includes(`{${prefix}`)) {
+      warnings.push(
+        `La boucle {FOR:${arrayName}}...{ENDFOR} ne contient aucune variable {${prefix}...} : elle restera toujours vide.`
+      )
+    }
+  }
+
+  for (const prefix of prefixes) {
+    const varRegex = new RegExp(`\\{${prefix}\\w+\\}`, 'g')
+    let varMatch: RegExpExecArray | null
+    while ((varMatch = varRegex.exec(html)) !== null) {
+      const insideLoop = loopSpans.some((span) => varMatch!.index >= span.start && varMatch!.index < span.end)
+      if (insideLoop) continue
+      const message = `La variable ${varMatch[0]} apparaît en dehors de son bloc {FOR:...}{ENDFOR} : elle ne sera jamais remplie. Vérifiez que {FOR:...} et {ENDFOR} entourent bien toute la ligne du tableau.`
+      if (!warnings.includes(message)) warnings.push(message)
+    }
+  }
+
+  return warnings
+}

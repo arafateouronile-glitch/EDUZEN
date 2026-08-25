@@ -24,6 +24,7 @@ import { DocumentSettings } from './components/document-settings'
 import { DocxTemplateUploader } from '@/components/document-templates/DocxTemplateUploader'
 import { getDocumentTypeConfig } from './utils/document-type-config'
 import { getDefaultTemplateContent } from '@/lib/utils/document-template-defaults'
+import { validateLoopBlocks } from '@/lib/utils/document-generation/loop-processor'
 import { cn } from '@/lib/utils'
 import { logger, sanitizeError } from '@/lib/utils/logger'
 
@@ -413,6 +414,24 @@ export default function DocumentTemplateEditPage() {
 
   const handleSave = () => {
     if (!template) return
+
+    // Alerte non bloquante : détecte les boucles {FOR:...}{ENDFOR} cassées
+    // (vides, ou variables {module_...} etc. qui ont fini en dehors du bloc
+    // en éditant un tableau) — cf. incident du 25/08/2026 sur les modèles
+    // de devis, où le tableau "Prix de la formation" restait vide.
+    const loopWarnings = [
+      ...validateLoopBlocks(template.header?.content || ''),
+      ...validateLoopBlocks(template.content?.html || ''),
+      ...validateLoopBlocks(template.footer?.content || ''),
+    ]
+    if (loopWarnings.length > 0) {
+      addToast({
+        type: 'warning',
+        title: 'Tableau à vérifier',
+        description: loopWarnings[0] + (loopWarnings.length > 1 ? ` (+${loopWarnings.length - 1} autre${loopWarnings.length > 2 ? 's' : ''})` : ''),
+      })
+    }
+
     saveMutation.mutate(template)
   }
 
