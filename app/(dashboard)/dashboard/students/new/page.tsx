@@ -281,7 +281,7 @@ export default function NewStudentPage() {
       if (data.entity_id && companyMode === 'existing') {
         // Le rattachement sera créé après la création de l'étudiant
       } else if (data.company_name || data.company_address || data.company_phone || data.company_email || data.company_siret) {
-        studentData.metadata = {
+        studentData.custom_fields = {
           company: {
             name: data.company_name || null,
             address: data.company_address || null,
