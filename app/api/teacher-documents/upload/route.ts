@@ -61,12 +61,20 @@ export async function POST(request: NextRequest) {
       teacherId = target_teacher_user_id
     }
 
-    // Validation type MIME
-    const ALLOWED_MIME_TYPES = ['application/pdf']
-    const ALLOWED_EXTENSIONS = ['pdf']
+    // Validation type MIME (doit rester alignée avec le bucket storage 'teacher-documents'
+    // et l'attribut accept du sélecteur de fichier côté client)
+    const ALLOWED_MIME_TYPES = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'image/jpg',
+    ]
+    const ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']
     const fileExt = file.name.split('.').pop()?.toLowerCase()
     if (!ALLOWED_MIME_TYPES.includes(file.type) || !fileExt || !ALLOWED_EXTENSIONS.includes(fileExt)) {
-      return NextResponse.json({ error: 'Seuls les fichiers PDF sont acceptés' }, { status: 400 })
+      return NextResponse.json({ error: 'Formats acceptés : PDF, Word, JPG, PNG' }, { status: 400 })
     }
 
     if (file.size > 10 * 1024 * 1024) {
