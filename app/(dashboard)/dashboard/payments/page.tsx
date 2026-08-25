@@ -12,7 +12,7 @@ import { BentoGrid, BentoCard } from '@/components/ui/bento-grid'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Plus, Search, FileText, AlertCircle, CheckCircle, TrendingUp, X, DollarSign, Receipt, CreditCard, ArrowUpRight, SlidersHorizontal, TrendingDown, ChevronDown, ChevronUp, RefreshCw, PenTool } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
-import { isToday, isThisWeek, isThisMonth } from 'date-fns'
+import { isToday, isThisWeek, isThisMonth, startOfDay, startOfWeek } from 'date-fns'
 import Link from 'next/link'
 import { BRAND_COLORS } from '@/lib/config/app-config'
 import { PremiumPieChart } from '@/components/charts/premium-pie-chart'
@@ -281,16 +281,33 @@ function PaymentsPageContent() {
   type InvRow = { document_type?: string; status?: string; total_amount?: number; paid_amount?: number }
   type ChargeRow = { id: string; amount?: number; payment_status?: string; category_id?: string; charge_date?: string; description?: string; currency?: string; vendor?: string; notes?: string; charge_categories?: { name?: string }; sessions?: { name?: string; start_date?: string } }
   type SessionOption = { id: string; name?: string; start_date?: string; end_date?: string }
+  // Filtre "Période" — jusqu'ici il ne pilotait que le graphique des
+  // paiements plus bas, sans effet sur la liste des devis/factures.
+  const isIssueDateInRange = (issueDate: string | null | undefined, range: string): boolean => {
+    if (!issueDate || range === 'all') return true
+    const date = new Date(issueDate)
+    const now = new Date()
+    switch (range) {
+      case 'day': return isToday(date)
+      case 'week': return isThisWeek(date, { weekStartsOn: 1 })
+      case 'month': return isThisMonth(date)
+      case 'quarter':
+        return date.getFullYear() === now.getFullYear() && Math.floor(date.getMonth() / 3) === Math.floor(now.getMonth() / 3)
+      case 'year': return date.getFullYear() === now.getFullYear()
+      default: return true
+    }
+  }
+
   const filteredInvoices = invoices?.filter((inv) => {
     const row = inv as InvRow
     if (activeTab === 'quotes' && row.document_type !== 'quote') return false
     if (activeTab === 'invoices' && row.document_type !== 'invoice' && row.document_type) return false
     if (statusFilter === 'signature_pending') {
-      return signatureStatusByInvoiceId.get(inv.id)?.status === 'pending'
+      if (signatureStatusByInvoiceId.get(inv.id)?.status !== 'pending') return false
+    } else if (statusFilter === 'quote_validated') {
+      if (!validatedAtByInvoiceId.has(inv.id)) return false
     }
-    if (statusFilter === 'quote_validated') {
-      return validatedAtByInvoiceId.has(inv.id)
-    }
+    if (!isIssueDateInRange((inv as { issue_date?: string | null }).issue_date, dateRangeFilter)) return false
     return true
   }) || []
 
@@ -327,6 +344,12 @@ function PaymentsPageContent() {
       const now = new Date()
 
       switch (dateRangeFilter) {
+        case 'day':
+          startDate = startOfDay(now)
+          break
+        case 'week':
+          startDate = startOfWeek(now, { weekStartsOn: 1 })
+          break
         case 'month':
           startDate = new Date(now.getFullYear(), now.getMonth(), 1)
           break
@@ -809,6 +832,8 @@ function PaymentsPageContent() {
                       className="w-full px-4 py-3 rounded-xl bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 focus:border-brand-cyan/50 focus:ring-4 focus:ring-brand-cyan/10 outline-none text-sm font-medium transition-all shadow-sm"
                     >
                       <option value="all">Toutes les périodes</option>
+                      <option value="day">🗓 Aujourd'hui</option>
+                      <option value="week">📈 Cette semaine</option>
                       <option value="month">📅 Ce mois</option>
                       <option value="quarter">📊 Ce trimestre</option>
                       <option value="year">📆 Cette année</option>
@@ -949,11 +974,11 @@ function PaymentsPageContent() {
               </div>
               <h3 className="text-2xl font-black text-gray-900 mb-3 font-display">Aucun document trouvé</h3>
               <p className="text-lg text-gray-500 mb-8 max-w-md mx-auto">
-                {search || statusFilter !== 'all' || documentTypeFilter !== 'all'
+                {search || statusFilter !== 'all' || documentTypeFilter !== 'all' || dateRangeFilter !== 'all'
                   ? 'Essayez de modifier vos filtres de recherche.'
                   : 'Commencez par créer votre premier document de paiement.'}
               </p>
-              {!search && statusFilter === 'all' && documentTypeFilter === 'all' && (
+              {!search && statusFilter === 'all' && documentTypeFilter === 'all' && dateRangeFilter === 'all' && (
                 <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.98 }}>
                   <Link href="/dashboard/payments/new">
                     <Button className="h-12 px-8 text-base font-semibold shadow-lg">
