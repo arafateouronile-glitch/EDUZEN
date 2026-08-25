@@ -10508,6 +10508,8 @@ export type Database = {
           total_amount: number
           type: string
           updated_at: string | null
+          validated_at: string | null
+          validated_by: string | null
         }
         Insert: {
           amount: number
@@ -10536,6 +10538,8 @@ export type Database = {
           total_amount: number
           type: string
           updated_at?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Update: {
           amount?: number
@@ -10564,8 +10568,17 @@ export type Database = {
           total_amount?: number
           type?: string
           updated_at?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_enrollment_id_fkey"
             columns: ["enrollment_id"]

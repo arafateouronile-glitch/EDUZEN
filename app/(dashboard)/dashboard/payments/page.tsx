@@ -208,10 +208,17 @@ function PaymentsPageContent() {
     enabled: !!user?.organization_id,
   })
 
-  const signedAtByInvoiceId = new Map<string, string>()
+  // Deux sources de validation : signature électronique (signature_requests)
+  // et validation manuelle (invoices.validated_at) — on les fusionne pour la
+  // section "Devis validés".
+  const validatedAtByInvoiceId = new Map<string, string>()
   for (const sig of signedQuoteSignatures || []) {
     const invId = sig.documents?.metadata?.invoice_id
-    if (invId && sig.signed_at) signedAtByInvoiceId.set(invId, sig.signed_at)
+    if (invId && sig.signed_at) validatedAtByInvoiceId.set(invId, sig.signed_at)
+  }
+  for (const inv of invoices || []) {
+    const validatedAt = (inv as { validated_at?: string | null }).validated_at
+    if (validatedAt && !validatedAtByInvoiceId.has(inv.id)) validatedAtByInvoiceId.set(inv.id, validatedAt)
   }
 
   const isInSignedPeriod = (dateStr: string) => {
@@ -222,8 +229,8 @@ function PaymentsPageContent() {
   }
 
   const signedQuotesInPeriod = (invoices || [])
-    .filter((inv) => signedAtByInvoiceId.has(inv.id) && isInSignedPeriod(signedAtByInvoiceId.get(inv.id)!))
-    .sort((a, b) => signedAtByInvoiceId.get(b.id)!.localeCompare(signedAtByInvoiceId.get(a.id)!))
+    .filter((inv) => validatedAtByInvoiceId.has(inv.id) && isInSignedPeriod(validatedAtByInvoiceId.get(inv.id)!))
+    .sort((a, b) => validatedAtByInvoiceId.get(b.id)!.localeCompare(validatedAtByInvoiceId.get(a.id)!))
 
   type InvRow = { document_type?: string; status?: string; total_amount?: number; paid_amount?: number }
   type ChargeRow = { id: string; amount?: number; payment_status?: string; category_id?: string; charge_date?: string; description?: string; currency?: string; vendor?: string; notes?: string; charge_categories?: { name?: string }; sessions?: { name?: string; start_date?: string } }
@@ -568,7 +575,8 @@ function PaymentsPageContent() {
         </BentoGrid>
       </div>
 
-      {/* Devis signés — pour que les coordos sachent qu'une session est à planifier */}
+      {/* Devis validés (signature électronique ou validation manuelle) — pour
+          que les coordos sachent qu'une session est à planifier */}
       <GlassCard variant="default" className="p-6 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
@@ -576,7 +584,7 @@ function PaymentsPageContent() {
               <PenTool className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Devis signés</h2>
+              <h2 className="text-lg font-bold text-gray-900">Devis validés</h2>
               <p className="text-sm text-gray-500">Une session est peut-être à planifier</p>
             </div>
           </div>
@@ -604,7 +612,7 @@ function PaymentsPageContent() {
 
         {signedQuotesInPeriod.length === 0 ? (
           <p className="text-sm text-gray-500 py-6 text-center">
-            Aucun devis signé sur cette période.
+            Aucun devis validé sur cette période.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -616,7 +624,7 @@ function PaymentsPageContent() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-bold text-gray-900">{invoice.invoice_number}</span>
                       <span className="text-xs font-semibold text-emerald-700">
-                        Signé le {formatDate(signedAtByInvoiceId.get(invoice.id)!)}
+                        Validé le {formatDate(validatedAtByInvoiceId.get(invoice.id)!)}
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 mb-1">

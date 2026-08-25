@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select'
 import type { StudentWithRelations, InvoiceWithRelations } from '@/lib/types/query-types'
 import { logger, sanitizeError } from '@/lib/utils/logger'
+import { NotificationService } from '@/lib/services/notification.service'
 
 type Payment = TableRow<'payments'>
 
@@ -309,6 +310,71 @@ export default function InvoiceDetailPage() {
         title: 'Erreur lors de la création de l\'avoir',
         description: error instanceof Error ? error.message : 'Veuillez vérifier les informations saisies.',
       })
+    },
+  })
+
+  // Validation manuelle — pour les devis validés autrement que par signature
+  // électronique (téléphone, email...). Alerte les coordos comme le fait la
+  // signature électronique, pour qu'une session soit planifiée.
+  // (doit être avant les returns conditionnels, cf. createCreditNoteMutation ci-dessus)
+  const validateMutation = useMutation({
+    mutationFn: async () => {
+      if (!invoice || !user) return
+      await invoiceService.update(invoice.id, {
+        validated_at: new Date().toISOString(),
+        validated_by: user.id,
+      })
+
+      if (user.organization_id) {
+        const { data: coordUsers } = await supabase
+          .from('users')
+          .select('id')
+          .eq('organization_id', user.organization_id)
+          .in('role', ['super_admin', 'admin', 'secretary'])
+        const coordUserIds = (coordUsers ?? []).map((u) => u.id)
+        if (coordUserIds.length > 0) {
+          // La policy RLS INSERT sur notifications n'autorise pas un client
+          // authentifié classique à créer une notification pour un AUTRE
+          // utilisateur via un simple .insert() — seule la fonction RPC
+          // create_notification() (SECURITY DEFINER) le permet de manière fiable.
+          const notificationService = new NotificationService(supabase)
+          await Promise.all(
+            coordUserIds.map((coordUserId) =>
+              notificationService.create({
+                user_id: coordUserId,
+                organization_id: user.organization_id!,
+                type: 'document',
+                title: 'Devis validé',
+                message: `${documentLabelCapitalized} ${invoice.invoice_number || 'Brouillon'} a été validé manuellement — une session est peut-être à planifier.`,
+                data: { invoice_id: invoice.id },
+                link: `/dashboard/payments/${invoice.id}`,
+              })
+            )
+          )
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      addToast({ type: 'success', title: 'Devis marqué comme validé' })
+    },
+    onError: (error: unknown) => {
+      addToast({
+        type: 'error',
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Impossible de marquer ce devis comme validé.',
+      })
+    },
+  })
+
+  const unvalidateMutation = useMutation({
+    mutationFn: async () => {
+      if (!invoice) return
+      await invoiceService.update(invoice.id, { validated_at: null, validated_by: null })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      addToast({ type: 'success', title: 'Validation annulée' })
     },
   })
 
@@ -730,6 +796,27 @@ export default function InvoiceDetailPage() {
               </Button>
             </Link>
           )}
+          {invoice.document_type === 'quote' && (
+            invoice.validated_at ? (
+              <Button
+                variant="outline"
+                onClick={() => unvalidateMutation.mutate()}
+                disabled={unvalidateMutation.isPending}
+              >
+                <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                Annuler la validation
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => validateMutation.mutate()}
+                disabled={validateMutation.isPending}
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                {validateMutation.isPending ? 'Validation...' : 'Marquer comme validé'}
+              </Button>
+            )
+          )}
         </div>
       </div>
 
@@ -795,6 +882,12 @@ export default function InvoiceDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {invoice.document_type === 'quote' && invoice.validated_at && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-medium">
+                  <CheckCircle className="h-4 w-4" />
+                  Validé manuellement le {formatDate(invoice.validated_at)}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground flex items-center mb-2">
